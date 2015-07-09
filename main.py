@@ -15,8 +15,8 @@ optionsframe = Frame(root)
 
 
 def add_folder_entry():
-    folderstable.insert(dict(foldersname=folder, alias=tkSimpleDialog.askstring("Alias?", "Add Convenient Alias For" +
-                                                                                "\n" + folder)))
+    folderstable.insert(dict(foldersname=folder, is_active="False",
+                             alias=tkSimpleDialog.askstring("Alias?", "Add Convenient Alias For" + "\n" + folder)))
 
 
 def process_directories(folderstable_process):
@@ -35,39 +35,62 @@ def select_folder():
 
 def make_users_list():
     global userslistframe
-    userslistframe = scrollbuttons.VerticalScrolledFrame(root)
-    userslistframe.pack(side=RIGHT)
+    global active_userslistframe
+    global inactive_userslistframe
+    userslistframe = Frame(root)
+    active_users_list_container = Frame(userslistframe)
+    inactive_users_list_container = Frame(userslistframe)
+    active_userslistframe = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
+    inactive_userslistframe = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
+    active_users_list_label = Label(active_users_list_container, text="Active Users")
+    inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Users")
     for foldersname in folderstable.all():
-        folderbuttonframe = Frame(userslistframe.interior)
-        newdeletebuttonname = Button(folderbuttonframe, text="Delete",
-                                     command=lambda name=foldersname['id']: delete_folder_entry(name))
-        newbuttonname = Button(folderbuttonframe, text=foldersname['alias'],
-                               command=lambda name=foldersname['id']: EditDialog(root, foldersname))
-        newdeletebuttonname.pack(side=RIGHT)
-        newbuttonname.pack(side=RIGHT)
-        folderbuttonframe.pack()
-
+        if foldersname['is_active'] != "False":
+            active_folderbuttonframe = Frame(active_userslistframe.interior)
+            Button(active_folderbuttonframe, text="Delete",
+                                         command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
+            Button(active_folderbuttonframe, text=foldersname['alias'],
+                                   command=lambda name=foldersname['id']: EditDialog(root, foldersname)).grid(column=0, row=0, sticky=E)
+            active_folderbuttonframe.pack(anchor='e')
+        else:
+            inactive_folderbuttonframe = Frame(active_userslistframe.interior)
+            Button(inactive_folderbuttonframe, text="Delete",
+                                         command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
+            Button(inactive_folderbuttonframe, text=foldersname['alias'],
+                                   command=lambda name=foldersname['id']: EditDialog(root, foldersname)).grid(column=0, row=0, sticky=E)
+            inactive_folderbuttonframe.pack(anchor='e')
+    active_users_list_label.pack()
+    inactive_users_list_label.pack()
+    active_userslistframe.pack()
+    inactive_userslistframe.pack()
+    active_users_list_container.pack(side=RIGHT)
+    inactive_users_list_container.pack(side=RIGHT)
+    userslistframe.pack(side=RIGHT)
 
 class EditDialog(dialog.Dialog):
 
     def body(self, master):
 
         copytodirectory = None
-        Label(master, text="Alias:").grid(row=0)
-        Label(master, text="Backend?").grid(row=1)
-        Label(master, text="Copy Destination?").grid(row=2)
+        global active_checkbutton_state
+        Label(master, text="Active?").grid(row=0)
+        Label(master, text="Alias:").grid(row=1)
+        Label(master, text="Backend?").grid(row=2)
+        Label(master, text="Copy Destination?").grid(row=3)
 
         def select_copy_to_directory():
             global copytodirectory
             copytodirectory = str(askdirectory())
 
-        self.e1 = Entry(master)
+        self.e1 = Checkbutton(master, variable=active_checkbutton, onvalue="True", offvalue="False")
         self.e2 = Entry(master)
-        self.e3 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
+        self.e3 = Entry(master)
+        self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
 
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
         self.e3.grid(row=2, column=1)
+        self.e4.grid(row=3, column=1)
 
         return self.e1  # initial focus
 
@@ -86,15 +109,18 @@ class EditDialog(dialog.Dialog):
 
     def apply(self, foldersnameapply):
         global copytodirectory
-        foldersnameapply['alias'] = str(self.e1.get())
+        global active_checkbutton
+        active_checkbutton_state = active_checkbutton.get()
+        foldersnameapply['is_active'] = active_checkbutton_state
+        foldersnameapply['alias'] = str(self.e2.get())
         foldersnameapply['copy_to_directory'] = copytodirectory
-        foldersnameapply['process_backend'] = str(self.e2.get())
+        foldersnameapply['process_backend'] = str(self.e3.get())
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
 
 def update_folder_alias(folderedit):
-    folderstable.update(dict(alias=folderedit['alias'], id=folderedit['id'],
+    folderstable.update(dict(is_active=folderedit['is_active'], alias=folderedit['alias'], id=folderedit['id'],
                              process_backend=folderedit['process_backend'],
                         copy_to_directory=folderedit['copy_to_directory']), ['id'])
     userslistframe.destroy()
