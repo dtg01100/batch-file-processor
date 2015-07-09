@@ -1,0 +1,7 @@
+import copy_backend
+
+
+def process(folders_database):
+    for parameters_dict in folders_database.all():
+        if parameters_dict['process_backend'] == "copy":
+            copy_backend.do(parameters_dict)

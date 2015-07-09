@@ -73,7 +73,7 @@ class Dialog(Toplevel):
         self.withdraw()
         self.update_idletasks()
 
-        self.apply(self.foldersnameinput)
+        self.apply()
 
         self.cancel()
 
