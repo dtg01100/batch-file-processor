@@ -2,7 +2,7 @@ from Tkinter import *
 
 class Dialog(Toplevel):
 
-    def __init__(self, parent, title = None):
+    def __init__(self, parent, foldersnameinput, title = None):
 
         Toplevel.__init__(self, parent)
         self.transient(parent)
@@ -11,6 +11,8 @@ class Dialog(Toplevel):
             self.title(title)
 
         self.parent = parent
+
+        self.foldersnameinput = foldersnameinput
 
         self.result = None
 
@@ -71,7 +73,7 @@ class Dialog(Toplevel):
         self.withdraw()
         self.update_idletasks()
 
-        self.apply()
+        self.apply(self.foldersnameinput)
 
         self.cancel()
 
