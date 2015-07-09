@@ -18,8 +18,10 @@ def add_folder_entry():
     folderstable.insert(dict(foldersname=folder, alias=tkSimpleDialog.askstring("Alias?", "Add Convenient Alias For" +
                                                                                 "\n" + folder)))
 
+
 def process_directories(folderstable_process):
     dispatch.process(folderstable_process)
+
 
 def select_folder():
     global folder
