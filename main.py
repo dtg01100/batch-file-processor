@@ -95,7 +95,8 @@ class EditDialog(dialog.Dialog):
 
 def update_folder_alias(folderedit):
     folderstable.update(dict(alias=folderedit['alias'], id=folderedit['id'],
-                             process_backend=folderedit['process_backend']), ['id'])
+                             process_backend=folderedit['process_backend'],
+                        copy_to_directory=folderedit['copy_to_directory']), ['id'])
     userslistframe.destroy()
     make_users_list()
 
