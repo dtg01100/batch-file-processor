@@ -78,7 +78,10 @@ class EditDialog(dialog.Dialog):
         Label(master, text="Active?").grid(row=0)
         Label(master, text="Alias:").grid(row=1)
         Label(master, text="Backend?").grid(row=2)
-        Label(master, text="Copy Destination?").grid(row=3)
+        Label(master, text="Copy Backend Settings").grid(row=3)
+        Label(master, text="Copy Destination?").grid(row=4)
+        Label(master, text="Ftp Backend Settings").grid(row=5)
+
 
         def select_copy_to_directory():
             global copytodirectory
@@ -90,6 +93,7 @@ class EditDialog(dialog.Dialog):
         self.e2 = Entry(master)
         self.e3 = Entry(master)
         self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
+        self.e5 = Entry(master)
 
         self.e1.insert(0, self.foldersnameinput['is_active'])
         self.e2.insert(0, self.foldersnameinput['alias'])
@@ -97,7 +101,7 @@ class EditDialog(dialog.Dialog):
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
         self.e3.grid(row=2, column=1)
-        self.e4.grid(row=3, column=1)
+        self.e4.grid(row=4, column=1)
 
         return self.e1  # initial focus
 
@@ -127,9 +131,7 @@ class EditDialog(dialog.Dialog):
 
 
 def update_folder_alias(folderedit):
-    folderstable.update(dict(is_active=folderedit['is_active'], alias=folderedit['alias'], id=folderedit['id'],
-                             process_backend=folderedit['process_backend'],
-                        copy_to_directory=folderedit['copy_to_directory']), ['id'])
+    folderstable.update(folderedit, ['id'])
     userslistframe.destroy()
     make_users_list()
 
