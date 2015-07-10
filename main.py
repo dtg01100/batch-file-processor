@@ -17,7 +17,8 @@ def add_folder_entry():
     folderstable.insert(dict(foldersname=folder, is_active="False",
                              alias=folder, process_backend='null', ftp_server='null', ftp_folder='null',
                              ftp_username='null', ftp_password='null',
-                             email_to='null', email_destination_address='null'))
+                             email_to='null', email_origin_address='null', email_origin_username='null',
+                             email_origin_password='null', email_origin_smtp_server='null'))
 
 
 def process_directories(folderstable_process):
@@ -89,7 +90,10 @@ class EditDialog(dialog.Dialog):
         Label(master, text="FTP Password:").grid(row=9)
         Label(master, text="Email Backend Settings").grid(row=10)
         Label(master, text="Recipient Address:").grid(row=11)
-        Label(master, text="Recipient Server:").grid(row=12)
+        Label(master, text="Sender Address:").grid(row=12)
+        Label(master, text="Sender Username:").grid(row=13)
+        Label(master, text="Sender Password:").grid(row=14)
+        Label(master, text="Sender Smtp Server:").grid(row=15)
 
 
         def select_copy_to_directory():
@@ -108,6 +112,9 @@ class EditDialog(dialog.Dialog):
         self.e8 = Entry(master)
         self.e9 = Entry(master)
         self.e10 = Entry(master)
+        self.e11 = Entry(master)
+        self.e12 = Entry(master)
+        self.e13 = Entry(master)
 
         self.e1.insert(0, self.foldersnameinput['is_active'])
         self.e2.insert(0, self.foldersnameinput['alias'])
@@ -117,7 +124,12 @@ class EditDialog(dialog.Dialog):
         self.e7.insert(0, self.foldersnameinput['ftp_username'])
         self.e8.insert(0, self.foldersnameinput['ftp_password'])
         self.e9.insert(0, self.foldersnameinput['email_to'])
-        self.e10.insert(0, self.foldersnameinput['email_destination_address'])
+        self.e10.insert(0, self.foldersnameinput['email_origin_address'])
+        self.e11.insert(0, self.foldersnameinput['email_origin_username'])
+        self.e12.insert(0, self.foldersnameinput['email_origin_password'])
+        self.e13.insert(0, self.foldersnameinput['email_origin_smtp_server'])
+
+
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
         self.e3.grid(row=2, column=1)
@@ -128,6 +140,9 @@ class EditDialog(dialog.Dialog):
         self.e8.grid(row=9, column=1)
         self.e9.grid(row=11, column=1)
         self.e10.grid(row=12, column=1)
+        self.e11.grid(row=13, column=1)
+        self.e12.grid(row=14, column=1)
+        self.e13.grid(row=15, column=1)
 
         return self.e1  # initial focus
 
@@ -157,7 +172,10 @@ class EditDialog(dialog.Dialog):
         foldersnameapply['ftp_username'] = str(self.e7.get())
         foldersnameapply['ftp_password'] = str(self.e8.get())
         foldersnameapply['email_to'] = str(self.e9.get())
-        foldersnameapply['email_destination_address'] = str(self.e10.get())
+        foldersnameapply['email_origin_address'] = str(self.e10.get())
+        foldersnameapply['email_origin_username'] = str(self.e11.get())
+        foldersnameapply['email_origin_password'] = str(self.e12.get())
+        foldersnameapply['email_origin_smtp_server'] = str(self.e13.get())
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 

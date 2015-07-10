@@ -1,5 +1,6 @@
 import copy_backend
 import ftp_backend
+import email_backend
 
 
 def process(folders_database):
@@ -9,3 +10,5 @@ def process(folders_database):
                 copy_backend.do(parameters_dict)
             if parameters_dict['process_backend'] == "ftp":
                 ftp_backend.do(parameters_dict)
+            if parameters_dict['process_backend'] == "email":
+                email_backend.do(parameters_dict)
