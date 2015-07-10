@@ -2,6 +2,11 @@ import os
 import shutil
 
 
+# this is a testing module for local file copies
+# note: process_parameters is a dict from a row in the database, passed into this module
+# TODO: error handling
+
+
 def do(process_parameters):
     os.chdir(process_parameters['foldersname'])
     for filename in os.listdir(process_parameters['foldersname']):

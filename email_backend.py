@@ -5,6 +5,12 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+# this module attempts to iterate over the specified folder and email them to the address specified
+# note: process_parameters is a dict from a row in the database, passed into this module
+# TODO: error handling
+
+
+
 def do(process_parameters):
     os.chdir(process_parameters['foldersname'])
     fromaddr = process_parameters['email_origin_address']
