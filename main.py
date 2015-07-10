@@ -2,7 +2,6 @@ from Tkinter import *
 from tkFileDialog import askdirectory
 import scrollbuttons
 import dataset
-import tkSimpleDialog
 import dialog
 import dispatch
 
@@ -16,7 +15,8 @@ optionsframe = Frame(root)
 
 def add_folder_entry():
     folderstable.insert(dict(foldersname=folder, is_active="False",
-                             alias=folder, process_backend='null'))
+                             alias=folder, process_backend='null', ftp_server='null', ftp_folder='null',
+                             ftp_username='null', ftp_password='null'))
 
 
 def process_directories(folderstable_process):
@@ -67,6 +67,7 @@ def make_users_list():
     inactive_users_list_container.pack(side=RIGHT)
     userslistframe.pack(side=RIGHT)
 
+
 class EditDialog(dialog.Dialog):
 
     def body(self, master):
@@ -81,6 +82,10 @@ class EditDialog(dialog.Dialog):
         Label(master, text="Copy Backend Settings").grid(row=3)
         Label(master, text="Copy Destination?").grid(row=4)
         Label(master, text="Ftp Backend Settings").grid(row=5)
+        Label(master, text="FTP Server:").grid(row=6)
+        Label(master, text="FTP Folder:").grid(row=7)
+        Label(master, text="FTP Username:").grid(row=8)
+        Label(master, text="FTP Password:").grid(row=9)
 
 
         def select_copy_to_directory():
@@ -94,14 +99,25 @@ class EditDialog(dialog.Dialog):
         self.e3 = Entry(master)
         self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
         self.e5 = Entry(master)
+        self.e6 = Entry(master)
+        self.e7 = Entry(master)
+        self.e8 = Entry(master)
 
         self.e1.insert(0, self.foldersnameinput['is_active'])
         self.e2.insert(0, self.foldersnameinput['alias'])
         self.e3.insert(0, self.foldersnameinput['process_backend'])
+        self.e5.insert(0, self.foldersnameinput['ftp_server'])
+        self.e6.insert(0, self.foldersnameinput['ftp_folder'])
+        self.e7.insert(0, self.foldersnameinput['ftp_username'])
+        self.e8.insert(0, self.foldersnameinput['ftp_password'])
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
         self.e3.grid(row=2, column=1)
         self.e4.grid(row=4, column=1)
+        self.e5.grid(row=6, column=1)
+        self.e6.grid(row=7, column=1)
+        self.e7.grid(row=8, column=1)
+        self.e8.grid(row=9, column=1)
 
         return self.e1  # initial focus
 
@@ -126,6 +142,10 @@ class EditDialog(dialog.Dialog):
         if destination_directory_is_altered is True:
             foldersnameapply['copy_to_directory'] = copytodirectory
         foldersnameapply['process_backend'] = str(self.e3.get())
+        foldersnameapply['ftp_server'] = str(self.e5.get())
+        foldersnameapply['ftp_folder'] = str(self.e6.get())
+        foldersnameapply['ftp_username'] = str(self.e7.get())
+        foldersnameapply['ftp_username']  = str(self.e8.get())
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
