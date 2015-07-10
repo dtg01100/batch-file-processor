@@ -145,7 +145,7 @@ class EditDialog(dialog.Dialog):
         foldersnameapply['ftp_server'] = str(self.e5.get())
         foldersnameapply['ftp_folder'] = str(self.e6.get())
         foldersnameapply['ftp_username'] = str(self.e7.get())
-        foldersnameapply['ftp_username']  = str(self.e8.get())
+        foldersnameapply['ftp_password'] = str(self.e8.get())
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
