@@ -19,7 +19,7 @@ folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 
 
-def add_folder_entry():  # add unconfigured folder to database
+def add_folder_entry(folder):  # add unconfigured folder to database
     defaults = oversight_and_defaults.find_one(id=1)
     print (defaults)
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
@@ -44,7 +44,8 @@ def add_folder_entry():  # add unconfigured folder to database
 
 
 def process_directories(folderstable_process):
-    dispatch.process(folderstable_process)  # call dispatch module to process active folders
+    reporting = oversight_and_defaults.find_one(id=1)
+    dispatch.process(folderstable_process, reporting)  # call dispatch module to process active folders
 
 
 def select_folder():
@@ -52,7 +53,7 @@ def select_folder():
     global column_entry_value
     folder = askdirectory()
     column_entry_value = folder
-    add_folder_entry()
+    add_folder_entry(folder)
     userslistframe.destroy()  # destroy lists on right
     make_users_list()  # recreate list
 
@@ -93,6 +94,63 @@ def make_users_list():
     inactive_users_list_container.pack(side=RIGHT)
     userslistframe.pack(side=RIGHT)
 
+class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
+    # note: this class makes no attempt to check correctness of input at the moment
+
+    def body(self, master):
+
+
+        Label(master, text="Reporting Email Address:").grid(row=0)
+        Label(master, text="Reporting Email Username:").grid(row=1)
+        Label(master, text="Reporting Email Password:").grid(row=2)
+        Label(master, text="Reporting Email SMTP Server:").grid(row=3)
+        Label(master, text="Reporting Email Destination:").grid(row=4)
+
+
+        self.e1 = Entry(master)
+        self.e2 = Entry(master)
+        self.e3 = Entry(master, show="*")
+        self.e4 = Entry(master)
+        self.e5 = Entry(master)
+
+        self.e1.insert(0, self.foldersnameinput['report_email_address'])
+        self.e2.insert(0, self.foldersnameinput['report_email_username'])
+        self.e3.insert(0, self.foldersnameinput['report_email_password'])
+        self.e4.insert(0, self.foldersnameinput['report_email_smtp_server'])
+        self.e5.insert(0, self.foldersnameinput['report_email_destination'])
+
+        self.e1.grid(row=0, column=1)
+        self.e2.grid(row=1, column=1)
+        self.e3.grid(row=2, column=1)
+        self.e4.grid(row=3, column=1)
+        self.e5.grid(row=4, column=1)
+
+
+        return self.e1  # initial focus
+
+    def ok(self, event=None):
+
+        if not self.validate():
+            self.initial_focus.focus_set()  # put focus back
+            return
+
+        self.withdraw()
+        self.update_idletasks()
+
+        self.apply(self.foldersnameinput)
+
+        self.cancel()
+
+    def apply(self, foldersnameapply):
+
+        foldersnameapply['report_email_address'] = str(self.e1.get())
+        foldersnameapply['report_email_username'] = str(self.e2.get())
+        foldersnameapply['report_email_password'] = str(self.e3.get())
+        foldersnameapply['report_email_smtp_server'] = str(self.e4.get())
+        foldersnameapply['report_email_destination'] = str(self.e5.get())
+
+        print (foldersnameapply)
+        update_reporting(foldersnameapply)
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
     # note: this class makes no attempt to check correctness of input at the moment
@@ -243,6 +301,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
+def update_reporting(changes):
+    oversight_and_defaults.update(changes, ['id'])
 
 def update_folder_alias(folderedit):  # update folder settings in database with results from EditDialog
     folderstable.update(folderedit, ['id'])
@@ -266,6 +326,9 @@ process_folder_button = Button(optionsframe, text="Process Folders", command=lam
 process_folder_button.pack(side=TOP)
 default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
 default_settings.pack(side=TOP)
+reporting_options = oversight_and_defaults.find_one(id=1)
+edit_reporting = Button(optionsframe, text="Edit Reporting", command=lambda: EditReportingDialog(root, reporting_options))
+edit_reporting.pack(side=TOP)
 optionsframe.pack(side=LEFT)
 
 make_users_list()

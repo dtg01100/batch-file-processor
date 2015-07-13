@@ -12,7 +12,7 @@ import error_handler
 # TODO: error reporting
 
 
-def process(folders_database):
+def process(folders_database, reporting):
     for parameters_dict in folders_database.all():
         if parameters_dict['is_active'] == "True":
             os.chdir(parameters_dict['foldersname'])
@@ -80,12 +80,16 @@ def process(folders_database):
                     try:
                         shutil.move(str(filename), parameters_dict['foldersname'] + "/obe/")
                     except Exception:
-                        errors_log.write("Can't move file " + str(filename) + "\n")
+                        errors_log.write("Operation Successful, but can't move file " + str(filename) + "\n")
+                        print("Can't move file " + str(filename) + "\n")
+                        errors += errors + 1
             errors_log.close()
             if errors > 0:
                 try:
-                    error_handler.do(parameters_dict, error_log_name_fullpath)
+                    print ("Sending Error Log.")
+                    error_handler.do(parameters_dict, error_log_name_fullpath, reporting)
                 except Exception, error:
+                    print ("Sending Error Log Failed.")
                     errors_log = open(error_log_name_fullpath, 'a')
                     errors_log.write("Error Sending Errors Log" + "\n")
                     errors_log.write(str(error))
