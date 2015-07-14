@@ -19,72 +19,83 @@ def process(folders_database, reporting):
             print (parameters_dict['foldersname'])
             try:
                 os.stat(parameters_dict['foldersname'] + "/obe/")
-            except:
+            except Exception, error:
+                print(str(error))
+                print("Error folder not found for " + parameters_dict['foldersname'] + ", " + "making one")
                 os.mkdir(parameters_dict['foldersname'] + "/obe/")
             try:
                 os.stat(parameters_dict['foldersname'] + "/errors/")
-            except:
+            except Exception, error:
+                print str(error)
+                print("Error folder not found for " + parameters_dict['foldersname'] + ", " + "making one")
                 os.mkdir(parameters_dict['foldersname'] + "/errors/")
             error_log_name_constructor = "errors." + str(int(time.time())) + ".txt"
             error_log_name_fullpath = parameters_dict['foldersname'] + "/errors/" + error_log_name_constructor
             errors_log = open(error_log_name_fullpath, 'w')
             files = [f for f in os.listdir('.') if os.path.isfile(f)]
-            errors = 0
+            errors = False
             for filename in files:
                 print filename
+                errors = False
                 if parameters_dict['process_edi'] == "True":
                     try:
                         converter.edi_convert(parameters_dict, filename, filename + ".csv", parameters_dict['calc_upc'],
-                                                     parameters_dict['inc_arec'], parameters_dict['inc_crec'],
-                                                     parameters_dict['inc_headers'],
-                                                     parameters_dict['filter_ampersand'],
-                                                     parameters_dict['pad_arec'],
-                                                     parameters_dict['arec_padding'])
+                                              parameters_dict['inc_arec'], parameters_dict['inc_crec'],
+                                              parameters_dict['inc_headers'],
+                                              parameters_dict['filter_ampersand'],
+                                              parameters_dict['pad_arec'],
+                                              parameters_dict['arec_padding'])
                         try:
                             shutil.move(str(filename), parameters_dict['foldersname'] + "/obe/")
-                        except IOError:
-                            print (IOError)
-                            errors += errors + 1
+                        except Exception, error:
+                            print str(error)
+                            errors = True
+                            errors_log.write("Error Moving " + filename + " To OBE Directory.\n")
+                            errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                            errors_log.write("Skipping File\n")
                         filename = filename + ".csv"
-                    except:
-                        print Exception
-                        errors += errors + 1
+                    except Exception, error:
+                        print str(error)
+                        errors = True
+                        errors_log.write("Error Converting " + filename + " To CSV.\n")
+                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
                         # error_handler.do(parameters_dict, filename)
-                if parameters_dict['process_backend'] == "copy":
+                if parameters_dict['process_backend'] == "copy" and errors is False:
                     try:
                         copy_backend.do(parameters_dict, filename)
                     except Exception, error:
-                        print error
+                        print str(error)
                         errors_log.write("Copy Backend Error For File: " + filename + "\n")
-                        errors_log.write(str(error) + "\n")
-                        errors += errors + 1
+                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors = True
                         # error_handler.do(parameters_dict, filename)
-                if parameters_dict['process_backend'] == "ftp":
+                if parameters_dict['process_backend'] == "ftp" and errors is False:
                     try:
                         ftp_backend.do(parameters_dict, filename)
                     except Exception, error:
-                        print error
+                        print str(error)
                         errors_log.write("FTP Backend Error For File: " + filename + "\n")
-                        errors_log.write(str(error) + "\n")
-                        errors += errors + 1
+                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors = True
                         # error_handler.do(parameters_dict, filename)
-                if parameters_dict['process_backend'] == "email":
+                if parameters_dict['process_backend'] == "email" and errors is False:
                     try:
                         email_backend.do(parameters_dict, filename)
                     except Exception, error:
                         errors_log.write("Email Backend Error For File: " + filename + "\n")
-                        errors_log.write(str(error) + "\n")
+                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
                         # error_handler.do(parameters_dict, filename)
-                        errors += errors + 1
-                if errors < 1:
+                        errors = True
+                if errors is False:
                     try:
                         shutil.move(str(filename), parameters_dict['foldersname'] + "/obe/")
-                    except Exception:
+                    except Exception, error:
                         errors_log.write("Operation Successful, but can't move file " + str(filename) + "\n")
+                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
                         print("Can't move file " + str(filename) + "\n")
-                        errors += errors + 1
+                        errors = True
             errors_log.close()
-            if errors > 0:
+            if errors is True:
                 try:
                     print ("Sending Error Log.")
                     error_handler.do(parameters_dict, error_log_name_fullpath, reporting)
@@ -92,5 +103,5 @@ def process(folders_database, reporting):
                     print ("Sending Error Log Failed.")
                     errors_log = open(error_log_name_fullpath, 'a')
                     errors_log.write("Error Sending Errors Log" + "\n")
-                    errors_log.write(str(error))
+                    errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
                     errors_log.close()

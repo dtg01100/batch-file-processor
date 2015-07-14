@@ -13,7 +13,7 @@ def add_check_digit(upc_str):
 
     upc_str = str(upc_str)
     if len(upc_str) != 11:
-        raise Exception("Invalid length")
+        raise Exception("InvalidLength")
 
     odd_sum = 0
     even_sum = 0
