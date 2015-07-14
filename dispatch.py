@@ -36,7 +36,6 @@ def process(folders_database, reporting):
             errors = False
             for filename in files:
                 print filename
-                errors = False
                 if parameters_dict['process_edi'] == "True":
                     try:
                         converter.edi_convert(parameters_dict, filename, filename + ".csv", parameters_dict['calc_upc'],
