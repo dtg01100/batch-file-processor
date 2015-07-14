@@ -49,23 +49,26 @@ def process(folders_database, reporting):
                         except Exception, error:
                             print str(error)
                             errors = True
-                            errors_log.write("Error Moving " + filename + " To OBE Directory.\n")
-                            errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
-                            errors_log.write("Skipping File\n")
+                            errors_log.write("Error Moving " + filename + " To OBE Directory." + "\r\n")
+                            errors_log.write("Error Message is:" + "\r\n")
+                            errors_log.write(str(error) + "\r\n")
+                            errors_log.write("Skipping File" + "\r\n")
                         filename = filename + ".csv"
                     except Exception, error:
                         print str(error)
                         errors = True
-                        errors_log.write("Error Converting " + filename + " To CSV.\n")
-                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors_log.write("Error Converting " + filename + " To CSV." + "\r\n")
+                        errors_log.write("Error Message is:" + "\r\n")
+                        errors_log.write(str(error) + "\r\n")
                         # error_handler.do(parameters_dict, filename)
                 if parameters_dict['process_backend'] == "copy" and errors is False:
                     try:
                         copy_backend.do(parameters_dict, filename)
                     except Exception, error:
                         print str(error)
-                        errors_log.write("Copy Backend Error For File: " + filename + "\n")
-                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors_log.write("Copy Backend Error For File: " + filename + "\r\n")
+                        errors_log.write("Error Message is:" + "\r\n")
+                        errors_log.write(str(error) + "\r\n")
                         errors = True
                         # error_handler.do(parameters_dict, filename)
                 if parameters_dict['process_backend'] == "ftp" and errors is False:
@@ -73,25 +76,26 @@ def process(folders_database, reporting):
                         ftp_backend.do(parameters_dict, filename)
                     except Exception, error:
                         print str(error)
-                        errors_log.write("FTP Backend Error For File: " + filename + "\n")
-                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors_log.write("FTP Backend Error For File: " + filename + "\r\n")
+                        errors_log.write("Error Message is:" + "\r\n")
+                        errors_log.write(str(error) + "\r\n")
                         errors = True
                         # error_handler.do(parameters_dict, filename)
                 if parameters_dict['process_backend'] == "email" and errors is False:
                     try:
                         email_backend.do(parameters_dict, filename)
                     except Exception, error:
-                        errors_log.write("Email Backend Error For File: " + filename + "\n")
-                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                        errors_log.write("Error Message is:" + "\r\n")
+                        errors_log.write(str(error) + "\r\n")
                         # error_handler.do(parameters_dict, filename)
                         errors = True
                 if errors is False:
                     try:
                         shutil.move(str(filename), parameters_dict['foldersname'] + "/obe/")
                     except Exception, error:
-                        errors_log.write("Operation Successful, but can't move file " + str(filename) + "\n")
-                        errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
-                        print("Can't move file " + str(filename) + "\n")
+                        errors_log.write("Operation Successful, but can't move file " + str(filename) + "\r\n")
+                        errors_log.write("Error Message is:" + "\r\n")
+                        errors_log.write(str(error) + "\r\n")
                         errors = True
             errors_log.close()
             if errors is True:
@@ -101,6 +105,7 @@ def process(folders_database, reporting):
                 except Exception, error:
                     print ("Sending Error Log Failed.")
                     errors_log = open(error_log_name_fullpath, 'a')
-                    errors_log.write("Error Sending Errors Log" + "\n")
-                    errors_log.write("Error Message is:" + "\n" + str(error) + "\n")
+                    errors_log.write("Error Sending Errors Log" + "\r\n")
+                    errors_log.write("Error Message is:" + "\r\n")
+                    errors_log.write(str(error) + "\r\n")
                     errors_log.close()

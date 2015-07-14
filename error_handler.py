@@ -17,10 +17,7 @@ def do(process_parameters, filename, reporting):
 
     filename = filename
 
-    with open(filename, "r") as myfile:
-        data = myfile.read()
-
-    body = data
+    body = "See attached error log."
 
     msg.attach(MIMEText(body, 'plain'))
 
