@@ -6,18 +6,26 @@ import dialog
 import dispatch
 import os
 import create_database
+import time
+import datetime
+import batch_log_sender
 
 if not os.path.isfile('folders.db'):
     create_database.do()
 
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 folderstable = database_connection['folders']  # open table in database
+emails_table = database_connection['emails_to_send']
+failed_emails_table = database_connection['failed_emails']
 oversight_and_defaults = database_connection['administrative']
 root = Tk()  # create root window
 root.title("Sender Interface")
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 
+logs_directory = oversight_and_defaults.find_one(id=1)
+if not os.path.isdir(logs_directory['logs_directory']):
+    os.mkdir(logs_directory['logs_directory'])
 
 def add_folder_entry(folder):  # add unconfigured folder to database
     defaults = oversight_and_defaults.find_one(id=1)
@@ -44,8 +52,16 @@ def add_folder_entry(folder):  # add unconfigured folder to database
 
 
 def process_directories(folderstable_process):
+    global emails_table
+    start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
-    dispatch.process(folderstable_process, reporting)  # call dispatch module to process active folders
+    run_log_name_constructor = "Run Log " + str(int(time.time())) + ".txt"
+    run_log_fullpath = reporting['logs_directory'] + run_log_name_constructor
+    run_log = open(run_log_fullpath, 'w')
+    # call dispatch module to process active folders
+    dispatch.process(folderstable_process, run_log, emails_table)
+    emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
+    batch_log_sender.do(reporting, emails_table, start_time)
 
 
 def select_folder():
@@ -99,12 +115,18 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def body(self, master):
 
+        global logs_directory_edit
+        logs_directory_edit = None
+        global logs_directory_is_altered
+        logs_directory_is_altered = False
+
 
         Label(master, text="Reporting Email Address:").grid(row=0)
         Label(master, text="Reporting Email Username:").grid(row=1)
         Label(master, text="Reporting Email Password:").grid(row=2)
         Label(master, text="Reporting Email SMTP Server:").grid(row=3)
         Label(master, text="Reporting Email Destination:").grid(row=4)
+        Label(master, text="Log File Folder").grid(row=5)
 
 
         self.e1 = Entry(master)
@@ -112,6 +134,15 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.e3 = Entry(master, show="*")
         self.e4 = Entry(master)
         self.e5 = Entry(master)
+        self.e6 = Button(master, text="Select Folder", command=lambda: select_log_directory())
+
+
+        def select_log_directory():
+            global logs_directory_edit
+            global logs_directory_is_altered
+            logs_directory_edit = str(askdirectory())
+            logs_directory_is_altered = True
+
 
         self.e1.insert(0, self.foldersnameinput['report_email_address'])
         self.e2.insert(0, self.foldersnameinput['report_email_username'])
@@ -124,7 +155,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.e3.grid(row=2, column=1)
         self.e4.grid(row=3, column=1)
         self.e5.grid(row=4, column=1)
-
+        self.e6.grid(row=5, column=1)
 
         return self.e1  # initial focus
 
@@ -143,6 +174,11 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def apply(self, foldersnameapply):
 
+        global logs_directory_edit
+        global logs_directory_is_altered
+
+        if logs_directory_is_altered is True:
+            foldersnameapply['log_directory'] = logs_directory_edit
         foldersnameapply['report_email_address'] = str(self.e1.get())
         foldersnameapply['report_email_username'] = str(self.e2.get())
         foldersnameapply['report_email_password'] = str(self.e3.get())
