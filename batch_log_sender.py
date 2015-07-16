@@ -3,6 +3,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import os
 
 
 def do(reporting, emails_table, time):
@@ -19,14 +20,18 @@ def do(reporting, emails_table, time):
     msg.attach(MIMEText(body, 'plain'))
 
     for log in emails_table.all():
+        print (log)
 
         filename = log['log']
-        attachment = open(filename)
+        print str(filename)
+        attachment = open(filename, "r")
+
+        head, tail = os.path.split(filename)
 
         part = MIMEBase('application', 'octet-stream')
-        part.set_payload(attachment).read()
+        part.set_payload(attachment.read())
         encoders.encode_base64(part)
-        part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+        part.add_header('Content-Disposition', "attachment; filename= %s" % tail)
 
         msg.attach(part)
 
