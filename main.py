@@ -9,6 +9,7 @@ import create_database
 import time
 import datetime
 import batch_log_sender
+import print_run_log
 
 if not os.path.isfile('folders.db'):
     create_database.do()
@@ -16,7 +17,7 @@ if not os.path.isfile('folders.db'):
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 folderstable = database_connection['folders']  # open table in database
 emails_table = database_connection['emails_to_send']
-failed_emails_table = database_connection['failed_emails']
+sent_emails_removal_queue= database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
 root = Tk()  # create root window
 root.title("Sender Interface")
@@ -56,13 +57,37 @@ def process_directories(folderstable_process):
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
     run_log_name_constructor = "Run Log " + str(int(time.time())) + ".txt"
-    run_log_fullpath = reporting['logs_directory'] + run_log_name_constructor
+    run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
     # call dispatch module to process active folders
-    dispatch.process(folderstable_process, run_log, emails_table)
+    try:
+        dispatch.process(folderstable_process, run_log, emails_table)
+        refresh_users_list()
+    except Exception, error:
+        print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+        run_log.write("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
     emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
-    batch_log_sender.do(reporting, emails_table, start_time)
-
+    run_log.close()
+    try:
+        sent_emails_removal_queue.delete()
+        batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
+        for line in sent_emails_removal_queue.all():
+            emails_table.delete(log=str(line['log']))
+        sent_emails_removal_queue.delete()
+    except Exception, error:
+        run_log = open(run_log_fullpath, 'a')
+        print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+        run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+        run_log.close()
+        try:
+            run_log = open(run_log_fullpath, 'r')
+            print_run_log.do(run_log)
+            run_log.close()
+        except Exception, error:
+            print("printing error log failed with error: " + str(error) + "\r\n")
+            run_log = open(run_log_fullpath, 'a')
+            run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
+            run_log.close()
 
 def select_folder():
     global folder

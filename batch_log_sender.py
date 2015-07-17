@@ -5,8 +5,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import os
 
-
-def do(reporting, emails_table, time):
+def do(reporting, emails_table, sent_emails_removal_queue, time):
     fromaddr = reporting['report_email_address']
     toaddr = reporting['report_email_destination']
     msg = MIMEMultipart()
@@ -34,6 +33,8 @@ def do(reporting, emails_table, time):
         part.add_header('Content-Disposition', "attachment; filename= %s" % tail)
 
         msg.attach(part)
+
+        sent_emails_removal_queue.insert(log)
 
     server = smtplib.SMTP(reporting['report_email_smtp_server'], 587)
     server.starttls()
