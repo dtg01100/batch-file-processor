@@ -27,7 +27,7 @@ def process(folders_database, run_log, emails_table):
                     print("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
                     run_log.write("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
                     os.mkdir(os.path.join(parameters_dict['foldersname'], "obe"))
-                folder_error_log_name_constructor = parameters_dict['alias'] + " errors." + str(int(time.time())) + ".txt"
+                folder_error_log_name_constructor = parameters_dict['alias'] + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
                 folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                 folder_errors_log = cStringIO.StringIO()
                 print (str(parameters_dict))

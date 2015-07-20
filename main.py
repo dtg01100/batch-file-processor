@@ -56,9 +56,10 @@ def process_directories(folderstable_process):
     global emails_table
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
-    run_log_name_constructor = "Run Log " + str(int(time.time())) + ".txt"
+    run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
     run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
+    run_log.write("starting run at " + time.ctime())
     # call dispatch module to process active folders
     try:
         dispatch.process(folderstable_process, run_log, emails_table)
@@ -93,10 +94,11 @@ def select_folder():
     global folder
     global column_entry_value
     folder = askdirectory()
-    column_entry_value = folder
-    add_folder_entry(folder)
-    userslistframe.destroy()  # destroy lists on right
-    make_users_list()  # recreate list
+    if folder != '':
+        column_entry_value = folder
+        add_folder_entry(folder)
+        userslistframe.destroy()  # destroy lists on right
+        make_users_list()  # recreate list
 
 
 def make_users_list():
