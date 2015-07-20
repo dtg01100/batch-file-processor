@@ -1,5 +1,6 @@
 from Tkinter import *
 from tkFileDialog import askdirectory
+from ttk import *
 import scrollbuttons
 import dataset
 import dialog
@@ -17,7 +18,7 @@ if not os.path.isfile('folders.db'):
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 folderstable = database_connection['folders']  # open table in database
 emails_table = database_connection['emails_to_send']
-sent_emails_removal_queue= database_connection['sent_emails_removal_queue']
+sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
 root = Tk()  # create root window
 root.title("Sender Interface")
@@ -28,25 +29,26 @@ logs_directory = oversight_and_defaults.find_one(id=1)
 if not os.path.isdir(logs_directory['logs_directory']):
     os.mkdir(logs_directory['logs_directory'])
 
+
 def add_folder_entry(folder):  # add unconfigured folder to database
     defaults = oversight_and_defaults.find_one(id=1)
     print (defaults)
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
-                            alias=folder, process_backend=defaults['process_backend'], 
-                             ftp_server=defaults['ftp_server'], 
+                             alias=folder, process_backend=defaults['process_backend'],
+                             ftp_server=defaults['ftp_server'],
                              ftp_folder=defaults['ftp_folder'],
-                             ftp_username=defaults['ftp_username'], 
+                             ftp_username=defaults['ftp_username'],
                              ftp_password=defaults['ftp_password'],
-                             email_to=defaults['email_to'], 
-                             email_origin_address=defaults['email_origin_address'], 
+                             email_to=defaults['email_to'],
+                             email_origin_address=defaults['email_origin_address'],
                              email_origin_username=defaults['email_origin_username'],
-                             email_origin_password=defaults['email_origin_password'], 
+                             email_origin_password=defaults['email_origin_password'],
                              email_origin_smtp_server=defaults['email_origin_smtp_server'],
-                             process_edi=defaults['process_edi'], 
+                             process_edi=defaults['process_edi'],
                              calc_upc=defaults['calc_upc'],
-                             inc_arec=defaults['inc_arec'], 
-                             inc_crec=defaults['inc_crec'], 
-                             inc_headers=defaults['inc_headers'], 
+                             inc_arec=defaults['inc_arec'],
+                             inc_crec=defaults['inc_crec'],
+                             inc_headers=defaults['inc_headers'],
                              filter_ampersand=defaults['filter_ampersand'],
                              pad_arec=defaults['pad_arec'],
                              arec_padding=defaults['arec_padding']))
@@ -59,36 +61,44 @@ def process_directories(folderstable_process):
     run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
     run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
-    run_log.write("starting run at " + time.ctime())
+    run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
         dispatch.process(folderstable_process, run_log, emails_table)
         refresh_users_list()
     except Exception, error:
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
-        run_log.write("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+        run_log.write(
+            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
     emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
     run_log.close()
-    try:
-        sent_emails_removal_queue.delete()
-        batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
-        for line in sent_emails_removal_queue.all():
-            emails_table.delete(log=str(line['log']))
-        sent_emails_removal_queue.delete()
-    except Exception, error:
-        run_log = open(run_log_fullpath, 'a')
-        print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-        run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-        run_log.close()
+    if reporting['enable_reporting'] == "True":
         try:
-            run_log = open(run_log_fullpath, 'r')
-            print_run_log.do(run_log)
-            run_log.close()
+            sent_emails_removal_queue.delete()
+            batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
+            for line in sent_emails_removal_queue.all():
+                emails_table.delete(log=str(line['log']))
+            sent_emails_removal_queue.delete()
         except Exception, error:
-            print("printing error log failed with error: " + str(error) + "\r\n")
             run_log = open(run_log_fullpath, 'a')
-            run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
+            print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+            run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
             run_log.close()
+            if reporting['report_printing_fallback'] == "True":
+                try:
+                    run_log = open(run_log_fullpath, 'r')
+                    print_run_log.do(run_log)
+                    run_log.close()
+                except Exception, error:
+                    print("printing error log failed with error: " + str(error) + "\r\n")
+                    run_log = open(run_log_fullpath, 'a')
+                    run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
+                    run_log.close()
+            else:
+                run_log = open(run_log_fullpath, 'a')
+                run_log.write("Report printing fallback disabled")
+                run_log.close()
+
 
 def select_folder():
     global folder
@@ -99,7 +109,6 @@ def select_folder():
         add_folder_entry(folder)
         userslistframe.destroy()  # destroy lists on right
         make_users_list()  # recreate list
-
 
 def make_users_list():
     global userslistframe
@@ -137,6 +146,7 @@ def make_users_list():
     inactive_users_list_container.pack(side=RIGHT)
     userslistframe.pack(side=RIGHT)
 
+
 class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
     # note: this class makes no attempt to check correctness of input at the moment
 
@@ -146,23 +156,26 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         logs_directory_edit = None
         global logs_directory_is_altered
         logs_directory_is_altered = False
+        self.enable_reporting_checkbutton = StringVar(master)
+        self.enable_report_printing_checkbutton = StringVar(master)
 
+        Label(master, text="Enable Report Sending:").grid(row=0)
+        Label(master, text="Reporting Email Address:").grid(row=1)
+        Label(master, text="Reporting Email Username:").grid(row=2)
+        Label(master, text="Reporting Email Password:").grid(row=3)
+        Label(master, text="Reporting Email SMTP Server:").grid(row=4)
+        Label(master, text="Reporting Email Destination:").grid(row=5)
+        Label(master, text="Log File Folder").grid(row=6)
+        Label(master, text="Enable Report Printing Fallback:").grid(row=7)
 
-        Label(master, text="Reporting Email Address:").grid(row=0)
-        Label(master, text="Reporting Email Username:").grid(row=1)
-        Label(master, text="Reporting Email Password:").grid(row=2)
-        Label(master, text="Reporting Email SMTP Server:").grid(row=3)
-        Label(master, text="Reporting Email Destination:").grid(row=4)
-        Label(master, text="Log File Folder").grid(row=5)
-
-
+        self.e0 = Checkbutton(master, variable=self.enable_reporting_checkbutton, onvalue="True", offvalue="False")
         self.e1 = Entry(master)
         self.e2 = Entry(master)
         self.e3 = Entry(master, show="*")
         self.e4 = Entry(master)
         self.e5 = Entry(master)
         self.e6 = Button(master, text="Select Folder", command=lambda: select_log_directory())
-
+        self.e7 = Checkbutton(master, variable=self.enable_report_printing_checkbutton, onvalue="True", offvalue="False")
 
         def select_log_directory():
             global logs_directory_edit
@@ -170,19 +183,22 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             logs_directory_edit = str(askdirectory())
             logs_directory_is_altered = True
 
-
+        self.enable_reporting_checkbutton.set(self.foldersnameinput['enable_reporting'])
         self.e1.insert(0, self.foldersnameinput['report_email_address'])
         self.e2.insert(0, self.foldersnameinput['report_email_username'])
         self.e3.insert(0, self.foldersnameinput['report_email_password'])
         self.e4.insert(0, self.foldersnameinput['report_email_smtp_server'])
         self.e5.insert(0, self.foldersnameinput['report_email_destination'])
+        self.enable_report_printing_checkbutton.set(self.foldersnameinput['report_printing_fallback'])
 
-        self.e1.grid(row=0, column=1)
-        self.e2.grid(row=1, column=1)
-        self.e3.grid(row=2, column=1)
-        self.e4.grid(row=3, column=1)
-        self.e5.grid(row=4, column=1)
-        self.e6.grid(row=5, column=1)
+        self.e0.grid(row=0, column=1)
+        self.e1.grid(row=1, column=1)
+        self.e2.grid(row=2, column=1)
+        self.e3.grid(row=3, column=1)
+        self.e4.grid(row=4, column=1)
+        self.e5.grid(row=5, column=1)
+        self.e6.grid(row=6, column=1)
+        self.e7.grid(row=7, column=1)
 
         return self.e1  # initial focus
 
@@ -204,6 +220,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         global logs_directory_edit
         global logs_directory_is_altered
 
+        foldersnameapply['enable_reporting'] = str(self.enable_reporting_checkbutton.get())
         if logs_directory_is_altered is True:
             foldersnameapply['log_directory'] = logs_directory_edit
         foldersnameapply['report_email_address'] = str(self.e1.get())
@@ -215,6 +232,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         print (foldersnameapply)
         update_reporting(foldersnameapply)
 
+
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
     # note: this class makes no attempt to check correctness of input at the moment
 
@@ -224,30 +242,39 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         copytodirectory = None
         global destination_directory_is_altered
         destination_directory_is_altered = False
-        Label(master, text="Active?").grid(row=0)
-        Label(master, text="Alias:").grid(row=1)
-        Label(master, text="Backend?").grid(row=2)
-        Label(master, text="Copy Backend Settings").grid(row=3)
-        Label(master, text="Copy Destination?").grid(row=4)
-        Label(master, text="Ftp Backend Settings").grid(row=5)
-        Label(master, text="FTP Server:").grid(row=6)
-        Label(master, text="FTP Folder:").grid(row=7)
-        Label(master, text="FTP Username:").grid(row=8)
-        Label(master, text="FTP Password:").grid(row=9)
-        Label(master, text="Email Backend Settings").grid(row=10)
-        Label(master, text="Recipient Address:").grid(row=11)
-        Label(master, text="Sender Address:").grid(row=12)
-        Label(master, text="Sender Username:").grid(row=13)
-        Label(master, text="Sender Password:").grid(row=14)
-        Label(master, text="Sender Smtp Server:").grid(row=15)
-        Label(master, text="Process EDI?").grid(row=0, column=3)
-        Label(master, text="Calculate UPC Check Digit:").grid(row=1, column=3)
-        Label(master, text="Include " + "A " + "Records:").grid(row=2, column=3)
-        Label(master, text="Include " + "C " + "Records:").grid(row=3, column=3)
-        Label(master, text="Include Headings:").grid(row=4, column=3)
-        Label(master, text="Filter Ampersand:").grid(row=5, column=3)
-        Label(master, text="Pad " + "A " + "Records:").grid(row=6, column=3)
-        Label(master, text="A " + "Record Padding:").grid(row=7, column=3)
+        self.backendvariable = StringVar(master)
+        self.active_checkbutton = StringVar(master)
+        self.process_edi = StringVar(master)
+        self.upc_var_check = StringVar(master)  # define  "UPC calculation" checkbox state variable
+        self.a_rec_var_check = StringVar(master)  # define "A record checkbox state variable
+        self.c_rec_var_check = StringVar(master)  # define "C record" checkbox state variable
+        self.c_headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
+        self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
+        self.pad_arec_check = StringVar(master)
+        Label(master, text="Active?").grid(row=0, sticky=E)
+        Label(master, text="Alias:").grid(row=1, sticky=E)
+        Label(master, text="Backend?").grid(row=2, sticky=E)
+        Label(master, text="Copy Backend Settings").grid(row=3, sticky=E)
+        Label(master, text="Copy Destination?").grid(row=4, sticky=E)
+        Label(master, text="Ftp Backend Settings").grid(row=5, sticky=E)
+        Label(master, text="FTP Server:").grid(row=6, sticky=E)
+        Label(master, text="FTP Folder:").grid(row=7, sticky=E)
+        Label(master, text="FTP Username:").grid(row=8, sticky=E)
+        Label(master, text="FTP Password:").grid(row=9, sticky=E)
+        Label(master, text="Email Backend Settings").grid(row=10, sticky=E)
+        Label(master, text="Recipient Address:").grid(row=11, sticky=E)
+        Label(master, text="Sender Address:").grid(row=12, sticky=E)
+        Label(master, text="Sender Username:").grid(row=13, sticky=E)
+        Label(master, text="Sender Password:").grid(row=14, sticky=E)
+        Label(master, text="Sender Smtp Server:").grid(row=15, sticky=E)
+        Label(master, text="Process EDI?").grid(row=0, column=3, sticky=E)
+        Label(master, text="Calculate UPC Check Digit:").grid(row=1, column=3, sticky=E)
+        Label(master, text="Include " + "A " + "Records:").grid(row=2, column=3, sticky=E)
+        Label(master, text="Include " + "C " + "Records:").grid(row=3, column=3, sticky=E)
+        Label(master, text="Include Headings:").grid(row=4, column=3, sticky=E)
+        Label(master, text="Filter Ampersand:").grid(row=5, column=3, sticky=E)
+        Label(master, text="Pad " + "A " + "Records:").grid(row=6, column=3, sticky=E)
+        Label(master, text="A " + "Record Padding:").grid(row=7, column=3, sticky=E)
 
         def select_copy_to_directory():
             global copytodirectory
@@ -255,9 +282,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copytodirectory = str(askdirectory())
             destination_directory_is_altered = True
 
-        self.e1 = Entry(master)
+        self.e1 = Checkbutton(master, variable=self.active_checkbutton, onvalue="True", offvalue="False")
         self.e2 = Entry(master)
-        self.e3 = Entry(master)
+        self.e3 = OptionMenu(master, self.backendvariable, "none", "copy", "ftp", "email")
         self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
         self.e5 = Entry(master)
         self.e6 = Entry(master)
@@ -268,18 +295,18 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e11 = Entry(master)
         self.e12 = Entry(master, show="*")
         self.e13 = Entry(master)
-        self.e14 = Entry(master)
-        self.e15 = Entry(master)
-        self.e16 = Entry(master)
-        self.e17 = Entry(master)
-        self.e18 = Entry(master)
-        self.e19 = Entry(master)
-        self.e20 = Entry(master)
+        self.e14 = Checkbutton(master, variable=self.process_edi, onvalue="True", offvalue="False")
+        self.e15 = Checkbutton(master, variable=self.upc_var_check, onvalue="True", offvalue="False")
+        self.e16 = Checkbutton(master, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
+        self.e17 = Checkbutton(master, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
+        self.e18 = Checkbutton(master, variable=self.c_headers_check, onvalue="True", offvalue="False")
+        self.e19 = Checkbutton(master, variable=self.ampersand_check, onvalue="True", offvalue="False")
+        self.e20 = Checkbutton(master, variable=self.pad_arec_check, onvalue="True", offvalue="False")
         self.e21 = Entry(master)
 
-        self.e1.insert(0, self.foldersnameinput['is_active'])
+        self.active_checkbutton.set(self.foldersnameinput['is_active'])
         self.e2.insert(0, self.foldersnameinput['alias'])
-        self.e3.insert(0, self.foldersnameinput['process_backend'])
+        self.backendvariable.set(self.foldersnameinput['process_backend'])
         self.e5.insert(0, self.foldersnameinput['ftp_server'])
         self.e6.insert(0, self.foldersnameinput['ftp_folder'])
         self.e7.insert(0, self.foldersnameinput['ftp_username'])
@@ -289,13 +316,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e11.insert(0, self.foldersnameinput['email_origin_username'])
         self.e12.insert(0, self.foldersnameinput['email_origin_password'])
         self.e13.insert(0, self.foldersnameinput['email_origin_smtp_server'])
-        self.e14.insert(0, self.foldersnameinput['process_edi'])
-        self.e15.insert(0, self.foldersnameinput['calc_upc'])
-        self.e16.insert(0, self.foldersnameinput['inc_arec'])
-        self.e17.insert(0, self.foldersnameinput['inc_crec'])
-        self.e18.insert(0, self.foldersnameinput['inc_headers'])
-        self.e19.insert(0, self.foldersnameinput['filter_ampersand'])
-        self.e20.insert(0, self.foldersnameinput['pad_arec'])
+        self.process_edi.set(self.foldersnameinput['process_edi'])
+        self.upc_var_check.set(self.foldersnameinput['calc_upc'])
+        self.a_rec_var_check.set(self.foldersnameinput['inc_arec'])
+        self.c_rec_var_check.set(self.foldersnameinput['inc_crec'])
+        self.c_headers_check.set(self.foldersnameinput['inc_headers'])
+        self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
+        self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
         self.e21.insert(0, self.foldersnameinput['arec_padding'])
 
         self.e1.grid(row=0, column=1)
@@ -338,11 +365,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
     def apply(self, foldersnameapply):
         global copytodirectory
         global destination_directory_is_altered
-        foldersnameapply['is_active'] = str(self.e1.get())
+        foldersnameapply['is_active'] = str(self.active_checkbutton.get())
         foldersnameapply['alias'] = str(self.e2.get())
         if destination_directory_is_altered is True:
             foldersnameapply['copy_to_directory'] = copytodirectory
-        foldersnameapply['process_backend'] = str(self.e3.get())
+        foldersnameapply['process_backend'] = str(self.backendvariable.get())
         foldersnameapply['ftp_server'] = str(self.e5.get())
         foldersnameapply['ftp_folder'] = str(self.e6.get())
         foldersnameapply['ftp_username'] = str(self.e7.get())
@@ -352,46 +379,53 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         foldersnameapply['email_origin_username'] = str(self.e11.get())
         foldersnameapply['email_origin_password'] = str(self.e12.get())
         foldersnameapply['email_origin_smtp_server'] = str(self.e13.get())
-        foldersnameapply['process_edi'] = str(self.e14.get())
-        foldersnameapply['calc_upc'] = str(self.e15.get())
-        foldersnameapply['inc_arec'] = str(self.e16.get())
-        foldersnameapply['inc_crec'] = str(self.e17.get())
-        foldersnameapply['inc_headers'] = str(self.e18.get())
-        foldersnameapply['filter_ampersand'] = str(self.e19.get())
-        foldersnameapply['pad_arec'] = str(self.e20.get())
+        foldersnameapply['process_edi'] = str(self.process_edi.get())
+        foldersnameapply['calc_upc'] = str(self.upc_var_check.get())
+        foldersnameapply['inc_arec'] = str(self.a_rec_var_check.get())
+        foldersnameapply['inc_crec'] = str(self.c_rec_var_check.get())
+        foldersnameapply['inc_headers'] = str(self.c_headers_check.get())
+        foldersnameapply['filter_ampersand'] = str(self.ampersand_check.get())
+        foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
         foldersnameapply['arec_padding'] = str(self.e21.get())
 
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
+
 def update_reporting(changes):
     oversight_and_defaults.update(changes, ['id'])
+
 
 def update_folder_alias(folderedit):  # update folder settings in database with results from EditDialog
     folderstable.update(folderedit, ['id'])
     refresh_users_list()
 
+
 def refresh_users_list():
     userslistframe.destroy()
     make_users_list()
+
 
 def delete_folder_entry(folder_to_be_removed):
     folderstable.delete(id=folder_to_be_removed)
     refresh_users_list()
 
+
 def set_defaults_popup():
     defaults = oversight_and_defaults.find_one(id=1)
     EditDialog(root, defaults)
 
+
 open_folder_button = Button(optionsframe, text="Open Directory", command=select_folder)
-open_folder_button.pack(side=TOP)
+open_folder_button.pack(side=TOP, fill=X)
 process_folder_button = Button(optionsframe, text="Process Folders", command=lambda: process_directories(folderstable))
-process_folder_button.pack(side=TOP)
+process_folder_button.pack(side=TOP, fill=X)
 default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
-default_settings.pack(side=TOP)
+default_settings.pack(side=TOP, fill=X)
 reporting_options = oversight_and_defaults.find_one(id=1)
-edit_reporting = Button(optionsframe, text="Edit Reporting", command=lambda: EditReportingDialog(root, reporting_options))
-edit_reporting.pack(side=TOP)
+edit_reporting = Button(optionsframe, text="Edit Reporting",
+                        command=lambda: EditReportingDialog(root, reporting_options))
+edit_reporting.pack(side=TOP, fill=X)
 optionsframe.pack(side=LEFT)
 
 make_users_list()
