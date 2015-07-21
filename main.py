@@ -348,7 +348,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         global destination_directory_is_altered
         foldersnameapply['is_active'] = str(self.active_checkbutton.get())
         if str(self.e2.get()) == '':
-            foldersnameapply['alias'] = foldersnameapply['folder']
+            foldersnameapply['alias'] = os.path.basename(self.foldersnameinput['foldersname'])
         else:
             foldersnameapply['alias'] = str(self.e2.get())
         if destination_directory_is_altered is True:
