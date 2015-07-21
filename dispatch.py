@@ -106,7 +106,7 @@ def process(folders_database, run_log, emails_table):
                                 except Exception, error:
                                     raise error
                         else:
-                            record_error.do(run_log, folder_errors_log, str(error), str(parameters_dict['foldersname']),
+                            record_error.do(run_log, folder_errors_log, "Error folder Not Found", str(parameters_dict['foldersname']),
                                         "Dispatch Error Logger")
                             print("Error folder not found for " + parameters_dict['foldersname'] + ", " + "making one")
                             try:

@@ -34,7 +34,7 @@ def do(process_parameters, filename):
 
     msg.attach(part)
 
-    server = smtplib.SMTP(process_parameters['email_origin_smtp_server'], 587)
+    server = smtplib.SMTP(process_parameters['email_origin_smtp_server'], process_parameters['email_smtp_port'])
     server.starttls()
     server.login(fromaddr, process_parameters['email_origin_password'])
     text = msg.as_string()
