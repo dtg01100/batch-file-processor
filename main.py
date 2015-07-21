@@ -11,6 +11,7 @@ import time
 import datetime
 import batch_log_sender
 import print_run_log
+import argparse
 
 if not os.path.isfile('folders.db'):
     create_database.do()
@@ -20,6 +21,7 @@ folderstable = database_connection['folders']  # open table in database
 emails_table = database_connection['emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
+launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
 root.title("Sender Interface")
 folder = NONE
@@ -52,52 +54,6 @@ def add_folder_entry(folder):  # add unconfigured folder to database
                              filter_ampersand=defaults['filter_ampersand'],
                              pad_arec=defaults['pad_arec'],
                              arec_padding=defaults['arec_padding']))
-
-
-def process_directories(folderstable_process):
-    global emails_table
-    start_time = str(datetime.datetime.now())
-    reporting = oversight_and_defaults.find_one(id=1)
-    run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
-    run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
-    run_log = open(run_log_fullpath, 'w')
-    run_log.write("starting run at " + time.ctime() + "\r\n")
-    # call dispatch module to process active folders
-    try:
-        dispatch.process(folderstable_process, run_log, emails_table)
-        refresh_users_list()
-    except Exception, error:
-        print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
-        run_log.write(
-            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
-    emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
-    run_log.close()
-    if reporting['enable_reporting'] == "True":
-        try:
-            sent_emails_removal_queue.delete()
-            batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
-            for line in sent_emails_removal_queue.all():
-                emails_table.delete(log=str(line['log']))
-            sent_emails_removal_queue.delete()
-        except Exception, error:
-            run_log = open(run_log_fullpath, 'a')
-            print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-            run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-            run_log.close()
-            if reporting['report_printing_fallback'] == "True":
-                try:
-                    run_log = open(run_log_fullpath, 'r')
-                    print_run_log.do(run_log)
-                    run_log.close()
-                except Exception, error:
-                    print("printing error log failed with error: " + str(error) + "\r\n")
-                    run_log = open(run_log_fullpath, 'a')
-                    run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
-                    run_log.close()
-            else:
-                run_log = open(run_log_fullpath, 'a')
-                run_log.write("Report printing fallback disabled")
-                run_log.close()
 
 
 def select_folder():
@@ -159,14 +115,14 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.enable_reporting_checkbutton = StringVar(master)
         self.enable_report_printing_checkbutton = StringVar(master)
 
-        Label(master, text="Enable Report Sending:").grid(row=0)
-        Label(master, text="Reporting Email Address:").grid(row=1)
-        Label(master, text="Reporting Email Username:").grid(row=2)
-        Label(master, text="Reporting Email Password:").grid(row=3)
-        Label(master, text="Reporting Email SMTP Server:").grid(row=4)
-        Label(master, text="Reporting Email Destination:").grid(row=5)
-        Label(master, text="Log File Folder").grid(row=6)
-        Label(master, text="Enable Report Printing Fallback:").grid(row=7)
+        Label(master, text="Enable Report Sending:").grid(row=0, sticky=E)
+        Label(master, text="Reporting Email Address:").grid(row=1, sticky=E)
+        Label(master, text="Reporting Email Username:").grid(row=2, sticky=E)
+        Label(master, text="Reporting Email Password:").grid(row=3, sticky=E)
+        Label(master, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
+        Label(master, text="Reporting Email Destination:").grid(row=5, sticky=E)
+        Label(master, text="Log File Folder").grid(row=6, sticky=E)
+        Label(master, text="Enable Report Printing Fallback:").grid(row=7, sticky=E)
 
         self.e0 = Checkbutton(master, variable=self.enable_reporting_checkbutton, onvalue="True", offvalue="False")
         self.e1 = Entry(master)
@@ -410,15 +366,71 @@ def delete_folder_entry(folder_to_be_removed):
     folderstable.delete(id=folder_to_be_removed)
     refresh_users_list()
 
+def graphical_process_directories(folderstable_process):
+    process_directories(folderstable_process)
+    refresh_users_list()
 
 def set_defaults_popup():
     defaults = oversight_and_defaults.find_one(id=1)
     EditDialog(root, defaults)
 
+def process_directories(folderstable_process):
+    global emails_table
+    start_time = str(datetime.datetime.now())
+    reporting = oversight_and_defaults.find_one(id=1)
+    run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+    run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
+    run_log = open(run_log_fullpath, 'w')
+    run_log.write("starting run at " + time.ctime() + "\r\n")
+    # call dispatch module to process active folders
+    try:
+        dispatch.process(folderstable_process, run_log, emails_table)
+    except Exception, error:
+        print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+        run_log.write(
+            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+    emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
+    run_log.close()
+    if reporting['enable_reporting'] == "True":
+        try:
+            sent_emails_removal_queue.delete()
+            batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
+            for line in sent_emails_removal_queue.all():
+                emails_table.delete(log=str(line['log']))
+            sent_emails_removal_queue.delete()
+        except Exception, error:
+            run_log = open(run_log_fullpath, 'a')
+            print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+            run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+            run_log.close()
+            if reporting['report_printing_fallback'] == "True":
+                try:
+                    run_log = open(run_log_fullpath, 'r')
+                    print_run_log.do(run_log)
+                    run_log.close()
+                except Exception, error:
+                    print("printing error log failed with error: " + str(error) + "\r\n")
+                    run_log = open(run_log_fullpath, 'a')
+                    run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
+                    run_log.close()
+            else:
+                run_log = open(run_log_fullpath, 'a')
+                run_log.write("Report printing fallback disabled")
+                run_log.close()
+
+def silent_process_directories(folderstable):
+    print "batch processing configured directories"
+    process_directories(folderstable)
+    quit()
+
+launch_options.add_argument('--automatic', action='store_true')
+args = launch_options.parse_args()
+if args.automatic:
+    silent_process_directories(folderstable)
 
 open_folder_button = Button(optionsframe, text="Open Directory", command=select_folder)
 open_folder_button.pack(side=TOP, fill=X)
-process_folder_button = Button(optionsframe, text="Process Folders", command=lambda: process_directories(folderstable))
+process_folder_button = Button(optionsframe, text="Process Folders", command=lambda: graphical_process_directories(folderstable))
 process_folder_button.pack(side=TOP, fill=X)
 default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
 default_settings.pack(side=TOP, fill=X)
