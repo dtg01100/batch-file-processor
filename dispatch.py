@@ -10,8 +10,6 @@ import cStringIO
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
-# TODO: error handling
-# TODO: error reporting
 
 
 def process(folders_database, run_log, emails_table):

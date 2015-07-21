@@ -3,7 +3,6 @@ import shutil
 
 # this module attempts to iterate over the specified folder and ftp them to the address specified
 # note: process_parameters is a dict from a row in the database, passed into this module
-# TODO: error handling
 
 
 def do(process_parameters, filename):

@@ -1,1 +1,0 @@
-os.isdir(reporting_confguration['logs_directory'] + "/" + os.path.basename(folder_configuration['foldersname']))

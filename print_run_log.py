@@ -1,4 +1,3 @@
-# todo: test non windows code
 import platform
 import textwrap
 
