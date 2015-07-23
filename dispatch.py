@@ -8,6 +8,7 @@ import time
 import record_error
 import cStringIO
 import re
+import edi_validator
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -42,25 +43,29 @@ def process(folders_database, run_log, emails_table):
                     for filename in files:
                         print filename
                         if parameters_dict['process_edi'] == "True":
-                            try:
-                                run_log.write("converting " + filename + " from EDI to CSV\r\n")
-                                converter.edi_convert(parameters_dict, filename, filename + ".csv", parameters_dict['calc_upc'],
-                                                      parameters_dict['inc_arec'], parameters_dict['inc_crec'],
-                                                      parameters_dict['inc_headers'],
-                                                      parameters_dict['filter_ampersand'],
-                                                      parameters_dict['pad_arec'],
-                                                      parameters_dict['arec_padding'])
+                            if edi_validator.check(filename):
                                 try:
-                                    shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
+                                    run_log.write("converting " + filename + " from EDI to CSV\r\n")
+                                    converter.edi_convert(parameters_dict, filename, filename + ".csv", parameters_dict['calc_upc'],
+                                                          parameters_dict['inc_arec'], parameters_dict['inc_crec'],
+                                                          parameters_dict['inc_headers'],
+                                                          parameters_dict['filter_ampersand'],
+                                                          parameters_dict['pad_arec'],
+                                                          parameters_dict['arec_padding'])
+                                    try:
+                                        shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
+                                    except Exception, error:
+                                        print str(error)
+                                        errors = True
+                                        record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
+                                    filename = filename + ".csv"
                                 except Exception, error:
                                     print str(error)
                                     errors = True
                                     record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
-                                filename = filename + ".csv"
-                            except Exception, error:
-                                print str(error)
+                            else:
+                                record_error.do(run_log,folder_errors_log, filename + " is not an edi file", filename, "edi validator")
                                 errors = True
-                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
                         if parameters_dict['process_backend'] == "copy" and errors is False:
                             try:
                                 run_log.write("sending file " + str(filename) + " to " +
