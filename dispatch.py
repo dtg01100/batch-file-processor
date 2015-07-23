@@ -65,7 +65,6 @@ def process(folders_database, run_log, emails_table):
                                     record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
                             else:
                                 record_error.do(run_log,folder_errors_log, filename + " is not an edi file", filename, "edi validator")
-                                errors = True
                         if parameters_dict['process_backend'] == "copy" and errors is False:
                             try:
                                 run_log.write("sending file " + str(filename) + " to " +
