@@ -8,12 +8,10 @@ def do(filename):
         import os, sys
         import win32print
         printer_name = win32print.GetDefaultPrinter ()
-        print(printer_name)
         #
         # raw_data could equally be raw PCL/PS read from
         #  some print-to-file operation
         #
-        print (sys.version_info)
         if sys.version_info >= (3,):
             raw_data = bytes (formatted_log, "utf-8")
         else:

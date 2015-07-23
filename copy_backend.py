@@ -5,5 +5,4 @@ import shutil
 
 
 def do(process_parameters, filename):
-    print("copying " + filename)
     shutil.copy(filename, process_parameters['copy_to_directory'])

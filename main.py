@@ -38,7 +38,6 @@ if not os.path.isdir(logs_directory['logs_directory']):
 
 def add_folder_entry(folder):  # add unconfigured folder to database
     defaults = oversight_and_defaults.find_one(id=1)
-    print (defaults)
     folder_alias_constructor = os.path.basename(folder)
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
                              alias=folder_alias_constructor, process_backend=defaults['process_backend'],
@@ -217,7 +216,6 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         foldersnameapply['reporting_smtp_port'] = str(self.e5.get())
         foldersnameapply['report_email_destination'] = str(self.e6.get())
 
-        print (foldersnameapply)
         update_reporting(foldersnameapply)
 
 
@@ -392,7 +390,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
         foldersnameapply['arec_padding'] = str(self.e23.get())
 
-        print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
     def validate(self):
@@ -448,7 +445,6 @@ def process_directories(folderstable_process):
     reporting = oversight_and_defaults.find_one(id=1)
     run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
     run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
-    print (run_log_fullpath)
     run_log = open(run_log_fullpath, 'w')
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders

@@ -22,7 +22,6 @@ def do(reporting, emails_table, sent_emails_removal_queue, time):
         print (log)
 
         filename = log['log']
-        print str(filename)
         attachment = open(filename, "r")
 
         head, tail = os.path.split(filename)
