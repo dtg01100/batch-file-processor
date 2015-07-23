@@ -1,6 +1,7 @@
 from Tkinter import *
 from tkFileDialog import askdirectory
 from ttk import *
+from validate_email import validate_email
 import scrollbuttons
 import dataset
 import dialog
@@ -12,6 +13,8 @@ import datetime
 import batch_log_sender
 import print_run_log
 import argparse
+import sqlalchemy.dialects.sqlite  # needed for py2exe
+
 
 if not os.path.isfile('folders.db'):
     create_database.do()
@@ -70,6 +73,7 @@ def select_folder():
         userslistframe.destroy()  # destroy lists on right
         make_users_list()  # recreate list
 
+
 def make_users_list():
     global userslistframe
     global active_userslistframe
@@ -116,7 +120,6 @@ def make_users_list():
 
 
 class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
-    # note: this class makes no attempt to check correctness of input at the moment
 
     def body(self, master):
 
@@ -174,6 +177,17 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
         return self.e1  # initial focus
 
+    def validate(self):
+
+        if self.enable_reporting_checkbutton.get() == "True":
+            if (validate_email(str(self.e1.get()), verify=True)) is False:
+                return False
+            if (validate_email(str(self.e2.get()), verify=True)) is False:
+                return False
+            if (validate_email(str(self.e6.get()), verify=True)) is False:
+                return False
+        return 1
+
     def ok(self, event=None):
 
         if not self.validate():
@@ -207,7 +221,6 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
-    # note: this class makes no attempt to check correctness of input at the moment
 
     def body(self, master):
 
@@ -225,7 +238,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
         self.pad_arec_check = StringVar(master)
         Label(master, text="Active?").grid(row=0, sticky=E)
-        Label(master, text="Alias:").grid(row=1, sticky=E)
+        if self.foldersnameinput['foldersname'] != 'template':
+            Label(master, text="Alias:").grid(row=1, sticky=E)
         Label(master, text="Backend?").grid(row=2, sticky=E)
         Label(master, text="Copy Backend Settings").grid(row=3, sticky=E)
         Label(master, text="Copy Destination?").grid(row=4, sticky=E)
@@ -249,7 +263,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(master, text="Include Headings:").grid(row=4, column=3, sticky=E)
         Label(master, text="Filter Ampersand:").grid(row=5, column=3, sticky=E)
         Label(master, text="Pad " + "A " + "Records:").grid(row=6, column=3, sticky=E)
-        Label(master, text="A " + "Record Padding:").grid(row=7, column=3, sticky=E)
+        Label(master, text="A " + "Record Padding (6 characters):").grid(row=7, column=3, sticky=E)
 
         def select_copy_to_directory():
             global copytodirectory
@@ -258,7 +272,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             destination_directory_is_altered = True
 
         self.e1 = Checkbutton(master, variable=self.active_checkbutton, onvalue="True", offvalue="False")
-        self.e2 = Entry(master)
+        if self.foldersnameinput['foldersname'] != 'template':
+            self.e2 = Entry(master)
         self.e3 = OptionMenu(master, self.backendvariable, "none", "copy", "ftp", "email")
         self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
         self.e5 = Entry(master)
@@ -282,7 +297,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e23 = Entry(master)
 
         self.active_checkbutton.set(self.foldersnameinput['is_active'])
-        self.e2.insert(0, self.foldersnameinput['alias'])
+        if self.foldersnameinput['foldersname'] != 'template':
+            self.e2.insert(0, self.foldersnameinput['alias'])
         self.backendvariable.set(self.foldersnameinput['process_backend'])
         self.e5.insert(0, self.foldersnameinput['ftp_server'])
         self.e6.insert(0, self.foldersnameinput['ftp_port'])
@@ -305,7 +321,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e23.insert(0, self.foldersnameinput['arec_padding'])
 
         self.e1.grid(row=0, column=1)
-        self.e2.grid(row=1, column=1)
+        if self.foldersnameinput['foldersname'] != 'template':
+            self.e2.grid(row=1, column=1)
         self.e3.grid(row=2, column=1)
         self.e4.grid(row=4, column=1)
         self.e5.grid(row=6, column=1)
@@ -347,10 +364,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         global copytodirectory
         global destination_directory_is_altered
         foldersnameapply['is_active'] = str(self.active_checkbutton.get())
-        if str(self.e2.get()) == '':
-            foldersnameapply['alias'] = os.path.basename(self.foldersnameinput['foldersname'])
-        else:
-            foldersnameapply['alias'] = str(self.e2.get())
+        if self.foldersnameinput['foldersname'] != 'template':
+            if str(self.e2.get()) == '':
+                foldersnameapply['alias'] = os.path.basename(self.foldersnameinput['foldersname'])
+            else:
+                foldersnameapply['alias'] = str(self.e2.get())
         if destination_directory_is_altered is True:
             foldersnameapply['copy_to_directory'] = copytodirectory
         foldersnameapply['process_backend'] = str(self.backendvariable.get())
@@ -376,6 +394,20 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         print (foldersnameapply)
         update_folder_alias(foldersnameapply)
 
+    def validate(self):
+
+        if str(self.backendvariable.get()) == "email":
+            if (validate_email(str(self.e11.get()), verify=True)) is False:
+                return False
+
+            if (validate_email(str(self.e10.get()), verify=True)) is False:
+                return False
+
+        if len(str(self.e23.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
+            return False
+
+        return 1
+
 
 def update_reporting(changes):
     oversight_and_defaults.update(changes, ['id'])
@@ -395,13 +427,16 @@ def delete_folder_entry(folder_to_be_removed):
     folderstable.delete(id=folder_to_be_removed)
     refresh_users_list()
 
+
 def graphical_process_directories(folderstable_process):
     process_directories(folderstable_process)
     refresh_users_list()
 
+
 def set_defaults_popup():
     defaults = oversight_and_defaults.find_one(id=1)
     EditDialog(root, defaults)
+
 
 def process_directories(folderstable_process):
     global emails_table
@@ -448,10 +483,12 @@ def process_directories(folderstable_process):
                 run_log.write("Report printing fallback disabled")
                 run_log.close()
 
+
 def silent_process_directories(folderstable):
     print "batch processing configured directories"
     process_directories(folderstable)
     quit()
+
 
 launch_options.add_argument('--automatic', action='store_true')
 args = launch_options.parse_args()

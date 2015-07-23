@@ -10,7 +10,7 @@ def do():
                                        email_origin_password='', email_origin_smtp_server='smtp.gmail.com',
                                        process_edi='False', calc_upc='False', inc_arec='False', inc_crec='False',
                                        inc_headers='False', filter_ampersand='False', pad_arec='False',
-                                       arec_padding='', reporting_email='', folder='', alias='',
+                                       arec_padding='', reporting_email='', foldersname='template', alias='',
                                        report_email_address='', report_email_username='',
                                        report_email_password='', report_email_smtp_server='smtp.gmail.com',
                                        report_email_destination='', process_backend='none', ftp_server='',
