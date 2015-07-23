@@ -1,5 +1,6 @@
 from Tkinter import *
 from tkFileDialog import askdirectory
+from tkMessageBox import showerror
 from ttk import *
 from validate_email import validate_email
 import scrollbuttons
@@ -181,10 +182,10 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
         if self.enable_reporting_checkbutton.get() == "True":
             if (validate_email(str(self.e1.get()), verify=True)) is False:
-                return False
-            if (validate_email(str(self.e2.get()), verify=True)) is False:
+                showerror(title="Invalid Email Address", message="Invalid Email Origin Address")
                 return False
             if (validate_email(str(self.e6.get()), verify=True)) is False:
+                showerror(title="Invalid Email Address", message="Invalid Email Destination Address")
                 return False
         return 1
 
@@ -398,12 +399,15 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         if str(self.backendvariable.get()) == "email":
             if (validate_email(str(self.e11.get()), verify=True)) is False:
+                showerror(title="Invalid Email Address", message="Invalid Email Origin Address")
                 return False
 
             if (validate_email(str(self.e10.get()), verify=True)) is False:
+                showerror(title="Invalid Email Address", message="Invalid Email Destination Address")
                 return False
 
         if len(str(self.e23.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
+            showerror(title='"A" Record Padding Too Short', message='"A" Record Padding Needs To Be Six Characters')
             return False
 
         return 1
