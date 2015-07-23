@@ -1,24 +1,45 @@
-from Tkinter import *
-from tkFileDialog import askdirectory
-from tkMessageBox import showerror
-from ttk import *
-from validate_email import validate_email
-import scrollbuttons
-import dataset
-import dialog
-import dispatch
-import os
-import create_database
-import time
-import datetime
-import batch_log_sender
-import print_run_log
-import argparse
-import sqlalchemy.dialects.sqlite  # needed for py2exe
+try:
+    from Tkinter import *
+    from tkFileDialog import askdirectory
+    from tkMessageBox import showerror
+    from ttk import *
+    from validate_email import validate_email
+    import scrollbuttons
+    import dataset
+    import dialog
+    import dispatch
+    import os
+    import create_database
+    import time
+    import datetime
+    import batch_log_sender
+    import print_run_log
+    import argparse
+    import sqlalchemy.dialects.sqlite  # needed for py2exe
+except Exception, error:
+    try:
+        print(str(error))
+        critical_log = open("critical_error.log", 'a')
+        critical_log.write(str(error))
+        critical_log.close()
+    except Exception, big_error:
+        print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
+        quit()
 
 
 if not os.path.isfile('folders.db'):
-    create_database.do()
+    try:
+        create_database.do()
+    except Exception, error:
+        try:
+            print(str(error))
+            critical_log = open("critical_error.log" 'a')
+            critical_log.write(str(error))
+            critical_log.close()
+            quit()
+        except Exception, big_error:
+            print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
+            quit()
 
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 folderstable = database_connection['folders']  # open table in database

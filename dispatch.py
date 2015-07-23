@@ -41,7 +41,6 @@ def process(folders_database, run_log, emails_table):
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]
                     errors = False
                     for filename in files:
-                        print filename
                         if parameters_dict['process_edi'] == "True":
                             if edi_validator.check(filename):
                                 try:
@@ -118,7 +117,6 @@ def process(folders_database, run_log, emails_table):
                             except Exception, error:
                                 raise error
                         folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
-                        print (folder_error_log_name_fullpath)
                         folder_errors_log_write.write(folder_errors_log.getvalue())
                         emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
                     folder_errors_log.close()
