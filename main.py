@@ -504,13 +504,6 @@ def set_defaults_popup():
     EditDialog(root, defaults)
 
 
-def check_process_directories():
-    if folderstable.count(active="True") > 0:
-        process_directories(folderstable)
-    else:
-        showerror(root, "Error", text="No Active Folders")
-
-
 def process_directories(folderstable_process):
     global emails_table
     log_folder_creation_error = False
