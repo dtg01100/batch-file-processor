@@ -443,7 +443,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
         foldersnameapply['arec_padding'] = str(self.e23.get())
 
-        update_folder_alias(foldersnameapply)
+        if self.foldersnameinput['foldersname'] != 'template':
+            update_folder_alias(foldersnameapply)
+        else:
+            update_reporting(foldersnameapply)
 
     def validate(self):
 
