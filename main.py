@@ -21,7 +21,7 @@ except Exception, error:
     try:
         print(str(error))
         critical_log = open("critical_error.log", 'a')
-        critical_log.write(str(error))
+        critical_log.write(str(error) + "\r\n")
         critical_log.close()
     except Exception, big_error:
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
@@ -35,7 +35,7 @@ if not os.path.isfile('folders.db'):
         try:
             print(str(error))
             critical_log = open("critical_error.log" 'a')
-            critical_log.write(str(error))
+            critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
             quit()
         except Exception, big_error:
@@ -52,10 +52,17 @@ root = Tk()  # create root window
 root.title("Sender Interface")
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
-
 logs_directory = oversight_and_defaults.find_one(id=1)
-if not os.path.isdir(logs_directory['logs_directory']):
-    os.mkdir(logs_directory['logs_directory'])
+
+
+def check_logs_directory():
+    try:
+        test_log_file = open(os.path.join(logs_directory['logs_directory'], 'test_log_file'), 'w')
+        test_log_file.close()
+        os.remove(os.path.join(logs_directory['logs_directory'], 'test_log_file'))
+    except IOError, error:
+        print(str(error))
+        return False
 
 
 def add_folder_entry(folder):  # add unconfigured folder to database
@@ -90,7 +97,6 @@ def select_folder():
     global column_entry_value
     folder = askdirectory()
     proposed_folder = folderstable.find_one(foldersname=folder)
-    print proposed_folder
     if proposed_folder is None:
         if folder != '':
             column_entry_value = folder
@@ -100,6 +106,7 @@ def select_folder():
     else:
         if askokcancel("Query:", "Folder already known, would you like to edit?"):
             EditDialog(root, proposed_folder)
+
 
 def make_users_list():
     global userslistframe
@@ -468,9 +475,32 @@ def set_defaults_popup():
 
 def process_directories(folderstable_process):
     global emails_table
+    log_folder_creation_error = False
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
     run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+    if not os.path.isdir(logs_directory['logs_directory']):
+        try:
+            os.mkdir(logs_directory['logs_directory'])
+        except IOError, error:
+            log_folder_creation_error = True
+    if check_logs_directory() is False or log_folder_creation_error is True:
+        if args.automatic is False:
+            if askokcancel("Error", "Can't write to log directory,\r\n would you like to change reporting settings?"):
+                EditReportingDialog(root, reporting_options)
+            else:
+                showerror(message="Can't write to log directory, exiting")
+                quit()
+        else:
+            try:
+                print("can't write into logs directory. in automatic mode, so no prompt. this error will be stored in critical log")
+                critical_log = open("critical_error.log", 'a')
+                critical_log.write(str(datetime.datetime.now()) + "can't write into logs directory. in automatic mode, so no prompt\r\n")
+                critical_log.close()
+                quit()
+            except IOError:
+                print("Can't write critical error log, aborting")
+                quit()
     run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
     run_log.write("starting run at " + time.ctime() + "\r\n")
