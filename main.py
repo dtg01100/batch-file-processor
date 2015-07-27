@@ -582,7 +582,13 @@ def process_directories(folderstable_process):
 def silent_process_directories(folderstable):
     if folderstable.count(is_active="True") > 0:
         print "batch processing configured directories"
-        process_directories(folderstable)
+        try:
+            process_directories(folderstable)
+        except Exception, error:
+            print(str(error))
+            critical_log = open("critical_error.log", 'a')
+            critical_log.write(str(error) + "\r\n")
+            critical_log.close()
     else:
         print("Error, No Active Folders")
     quit()
