@@ -14,7 +14,7 @@ import edi_validator
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
-def process(folders_database, run_log, emails_table):
+def process(folders_database, run_log, emails_table, run_log_directory):
     for parameters_dict in folders_database.all():
         if parameters_dict['is_active'] == "True":
             if parameters_dict['process_backend'] != 'copy' and parameters_dict['process_backend'] != 'ftp' and parameters_dict['process_backend'] != 'email':
@@ -24,7 +24,6 @@ def process(folders_database, run_log, emails_table):
             else:
                 if os.path.isdir(parameters_dict['foldersname']) is True:
                     os.chdir(parameters_dict['foldersname'])
-                    print (parameters_dict['foldersname'])
                     try:
                         os.stat(os.path.join(parameters_dict['foldersname'], "obe"))
                     except Exception, error:
@@ -36,7 +35,6 @@ def process(folders_database, run_log, emails_table):
                     folder_error_log_name_constructor = cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
                     folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                     folder_errors_log = cStringIO.StringIO()
-                    print (str(parameters_dict))
                     run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'] + "\r\n")
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]
                     errors = False
@@ -115,10 +113,19 @@ def process(folders_database, run_log, emails_table):
                             try:
                                 os.mkdir(os.path.join(parameters_dict['foldersname'], "errors"))
                             except Exception, error:
-                                raise error
-                        folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
-                        folder_errors_log_write.write(folder_errors_log.getvalue())
-                        emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
+                                record_error.do(run_log, folder_errors_log, "Error creating errors folder",
+                                                str(parameters_dict['foldersname']),"Dispatch Error Logger")
+                                folder_error_log_name_fullpath = os.path.join(run_log_directory, folder_error_log_name_constructor)
+                        try:
+                            folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
+                            folder_errors_log_write.write(folder_errors_log.getvalue())
+                            emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
+                        except Exception, error:
+                            print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")
+                            run_log.write("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log\r\n")
+                            run_log.write("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n")
+                            run_log.write(folder_errors_log.getvalue())
+                            run_log.write("\r\n\r\nEnd of Error file")
                     folder_errors_log.close()
                 else:
                     data = dict(id=parameters_dict['id'], is_active="False")

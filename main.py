@@ -482,7 +482,7 @@ def process_directories(folderstable_process):
     if not os.path.isdir(logs_directory['logs_directory']):
         try:
             os.mkdir(logs_directory['logs_directory'])
-        except IOError, error:
+        except IOError:
             log_folder_creation_error = True
     if check_logs_directory() is False or log_folder_creation_error is True:
         if args.automatic is False:
@@ -506,7 +506,7 @@ def process_directories(folderstable_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table)
+        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'])
     except Exception, error:
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
         run_log.write(
