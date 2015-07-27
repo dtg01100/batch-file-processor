@@ -455,6 +455,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             showerror(title='"A" Record Padding Too Short', message='"A" Record Padding Needs To Be Six Characters')
             return False
 
+        proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
+        if proposed_folder is not None:
+            return False
+
         return 1
 
 
