@@ -68,6 +68,20 @@ def check_logs_directory():
 def add_folder_entry(folder):  # add unconfigured folder to database
     defaults = oversight_and_defaults.find_one(id=1)
     folder_alias_constructor = os.path.basename(folder)
+
+    def folder_alias_checker(check):
+        proposed_folder = folderstable.find_one(alias=check)
+        if proposed_folder is not None:
+            return False
+    if folder_alias_checker(folder_alias_constructor) is False:
+        folder_alias_end_suffix = 0
+        folder_alias_deduplicate_constructor = folder_alias_constructor
+        while folder_alias_checker(folder_alias_deduplicate_constructor) is False:
+            folder_alias_end_suffix += folder_alias_end_suffix + 1
+            print str(folder_alias_end_suffix)
+            folder_alias_deduplicate_constructor = folder_alias_constructor + " " + str(folder_alias_end_suffix)
+        folder_alias_constructor = folder_alias_deduplicate_constructor
+
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
                              alias=folder_alias_constructor, process_backend=defaults['process_backend'],
                              ftp_server=defaults['ftp_server'],
