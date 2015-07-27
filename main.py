@@ -122,6 +122,11 @@ def select_folder():
             EditDialog(root, proposed_folder)
 
 
+def edit_folder_selector(folder_to_be_edited):
+    edit_folder = folderstable.find_one(id=[folder_to_be_edited])
+    EditDialog(root, edit_folder)
+
+
 def make_users_list():
     global userslistframe
     global active_userslistframe
@@ -147,7 +152,7 @@ def make_users_list():
             Button(active_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
             Button(active_folderbuttonframe, text=buttonlabelstring,
-                   command=lambda name=foldersname['id']: EditDialog(root, foldersname)).grid(column=0, row=0, sticky=E)
+                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             active_folderbuttonframe.pack(anchor='e')
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
@@ -155,7 +160,7 @@ def make_users_list():
             Button(inactive_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
             Button(inactive_folderbuttonframe, text=buttonlabelstring,
-                   command=lambda name=foldersname['id']: EditDialog(root, foldersname)).grid(column=0, row=0, sticky=E)
+                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             inactive_folderbuttonframe.pack(anchor='e')
     # pack widgets in correct order
     active_users_list_label.pack()
@@ -455,9 +460,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             showerror(title='"A" Record Padding Too Short', message='"A" Record Padding Needs To Be Six Characters')
             return False
 
-        proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
-        if proposed_folder is not None:
-            return False
+        if self.foldersnameinput['foldersname'] != 'template':
+            if str(self.e2.get()) != self.foldersnameinput['alias']:
+                proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
+                if proposed_folder is not None:
+                    return False
 
         return 1
 
@@ -482,13 +489,23 @@ def delete_folder_entry(folder_to_be_removed):
 
 
 def graphical_process_directories(folderstable_process):
-    process_directories(folderstable_process)
+    if folderstable_process.count(active="True") > 0:
+        process_directories(folderstable_process)
+    else:
+        showerror("Error", "No Active Folders")
     refresh_users_list()
 
 
 def set_defaults_popup():
     defaults = oversight_and_defaults.find_one(id=1)
     EditDialog(root, defaults)
+
+
+def check_process_directories():
+    if folderstable.count(active="True") > 0:
+        process_directories(folderstable)
+    else:
+        showerror(root, "Error", "No Active Folders")
 
 
 def process_directories(folderstable_process):
@@ -560,8 +577,11 @@ def process_directories(folderstable_process):
 
 
 def silent_process_directories(folderstable):
-    print "batch processing configured directories"
-    process_directories(folderstable)
+    if folderstable.count(active="True") > 0:
+        print "batch processing configured directories"
+        process_directories(folderstable)
+    else:
+        print("Error, No Active Folders")
     quit()
 
 
