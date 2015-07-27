@@ -594,7 +594,7 @@ def silent_process_directories(folderstable):
     quit()
 
 
-launch_options.add_argument('--automatic', action='store_true')
+launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
     silent_process_directories(folderstable)
