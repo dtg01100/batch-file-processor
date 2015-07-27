@@ -492,7 +492,8 @@ def delete_folder_entry(folder_to_be_removed):
 
 
 def graphical_process_directories(folderstable_process):
-    if folderstable_process.count(active="True") > 0:
+    print(folderstable_process.count(is_active="True"))
+    if folderstable_process.count(is_active="True") > 0:
         process_directories(folderstable_process)
     else:
         showerror("Error", "No Active Folders")
@@ -580,7 +581,7 @@ def process_directories(folderstable_process):
 
 
 def silent_process_directories(folderstable):
-    if folderstable.count(active="True") > 0:
+    if folderstable.count(is_active="True") > 0:
         print "batch processing configured directories"
         process_directories(folderstable)
     else:

@@ -35,9 +35,11 @@ def process(folders_database, run_log, emails_table, run_log_directory):
                     folder_error_log_name_constructor = cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
                     folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                     folder_errors_log = cStringIO.StringIO()
-                    run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'] + "\r\n")
+                    run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'] + "\r\n\r\n")
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]
                     errors = False
+                    if len(files) == 0:
+                        run_log.write("No files in directory\r\n\r\n")
                     for filename in files:
                         if parameters_dict['process_edi'] == "True":
                             if edi_validator.check(filename):
