@@ -2,6 +2,7 @@ try:
     from Tkinter import *
     from tkFileDialog import askdirectory
     from tkMessageBox import showerror
+    from tkMessageBox import askokcancel
     from ttk import *
     from validate_email import validate_email
     import scrollbuttons
@@ -88,12 +89,17 @@ def select_folder():
     global folder
     global column_entry_value
     folder = askdirectory()
-    if folder != '':
-        column_entry_value = folder
-        add_folder_entry(folder)
-        userslistframe.destroy()  # destroy lists on right
-        make_users_list()  # recreate list
-
+    proposed_folder = folderstable.find_one(foldersname=folder)
+    print proposed_folder
+    if proposed_folder is None:
+        if folder != '':
+            column_entry_value = folder
+            add_folder_entry(folder)
+            userslistframe.destroy()  # destroy lists on right
+            make_users_list()  # recreate list
+    else:
+        if askokcancel("Query:", "Folder already known, would you like to edit?"):
+            EditDialog(root, proposed_folder)
 
 def make_users_list():
     global userslistframe
