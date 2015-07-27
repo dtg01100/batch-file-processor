@@ -492,7 +492,6 @@ def delete_folder_entry(folder_to_be_removed):
 
 
 def graphical_process_directories(folderstable_process):
-    print(folderstable_process.count(is_active="True"))
     if folderstable_process.count(is_active="True") > 0:
         process_directories(folderstable_process)
     else:
@@ -509,7 +508,7 @@ def check_process_directories():
     if folderstable.count(active="True") > 0:
         process_directories(folderstable)
     else:
-        showerror(root, "Error", "No Active Folders")
+        showerror(root, "Error", text="No Active Folders")
 
 
 def process_directories(folderstable_process):
