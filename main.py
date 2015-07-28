@@ -563,6 +563,7 @@ def process_directories(folderstable_process):
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
         except Exception, error:
+            emails_table_batch.delete()
             run_log = open(run_log_fullpath, 'a')
             print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
             run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
