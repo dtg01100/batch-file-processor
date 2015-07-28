@@ -45,6 +45,7 @@ if not os.path.isfile('folders.db'):
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 folderstable = database_connection['folders']  # open table in database
 emails_table = database_connection['emails_to_send']
+emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
 launch_options = argparse.ArgumentParser()
@@ -547,7 +548,17 @@ def process_directories(folderstable_process):
     if reporting['enable_reporting'] == "True":
         try:
             sent_emails_removal_queue.delete()
-            batch_log_sender.do(reporting, emails_table, sent_emails_removal_queue, start_time)
+            total_size = 0
+            for log in emails_table.all():
+                total_size += total_size + os.path.getsize(log['log'])
+                emails_table_batch.insert(log)
+                if total_size > 9000000:
+                    batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
+                    emails_table_batch.delete()
+                    total_size = 0
+            if emails_table_batch.count() > 0:
+                batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
+                emails_table_batch.delete()
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
