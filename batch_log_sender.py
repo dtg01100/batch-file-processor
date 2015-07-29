@@ -19,7 +19,6 @@ def do(reporting, emails_table, sent_emails_removal_queue, time):
     msg.attach(MIMEText(body, 'plain'))
 
     for log in emails_table.all():
-        print (log)
 
         filename = log['log']
         attachment = open(filename, "r")
