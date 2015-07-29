@@ -477,6 +477,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             if str(self.e2.get()) != self.foldersnameinput['alias']:
                 proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
                 if proposed_folder is not None:
+                    showerror(title="Invalid Alias", message="Folder Alias Already In Use")
                     return False
 
         return 1
