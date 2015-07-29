@@ -2,7 +2,7 @@ import dataset
 import os
 
 
-def do():
+def do():  # create database file with some default settings
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
     oversight_and_defaults = database_connection['administrative']
 

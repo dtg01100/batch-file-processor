@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
-# this module attempts to iterate over the specified folder and email them to the address specified
+# this module sends the file specified in filename to the address specified in the dict process_parameters via email
 # note: process_parameters is a dict from a row in the database, passed into this module
 
 

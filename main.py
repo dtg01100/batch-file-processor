@@ -1,4 +1,4 @@
-try:
+try:  # try to import required modules
     from Tkinter import *
     from tkFileDialog import askdirectory
     from tkMessageBox import showerror
@@ -18,32 +18,34 @@ try:
     import argparse
     import sqlalchemy.dialects.sqlite  # needed for py2exe
 except Exception, error:
-    try:
+    try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
         critical_log = open("critical_error.log", 'a')
         critical_log.write(str(error) + "\r\n")
         critical_log.close()
-    except Exception, big_error:
+        quit()
+    except Exception, big_error:  # if logging doesn't work, at least complain
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
         quit()
 
 
-if not os.path.isfile('folders.db'):
+if not os.path.isfile('folders.db'):  # if the database file is missing
     try:
-        create_database.do()
-    except Exception, error:
+        create_database.do()  # make a new one
+    except Exception, error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
             critical_log = open("critical_error.log" 'a')
             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
             quit()
-        except Exception, big_error:
+        except Exception, big_error:  # if logging doesn't work, at least complain
             print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
             quit()
 
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
-folderstable = database_connection['folders']  # open table in database
+# open required tables in database
+folderstable = database_connection['folders']
 emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
@@ -58,6 +60,7 @@ logs_directory = oversight_and_defaults.find_one(id=1)
 
 def check_logs_directory():
     try:
+        # check to see if log directory is writable
         test_log_file = open(os.path.join(logs_directory['logs_directory'], 'test_log_file'), 'w')
         test_log_file.close()
         os.remove(os.path.join(logs_directory['logs_directory'], 'test_log_file'))
@@ -71,10 +74,12 @@ def add_folder_entry(folder):  # add unconfigured folder to database
     folder_alias_constructor = os.path.basename(folder)
 
     def folder_alias_checker(check):
+        # check database to see if the folder alias exists, and return false if it does
         proposed_folder = folderstable.find_one(alias=check)
         if proposed_folder is not None:
             return False
     if folder_alias_checker(folder_alias_constructor) is False:
+        # auto generate a number to add to automatic aliases
         folder_alias_end_suffix = 0
         folder_alias_deduplicate_constructor = folder_alias_constructor
         while folder_alias_checker(folder_alias_deduplicate_constructor) is False:
@@ -83,6 +88,7 @@ def add_folder_entry(folder):  # add unconfigured folder to database
             folder_alias_deduplicate_constructor = folder_alias_constructor + " " + str(folder_alias_end_suffix)
         folder_alias_constructor = folder_alias_deduplicate_constructor
 
+    # create folder entry using the selected folder, the generated alias, and values copied from template
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
                              alias=folder_alias_constructor, process_backend=defaults['process_backend'],
                              ftp_server=defaults['ftp_server'],
@@ -113,17 +119,20 @@ def select_folder():
     folder = askdirectory()
     proposed_folder = folderstable.find_one(foldersname=folder)
     if proposed_folder is None:
-        if folder != '':
+        if folder != '':  # check to see if selected folder has a path
             column_entry_value = folder
             add_folder_entry(folder)
             userslistframe.destroy()  # destroy lists on right
             make_users_list()  # recreate list
     else:
+        #  offer to edit the folder if it is already known
         if askokcancel("Query:", "Folder already known, would you like to edit?"):
             EditDialog(root, proposed_folder)
 
 
 def edit_folder_selector(folder_to_be_edited):
+    # feed the editdialog class the the dict for the selected folder from the folders list buttons
+    # note: would prefer to be able to do this inline, but variables appear to need to be pushed out of instanced objects
     edit_folder = folderstable.find_one(id=[folder_to_be_edited])
     EditDialog(root, edit_folder)
 
@@ -511,6 +520,7 @@ def process_directories(folderstable_process):
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
     run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+    # check for configured logs directory, and create it if necessary
     if not os.path.isdir(logs_directory['logs_directory']):
         try:
             os.mkdir(logs_directory['logs_directory'])
@@ -518,23 +528,28 @@ def process_directories(folderstable_process):
             log_folder_creation_error = True
     if check_logs_directory() is False or log_folder_creation_error is True:
         if args.automatic is False:
-            if askokcancel("Error", "Can't write to log directory,\r\n would you like to change reporting settings?"):
-                EditReportingDialog(root, reporting_options)
-            else:
-                showerror(message="Can't write to log directory, exiting")
-                quit()
+            # offer to make new log directory
+            while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
+                if askokcancel("Error", "Can't write to log directory,\r\n would you like to change reporting settings?"):
+                    EditReportingDialog(root, reporting_options)
+                else:
+                    # the logs must flow. aka, stop here if user declines selecting a new writable log folder
+                    showerror(message="Can't write to log directory, exiting")
+                    quit()
         else:
             try:
+                # can't prompt for new logs directory, can only complain in a critical log and quit
                 print("can't write into logs directory. in automatic mode, so no prompt. this error will be stored in critical log")
                 critical_log = open("critical_error.log", 'a')
                 critical_log.write(str(datetime.datetime.now()) + "can't write into logs directory. in automatic mode, so no prompt\r\n")
                 critical_log.close()
                 quit()
             except IOError:
+                # can't complain in a critical log, so ill complain in standard output and quit
                 print("Can't write critical error log, aborting")
                 quit()
     run_log_path = reporting['logs_directory']
-    run_log_path = str(run_log_path)
+    run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
     run_log_fullpath = os.path.join(run_log_path, run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
     run_log.write("starting run at " + time.ctime() + "\r\n")
@@ -542,6 +557,7 @@ def process_directories(folderstable_process):
     try:
         dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting)
     except Exception, error:
+        # if processing folders runs into a serious error, report and log
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
         run_log.write(
             "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
@@ -552,15 +568,17 @@ def process_directories(folderstable_process):
             sent_emails_removal_queue.delete()
             total_size = 0
             for log in emails_table.all():
-                total_size += total_size + os.path.getsize(log['log'])
+                # iterate over emails to send queue, breaking it into 9mb chunks if necessary
+                total_size += total_size + os.path.getsize(log['log'])  # add size of current file to total
                 emails_table_batch.insert(log)
-                if total_size > 9000000:
+                if total_size > 9000000:  # if the total size is more than 9mb, then send that set and reset the total
                     batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
-                    emails_table_batch.delete()
+                    emails_table_batch.delete()  # clear batch
                     total_size = 0
             if emails_table_batch.count() > 0:
+                # send the remainder of emails
                 batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
-                emails_table_batch.delete()
+                emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
