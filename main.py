@@ -567,8 +567,12 @@ def process_directories(folderstable_process):
         except Exception, error:
             emails_table_batch.delete()
             run_log = open(run_log_fullpath, 'a')
-            print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-            run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+            if reporting['report_printing_fallback'] == "True":
+                print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+                run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+            else:
+                print("Emailing report log failed with: " + str(error) + ", printing disabled, stopping\r\n")
+                run_log.write("Emailing report log failed with: " + str(error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
                 try:
@@ -580,10 +584,6 @@ def process_directories(folderstable_process):
                     run_log = open(run_log_fullpath, 'a')
                     run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
                     run_log.close()
-            else:
-                run_log = open(run_log_fullpath, 'a')
-                run_log.write("Report printing fallback disabled")
-                run_log.close()
 
 
 def silent_process_directories(folderstable):
