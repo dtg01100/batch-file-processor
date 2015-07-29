@@ -533,19 +533,21 @@ def process_directories(folderstable_process):
             except IOError:
                 print("Can't write critical error log, aborting")
                 quit()
-    run_log_fullpath = os.path.join(reporting['logs_directory'], run_log_name_constructor)
+    run_log_path = reporting['logs_directory']
+    run_log_path = str(run_log_path)
+    run_log_fullpath = os.path.join(run_log_path, run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'])
+        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting)
     except Exception, error:
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
         run_log.write(
             "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
-    emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
     run_log.close()
     if reporting['enable_reporting'] == "True":
+        emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
         try:
             sent_emails_removal_queue.delete()
             total_size = 0

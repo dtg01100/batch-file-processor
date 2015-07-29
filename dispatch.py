@@ -14,7 +14,7 @@ import edi_validator
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
-def process(folders_database, run_log, emails_table, run_log_directory):
+def process(folders_database, run_log, emails_table, run_log_directory, reporting):
     for parameters_dict in folders_database.all():
         if parameters_dict['is_active'] == "True":
             if parameters_dict['process_backend'] != 'copy' and parameters_dict['process_backend'] != 'ftp' and parameters_dict['process_backend'] != 'email':
@@ -121,7 +121,8 @@ def process(folders_database, run_log, emails_table, run_log_directory):
                         try:
                             folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
                             folder_errors_log_write.write(folder_errors_log.getvalue())
-                            emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
+                            if reporting['enable_reporting'] == "True":
+                                emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
                         except Exception, error:
                             print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")
                             run_log.write("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log\r\n")
