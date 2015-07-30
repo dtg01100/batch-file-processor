@@ -249,8 +249,8 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             error_list.append("Invalid Email Destination Address\r\n")
             errors = True
         if errors is True:
-            error_report = ''.join(error_list)
-            showerror(message=error_report)
+            error_report = ''.join(error_list)  # combine error messages into single string
+            showerror(message=error_report)  # display generated error string in error dialog
             return False
         return 1
 
@@ -489,9 +489,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 error_string_constructor_list.append("Alias Too Long\r\n")
                 errors = True
         if errors is True:
-            error_string = ''.join(error_string_constructor_list)
-            print(error_string)
-            showerror(message=error_string)
+            error_string = ''.join(error_string_constructor_list)  # combine error messages into single string
+            showerror(message=error_string)  # display generated error in dialog box
             return False
 
         return 1
