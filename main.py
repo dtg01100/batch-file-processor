@@ -5,7 +5,6 @@ try:  # try to import required modules
     from tkMessageBox import askokcancel
     from ttk import *
     from validate_email import validate_email
-    from icemac.truncatetext import truncate
     import scrollbuttons
     import dataset
     import dialog
@@ -159,16 +158,18 @@ def make_users_list():
     for foldersname in folderstable.all():
         if str(foldersname['is_active']) != "False":
             active_folderbuttonframe = Frame(active_userslistframe.interior)
+            buttonlabelstring = ('..' + foldersname['alias'][75:]) if len(foldersname['alias']) > 75 else foldersname['alias']
             Button(active_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(active_folderbuttonframe, text=truncate(foldersname['alias'], 50),
+            Button(active_folderbuttonframe, text=buttonlabelstring,
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             active_folderbuttonframe.pack(anchor='e')
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
+            buttonlabelstring = ('..' + foldersname['alias'][75:]) if len(foldersname['alias']) > 75 else foldersname['alias']
             Button(inactive_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(inactive_folderbuttonframe, text=truncate(foldersname['alias'], 50),
+            Button(inactive_folderbuttonframe, text=buttonlabelstring,
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             inactive_folderbuttonframe.pack(anchor='e')
     # pack widgets in correct order
