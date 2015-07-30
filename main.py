@@ -158,18 +158,16 @@ def make_users_list():
     for foldersname in folderstable.all():
         if str(foldersname['is_active']) != "False":
             active_folderbuttonframe = Frame(active_userslistframe.interior)
-            buttonlabelstring = ('..' + foldersname['alias'][75:]) if len(foldersname['alias']) > 75 else foldersname['alias']
             Button(active_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(active_folderbuttonframe, text=buttonlabelstring,
+            Button(active_folderbuttonframe, text=foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             active_folderbuttonframe.pack(anchor='e')
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
-            buttonlabelstring = ('..' + foldersname['alias'][75:]) if len(foldersname['alias']) > 75 else foldersname['alias']
             Button(inactive_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(inactive_folderbuttonframe, text=buttonlabelstring,
+            Button(inactive_folderbuttonframe, text=foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             inactive_folderbuttonframe.pack(anchor='e')
     # pack widgets in correct order
@@ -479,6 +477,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 if proposed_folder is not None:
                     showerror(title="Invalid Alias", message="Folder Alias Already In Use")
                     return False
+            if len(self.e2.get()) > 50:
+                showerror(message="Alias Too Long")
+                return False
 
         return 1
 
