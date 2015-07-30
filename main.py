@@ -240,13 +240,18 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def validate(self):
 
-        if self.enable_reporting_checkbutton.get() == "True":
-            if (validate_email(str(self.e1.get()), verify=True)) is False:
-                showerror(title="Invalid Email Address", message="Invalid Email Origin Address")
-                return False
-            if (validate_email(str(self.e6.get()), verify=True)) is False:
-                showerror(title="Invalid Email Address", message="Invalid Email Destination Address")
-                return False
+        error_list = []
+        errors = False
+        if (validate_email(str(self.e1.get()), verify=True)) is False:
+            error_list.append("Invalid Email Origin Address\r\n")
+            errors = True
+        if (validate_email(str(self.e6.get()), verify=True)) is False:
+            error_list.append("Invalid Email Destination Address\r\n")
+            errors = True
+        if errors is True:
+            error_report = ''.join(error_list)
+            showerror(message=error_report)
+            return False
         return 1
 
     def ok(self, event=None):
@@ -458,28 +463,36 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
     def validate(self):
 
+        error_string_constructor_list = []
+        errors = False
         if str(self.backendvariable.get()) == "email":
             if (validate_email(str(self.e11.get()), verify=True)) is False:
-                showerror(title="Invalid Email Address", message="Invalid Email Origin Address")
-                return False
+                error_string_constructor_list.append("Invalid Email Origin Address\r\n")
+                errors = True
 
             if (validate_email(str(self.e10.get()), verify=True)) is False:
-                showerror(title="Invalid Email Address", message="Invalid Email Destination Address")
-                return False
+                error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                errors = True
 
         if len(str(self.e23.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
-            showerror(title='"A" Record Padding Too Short', message='"A" Record Padding Needs To Be Six Characters')
-            return False
+            error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
+            errors = True
 
         if self.foldersnameinput['foldersname'] != 'template':
             if str(self.e2.get()) != self.foldersnameinput['alias']:
                 proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
                 if proposed_folder is not None:
-                    showerror(title="Invalid Alias", message="Folder Alias Already In Use")
-                    return False
+                    error_string_constructor_list.append("Folder Alias Already In Use\r\n")
+                    errors = True
+
             if len(self.e2.get()) > 50:
-                showerror(message="Alias Too Long")
-                return False
+                error_string_constructor_list.append("Alias Too Long\r\n")
+                errors = True
+        if errors is True:
+            error_string = ''.join(error_string_constructor_list)
+            print(error_string)
+            showerror(message=error_string)
+            return False
 
         return 1
 
