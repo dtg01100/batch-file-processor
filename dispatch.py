@@ -125,7 +125,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                             print("Error folder not found for " + parameters_dict['foldersname'] + ", " + "making one")
                             try:
                                 os.mkdir(os.path.join(parameters_dict['foldersname'], "errors"))
-                            except Exception:  # if we can't create error logs folder, put it in run log directory
+                            except IOError:  # if we can't create error logs folder, put it in run log directory
                                 record_error.do(run_log, folder_errors_log, "Error creating errors folder",
                                                 str(parameters_dict['foldersname']),"Dispatch Error Logger")
                                 folder_error_log_name_fullpath = os.path.join(run_log_directory, folder_error_log_name_constructor)
