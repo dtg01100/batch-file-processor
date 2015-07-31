@@ -146,3 +146,4 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     # if the folder doesn't exist anymore, mark it as inactive
                     data = dict(id=parameters_dict['id'], is_active="False")
                     folders_database.update(data, ['id'])
+                    run_log.write("\r\nfolder missing for " + parameters_dict['alias'] + ", disabling\r\n\r\n")
