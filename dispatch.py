@@ -140,7 +140,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                             run_log.write("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log\r\n")
                             run_log.write("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n")
                             run_log.write(folder_errors_log.getvalue())
-                            run_log.write("\r\n\r\nEnd of Error file")
+                            run_log.write("\r\n\r\nEnd of Error file\r\n\r\n")
                     folder_errors_log.close()
                 else:
                     # if the folder doesn't exist anymore, mark it as inactive
