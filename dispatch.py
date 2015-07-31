@@ -32,7 +32,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         print("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
                         run_log.write("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
                         os.mkdir(os.path.join(parameters_dict['foldersname'], "obe"))
-                    cleaned_alias_string = re.sub('[^a-zA-Z0-9 \n\.]', '', parameters_dict['alias'])  # strip potentially invalid filename characters from alias string
+                    cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])  # strip potentially invalid filename characters from alias string
                     folder_error_log_name_constructor = cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"  # add iso8601 date/time stamp to filename, but filter : for - due to filename constraints
                     folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                     folder_errors_log = cStringIO.StringIO()
