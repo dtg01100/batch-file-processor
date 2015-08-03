@@ -43,7 +43,19 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
             print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
             raise SystemExit
 
-database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+try:  # try to connect to database
+    database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+except Exception, error:  # if that doesn't work for some reason, log and quit
+    try:
+        print(str(error))
+        critical_log = open("critical_error.log" 'a')
+        critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
+        critical_log.close()
+        raise SystemExit
+    except Exception, big_error:  # if logging doesn't work, at least complain
+        print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
+        raise SystemExit
+
 # open required tables in database
 folderstable = database_connection['folders']
 emails_table = database_connection['emails_to_send']
