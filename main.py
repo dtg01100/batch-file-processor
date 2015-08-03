@@ -2,6 +2,7 @@ try:  # try to import required modules
     from Tkinter import *
     from tkFileDialog import askdirectory
     from tkMessageBox import showerror
+    from tkMessageBox import showinfo
     from tkMessageBox import askokcancel
     from ttk import *
     from validate_email import validate_email
@@ -140,6 +141,26 @@ def select_folder():
         #  offer to edit the folder if it is already known
         if askokcancel("Query:", "Folder already known, would you like to edit?"):
             EditDialog(root, proposed_folder)
+
+
+def batch_add_folders():
+    added = 0
+    skipped = 0
+    containing_folder = askdirectory()
+    os.chdir(str(containing_folder))
+    folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
+    if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
+        for folder in folders_list:
+            folder = os.path.join(containing_folder, folder)
+            proposed_folder = folderstable.find_one(foldersname=folder)
+            if proposed_folder is None:
+                if folder != '':  # check to see if selected folder has a path
+                    add_folder_entry(folder)
+                    added = added + 1
+            else:
+                skipped = skipped + 1
+        refresh_users_list()
+        showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
 
 
 def edit_folder_selector(folder_to_be_edited):
@@ -652,6 +673,8 @@ if args.automatic:
 
 open_folder_button = Button(optionsframe, text="Add Directory", command=select_folder)
 open_folder_button.pack(side=TOP, fill=X)
+open_multiple_folder_button = Button(optionsframe, text="Batch Add Directories", command=batch_add_folders)
+open_multiple_folder_button.pack(side=TOP, fill=X)
 default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
 default_settings.pack(side=TOP, fill=X)
 reporting_options = oversight_and_defaults.find_one(id=1)
