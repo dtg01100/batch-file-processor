@@ -30,7 +30,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     except Exception, error:
                         print(str(error))
                         print("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
-                        run_log.write("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
+                        run_log.write("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n\r\n")
                         os.mkdir(os.path.join(parameters_dict['foldersname'], "obe"))
                     cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])  # strip potentially invalid filename characters from alias string
                     folder_error_log_name_constructor = cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"  # add iso8601 date/time stamp to filename, but filter : for - due to filename constraints
@@ -53,6 +53,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                                           parameters_dict['filter_ampersand'],
                                                           parameters_dict['pad_arec'],
                                                           parameters_dict['arec_padding'])
+                                    run_log.write("Success\r\n\r\n")
                                     try:
                                         shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
                                     except Exception, error:
@@ -70,24 +71,27 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         if parameters_dict['process_backend'] == "copy" and errors is False:
                             try:
                                 run_log.write("sending file " + str(filename) + " to " +
-                                        str(parameters_dict['copy_to_directory']) + " with copy backend\r\n")
+                                        str(parameters_dict['copy_to_directory']) + " with copy backend\r\n\r\n")
                                 copy_backend.do(parameters_dict, filename)
+                                run_log.write("Success\r\n\r\n")
                             except Exception, error:
                                 print str(error)
-                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "Copy Backend\r\n")
+                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "Copy Backend")
                                 errors = True
                         if parameters_dict['process_backend'] == "ftp" and errors is False:
                             try:
-                                run_log.write("sending " + str(filename) + " to " + str(parameters_dict['ftp_server']) + " with FTP backend\r\n")
+                                run_log.write("sending " + str(filename) + " to " + str(parameters_dict['ftp_server']) + " with FTP backend\r\n\r\n")
                                 ftp_backend.do(parameters_dict, filename)
+                                run_log.write("Success\r\n\r\n")
                             except Exception, error:
                                 print str(error)
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "FTP Backend")
                                 errors = True
                         if parameters_dict['process_backend'] == "email" and errors is False:
                             try:
-                                run_log.write("sending " + str(filename) + " to " + str(parameters_dict['email_to']) + " with email backend\r\n")
+                                run_log.write("sending " + str(filename) + " to " + str(parameters_dict['email_to']) + " with email backend\r\n\r\n")
                                 email_backend.do(parameters_dict, filename)
+                                run_log.write("Success\r\n\r\n")
                             except Exception, error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "Email Backend")
                                 errors = True

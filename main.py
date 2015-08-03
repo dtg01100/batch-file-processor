@@ -23,10 +23,10 @@ except Exception, error:
         critical_log = open("critical_error.log", 'a')
         critical_log.write(str(error) + "\r\n")
         critical_log.close()
-        quit()
+        raise SystemExit
     except Exception, big_error:  # if logging doesn't work, at least complain
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
-        quit()
+        raise SystemExit
 
 
 if not os.path.isfile('folders.db'):  # if the database file is missing
@@ -38,10 +38,10 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
             critical_log = open("critical_error.log" 'a')
             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
-            quit()
+            raise SystemExit
         except Exception, big_error:  # if logging doesn't work, at least complain
             print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
-            quit()
+            raise SystemExit
 
 database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
 # open required tables in database
@@ -146,8 +146,8 @@ def make_users_list():
     inactive_users_list_container = Frame(userslistframe)
     active_userslistframe = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
     inactive_userslistframe = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
-    active_users_list_label = Label(active_users_list_container, text="Active Users")  # active users title
-    inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Users")  # inactive users title
+    active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
+    inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     if folderstable.count(is_active="True") == 0:
         no_active_label = Label(active_userslistframe, text="No Active Folders")
         no_active_label.pack()
@@ -160,14 +160,14 @@ def make_users_list():
             active_folderbuttonframe = Frame(active_userslistframe.interior)
             Button(active_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(active_folderbuttonframe, text=foldersname['alias'],
+            Button(active_folderbuttonframe, text="Edit: " + foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             active_folderbuttonframe.pack(anchor='e')
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
             Button(inactive_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
-            Button(inactive_folderbuttonframe, text=foldersname['alias'],
+            Button(inactive_folderbuttonframe, text="Edit: " + foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
             inactive_folderbuttonframe.pack(anchor='e')
     # pack widgets in correct order
@@ -549,7 +549,7 @@ def process_directories(folderstable_process):
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
                     showerror(message="Can't write to log directory, exiting")
-                    quit()
+                    raise SystemExit
         else:
             try:
                 # can't prompt for new logs directory, can only complain in a critical log and quit
@@ -557,11 +557,11 @@ def process_directories(folderstable_process):
                 critical_log = open("critical_error.log", 'a')
                 critical_log.write(str(datetime.datetime.now()) + "can't write into logs directory. in automatic mode, so no prompt\r\n")
                 critical_log.close()
-                quit()
+                raise SystemExit
             except IOError:
                 # can't complain in a critical log, so ill complain in standard output and quit
                 print("Can't write critical error log, aborting")
-                quit()
+                raise SystemExit
     run_log_path = reporting['logs_directory']
     run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
     run_log_fullpath = os.path.join(run_log_path, run_log_name_constructor)
@@ -630,7 +630,7 @@ def silent_process_directories(folderstable):
             critical_log.close()
     else:
         print("Error, No Active Folders")
-    quit()
+    raise SystemExit
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')
