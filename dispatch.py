@@ -15,6 +15,8 @@ import edi_validator
 
 
 def process(folders_database, run_log, emails_table, run_log_directory, reporting):
+    error_counter = 0
+    processed_counter = 0
     for parameters_dict in folders_database.all():  # loop over all known folders
         if parameters_dict['is_active'] == "True":  # skip inactive ones
             # if the backend is invalid, deactivate
@@ -37,16 +39,19 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                     folder_errors_log = cStringIO.StringIO()
                     run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'] + "\r\n\r\n")
+                    print("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'])
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
                     errors = False
                     if len(files) == 0:  # if there are no files in directory, record in log
                         run_log.write("No files in directory\r\n\r\n")
+                        print("No files in directory")
                     for filename in files:  # iterate over all files in directory
                         if parameters_dict['process_edi'] == "True":
                             if edi_validator.check(filename):
                                 # if the current file is recognized as a valid edi file, then convert it to csv, otherwise log and carry on
                                 try:
                                     run_log.write("converting " + filename + " from EDI to CSV\r\n")
+                                    print("converting " + filename + " from EDI to CSV")
                                     converter.edi_convert(parameters_dict, filename, filename + ".csv", parameters_dict['calc_upc'],
                                                           parameters_dict['inc_arec'], parameters_dict['inc_crec'],
                                                           parameters_dict['inc_headers'],
@@ -70,28 +75,35 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         # the following blocks process the files using the specified backend, and log in the event of any errors
                         if parameters_dict['process_backend'] == "copy" and errors is False:
                             try:
+                                print("sending file " + str(filename) + " to " +
+                                        str(parameters_dict['copy_to_directory']) + " with copy backend")
                                 run_log.write("sending file " + str(filename) + " to " +
                                         str(parameters_dict['copy_to_directory']) + " with copy backend\r\n\r\n")
                                 copy_backend.do(parameters_dict, filename)
                                 run_log.write("Success\r\n\r\n")
+                                processed_counter = processed_counter + 1
                             except Exception, error:
                                 print str(error)
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "Copy Backend")
                                 errors = True
                         if parameters_dict['process_backend'] == "ftp" and errors is False:
                             try:
+                                print("sending " + str(filename) + " to " + str(parameters_dict['ftp_server']) + " with FTP backend")
                                 run_log.write("sending " + str(filename) + " to " + str(parameters_dict['ftp_server']) + " with FTP backend\r\n\r\n")
                                 ftp_backend.do(parameters_dict, filename)
                                 run_log.write("Success\r\n\r\n")
+                                processed_counter = processed_counter + 1
                             except Exception, error:
                                 print str(error)
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "FTP Backend")
                                 errors = True
                         if parameters_dict['process_backend'] == "email" and errors is False:
                             try:
+                                print("sending " + str(filename) + " to " + str(parameters_dict['email_to']) + " with email backend")
                                 run_log.write("sending " + str(filename) + " to " + str(parameters_dict['email_to']) + " with email backend\r\n\r\n")
                                 email_backend.do(parameters_dict, filename)
                                 run_log.write("Success\r\n\r\n")
+                                processed_counter = processed_counter + 1
                             except Exception, error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "Email Backend")
                                 errors = True
@@ -102,6 +114,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                 record_error.do(run_log, folder_errors_log, str(error), str(filename), "Dispatch")
                                 errors = True
                     if errors is True:
+                        error_counter = error_counter + 1
                         # check for file blocking error log folder, attempt to clear it, record errors
                         if os.path.exists(os.path.join(parameters_dict['foldersname'], "errors")) is True:
                             if os.path.isfile(os.path.join(parameters_dict['foldersname'], "errors")) is True:
@@ -151,3 +164,6 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     data = dict(id=parameters_dict['id'], is_active="False")
                     folders_database.update(data, ['id'])
                     run_log.write("\r\nfolder missing for " + parameters_dict['alias'] + ", disabling\r\n\r\n")
+                    print("folder missing for " + parameters_dict['alias'] + ", disabling")
+    print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
+    run_log.write("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors")

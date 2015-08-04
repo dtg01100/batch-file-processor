@@ -9,3 +9,4 @@ def do(run_log, errors_log, error_message, filename, error_source):
     # record error to both the run log and the errors log
     run_log.write(message)
     errors_log.write(message)
+    print(message)

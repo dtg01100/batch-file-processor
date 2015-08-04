@@ -32,7 +32,9 @@ except Exception, error:
 
 if not os.path.isfile('folders.db'):  # if the database file is missing
     try:
+        print("creating initial database file...")
         create_database.do()  # make a new one
+        print("done")
     except Exception, error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
@@ -101,6 +103,7 @@ def add_folder_entry(folder):  # add unconfigured folder to database
             folder_alias_deduplicate_constructor = folder_alias_constructor + " " + str(folder_alias_end_suffix)
         folder_alias_constructor = folder_alias_deduplicate_constructor
 
+    print("adding folder: " + folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
     folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
                              alias=folder_alias_constructor, process_backend=defaults['process_backend'],
@@ -124,6 +127,7 @@ def add_folder_entry(folder):  # add unconfigured folder to database
                              email_smtp_port=defaults['email_smtp_port'],
                              reporting_smtp_port=defaults['reporting_smtp_port'],
                              ftp_port=defaults['ftp_port']))
+    print("done")
 
 
 def select_folder():
@@ -149,6 +153,7 @@ def batch_add_folders():
     containing_folder = askdirectory()
     os.chdir(str(containing_folder))
     folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
+    print("adding " + str(len(folders_list)) + " folders")
     if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
         for folder in folders_list:
             folder = os.path.join(containing_folder, folder)
@@ -158,7 +163,9 @@ def batch_add_folders():
                     add_folder_entry(folder)
                     added = added + 1
             else:
+                print("skipping existing folder: " + folder)
                 skipped = skipped + 1
+        print("done adding folders")
         refresh_users_list()
         showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
 

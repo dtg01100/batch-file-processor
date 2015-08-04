@@ -30,6 +30,7 @@ def do(reporting, emails_table, sent_emails_removal_queue, time):
         encoders.encode_base64(part)
         part.add_header('Content-Disposition', "attachment; filename= %s" % tail)
 
+        print("attaching " + filename)
         msg.attach(part)
 
         sent_emails_removal_queue.insert(log)
@@ -38,5 +39,6 @@ def do(reporting, emails_table, sent_emails_removal_queue, time):
     server.starttls()
     server.login(fromaddr, reporting['report_email_password'])
     text = msg.as_string()
+    print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
     server.sendmail(fromaddr, toaddr, text)
     server.quit()
