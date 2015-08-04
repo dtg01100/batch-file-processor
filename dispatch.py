@@ -38,8 +38,8 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     folder_error_log_name_constructor = cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"  # add iso8601 date/time stamp to filename, but filter : for - due to filename constraints
                     folder_error_log_name_fullpath = os.path.join(parameters_dict['foldersname'], "errors", folder_error_log_name_constructor)
                     folder_errors_log = cStringIO.StringIO()
-                    run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'] + "\r\n\r\n")
-                    print("processing folder " + parameters_dict['foldersname'] + " with backend " + parameters_dict['process_backend'])
+                    run_log.write("processing folder " + parameters_dict['foldersname'] + " with backend: " + parameters_dict['process_backend'] + "\r\n\r\n")
+                    print("processing folder " + parameters_dict['foldersname'] + " with backend: " + parameters_dict['process_backend'])
                     files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
                     errors = False
                     if len(files) == 0:  # if there are no files in directory, record in log
