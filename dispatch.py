@@ -35,7 +35,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                     while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
                         destination_file_end_suffix += destination_file_end_suffix + 1
                         print str(destination_file_end_suffix)
-                        destination_file_deduplicate_constructor = destination_file_constructor + " " + str(destination_file_end_suffix)
+                        destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
                     destination_file_constructor = destination_file_deduplicate_constructor
                     shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
                 obe_queue.delete(file=str(files['file']))
