@@ -38,7 +38,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
     except Exception, error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
-            critical_log = open("critical_error.log" 'a')
+            critical_log = open("critical_error.log", 'a')
             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
             raise SystemExit
@@ -51,7 +51,7 @@ try:  # try to connect to database
 except Exception, error:  # if that doesn't work for some reason, log and quit
     try:
         print(str(error))
-        critical_log = open("critical_error.log" 'a')
+        critical_log = open("critical_error.log", 'a')
         critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
         critical_log.close()
         raise SystemExit
@@ -65,6 +65,7 @@ emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
+obe_queue = database_connection['obe_queue']
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
 root.title("Sender Interface")
@@ -609,7 +610,7 @@ def process_directories(folderstable_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting)
+        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue)
     except Exception, error:
         # if processing folders runs into a serious error, report and log
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")

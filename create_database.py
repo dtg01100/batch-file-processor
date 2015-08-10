@@ -1,4 +1,5 @@
 import dataset
+import sqlalchemy
 import os
 
 
@@ -19,3 +20,7 @@ def do():  # create database file with some default settings
                                        logs_directory=os.getcwd() + "/run_logs/", enable_reporting="False",
                                        report_printing_fallback="False", reporting_smtp_port=587, email_smtp_port=587,
                                        ftp_port=21))
+
+    obe_queue = database_connection['obe_queue']
+    obe_queue.create_column('file', sqlalchemy.types.String)
+    obe_queue.create_column('destination', sqlalchemy.types.String)
