@@ -68,7 +68,7 @@ oversight_and_defaults = database_connection['administrative']
 obe_queue = database_connection['obe_queue']
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
-root.title("Sender Interface")
+root.title("Sender Interface 1.0")
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
@@ -85,7 +85,7 @@ def check_logs_directory():
         return False
 
 
-def add_folder_entry(folder):  # add unconfigured folder to database
+def add_folder_entry(folder):  # add folder to database, copying configuration from template
     defaults = oversight_and_defaults.find_one(id=1)
     folder_alias_constructor = os.path.basename(folder)
 

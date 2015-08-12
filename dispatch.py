@@ -24,20 +24,24 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
             try:
                 print("moving " + files['file'] + " to obe directory")
                 run_log.write("\r\nmoving " + files['file'] + " to obe directory\r\n")
-                if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
-                    shutil.move(files['file'], files['destination'])
+                if os.path.isfile(files['file']):
+                    if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
+                        shutil.move(files['file'], files['destination'])
+                    else:
+                        print("file with same name exists, adding number to end")
+                        run_log.write("\r\nfile with same name exists, adding number to end\r\n")
+                        destination_file_constructor = files['file']
+                        destination_file_end_suffix = 0
+                        destination_file_deduplicate_constructor = destination_file_constructor
+                        while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
+                            destination_file_end_suffix += destination_file_end_suffix + 1
+                            print str(destination_file_end_suffix)
+                            destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
+                        destination_file_constructor = destination_file_deduplicate_constructor
+                        shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
                 else:
-                    print("file with same name exists, adding number to end")
-                    run_log.write("\r\nfile with same name exists, adding number to end\r\n")
-                    destination_file_constructor = files['file']
-                    destination_file_end_suffix = 0
-                    destination_file_deduplicate_constructor = destination_file_constructor
-                    while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
-                        destination_file_end_suffix += destination_file_end_suffix + 1
-                        print str(destination_file_end_suffix)
-                        destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
-                    destination_file_constructor = destination_file_deduplicate_constructor
-                    shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
+                    print(files['file'] + " missing, deleting from move queue")
+                    run_log.write("\r\n" + files['file'] + " deleting from move queue\r\n")
                 obe_queue.delete(file=str(files['file']))
             except IOError:
                 run_log.write("\r\nerror moving file " + os.path.basename(files['file']), ' to obe directory\r\n')
