@@ -91,7 +91,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                                           parameters_dict['arec_padding'])
                                     run_log.write("Success\r\n\r\n")
                                     try:
-                                        obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe"))))
+                                        obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe")), folder_id=parameters_dict['id']))
                                         shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
                                         obe_queue.delete(file=str(os.path.abspath(filename)))
                                     except Exception, error:
@@ -142,7 +142,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                 errors = True
                         if errors is False:
                             try:
-                                obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe"))))
+                                obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe")), folder_id=parameters_dict['id']))
                                 shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
                                 obe_queue.delete(file=str(os.path.abspath(filename)))
                             except Exception, error:
@@ -185,7 +185,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                             folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
                             folder_errors_log_write.write(folder_errors_log.getvalue())
                             if reporting['enable_reporting'] == "True":
-                                emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias']))
+                                emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias'], folder_id=parameters_dict['id']))
                         except Exception, error:
                             # if file can't be created in either directory, put error log inline in the run log
                             print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")

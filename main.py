@@ -554,6 +554,8 @@ def refresh_users_list():
 def delete_folder_entry(folder_to_be_removed):
     folderstable.delete(id=folder_to_be_removed)
     refresh_users_list()
+    obe_queue.delete(folder_id=folder_to_be_removed)
+    emails_table.delete(folder_id=folder_to_be_removed)
 
 
 def graphical_process_directories(folderstable_process):
