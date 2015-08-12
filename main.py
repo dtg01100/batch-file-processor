@@ -638,6 +638,7 @@ def process_directories(folderstable_process):
                         total_size = 0
                 else:
                     email_errors.write("\r\n" + log['log'] + " missing, skipping")
+                    email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                     skipped_files = skipped_files + 1
                     sent_emails_removal_queue.insert(log)
                 if emails_table_batch.count() > 0:
