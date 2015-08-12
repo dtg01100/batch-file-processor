@@ -698,6 +698,20 @@ def silent_process_directories(folderstable):
     raise SystemExit
 
 
+def maintenance_functions_popup():
+    maintenance_popup = Toplevel()
+    maintenance_popup.title("Maintenance Functions")
+    maintenance_popup.grab_set()
+    clear_emails_queue = Button(maintenance_popup, text="clear queued emails", command=None)
+    clear_obe_queue = Button(maintenance_popup, text="clear obe queue", command=obe_queue.delete)
+    move_active_to_obe = Button(maintenance_popup, text="Move Active to obe", command=None)
+    close_maintenance_button = Button(maintenance_popup, text="Close", command=maintenance_popup.destroy)
+    clear_emails_queue.grid(row=0)
+    clear_obe_queue.grid(row=1)
+    move_active_to_obe.grid(row=2)
+    close_maintenance_button.grid(row=3)
+
+
 launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
@@ -715,6 +729,8 @@ edit_reporting = Button(optionsframe, text="Edit Reporting",
 edit_reporting.pack(side=TOP, fill=X)
 process_folder_button = Button(optionsframe, text="Process Folders", command=lambda: graphical_process_directories(folderstable))
 process_folder_button.pack(side=TOP, fill=X)
+maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
+maintenance_button.pack(side=TOP, fill=X)
 optionsframe.pack(side=LEFT)
 
 make_users_list()
