@@ -19,6 +19,7 @@ try:  # try to import required modules
     import argparse
     import sqlalchemy.dialects.sqlite  # needed for py2exe
     import cStringIO
+    import shutil
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
@@ -698,18 +699,55 @@ def silent_process_directories(folderstable):
     raise SystemExit
 
 
+def remove_inactive_folders():
+    folderstable.delete(is_active="False")
+    refresh_users_list()
+
+
+def move_active_to_obe():
+    move_errors = 0
+    moved_files = 0
+    for files in folderstable.find(is_active="True"):
+        try:
+            print("moving " + files['file'] + " to obe directory")
+            if os.path.isfile(files['file']):
+                if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
+                    shutil.move(files['file'], files['destination'])
+                    moved_files = moved_files + 1
+                else:
+                    destination_file_constructor = files['file']
+                    destination_file_end_suffix = 0
+                    destination_file_deduplicate_constructor = destination_file_constructor
+                    while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
+                        destination_file_end_suffix += destination_file_end_suffix + 1
+                        print str(destination_file_end_suffix)
+                        destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
+                    destination_file_constructor = destination_file_deduplicate_constructor
+                    shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
+        except IOError:
+            move_errors = move_errors + 1
+    showinfo(message=str(moved_files) + " files moved\r\n" + str(move_errors) + " move errors")
+
+
 def maintenance_functions_popup():
-    maintenance_popup = Toplevel()
-    maintenance_popup.title("Maintenance Functions")
-    maintenance_popup.grab_set()
-    clear_emails_queue = Button(maintenance_popup, text="clear queued emails", command=None)
-    clear_obe_queue = Button(maintenance_popup, text="clear obe queue", command=obe_queue.delete)
-    move_active_to_obe = Button(maintenance_popup, text="Move Active to obe", command=None)
-    close_maintenance_button = Button(maintenance_popup, text="Close", command=maintenance_popup.destroy)
-    clear_emails_queue.grid(row=0)
-    clear_obe_queue.grid(row=1)
-    move_active_to_obe.grid(row=2)
-    close_maintenance_button.grid(row=3)
+    if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used. Are you sure you want to continue?"):
+        maintenance_popup = Toplevel()
+        maintenance_popup.title("Maintenance Functions")
+        maintenance_popup.grab_set()
+        maintenance_popup_button_frame = Frame(maintenance_popup)
+        maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
+        clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails", command=emails_table.delete)
+        clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
+        move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe", command=move_active_to_obe)
+        remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations", command=remove_inactive_folders)
+        close_maintenance_button = Button(maintenance_popup_button_frame, text="Close", command=maintenance_popup.destroy)
+        clear_emails_queue.pack(side=TOP, fill=X)
+        clear_obe_queue.pack(side=TOP, fill=X)
+        move_active_to_obe_button.pack(side=TOP, fill=X)
+        remove_all_inactive.pack(side=TOP, fill=X)
+        close_maintenance_button.pack(side=TOP, fill=X)
+        maintenance_popup_button_frame.pack(side=LEFT)
+        maintenance_popup_warning_label.pack(side=RIGHT)
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')
