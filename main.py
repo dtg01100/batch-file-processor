@@ -740,12 +740,10 @@ def maintenance_functions_popup():
         clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe", command=move_active_to_obe)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations", command=remove_inactive_folders)
-        close_maintenance_button = Button(maintenance_popup_button_frame, text="Close", command=maintenance_popup.destroy)
         clear_emails_queue.pack(side=TOP, fill=X)
         clear_obe_queue.pack(side=TOP, fill=X)
         move_active_to_obe_button.pack(side=TOP, fill=X)
         remove_all_inactive.pack(side=TOP, fill=X)
-        close_maintenance_button.pack(side=TOP, fill=X)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT)
 
