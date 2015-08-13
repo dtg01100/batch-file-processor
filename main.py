@@ -154,23 +154,24 @@ def batch_add_folders():
     added = 0
     skipped = 0
     containing_folder = askdirectory()
-    os.chdir(str(containing_folder))
-    folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
-    print("adding " + str(len(folders_list)) + " folders")
-    if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
-        for folder in folders_list:
-            folder = os.path.join(containing_folder, folder)
-            proposed_folder = folderstable.find_one(foldersname=folder)
-            if proposed_folder is None:
-                if folder != '':  # check to see if selected folder has a path
-                    add_folder_entry(folder)
-                    added = added + 1
-            else:
-                print("skipping existing folder: " + folder)
-                skipped = skipped + 1
-        print("done adding folders")
-        refresh_users_list()
-        showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
+    if containing_folder != "":
+        os.chdir(str(containing_folder))
+        folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
+        print("adding " + str(len(folders_list)) + " folders")
+        if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
+            for folder in folders_list:
+                folder = os.path.join(containing_folder, folder)
+                proposed_folder = folderstable.find_one(foldersname=folder)
+                if proposed_folder is None:
+                    if folder != '':  # check to see if selected folder has a path
+                        add_folder_entry(folder)
+                        added = added + 1
+                else:
+                    print("skipping existing folder: " + folder)
+                    skipped = skipped + 1
+            print("done adding folders")
+            refresh_users_list()
+            showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
 
 
 def edit_folder_selector(folder_to_be_edited):
@@ -193,10 +194,10 @@ def make_users_list():
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     if folderstable.count(is_active="True") == 0:
         no_active_label = Label(active_userslistframe, text="No Active Folders")
-        no_active_label.pack()
+        no_active_label.pack(fill=BOTH, expand=1, padx=10)
     if folderstable.count(is_active="False") == 0:
         no_inactive_label = Label(inactive_userslistframe, text="No Inactive Folders")
-        no_inactive_label.pack()
+        no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
     for foldersname in folderstable.all():
         if str(foldersname['is_active']) != "False":
@@ -204,29 +205,30 @@ def make_users_list():
             Button(active_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
             Button(active_folderbuttonframe, text="Edit: " + foldersname['alias'],
-                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
-            active_folderbuttonframe.pack(anchor='e')
+                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E+W)
+            active_folderbuttonframe.pack(anchor='e', pady=1)
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
             Button(inactive_folderbuttonframe, text="Delete",
                    command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
             Button(inactive_folderbuttonframe, text="Edit: " + foldersname['alias'],
-                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E)
-            inactive_folderbuttonframe.pack(anchor='e')
+                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E+W)
+            inactive_folderbuttonframe.pack(anchor='e', pady=1)
     # pack widgets in correct order
-    active_users_list_label.pack()
-    inactive_users_list_label.pack()
-    active_userslistframe.pack()
-    inactive_userslistframe.pack()
-    active_users_list_container.pack(side=RIGHT)
-    inactive_users_list_container.pack(side=RIGHT)
-    userslistframe.pack(side=RIGHT)
+    active_users_list_label.pack(pady=5)
+    inactive_users_list_label.pack(pady=5)
+    active_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
+    inactive_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
+    active_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
+    inactive_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
+    userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
 
 
 class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
     def body(self, master):
 
+        self.resizable(width=FALSE, height=FALSE)
         global logs_directory_edit
         logs_directory_edit = None
         global logs_directory_is_altered
@@ -241,16 +243,16 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         Label(master, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
         Label(master, text="Reporting Email SMTP Port").grid(row=5, sticky=E)
         Label(master, text="Reporting Email Destination:").grid(row=6, sticky=E)
-        Label(master, text="Log File Folder").grid(row=7, sticky=E)
+        Label(master, text="Log File Folder:").grid(row=7, sticky=E)
         Label(master, text="Enable Report Printing Fallback:").grid(row=8, sticky=E)
 
         self.e0 = Checkbutton(master, variable=self.enable_reporting_checkbutton, onvalue="True", offvalue="False")
-        self.e1 = Entry(master)
-        self.e2 = Entry(master)
-        self.e3 = Entry(master, show="*")
-        self.e4 = Entry(master)
-        self.e5 = Entry(master)
-        self.e6 = Entry(master)
+        self.e1 = Entry(master, width=40)
+        self.e2 = Entry(master, width=40)
+        self.e3 = Entry(master, show="*", width=40)
+        self.e4 = Entry(master, width=40)
+        self.e5 = Entry(master, width=40)
+        self.e6 = Entry(master, width=40)
         self.e7 = Button(master, text="Select Folder", command=lambda: select_log_directory())
         self.e8 = Checkbutton(master, variable=self.enable_report_printing_checkbutton, onvalue="True", offvalue="False")
 
@@ -269,15 +271,15 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.e6.insert(0, self.foldersnameinput['report_email_destination'])
         self.enable_report_printing_checkbutton.set(self.foldersnameinput['report_printing_fallback'])
 
-        self.e0.grid(row=0, column=1)
-        self.e1.grid(row=1, column=1)
-        self.e2.grid(row=2, column=1)
-        self.e3.grid(row=3, column=1)
-        self.e4.grid(row=4, column=1)
-        self.e5.grid(row=5, column=1)
-        self.e6.grid(row=6, column=1)
-        self.e7.grid(row=7, column=1)
-        self.e8.grid(row=8, column=1)
+        self.e0.grid(row=0, column=1, padx=2, pady=2, sticky=W)
+        self.e1.grid(row=1, column=1, padx=2, pady=2)
+        self.e2.grid(row=2, column=1, padx=2, pady=2)
+        self.e3.grid(row=3, column=1, padx=2, pady=2)
+        self.e4.grid(row=4, column=1, padx=2, pady=2)
+        self.e5.grid(row=5, column=1, padx=2, pady=2)
+        self.e6.grid(row=6, column=1, padx=2, pady=2)
+        self.e7.grid(row=7, column=1, padx=2, pady=2, sticky=W)
+        self.e8.grid(row=8, column=1, padx=2, pady=2, sticky=W)
 
         return self.e1  # initial focus
 
@@ -332,6 +334,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
     def body(self, master):
 
+        self.resizable(width=FALSE, height=FALSE)
         global copytodirectory
         copytodirectory = None
         global destination_directory_is_altered
@@ -381,20 +384,20 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         self.e1 = Checkbutton(master, variable=self.active_checkbutton, onvalue="True", offvalue="False")
         if self.foldersnameinput['foldersname'] != 'template':
-            self.e2 = Entry(master)
+            self.e2 = Entry(master, width=30)
         self.e3 = OptionMenu(master, self.backendvariable, "none", "copy", "ftp", "email")
         self.e4 = Button(master, text="Select Folder", command=lambda: select_copy_to_directory())
-        self.e5 = Entry(master)
-        self.e6 = Entry(master)
-        self.e7 = Entry(master)
-        self.e8 = Entry(master)
-        self.e9 = Entry(master, show="*")
-        self.e10 = Entry(master)
-        self.e11 = Entry(master)
-        self.e12 = Entry(master)
-        self.e13 = Entry(master, show="*")
-        self.e14 = Entry(master)
-        self.e15 = Entry(master)
+        self.e5 = Entry(master, width=30)
+        self.e6 = Entry(master, width=30)
+        self.e7 = Entry(master, width=30)
+        self.e8 = Entry(master, width=30)
+        self.e9 = Entry(master, show="*", width=30)
+        self.e10 = Entry(master, width=30)
+        self.e11 = Entry(master, width=30)
+        self.e12 = Entry(master, width=30)
+        self.e13 = Entry(master, show="*", width=30)
+        self.e14 = Entry(master, width=30)
+        self.e15 = Entry(master, width=30)
         self.e16 = Checkbutton(master, variable=self.process_edi, onvalue="True", offvalue="False")
         self.e17 = Checkbutton(master, variable=self.upc_var_check, onvalue="True", offvalue="False")
         self.e18 = Checkbutton(master, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
@@ -402,7 +405,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e20 = Checkbutton(master, variable=self.c_headers_check, onvalue="True", offvalue="False")
         self.e21 = Checkbutton(master, variable=self.ampersand_check, onvalue="True", offvalue="False")
         self.e22 = Checkbutton(master, variable=self.pad_arec_check, onvalue="True", offvalue="False")
-        self.e23 = Entry(master)
+        self.e23 = Entry(master, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['is_active'])
         if self.foldersnameinput['foldersname'] != 'template':
@@ -428,10 +431,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
         self.e23.insert(0, self.foldersnameinput['arec_padding'])
 
-        self.e1.grid(row=0, column=1)
+        self.e1.grid(row=0, column=1, sticky=W, padx=3)
         if self.foldersnameinput['foldersname'] != 'template':
             self.e2.grid(row=1, column=1)
-        self.e3.grid(row=2, column=1)
+        self.e3.grid(row=2, column=1, sticky=W+E)
         self.e4.grid(row=4, column=1)
         self.e5.grid(row=6, column=1)
         self.e6.grid(row=7, column=1)
@@ -444,13 +447,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e13.grid(row=15, column=1)
         self.e14.grid(row=16, column=1)
         self.e15.grid(row=17, column=1)
-        self.e16.grid(row=0, column=4)
-        self.e17.grid(row=1, column=4)
-        self.e18.grid(row=2, column=4)
-        self.e19.grid(row=3, column=4)
-        self.e20.grid(row=4, column=4)
-        self.e21.grid(row=5, column=4)
-        self.e22.grid(row=6, column=4)
+        self.e16.grid(row=0, column=4, sticky=W, padx=3)
+        self.e17.grid(row=1, column=4, sticky=W, padx=3)
+        self.e18.grid(row=2, column=4, sticky=W, padx=3)
+        self.e19.grid(row=3, column=4, sticky=W, padx=3)
+        self.e20.grid(row=4, column=4, sticky=W, padx=3)
+        self.e21.grid(row=5, column=4, sticky=W, padx=3)
+        self.e22.grid(row=6, column=4, sticky=W, padx=3)
         self.e23.grid(row=7, column=4)
 
         return self.e1  # initial focus
@@ -563,9 +566,9 @@ def delete_folder_entry(folder_to_be_removed):
 def graphical_process_directories(folderstable_process):
     if folderstable_process.count(is_active="True") > 0:
         process_directories(folderstable_process)
+        refresh_users_list()
     else:
         showerror("Error", "No Active Folders")
-    refresh_users_list()
 
 
 def set_defaults_popup():
@@ -733,19 +736,21 @@ def maintenance_functions_popup():
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used. Are you sure you want to continue?"):
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
+        maintenance_popup.transient(root)
         maintenance_popup.grab_set()
+        maintenance_popup.resizable(width=FALSE, height=FALSE)
         maintenance_popup_button_frame = Frame(maintenance_popup)
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails", command=emails_table.delete)
         clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe", command=move_active_to_obe)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations", command=remove_inactive_folders)
-        clear_emails_queue.pack(side=TOP, fill=X)
-        clear_obe_queue.pack(side=TOP, fill=X)
-        move_active_to_obe_button.pack(side=TOP, fill=X)
-        remove_all_inactive.pack(side=TOP, fill=X)
+        clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
+        clear_obe_queue.pack(side=TOP, fill=X, padx=2, pady=2)
+        move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
+        remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
-        maintenance_popup_warning_label.pack(side=RIGHT)
+        maintenance_popup_warning_label.pack(side=RIGHT, padx=10)
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')
@@ -768,6 +773,13 @@ process_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
 maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 optionsframe.pack(side=LEFT)
+optionsframe_divider = Separator(root, orient=VERTICAL)
+optionsframe_divider.pack(side=LEFT, fill=Y)
+# set window minimum size to prevent user making it ugly
+root.update()  # update window geometry
+# don't allow window to be resized smaller than current dimensions
+root.minsize(root.winfo_width(), root.winfo_height())
+root.resizable(width=FALSE, height=TRUE)
 
 make_users_list()
 
