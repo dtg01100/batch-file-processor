@@ -744,28 +744,51 @@ def remove_inactive_folders():
 
 
 def move_active_to_obe():
-    move_errors = 0
-    moved_files = 0
-    for files in folderstable.find(is_active="True"):
-        try:
-            print("moving " + files['file'] + " to obe directory")
-            if os.path.isfile(files['file']):
-                if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
-                    shutil.move(files['file'], files['destination'])
-                    moved_files = moved_files + 1
+    for parameters_dict in folderstable.find(is_active="True"):
+        os.chdir(parameters_dict['foldersname'])
+        files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
+        for filename in files:
+            obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe")), folder_id=parameters_dict['id']))
+
+
+def process_obe_queue():
+    def update_overlay(overlay_text, folder_count, folder_total, file_count, file_total):
+        doing_stuff_overlay.destroy_overlay()
+        doing_stuff_overlay.make_overlay(parent=root, overlaytext=overlay_text + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
+    error_counter = 0
+    processed_counter = 0
+    if obe_queue.count() > 0:
+        update_overlay("processing obe queue\n", None, None, None, None)
+        file_count_total = obe_queue.count()
+        file_count = 0
+        for files in obe_queue.all():
+            try:
+                file_count = file_count + 1
+                if not args.automatic:
+                    doing_stuff_overlay.destroy_overlay()
+                    doing_stuff_overlay.make_overlay(parent=root, overlaytext="moving files to obe folders...\n\n" + str(file_count_total) + " of " + str(file_count))
+                print("moving " + files['file'] + " to obe directory")
+                if os.path.isfile(files['file']):
+                    if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
+                        shutil.move(files['file'], files['destination'])
+                    else:
+                        print("file with same name exists, adding number to end")
+                        destination_file_constructor = files['file']
+                        destination_file_end_suffix = 0
+                        destination_file_deduplicate_constructor = destination_file_constructor
+                        while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
+                            destination_file_end_suffix += destination_file_end_suffix + 1
+                            print str(destination_file_end_suffix)
+                            destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
+                        destination_file_constructor = destination_file_deduplicate_constructor
+                        shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
+                    processed_counter = processed_counter + 1
                 else:
-                    destination_file_constructor = files['file']
-                    destination_file_end_suffix = 0
-                    destination_file_deduplicate_constructor = destination_file_constructor
-                    while os.path.isfile(os.path.join(str(files['destination']), destination_file_deduplicate_constructor)) is True:
-                        destination_file_end_suffix += destination_file_end_suffix + 1
-                        print str(destination_file_end_suffix)
-                        destination_file_deduplicate_constructor = destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
-                    destination_file_constructor = destination_file_deduplicate_constructor
-                    shutil.move(str(files['file']), os.path.join(str(files['destination']), destination_file_constructor))
-        except IOError:
-            move_errors = move_errors + 1
-    showinfo(message=str(moved_files) + " files moved\r\n" + str(move_errors) + " move errors")
+                    obe_queue.delete(file=str(files['file']))
+                    error_counter = error_counter + 1
+            except IOError:
+                error_counter = error_counter + 1
+        showinfo(message=str(processed_counter) + " files moved\r\n" + str(error_counter) + " move errors")
 
 
 def set_all_inactive():
@@ -809,12 +832,14 @@ def maintenance_functions_popup():
         clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails", command=emails_table.delete)
         clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe", command=move_active_to_obe)
+        process_obe_queue_button = Button(maintenance_popup_button_frame, text="Process obe queue", command=process_obe_queue)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations", command=remove_inactive_folders)
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_obe_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
+        process_obe_queue_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT, padx=10)
