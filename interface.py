@@ -20,6 +20,7 @@ try:  # try to import required modules
     import sqlalchemy.dialects.sqlite  # needed for py2exe
     import cStringIO
     import shutil
+    import doing_stuff_overlay
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
@@ -70,7 +71,7 @@ oversight_and_defaults = database_connection['administrative']
 obe_queue = database_connection['obe_queue']
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
-root.title("Sender Interface 1.0")
+root.title("Sender Interface 1.0 rc1")
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
@@ -108,7 +109,8 @@ def add_folder_entry(folder):  # add folder to database, copying configuration f
 
     print("adding folder: " + folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
-    folderstable.insert(dict(foldersname=folder, is_active=defaults['is_active'],
+    folderstable.insert(dict(foldersname=folder, copy_to_directory=defaults['copy_to_directory'],
+                             is_active=defaults['is_active'],
                              alias=folder_alias_constructor, process_backend=defaults['process_backend'],
                              ftp_server=defaults['ftp_server'],
                              ftp_folder=defaults['ftp_folder'],
@@ -159,7 +161,12 @@ def batch_add_folders():
         folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
         print("adding " + str(len(folders_list)) + " folders")
         if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
+            doing_stuff_overlay.make_overlay(parent=root, overlaytext="adding folders...")
+            folder_count = 0
             for folder in folders_list:
+                doing_stuff_overlay.destroy_overlay()
+                folder_count = folder_count + 1
+                doing_stuff_overlay.make_overlay(parent=root, overlaytext="adding folders... " + str(folder_count) + " of " + str(len(folders_list)))
                 folder = os.path.join(containing_folder, folder)
                 proposed_folder = folderstable.find_one(foldersname=folder)
                 if proposed_folder is None:
@@ -170,6 +177,7 @@ def batch_add_folders():
                     print("skipping existing folder: " + folder)
                     skipped = skipped + 1
             print("done adding folders")
+            doing_stuff_overlay.destroy_overlay()
             refresh_users_list()
             showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
 
@@ -216,7 +224,9 @@ def make_users_list():
             inactive_folderbuttonframe.pack(anchor='e', pady=1)
     # pack widgets in correct order
     active_users_list_label.pack(pady=5)
+    Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
     inactive_users_list_label.pack(pady=5)
+    Separator(inactive_users_list_container, orient=HORIZONTAL).pack(fill=X)
     active_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
     inactive_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
     active_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
@@ -579,8 +589,10 @@ def delete_folder_entry(folder_to_be_removed):
 
 def graphical_process_directories(folderstable_process):
     if folderstable_process.count(is_active="True") > 0:
+        doing_stuff_overlay.make_overlay(parent=root, overlaytext="processing folders...")
         process_directories(folderstable_process)
         refresh_users_list()
+        doing_stuff_overlay.destroy_overlay()
     else:
         showerror("Error", "No Active Folders")
 
@@ -631,7 +643,7 @@ def process_directories(folderstable_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue)
+        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue, root, args)
     except Exception, error:
         # if processing folders runs into a serious error, report and log
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
@@ -746,8 +758,33 @@ def move_active_to_obe():
     showinfo(message=str(moved_files) + " files moved\r\n" + str(move_errors) + " move errors")
 
 
+def set_all_inactive():
+    total = folderstable.count(is_active="True")
+    count = 0
+    for folder in folderstable.find(is_active="True"):
+        count = count + 1
+        doing_stuff_overlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        folder['is_active'] = "False"
+        folderstable.update(folder, ['id'])
+        doing_stuff_overlay.destroy_overlay()
+    refresh_users_list()
+
+
+def set_all_active():
+    total = folderstable.count(is_active="False")
+    count = 0
+    for folder in folderstable.find(is_active="False"):
+        count = count + 1
+        doing_stuff_overlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        folder['is_active'] = "True"
+        folderstable.update(folder, ['id'])
+        doing_stuff_overlay.destroy_overlay()
+    refresh_users_list()
+
+
 def maintenance_functions_popup():
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used. Are you sure you want to continue?"):
+        global maintenance_popup
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
         maintenance_popup.transient(root)
@@ -755,10 +792,14 @@ def maintenance_functions_popup():
         maintenance_popup.resizable(width=FALSE, height=FALSE)
         maintenance_popup_button_frame = Frame(maintenance_popup)
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
+        set_all_active_button = Button(maintenance_popup_button_frame, text="move all to active", command=set_all_active)
+        set_all_inactive_button = Button(maintenance_popup_button_frame, text="move all to inactive", command=set_all_inactive)
         clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails", command=emails_table.delete)
         clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe", command=move_active_to_obe)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations", command=remove_inactive_folders)
+        set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
+        set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_obe_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
@@ -783,10 +824,11 @@ edit_reporting = Button(optionsframe, text="Edit Reporting",
                         command=lambda: EditReportingDialog(root, reporting_options))
 edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
 process_folder_button = Button(optionsframe, text="Process Folders", command=lambda: graphical_process_directories(folderstable))
-process_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
+process_folder_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
+Separator(optionsframe, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
-optionsframe.pack(side=LEFT)
+optionsframe.pack(side=LEFT, anchor='n', fill=Y)
 optionsframe_divider = Separator(root, orient=VERTICAL)
 optionsframe_divider.pack(side=LEFT, fill=Y)
 # set window minimum size to prevent user making it ugly

@@ -7,7 +7,7 @@ def do():  # create database file with some default settings
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
     oversight_and_defaults = database_connection['administrative']
 
-    oversight_and_defaults.insert(dict(is_active="False",
+    oversight_and_defaults.insert(dict(is_active="False", copy_to_directory=None,
                                        email_origin_password='', email_origin_smtp_server='smtp.gmail.com',
                                        process_edi='False', calc_upc='False', inc_arec='False', inc_crec='False',
                                        inc_headers='False', filter_ampersand='False', pad_arec='False',
