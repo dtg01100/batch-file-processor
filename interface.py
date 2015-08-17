@@ -735,8 +735,12 @@ def silent_process_directories(folderstable):
 
 
 def remove_inactive_folders():
+    users_refresh = False
+    if folderstable.count(is_active="False") > 0:
+        users_refresh = True
     folderstable.delete(is_active="False")
-    refresh_users_list()
+    if users_refresh:
+        refresh_users_list()
 
 
 def move_active_to_obe():
@@ -773,7 +777,8 @@ def set_all_inactive():
         folder['is_active'] = "False"
         folderstable.update(folder, ['id'])
         doing_stuff_overlay.destroy_overlay()
-    refresh_users_list()
+    if total > 0:
+        refresh_users_list()
 
 
 def set_all_active():
@@ -785,7 +790,8 @@ def set_all_active():
         folder['is_active'] = "True"
         folderstable.update(folder, ['id'])
         doing_stuff_overlay.destroy_overlay()
-    refresh_users_list()
+    if total > 0:
+        refresh_users_list()
 
 
 def maintenance_functions_popup():
