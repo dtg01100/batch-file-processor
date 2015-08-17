@@ -657,40 +657,46 @@ def process_directories(folderstable_process):
             total_size = 0
             skipped_files = 0
             email_errors = cStringIO.StringIO()
+            total_emails = emails_table.count()
+            emails_count = 0
+            batch_number = 1
             for log in emails_table.all():
+                emails_count = emails_count + 1
                 if os.path.isfile(log['log']):
                     # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                     total_size += total_size + os.path.getsize(log['log'])  # add size of current file to total
                     emails_table_batch.insert(log)
                     if total_size > 9000000:  # if the total size is more than 9mb, then send that set and reset the total
-                        batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
+                        batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args, root, batch_number, emails_count, total_emails)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
+                        batch_number = batch_number + 1
                 else:
                     email_errors.write("\r\n" + log['log'] + " missing, skipping")
                     email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                     skipped_files = skipped_files + 1
                     sent_emails_removal_queue.insert(log)
-                if emails_table_batch.count() > 0:
-                    # send the remainder of emails
+            if emails_table_batch.count() > 0:
+                # send the remainder of emails
+                batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args, root, batch_number, emails_count, total_emails)
+                emails_table_batch.delete()  # clear batch
+            for line in sent_emails_removal_queue.all():
+                emails_table.delete(log=str(line['log']))
+            sent_emails_removal_queue.delete()
+            if skipped_files > 0:
+                email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
+                email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
+                email_errors_log_fullpath = os.path.join(run_log_path, email_errors_log_name_constructor)
+                reporting_emails_errors = open(email_errors_log_fullpath, 'w')
+                reporting_emails_errors.write(email_errors.getvalue())
+                reporting_emails_errors.close()
+                emails_table_batch.insert(dict(log=email_errors_log_fullpath, folder_alias=email_errors_log_name_constructor))
+                try:
                     batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
-                    emails_table_batch.delete()  # clear batch
-                for line in sent_emails_removal_queue.all():
-                    emails_table.delete(log=str(line['log']))
-                sent_emails_removal_queue.delete()
-                if skipped_files > 0:
-                    email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
-                    email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
-                    email_errors_log_fullpath = os.path.join(run_log_path, email_errors_log_name_constructor)
-                    reporting_emails_errors = open(email_errors_log_fullpath, 'w')
-                    reporting_emails_errors.write(email_errors.getvalue())
-                    reporting_emails_errors.close()
-                    emails_table_batch.insert(dict(log=email_errors_log_fullpath, folder_alias=email_errors_log_name_constructor))
-                    try:
-                        batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
-                        emails_table_batch.delete()
-                    except Exception:
-                        emails_table_batch.delete()
+                    emails_table_batch.delete()
+                except Exception:
+                    doing_stuff_overlay.destroy_overlay()
+                    emails_table_batch.delete()
         except Exception, error:
             emails_table_batch.delete()
             run_log = open(run_log_fullpath, 'a')

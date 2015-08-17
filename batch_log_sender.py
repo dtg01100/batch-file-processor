@@ -4,8 +4,9 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
+import doing_stuff_overlay
 
-def do(reporting, emails_table, sent_emails_removal_queue, time):
+def do(reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count, total_emails):
     fromaddr = reporting['report_email_address']
     toaddr = reporting['report_email_destination']
     msg = MIMEMultipart()
@@ -19,6 +20,10 @@ def do(reporting, emails_table, sent_emails_removal_queue, time):
     msg.attach(MIMEText(body, 'plain'))
 
     for log in emails_table.all():
+
+        if not args.automatic:
+            doing_stuff_overlay.destroy_overlay()
+            doing_stuff_overlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) + " attachment " + str(emails_count) + " of " + str(total_emails))
 
         filename = log['log']
         attachment = open(filename, "r")

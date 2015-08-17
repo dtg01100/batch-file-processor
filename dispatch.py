@@ -18,7 +18,8 @@ import doing_stuff_overlay
 def process(folders_database, run_log, emails_table, run_log_directory, reporting, obe_queue, root, args):
     def update_overlay(overlay_text, folder_count, folder_total, file_count, file_total):
         if not args.automatic:
-            doing_stuff_overlay.update_overlay(parent=root, overlaytext=overlay_text + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
+            doing_stuff_overlay.destroy_overlay()
+            doing_stuff_overlay.make_overlay(parent=root, overlaytext=overlay_text + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
     error_counter = 0
     processed_counter = 0
     if obe_queue.count() > 0:
@@ -30,7 +31,9 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
         for files in obe_queue.all():
             try:
                 file_count = file_count + 1
-                doing_stuff_overlay.update_overlay(parent=root, overlaytext="moving files to obe folders...\n\n" + str(file_count_total) + " of " + str(file_count))
+                if not args.automatic:
+                    doing_stuff_overlay.destroy_overlay()
+                    doing_stuff_overlay.make_overlay(parent=root, overlaytext="moving files to obe folders...\n\n" + str(file_count_total) + " of " + str(file_count))
                 print("moving " + files['file'] + " to obe directory")
                 run_log.write("\r\nmoving " + files['file'] + " to obe directory\r\n")
                 if os.path.isfile(files['file']):
