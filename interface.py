@@ -603,6 +603,7 @@ def set_defaults_popup():
 
 
 def process_directories(folderstable_process):
+    original_folder = os.getcwd()
     global emails_table
     log_folder_creation_error = False
     start_time = str(datetime.datetime.now())
@@ -644,7 +645,9 @@ def process_directories(folderstable_process):
     # call dispatch module to process active folders
     try:
         dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue, root, args)
+        os.chdir(original_folder)
     except Exception, error:
+        os.chdir(original_folder)
         # if processing folders runs into a serious error, report and log
         print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
         run_log.write(
@@ -744,31 +747,46 @@ def remove_inactive_folders():
 
 
 def move_active_to_obe():
+    starting_folder = os.getcwd()
+    folder_total = folderstable.count(is_active="True")
+    folder_count = 0
+    doing_stuff_overlay.make_overlay(maintenance_popup, "adding files to obe queue...")
     for parameters_dict in folderstable.find(is_active="True"):
+        file_total = 0
+        file_count = 0
+        folder_count = folder_count + 1
+        doing_stuff_overlay.destroy_overlay()
+        doing_stuff_overlay.make_overlay(parent=maintenance_popup, overlaytext="adding files to obe queue..." + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
         os.chdir(parameters_dict['foldersname'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
+        file_total = len(files)
         for filename in files:
-            obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe")), folder_id=parameters_dict['id']))
+            file_count = file_count + 1
+            doing_stuff_overlay.destroy_overlay()
+            doing_stuff_overlay.make_overlay(parent=maintenance_popup, overlaytext="adding files to obe queue..." + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
+            if obe_queue.find_one(file=str(os.path.abspath(filename))) is None:
+                obe_queue.insert(dict(file=str(os.path.abspath(filename)), destination=str(os.path.join(parameters_dict['foldersname'], "obe")), folder_id=parameters_dict['id']))
+    doing_stuff_overlay.destroy_overlay()
+    os.chdir(starting_folder)
 
 
 def process_obe_queue():
-    def update_overlay(overlay_text, folder_count, folder_total, file_count, file_total):
-        doing_stuff_overlay.destroy_overlay()
-        doing_stuff_overlay.make_overlay(parent=root, overlaytext=overlay_text + " folder " + str(folder_count) + " of " + str(folder_total) + " file " + str(file_count) + " of " + str(file_total))
     error_counter = 0
     processed_counter = 0
     if obe_queue.count() > 0:
-        update_overlay("processing obe queue\n", None, None, None, None)
+        doing_stuff_overlay.make_overlay(maintenance_popup, "processing obe queue...")
         file_count_total = obe_queue.count()
         file_count = 0
         for files in obe_queue.all():
             try:
                 file_count = file_count + 1
-                if not args.automatic:
-                    doing_stuff_overlay.destroy_overlay()
-                    doing_stuff_overlay.make_overlay(parent=root, overlaytext="moving files to obe folders...\n\n" + str(file_count_total) + " of " + str(file_count))
+                doing_stuff_overlay.destroy_overlay()
+                doing_stuff_overlay.make_overlay(parent=maintenance_popup, overlaytext="moving files to obe folders...\n\n" + str(file_count) + " of " + str(file_count_total))
                 print("moving " + files['file'] + " to obe directory")
                 if os.path.isfile(files['file']):
+                    if os.path.exists(files['destination']) is False:
+                        print("obe folder missing, making one")
+                        os.mkdir(files['destination'])
                     if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
                         shutil.move(files['file'], files['destination'])
                     else:
@@ -788,6 +806,7 @@ def process_obe_queue():
                     error_counter = error_counter + 1
             except IOError:
                 error_counter = error_counter + 1
+        doing_stuff_overlay.destroy_overlay()
         showinfo(message=str(processed_counter) + " files moved\r\n" + str(error_counter) + " move errors")
 
 
@@ -842,7 +861,7 @@ def maintenance_functions_popup():
         process_obe_queue_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
-        maintenance_popup_warning_label.pack(side=RIGHT, padx=10)
+        maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')

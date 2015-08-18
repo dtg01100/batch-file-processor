@@ -37,6 +37,9 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                 print("moving " + files['file'] + " to obe directory")
                 run_log.write("\r\nmoving " + files['file'] + " to obe directory\r\n")
                 if os.path.isfile(files['file']):
+                    if os.path.exists(files['destination']) is False:
+                        print("obe folder missing, making one")
+                        os.mkdir(files['destination'])
                     if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
                         shutil.move(files['file'], files['destination'])
                     else:
