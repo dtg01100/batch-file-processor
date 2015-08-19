@@ -906,6 +906,7 @@ def maintenance_functions_popup():
         maintenance_popup.transient(root)
         maintenance_popup.geometry("+%d+%d" % (root.winfo_rootx()+50, root.winfo_rooty()+50))
         maintenance_popup.grab_set()
+        maintenance_popup.focus_set()
         maintenance_popup.resizable(width=FALSE, height=FALSE)
         maintenance_popup_button_frame = Frame(maintenance_popup)
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
