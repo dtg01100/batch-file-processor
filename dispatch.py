@@ -63,12 +63,15 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
     folder_count = 0
     folder_total_count = folders_database.count()
     for parameters_dict in folders_database.find(is_active="True"):  # loop over all known active folders
+        global filename
         # if the backend is invalid, deactivate
         folder_count = folder_count + 1
         file_count = 0
         file_count_total = 0
         update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total)
         if os.path.isdir(parameters_dict['foldersname']) is True:
+            print("entering folder " + parameters_dict['foldersname'] + ", aliased as " + parameters_dict['alias'])
+            run_log.write("\r\n\r\nentering folder " + parameters_dict['foldersname'] + ", aliased as " + parameters_dict['alias'] + "\r\n\r\n")
             os.chdir(parameters_dict['foldersname'])
             try:
                 os.stat(os.path.join(parameters_dict['foldersname'], "obe"))

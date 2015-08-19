@@ -36,8 +36,12 @@ except Exception, error:
 if not os.path.isfile('folders.db'):  # if the database file is missing
     try:
         print("creating initial database file...")
+        creating_database_popup = Tk()
+        Label(creating_database_popup, text="Creating initial database file...").pack()
+        creating_database_popup.update()
         create_database.do()  # make a new one
         print("done")
+        creating_database_popup.destroy()
     except Exception, error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
@@ -146,8 +150,10 @@ def select_folder():
     proposed_folder = folderstable.find_one(foldersname=folder)
     if proposed_folder is None:
         if folder != '':  # check to see if selected folder has a path
+            doing_stuff_overlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
+            doing_stuff_overlay.destroy_overlay()
             userslistframe.destroy()  # destroy lists on right
             make_users_list()  # recreate list
     else:
@@ -299,6 +305,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def validate(self):
 
+        doing_stuff_overlay.make_overlay(self, "Testing Changes...")
         error_list = []
         errors = False
         if (validate_email(str(self.e1.get()), verify=True)) is False:
@@ -310,7 +317,9 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
             showerror(message=error_report)  # display generated error string in error dialog
+            doing_stuff_overlay.destroy_overlay()
             return False
+        doing_stuff_overlay.destroy_overlay()
         return 1
 
     def ok(self, event=None):
@@ -331,6 +340,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         global logs_directory_edit
         global logs_directory_is_altered
 
+        doing_stuff_overlay.make_overlay(self, "Applying Changes...")
         foldersnameapply['enable_reporting'] = str(self.enable_reporting_checkbutton.get())
         if logs_directory_is_altered is True:
             foldersnameapply['log_directory'] = logs_directory_edit
@@ -342,6 +352,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         foldersnameapply['report_email_destination'] = str(self.e6.get())
 
         update_reporting(foldersnameapply)
+        doing_stuff_overlay.destroy_overlay()
 
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -513,6 +524,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.cancel()
 
     def apply(self, foldersnameapply):
+        doing_stuff_overlay.make_overlay(self, "Applying Changes...")
         global copytodirectory
         global destination_directory_is_altered
         foldersnameapply['is_active'] = str(self.active_checkbutton.get())
@@ -551,12 +563,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             update_folder_alias(foldersnameapply)
         else:
             update_reporting(foldersnameapply)
+        doing_stuff_overlay.destroy_overlay()
 
     def validate(self):
 
         error_string_constructor_list = []
         errors = False
 
+        doing_stuff_overlay.make_overlay(self, "Testing Changes...")
         if self.process_backend_ftp_check.get() is True:
             try:
                 temp_smtp_port_check = int(self.e6.get())
@@ -595,10 +609,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 error_string_constructor_list.append("Alias Too Long\r\n")
                 errors = True
         if errors is True:
+            doing_stuff_overlay.destroy_overlay()
             error_string = ''.join(error_string_constructor_list)  # combine error messages into single string
             showerror(message=error_string)  # display generated error in dialog box
             return False
 
+        doing_stuff_overlay.destroy_overlay()
         return 1
 
 
