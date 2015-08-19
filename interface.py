@@ -111,7 +111,10 @@ def add_folder_entry(folder):  # add folder to database, copying configuration f
     # create folder entry using the selected folder, the generated alias, and values copied from template
     folderstable.insert(dict(foldersname=folder, copy_to_directory=defaults['copy_to_directory'],
                              is_active=defaults['is_active'],
-                             alias=folder_alias_constructor, process_backend=defaults['process_backend'],
+                             alias=folder_alias_constructor,
+                             process_backend_copy=defaults['process_backend_copy'],
+                             process_backend_ftp=defaults['process_backend_ftp'],
+                             process_backend_email=defaults['process_backend_email'],
                              ftp_server=defaults['ftp_server'],
                              ftp_folder=defaults['ftp_folder'],
                              ftp_username=defaults['ftp_username'],
@@ -364,11 +367,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.c_headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
         self.pad_arec_check = StringVar(master)
+        self.process_backend_copy_check = BooleanVar(master)
+        self.process_backend_ftp_check = BooleanVar(master)
+        self.process_backend_email_check = BooleanVar(master)
         Label(self.folderframe, text="Folder Settings:").grid(row=0, columnspan=2, pady=3)
-        Label(self.folderframe, text="Active:").grid(row=1, sticky=E)
-        Label(self.folderframe, text="Backend:").grid(row=2, sticky=E)
+        Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
         if self.foldersnameinput['foldersname'] != 'template':
-            Label(self.folderframe, text="Alias:").grid(row=3, sticky=E)
+            Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
         Label(self.prefsframe, text="Copy Destination:").grid(row=4, sticky=E)
         Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E+W, pady=2)
@@ -403,10 +408,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copytodirectory = str(askdirectory())
             destination_directory_is_altered = True
 
-        self.e1 = Checkbutton(self.folderframe, variable=self.active_checkbutton, onvalue="True", offvalue="False")
+        self.e1 = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton, onvalue="True", offvalue="False")
+        self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend", variable=self.process_backend_copy_check, onvalue=True, offvalue=False)
+        self.ftp_backend_checkbutton = Checkbutton(self.folderframe, text="FTP Backend", variable=self.process_backend_ftp_check, onvalue=True, offvalue=False)
+        self.email_backend_checkbutton = Checkbutton(self.folderframe, text="Email Backend", variable=self.process_backend_email_check, onvalue=True, offvalue=False)
         if self.foldersnameinput['foldersname'] != 'template':
+            Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.e2 = Entry(self.folderframe, width=30)
-        self.e3 = OptionMenu(self.folderframe, self.backendvariable, "none", "copy", "ftp", "email")
         self.e4 = Button(self.prefsframe, text="Select Folder", command=lambda: select_copy_to_directory())
         self.e5 = Entry(self.prefsframe, width=30)
         self.e6 = Entry(self.prefsframe, width=30)
@@ -432,7 +440,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.active_checkbutton.set(self.foldersnameinput['is_active'])
         if self.foldersnameinput['foldersname'] != 'template':
             self.e2.insert(0, self.foldersnameinput['alias'])
-        self.backendvariable.set(self.foldersnameinput['process_backend'])
+        self.process_backend_copy_check.set(self.foldersnameinput['process_backend_copy'])
+        self.process_backend_ftp_check.set(self.foldersnameinput['process_backend_ftp'])
+        self.process_backend_email_check.set(self.foldersnameinput['process_backend_email'])
         self.e5.insert(0, self.foldersnameinput['ftp_server'])
         self.e6.insert(0, self.foldersnameinput['ftp_port'])
         self.e7.insert(0, self.foldersnameinput['ftp_folder'])
@@ -454,10 +464,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
         self.e24.insert(0, self.foldersnameinput['arec_padding'])
 
-        self.e1.grid(row=1, column=1, sticky=W, padx=3)
-        self.e3.grid(row=2, column=1)
+        self.e1.grid(row=1, column=0, columnspan=2, padx=3)
+        self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
+        self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
+        self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
         if self.foldersnameinput['foldersname'] != 'template':
-            self.e2.grid(row=3, column=1)
+            self.e2.grid(row=6, column=1)
         self.e4.grid(row=4, column=1)
         self.e5.grid(row=7, column=1)
         self.e6.grid(row=8, column=1)
@@ -511,7 +523,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 foldersnameapply['alias'] = str(self.e2.get())
         if destination_directory_is_altered is True:
             foldersnameapply['copy_to_directory'] = copytodirectory
-        foldersnameapply['process_backend'] = str(self.backendvariable.get())
+        foldersnameapply['process_backend_copy'] = self.process_backend_copy_check.get()
+        foldersnameapply['process_backend_ftp'] = self.process_backend_ftp_check.get()
+        foldersnameapply['process_backend_email'] = self.process_backend_email_check.get()
         foldersnameapply['ftp_server'] = str(self.e5.get())
         foldersnameapply['ftp_port'] = int(self.e6.get())
         foldersnameapply['ftp_folder'] = str(self.e7.get())
@@ -543,14 +557,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         error_string_constructor_list = []
         errors = False
 
-        if str(self.backendvariable.get()) == "ftp":
+        if self.process_backend_ftp_check.get() is True:
             try:
                 temp_smtp_port_check = int(self.e6.get())
             except Exception:
                 error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
                 errors = True
 
-        if str(self.backendvariable.get()) == "email":
+        if self.process_backend_email_check.get() is True:
             if (validate_email(str(self.e11.get()), verify=True)) is False:
                 error_string_constructor_list.append("Invalid Email Origin Address\r\n")
                 errors = True
