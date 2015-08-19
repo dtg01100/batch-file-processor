@@ -75,7 +75,7 @@ oversight_and_defaults = database_connection['administrative']
 obe_queue = database_connection['obe_queue']
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
-root.title("Sender Interface 1.0 rc1")
+root.title("Sender Interface 1.0 rc2")
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
@@ -904,6 +904,7 @@ def maintenance_functions_popup():
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
         maintenance_popup.transient(root)
+        maintenance_popup.geometry("+%d+%d" % (root.winfo_rootx()+50, root.winfo_rooty()+50))
         maintenance_popup.grab_set()
         maintenance_popup.resizable(width=FALSE, height=FALSE)
         maintenance_popup_button_frame = Frame(maintenance_popup)
