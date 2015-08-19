@@ -19,7 +19,7 @@ def make_overlay(parent, overlaytext):
     doing_stuff_frame.grab_set()
     doing_stuff = Label(doing_stuff_frame, text=labelvar.get())
     doing_stuff.place(relx=.5, rely=.5, anchor=CENTER)
-    doing_stuff_frame.place(relx=.5, rely=.5, relheight=.40, relwidth=1, anchor=CENTER)
+    doing_stuff_frame.place(relx=.5, rely=.5, height=100, relwidth=1, anchor=CENTER)
     parent.update()
 
 def destroy_overlay():

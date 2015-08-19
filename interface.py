@@ -221,14 +221,14 @@ def make_users_list():
         if str(foldersname['is_active']) != "False":
             active_folderbuttonframe = Frame(active_userslistframe.interior)
             Button(active_folderbuttonframe, text="Delete",
-                   command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
+                   command=lambda name=foldersname['id']: delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
             Button(active_folderbuttonframe, text="Edit: " + foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E+W)
             active_folderbuttonframe.pack(anchor='e', pady=1)
         else:
             inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
             Button(inactive_folderbuttonframe, text="Delete",
-                   command=lambda name=foldersname['id']: delete_folder_entry(name)).grid(column=1, row=0, sticky=E)
+                   command=lambda name=foldersname['id']: delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
             Button(inactive_folderbuttonframe, text="Edit: " + foldersname['alias'],
                    command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0, row=0, sticky=E+W)
             inactive_folderbuttonframe.pack(anchor='e', pady=1)
@@ -634,9 +634,13 @@ def refresh_users_list():
 
 def delete_folder_entry(folder_to_be_removed):
     folderstable.delete(id=folder_to_be_removed)
-    refresh_users_list()
     obe_queue.delete(folder_id=folder_to_be_removed)
     emails_table.delete(folder_id=folder_to_be_removed)
+
+
+def delete_folder_entry_wrapper(folder_to_be_removed):
+    delete_folder_entry(folder_to_be_removed)
+    refresh_users_list()
 
 
 def graphical_process_directories(folderstable_process):
@@ -793,7 +797,13 @@ def remove_inactive_folders():
     users_refresh = False
     if folderstable.count(is_active="False") > 0:
         users_refresh = True
-    folderstable.delete(is_active="False")
+    folders_total = folderstable.count(is_active="False")
+    folders_count = 0
+    for folder in folderstable.find(is_active="False"):
+        folders_count = folders_count + 1
+        doing_stuff_overlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " + str(folders_total))
+        delete_folder_entry(folder['id'])
+        doing_stuff_overlay.destroy_overlay()
     if users_refresh:
         refresh_users_list()
 
