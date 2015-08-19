@@ -19,7 +19,7 @@ def do():  # create database file with some default settings
                                        email_origin_address='', email_origin_username='',
                                        logs_directory=os.getcwd() + "/run_logs/", enable_reporting="False",
                                        report_printing_fallback="False", reporting_smtp_port=587, email_smtp_port=587,
-                                       ftp_port=21))
+                                       ftp_port=21, email_subject_line=""))
 
     obe_queue = database_connection['obe_queue']
     obe_queue.create_column('file', sqlalchemy.types.String)

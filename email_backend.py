@@ -3,6 +3,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import time
 
 # this module sends the file specified in filename to the address specified in the dict process_parameters via email
 # note: process_parameters is a dict from a row in the database, passed into this module
@@ -14,9 +15,16 @@ def do(process_parameters, filename):
     print (repr(filename))
     msg = MIMEMultipart()
 
+    if process_parameters['email_subject_line'] != "":
+        date_time = str(time.ctime())
+        subject_line_constructor = process_parameters['email_subject_line']
+        msg['Subject'] = subject_line_constructor.replace("%datetime%", date_time)
+    else:
+        msg['Subject'] = str(filename) + " Attached"
+
+
     msg['From'] = fromaddr
     msg['To'] = toaddr
-    msg['Subject'] = str(filename) + " Attached"
 
     body = str(filename) + " Attached"
 

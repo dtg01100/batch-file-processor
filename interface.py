@@ -131,7 +131,8 @@ def add_folder_entry(folder):  # add folder to database, copying configuration f
                              arec_padding=defaults['arec_padding'],
                              email_smtp_port=defaults['email_smtp_port'],
                              reporting_smtp_port=defaults['reporting_smtp_port'],
-                             ftp_port=defaults['ftp_port']))
+                             ftp_port=defaults['ftp_port'],
+                             email_subject_line=defaults['email_subject_line']))
     print("done")
 
 
@@ -383,8 +384,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Sender Address:").grid(row=15, sticky=E)
         Label(self.prefsframe, text="Sender Username:").grid(row=16, sticky=E)
         Label(self.prefsframe, text="Sender Password:").grid(row=17, sticky=E)
-        Label(self.prefsframe, text="Sender SMTP Server:").grid(row=18, sticky=E)
-        Label(self.prefsframe, text="SMTP Server Port:").grid(row=19, sticky=E)
+        Label(self.prefsframe, text="Email Subject:").grid(row=18, sticky=E)
+        Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
+        Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
         Label(self.ediframe, text="Process EDI?").grid(row=1, column=3, sticky=E)
         Label(self.ediframe, text="Calculate UPC Check Digit:").grid(row=2, column=3, sticky=E)
@@ -417,14 +419,15 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e13 = Entry(self.prefsframe, show="*", width=30)
         self.e14 = Entry(self.prefsframe, width=30)
         self.e15 = Entry(self.prefsframe, width=30)
-        self.e16 = Checkbutton(self.ediframe, variable=self.process_edi, onvalue="True", offvalue="False")
-        self.e17 = Checkbutton(self.ediframe, variable=self.upc_var_check, onvalue="True", offvalue="False")
-        self.e18 = Checkbutton(self.ediframe, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
-        self.e19 = Checkbutton(self.ediframe, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
-        self.e20 = Checkbutton(self.ediframe, variable=self.c_headers_check, onvalue="True", offvalue="False")
-        self.e21 = Checkbutton(self.ediframe, variable=self.ampersand_check, onvalue="True", offvalue="False")
-        self.e22 = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
-        self.e23 = Entry(self.ediframe, width=10)
+        self.e16 = Entry(self.prefsframe, width=30)
+        self.e17 = Checkbutton(self.ediframe, variable=self.process_edi, onvalue="True", offvalue="False")
+        self.e18 = Checkbutton(self.ediframe, variable=self.upc_var_check, onvalue="True", offvalue="False")
+        self.e19 = Checkbutton(self.ediframe, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
+        self.e20 = Checkbutton(self.ediframe, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
+        self.e21 = Checkbutton(self.ediframe, variable=self.c_headers_check, onvalue="True", offvalue="False")
+        self.e22 = Checkbutton(self.ediframe, variable=self.ampersand_check, onvalue="True", offvalue="False")
+        self.e23 = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
+        self.e24 = Entry(self.ediframe, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['is_active'])
         if self.foldersnameinput['foldersname'] != 'template':
@@ -439,8 +442,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e11.insert(0, self.foldersnameinput['email_origin_address'])
         self.e12.insert(0, self.foldersnameinput['email_origin_username'])
         self.e13.insert(0, self.foldersnameinput['email_origin_password'])
-        self.e14.insert(0, self.foldersnameinput['email_origin_smtp_server'])
-        self.e15.insert(0, self.foldersnameinput['email_smtp_port'])
+        self.e14.insert(0, self.foldersnameinput['email_subject_line'])
+        self.e15.insert(0, self.foldersnameinput['email_origin_smtp_server'])
+        self.e16.insert(0, self.foldersnameinput['email_smtp_port'])
         self.process_edi.set(self.foldersnameinput['process_edi'])
         self.upc_var_check.set(self.foldersnameinput['calc_upc'])
         self.a_rec_var_check.set(self.foldersnameinput['inc_arec'])
@@ -448,7 +452,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.c_headers_check.set(self.foldersnameinput['inc_headers'])
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
         self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
-        self.e23.insert(0, self.foldersnameinput['arec_padding'])
+        self.e24.insert(0, self.foldersnameinput['arec_padding'])
 
         self.e1.grid(row=1, column=1, sticky=W, padx=3)
         self.e3.grid(row=2, column=1)
@@ -466,14 +470,15 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e13.grid(row=17, column=1)
         self.e14.grid(row=18, column=1)
         self.e15.grid(row=19, column=1)
-        self.e16.grid(row=1, column=4, sticky=W, padx=3)
-        self.e17.grid(row=2, column=4, sticky=W, padx=3)
-        self.e18.grid(row=3, column=4, sticky=W, padx=3)
-        self.e19.grid(row=4, column=4, sticky=W, padx=3)
-        self.e20.grid(row=5, column=4, sticky=W, padx=3)
-        self.e21.grid(row=6, column=4, sticky=W, padx=3)
-        self.e22.grid(row=7, column=4, sticky=W, padx=3)
-        self.e23.grid(row=8, column=4)
+        self.e16.grid(row=20, column=1)
+        self.e17.grid(row=1, column=4, sticky=W, padx=3)
+        self.e18.grid(row=2, column=4, sticky=W, padx=3)
+        self.e19.grid(row=3, column=4, sticky=W, padx=3)
+        self.e20.grid(row=4, column=4, sticky=W, padx=3)
+        self.e21.grid(row=5, column=4, sticky=W, padx=3)
+        self.e22.grid(row=6, column=4, sticky=W, padx=3)
+        self.e23.grid(row=7, column=4, sticky=W, padx=3)
+        self.e24.grid(row=8, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
@@ -508,7 +513,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             foldersnameapply['copy_to_directory'] = copytodirectory
         foldersnameapply['process_backend'] = str(self.backendvariable.get())
         foldersnameapply['ftp_server'] = str(self.e5.get())
-        foldersnameapply['ftp_port'] = str(self.e6.get())
+        foldersnameapply['ftp_port'] = int(self.e6.get())
         foldersnameapply['ftp_folder'] = str(self.e7.get())
         foldersnameapply['ftp_username'] = str(self.e8.get())
         foldersnameapply['ftp_password'] = str(self.e9.get())
@@ -516,7 +521,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         foldersnameapply['email_origin_address'] = str(self.e11.get())
         foldersnameapply['email_origin_username'] = str(self.e12.get())
         foldersnameapply['email_origin_password'] = str(self.e13.get())
-        foldersnameapply['email_origin_smtp_server'] = str(self.e14.get())
+        foldersnameapply['email_subject_line'] = str(self.e14.get())
+        foldersnameapply['email_origin_smtp_server'] = str(self.e15.get())
+        foldersnameapply['email_smtp_port'] = int(self.e16.get())
         foldersnameapply['process_edi'] = str(self.process_edi.get())
         foldersnameapply['calc_upc'] = str(self.upc_var_check.get())
         foldersnameapply['inc_arec'] = str(self.a_rec_var_check.get())
@@ -524,7 +531,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         foldersnameapply['inc_headers'] = str(self.c_headers_check.get())
         foldersnameapply['filter_ampersand'] = str(self.ampersand_check.get())
         foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
-        foldersnameapply['arec_padding'] = str(self.e23.get())
+        foldersnameapply['arec_padding'] = str(self.e24.get())
 
         if self.foldersnameinput['foldersname'] != 'template':
             update_folder_alias(foldersnameapply)
@@ -535,6 +542,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         error_string_constructor_list = []
         errors = False
+
+        if str(self.backendvariable.get()) == "ftp":
+            try:
+                temp_smtp_port_check = int(self.e6.get())
+            except Exception:
+                error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
+                errors = True
+
         if str(self.backendvariable.get()) == "email":
             if (validate_email(str(self.e11.get()), verify=True)) is False:
                 error_string_constructor_list.append("Invalid Email Origin Address\r\n")
@@ -544,7 +559,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 error_string_constructor_list.append("Invalid Email Destination Address\r\n")
                 errors = True
 
-        if len(str(self.e23.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
+            try:
+                temp_smtp_port_check = int(self.e16.get())
+            except Exception:
+                error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
+                errors = True
+
+
+        if len(str(self.e24.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
             errors = True
 
