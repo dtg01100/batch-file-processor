@@ -326,12 +326,40 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         doing_stuff_overlay.make_overlay(self, "Testing Changes...")
         error_list = []
         errors = False
-        if (validate_email(str(self.e1.get()), verify=True)) is False:
-            error_list.append("Invalid Email Origin Address\r\n")
+
+        if self.e1.get() == '':
+            error_list.append("Reporting Email Address Is A Required Field\r")
             errors = True
-        if (validate_email(str(self.e6.get()), verify=True)) is False:
-            error_list.append("Invalid Email Destination Address\r\n")
+        else:
+            if (validate_email(str(self.e1.get()), verify=True)) is False:
+                error_list.append("Invalid Email Origin Address\r")
+                errors = True
+
+        if self.e2.get() == '':
+            error_list.append("Reporting Email Username Is A Required Field\r")
             errors = True
+
+        if self.e3.get() == '':
+            error_list.append("Reporting Email Password Is A Required Field\r")
+            errors = True
+
+        if self.e4.get() == '':
+            error_list.append("Reporting Email Address Is A Required Field\r")
+            errors = True
+
+        if self.e5.get() == '':
+            error_list.append("SMTP Port Is A Required Field\r")
+            errors = True
+
+        if self.e6.get() == '':
+            error_list.append("Reporting Email Destination Is A Required Field\r")
+            errors = True
+        else:
+            if (validate_email(str(self.e6.get()), verify=True)) is False:
+                error_list.append("Invalid Email Destination Address\r")
+                errors = True
+
+
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
             showerror(message=error_report)  # display generated error string in error dialog
@@ -342,9 +370,10 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def ok(self, event=None):
 
-        if not self.validate():
-            self.initial_focus.focus_set()  # put focus back
-            return
+        if self.enable_reporting_checkbutton.get() == "True":
+            if not self.validate():
+                self.initial_focus.focus_set()  # put focus back
+                return
 
         self.withdraw()
         self.update_idletasks()
