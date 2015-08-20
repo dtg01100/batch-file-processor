@@ -590,6 +590,27 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         doing_stuff_overlay.make_overlay(self, "Testing Changes...")
         if self.process_backend_ftp_check.get() is True:
+
+            if self.e5.get() == "":
+                error_string_constructor_list.append("FTP Server Field Is Required\r\n")
+                errors = True
+
+            if self.e6.get() == "":
+                error_string_constructor_list.append("FTP Port Field Is Required\r\n")
+                errors = True
+
+            if self.e7.get() == "":
+                error_string_constructor_list.append("FTP Folder Field Is Required\r\n")
+                errors = True
+
+            if self.e8.get() == "":
+                error_string_constructor_list.append("FTP Username Field Is Required\r\n")
+                errors = True
+
+            if self.e9.get() == "":
+                error_string_constructor_list.append("FTP Password Field Is Required\r\n")
+                errors = True
+
             try:
                 temp_smtp_port_check = int(self.e6.get())
             except Exception:
@@ -597,20 +618,50 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 errors = True
 
         if self.process_backend_email_check.get() is True:
-            if (validate_email(str(self.e11.get()), verify=True)) is False:
-                error_string_constructor_list.append("Invalid Email Origin Address\r\n")
+
+
+            if self.e10.get() == "":
+                error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
+                errors = True
+            else:
+                if (validate_email(str(self.e10.get()), verify=True)) is False:
+                    error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                    errors = True
+
+            if self.e11.get() == "":
+                error_string_constructor_list.append("Email Origin Address Field Is Required\r\n")
+                errors = True
+            else:
+                if (validate_email(str(self.e11.get()), verify=True)) is False:
+                    error_string_constructor_list.append("Invalid Email Origin Address\r\n")
+                    errors = True
+
+            if self.e12.get() == "":
+                error_string_constructor_list.append("Email Username Field Is Required\r\n")
                 errors = True
 
-            if (validate_email(str(self.e10.get()), verify=True)) is False:
-                error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+            if self.e13.get() == "":
+                error_string_constructor_list.append("Email Password Field Is Required\r\n")
                 errors = True
 
-            try:
-                temp_smtp_port_check = int(self.e16.get())
-            except Exception:
-                error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
+            if self.e15.get() == "":
+                error_string_constructor_list.append("SMTP Server Field Is Required\r\n")
                 errors = True
 
+            if self.e16.get() == "":
+                error_string_constructor_list.append("SMTP Port Field Is Required\r\n")
+                errors = True
+            else:
+                try:
+                    temp_smtp_port_check = int(self.e16.get())
+                except Exception:
+                    error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
+                    errors = True
+
+        if self.process_backend_copy_check.get() is True:
+            if copytodirectory == None or copytodirectory == "":
+                error_string_constructor_list.append("Copy Backend Destination Is currently Unset, Please Select One\r\n")
+                errors = True
 
         if len(str(self.e24.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
