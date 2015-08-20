@@ -38,6 +38,7 @@ except Exception, error:
         raise SystemExit
 
 
+# prevent multiple instances from running
 me = singleton.SingleInstance()
 
 if not os.path.isfile('folders.db'):  # if the database file is missing
