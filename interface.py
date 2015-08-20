@@ -298,7 +298,9 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         def select_log_directory():
             global logs_directory_edit
             global logs_directory_is_altered
-            logs_directory_edit = str(askdirectory())
+            logs_directory_edit_proposed = str(askdirectory())
+            if logs_directory_edit_proposed != '':
+                logs_directory_edit = logs_directory_edit_proposed
             logs_directory_is_altered = True
 
         self.enable_reporting_checkbutton.set(self.foldersnameinput['enable_reporting'])
