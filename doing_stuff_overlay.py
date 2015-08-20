@@ -9,7 +9,6 @@ class doing_stuff_overlay():
 
 
 def make_overlay(parent, overlaytext):
-    print("making overlay")
     global doing_stuff_frame
     global doing_stuff
     global labelvar
@@ -23,5 +22,4 @@ def make_overlay(parent, overlaytext):
     parent.update()
 
 def destroy_overlay():
-    print("destroying overlay")
     doing_stuff_frame.destroy()
