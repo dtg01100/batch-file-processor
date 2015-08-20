@@ -743,6 +743,8 @@ def process_directories(folderstable_process):
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
             if skipped_files > 0:
+                batch_number = batch_number + 1
+                emails_count = emails_count + 1
                 email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
                 email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
                 email_errors_log_fullpath = os.path.join(run_log_path, email_errors_log_name_constructor)
@@ -751,7 +753,7 @@ def process_directories(folderstable_process):
                 reporting_emails_errors.close()
                 emails_table_batch.insert(dict(log=email_errors_log_fullpath, folder_alias=email_errors_log_name_constructor))
                 try:
-                    batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time)
+                    batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args, root, batch_number, emails_count, total_emails)
                     emails_table_batch.delete()
                 except Exception:
                     doing_stuff_overlay.destroy_overlay()
