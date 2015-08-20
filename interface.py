@@ -271,6 +271,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         logs_directory_edit = None
         global logs_directory_is_altered
         logs_directory_is_altered = False
+        self.title("Edit Reporting Options")
         self.enable_reporting_checkbutton = StringVar(master)
         self.enable_report_printing_checkbutton = StringVar(master)
 
@@ -411,6 +412,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         copytodirectory = None
         global destination_directory_is_altered
         destination_directory_is_altered = False
+        self.title("Folder Settings")
         self.folderframe = Frame(master)
         self.prefsframe = Frame(master)
         self.ediframe = Frame(master)
@@ -428,7 +430,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
-        Label(self.folderframe, text="Folder Settings:").grid(row=0, columnspan=2, pady=3)
+        Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
         if self.foldersnameinput['foldersname'] != 'template':
             Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
