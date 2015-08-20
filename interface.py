@@ -76,7 +76,7 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
         raise SystemExit
 
-# open required tables in database
+# open table required for database check in database
 db_version = database_connection['version']
 db_version_dict = db_version.find_one(id=1)
 if db_version_dict['version'] != database_version:
@@ -84,6 +84,7 @@ if db_version_dict['version'] != database_version:
     showerror(title="Database Mismatch", message="Database version mismatch\ndatabase version is: " + str(db_version_dict['version']) + "\ndatabase version expected is: " + str(database_version))
     raise SystemExit
 
+# open required tables in database
 folderstable = database_connection['folders']
 emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
