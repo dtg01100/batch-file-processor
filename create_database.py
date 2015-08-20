@@ -3,8 +3,13 @@ import sqlalchemy
 import os
 
 
-def do():  # create database file with some default settings
+def do(database_version):  # create database file with some default settings
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+
+    version = database_connection['version']
+
+    version.insert(dict(version="1"))
+
     oversight_and_defaults = database_connection['administrative']
 
     oversight_and_defaults.insert(dict(is_active="False", copy_to_directory=None,

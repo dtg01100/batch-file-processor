@@ -15,7 +15,7 @@ import doing_stuff_overlay
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
-def process(folders_database, run_log, emails_table, run_log_directory, reporting, obe_queue, root, args):
+def process(folders_database, run_log, emails_table, run_log_directory, reporting, obe_queue, root, args, version):
     def update_overlay(overlay_text, folder_count, folder_total, file_count, file_total):
         if not args.automatic:
             doing_stuff_overlay.destroy_overlay()
@@ -200,6 +200,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         folder_error_log_name_fullpath = os.path.join(run_log_directory, folder_error_log_name_constructor)
                 try:
                     folder_errors_log_write = open(folder_error_log_name_fullpath, 'w')
+                    folder_errors_log_write.write("Program Version = " + version + "\r\n\r\n")
                     folder_errors_log_write.write(folder_errors_log.getvalue())
                     if reporting['enable_reporting'] == "True":
                         emails_table.insert(dict(log=folder_error_log_name_fullpath, folder_alias=parameters_dict['alias'], folder_id=parameters_dict['id']))

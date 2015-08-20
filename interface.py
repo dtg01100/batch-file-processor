@@ -1,3 +1,6 @@
+version = "1.0 rc2"
+database_version = "1"
+print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
     from tkFileDialog import askdirectory
@@ -25,6 +28,7 @@ except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
         critical_log = open("critical_error.log", 'a')
+        critical_log.write("program version is " + version)
         critical_log.write(str(error) + "\r\n")
         critical_log.close()
         raise SystemExit
@@ -39,13 +43,14 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
         creating_database_popup = Tk()
         Label(creating_database_popup, text="Creating initial database file...").pack()
         creating_database_popup.update()
-        create_database.do()  # make a new one
+        create_database.do(database_version)  # make a new one
         print("done")
         creating_database_popup.destroy()
     except Exception, error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
             critical_log = open("critical_error.log", 'a')
+            critical_log.write("program version is " + version)
             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
             raise SystemExit
@@ -59,6 +64,7 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
     try:
         print(str(error))
         critical_log = open("critical_error.log", 'a')
+        critical_log.write("program version is " + version)
         critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
         critical_log.close()
         raise SystemExit
@@ -67,6 +73,13 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
         raise SystemExit
 
 # open required tables in database
+db_version = database_connection['version']
+db_version_dict = db_version.find_one(id=1)
+if db_version_dict['version'] != database_version:
+    Tk().withdraw()
+    showerror(title="Database Mismatch", message="Database version mismatch\ndatabase version is: " + str(db_version_dict['version']) + "\ndatabase version expected is: " + str(database_version))
+    raise SystemExit
+
 folderstable = database_connection['folders']
 emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
@@ -75,7 +88,7 @@ oversight_and_defaults = database_connection['administrative']
 obe_queue = database_connection['obe_queue']
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
-root.title("Sender Interface 1.0 rc2")
+root.title("Sender Interface " + version)
 folder = NONE
 optionsframe = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
@@ -697,10 +710,11 @@ def process_directories(folderstable_process):
     run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
     run_log_fullpath = os.path.join(run_log_path, run_log_name_constructor)
     run_log = open(run_log_fullpath, 'w')
+    run_log.write("Batch File Sender Version " + version + "\r\n")
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue, root, args)
+        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting, obe_queue, root, args, version)
         os.chdir(original_folder)
     except Exception, error:
         os.chdir(original_folder)
