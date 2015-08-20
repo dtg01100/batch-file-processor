@@ -172,8 +172,7 @@ def select_folder():
             column_entry_value = folder
             add_folder_entry(folder)
             doing_stuff_overlay.destroy_overlay()
-            userslistframe.destroy()  # destroy lists on right
-            make_users_list()  # recreate list
+            refresh_users_list()  # recreate list
     else:
         #  offer to edit the folder if it is already known
         if askokcancel("Query:", "Folder already known, would you like to edit?"):
@@ -259,7 +258,7 @@ def make_users_list():
     inactive_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
     active_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
     inactive_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
-    userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
+    userslistframe.update()
 
 
 class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -732,6 +731,7 @@ def update_folder_alias(folderedit):  # update folder settings in database with 
 def refresh_users_list():
     userslistframe.destroy()
     make_users_list()
+    userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
 
 
 def delete_folder_entry(folder_to_be_removed):
@@ -1038,6 +1038,8 @@ args = launch_options.parse_args()
 if args.automatic:
     silent_process_directories(folderstable)
 
+make_users_list()
+
 open_folder_button = Button(optionsframe, text="Add Directory", command=select_folder)
 open_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
 open_multiple_folder_button = Button(optionsframe, text="Batch Add Directories", command=batch_add_folders)
@@ -1056,12 +1058,11 @@ maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 optionsframe.pack(side=LEFT, anchor='n', fill=Y)
 optionsframe_divider = Separator(root, orient=VERTICAL)
 optionsframe_divider.pack(side=LEFT, fill=Y)
+userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
 # set window minimum size to prevent user making it ugly
 root.update()  # update window geometry
 # don't allow window to be resized smaller than current dimensions
 root.minsize(root.winfo_width(), root.winfo_height())
 root.resizable(width=FALSE, height=TRUE)
-
-make_users_list()
 
 root.mainloop()
