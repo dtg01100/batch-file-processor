@@ -24,6 +24,7 @@ try:  # try to import required modules
     import cStringIO
     import shutil
     import doing_stuff_overlay
+    from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
@@ -36,6 +37,8 @@ except Exception, error:
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " + str(big_error))
         raise SystemExit
 
+
+me = singleton.SingleInstance()
 
 if not os.path.isfile('folders.db'):  # if the database file is missing
     try:
