@@ -218,7 +218,7 @@ def batch_add_folders():
 
 
 def edit_folder_selector(folder_to_be_edited):
-    # feed the editdialog class the the dict for the selected folder from the folders list buttons
+    # feed the EditDialog class the the dict for the selected folder from the folders list buttons
     # note: would prefer to be able to do this inline,
     # but variables appear to need to be pushed out of instanced objects
     edit_folder = folderstable.find_one(id=[folder_to_be_edited])
