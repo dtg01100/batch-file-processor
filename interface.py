@@ -85,7 +85,8 @@ db_version_dict = db_version.find_one(id=1)
 if db_version_dict['version'] != database_version:
     Tk().withdraw()
     showerror(title="Database Mismatch", message="Database version mismatch\ndatabase version is: " +
-                                                 str(db_version_dict['version']) + "\ndatabase version expected is: " + str(database_version))
+                                                 str(db_version_dict['version']) + "\ndatabase version expected is: " +
+                                                 str(database_version))
     raise SystemExit
 
 # open required tables in database
@@ -372,7 +373,6 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
                 error_list.append("Invalid Email Destination Address\r")
                 errors = True
 
-
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
             showerror(message=error_report)  # display generated error string in error dialog
@@ -483,11 +483,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.e1 = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
                               onvalue="True", offvalue="False")
         self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend",
-                                                    variable=self.process_backend_copy_check, onvalue=True, offvalue=False)
+                                                    variable=self.process_backend_copy_check,
+                                                    onvalue=True, offvalue=False)
         self.ftp_backend_checkbutton = Checkbutton(self.folderframe, text="FTP Backend",
-                                                   variable=self.process_backend_ftp_check, onvalue=True, offvalue=False)
+                                                   variable=self.process_backend_ftp_check,
+                                                   onvalue=True, offvalue=False)
         self.email_backend_checkbutton = Checkbutton(self.folderframe, text="Email Backend",
-                                                     variable=self.process_backend_email_check, onvalue=True, offvalue=False)
+                                                     variable=self.process_backend_email_check,
+                                                     onvalue=True, offvalue=False)
         if self.foldersnameinput['foldersname'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.e2 = Entry(self.folderframe, width=30)
