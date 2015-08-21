@@ -96,6 +96,7 @@ emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
 obe_queue = database_connection['obe_queue']
+
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
 root.title("Sender Interface " + version)
@@ -192,11 +193,12 @@ def batch_add_folders():
     containing_folder = askdirectory()
     if containing_folder != "":
         os.chdir(str(containing_folder))
-        folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
+        folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
         print("adding " + str(len(folders_list)) + " folders")
         if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
             doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders...")
             folder_count = 0
+            # loop over all folders in target directory, skipping them if they are already known
             for batch_folder_add_proposed_folder in folders_list:
                 doingstuffoverlay.destroy_overlay()
                 folder_count += 1
@@ -236,6 +238,7 @@ def make_users_list():
     inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
+    # make labels for empty lists
     if folderstable.count(is_active="True") == 0:
         no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
@@ -740,36 +743,39 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
 
 def update_reporting(changes):
+    # push new settings into table
     oversight_and_defaults.update(changes, ['id'])
 
 
-def update_folder_alias(folderedit):  # update folder settings in database with results from EditDialog
-    folderstable.update(folderedit, ['id'])
+def update_folder_alias(folder_edit):  # update folder settings in database with results from EditDialog
+    folderstable.update(folder_edit, ['id'])
     refresh_users_list()
 
 
 def refresh_users_list():
-    users_list_frame.destroy()
-    make_users_list()
-    users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
+    users_list_frame.destroy()  # destroy old users list
+    make_users_list()  # create new users list
+    users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)  # repack new users list
 
 
 def delete_folder_entry(folder_to_be_removed):
+    # delete specified folder configuration and it's queued emails and obe queue
     folderstable.delete(id=folder_to_be_removed)
     obe_queue.delete(folder_id=folder_to_be_removed)
     emails_table.delete(folder_id=folder_to_be_removed)
 
 
-def delete_folder_entry_wrapper(folder_to_be_removed):
+def delete_folder_entry_wrapper(
+        folder_to_be_removed):  # a wrapper function to both delete the folder entry and update the users list
     delete_folder_entry(folder_to_be_removed)
     refresh_users_list()
 
 
-def graphical_process_directories(folderstable_process):
-    if folderstable_process.count(is_active="True") > 0:
+def graphical_process_directories(folders_table_process):  # process folders while showing progress overlay
+    if folders_table_process.count(is_active="True") > 0:
         doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
-        process_directories(folderstable_process)
-        refresh_users_list()
+        process_directories(folders_table_process)
+        refresh_users_list()  # refresh the users list in case the active state has changed
         doingstuffoverlay.destroy_overlay()
     else:
         showerror("Error", "No Active Folders")
@@ -799,7 +805,7 @@ def process_directories(folderstable_process):
             while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
                 if askokcancel("Error", "Can't write to log directory,\r\n"
                                         " would you like to change reporting settings?"):
-                    EditReportingDialog(root, reporting_options)
+                    EditReportingDialog(root, oversight_and_defaults.find_one(id=1))
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
                     showerror(message="Can't write to log directory, exiting")
@@ -841,6 +847,7 @@ def process_directories(folderstable_process):
                 dispatch_error) + "\r\n")
     run_log.close()
     if reporting['enable_reporting'] == "True":
+        # add run log to email queue if reporting is enabled
         emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
         try:
             sent_emails_removal_queue.delete()
@@ -876,7 +883,7 @@ def process_directories(folderstable_process):
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
-            if skipped_files > 0:
+            if skipped_files > 0:  # log any skipped files, try to send that error in the run log
                 batch_number += 1
                 emails_count += 1
                 email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
@@ -897,7 +904,7 @@ def process_directories(folderstable_process):
         except Exception, dispatch_error:
             emails_table_batch.delete()
             run_log = open(run_log_fullpath, 'a')
-            if reporting['report_printing_fallback'] == "True":
+            if reporting['report_printing_fallback'] != "True":
                 print("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
                 run_log.write("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
             else:
@@ -906,6 +913,7 @@ def process_directories(folderstable_process):
                     "Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
+                # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
                 try:
                     run_log = open(run_log_fullpath, 'r')
                     print_run_log.do(run_log)
@@ -932,7 +940,7 @@ def silent_process_directories(silent_process_folders_table):
     raise SystemExit
 
 
-def remove_inactive_folders():
+def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
     users_refresh = False
     if folderstable.count(is_active="False") > 0:
         users_refresh = True
@@ -953,7 +961,7 @@ def move_active_to_obe():
     folder_total = folderstable.count(is_active="True")
     folder_count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "adding files to obe queue...")
-    for parameters_dict in folderstable.find(is_active="True"):
+    for parameters_dict in folderstable.find(is_active="True"):  # create list of active directories
         file_total = 0
         file_count = 0
         folder_count += 1
@@ -1058,6 +1066,7 @@ def maintenance_functions_popup():
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
         maintenance_popup.transient(root)
+        # center dialog on main window
         maintenance_popup.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
         maintenance_popup.grab_set()
         maintenance_popup.focus_set()
@@ -1077,6 +1086,7 @@ def maintenance_functions_popup():
                                           command=process_obe_queue)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations",
                                      command=remove_inactive_folders)
+        # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
@@ -1095,26 +1105,31 @@ if args.automatic:
 
 make_users_list()
 
+# define main window widgets
 open_folder_button = Button(optionsframe, text="Add Directory", command=select_folder)
-open_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
 open_multiple_folder_button = Button(optionsframe, text="Batch Add Directories", command=batch_add_folders)
-open_multiple_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
 default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
-default_settings.pack(side=TOP, fill=X, pady=2, padx=2)
-reporting_options = oversight_and_defaults.find_one(id=1)
 edit_reporting = Button(optionsframe, text="Edit Reporting",
-                        command=lambda: EditReportingDialog(root, reporting_options))
-edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
+                        command=lambda: EditReportingDialog(root, oversight_and_defaults.find_one(id=1)))
 process_folder_button = Button(optionsframe, text="Process Folders",
                                command=lambda: graphical_process_directories(folderstable))
+maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
+options_frame_divider = Separator(root, orient=VERTICAL)
+
+# pack main window widgets
+open_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
+open_multiple_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
+default_settings.pack(side=TOP, fill=X, pady=2, padx=2)
+edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
 process_folder_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
 Separator(optionsframe, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
-maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 optionsframe.pack(side=LEFT, anchor='n', fill=Y)
-optionsframe_divider = Separator(root, orient=VERTICAL)
-optionsframe_divider.pack(side=LEFT, fill=Y)
+options_frame_divider.pack(side=LEFT, fill=Y)
 users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
+
+# set parameters for root window
+
 # set window minimum size to prevent user making it ugly
 root.update()  # update window geometry
 # don't allow window to be resized smaller than current dimensions
