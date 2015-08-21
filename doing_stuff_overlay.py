@@ -1,8 +1,8 @@
 from Tkinter import *
 from ttk import *
 
-class doing_stuff_overlay():
 
+class doing_stuff_overlay():
 
     def __init__(self, parent):
         self.parent = parent
@@ -20,6 +20,7 @@ def make_overlay(parent, overlaytext):
     doing_stuff.place(relx=.5, rely=.5, anchor=CENTER)
     doing_stuff_frame.place(relx=.5, rely=.5, height=100, relwidth=1, anchor=CENTER)
     parent.update()
+
 
 def destroy_overlay():
     doing_stuff_frame.destroy()

@@ -9,5 +9,5 @@ def do(process_parameters, filename):
     ftp = ftplib.FTP()
     ftp.connect(str(process_parameters['ftp_server']), 2121)
     ftp.login(process_parameters['ftp_username'], process_parameters['ftp_password'])
-    ftp.storbinary("stor " + process_parameters['ftp_folder']+filename, open(filename,'rb'))
+    ftp.storbinary("stor " + process_parameters['ftp_folder']+filename, open(filename, 'rb'))
     ftp.close()

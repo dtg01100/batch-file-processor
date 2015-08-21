@@ -23,7 +23,8 @@ def do(reporting, emails_table, sent_emails_removal_queue, time, args, root, bat
 
         if not args.automatic:
             doing_stuff_overlay.destroy_overlay()
-            doing_stuff_overlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) + " attachment " + str(emails_count) + " of " + str(total_emails))
+            doing_stuff_overlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
+                                             " attachment " + str(emails_count) + " of " + str(total_emails))
 
         filename = log['log']
         attachment = open(filename, "r")

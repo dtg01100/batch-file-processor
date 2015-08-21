@@ -1,6 +1,7 @@
 from Tkinter import *
 from ttk import *
 
+
 class Dialog(Toplevel):
 
     def __init__(self, parent, foldersnameinput, title = None):
@@ -68,7 +69,7 @@ class Dialog(Toplevel):
     def ok(self, event=None):
 
         if not self.validate():
-            self.initial_focus.focus_set() # put focus back
+            self.initial_focus.focus_set()  # put focus back
             return
 
         self.withdraw()
@@ -89,8 +90,8 @@ class Dialog(Toplevel):
 
     def validate(self):
 
-        return 1 # override
+        return 1  # override
 
     def apply(self):
 
-        pass # override
+        pass  # override

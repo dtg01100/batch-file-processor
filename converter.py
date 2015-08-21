@@ -2,7 +2,8 @@ import upc_check_digit
 import shutil
 
 
-def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers, filter_ampersand, pad_arec, arec_padding):
+def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers,
+                filter_ampersand, pad_arec, arec_padding):
 
     # save input parameters as variables
     conv_calc_upc = calc_upc
@@ -20,7 +21,8 @@ def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_are
 
     for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
 
-        if line.startswith("A") and conv_inc_arec != "False":  # if include "A" records flag is set and line starts with "A"
+        # if include "A" records flag is set and line starts with "A"
+        if line.startswith("A") and conv_inc_arec != "False":
             f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(line)  # write "A" line
 
         # the following block writes "B" lines, dependent on filter and convert settings
@@ -35,7 +37,8 @@ def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_are
                      (line.replace("&", "AND")[12:37] if filter_ampersand != "False" else line[12:37]),
                      line[55:57], line[38:43]))
 
-        if line.startswith("C") and conv_inc_crec != "False":  # if include "C" records flag is set and line starts with "C"
+        # if include "C" records flag is set and line starts with "C"
+        if line.startswith("C") and conv_inc_crec != "False":
             f.write(line)  # write "C" line
 
     f.close()  # close output file

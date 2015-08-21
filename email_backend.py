@@ -46,4 +46,3 @@ def do(process_parameters, filename):
     text = msg.as_string()
     server.sendmail(fromaddr, toaddr, text)
     server.close()
-
