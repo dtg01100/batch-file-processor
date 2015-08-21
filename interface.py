@@ -23,7 +23,7 @@ try:  # try to import required modules
     import sqlalchemy.dialects.sqlite  # needed for py2exe
     import cStringIO
     import shutil
-    import doing_stuff_overlay
+    import doingstuffoverlay
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -110,20 +110,21 @@ def check_logs_directory():
         test_log_file = open(os.path.join(logs_directory['logs_directory'], 'test_log_file'), 'w')
         test_log_file.close()
         os.remove(os.path.join(logs_directory['logs_directory'], 'test_log_file'))
-    except IOError, error:
-        print(str(error))
+    except IOError, log_directory_error:
+        print(str(log_directory_error))
         return False
 
 
-def add_folder_entry(folder):  # add folder to database, copying configuration from template
+def add_folder_entry(proposed_folder):  # add folder to database, copying configuration from template
     defaults = oversight_and_defaults.find_one(id=1)
-    folder_alias_constructor = os.path.basename(folder)
+    folder_alias_constructor = os.path.basename(proposed_folder)
 
     def folder_alias_checker(check):
         # check database to see if the folder alias exists, and return false if it does
-        proposed_folder = folderstable.find_one(alias=check)
-        if proposed_folder is not None:
+        add_folder_entry_proposed_folder = folderstable.find_one(alias=check)
+        if add_folder_entry_proposed_folder is not None:
             return False
+
     if folder_alias_checker(folder_alias_constructor) is False:
         # auto generate a number to add to automatic aliases
         folder_alias_end_suffix = 0
@@ -134,9 +135,9 @@ def add_folder_entry(folder):  # add folder to database, copying configuration f
             folder_alias_deduplicate_constructor = folder_alias_constructor + " " + str(folder_alias_end_suffix)
         folder_alias_constructor = folder_alias_deduplicate_constructor
 
-    print("adding folder: " + folder + " with settings from template")
+    print("adding folder: " + proposed_folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
-    folderstable.insert(dict(foldersname=folder,
+    folderstable.insert(dict(foldersname=proposed_folder,
                              copy_to_directory=defaults['copy_to_directory'],
                              is_active=defaults['is_active'],
                              alias=folder_alias_constructor,
@@ -174,10 +175,10 @@ def select_folder():
     proposed_folder = folderstable.find_one(foldersname=folder)
     if proposed_folder is None:
         if folder != '':  # check to see if selected folder has a path
-            doing_stuff_overlay.make_overlay(root, "Adding Folder...")
+            doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
-            doing_stuff_overlay.destroy_overlay()
+            doingstuffoverlay.destroy_overlay()
             refresh_users_list()  # recreate list
     else:
         #  offer to edit the folder if it is already known
@@ -194,24 +195,24 @@ def batch_add_folders():
         folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]
         print("adding " + str(len(folders_list)) + " folders")
         if askokcancel(message="This will add " + str(len(folders_list)) + " directories, are you sure?"):
-            doing_stuff_overlay.make_overlay(parent=root, overlaytext="adding folders...")
+            doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders...")
             folder_count = 0
-            for folder in folders_list:
-                doing_stuff_overlay.destroy_overlay()
-                folder_count = folder_count + 1
-                doing_stuff_overlay.make_overlay(parent=root, overlaytext="adding folders... " + str(folder_count) +
-                                                                          " of " + str(len(folders_list)))
-                folder = os.path.join(containing_folder, folder)
-                proposed_folder = folderstable.find_one(foldersname=folder)
+            for batch_folder_add_proposed_folder in folders_list:
+                doingstuffoverlay.destroy_overlay()
+                folder_count += 1
+                doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
+                                                                         " of " + str(len(folders_list)))
+                batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
+                proposed_folder = folderstable.find_one(foldersname=batch_folder_add_proposed_folder)
                 if proposed_folder is None:
-                    if folder != '':  # check to see if selected folder has a path
-                        add_folder_entry(folder)
-                        added = added + 1
+                    if batch_folder_add_proposed_folder != '':  # check to see if selected folder has a path
+                        add_folder_entry(batch_folder_add_proposed_folder)
+                        added += 1
                 else:
-                    print("skipping existing folder: " + folder)
-                    skipped = skipped + 1
+                    print("skipping existing folder: " + batch_folder_add_proposed_folder)
+                    skipped += 1
             print("done adding folders")
-            doing_stuff_overlay.destroy_overlay()
+            doingstuffoverlay.destroy_overlay()
             refresh_users_list()
             showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
 
@@ -225,52 +226,52 @@ def edit_folder_selector(folder_to_be_edited):
 
 
 def make_users_list():
-    global userslistframe
-    global active_userslistframe
-    global inactive_userslistframe
-    userslistframe = Frame(root)
-    active_users_list_container = Frame(userslistframe)
-    inactive_users_list_container = Frame(userslistframe)
-    active_userslistframe = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
-    inactive_userslistframe = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
+    global users_list_frame
+    global active_users_list_frame
+    global inactive_users_list_frame
+    users_list_frame = Frame(root)
+    active_users_list_container = Frame(users_list_frame)
+    inactive_users_list_container = Frame(users_list_frame)
+    active_users_list_frame = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
+    inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     if folderstable.count(is_active="True") == 0:
-        no_active_label = Label(active_userslistframe, text="No Active Folders")
+        no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
     if folderstable.count(is_active="False") == 0:
-        no_inactive_label = Label(inactive_userslistframe, text="No Inactive Folders")
+        no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
-    for foldersname in folderstable.all():
-        if str(foldersname['is_active']) != "False":
-            active_folderbuttonframe = Frame(active_userslistframe.interior)
-            Button(active_folderbuttonframe, text="Delete",
-                   command=lambda name=foldersname['id']: delete_folder_entry_wrapper(name)).grid(column=1,
-                                                                                                  row=0, sticky=E)
-            Button(active_folderbuttonframe, text="Edit: " + foldersname['alias'],
-                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0,
-                                                                                           row=0, sticky=E+W)
-            active_folderbuttonframe.pack(anchor='e', pady=1)
+    for folders_name in folderstable.all():
+        if str(folders_name['is_active']) != "False":
+            active_folder_button_frame = Frame(active_users_list_frame.interior)
+            Button(active_folder_button_frame, text="Delete",
+                   command=lambda name=folders_name['id']:
+                   delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
+            Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
+                   command=lambda name=folders_name['id']:
+                   edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
+            active_folder_button_frame.pack(anchor='e', pady=1)
         else:
-            inactive_folderbuttonframe = Frame(inactive_userslistframe.interior)
-            Button(inactive_folderbuttonframe, text="Delete",
-                   command=lambda name=foldersname['id']: delete_folder_entry_wrapper(name)).grid(column=1,
-                                                                                                  row=0, sticky=E)
-            Button(inactive_folderbuttonframe, text="Edit: " + foldersname['alias'],
-                   command=lambda name=foldersname['id']: edit_folder_selector(name)).grid(column=0,
-                                                                                           row=0, sticky=E+W)
-            inactive_folderbuttonframe.pack(anchor='e', pady=1)
+            inactive_folder_button_frame = Frame(inactive_users_list_frame.interior)
+            Button(inactive_folder_button_frame, text="Delete",
+                   command=lambda name=folders_name['id']:
+                   delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
+            Button(inactive_folder_button_frame, text="Edit: " + folders_name['alias'],
+                   command=lambda name=folders_name['id']:
+                   edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
+            inactive_folder_button_frame.pack(anchor='e', pady=1)
     # pack widgets in correct order
     active_users_list_label.pack(pady=5)
     Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
     inactive_users_list_label.pack(pady=5)
     Separator(inactive_users_list_container, orient=HORIZONTAL).pack(fill=X)
-    active_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
-    inactive_userslistframe.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
+    active_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
+    inactive_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
     active_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
     inactive_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
-    userslistframe.update()
+    users_list_frame.update()
 
 
 class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -338,7 +339,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def validate(self):
 
-        doing_stuff_overlay.make_overlay(self, "Testing Changes...")
+        doingstuffoverlay.make_overlay(self, "Testing Changes...")
         error_list = []
         errors = False
 
@@ -377,9 +378,9 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
             showerror(message=error_report)  # display generated error string in error dialog
-            doing_stuff_overlay.destroy_overlay()
+            doingstuffoverlay.destroy_overlay()
             return False
-        doing_stuff_overlay.destroy_overlay()
+        doingstuffoverlay.destroy_overlay()
         return 1
 
     def ok(self, event=None):
@@ -396,24 +397,24 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
         self.cancel()
 
-    def apply(self, foldersnameapply):
+    def apply(self, folders_name_apply):
 
         global logs_directory_edit
         global logs_directory_is_altered
 
-        doing_stuff_overlay.make_overlay(self, "Applying Changes...")
-        foldersnameapply['enable_reporting'] = str(self.enable_reporting_checkbutton.get())
+        doingstuffoverlay.make_overlay(self, "Applying Changes...")
+        folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton.get())
         if logs_directory_is_altered is True:
-            foldersnameapply['log_directory'] = logs_directory_edit
-        foldersnameapply['report_email_address'] = str(self.e1.get())
-        foldersnameapply['report_email_username'] = str(self.e2.get())
-        foldersnameapply['report_email_password'] = str(self.e3.get())
-        foldersnameapply['report_email_smtp_server'] = str(self.e4.get())
-        foldersnameapply['reporting_smtp_port'] = str(self.e5.get())
-        foldersnameapply['report_email_destination'] = str(self.e6.get())
+            folders_name_apply['log_directory'] = logs_directory_edit
+        folders_name_apply['report_email_address'] = str(self.e1.get())
+        folders_name_apply['report_email_username'] = str(self.e2.get())
+        folders_name_apply['report_email_password'] = str(self.e3.get())
+        folders_name_apply['report_email_smtp_server'] = str(self.e4.get())
+        folders_name_apply['reporting_smtp_port'] = str(self.e5.get())
+        folders_name_apply['report_email_destination'] = str(self.e6.get())
 
-        update_reporting(foldersnameapply)
-        doing_stuff_overlay.destroy_overlay()
+        update_reporting(folders_name_apply)
+        doingstuffoverlay.destroy_overlay()
 
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -421,8 +422,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
     def body(self, master):
 
         self.resizable(width=FALSE, height=FALSE)
-        global copytodirectory
-        copytodirectory = None
+        global copy_to_directory
+        copy_to_directory = None
         global destination_directory_is_altered
         destination_directory_is_altered = False
         self.title("Folder Settings")
@@ -449,14 +450,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
         Label(self.prefsframe, text="Copy Destination:").grid(row=4, sticky=E)
-        Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E+W, pady=2)
+        Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E + W, pady=2)
         Label(self.prefsframe, text="Ftp Backend Settings:").grid(row=6, columnspan=2, pady=3)
         Label(self.prefsframe, text="FTP Server:").grid(row=7, sticky=E)
         Label(self.prefsframe, text="FTP Port:").grid(row=8, sticky=E)
         Label(self.prefsframe, text="FTP Folder:").grid(row=9, sticky=E)
         Label(self.prefsframe, text="FTP Username:").grid(row=10, sticky=E)
         Label(self.prefsframe, text="FTP Password:").grid(row=11, sticky=E)
-        Separator(self.prefsframe, orient=HORIZONTAL).grid(row=12, columnspan=2, sticky=E+W, pady=2)
+        Separator(self.prefsframe, orient=HORIZONTAL).grid(row=12, columnspan=2, sticky=E + W, pady=2)
         Label(self.prefsframe, text="Email Backend Settings:").grid(row=13, columnspan=2, pady=3)
         Label(self.prefsframe, text="Recipient Address:").grid(row=14, sticky=E)
         Label(self.prefsframe, text="Sender Address:").grid(row=15, sticky=E)
@@ -476,9 +477,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.ediframe, text="A " + "Record Padding (6 characters):").grid(row=8, column=3, sticky=E)
 
         def select_copy_to_directory():
-            global copytodirectory
+            global copy_to_directory
             global destination_directory_is_altered
-            copytodirectory = str(askdirectory())
+            copy_to_directory = str(askdirectory())
             destination_directory_is_altered = True
 
         self.e1 = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
@@ -593,8 +594,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.cancel()
 
     def apply(self, foldersnameapply):
-        doing_stuff_overlay.make_overlay(self, "Applying Changes...")
-        global copytodirectory
+        doingstuffoverlay.make_overlay(self, "Applying Changes...")
+        global copy_to_directory
         global destination_directory_is_altered
         foldersnameapply['is_active'] = str(self.active_checkbutton.get())
         if self.foldersnameinput['foldersname'] != 'template':
@@ -603,7 +604,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             else:
                 foldersnameapply['alias'] = str(self.e2.get())
         if destination_directory_is_altered is True:
-            foldersnameapply['copy_to_directory'] = copytodirectory
+            foldersnameapply['copy_to_directory'] = copy_to_directory
         foldersnameapply['process_backend_copy'] = self.process_backend_copy_check.get()
         foldersnameapply['process_backend_ftp'] = self.process_backend_ftp_check.get()
         foldersnameapply['process_backend_email'] = self.process_backend_email_check.get()
@@ -632,14 +633,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             update_folder_alias(foldersnameapply)
         else:
             update_reporting(foldersnameapply)
-        doing_stuff_overlay.destroy_overlay()
+        doingstuffoverlay.destroy_overlay()
 
     def validate(self):
 
         error_string_constructor_list = []
         errors = False
 
-        doing_stuff_overlay.make_overlay(self, "Testing Changes...")
+        doingstuffoverlay.make_overlay(self, "Testing Changes...")
         if self.process_backend_ftp_check.get() is True:
 
             if self.e5.get() == "":
@@ -669,7 +670,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 errors = True
 
         if self.process_backend_email_check.get() is True:
-
 
             if self.e10.get() == "":
                 error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
@@ -710,7 +710,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                     errors = True
 
         if self.process_backend_copy_check.get() is True:
-            if copytodirectory == None or copytodirectory == "":
+            if copy_to_directory is None or copy_to_directory == "":
                 error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
                                                      " Please Select One\r\n")
                 errors = True
@@ -730,12 +730,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 error_string_constructor_list.append("Alias Too Long\r\n")
                 errors = True
         if errors is True:
-            doing_stuff_overlay.destroy_overlay()
+            doingstuffoverlay.destroy_overlay()
             error_string = ''.join(error_string_constructor_list)  # combine error messages into single string
             showerror(message=error_string)  # display generated error in dialog box
             return False
 
-        doing_stuff_overlay.destroy_overlay()
+        doingstuffoverlay.destroy_overlay()
         return 1
 
 
@@ -749,9 +749,9 @@ def update_folder_alias(folderedit):  # update folder settings in database with 
 
 
 def refresh_users_list():
-    userslistframe.destroy()
+    users_list_frame.destroy()
     make_users_list()
-    userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
+    users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
 
 
 def delete_folder_entry(folder_to_be_removed):
@@ -767,10 +767,10 @@ def delete_folder_entry_wrapper(folder_to_be_removed):
 
 def graphical_process_directories(folderstable_process):
     if folderstable_process.count(is_active="True") > 0:
-        doing_stuff_overlay.make_overlay(parent=root, overlaytext="processing folders...")
+        doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
         process_directories(folderstable_process)
         refresh_users_list()
-        doing_stuff_overlay.destroy_overlay()
+        doingstuffoverlay.destroy_overlay()
     else:
         showerror("Error", "No Active Folders")
 
@@ -809,10 +809,11 @@ def process_directories(folderstable_process):
                 # can't prompt for new logs directory, can only complain in a critical log and quit
                 print("can't write into logs directory. in automatic mode,"
                       " so no prompt. this error will be stored in critical log")
-                critical_log = open("critical_error.log", 'a')
-                critical_log.write(str(datetime.datetime.now()) +
-                                   "can't write into logs directory. in automatic mode, so no prompt\r\n")
-                critical_log.close()
+                process_folders_critical_log = open("critical_error.log", 'a')
+                process_folders_critical_log.write(str(datetime.datetime.now()) +
+                                                   "can't write into logs directory."
+                                                   " in automatic mode, so no prompt\r\n")
+                process_folders_critical_log.close()
                 raise SystemExit
             except IOError:
                 # can't complain in a critical log, so ill complain in standard output and quit
@@ -829,12 +830,15 @@ def process_directories(folderstable_process):
         dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting,
                          obe_queue, root, args, version)
         os.chdir(original_folder)
-    except Exception, error:
+    except Exception, dispatch_error:
         os.chdir(original_folder)
         # if processing folders runs into a serious error, report and log
-        print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+        print(
+            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                dispatch_error) + "\r\n")
         run_log.write(
-            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(error) + "\r\n")
+            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                dispatch_error) + "\r\n")
     run_log.close()
     if reporting['enable_reporting'] == "True":
         emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
@@ -847,7 +851,7 @@ def process_directories(folderstable_process):
             emails_count = 0
             batch_number = 1
             for log in emails_table.all():
-                emails_count = emails_count + 1
+                emails_count += 1
                 if os.path.isfile(log['log']):
                     # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                     total_size += total_size + os.path.getsize(log['log'])  # add size of current file to total
@@ -858,11 +862,11 @@ def process_directories(folderstable_process):
                                             root, batch_number, emails_count, total_emails)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
-                        batch_number = batch_number + 1
+                        batch_number += 1
                 else:
                     email_errors.write("\r\n" + log['log'] + " missing, skipping")
                     email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
-                    skipped_files = skipped_files + 1
+                    skipped_files += 1
                     sent_emails_removal_queue.insert(log)
             if emails_table_batch.count() > 0:
                 # send the remainder of emails
@@ -873,8 +877,8 @@ def process_directories(folderstable_process):
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
             if skipped_files > 0:
-                batch_number = batch_number + 1
-                emails_count = emails_count + 1
+                batch_number += 1
+                emails_count += 1
                 email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
                 email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
                 email_errors_log_fullpath = os.path.join(run_log_path, email_errors_log_name_constructor)
@@ -888,40 +892,41 @@ def process_directories(folderstable_process):
                                         root, batch_number, emails_count, total_emails)
                     emails_table_batch.delete()
                 except Exception:
-                    doing_stuff_overlay.destroy_overlay()
+                    doingstuffoverlay.destroy_overlay()
                     emails_table_batch.delete()
-        except Exception, error:
+        except Exception, dispatch_error:
             emails_table_batch.delete()
             run_log = open(run_log_fullpath, 'a')
             if reporting['report_printing_fallback'] == "True":
-                print("Emailing report log failed with: " + str(error) + ", printing file\r\n")
-                run_log.write("Emailing report log failed with: " + str(error) + ", printing file\r\n")
+                print("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
+                run_log.write("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
             else:
-                print("Emailing report log failed with: " + str(error) + ", printing disabled, stopping\r\n")
-                run_log.write("Emailing report log failed with: " + str(error) + ", printing disabled, stopping\r\n")
+                print("Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
+                run_log.write(
+                    "Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
                 try:
                     run_log = open(run_log_fullpath, 'r')
                     print_run_log.do(run_log)
                     run_log.close()
-                except Exception, error:
-                    print("printing error log failed with error: " + str(error) + "\r\n")
+                except Exception, dispatch_error:
+                    print("printing error log failed with error: " + str(dispatch_error) + "\r\n")
                     run_log = open(run_log_fullpath, 'a')
-                    run_log.write("Printing error log failed with error: " + str(error) + "\r\n")
+                    run_log.write("Printing error log failed with error: " + str(dispatch_error) + "\r\n")
                     run_log.close()
 
 
-def silent_process_directories(folderstable):
-    if folderstable.count(is_active="True") > 0:
+def silent_process_directories(silent_process_folders_table):
+    if silent_process_folders_table.count(is_active="True") > 0:
         print "batch processing configured directories"
         try:
-            process_directories(folderstable)
-        except Exception, error:
-            print(str(error))
-            critical_log = open("critical_error.log", 'a')
-            critical_log.write(str(error) + "\r\n")
-            critical_log.close()
+            process_directories(silent_process_folders_table)
+        except Exception, silent_process_error:
+            print(str(silent_process_error))
+            silent_process_critical_log = open("critical_error.log", 'a')
+            silent_process_critical_log.write(str(silent_process_error) + "\r\n")
+            silent_process_critical_log.close()
     else:
         print("Error, No Active Folders")
     raise SystemExit
@@ -933,12 +938,12 @@ def remove_inactive_folders():
         users_refresh = True
     folders_total = folderstable.count(is_active="False")
     folders_count = 0
-    for folder in folderstable.find(is_active="False"):
-        folders_count = folders_count + 1
-        doing_stuff_overlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
-                                         str(folders_total))
-        delete_folder_entry(folder['id'])
-        doing_stuff_overlay.destroy_overlay()
+    for folder_to_be_removed in folderstable.find(is_active="False"):
+        folders_count += 1
+        doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
+                                       str(folders_total))
+        delete_folder_entry(folder_to_be_removed['id'])
+        doingstuffoverlay.destroy_overlay()
     if users_refresh:
         refresh_users_list()
 
@@ -947,31 +952,31 @@ def move_active_to_obe():
     starting_folder = os.getcwd()
     folder_total = folderstable.count(is_active="True")
     folder_count = 0
-    doing_stuff_overlay.make_overlay(maintenance_popup, "adding files to obe queue...")
+    doingstuffoverlay.make_overlay(maintenance_popup, "adding files to obe queue...")
     for parameters_dict in folderstable.find(is_active="True"):
         file_total = 0
         file_count = 0
-        folder_count = folder_count + 1
-        doing_stuff_overlay.destroy_overlay()
-        doing_stuff_overlay.make_overlay(parent=maintenance_popup,
-                                         overlaytext="adding files to obe queue..." + " folder " + str(folder_count) +
-                                                     " of " + str(folder_total) + " file " + str(file_count) +
-                                                     " of " + str(file_total))
+        folder_count += 1
+        doingstuffoverlay.destroy_overlay()
+        doingstuffoverlay.make_overlay(parent=maintenance_popup,
+                                       overlay_text="adding files to obe queue..." + " folder " + str(folder_count) +
+                                                    " of " + str(folder_total) + " file " + str(file_count) +
+                                                    " of " + str(file_total))
         os.chdir(parameters_dict['foldersname'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
         file_total = len(files)
         for filename in files:
-            file_count = file_count + 1
-            doing_stuff_overlay.destroy_overlay()
-            doing_stuff_overlay.make_overlay(parent=maintenance_popup,
-                                             overlaytext="adding files to obe queue..." + " folder " +
-                                                         str(folder_count) + " of " + str(folder_total) +
-                                                         " file " + str(file_count) + " of " + str(file_total))
+            file_count += 1
+            doingstuffoverlay.destroy_overlay()
+            doingstuffoverlay.make_overlay(parent=maintenance_popup,
+                                           overlay_text="adding files to obe queue..." + " folder " +
+                                                        str(folder_count) + " of " + str(folder_total) +
+                                                        " file " + str(file_count) + " of " + str(file_total))
             if obe_queue.find_one(file=str(os.path.abspath(filename))) is None:
                 obe_queue.insert(dict(file=str(os.path.abspath(filename)),
                                       destination=str(os.path.join(parameters_dict['foldersname'], "obe")),
                                       folder_id=parameters_dict['id']))
-    doing_stuff_overlay.destroy_overlay()
+    doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
 
 
@@ -979,16 +984,16 @@ def process_obe_queue():
     error_counter = 0
     processed_counter = 0
     if obe_queue.count() > 0:
-        doing_stuff_overlay.make_overlay(maintenance_popup, "processing obe queue...")
+        doingstuffoverlay.make_overlay(maintenance_popup, "processing obe queue...")
         file_count_total = obe_queue.count()
         file_count = 0
         for files in obe_queue.all():
             try:
-                file_count = file_count + 1
-                doing_stuff_overlay.destroy_overlay()
-                doing_stuff_overlay.make_overlay(parent=maintenance_popup,
-                                                 overlaytext="moving files to obe folders...\n\n" + str(file_count) +
-                                                             " of " + str(file_count_total))
+                file_count += 1
+                doingstuffoverlay.destroy_overlay()
+                doingstuffoverlay.make_overlay(parent=maintenance_popup,
+                                               overlay_text="moving files to obe folders...\n\n" + str(file_count) +
+                                                            " of " + str(file_count_total))
                 print("moving " + files['file'] + " to obe directory")
                 if os.path.isfile(files['file']):
                     if os.path.exists(files['destination']) is False:
@@ -1005,30 +1010,30 @@ def process_obe_queue():
                                                           destination_file_deduplicate_constructor)) is True:
                             destination_file_end_suffix += destination_file_end_suffix + 1
                             print str(destination_file_end_suffix)
-                            destination_file_deduplicate_constructor =\
+                            destination_file_deduplicate_constructor = \
                                 destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
                         destination_file_constructor = destination_file_deduplicate_constructor
                         shutil.move(str(files['file']), os.path.join(str(files['destination']),
                                                                      destination_file_constructor))
-                    processed_counter = processed_counter + 1
+                    processed_counter += 1
                 else:
                     obe_queue.delete(file=str(files['file']))
-                    error_counter = error_counter + 1
+                    error_counter += 1
             except IOError:
-                error_counter = error_counter + 1
-        doing_stuff_overlay.destroy_overlay()
+                error_counter += 1
+        doingstuffoverlay.destroy_overlay()
         showinfo(message=str(processed_counter) + " files moved\r\n" + str(error_counter) + " move errors")
 
 
 def set_all_inactive():
     total = folderstable.count(is_active="True")
     count = 0
-    for folder in folderstable.find(is_active="True"):
-        count = count + 1
-        doing_stuff_overlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder['is_active'] = "False"
-        folderstable.update(folder, ['id'])
-        doing_stuff_overlay.destroy_overlay()
+    for folder_to_be_inactive in folderstable.find(is_active="True"):
+        count += 1
+        doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        folder_to_be_inactive['is_active'] = "False"
+        folderstable.update(folder_to_be_inactive, ['id'])
+        doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
 
@@ -1036,12 +1041,12 @@ def set_all_inactive():
 def set_all_active():
     total = folderstable.count(is_active="False")
     count = 0
-    for folder in folderstable.find(is_active="False"):
-        count = count + 1
-        doing_stuff_overlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder['is_active'] = "True"
-        folderstable.update(folder, ['id'])
-        doing_stuff_overlay.destroy_overlay()
+    for folder_to_be_active in folderstable.find(is_active="False"):
+        count += 1
+        doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        folder_to_be_active['is_active'] = "True"
+        folderstable.update(folder_to_be_active, ['id'])
+        doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
 
@@ -1053,7 +1058,7 @@ def maintenance_functions_popup():
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
         maintenance_popup.transient(root)
-        maintenance_popup.geometry("+%d+%d" % (root.winfo_rootx()+50, root.winfo_rooty()+50))
+        maintenance_popup.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
         maintenance_popup.grab_set()
         maintenance_popup.focus_set()
         maintenance_popup.resizable(width=FALSE, height=FALSE)
@@ -1109,7 +1114,7 @@ maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 optionsframe.pack(side=LEFT, anchor='n', fill=Y)
 optionsframe_divider = Separator(root, orient=VERTICAL)
 optionsframe_divider.pack(side=LEFT, fill=Y)
-userslistframe.pack(side=RIGHT, fill=BOTH, expand=1)
+users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
 # set window minimum size to prevent user making it ugly
 root.update()  # update window geometry
 # don't allow window to be resized smaller than current dimensions

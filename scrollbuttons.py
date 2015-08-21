@@ -1,5 +1,6 @@
-from Tkinter import *   # from x import * is bad practice
+from Tkinter import *  # from x import * is bad practice
 from ttk import *
+
 
 # http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame
 
@@ -10,6 +11,7 @@ class VerticalScrolledFrame(Frame):
     * This frame only allows vertical scrolling
 
     """
+
     def __init__(self, parent, *args, **kw):
         Frame.__init__(self, parent, *args, **kw)
 
@@ -39,10 +41,12 @@ class VerticalScrolledFrame(Frame):
             if interior.winfo_reqwidth() != canvas.winfo_width():
                 # update the canvas's width to fit the inner frame
                 canvas.config(width=interior.winfo_reqwidth())
+
         interior.bind('<Configure>', _configure_interior)
 
         def _configure_canvas(event):
             if interior.winfo_reqwidth() != canvas.winfo_width():
                 # update the inner frame's width to fill the canvas
                 canvas.itemconfigure(interior_id, width=canvas.winfo_width())
+
         canvas.bind('<Configure>', _configure_canvas)

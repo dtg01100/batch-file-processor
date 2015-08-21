@@ -8,7 +8,7 @@ def do(database_version):  # create database file with some default settings
 
     version = database_connection['version']
 
-    version.insert(dict(version="1"))
+    version.insert(dict(version=database_version))
 
     oversight_and_defaults = database_connection['administrative']
 
@@ -23,8 +23,8 @@ def do(database_version):  # create database file with some default settings
                                        inc_headers='False',
                                        filter_ampersand='False',
                                        pad_arec='False',
-                                       arec_padding=''
-                                       , reporting_email='',
+                                       arec_padding='',
+                                       reporting_email='',
                                        foldersname='template',
                                        alias='',
                                        report_email_address='',

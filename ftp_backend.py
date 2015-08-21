@@ -1,5 +1,5 @@
 import ftplib
-import shutil
+
 
 # this module sends the file specified in filename to the address specified in the dict process_parameters via ftp
 # note: process_parameters is a dict from a row in the database, passed into this module

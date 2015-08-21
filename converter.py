@@ -1,8 +1,7 @@
 import upc_check_digit
-import shutil
 
 
-def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers,
+def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers,
                 filter_ampersand, pad_arec, arec_padding):
 
     # save input parameters as variables
@@ -10,7 +9,6 @@ def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_are
     conv_inc_arec = inc_arec
     conv_inc_crec = inc_crec
     conv_inc_headers = inc_headers
-    filename = edi_process
     work_file = open(edi_process)  # open input file
     work_file_lined = [n for n in work_file.readlines()]  # make list of lines
     f = open(output_filename, 'w')  # open work file, overwriting old file
@@ -42,4 +40,3 @@ def edi_convert(parameters_dict, edi_process, output_filename, calc_upc, inc_are
             f.write(line)  # write "C" line
 
     f.close()  # close output file
-
