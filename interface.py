@@ -1060,6 +1060,7 @@ def set_all_active():
 
 
 def maintenance_functions_popup():
+    # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
                            " Are you sure you want to continue?"):
         global maintenance_popup
@@ -1072,6 +1073,7 @@ def maintenance_functions_popup():
         maintenance_popup.focus_set()
         maintenance_popup.resizable(width=FALSE, height=FALSE)
         maintenance_popup_button_frame = Frame(maintenance_popup)
+        # a persistent warning that this dialog can break things...
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         set_all_active_button = Button(maintenance_popup_button_frame, text="move all to active",
                                        command=set_all_active)
