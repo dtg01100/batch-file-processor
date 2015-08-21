@@ -90,7 +90,7 @@ if db_version_dict['version'] != database_version:
     raise SystemExit
 
 # open required tables in database
-folderstable = database_connection['folders']
+folders_table = database_connection['folders']
 emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
@@ -101,7 +101,7 @@ launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
 root.title("Sender Interface " + version)
 folder = NONE
-optionsframe = Frame(root)  # initialize left frame
+options_frame = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
 
 
@@ -122,7 +122,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
 
     def folder_alias_checker(check):
         # check database to see if the folder alias exists, and return false if it does
-        add_folder_entry_proposed_folder = folderstable.find_one(alias=check)
+        add_folder_entry_proposed_folder = folders_table.find_one(alias=check)
         if add_folder_entry_proposed_folder is not None:
             return False
 
@@ -138,7 +138,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
 
     print("adding folder: " + proposed_folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
-    folderstable.insert(dict(foldersname=proposed_folder,
+    folders_table.insert(dict(foldersname=proposed_folder,
                              copy_to_directory=defaults['copy_to_directory'],
                              is_active=defaults['is_active'],
                              alias=folder_alias_constructor,
@@ -173,7 +173,7 @@ def select_folder():
     global folder
     global column_entry_value
     folder = askdirectory()
-    proposed_folder = folderstable.find_one(foldersname=folder)
+    proposed_folder = folders_table.find_one(foldersname=folder)
     if proposed_folder is None:
         if folder != '':  # check to see if selected folder has a path
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
@@ -205,7 +205,7 @@ def batch_add_folders():
                 doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
                                                                          " of " + str(len(folders_list)))
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
-                proposed_folder = folderstable.find_one(foldersname=batch_folder_add_proposed_folder)
+                proposed_folder = folders_table.find_one(foldersname=batch_folder_add_proposed_folder)
                 if proposed_folder is None:
                     if batch_folder_add_proposed_folder != '':  # check to see if selected folder has a path
                         add_folder_entry(batch_folder_add_proposed_folder)
@@ -223,7 +223,7 @@ def edit_folder_selector(folder_to_be_edited):
     # feed the EditDialog class the the dict for the selected folder from the folders list buttons
     # note: would prefer to be able to do this inline,
     # but variables appear to need to be pushed out of instanced objects
-    edit_folder = folderstable.find_one(id=[folder_to_be_edited])
+    edit_folder = folders_table.find_one(id=[folder_to_be_edited])
     EditDialog(root, edit_folder)
 
 
@@ -239,14 +239,14 @@ def make_users_list():
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     # make labels for empty lists
-    if folderstable.count(is_active="True") == 0:
+    if folders_table.count(is_active="True") == 0:
         no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
-    if folderstable.count(is_active="False") == 0:
+    if folders_table.count(is_active="False") == 0:
         no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
-    for folders_name in folderstable.all():
+    for folders_name in folders_table.all():
         if str(folders_name['is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Delete",
@@ -724,7 +724,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         if self.foldersnameinput['foldersname'] != 'template':
             if str(self.e2.get()) != self.foldersnameinput['alias']:
-                proposed_folder = folderstable.find_one(alias=str(self.e2.get()))
+                proposed_folder = folders_table.find_one(alias=str(self.e2.get()))
                 if proposed_folder is not None:
                     error_string_constructor_list.append("Folder Alias Already In Use\r\n")
                     errors = True
@@ -748,7 +748,7 @@ def update_reporting(changes):
 
 
 def update_folder_alias(folder_edit):  # update folder settings in database with results from EditDialog
-    folderstable.update(folder_edit, ['id'])
+    folders_table.update(folder_edit, ['id'])
     refresh_users_list()
 
 
@@ -760,7 +760,7 @@ def refresh_users_list():
 
 def delete_folder_entry(folder_to_be_removed):
     # delete specified folder configuration and it's queued emails and obe queue
-    folderstable.delete(id=folder_to_be_removed)
+    folders_table.delete(id=folder_to_be_removed)
     obe_queue.delete(folder_id=folder_to_be_removed)
     emails_table.delete(folder_id=folder_to_be_removed)
 
@@ -942,11 +942,11 @@ def silent_process_directories(silent_process_folders_table):
 
 def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
     users_refresh = False
-    if folderstable.count(is_active="False") > 0:
+    if folders_table.count(is_active="False") > 0:
         users_refresh = True
-    folders_total = folderstable.count(is_active="False")
+    folders_total = folders_table.count(is_active="False")
     folders_count = 0
-    for folder_to_be_removed in folderstable.find(is_active="False"):
+    for folder_to_be_removed in folders_table.find(is_active="False"):
         folders_count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
                                        str(folders_total))
@@ -958,10 +958,10 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
 
 def move_active_to_obe():
     starting_folder = os.getcwd()
-    folder_total = folderstable.count(is_active="True")
+    folder_total = folders_table.count(is_active="True")
     folder_count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "adding files to obe queue...")
-    for parameters_dict in folderstable.find(is_active="True"):  # create list of active directories
+    for parameters_dict in folders_table.find(is_active="True"):  # create list of active directories
         file_total = 0
         file_count = 0
         folder_count += 1
@@ -1034,26 +1034,26 @@ def process_obe_queue():
 
 
 def set_all_inactive():
-    total = folderstable.count(is_active="True")
+    total = folders_table.count(is_active="True")
     count = 0
-    for folder_to_be_inactive in folderstable.find(is_active="True"):
+    for folder_to_be_inactive in folders_table.find(is_active="True"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_inactive['is_active'] = "False"
-        folderstable.update(folder_to_be_inactive, ['id'])
+        folders_table.update(folder_to_be_inactive, ['id'])
         doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
 
 
 def set_all_active():
-    total = folderstable.count(is_active="False")
+    total = folders_table.count(is_active="False")
     count = 0
-    for folder_to_be_active in folderstable.find(is_active="False"):
+    for folder_to_be_active in folders_table.find(is_active="False"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_active['is_active'] = "True"
-        folderstable.update(folder_to_be_active, ['id'])
+        folders_table.update(folder_to_be_active, ['id'])
         doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
@@ -1103,19 +1103,19 @@ def maintenance_functions_popup():
 launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
-    silent_process_directories(folderstable)
+    silent_process_directories(folders_table)
 
 make_users_list()
 
 # define main window widgets
-open_folder_button = Button(optionsframe, text="Add Directory", command=select_folder)
-open_multiple_folder_button = Button(optionsframe, text="Batch Add Directories", command=batch_add_folders)
-default_settings = Button(optionsframe, text="Set Defaults", command=set_defaults_popup)
-edit_reporting = Button(optionsframe, text="Edit Reporting",
+open_folder_button = Button(options_frame, text="Add Directory", command=select_folder)
+open_multiple_folder_button = Button(options_frame, text="Batch Add Directories", command=batch_add_folders)
+default_settings = Button(options_frame, text="Set Defaults", command=set_defaults_popup)
+edit_reporting = Button(options_frame, text="Edit Reporting",
                         command=lambda: EditReportingDialog(root, oversight_and_defaults.find_one(id=1)))
-process_folder_button = Button(optionsframe, text="Process Folders",
-                               command=lambda: graphical_process_directories(folderstable))
-maintenance_button = Button(optionsframe, text="Maintenance", command=maintenance_functions_popup)
+process_folder_button = Button(options_frame, text="Process Folders",
+                               command=lambda: graphical_process_directories(folders_table))
+maintenance_button = Button(options_frame, text="Maintenance", command=maintenance_functions_popup)
 options_frame_divider = Separator(root, orient=VERTICAL)
 
 # pack main window widgets
@@ -1124,9 +1124,9 @@ open_multiple_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
 default_settings.pack(side=TOP, fill=X, pady=2, padx=2)
 edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
 process_folder_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
-Separator(optionsframe, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
+Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
-optionsframe.pack(side=LEFT, anchor='n', fill=Y)
+options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
 users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
 
