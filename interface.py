@@ -136,7 +136,8 @@ def add_folder_entry(folder):  # add folder to database, copying configuration f
 
     print("adding folder: " + folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
-    folderstable.insert(dict(foldersname=folder, copy_to_directory=defaults['copy_to_directory'],
+    folderstable.insert(dict(foldersname=folder,
+                             copy_to_directory=defaults['copy_to_directory'],
                              is_active=defaults['is_active'],
                              alias=folder_alias_constructor,
                              process_backend_copy=defaults['process_backend_copy'],
