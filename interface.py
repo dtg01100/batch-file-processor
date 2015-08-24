@@ -898,7 +898,8 @@ def process_directories(folderstable_process):
                     batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args,
                                         root, batch_number, emails_count, total_emails)
                     emails_table_batch.delete()
-                except Exception:
+                except Exception, email_send_error:
+                    print(email_send_error)
                     doingstuffoverlay.destroy_overlay()
                     emails_table_batch.delete()
         except Exception, dispatch_error:
