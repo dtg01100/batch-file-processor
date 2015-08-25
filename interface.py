@@ -287,8 +287,8 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         global logs_directory_is_altered
         logs_directory_is_altered = False
         self.title("Edit Reporting Options")
-        self.enable_reporting_checkbutton = StringVar(master)
-        self.enable_report_printing_checkbutton = StringVar(master)
+        self.enable_reporting_checkbutton_variable = StringVar(master)
+        self.enable_report_printing_checkbutton_variable = StringVar(master)
 
         Label(master, text="Enable Report Sending:").grid(row=0, sticky=E)
         Label(master, text="Reporting Email Address:").grid(row=1, sticky=E)
@@ -300,15 +300,17 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         Label(master, text="Log File Folder:").grid(row=7, sticky=E)
         Label(master, text="Enable Report Printing Fallback:").grid(row=8, sticky=E)
 
-        self.e0 = Checkbutton(master, variable=self.enable_reporting_checkbutton, onvalue="True", offvalue="False")
-        self.e1 = Entry(master, width=40)
-        self.e2 = Entry(master, width=40)
-        self.e3 = Entry(master, show="*", width=40)
-        self.e4 = Entry(master, width=40)
-        self.e5 = Entry(master, width=40)
-        self.e6 = Entry(master, width=40)
-        self.e7 = Button(master, text="Select Folder", command=lambda: select_log_directory())
-        self.e8 = Checkbutton(master, variable=self.enable_report_printing_checkbutton, onvalue="True",
+        self.run_reporting_checkbutton = Checkbutton(master, variable=self.enable_reporting_checkbutton_variable,
+                                                     onvalue="True", offvalue="False")
+        self.report_email_address_field = Entry(master, width=40)
+        self.report_email_username_field = Entry(master, width=40)
+        self.report_email_password_field = Entry(master, show="*", width=40)
+        self.report_email_smtp_server_field = Entry(master, width=40)
+        self.reporting_smtp_port_field = Entry(master, width=40)
+        self.report_email_destination_field = Entry(master, width=40)
+        self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
+        self.log_printing_fallback_checkbutton =\
+            Checkbutton(master, variable=self.enable_report_printing_checkbutton_variable, onvalue="True",
                               offvalue="False")
 
         def select_log_directory():
@@ -319,26 +321,26 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
                 logs_directory_edit = logs_directory_edit_proposed
             logs_directory_is_altered = True
 
-        self.enable_reporting_checkbutton.set(self.foldersnameinput['enable_reporting'])
-        self.e1.insert(0, self.foldersnameinput['report_email_address'])
-        self.e2.insert(0, self.foldersnameinput['report_email_username'])
-        self.e3.insert(0, self.foldersnameinput['report_email_password'])
-        self.e4.insert(0, self.foldersnameinput['report_email_smtp_server'])
-        self.e5.insert(0, self.foldersnameinput['reporting_smtp_port'])
-        self.e6.insert(0, self.foldersnameinput['report_email_destination'])
-        self.enable_report_printing_checkbutton.set(self.foldersnameinput['report_printing_fallback'])
+        self.enable_reporting_checkbutton_variable.set(self.foldersnameinput['enable_reporting'])
+        self.report_email_address_field.insert(0, self.foldersnameinput['report_email_address'])
+        self.report_email_username_field.insert(0, self.foldersnameinput['report_email_username'])
+        self.report_email_password_field.insert(0, self.foldersnameinput['report_email_password'])
+        self.report_email_smtp_server_field.insert(0, self.foldersnameinput['report_email_smtp_server'])
+        self.reporting_smtp_port_field.insert(0, self.foldersnameinput['reporting_smtp_port'])
+        self.report_email_destination_field.insert(0, self.foldersnameinput['report_email_destination'])
+        self.enable_report_printing_checkbutton_variable.set(self.foldersnameinput['report_printing_fallback'])
 
-        self.e0.grid(row=0, column=1, padx=2, pady=2, sticky=W)
-        self.e1.grid(row=1, column=1, padx=2, pady=2)
-        self.e2.grid(row=2, column=1, padx=2, pady=2)
-        self.e3.grid(row=3, column=1, padx=2, pady=2)
-        self.e4.grid(row=4, column=1, padx=2, pady=2)
-        self.e5.grid(row=5, column=1, padx=2, pady=2)
-        self.e6.grid(row=6, column=1, padx=2, pady=2)
-        self.e7.grid(row=7, column=1, padx=2, pady=2, sticky=W)
-        self.e8.grid(row=8, column=1, padx=2, pady=2, sticky=W)
+        self.run_reporting_checkbutton.grid(row=0, column=1, padx=2, pady=2, sticky=W)
+        self.report_email_address_field.grid(row=1, column=1, padx=2, pady=2)
+        self.report_email_username_field.grid(row=2, column=1, padx=2, pady=2)
+        self.report_email_password_field.grid(row=3, column=1, padx=2, pady=2)
+        self.report_email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
+        self.reporting_smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
+        self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
+        self.select_log_folder_button.grid(row=7, column=1, padx=2, pady=2, sticky=W)
+        self.log_printing_fallback_checkbutton.grid(row=8, column=1, padx=2, pady=2, sticky=W)
 
-        return self.e1  # initial focus
+        return self.report_email_address_field  # initial focus
 
     def validate(self):
 
@@ -346,35 +348,35 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         error_list = []
         errors = False
 
-        if self.e1.get() == '':
+        if self.report_email_address_field.get() == '':
             error_list.append("Reporting Email Address Is A Required Field\r")
             errors = True
         else:
-            if (validate_email(str(self.e1.get()), verify=True)) is False:
+            if (validate_email(str(self.report_email_address_field.get()), verify=True)) is False:
                 error_list.append("Invalid Email Origin Address\r")
                 errors = True
 
-        if self.e2.get() == '':
+        if self.report_email_username_field.get() == '':
             error_list.append("Reporting Email Username Is A Required Field\r")
             errors = True
 
-        if self.e3.get() == '':
+        if self.report_email_password_field.get() == '':
             error_list.append("Reporting Email Password Is A Required Field\r")
             errors = True
 
-        if self.e4.get() == '':
+        if self.report_email_smtp_server_field.get() == '':
             error_list.append("Reporting Email Address Is A Required Field\r")
             errors = True
 
-        if self.e5.get() == '':
+        if self.reporting_smtp_port_field.get() == '':
             error_list.append("SMTP Port Is A Required Field\r")
             errors = True
 
-        if self.e6.get() == '':
+        if self.report_email_destination_field.get() == '':
             error_list.append("Reporting Email Destination Is A Required Field\r")
             errors = True
         else:
-            if (validate_email(str(self.e6.get()), verify=True)) is False:
+            if (validate_email(str(self.report_email_destination_field.get()), verify=True)) is False:
                 error_list.append("Invalid Email Destination Address\r")
                 errors = True
 
@@ -388,7 +390,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def ok(self, event=None):
 
-        if self.enable_reporting_checkbutton.get() == "True":
+        if self.enable_reporting_checkbutton_variable.get() == "True":
             if not self.validate():
                 self.initial_focus.focus_set()  # put focus back
                 return
@@ -406,15 +408,15 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         global logs_directory_is_altered
 
         doingstuffoverlay.make_overlay(self, "Applying Changes...")
-        folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton.get())
+        folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
         if logs_directory_is_altered is True:
             folders_name_apply['log_directory'] = logs_directory_edit
-        folders_name_apply['report_email_address'] = str(self.e1.get())
-        folders_name_apply['report_email_username'] = str(self.e2.get())
-        folders_name_apply['report_email_password'] = str(self.e3.get())
-        folders_name_apply['report_email_smtp_server'] = str(self.e4.get())
-        folders_name_apply['reporting_smtp_port'] = str(self.e5.get())
-        folders_name_apply['report_email_destination'] = str(self.e6.get())
+        folders_name_apply['report_email_address'] = str(self.report_email_address_field.get())
+        folders_name_apply['report_email_username'] = str(self.report_email_username_field.get())
+        folders_name_apply['report_email_password'] = str(self.report_email_password_field.get())
+        folders_name_apply['report_email_smtp_server'] = str(self.report_email_smtp_server_field.get())
+        folders_name_apply['reporting_smtp_port'] = str(self.reporting_smtp_port_field.get())
+        folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
 
         update_reporting(folders_name_apply)
         doingstuffoverlay.destroy_overlay()
@@ -485,7 +487,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copy_to_directory = str(askdirectory())
             destination_directory_is_altered = True
 
-        self.e1 = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
+        self.active_checkbutton_object = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
                               onvalue="True", offvalue="False")
         self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend",
                                                     variable=self.process_backend_copy_check,
@@ -548,7 +550,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['arec_padding'])
 
-        self.e1.grid(row=1, column=0, columnspan=2, padx=3)
+        self.active_checkbutton_object.grid(row=1, column=0, columnspan=2, padx=3)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
         self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
@@ -581,7 +583,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.separatorv2.pack(side=LEFT, fill=Y, padx=2)
         self.ediframe.pack(side=LEFT, anchor='n')
 
-        return self.e1  # initial focus
+        return self.active_checkbutton_object  # initial focus
 
     def ok(self, event=None):
 
