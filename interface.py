@@ -441,7 +441,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.upc_var_check = StringVar(master)  # define  "UPC calculation" checkbox state variable
         self.a_rec_var_check = StringVar(master)  # define "A record checkbox state variable
         self.c_rec_var_check = StringVar(master)  # define "C record" checkbox state variable
-        self.c_headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
+        self.headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
         self.pad_arec_check = StringVar(master)
         self.process_backend_copy_check = BooleanVar(master)
@@ -498,83 +498,83 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                      onvalue=True, offvalue=False)
         if self.foldersnameinput['foldersname'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
-            self.e2 = Entry(self.folderframe, width=30)
-        self.e4 = Button(self.prefsframe, text="Select Folder", command=lambda: select_copy_to_directory())
-        self.e5 = Entry(self.prefsframe, width=30)
-        self.e6 = Entry(self.prefsframe, width=30)
-        self.e7 = Entry(self.prefsframe, width=30)
-        self.e8 = Entry(self.prefsframe, width=30)
-        self.e9 = Entry(self.prefsframe, show="*", width=30)
-        self.e10 = Entry(self.prefsframe, width=30)
-        self.e11 = Entry(self.prefsframe, width=30)
-        self.e12 = Entry(self.prefsframe, width=30)
-        self.e13 = Entry(self.prefsframe, show="*", width=30)
-        self.e14 = Entry(self.prefsframe, width=30)
-        self.e15 = Entry(self.prefsframe, width=30)
-        self.e16 = Entry(self.prefsframe, width=30)
-        self.e17 = Checkbutton(self.ediframe, variable=self.process_edi, onvalue="True", offvalue="False")
-        self.e18 = Checkbutton(self.ediframe, variable=self.upc_var_check, onvalue="True", offvalue="False")
-        self.e19 = Checkbutton(self.ediframe, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
-        self.e20 = Checkbutton(self.ediframe, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
-        self.e21 = Checkbutton(self.ediframe, variable=self.c_headers_check, onvalue="True", offvalue="False")
-        self.e22 = Checkbutton(self.ediframe, variable=self.ampersand_check, onvalue="True", offvalue="False")
-        self.e23 = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
-        self.e24 = Entry(self.ediframe, width=10)
+            self.folder_alias_field = Entry(self.folderframe, width=30)
+        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder", command=lambda: select_copy_to_directory())
+        self.ftp_server_field = Entry(self.prefsframe, width=30)
+        self.ftp_port_field = Entry(self.prefsframe, width=30)
+        self.ftp_folder_field = Entry(self.prefsframe, width=30)
+        self.ftp_username_field = Entry(self.prefsframe, width=30)
+        self.ftp_password_field = Entry(self.prefsframe, show="*", width=30)
+        self.email_recepient_field = Entry(self.prefsframe, width=30)
+        self.email_sender_address_field = Entry(self.prefsframe, width=30)
+        self.email_sender_username_field = Entry(self.prefsframe, width=30)
+        self.email_sender_password_field = Entry(self.prefsframe, show="*", width=30)
+        self.email_sender_subject_field = Entry(self.prefsframe, width=30)
+        self.email_smtp_field = Entry(self.prefsframe, width=30)
+        self.email_smtp_port_field = Entry(self.prefsframe, width=30)
+        self.process_edi_checkbutton = Checkbutton(self.ediframe, variable=self.process_edi, onvalue="True", offvalue="False")
+        self.upc_variable_process_checkbutton = Checkbutton(self.ediframe, variable=self.upc_var_check, onvalue="True", offvalue="False")
+        self.a_record_checkbutton = Checkbutton(self.ediframe, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
+        self.c_record_checkbutton = Checkbutton(self.ediframe, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
+        self.headers_checkbutton = Checkbutton(self.ediframe, variable=self.headers_check, onvalue="True", offvalue="False")
+        self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, onvalue="True", offvalue="False")
+        self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
+        self.a_record_padding_field = Entry(self.ediframe, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['is_active'])
         if self.foldersnameinput['foldersname'] != 'template':
-            self.e2.insert(0, self.foldersnameinput['alias'])
+            self.folder_alias_field.insert(0, self.foldersnameinput['alias'])
         self.process_backend_copy_check.set(self.foldersnameinput['process_backend_copy'])
         self.process_backend_ftp_check.set(self.foldersnameinput['process_backend_ftp'])
         self.process_backend_email_check.set(self.foldersnameinput['process_backend_email'])
-        self.e5.insert(0, self.foldersnameinput['ftp_server'])
-        self.e6.insert(0, self.foldersnameinput['ftp_port'])
-        self.e7.insert(0, self.foldersnameinput['ftp_folder'])
-        self.e8.insert(0, self.foldersnameinput['ftp_username'])
-        self.e9.insert(0, self.foldersnameinput['ftp_password'])
-        self.e10.insert(0, self.foldersnameinput['email_to'])
-        self.e11.insert(0, self.foldersnameinput['email_origin_address'])
-        self.e12.insert(0, self.foldersnameinput['email_origin_username'])
-        self.e13.insert(0, self.foldersnameinput['email_origin_password'])
-        self.e14.insert(0, self.foldersnameinput['email_subject_line'])
-        self.e15.insert(0, self.foldersnameinput['email_origin_smtp_server'])
-        self.e16.insert(0, self.foldersnameinput['email_smtp_port'])
+        self.ftp_server_field.insert(0, self.foldersnameinput['ftp_server'])
+        self.ftp_port_field.insert(0, self.foldersnameinput['ftp_port'])
+        self.ftp_folder_field.insert(0, self.foldersnameinput['ftp_folder'])
+        self.ftp_username_field.insert(0, self.foldersnameinput['ftp_username'])
+        self.ftp_password_field.insert(0, self.foldersnameinput['ftp_password'])
+        self.email_recepient_field.insert(0, self.foldersnameinput['email_to'])
+        self.email_sender_address_field.insert(0, self.foldersnameinput['email_origin_address'])
+        self.email_sender_username_field.insert(0, self.foldersnameinput['email_origin_username'])
+        self.email_sender_password_field.insert(0, self.foldersnameinput['email_origin_password'])
+        self.email_sender_subject_field.insert(0, self.foldersnameinput['email_subject_line'])
+        self.email_smtp_field.insert(0, self.foldersnameinput['email_origin_smtp_server'])
+        self.email_smtp_port_field.insert(0, self.foldersnameinput['email_smtp_port'])
         self.process_edi.set(self.foldersnameinput['process_edi'])
         self.upc_var_check.set(self.foldersnameinput['calc_upc'])
         self.a_rec_var_check.set(self.foldersnameinput['inc_arec'])
         self.c_rec_var_check.set(self.foldersnameinput['inc_crec'])
-        self.c_headers_check.set(self.foldersnameinput['inc_headers'])
+        self.headers_check.set(self.foldersnameinput['inc_headers'])
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
         self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
-        self.e24.insert(0, self.foldersnameinput['arec_padding'])
+        self.a_record_padding_field.insert(0, self.foldersnameinput['arec_padding'])
 
         self.e1.grid(row=1, column=0, columnspan=2, padx=3)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
         self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
         if self.foldersnameinput['foldersname'] != 'template':
-            self.e2.grid(row=6, column=1)
-        self.e4.grid(row=4, column=1)
-        self.e5.grid(row=7, column=1)
-        self.e6.grid(row=8, column=1)
-        self.e7.grid(row=9, column=1)
-        self.e8.grid(row=10, column=1)
-        self.e9.grid(row=11, column=1)
-        self.e10.grid(row=14, column=1)
-        self.e11.grid(row=15, column=1)
-        self.e12.grid(row=16, column=1)
-        self.e13.grid(row=17, column=1)
-        self.e14.grid(row=18, column=1)
-        self.e15.grid(row=19, column=1)
-        self.e16.grid(row=20, column=1)
-        self.e17.grid(row=1, column=4, sticky=W, padx=3)
-        self.e18.grid(row=2, column=4, sticky=W, padx=3)
-        self.e19.grid(row=3, column=4, sticky=W, padx=3)
-        self.e20.grid(row=4, column=4, sticky=W, padx=3)
-        self.e21.grid(row=5, column=4, sticky=W, padx=3)
-        self.e22.grid(row=6, column=4, sticky=W, padx=3)
-        self.e23.grid(row=7, column=4, sticky=W, padx=3)
-        self.e24.grid(row=8, column=4)
+            self.folder_alias_field.grid(row=6, column=1)
+        self.copy_backend_folder_selection_button.grid(row=4, column=1)
+        self.ftp_server_field.grid(row=7, column=1)
+        self.ftp_port_field.grid(row=8, column=1)
+        self.ftp_folder_field.grid(row=9, column=1)
+        self.ftp_username_field.grid(row=10, column=1)
+        self.ftp_password_field.grid(row=11, column=1)
+        self.email_recepient_field.grid(row=14, column=1)
+        self.email_sender_address_field.grid(row=15, column=1)
+        self.email_sender_username_field.grid(row=16, column=1)
+        self.email_sender_password_field.grid(row=17, column=1)
+        self.email_sender_subject_field.grid(row=18, column=1)
+        self.email_smtp_field.grid(row=19, column=1)
+        self.email_smtp_port_field.grid(row=20, column=1)
+        self.process_edi_checkbutton.grid(row=1, column=4, sticky=W, padx=3)
+        self.upc_variable_process_checkbutton.grid(row=2, column=4, sticky=W, padx=3)
+        self.a_record_checkbutton.grid(row=3, column=4, sticky=W, padx=3)
+        self.c_record_checkbutton.grid(row=4, column=4, sticky=W, padx=3)
+        self.headers_checkbutton.grid(row=5, column=4, sticky=W, padx=3)
+        self.ampersand_checkbutton.grid(row=6, column=4, sticky=W, padx=3)
+        self.pad_a_records_checkbutton.grid(row=7, column=4, sticky=W, padx=3)
+        self.a_record_padding_field.grid(row=8, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
@@ -602,35 +602,35 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         global destination_directory_is_altered
         foldersnameapply['is_active'] = str(self.active_checkbutton.get())
         if self.foldersnameinput['foldersname'] != 'template':
-            if str(self.e2.get()) == '':
+            if str(self.folder_alias_field.get()) == '':
                 foldersnameapply['alias'] = os.path.basename(self.foldersnameinput['foldersname'])
             else:
-                foldersnameapply['alias'] = str(self.e2.get())
+                foldersnameapply['alias'] = str(self.folder_alias_field.get())
         if destination_directory_is_altered is True:
             foldersnameapply['copy_to_directory'] = copy_to_directory
         foldersnameapply['process_backend_copy'] = self.process_backend_copy_check.get()
         foldersnameapply['process_backend_ftp'] = self.process_backend_ftp_check.get()
         foldersnameapply['process_backend_email'] = self.process_backend_email_check.get()
-        foldersnameapply['ftp_server'] = str(self.e5.get())
-        foldersnameapply['ftp_port'] = int(self.e6.get())
-        foldersnameapply['ftp_folder'] = str(self.e7.get())
-        foldersnameapply['ftp_username'] = str(self.e8.get())
-        foldersnameapply['ftp_password'] = str(self.e9.get())
-        foldersnameapply['email_to'] = str(self.e10.get())
-        foldersnameapply['email_origin_address'] = str(self.e11.get())
-        foldersnameapply['email_origin_username'] = str(self.e12.get())
-        foldersnameapply['email_origin_password'] = str(self.e13.get())
-        foldersnameapply['email_subject_line'] = str(self.e14.get())
-        foldersnameapply['email_origin_smtp_server'] = str(self.e15.get())
-        foldersnameapply['email_smtp_port'] = int(self.e16.get())
+        foldersnameapply['ftp_server'] = str(self.ftp_server_field.get())
+        foldersnameapply['ftp_port'] = int(self.ftp_port_field.get())
+        foldersnameapply['ftp_folder'] = str(self.ftp_folder_field.get())
+        foldersnameapply['ftp_username'] = str(self.ftp_username_field.get())
+        foldersnameapply['ftp_password'] = str(self.ftp_password_field.get())
+        foldersnameapply['email_to'] = str(self.email_recepient_field.get())
+        foldersnameapply['email_origin_address'] = str(self.email_sender_address_field.get())
+        foldersnameapply['email_origin_username'] = str(self.email_sender_username_field.get())
+        foldersnameapply['email_origin_password'] = str(self.email_sender_password_field.get())
+        foldersnameapply['email_subject_line'] = str(self.email_sender_subject_field.get())
+        foldersnameapply['email_origin_smtp_server'] = str(self.email_smtp_field.get())
+        foldersnameapply['email_smtp_port'] = int(self.email_smtp_port_field.get())
         foldersnameapply['process_edi'] = str(self.process_edi.get())
         foldersnameapply['calc_upc'] = str(self.upc_var_check.get())
         foldersnameapply['inc_arec'] = str(self.a_rec_var_check.get())
         foldersnameapply['inc_crec'] = str(self.c_rec_var_check.get())
-        foldersnameapply['inc_headers'] = str(self.c_headers_check.get())
+        foldersnameapply['inc_headers'] = str(self.headers_check.get())
         foldersnameapply['filter_ampersand'] = str(self.ampersand_check.get())
         foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
-        foldersnameapply['arec_padding'] = str(self.e24.get())
+        foldersnameapply['arec_padding'] = str(self.a_record_padding_field.get())
 
         if self.foldersnameinput['foldersname'] != 'template':
             update_folder_alias(foldersnameapply)
@@ -646,68 +646,68 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         doingstuffoverlay.make_overlay(self, "Testing Changes...")
         if self.process_backend_ftp_check.get() is True:
 
-            if self.e5.get() == "":
+            if self.ftp_server_field.get() == "":
                 error_string_constructor_list.append("FTP Server Field Is Required\r\n")
                 errors = True
 
-            if self.e6.get() == "":
+            if self.ftp_port_field.get() == "":
                 error_string_constructor_list.append("FTP Port Field Is Required\r\n")
                 errors = True
 
-            if self.e7.get() == "":
+            if self.ftp_folder_field.get() == "":
                 error_string_constructor_list.append("FTP Folder Field Is Required\r\n")
                 errors = True
 
-            if self.e8.get() == "":
+            if self.ftp_username_field.get() == "":
                 error_string_constructor_list.append("FTP Username Field Is Required\r\n")
                 errors = True
 
-            if self.e9.get() == "":
+            if self.ftp_password_field.get() == "":
                 error_string_constructor_list.append("FTP Password Field Is Required\r\n")
                 errors = True
 
             try:
-                temp_smtp_port_check = int(self.e6.get())
+                temp_smtp_port_check = int(self.ftp_port_field.get())
             except Exception:
                 error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
                 errors = True
 
         if self.process_backend_email_check.get() is True:
 
-            if self.e10.get() == "":
+            if self.email_recepient_field.get() == "":
                 error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
                 errors = True
             else:
-                if (validate_email(str(self.e10.get()), verify=True)) is False:
+                if (validate_email(str(self.email_recepient_field.get()), verify=True)) is False:
                     error_string_constructor_list.append("Invalid Email Destination Address\r\n")
                     errors = True
 
-            if self.e11.get() == "":
+            if self.email_sender_address_field.get() == "":
                 error_string_constructor_list.append("Email Origin Address Field Is Required\r\n")
                 errors = True
             else:
-                if (validate_email(str(self.e11.get()), verify=True)) is False:
+                if (validate_email(str(self.email_sender_address_field.get()), verify=True)) is False:
                     error_string_constructor_list.append("Invalid Email Origin Address\r\n")
                     errors = True
 
-            if self.e12.get() == "":
+            if self.email_sender_username_field.get() == "":
                 error_string_constructor_list.append("Email Username Field Is Required\r\n")
                 errors = True
 
-            if self.e13.get() == "":
+            if self.email_sender_password_field.get() == "":
                 error_string_constructor_list.append("Email Password Field Is Required\r\n")
                 errors = True
 
-            if self.e15.get() == "":
+            if self.email_smtp_field.get() == "":
                 error_string_constructor_list.append("SMTP Server Field Is Required\r\n")
                 errors = True
 
-            if self.e16.get() == "":
+            if self.email_smtp_port_field.get() == "":
                 error_string_constructor_list.append("SMTP Port Field Is Required\r\n")
                 errors = True
             else:
                 try:
-                    temp_smtp_port_check = int(self.e16.get())
+                    temp_smtp_port_check = int(self.email_smtp_port_field.get())
                 except Exception:
                     error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
                     errors = True
@@ -718,18 +718,18 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                      " Please Select One\r\n")
                 errors = True
 
-        if len(str(self.e24.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
+        if len(str(self.a_record_padding_field.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
             errors = True
 
         if self.foldersnameinput['foldersname'] != 'template':
-            if str(self.e2.get()) != self.foldersnameinput['alias']:
-                proposed_folder = folders_table.find_one(alias=str(self.e2.get()))
+            if str(self.folder_alias_field.get()) != self.foldersnameinput['alias']:
+                proposed_folder = folders_table.find_one(alias=str(self.folder_alias_field.get()))
                 if proposed_folder is not None:
                     error_string_constructor_list.append("Folder Alias Already In Use\r\n")
                     errors = True
 
-            if len(self.e2.get()) > 50:
+            if len(self.folder_alias_field.get()) > 50:
                 error_string_constructor_list.append("Alias Too Long\r\n")
                 errors = True
         if errors is True:
