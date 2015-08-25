@@ -786,7 +786,7 @@ def set_defaults_popup():
     EditDialog(root, defaults)
 
 
-def process_directories(folderstable_process):
+def process_directories(folders_table_process):
     original_folder = os.getcwd()
     global emails_table
     log_folder_creation_error = False
@@ -827,13 +827,13 @@ def process_directories(folderstable_process):
                 raise SystemExit
     run_log_path = reporting['logs_directory']
     run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
-    run_log_fullpath = os.path.join(run_log_path, run_log_name_constructor)
-    run_log = open(run_log_fullpath, 'w')
+    run_log_full_path = os.path.join(run_log_path, run_log_name_constructor)
+    run_log = open(run_log_full_path, 'w')
     run_log.write("Batch File Sender Version " + version + "\r\n")
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folderstable_process, run_log, emails_table, reporting['logs_directory'], reporting,
+        dispatch.process(folders_table_process, run_log, emails_table, reporting['logs_directory'], reporting,
                          obe_queue, root, args, version)
         os.chdir(original_folder)
     except Exception, dispatch_error:
@@ -848,7 +848,7 @@ def process_directories(folderstable_process):
     run_log.close()
     if reporting['enable_reporting'] == "True":
         # add run log to email queue if reporting is enabled
-        emails_table.insert(dict(log=run_log_fullpath, folder_alias=run_log_name_constructor))
+        emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
         try:
             sent_emails_removal_queue.delete()
             total_size = 0
@@ -888,11 +888,11 @@ def process_directories(folderstable_process):
                 emails_count += 1
                 email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
                 email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
-                email_errors_log_fullpath = os.path.join(run_log_path, email_errors_log_name_constructor)
-                reporting_emails_errors = open(email_errors_log_fullpath, 'w')
+                email_errors_log_full_path = os.path.join(run_log_path, email_errors_log_name_constructor)
+                reporting_emails_errors = open(email_errors_log_full_path, 'w')
                 reporting_emails_errors.write(email_errors.getvalue())
                 reporting_emails_errors.close()
-                emails_table_batch.insert(dict(log=email_errors_log_fullpath,
+                emails_table_batch.insert(dict(log=email_errors_log_full_path,
                                                folder_alias=email_errors_log_name_constructor))
                 try:
                     batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args,
@@ -904,7 +904,7 @@ def process_directories(folderstable_process):
                     emails_table_batch.delete()
         except Exception, dispatch_error:
             emails_table_batch.delete()
-            run_log = open(run_log_fullpath, 'a')
+            run_log = open(run_log_full_path, 'a')
             if reporting['report_printing_fallback'] != "True":
                 print("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
                 run_log.write("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
@@ -916,12 +916,12 @@ def process_directories(folderstable_process):
             if reporting['report_printing_fallback'] == "True":
                 # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
                 try:
-                    run_log = open(run_log_fullpath, 'r')
+                    run_log = open(run_log_full_path, 'r')
                     print_run_log.do(run_log)
                     run_log.close()
                 except Exception, dispatch_error:
                     print("printing error log failed with error: " + str(dispatch_error) + "\r\n")
-                    run_log = open(run_log_fullpath, 'a')
+                    run_log = open(run_log_full_path, 'a')
                     run_log.write("Printing error log failed with error: " + str(dispatch_error) + "\r\n")
                     run_log.close()
 
