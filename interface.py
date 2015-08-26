@@ -646,7 +646,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         errors = False
 
         doingstuffoverlay.make_overlay(self, "Testing Changes...")
+        backend_count = 0
         if self.process_backend_ftp_check.get() is True:
+
+            backend_count += 1
 
             if self.ftp_server_field.get() == "":
                 error_string_constructor_list.append("FTP Server Field Is Required\r\n")
@@ -675,6 +678,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 errors = True
 
         if self.process_backend_email_check.get() is True:
+
+            backend_count += 1
 
             if self.email_recepient_field.get() == "":
                 error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
@@ -715,10 +720,17 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                     errors = True
 
         if self.process_backend_copy_check.get() is True:
+
+            backend_count += 1
+
             if copy_to_directory is None or copy_to_directory == "":
                 error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
                                                      " Please Select One\r\n")
                 errors = True
+
+        if backend_count is 0:
+            error_string_constructor_list.append("No Backend Is Selected")
+            errors = True
 
         if len(str(self.a_record_padding_field.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
