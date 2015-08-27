@@ -1,5 +1,5 @@
 version = "1.0 rc2"
-database_version = "1"
+database_version = "2"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -138,9 +138,9 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
 
     print("adding folder: " + proposed_folder + " with settings from template")
     # create folder entry using the selected folder, the generated alias, and values copied from template
-    folders_table.insert(dict(foldersname=proposed_folder,
+    folders_table.insert(dict(folder_name=proposed_folder,
                               copy_to_directory=defaults['copy_to_directory'],
-                              is_active=defaults['is_active'],
+                              folder_is_active=defaults['folder_is_active'],
                               alias=folder_alias_constructor,
                               process_backend_copy=defaults['process_backend_copy'],
                               process_backend_ftp=defaults['process_backend_ftp'],
@@ -155,13 +155,13 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               email_origin_password=defaults['email_origin_password'],
                               email_origin_smtp_server=defaults['email_origin_smtp_server'],
                               process_edi=defaults['process_edi'],
-                              calc_upc=defaults['calc_upc'],
-                              inc_arec=defaults['inc_arec'],
-                              inc_crec=defaults['inc_crec'],
-                              inc_headers=defaults['inc_headers'],
+                              calculate_upc_check_digit=defaults['calculate_upc_check_digit'],
+                              include_a_records=defaults['include_a_records'],
+                              include_c_records=defaults['include_c_records'],
+                              include_headers=defaults['include_headers'],
                               filter_ampersand=defaults['filter_ampersand'],
-                              pad_arec=defaults['pad_arec'],
-                              arec_padding=defaults['arec_padding'],
+                              pad_a_records=defaults['pad_a_records'],
+                              a_record_padding=defaults['a_record_padding'],
                               email_smtp_port=defaults['email_smtp_port'],
                               reporting_smtp_port=defaults['reporting_smtp_port'],
                               ftp_port=defaults['ftp_port'],
@@ -239,15 +239,15 @@ def make_users_list():
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     # make labels for empty lists
-    if folders_table.count(is_active="True") == 0:
+    if folders_table.count(folder_is_active="True") == 0:
         no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
-    if folders_table.count(is_active="False") == 0:
+    if folders_table.count(folder_is_active="False") == 0:
         no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
     for folders_name in folders_table.all():
-        if str(folders_name['is_active']) != "False":
+        if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Delete",
                    command=lambda name=folders_name['id']:
@@ -451,7 +451,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_email_check = BooleanVar(master)
         Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
-        if self.foldersnameinput['foldersname'] != 'template':
+        if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
         Label(self.prefsframe, text="Copy Destination:").grid(row=4, sticky=E)
@@ -498,7 +498,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_backend_checkbutton = Checkbutton(self.folderframe, text="Email Backend",
                                                      variable=self.process_backend_email_check,
                                                      onvalue=True, offvalue=False)
-        if self.foldersnameinput['foldersname'] != 'template':
+        if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.folder_alias_field = Entry(self.folderframe, width=30)
         self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder", command=lambda: select_copy_to_directory())
@@ -523,8 +523,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
         self.a_record_padding_field = Entry(self.ediframe, width=10)
 
-        self.active_checkbutton.set(self.foldersnameinput['is_active'])
-        if self.foldersnameinput['foldersname'] != 'template':
+        self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
+        if self.foldersnameinput['folder_name'] != 'template':
             self.folder_alias_field.insert(0, self.foldersnameinput['alias'])
         self.process_backend_copy_check.set(self.foldersnameinput['process_backend_copy'])
         self.process_backend_ftp_check.set(self.foldersnameinput['process_backend_ftp'])
@@ -542,19 +542,19 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_field.insert(0, self.foldersnameinput['email_origin_smtp_server'])
         self.email_smtp_port_field.insert(0, self.foldersnameinput['email_smtp_port'])
         self.process_edi.set(self.foldersnameinput['process_edi'])
-        self.upc_var_check.set(self.foldersnameinput['calc_upc'])
-        self.a_rec_var_check.set(self.foldersnameinput['inc_arec'])
-        self.c_rec_var_check.set(self.foldersnameinput['inc_crec'])
-        self.headers_check.set(self.foldersnameinput['inc_headers'])
+        self.upc_var_check.set(self.foldersnameinput['calculate_upc_check_digit'])
+        self.a_rec_var_check.set(self.foldersnameinput['include_a_records'])
+        self.c_rec_var_check.set(self.foldersnameinput['include_c_records'])
+        self.headers_check.set(self.foldersnameinput['include_headers'])
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
-        self.pad_arec_check.set(self.foldersnameinput['pad_arec'])
-        self.a_record_padding_field.insert(0, self.foldersnameinput['arec_padding'])
+        self.pad_arec_check.set(self.foldersnameinput['pad_a_records'])
+        self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
 
         self.active_checkbutton_object.grid(row=1, column=0, columnspan=2, padx=3)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
         self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
-        if self.foldersnameinput['foldersname'] != 'template':
+        if self.foldersnameinput['folder_name'] != 'template':
             self.folder_alias_field.grid(row=6, column=1)
         self.copy_backend_folder_selection_button.grid(row=4, column=1)
         self.ftp_server_field.grid(row=7, column=1)
@@ -598,46 +598,46 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         self.cancel()
 
-    def apply(self, foldersnameapply):
+    def apply(self, apply_to_folder):
         doingstuffoverlay.make_overlay(self, "Applying Changes...")
         global copy_to_directory
         global destination_directory_is_altered
-        foldersnameapply['is_active'] = str(self.active_checkbutton.get())
-        if self.foldersnameinput['foldersname'] != 'template':
+        apply_to_folder['folder_is_active'] = str(self.active_checkbutton.get())
+        if self.foldersnameinput['folder_name'] != 'template':
             if str(self.folder_alias_field.get()) == '':
-                foldersnameapply['alias'] = os.path.basename(self.foldersnameinput['foldersname'])
+                apply_to_folder['alias'] = os.path.basename(self.foldersnameinput['folder_name'])
             else:
-                foldersnameapply['alias'] = str(self.folder_alias_field.get())
+                apply_to_folder['alias'] = str(self.folder_alias_field.get())
         if destination_directory_is_altered is True:
-            foldersnameapply['copy_to_directory'] = copy_to_directory
-        foldersnameapply['process_backend_copy'] = self.process_backend_copy_check.get()
-        foldersnameapply['process_backend_ftp'] = self.process_backend_ftp_check.get()
-        foldersnameapply['process_backend_email'] = self.process_backend_email_check.get()
-        foldersnameapply['ftp_server'] = str(self.ftp_server_field.get())
-        foldersnameapply['ftp_port'] = int(self.ftp_port_field.get())
-        foldersnameapply['ftp_folder'] = str(self.ftp_folder_field.get())
-        foldersnameapply['ftp_username'] = str(self.ftp_username_field.get())
-        foldersnameapply['ftp_password'] = str(self.ftp_password_field.get())
-        foldersnameapply['email_to'] = str(self.email_recepient_field.get())
-        foldersnameapply['email_origin_address'] = str(self.email_sender_address_field.get())
-        foldersnameapply['email_origin_username'] = str(self.email_sender_username_field.get())
-        foldersnameapply['email_origin_password'] = str(self.email_sender_password_field.get())
-        foldersnameapply['email_subject_line'] = str(self.email_sender_subject_field.get())
-        foldersnameapply['email_origin_smtp_server'] = str(self.email_smtp_field.get())
-        foldersnameapply['email_smtp_port'] = int(self.email_smtp_port_field.get())
-        foldersnameapply['process_edi'] = str(self.process_edi.get())
-        foldersnameapply['calc_upc'] = str(self.upc_var_check.get())
-        foldersnameapply['inc_arec'] = str(self.a_rec_var_check.get())
-        foldersnameapply['inc_crec'] = str(self.c_rec_var_check.get())
-        foldersnameapply['inc_headers'] = str(self.headers_check.get())
-        foldersnameapply['filter_ampersand'] = str(self.ampersand_check.get())
-        foldersnameapply['pad_arec'] = str(self.pad_arec_check.get())
-        foldersnameapply['arec_padding'] = str(self.a_record_padding_field.get())
+            apply_to_folder['copy_to_directory'] = copy_to_directory
+        apply_to_folder['process_backend_copy'] = self.process_backend_copy_check.get()
+        apply_to_folder['process_backend_ftp'] = self.process_backend_ftp_check.get()
+        apply_to_folder['process_backend_email'] = self.process_backend_email_check.get()
+        apply_to_folder['ftp_server'] = str(self.ftp_server_field.get())
+        apply_to_folder['ftp_port'] = int(self.ftp_port_field.get())
+        apply_to_folder['ftp_folder'] = str(self.ftp_folder_field.get())
+        apply_to_folder['ftp_username'] = str(self.ftp_username_field.get())
+        apply_to_folder['ftp_password'] = str(self.ftp_password_field.get())
+        apply_to_folder['email_to'] = str(self.email_recepient_field.get())
+        apply_to_folder['email_origin_address'] = str(self.email_sender_address_field.get())
+        apply_to_folder['email_origin_username'] = str(self.email_sender_username_field.get())
+        apply_to_folder['email_origin_password'] = str(self.email_sender_password_field.get())
+        apply_to_folder['email_subject_line'] = str(self.email_sender_subject_field.get())
+        apply_to_folder['email_origin_smtp_server'] = str(self.email_smtp_field.get())
+        apply_to_folder['email_smtp_port'] = int(self.email_smtp_port_field.get())
+        apply_to_folder['process_edi'] = str(self.process_edi.get())
+        apply_to_folder['calculate_upc_check_digit'] = str(self.upc_var_check.get())
+        apply_to_folder['include_a_records'] = str(self.a_rec_var_check.get())
+        apply_to_folder['include_c_records'] = str(self.c_rec_var_check.get())
+        apply_to_folder['include_headers'] = str(self.headers_check.get())
+        apply_to_folder['filter_ampersand'] = str(self.ampersand_check.get())
+        apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
+        apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
 
-        if self.foldersnameinput['foldersname'] != 'template':
-            update_folder_alias(foldersnameapply)
+        if self.foldersnameinput['folder_name'] != 'template':
+            update_folder_alias(apply_to_folder)
         else:
-            update_reporting(foldersnameapply)
+            update_reporting(apply_to_folder)
         doingstuffoverlay.destroy_overlay()
 
     def validate(self):
@@ -736,7 +736,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
             errors = True
 
-        if self.foldersnameinput['foldersname'] != 'template':
+        if self.foldersnameinput['folder_name'] != 'template':
             if str(self.folder_alias_field.get()) != self.foldersnameinput['alias']:
                 proposed_folder = folders_table.find_one(alias=str(self.folder_alias_field.get()))
                 if proposed_folder is not None:
@@ -985,7 +985,7 @@ def move_active_to_obe():
                                        overlay_text="adding files to obe queue..." + " folder " + str(folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
                                                     " of " + str(file_total))
-        os.chdir(parameters_dict['foldersname'])
+        os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
         file_total = len(files)
         for filename in files:
@@ -997,7 +997,7 @@ def move_active_to_obe():
                                                         " file " + str(file_count) + " of " + str(file_total))
             if obe_queue.find_one(file=str(os.path.abspath(filename))) is None:
                 obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                      destination=str(os.path.join(parameters_dict['foldersname'], "obe")),
+                                      destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
                                       folder_id=parameters_dict['id']))
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
@@ -1054,7 +1054,7 @@ def set_all_inactive():
     for folder_to_be_inactive in folders_table.find(is_active="True"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder_to_be_inactive['is_active'] = "False"
+        folder_to_be_inactive['folder_is_active'] = "False"
         folders_table.update(folder_to_be_inactive, ['id'])
         doingstuffoverlay.destroy_overlay()
     if total > 0:
@@ -1067,7 +1067,7 @@ def set_all_active():
     for folder_to_be_active in folders_table.find(is_active="False"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder_to_be_active['is_active'] = "True"
+        folder_to_be_active['folder_is_active'] = "True"
         folders_table.update(folder_to_be_active, ['id'])
         doingstuffoverlay.destroy_overlay()
     if total > 0:

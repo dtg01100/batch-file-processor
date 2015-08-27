@@ -77,25 +77,25 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
         file_count = 0
         file_count_total = 0
         update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total)
-        if os.path.isdir(parameters_dict['foldersname']) is True:
-            print("entering folder " + parameters_dict['foldersname'] + ", aliased as " + parameters_dict['alias'])
-            run_log.write("\r\n\r\nentering folder " + parameters_dict['foldersname'] + ", aliased as " +
+        if os.path.isdir(parameters_dict['folder_name']) is True:
+            print("entering folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
+            run_log.write("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
                           parameters_dict['alias'] + "\r\n\r\n")
-            os.chdir(parameters_dict['foldersname'])
+            os.chdir(parameters_dict['folder_name'])
             try:
-                os.stat(os.path.join(parameters_dict['foldersname'], "obe"))
+                os.stat(os.path.join(parameters_dict['folder_name'], "obe"))
             except Exception, error:
                 print(str(error))
-                print("OBE folder not found for " + parameters_dict['foldersname'] + ", " + "making one\r\n")
-                run_log.write("OBE folder not found for " + parameters_dict['foldersname'] + ", " +
+                print("OBE folder not found for " + parameters_dict['folder_name'] + ", " + "making one\r\n")
+                run_log.write("OBE folder not found for " + parameters_dict['folder_name'] + ", " +
                               "making one\r\n\r\n")
-                os.mkdir(os.path.join(parameters_dict['foldersname'], "obe"))
+                os.mkdir(os.path.join(parameters_dict['folder_name'], "obe"))
             # strip potentially invalid filename characters from alias string
             cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])
             # add iso8601 date/time stamp to filename, but filter : for - due to filename constraints
             folder_error_log_name_constructor = \
                 cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
-            folder_error_log_name_full_path = os.path.join(parameters_dict['foldersname'], "errors",
+            folder_error_log_name_full_path = os.path.join(parameters_dict['folder_name'], "errors",
                                                            folder_error_log_name_constructor)
             folder_errors_log = cStringIO.StringIO()
             files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
@@ -119,19 +119,19 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                             run_log.write("converting " + filename + " from EDI to CSV\r\n")
                             print("converting " + filename + " from EDI to CSV")
                             converter.edi_convert(filename, filename + ".csv",
-                                                  parameters_dict['calc_upc'],
-                                                  parameters_dict['inc_arec'], parameters_dict['inc_crec'],
-                                                  parameters_dict['inc_headers'],
+                                                  parameters_dict['calculate_upc_check_digit'],
+                                                  parameters_dict['include_a_records'], parameters_dict['include_c_records'],
+                                                  parameters_dict['include_headers'],
                                                   parameters_dict['filter_ampersand'],
-                                                  parameters_dict['pad_arec'],
-                                                  parameters_dict['arec_padding'])
+                                                  parameters_dict['pad_a_records'],
+                                                  parameters_dict['a_record_padding'])
                             run_log.write("Success\r\n\r\n")
                             try:
                                 obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                                      destination=str(os.path.join(parameters_dict['foldersname'],
+                                                      destination=str(os.path.join(parameters_dict['folder_name'],
                                                                                    "obe")),
                                                       folder_id=parameters_dict['id']))
-                                shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
+                                shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
                                 obe_queue.delete(file=str(os.path.abspath(filename)))
                             except Exception, error:
                                 print str(error)
@@ -184,9 +184,9 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                 if errors is False:
                     try:
                         obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                              destination=str(os.path.join(parameters_dict['foldersname'], "obe")),
+                                              destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
                                               folder_id=parameters_dict['id']))
-                        shutil.move(str(filename), os.path.join(parameters_dict['foldersname'], "obe"))
+                        shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
                         obe_queue.delete(file=str(os.path.abspath(filename)))
                         processed_counter += 1
                     except Exception, error:
@@ -195,39 +195,39 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
             if errors is True:
                 error_counter += 1
                 # check for file blocking error log folder, attempt to clear it, record errors
-                if os.path.exists(os.path.join(parameters_dict['foldersname'], "errors")) is True:
-                    if os.path.isfile(os.path.join(parameters_dict['foldersname'], "errors")) is True:
+                if os.path.exists(os.path.join(parameters_dict['folder_name'], "errors")) is True:
+                    if os.path.isfile(os.path.join(parameters_dict['folder_name'], "errors")) is True:
                         record_error.do(run_log, folder_errors_log,
-                                        str(os.path.join(parameters_dict['foldersname'], "errors") +
-                                            " is a file, deleting"), str(os.path.join(parameters_dict['foldersname'],
+                                        str(os.path.join(parameters_dict['folder_name'], "errors") +
+                                            " is a file, deleting"), str(os.path.join(parameters_dict['folder_name'],
                                                                                       "errors")),
                                         "Dispatch Error Logger")
                         try:
-                            os.remove(os.path.join(parameters_dict['foldersname'], "errors"))
+                            os.remove(os.path.join(parameters_dict['folder_name'], "errors"))
                         except IOError:
                             record_error.do(run_log, folder_errors_log,
-                                            str(os.path.join(parameters_dict['foldersname'], "errors") +
-                                                "cannot be deleted"), str(os.path.join(parameters_dict['foldersname'],
+                                            str(os.path.join(parameters_dict['folder_name'], "errors") +
+                                                "cannot be deleted"), str(os.path.join(parameters_dict['folder_name'],
                                                                                        "errors")),
                                             "Dispatch Error Logger")
                         try:
-                            os.mkdir(os.path.join(parameters_dict['foldersname'], "errors"))
+                            os.mkdir(os.path.join(parameters_dict['folder_name'], "errors"))
                         except IOError:
                             record_error.do(run_log, folder_errors_log,
-                                            str(os.path.join(parameters_dict['foldersname'], "errors") +
+                                            str(os.path.join(parameters_dict['folder_name'], "errors") +
                                                 " cannot be created as directory"),
-                                            str(os.path.join(parameters_dict['foldersname'],
+                                            str(os.path.join(parameters_dict['folder_name'],
                                                              "errors")), "Dispatch Error Logger")
                 else:
                     record_error.do(run_log, folder_errors_log, "Error folder Not Found",
-                                    str(parameters_dict['foldersname']),
+                                    str(parameters_dict['folder_name']),
                                     "Dispatch Error Logger")
-                    print("Error folder not found for " + parameters_dict['foldersname'] + ", " + "making one")
+                    print("Error folder not found for " + parameters_dict['folder_name'] + ", " + "making one")
                     try:
-                        os.mkdir(os.path.join(parameters_dict['foldersname'], "errors"))
+                        os.mkdir(os.path.join(parameters_dict['folder_name'], "errors"))
                     except IOError:  # if we can't create error logs folder, put it in run log directory
                         record_error.do(run_log, folder_errors_log, "Error creating errors folder",
-                                        str(parameters_dict['foldersname']), "Dispatch Error Logger")
+                                        str(parameters_dict['folder_name']), "Dispatch Error Logger")
                         folder_error_log_name_full_path = os.path.join(run_log_directory,
                                                                        folder_error_log_name_constructor)
                 try:

@@ -31,7 +31,7 @@ def do(process_parameters, filename):
     msg.attach(MIMEText(body, 'plain'))
 
     filename = filename
-    attachment = open(process_parameters['foldersname'] + "/" + filename)
+    attachment = open(process_parameters['folder_name'] + "/" + filename)
 
     part = MIMEBase('application', 'octet-stream')
     part.set_payload(attachment.read())
