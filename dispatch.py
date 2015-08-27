@@ -120,7 +120,8 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                             print("converting " + filename + " from EDI to CSV")
                             converter.edi_convert(filename, filename + ".csv",
                                                   parameters_dict['calculate_upc_check_digit'],
-                                                  parameters_dict['include_a_records'], parameters_dict['include_c_records'],
+                                                  parameters_dict['include_a_records'],
+                                                  parameters_dict['include_c_records'],
                                                   parameters_dict['include_headers'],
                                                   parameters_dict['filter_ampersand'],
                                                   parameters_dict['pad_a_records'],
