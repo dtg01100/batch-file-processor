@@ -1,4 +1,4 @@
-version = "1.0"
+version = "1.1"
 database_version = "2"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -472,13 +472,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
-        Label(self.ediframe, text="Process EDI?").grid(row=1, column=3, sticky=E)
-        Label(self.ediframe, text="Calculate UPC Check Digit:").grid(row=2, column=3, sticky=E)
-        Label(self.ediframe, text="Include " + "A " + "Records:").grid(row=3, column=3, sticky=E)
-        Label(self.ediframe, text="Include " + "C " + "Records:").grid(row=4, column=3, sticky=E)
-        Label(self.ediframe, text="Include Headings:").grid(row=5, column=3, sticky=E)
-        Label(self.ediframe, text="Filter Ampersand:").grid(row=6, column=3, sticky=E)
-        Label(self.ediframe, text="Pad " + "A " + "Records:").grid(row=7, column=3, sticky=E)
         Label(self.ediframe, text="A " + "Record Padding (6 characters):").grid(row=8, column=3, sticky=E)
 
         def select_copy_to_directory():
@@ -514,13 +507,23 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_sender_subject_field = Entry(self.prefsframe, width=30)
         self.email_smtp_field = Entry(self.prefsframe, width=30)
         self.email_smtp_port_field = Entry(self.prefsframe, width=30)
-        self.process_edi_checkbutton = Checkbutton(self.ediframe, variable=self.process_edi, onvalue="True", offvalue="False")
-        self.upc_variable_process_checkbutton = Checkbutton(self.ediframe, variable=self.upc_var_check, onvalue="True", offvalue="False")
-        self.a_record_checkbutton = Checkbutton(self.ediframe, variable=self.a_rec_var_check, onvalue="True", offvalue="False")
-        self.c_record_checkbutton = Checkbutton(self.ediframe, variable=self.c_rec_var_check, onvalue="True", offvalue="False")
-        self.headers_checkbutton = Checkbutton(self.ediframe, variable=self.headers_check, onvalue="True", offvalue="False")
-        self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, onvalue="True", offvalue="False")
-        self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check, onvalue="True", offvalue="False")
+        self.process_edi_checkbutton = Checkbutton(self.ediframe, variable=self.process_edi, text="Process EDI",
+                                                   onvalue="True", offvalue="False")
+        self.upc_variable_process_checkbutton = Checkbutton(self.ediframe, variable=self.upc_var_check,
+                                                            text="Calculate UPC Check Digit",
+                                                            onvalue="True", offvalue="False")
+        self.a_record_checkbutton = Checkbutton(self.ediframe, variable=self.a_rec_var_check,
+                                                text="Include " + "A " + "Records",
+                                                onvalue="True", offvalue="False")
+        self.c_record_checkbutton = Checkbutton(self.ediframe, variable=self.c_rec_var_check,
+                                                text="Include " + "C " + "Records", onvalue="True", offvalue="False")
+        self.headers_checkbutton = Checkbutton(self.ediframe, variable=self.headers_check, text="Include Headings",
+                                               onvalue="True", offvalue="False")
+        self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, text="Filter Ampersand:",
+                                                 onvalue="True", offvalue="False")
+        self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check,
+                                                     text="Pad " + "A " + "Records",
+                                                     onvalue="True", offvalue="False")
         self.a_record_padding_field = Entry(self.ediframe, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
@@ -569,13 +572,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_sender_subject_field.grid(row=18, column=1)
         self.email_smtp_field.grid(row=19, column=1)
         self.email_smtp_port_field.grid(row=20, column=1)
-        self.process_edi_checkbutton.grid(row=1, column=4, sticky=W, padx=3)
-        self.upc_variable_process_checkbutton.grid(row=2, column=4, sticky=W, padx=3)
-        self.a_record_checkbutton.grid(row=3, column=4, sticky=W, padx=3)
-        self.c_record_checkbutton.grid(row=4, column=4, sticky=W, padx=3)
-        self.headers_checkbutton.grid(row=5, column=4, sticky=W, padx=3)
-        self.ampersand_checkbutton.grid(row=6, column=4, sticky=W, padx=3)
-        self.pad_a_records_checkbutton.grid(row=7, column=4, sticky=W, padx=3)
+        self.process_edi_checkbutton.grid(row=1, column=3, sticky=W, padx=3)
+        self.upc_variable_process_checkbutton.grid(row=2, column=3, sticky=W, padx=3)
+        self.a_record_checkbutton.grid(row=3, column=3, sticky=W, padx=3)
+        self.c_record_checkbutton.grid(row=4, column=3, sticky=W, padx=3)
+        self.headers_checkbutton.grid(row=5, column=3, sticky=W, padx=3)
+        self.ampersand_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
+        self.pad_a_records_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
         self.a_record_padding_field.grid(row=8, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
