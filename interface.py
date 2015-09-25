@@ -1,4 +1,4 @@
-version = "1.1"
+version = "1.1.1"
 database_version = "2"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -789,7 +789,7 @@ def delete_folder_entry_wrapper(
 
 
 def graphical_process_directories(folders_table_process):  # process folders while showing progress overlay
-    if folders_table_process.count(is_active="True") > 0:
+    if folders_table_process.count(folder_is_active="True") > 0:
         doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
         process_directories(folders_table_process)
         refresh_users_list()  # refresh the users list in case the active state has changed

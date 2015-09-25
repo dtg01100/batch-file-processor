@@ -71,7 +71,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                 run_log.write("\r\nerror moving file " + os.path.basename(files['file']), ' to obe directory\r\n')
     folder_count = 0
     folder_total_count = folders_database.count()
-    for parameters_dict in folders_database.find(is_active="True"):  # loop over all known active folders
+    for parameters_dict in folders_database.find(folder_is_active="True"):  # loop over all known active folders
         global filename
         folder_count += 1
         file_count = 0
@@ -187,7 +187,16 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         obe_queue.insert(dict(file=str(os.path.abspath(filename)),
                                               destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
                                               folder_id=parameters_dict['id']))
-                        shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
+                        move_retry = 0
+                        move_error = True
+                        while move_retry < 5 or move_error is True:
+                            try:
+                                shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
+                                move_error = False
+                            except IOError:
+                                move_retry += 1
+                        if move_error is True or move_retry >= 5:
+                            raise Exception("Too Many Move Retries")
                         obe_queue.delete(file=str(os.path.abspath(filename)))
                         processed_counter += 1
                     except Exception, error:
@@ -250,7 +259,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
             folder_errors_log.close()
         else:
             # if the folder doesn't exist anymore, mark it as inactive
-            data = dict(id=parameters_dict['id'], is_active="False")
+            data = dict(id=parameters_dict['id'], folder_is_active="False")
             folders_database.update(data, ['id'])
             run_log.write("\r\nfolder missing for " + parameters_dict['alias'] + ", disabling\r\n\r\n")
             print("folder missing for " + parameters_dict['alias'] + ", disabling")
