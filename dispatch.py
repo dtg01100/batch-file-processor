@@ -187,16 +187,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         obe_queue.insert(dict(file=str(os.path.abspath(filename)),
                                               destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
                                               folder_id=parameters_dict['id']))
-                        move_retry = 0
-                        move_error = True
-                        while move_retry < 5 or move_error is True:
-                            try:
-                                shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
-                                move_error = False
-                            except IOError:
-                                move_retry += 1
-                        if move_error is True or move_retry >= 5:
-                            raise Exception("Too Many Move Retries")
+                        shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
                         obe_queue.delete(file=str(os.path.abspath(filename)))
                         processed_counter += 1
                     except Exception, error:
