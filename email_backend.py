@@ -13,6 +13,7 @@ import time
 def do(process_parameters, filename):
     from_address = process_parameters['email_origin_address']
     to_address = process_parameters['email_to']
+    to_address_list = to_address.split(", ")
     print (repr(filename))
     msg = MIMEMultipart()
 
@@ -44,5 +45,5 @@ def do(process_parameters, filename):
     server.starttls()
     server.login(from_address, process_parameters['email_origin_password'])
     text = msg.as_string()
-    server.sendmail(from_address, to_address, text)
+    server.sendmail(from_address, to_address_list, text)
     server.close()

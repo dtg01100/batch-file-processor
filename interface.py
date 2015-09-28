@@ -1,4 +1,4 @@
-version = "1.1.2"
+version = "1.2"
 database_version = "2"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -688,9 +688,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
                 errors = True
             else:
-                if (validate_email(str(self.email_recepient_field.get()), verify=True)) is False:
-                    error_string_constructor_list.append("Invalid Email Destination Address\r\n")
-                    errors = True
+                email_recepients = str(self.email_recepient_field.get()).split(", ")
+                for email_recepient in email_recepients:
+                    print(email_recepient)
+                    if (validate_email(str(email_recepient), verify=True)) is False:
+                        error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                        errors = True
 
             if self.email_sender_address_field.get() == "":
                 error_string_constructor_list.append("Email Origin Address Field Is Required\r\n")
