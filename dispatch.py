@@ -1,9 +1,10 @@
+import hashlib
+import datetime
 import copy_backend
 import ftp_backend
 import email_backend
 import converter
 import os
-import shutil
 import time
 import record_error
 import cStringIO
@@ -15,7 +16,8 @@ import doingstuffoverlay
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
-def process(folders_database, run_log, emails_table, run_log_directory, reporting, obe_queue, root, args, version):
+def process(folders_database, run_log, emails_table, run_log_directory,
+            reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder):
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total):
         if not args.automatic:
             doingstuffoverlay.destroy_overlay()
@@ -24,53 +26,20 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                                dispatch_folder_count) + " of " + str(folder_total) + " file " + str(
                                                dispatch_file_count) + " of " + str(file_total))
 
+    def emptydir(top):
+        if top == '/' or top == "\\":
+            return
+        else:
+            for root, dirs, files in os.walk(top, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+
     error_counter = 0
     processed_counter = 0
-    if obe_queue.count() > 0:
-        print("moving left over files from prior run")
-        update_overlay("moving left over files from prior run\n", None, None, None, None)
-        run_log.write("\r\nmoving left over files from prior run\r\n")
-        file_count_total = obe_queue.count()
-        file_count = 0
-        for files in obe_queue.all():
-            try:
-                file_count += 1
-                if not args.automatic:
-                    doingstuffoverlay.destroy_overlay()
-                    doingstuffoverlay.make_overlay(parent=root,
-                                                   overlay_text="moving files to obe folders...\n\n" +
-                                                                str(file_count_total) + " of " + str(file_count))
-                print("moving " + files['file'] + " to obe directory")
-                run_log.write("\r\nmoving " + files['file'] + " to obe directory\r\n")
-                if os.path.isfile(files['file']):
-                    if os.path.exists(files['destination']) is False:
-                        print("obe folder missing, making one")
-                        os.mkdir(files['destination'])
-                    if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
-                        shutil.move(files['file'], files['destination'])
-                    else:
-                        print("file with same name exists, adding number to end")
-                        run_log.write("\r\nfile with same name exists, adding number to end\r\n")
-                        destination_file_constructor = files['file']
-                        destination_file_end_suffix = 0
-                        destination_file_deduplicate_constructor = destination_file_constructor
-                        while os.path.isfile(os.path.join(str(files['destination']),
-                                                          destination_file_deduplicate_constructor)) is True:
-                            destination_file_end_suffix += destination_file_end_suffix + 1
-                            print str(destination_file_end_suffix)
-                            destination_file_deduplicate_constructor = \
-                                destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
-                        destination_file_constructor = destination_file_deduplicate_constructor
-                        shutil.move(str(files['file']), os.path.join(str(files['destination']),
-                                                                     destination_file_constructor))
-                else:
-                    print(files['file'] + " missing, deleting from move queue")
-                    run_log.write("\r\n" + files['file'] + " deleting from move queue\r\n")
-                obe_queue.delete(file=str(files['file']))
-            except IOError:
-                run_log.write("\r\nerror moving file " + os.path.basename(files['file']), ' to obe directory\r\n')
     folder_count = 0
-    folder_total_count = folders_database.count()
+    folder_total_count = folders_database.count(folder_is_active="True")
     for parameters_dict in folders_database.find(folder_is_active="True"):  # loop over all known active folders
         global filename
         folder_count += 1
@@ -82,43 +51,50 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
             run_log.write("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
                           parameters_dict['alias'] + "\r\n\r\n")
             os.chdir(parameters_dict['folder_name'])
-            try:
-                os.stat(os.path.join(parameters_dict['folder_name'], "obe"))
-            except Exception, error:
-                print(str(error))
-                print("OBE folder not found for " + parameters_dict['folder_name'] + ", " + "making one\r\n")
-                run_log.write("OBE folder not found for " + parameters_dict['folder_name'] + ", " +
-                              "making one\r\n\r\n")
-                os.mkdir(os.path.join(parameters_dict['folder_name'], "obe"))
             # strip potentially invalid filename characters from alias string
             cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])
             # add iso8601 date/time stamp to filename, but filter : for - due to filename constraints
             folder_error_log_name_constructor = \
                 cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
-            folder_error_log_name_full_path = os.path.join(parameters_dict['folder_name'], "errors",
+            folder_error_log_name_full_path = os.path.join(errors_folder['errors_folder'],
+                                                           os.path.basename(parameters_dict['folder_name']),
                                                            folder_error_log_name_constructor)
             folder_errors_log = cStringIO.StringIO()
-            files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
+            print folder_error_log_name_full_path
+            files = [f for f in os.listdir('.')]  # create list of all files in directory
+            filtered_files = []
+            file_count_total = len(files)
+            for f in files:
+                file_count += 1
+                update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
+                               file_count, file_count_total)
+                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
+                        open(f, 'rb').read()).hexdigest()) is None:
+                    filtered_files.append(f)
+            file_count = 0
             errors = False
             if len(files) == 0:  # if there are no files in directory, record in log
                 run_log.write("No files in directory\r\n\r\n")
                 print("No files in directory")
             file_count_total = len(files)
-            for filename in files:  # iterate over all files in directory
+            for filename in filtered_files:  # iterate over all files in directory
+                original_filename = filename
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total)
-                if obe_queue.find_one(file=filename) is not None:
-                    record_error.do(run_log, folder_errors_log, "file already processed", filename, "dispatch")
-                    errors = True
                 if parameters_dict['process_edi'] == "True" and errors is False:
                     if edi_validator.check(filename):
                         # if the current file is recognized as a valid edi file,
                         # then convert it to csv, otherwise log and carry on
+                        output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                       os.path.basename(filename) + ".csv")
+                        if os.path.exists(os.path.dirname(output_filename)) is False:
+                            os.mkdir(os.path.dirname(output_filename))
+                        emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
                         try:
                             run_log.write("converting " + filename + " from EDI to CSV\r\n")
                             print("converting " + filename + " from EDI to CSV")
-                            converter.edi_convert(filename, filename + ".csv",
+                            converter.edi_convert(filename, output_filename,
                                                   parameters_dict['calculate_upc_check_digit'],
                                                   parameters_dict['include_a_records'],
                                                   parameters_dict['include_c_records'],
@@ -127,18 +103,7 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                                                   parameters_dict['pad_a_records'],
                                                   parameters_dict['a_record_padding'])
                             run_log.write("Success\r\n\r\n")
-                            try:
-                                obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                                      destination=str(os.path.join(parameters_dict['folder_name'],
-                                                                                   "obe")),
-                                                      folder_id=parameters_dict['id']))
-                                shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
-                                obe_queue.delete(file=str(os.path.abspath(filename)))
-                            except Exception, error:
-                                print str(error)
-                                errors = True
-                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
-                            filename += ".csv"
+                            filename = output_filename
                         except Exception, error:
                             print str(error)
                             errors = True
@@ -184,48 +149,29 @@ def process(folders_database, run_log, emails_table, run_log_directory, reportin
                         errors = True
                 if errors is False:
                     try:
-                        obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                              destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
-                                              folder_id=parameters_dict['id']))
-                        shutil.move(str(filename), os.path.join(parameters_dict['folder_name'], "obe"))
-                        obe_queue.delete(file=str(os.path.abspath(filename)))
+                        processed_files.insert(dict(file_name=str(os.path.abspath(original_filename)),
+                                                    folder_id=parameters_dict['id'],
+                                                    file_checksum=hashlib.md5(
+                                                        open(original_filename, 'rb').read()).hexdigest(),
+                                                    sent_date_time=datetime.datetime.now()))
                         processed_counter += 1
                     except Exception, error:
                         record_error.do(run_log, folder_errors_log, str(error), str(filename), "Dispatch")
                         errors = True
             if errors is True:
                 error_counter += 1
-                # check for file blocking error log folder, attempt to clear it, record errors
-                if os.path.exists(os.path.join(parameters_dict['folder_name'], "errors")) is True:
-                    if os.path.isfile(os.path.join(parameters_dict['folder_name'], "errors")) is True:
-                        record_error.do(run_log, folder_errors_log,
-                                        str(os.path.join(parameters_dict['folder_name'], "errors") +
-                                            " is a file, deleting"), str(os.path.join(parameters_dict['folder_name'],
-                                                                                      "errors")),
-                                        "Dispatch Error Logger")
-                        try:
-                            os.remove(os.path.join(parameters_dict['folder_name'], "errors"))
-                        except IOError:
-                            record_error.do(run_log, folder_errors_log,
-                                            str(os.path.join(parameters_dict['folder_name'], "errors") +
-                                                "cannot be deleted"), str(os.path.join(parameters_dict['folder_name'],
-                                                                                       "errors")),
-                                            "Dispatch Error Logger")
-                        try:
-                            os.mkdir(os.path.join(parameters_dict['folder_name'], "errors"))
-                        except IOError:
-                            record_error.do(run_log, folder_errors_log,
-                                            str(os.path.join(parameters_dict['folder_name'], "errors") +
-                                                " cannot be created as directory"),
-                                            str(os.path.join(parameters_dict['folder_name'],
-                                                             "errors")), "Dispatch Error Logger")
-                else:
+                if os.path.exists(errors_folder['errors_folder']) is False:
+                    record_error.do(run_log, folder_errors_log, "Base errors folder not found",
+                                    str(parameters_dict['folder_name']), "Dispatch Error Logger")
+                    print("Base error folder not found, " + "making one")
+                    os.mkdir(errors_folder['errors_folder'])
+                if os.path.exists(os.path.dirname(folder_error_log_name_full_path)) is False:
                     record_error.do(run_log, folder_errors_log, "Error folder Not Found",
                                     str(parameters_dict['folder_name']),
                                     "Dispatch Error Logger")
                     print("Error folder not found for " + parameters_dict['folder_name'] + ", " + "making one")
                     try:
-                        os.mkdir(os.path.join(parameters_dict['folder_name'], "errors"))
+                        os.mkdir(os.path.dirname(folder_error_log_name_full_path))
                     except IOError:  # if we can't create error logs folder, put it in run log directory
                         record_error.do(run_log, folder_errors_log, "Error creating errors folder",
                                         str(parameters_dict['folder_name']), "Dispatch Error Logger")

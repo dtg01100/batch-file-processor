@@ -1,5 +1,7 @@
-version = "1.2"
-database_version = "2"
+import hashlib
+
+version = "1.3"
+database_version = "3"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -95,7 +97,7 @@ emails_table = database_connection['emails_to_send']
 emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
-obe_queue = database_connection['obe_queue']
+processed_files = database_connection['processed_files']
 
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
@@ -103,6 +105,8 @@ root.title("Sender Interface " + version)
 folder = NONE
 options_frame = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
+errors_directory = oversight_and_defaults.find_one(id=1)
+edi_converter_scratch_folder = oversight_and_defaults.find_one(id=1)
 
 
 def check_logs_directory():
@@ -173,7 +177,7 @@ def select_folder():
     global folder
     global column_entry_value
     folder = askdirectory()
-    proposed_folder = folders_table.find_one(foldersname=folder)
+    proposed_folder = folders_table.find_one(folder_name=folder)
     if proposed_folder is None:
         if folder != '':  # check to see if selected folder has a path
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
@@ -205,7 +209,7 @@ def batch_add_folders():
                 doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
                                                                          " of " + str(len(folders_list)))
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
-                proposed_folder = folders_table.find_one(foldersname=batch_folder_add_proposed_folder)
+                proposed_folder = folders_table.find_one(folder_name=batch_folder_add_proposed_folder)
                 if proposed_folder is None:
                     if batch_folder_add_proposed_folder != '':  # check to see if selected folder has a path
                         add_folder_entry(batch_folder_add_proposed_folder)
@@ -309,9 +313,9 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.reporting_smtp_port_field = Entry(master, width=40)
         self.report_email_destination_field = Entry(master, width=40)
         self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
-        self.log_printing_fallback_checkbutton =\
+        self.log_printing_fallback_checkbutton = \
             Checkbutton(master, variable=self.enable_report_printing_checkbutton_variable, onvalue="True",
-                              offvalue="False")
+                        offvalue="False")
 
         def select_log_directory():
             global logs_directory_edit
@@ -481,7 +485,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             destination_directory_is_altered = True
 
         self.active_checkbutton_object = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
-                              onvalue="True", offvalue="False")
+                                                     onvalue="True", offvalue="False")
         self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend",
                                                     variable=self.process_backend_copy_check,
                                                     onvalue=True, offvalue=False)
@@ -494,7 +498,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.folder_alias_field = Entry(self.folderframe, width=30)
-        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder", command=lambda: select_copy_to_directory())
+        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder",
+                                                           command=lambda: select_copy_to_directory())
         self.ftp_server_field = Entry(self.prefsframe, width=30)
         self.ftp_port_field = Entry(self.prefsframe, width=30)
         self.ftp_folder_field = Entry(self.prefsframe, width=30)
@@ -684,16 +689,17 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
             backend_count += 1
 
-            if self.email_recepient_field.get() == "":
-                error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
-                errors = True
-            else:
-                email_recepients = str(self.email_recepient_field.get()).split(", ")
-                for email_recepient in email_recepients:
-                    print(email_recepient)
-                    if (validate_email(str(email_recepient), verify=True)) is False:
-                        error_string_constructor_list.append("Invalid Email Destination Address\r\n")
-                        errors = True
+            if self.foldersnameinput == 'template':
+                if self.email_recepient_field.get() == "":
+                    error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
+                    errors = True
+                else:
+                    email_recepients = str(self.email_recepient_field.get()).split(", ")
+                    for email_recepient in email_recepients:
+                        print(email_recepient)
+                        if (validate_email(str(email_recepient), verify=True)) is False:
+                            error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                            errors = True
 
             if self.email_sender_address_field.get() == "":
                 error_string_constructor_list.append("Email Origin Address Field Is Required\r\n")
@@ -781,7 +787,7 @@ def refresh_users_list():
 def delete_folder_entry(folder_to_be_removed):
     # delete specified folder configuration and it's queued emails and obe queue
     folders_table.delete(id=folder_to_be_removed)
-    obe_queue.delete(folder_id=folder_to_be_removed)
+    processed_files.delete(folder_id=folder_to_be_removed)
     emails_table.delete(folder_id=folder_to_be_removed)
 
 
@@ -854,7 +860,7 @@ def process_directories(folders_table_process):
     # call dispatch module to process active folders
     try:
         dispatch.process(folders_table_process, run_log, emails_table, reporting['logs_directory'], reporting,
-                         obe_queue, root, args, version)
+                         processed_files, root, args, version, errors_directory, edi_converter_scratch_folder)
         os.chdir(original_folder)
     except Exception, dispatch_error:
         os.chdir(original_folder)
@@ -977,81 +983,51 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
         refresh_users_list()
 
 
-def move_active_to_obe():
+def mark_active_as_processed():
     starting_folder = os.getcwd()
-    folder_total = folders_table.count(is_active="True")
+    folder_total = folders_table.count(folder_is_active="True")
     folder_count = 0
-    doingstuffoverlay.make_overlay(maintenance_popup, "adding files to obe queue...")
-    for parameters_dict in folders_table.find(is_active="True"):  # create list of active directories
+    doingstuffoverlay.make_overlay(maintenance_popup, "adding files to processed list...")
+    for parameters_dict in folders_table.find(folder_is_active="True"):  # create list of active directories
         file_total = 0
         file_count = 0
         folder_count += 1
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
-                                       overlay_text="adding files to obe queue..." + " folder " + str(folder_count) +
+                                       overlay_text="adding files to processed list...\n\n" + " folder " + str(folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
                                                     " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
-        files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
+        files = [f for f in os.listdir('.') if os.path.isfile(f)]
+        # create list of all files in directory
         file_total = len(files)
-        for filename in files:
+        filtered_files = []
+        for f in files:
             file_count += 1
             doingstuffoverlay.destroy_overlay()
             doingstuffoverlay.make_overlay(parent=maintenance_popup,
-                                           overlay_text="adding files to obe queue..." + " folder " +
+                                       overlay_text="checking files for already processed\n\n" + str(folder_count) +
+                                                    " of " + str(folder_total) + " file " + str(file_count) +
+                                                    " of " + str(file_total))
+            if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
+                    open(f, 'rb').read()).hexdigest()) is None:
+                filtered_files.append(f)
+        file_total = len(filtered_files)
+        file_count = 0
+        for filename in filtered_files:
+            print filename
+            file_count += 1
+            doingstuffoverlay.destroy_overlay()
+            doingstuffoverlay.make_overlay(parent=maintenance_popup,
+                                           overlay_text="adding files to processed list...\n\n" + " folder " +
                                                         str(folder_count) + " of " + str(folder_total) +
                                                         " file " + str(file_count) + " of " + str(file_total))
-            if obe_queue.find_one(file=str(os.path.abspath(filename))) is None:
-                obe_queue.insert(dict(file=str(os.path.abspath(filename)),
-                                      destination=str(os.path.join(parameters_dict['folder_name'], "obe")),
-                                      folder_id=parameters_dict['id']))
+            processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
+                                        file_checksum=hashlib.md5
+                                        (open(filename, 'rb').read()).hexdigest(),
+                                        folder_id=parameters_dict['id']))
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
-
-
-def process_obe_queue():
-    error_counter = 0
-    processed_counter = 0
-    if obe_queue.count() > 0:
-        doingstuffoverlay.make_overlay(maintenance_popup, "processing obe queue...")
-        file_count_total = obe_queue.count()
-        file_count = 0
-        for files in obe_queue.all():
-            try:
-                file_count += 1
-                doingstuffoverlay.destroy_overlay()
-                doingstuffoverlay.make_overlay(parent=maintenance_popup,
-                                               overlay_text="moving files to obe folders...\n\n" + str(file_count) +
-                                                            " of " + str(file_count_total))
-                print("moving " + files['file'] + " to obe directory")
-                if os.path.isfile(files['file']):
-                    if os.path.exists(files['destination']) is False:
-                        print("obe folder missing, making one")
-                        os.mkdir(files['destination'])
-                    if os.path.isfile(os.path.join(files['destination'], os.path.basename(files['file']))) is False:
-                        shutil.move(files['file'], files['destination'])
-                    else:
-                        print("file with same name exists, adding number to end")
-                        destination_file_constructor = files['file']
-                        destination_file_end_suffix = 0
-                        destination_file_deduplicate_constructor = destination_file_constructor
-                        while os.path.isfile(os.path.join(str(files['destination']),
-                                                          destination_file_deduplicate_constructor)) is True:
-                            destination_file_end_suffix += destination_file_end_suffix + 1
-                            print str(destination_file_end_suffix)
-                            destination_file_deduplicate_constructor = \
-                                destination_file_constructor + " duplicate " + str(destination_file_end_suffix)
-                        destination_file_constructor = destination_file_deduplicate_constructor
-                        shutil.move(str(files['file']), os.path.join(str(files['destination']),
-                                                                     destination_file_constructor))
-                    processed_counter += 1
-                else:
-                    obe_queue.delete(file=str(files['file']))
-                    error_counter += 1
-            except IOError:
-                error_counter += 1
-        doingstuffoverlay.destroy_overlay()
-        showinfo(message=str(processed_counter) + " files moved\r\n" + str(error_counter) + " move errors")
 
 
 def set_all_inactive():
@@ -1102,20 +1078,15 @@ def maintenance_functions_popup():
                                          command=set_all_inactive)
         clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails",
                                     command=emails_table.delete)
-        clear_obe_queue = Button(maintenance_popup_button_frame, text="clear obe queue", command=obe_queue.delete)
-        move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Move Active to obe",
-                                           command=move_active_to_obe)
-        process_obe_queue_button = Button(maintenance_popup_button_frame, text="Process obe queue",
-                                          command=process_obe_queue)
+        move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Mark all in active as processed",
+                                           command=mark_active_as_processed)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations",
                                      command=remove_inactive_folders)
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
-        clear_obe_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
-        process_obe_queue_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)

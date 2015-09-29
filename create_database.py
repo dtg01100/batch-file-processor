@@ -42,7 +42,9 @@ def do(database_version):  # create database file with some default settings
                                        email_to='',
                                        email_origin_address='',
                                        email_origin_username='',
-                                       logs_directory=os.getcwd() + "/run_logs/",
+                                       logs_directory=os.path.join(os.getcwd(), "run_logs"),
+                                       edi_converter_scratch_folder=os.path.join(os.getcwd(), "edi_converter_scratch_folder"),
+                                       errors_folder=os.path.join(os.getcwd(), "errors"),
                                        enable_reporting="False",
                                        report_printing_fallback="False",
                                        reporting_smtp_port=587,
@@ -50,6 +52,6 @@ def do(database_version):  # create database file with some default settings
                                        ftp_port=21,
                                        email_subject_line=""))
 
-    obe_queue = database_connection['obe_queue']
-    obe_queue.create_column('file', sqlalchemy.types.String)
-    obe_queue.create_column('destination', sqlalchemy.types.String)
+    processed_files = database_connection['processed_files']
+    processed_files.create_column('file_name', sqlalchemy.types.String)
+    processed_files.create_column('file_checksum', sqlalchemy.types.String)

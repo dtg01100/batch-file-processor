@@ -60,6 +60,8 @@ docs/_build/
 target/
 
 
+/edi_converter_scratch_folder
+/errors
 
 folders.db
 .idea/
