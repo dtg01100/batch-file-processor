@@ -431,9 +431,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         self.resizable(width=FALSE, height=FALSE)
         global copy_to_directory
-        copy_to_directory = None
-        global destination_directory_is_altered
-        destination_directory_is_altered = False
+        copy_to_directory = self.foldersnameinput['copy_to_directory']
         self.title("Folder Settings")
         self.folderframe = Frame(master)
         self.prefsframe = Frame(master)
@@ -479,9 +477,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         def select_copy_to_directory():
             global copy_to_directory
-            global destination_directory_is_altered
             copy_to_directory = str(askdirectory())
-            destination_directory_is_altered = True
 
         self.active_checkbutton_object = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
                                                      onvalue="True", offvalue="False")
@@ -615,8 +611,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 apply_to_folder['alias'] = os.path.basename(self.foldersnameinput['folder_name'])
             else:
                 apply_to_folder['alias'] = str(self.folder_alias_field.get())
-        if destination_directory_is_altered is True:
-            apply_to_folder['copy_to_directory'] = copy_to_directory
+        apply_to_folder['copy_to_directory'] = copy_to_directory
         apply_to_folder['process_backend_copy'] = self.process_backend_copy_check.get()
         apply_to_folder['process_backend_ftp'] = self.process_backend_ftp_check.get()
         apply_to_folder['process_backend_email'] = self.process_backend_email_check.get()
@@ -735,12 +730,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             backend_count += 1
 
             if copy_to_directory is None or copy_to_directory == "":
-                if destination_directory_is_altered is True:
-                    error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
-                                                         " Please Select One\r\n")
-                    errors = True
+                error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
+                                                     " Please Select One\r\n")
+                errors = True
 
-        if backend_count is 0:
+        if backend_count is 0 and self.active_checkbutton.get() == "True":
             error_string_constructor_list.append("No Backend Is Selected")
             errors = True
 
