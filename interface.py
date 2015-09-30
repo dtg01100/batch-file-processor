@@ -1,4 +1,4 @@
-version = "1.5.1"
+version = "1.5.2"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -968,11 +968,11 @@ def silent_process_directories(silent_process_folders_table):
 
 def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
     users_refresh = False
-    if folders_table.count(is_active="False") > 0:
+    if folders_table.count(folder_is_active="False") > 0:
         users_refresh = True
-    folders_total = folders_table.count(is_active="False")
+    folders_total = folders_table.count(folder_is_active="False")
     folders_count = 0
-    for folder_to_be_removed in folders_table.find(is_active="False"):
+    for folder_to_be_removed in folders_table.find(folder_is_active="False"):
         folders_count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
                                        str(folders_total))
