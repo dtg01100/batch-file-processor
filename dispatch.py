@@ -60,7 +60,6 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                                                            os.path.basename(parameters_dict['folder_name']),
                                                            folder_error_log_name_constructor)
             folder_errors_log = cStringIO.StringIO()
-            print folder_error_log_name_full_path
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)
