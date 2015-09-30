@@ -1,7 +1,7 @@
 import hashlib
 
-version = "1.3"
-database_version = "3"
+version = "1.4"
+database_version = "4"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -994,7 +994,8 @@ def mark_active_as_processed():
         folder_count += 1
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
-                                       overlay_text="adding files to processed list...\n\n" + " folder " + str(folder_count) +
+                                       overlay_text="adding files to processed list...\n\n" + " folder " + str(
+                                           folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
                                                     " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
@@ -1006,9 +1007,9 @@ def mark_active_as_processed():
             file_count += 1
             doingstuffoverlay.destroy_overlay()
             doingstuffoverlay.make_overlay(parent=maintenance_popup,
-                                       overlay_text="checking files for already processed\n\n" + str(folder_count) +
-                                                    " of " + str(folder_total) + " file " + str(file_count) +
-                                                    " of " + str(file_total))
+                                           overlay_text="checking files for already processed\n\n" + str(folder_count) +
+                                                        " of " + str(folder_total) + " file " + str(file_count) +
+                                                        " of " + str(file_total))
             if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                     open(f, 'rb').read()).hexdigest()) is None:
                 filtered_files.append(f)
@@ -1092,6 +1093,39 @@ def maintenance_functions_popup():
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
 
 
+def export_processed_report(name):
+    output_folder = askdirectory()
+    folder_alias = folders_table.find_one(id=name)
+    processed_log = open(str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv")), 'w')
+    for line in processed_files.find(folder_id=name):
+        processed_log.write(line['file_name'] + "," + str(line['sent_date_time']) + "," + line['copy_destination'] +
+                            "," + line['ftp_destination'] + "," +
+                            str(line['email_destination']).replace(",", ";") + "\n")
+
+
+def processed_files_popup():
+    processed_files_popup = Toplevel()
+    processed_files_popup.title("Generate Processed Files Report")
+    processed_files_popup.transient(root)
+    # center dialog on main window
+    processed_files_popup.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
+    processed_files_popup.grab_set()
+    processed_files_popup.focus_set()
+    processed_files_popup.resizable(width=FALSE, height=FALSE)
+    processed_files_list_container = Frame(processed_files_popup)
+    processed_files_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_list_container)
+    if processed_files.count() == 0:
+        no_processed_label = Label(processed_files_list_frame, text="No Folders With Processed Files")
+        no_processed_label.pack(fill=BOTH, expand=1, padx=10)
+    for folders_name in processed_files.distinct('folder_id'):
+        folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
+        Button(processed_files_list_frame, text=folder_row['folder_alias'],
+               command=lambda name=folder_row['folder_id']:
+               export_processed_report(name)).pack()
+    processed_files_list_container.pack()
+    processed_files_list_frame.pack()
+
+
 launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
@@ -1108,6 +1142,7 @@ edit_reporting = Button(options_frame, text="Edit Reporting",
 process_folder_button = Button(options_frame, text="Process Folders",
                                command=lambda: graphical_process_directories(folders_table))
 maintenance_button = Button(options_frame, text="Maintenance", command=maintenance_functions_popup)
+processed_files_button = Button(options_frame, text="Processed Files Report", command=processed_files_popup)
 options_frame_divider = Separator(root, orient=VERTICAL)
 
 # pack main window widgets
@@ -1118,6 +1153,7 @@ edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
 process_folder_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
 Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
+processed_files_button.pack(side=TOP, fill=X, pady=2, padx=2)
 options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
 users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)

@@ -151,9 +151,16 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                     try:
                         processed_files.insert(dict(file_name=str(os.path.abspath(original_filename)),
                                                     folder_id=parameters_dict['id'],
+                                                    folder_alias=parameters_dict['alias'],
                                                     file_checksum=hashlib.md5(
                                                         open(original_filename, 'rb').read()).hexdigest(),
-                                                    sent_date_time=datetime.datetime.now()))
+                                                    sent_date_time=datetime.datetime.now(),
+                                                    copy_destination=parameters_dict['copy_to_directory'] if
+                                                    parameters_dict['process_backend_copy'] is True else "N/A",
+                                                    ftp_destination=parameters_dict['ftp_server'] if
+                                                    parameters_dict['process_backend_ftp'] is True else "N/A",
+                                                    email_destination=parameters_dict['email_to'] if
+                                                    parameters_dict['process_backend_email'] is True else "N/A"))
                         processed_counter += 1
                     except Exception, error:
                         record_error.do(run_log, folder_errors_log, str(error), str(filename), "Dispatch")
