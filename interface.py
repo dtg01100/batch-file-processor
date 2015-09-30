@@ -735,9 +735,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             backend_count += 1
 
             if copy_to_directory is None or copy_to_directory == "":
-                error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
-                                                     " Please Select One\r\n")
-                errors = True
+                if destination_directory_is_altered is True:
+                    error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
+                                                         " Please Select One\r\n")
+                    errors = True
 
         if backend_count is 0:
             error_string_constructor_list.append("No Backend Is Selected")
