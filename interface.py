@@ -1,7 +1,7 @@
 import hashlib
 
-version = "1.4"
-database_version = "4"
+version = "1.5"
+database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -1026,7 +1026,12 @@ def mark_active_as_processed():
             processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
                                         file_checksum=hashlib.md5
                                         (open(filename, 'rb').read()).hexdigest(),
-                                        folder_id=parameters_dict['id']))
+                                        folder_id=parameters_dict['id'],
+                                        folder_alias=parameters_dict['alias'],
+                                        copy_destination="N/A",
+                                        ftp_destination="N/A",
+                                        email_destination="N/A",
+                                        sent_date_time="N/A"))
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
 
@@ -1101,6 +1106,7 @@ def export_processed_report(name):
         processed_log.write(line['file_name'] + "," + str(line['sent_date_time']) + "," + line['copy_destination'] +
                             "," + line['ftp_destination'] + "," +
                             str(line['email_destination']).replace(",", ";") + "\n")
+    showinfo(message="Processed File Report Exported")
 
 
 def processed_files_popup():
