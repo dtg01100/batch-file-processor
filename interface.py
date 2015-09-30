@@ -1,6 +1,4 @@
-import hashlib
-
-version = "1.5"
+version = "1.5.1"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -11,6 +9,7 @@ try:  # try to import required modules
     from tkMessageBox import askokcancel
     from ttk import *
     from validate_email import validate_email
+    import hashlib
     import scrollbuttons
     import dataset
     import dialog
