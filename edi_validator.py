@@ -3,11 +3,14 @@
 
 def check(input_file):
 
-    input_file = open(input_file, 'r')
-    if str(input_file.readline()[:1]) != "A":
-        return False
-    try:
-        second_line = int(input_file.readline()[1:10])
-    except ValueError:
-        return False
+    file_to_test = open(input_file)
+    for line in file_to_test:
+        if line[0][0] != "A" and line[0] != "B" and line[0] != "C":
+            return False
+        else:
+            try:
+                if line[0] == "B":
+                    line_check = int(line[1:10])
+            except ValueError:
+                return False
     return 1
