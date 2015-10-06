@@ -1,4 +1,4 @@
-version = "1.5.4"
+version = "1.5.5"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -9,6 +9,7 @@ try:  # try to import required modules
     from tkMessageBox import askokcancel
     from ttk import *
     from validate_email import validate_email
+    import rclick_menu
     import hashlib
     import scrollbuttons
     import dataset
@@ -306,11 +307,21 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.run_reporting_checkbutton = Checkbutton(master, variable=self.enable_reporting_checkbutton_variable,
                                                      onvalue="True", offvalue="False")
         self.report_email_address_field = Entry(master, width=40)
+        rclick_report_email_address_field = rclick_menu.RightClickMenu(self.report_email_address_field)
+        self.report_email_address_field.bind("<3>", rclick_report_email_address_field)
         self.report_email_username_field = Entry(master, width=40)
+        rclick_report_email_username_field = rclick_menu.RightClickMenu(self.report_email_username_field)
+        self.report_email_username_field.bind("<3>", rclick_report_email_username_field)
         self.report_email_password_field = Entry(master, show="*", width=40)
         self.report_email_smtp_server_field = Entry(master, width=40)
+        rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.report_email_smtp_server_field)
+        self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
         self.reporting_smtp_port_field = Entry(master, width=40)
+        rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(self.reporting_smtp_port_field)
+        self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
         self.report_email_destination_field = Entry(master, width=40)
+        rclick_report_email_destination_field = rclick_menu.RightClickMenu(self.report_email_destination_field)
+        self.report_email_destination_field.bind("<3>", rclick_report_email_destination_field)
         self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
         self.log_printing_fallback_checkbutton = \
             Checkbutton(master, variable=self.enable_report_printing_checkbutton_variable, onvalue="True",
@@ -493,20 +504,42 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.folder_alias_field = Entry(self.folderframe, width=30)
+            rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
+            self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
         self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder",
                                                            command=lambda: select_copy_to_directory())
         self.ftp_server_field = Entry(self.prefsframe, width=30)
+        rclick_ftp_server_field = rclick_menu.RightClickMenu(self.ftp_server_field)
+        self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
         self.ftp_port_field = Entry(self.prefsframe, width=30)
+        rclick_ftp_port_field = rclick_menu.RightClickMenu(self.ftp_port_field)
+        self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
         self.ftp_folder_field = Entry(self.prefsframe, width=30)
+        rclick_ftp_folder_field = rclick_menu.RightClickMenu(self.ftp_folder_field)
+        self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
         self.ftp_username_field = Entry(self.prefsframe, width=30)
+        rclick_ftp_username_field = rclick_menu.RightClickMenu(self.ftp_username_field)
+        self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
         self.ftp_password_field = Entry(self.prefsframe, show="*", width=30)
         self.email_recepient_field = Entry(self.prefsframe, width=30)
+        rclick_email_recepient_field = rclick_menu.RightClickMenu(self.email_recepient_field)
+        self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
         self.email_sender_address_field = Entry(self.prefsframe, width=30)
+        rclick_email_sender_address_field = rclick_menu.RightClickMenu(self.email_sender_address_field)
+        self.email_sender_address_field.bind("<3>", rclick_email_sender_address_field)
         self.email_sender_username_field = Entry(self.prefsframe, width=30)
+        rclick_email_sender_username_field = rclick_menu.RightClickMenu(self.email_sender_username_field)
+        self.email_sender_username_field.bind("<3>", rclick_email_sender_username_field)
         self.email_sender_password_field = Entry(self.prefsframe, show="*", width=30)
         self.email_sender_subject_field = Entry(self.prefsframe, width=30)
+        rclick_email_sender_subject_field = rclick_menu.RightClickMenu(self.email_sender_subject_field)
+        self.email_sender_subject_field.bind("<3>", rclick_email_sender_subject_field)
         self.email_smtp_field = Entry(self.prefsframe, width=30)
+        rclick_email_smtp_field = rclick_menu.RightClickMenu(self.email_smtp_field)
+        self.email_smtp_field.bind("<3>", rclick_email_smtp_field)
         self.email_smtp_port_field = Entry(self.prefsframe, width=30)
+        rclick_email_smtp_port_field = rclick_menu.RightClickMenu(self.email_smtp_port_field)
+        self.email_smtp_port_field.bind("<3>", rclick_email_smtp_port_field)
         self.process_edi_checkbutton = Checkbutton(self.ediframe, variable=self.process_edi, text="Process EDI",
                                                    onvalue="True", offvalue="False")
         self.upc_variable_process_checkbutton = Checkbutton(self.ediframe, variable=self.upc_var_check,
