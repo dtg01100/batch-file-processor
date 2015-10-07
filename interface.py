@@ -1,4 +1,4 @@
-version = "1.5.5"
+version = "1.5.6"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -1064,9 +1064,9 @@ def mark_active_as_processed():
 
 
 def set_all_inactive():
-    total = folders_table.count(is_active="True")
+    total = folders_table.count(folder_is_active="True")
     count = 0
-    for folder_to_be_inactive in folders_table.find(is_active="True"):
+    for folder_to_be_inactive in folders_table.find(folder_is_active="True"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_inactive['folder_is_active'] = "False"
@@ -1077,9 +1077,9 @@ def set_all_inactive():
 
 
 def set_all_active():
-    total = folders_table.count(is_active="False")
+    total = folders_table.count(folder_is_active="False")
     count = 0
-    for folder_to_be_active in folders_table.find(is_active="False"):
+    for folder_to_be_active in folders_table.find(folder_is_active="False"):
         count += 1
         doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_active['folder_is_active'] = "True"
