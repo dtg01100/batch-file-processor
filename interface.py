@@ -1130,12 +1130,15 @@ def export_processed_report(name):
     if output_folder == "":
         return
     folder_alias = folders_table.find_one(id=name)
-    processed_log = open(str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv")), 'w')
+    processed_log_path = str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv"))
+    processed_log = open(processed_log_path, 'w')
+    processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
         processed_log.write(line['file_name'] + "," + str(line['sent_date_time']) + "," + line['copy_destination'] +
                             "," + line['ftp_destination'] + "," +
                             str(line['email_destination']).replace(",", ";") + "\n")
-    showinfo(message="Processed File Report Exported")
+    processed_log.close()
+    showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 
 
 def processed_files_popup():
