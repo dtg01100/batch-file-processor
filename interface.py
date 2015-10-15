@@ -1,4 +1,4 @@
-version = "1.5.6"
+version = "1.5.7"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -1157,7 +1157,7 @@ def processed_files_popup():
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
     for folders_name in processed_files.distinct('folder_id'):
         folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
-        folder_dict = folders_table.find_one()
+        folder_dict = folders_table.find_one(id=folders_name['folder_id'])
         folder_alias = folder_dict['alias']
         Button(processed_files_list_frame, text=folder_alias,
                command=lambda name=folder_row['folder_id']:
