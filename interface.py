@@ -1,4 +1,4 @@
-version = "1.5.10"
+version = "1.6"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -825,13 +825,20 @@ def delete_folder_entry_wrapper(
 
 
 def graphical_process_directories(folders_table_process):  # process folders while showing progress overlay
-    if folders_table_process.count(folder_is_active="True") > 0:
-        doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
-        process_directories(folders_table_process)
-        refresh_users_list()  # refresh the users list in case the active state has changed
-        doingstuffoverlay.destroy_overlay()
+    missing_folder = False
+    for folder_test in folders_table_process.find(folder_is_active="True"):
+        if not os.path.exists(folder_test['folder_name']):
+            missing_folder = True
+    if missing_folder is True:
+        showerror("Error", "One or more expected folders are missing.\n Are all drives mounted?")
     else:
-        showerror("Error", "No Active Folders")
+        if folders_table_process.count(folder_is_active="True") > 0:
+            doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
+            process_directories(folders_table_process)
+            refresh_users_list()  # refresh the users list in case the active state has changed
+            doingstuffoverlay.destroy_overlay()
+        else:
+            showerror("Error", "No Active Folders")
 
 
 def set_defaults_popup():
