@@ -36,7 +36,7 @@ def do(database_version):  # create database file with some default settings
                                        process_backend_ftp=False,
                                        process_backend_email=False,
                                        ftp_server='',
-                                       ftp_folder='',
+                                       ftp_folder='/',
                                        ftp_username='',
                                        ftp_password='',
                                        email_to='',
