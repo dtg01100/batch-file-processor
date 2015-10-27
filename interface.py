@@ -1,4 +1,4 @@
-version = "1.6"
+version = "1.6.1"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -424,7 +424,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         doingstuffoverlay.make_overlay(self, "Applying Changes...")
         folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
         if logs_directory_is_altered is True:
-            folders_name_apply['log_directory'] = logs_directory_edit
+            folders_name_apply['logs_directory'] = logs_directory_edit
         folders_name_apply['report_email_address'] = str(self.report_email_address_field.get())
         folders_name_apply['report_email_username'] = str(self.report_email_username_field.get())
         folders_name_apply['report_email_password'] = str(self.report_email_password_field.get())
