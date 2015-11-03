@@ -179,7 +179,7 @@ def select_folder():
     folder = askdirectory()
     proposed_folder = folders_table.find_one(folder_name=folder)
     if proposed_folder is None:
-        if folder != '':  # check to see if selected folder has a path
+        if len(folder) > 0:  # check to see if selected folder has a path
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)

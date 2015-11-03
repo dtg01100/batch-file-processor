@@ -12,5 +12,7 @@ def check(input_file):
                 if line[0] == "B":
                     line_check = int(line[1:10])
             except ValueError:
-                return False
+                print(repr(line[1:10]))
+                if not line[1:10] == "         ":
+                    return False
     return 1
