@@ -1,4 +1,4 @@
-version = "1.6.2"
+version = "1.6.3"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -195,7 +195,7 @@ def batch_add_folders():
     added = 0
     skipped = 0
     containing_folder = askdirectory()
-    if containing_folder != "":
+    if len(containing_folder) > 0:
         os.chdir(str(containing_folder))
         folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
         print("adding " + str(len(folders_list)) + " folders")
