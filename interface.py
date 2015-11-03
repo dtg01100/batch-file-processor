@@ -1,4 +1,4 @@
-version = "1.6.4"
+version = "1.7.0"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -68,6 +68,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
 
 try:  # try to connect to database
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+    session_database = dataset.connect("sqlite:///session.db")
 except Exception, error:  # if that doesn't work for some reason, log and quit
     try:
         print(str(error))
@@ -231,6 +232,18 @@ def edit_folder_selector(folder_to_be_edited):
     EditDialog(root, edit_folder)
 
 
+def send_single(folder_id):
+    print("test" + str(folder_id))
+    try:
+        single_table = session_database['single_table']
+        single_table.drop()
+    finally:
+        single_table = session_database['single_table']
+        single_table.insert(folders_table.find_one(id=folder_id))
+        graphical_process_directories(single_table)
+        single_table.drop()
+
+
 def make_users_list():
     global users_list_frame
     global active_users_list_frame
@@ -255,7 +268,9 @@ def make_users_list():
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Delete",
                    command=lambda name=folders_name['id']:
-                   delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
+                   delete_folder_entry_wrapper(name)).grid(column=2, row=0, sticky=E)
+            Button(active_folder_button_frame, text="Send", command=lambda name=folders_name['id']:
+                   send_single(name)).grid(column=1, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
                    edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
