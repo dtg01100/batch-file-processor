@@ -233,7 +233,6 @@ def edit_folder_selector(folder_to_be_edited):
 
 
 def send_single(folder_id):
-    print("test" + str(folder_id))
     try:
         single_table = session_database['single_table']
         single_table.drop()
