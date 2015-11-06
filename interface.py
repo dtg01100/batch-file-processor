@@ -1,4 +1,4 @@
-version = "1.7.2"
+version = "1.7.3"
 database_version = "5"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -711,6 +711,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             if self.ftp_folder_field.get() == "":
                 error_string_constructor_list.append("FTP Folder Field Is Required\r\n")
                 errors = True
+            else:
+                if self.ftp_folder_field.get()[-1] is not "/":
+                    error_string_constructor_list.append("FTP Folder Path Needs To End In /\r\n")
+                    errors = True
 
             if self.ftp_username_field.get() == "":
                 error_string_constructor_list.append("FTP Username Field Is Required\r\n")

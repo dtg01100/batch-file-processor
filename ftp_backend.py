@@ -1,4 +1,5 @@
 import ftplib
+import os
 
 
 # this module sends the file specified in filename to the address specified in the dict process_parameters via ftp
@@ -6,8 +7,9 @@ import ftplib
 
 
 def do(process_parameters, filename):
+    filename_no_path = os.path.basename(filename)
     ftp = ftplib.FTP()
-    ftp.connect(str(process_parameters['ftp_server']), 2121)
+    ftp.connect(str(process_parameters['ftp_server']), process_parameters['ftp_port'])
     ftp.login(process_parameters['ftp_username'], process_parameters['ftp_password'])
-    ftp.storbinary("stor " + process_parameters['ftp_folder']+filename, open(filename, 'rb'))
+    ftp.storbinary("stor " + process_parameters['ftp_folder']+filename_no_path, open(filename, 'rb'))
     ftp.close()
