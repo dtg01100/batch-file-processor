@@ -39,7 +39,7 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
 
             f.write(
                 '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".format
-                ((upc_check_digit.add_check_digit(line[1:12]) if conv_calc_upc != "False" and blank_upc is False
+                (("\t" + upc_check_digit.add_check_digit(line[1:12]) if conv_calc_upc != "False" and blank_upc is False
                   else line[1:12]),
                  line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
                  line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else line[46:47] +
