@@ -4,6 +4,7 @@ import copy_backend
 import ftp_backend
 import email_backend
 import converter
+import convert_to_insight
 import os
 import time
 import record_error
@@ -82,34 +83,51 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total)
                 if parameters_dict['process_edi'] == "True" and errors is False:
-                    if edi_validator.check(filename):
-                        # if the current file is recognized as a valid edi file,
-                        # then convert it to csv, otherwise log and carry on
-                        output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                                       os.path.basename(filename) + ".csv")
-                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                            os.mkdir(os.path.dirname(output_filename))
-                        emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
-                        try:
-                            run_log.write("converting " + filename + " from EDI to CSV\r\n")
-                            print("converting " + filename + " from EDI to CSV")
-                            converter.edi_convert(filename, output_filename,
-                                                  parameters_dict['calculate_upc_check_digit'],
-                                                  parameters_dict['include_a_records'],
-                                                  parameters_dict['include_c_records'],
-                                                  parameters_dict['include_headers'],
-                                                  parameters_dict['filter_ampersand'],
-                                                  parameters_dict['pad_a_records'],
-                                                  parameters_dict['a_record_padding'])
-                            run_log.write("Success\r\n\r\n")
-                            filename = output_filename
-                        except Exception, error:
-                            print str(error)
-                            errors = True
-                            record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
-                    else:
-                        record_error.do(run_log, folder_errors_log, filename +
-                                        " is not an edi file", filename, "edi validator")
+                    if parameters_dict['convert_to_format'] == "csv":
+                        if edi_validator.check(filename):
+                            # if the current file is recognized as a valid edi file,
+                            # then convert it to csv, otherwise log and carry on
+                            output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                           os.path.basename(filename) + ".csv")
+                            if os.path.exists(os.path.dirname(output_filename)) is False:
+                                os.mkdir(os.path.dirname(output_filename))
+                            emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+                            try:
+                                run_log.write("converting " + filename + " from EDI to CSV\r\n")
+                                print("converting " + filename + " from EDI to CSV")
+                                converter.edi_convert(filename, output_filename,
+                                                      parameters_dict['calculate_upc_check_digit'],
+                                                      parameters_dict['include_a_records'],
+                                                      parameters_dict['include_c_records'],
+                                                      parameters_dict['include_headers'],
+                                                      parameters_dict['filter_ampersand'],
+                                                      parameters_dict['pad_a_records'],
+                                                      parameters_dict['a_record_padding'])
+                                run_log.write("Success\r\n\r\n")
+                                filename = output_filename
+                            except Exception, error:
+                                print str(error)
+                                errors = True
+                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
+                        else:
+                            record_error.do(run_log, folder_errors_log, filename +
+                                            " is not an edi file", filename, "edi validator")
+                    if parameters_dict['convert_to_format'] == "insight":
+                            output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                   os.path.basename(filename) + ".txt")
+                            if os.path.exists(os.path.dirname(output_filename)) is False:
+                                os.mkdir(os.path.dirname(output_filename))
+                            emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+                            try:
+                                run_log.write("converting " + filename + " from EDI to Insight\r\n")
+                                print("converting " + filename + " from EDI to Insight")
+                                convert_to_insight.edi_convert(filename, output_filename)
+                                run_log.write("Success\r\n\r\n")
+                                filename = output_filename
+                            except Exception, error:
+                                print str(error)
+                                errors = True
+                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
                 # the following blocks process the files using the specified backend, and log in the event of any errors
                 if parameters_dict['process_backend_copy'] is True and errors is False:
                     try:

@@ -1,5 +1,5 @@
-version = "1.7.4"
-database_version = "5"
+version = "1.8.0"
+database_version = "6"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -26,6 +26,7 @@ try:  # try to import required modules
     import cStringIO
     import shutil
     import doingstuffoverlay
+    import folders_database_migrator
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -85,11 +86,11 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
 # open table required for database check in database
 db_version = database_connection['version']
 db_version_dict = db_version.find_one(id=1)
-if db_version_dict['version'] != database_version:
+if db_version_dict['version'] < database_version:
+    folders_database_migrator.upgrade_database(database_connection)
+if db_version_dict['version'] > database_version:
     Tk().withdraw()
-    showerror(title="Database Mismatch", message="Database version mismatch\ndatabase version is: " +
-                                                 str(db_version_dict['version']) + "\ndatabase version expected is: " +
-                                                 str(database_version))
+    showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
     raise SystemExit
 
 # open required tables in database
@@ -160,6 +161,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               email_origin_password=defaults['email_origin_password'],
                               email_origin_smtp_server=defaults['email_origin_smtp_server'],
                               process_edi=defaults['process_edi'],
+                              convert_to_format=defaults['convert_to_format'],
                               calculate_upc_check_digit=defaults['calculate_upc_check_digit'],
                               include_a_records=defaults['include_a_records'],
                               include_c_records=defaults['include_c_records'],
@@ -457,10 +459,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.resizable(width=FALSE, height=FALSE)
         global copy_to_directory
         copy_to_directory = self.foldersnameinput['copy_to_directory']
+        self.convert_formats_var = StringVar(master)
         self.title("Folder Settings")
         self.folderframe = Frame(master)
         self.prefsframe = Frame(master)
         self.ediframe = Frame(master)
+        self.convert_options_frame = Frame(self.ediframe)
         self.separatorv1 = Separator(master, orient=VERTICAL)
         self.separatorv2 = Separator(master, orient=VERTICAL)
         self.backendvariable = StringVar(master)
@@ -498,6 +502,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
+        OptionMenu(self.ediframe, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
+                   'csv', 'insight').grid(row=2, column=3, columnspan=2)
         Label(self.ediframe, text="A " + "Record Padding (6 characters):").grid(row=8, column=3, sticky=E)
 
         def select_copy_to_directory():
@@ -620,13 +626,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_field.grid(row=19, column=1)
         self.email_smtp_port_field.grid(row=20, column=1)
         self.process_edi_checkbutton.grid(row=1, column=3, sticky=W, padx=3)
-        self.upc_variable_process_checkbutton.grid(row=2, column=3, sticky=W, padx=3)
-        self.a_record_checkbutton.grid(row=3, column=3, sticky=W, padx=3)
-        self.c_record_checkbutton.grid(row=4, column=3, sticky=W, padx=3)
-        self.headers_checkbutton.grid(row=5, column=3, sticky=W, padx=3)
-        self.ampersand_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
-        self.pad_a_records_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
-        self.a_record_padding_field.grid(row=8, column=4)
+        self.upc_variable_process_checkbutton.grid(row=3, column=3, sticky=W, padx=3)
+        self.a_record_checkbutton.grid(row=4, column=3, sticky=W, padx=3)
+        self.c_record_checkbutton.grid(row=5, column=3, sticky=W, padx=3)
+        self.headers_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
+        self.ampersand_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
+        self.pad_a_records_checkbutton.grid(row=8, column=3, sticky=W, padx=3)
+        self.a_record_padding_field.grid(row=9, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
@@ -675,6 +681,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['email_origin_smtp_server'] = str(self.email_smtp_field.get())
         apply_to_folder['email_smtp_port'] = int(self.email_smtp_port_field.get())
         apply_to_folder['process_edi'] = str(self.process_edi.get())
+        apply_to_folder['convert_to_format'] = str(self.convert_formats_var.get())
         apply_to_folder['calculate_upc_check_digit'] = str(self.upc_var_check.get())
         apply_to_folder['include_a_records'] = str(self.a_rec_var_check.get())
         apply_to_folder['include_c_records'] = str(self.c_rec_var_check.get())
