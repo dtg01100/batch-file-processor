@@ -503,9 +503,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
         self.convert_options_frame.grid(column=3, row=2, columnspan=2, sticky=W)
-        Label(self.convert_options_frame, text="Convert To: ").grid(row=2, column=3, sticky=W)
+        Label(self.convert_options_frame, text="Convert To: ").grid(row=0, column=0, sticky=W)
         OptionMenu(self.convert_options_frame, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
-                   'csv', 'insight').grid(row=2, column=4, sticky=W, columnspan=2)
+                   'csv', 'insight').grid(row=0, column=1, sticky=W, columnspan=2)
 
         def select_copy_to_directory():
             global copy_to_directory
