@@ -502,8 +502,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
-        OptionMenu(self.ediframe, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
-                   'csv', 'insight').grid(row=2, column=3, columnspan=2)
+        self.convert_options_frame = Frame(self.ediframe)
+        self.convert_options_frame.grid(column=3, row=2, columnspan=2, sticky=W)
+        Label(self.convert_options_frame, text="Convert To: ").grid(row=2, column=3, sticky=W)
+        OptionMenu(self.convert_options_frame, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
+                   'csv', 'insight').grid(row=2, column=4, sticky=W, columnspan=2)
         Label(self.ediframe, text="A " + "Record Padding (6 characters):").grid(row=8, column=3, sticky=E)
 
         def select_copy_to_directory():
