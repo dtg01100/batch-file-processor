@@ -507,7 +507,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.convert_options_frame, text="Convert To: ").grid(row=2, column=3, sticky=W)
         OptionMenu(self.convert_options_frame, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
                    'csv', 'insight').grid(row=2, column=4, sticky=W, columnspan=2)
-        Label(self.ediframe, text="A " + "Record Padding (6 characters):").grid(row=8, column=3, sticky=E)
 
         def select_copy_to_directory():
             global copy_to_directory
@@ -578,7 +577,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, text="Filter Ampersand:",
                                                  onvalue="True", offvalue="False")
         self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check,
-                                                     text="Pad " + "A " + "Records",
+                                                     text="Pad \"A\" Records (6 Characters)",
                                                      onvalue="True", offvalue="False")
         self.a_record_padding_field = Entry(self.ediframe, width=10)
 
@@ -635,7 +634,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.headers_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
         self.ampersand_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
         self.pad_a_records_checkbutton.grid(row=8, column=3, sticky=W, padx=3)
-        self.a_record_padding_field.grid(row=9, column=4)
+        self.a_record_padding_field.grid(row=8, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
