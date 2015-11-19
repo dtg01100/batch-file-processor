@@ -60,3 +60,4 @@ def do(database_version):  # create database file with some default settings
     processed_files.create_column('copy_destination', sqlalchemy.types.String)
     processed_files.create_column('ftp_destination', sqlalchemy.types.String)
     processed_files.create_column('email_destination', sqlalchemy.types.String)
+    processed_files.create_column('resend_flag', sqlalchemy.types.Boolean)

@@ -27,15 +27,15 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                                                dispatch_folder_count) + " of " + str(folder_total) + " file " + str(
                                                dispatch_file_count) + " of " + str(file_total))
 
-    def emptydir(top):
+    def empty_directory(top):
         if top == '/' or top == "\\":
             return
         else:
-            for root, dirs, files in os.walk(top, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
+            for folder_root, dirs, files_delete in os.walk(top, topdown=False):
+                for name in files_delete:
+                    os.remove(os.path.join(folder_root, name))
                 for name in dirs:
-                    os.rmdir(os.path.join(root, name))
+                    os.rmdir(os.path.join(folder_root, name))
 
     error_counter = 0
     processed_counter = 0
@@ -69,8 +69,11 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total)
                 if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
-                        open(f, 'rb').read()).hexdigest()) is None:
+                        open(f, 'rb').read()).hexdigest()) is None or \
+                        processed_files.find_one(
+                            file_name=os.path.join(os.getcwd(), f), resend_flag=True):
                     filtered_files.append(f)
+
             file_count = 0
             errors = False
             if len(files) == 0:  # if there are no files in directory, record in log
@@ -91,7 +94,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                                                            os.path.basename(filename) + ".csv")
                             if os.path.exists(os.path.dirname(output_filename)) is False:
                                 os.mkdir(os.path.dirname(output_filename))
-                            emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+                            empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
                             try:
                                 run_log.write("converting " + filename + " from EDI to CSV\r\n")
                                 print("converting " + filename + " from EDI to CSV")
@@ -113,21 +116,21 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                             record_error.do(run_log, folder_errors_log, filename +
                                             " is not an edi file", filename, "edi validator")
                     if parameters_dict['convert_to_format'] == "insight":
-                            output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                   os.path.basename(filename) + ".txt")
-                            if os.path.exists(os.path.dirname(output_filename)) is False:
-                                os.mkdir(os.path.dirname(output_filename))
-                            emptydir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
-                            try:
-                                run_log.write("converting " + filename + " from EDI to Insight\r\n")
-                                print("converting " + filename + " from EDI to Insight")
-                                convert_to_insight.edi_convert(filename, output_filename)
-                                run_log.write("Success\r\n\r\n")
-                                filename = output_filename
-                            except Exception, error:
-                                print str(error)
-                                errors = True
-                                record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
+                        output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                       os.path.basename(filename) + ".txt")
+                        if os.path.exists(os.path.dirname(output_filename)) is False:
+                            os.mkdir(os.path.dirname(output_filename))
+                        empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+                        try:
+                            run_log.write("converting " + filename + " from EDI to Insight\r\n")
+                            print("converting " + filename + " from EDI to Insight")
+                            convert_to_insight.edi_convert(filename, output_filename)
+                            run_log.write("Success\r\n\r\n")
+                            filename = output_filename
+                        except Exception, error:
+                            print str(error)
+                            errors = True
+                            record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
                 # the following blocks process the files using the specified backend, and log in the event of any errors
                 if parameters_dict['process_backend_copy'] is True and errors is False:
                     try:
@@ -166,6 +169,12 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                         errors = True
                 if errors is False:
                     try:
+                        if processed_files.count(file_name=str(os.path.abspath(original_filename))) > 0:
+                            file_old_id = processed_files.find_one(file_name=str(os.path.abspath(original_filename)),
+                                                                   resend_flag=True)
+                            processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
+                            processed_files.update(processed_files_update, ['id'])
+
                         processed_files.insert(dict(file_name=str(os.path.abspath(original_filename)),
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
@@ -177,7 +186,8 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                                                     ftp_destination=parameters_dict['ftp_server'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
-                                                    parameters_dict['process_backend_email'] is True else "N/A"))
+                                                    parameters_dict['process_backend_email'] is True else "N/A",
+                                                    resend_flag=False))
                         processed_counter += 1
                     except Exception, error:
                         record_error.do(run_log, folder_errors_log, str(error), str(filename), "Dispatch")

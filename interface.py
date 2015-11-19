@@ -1,5 +1,5 @@
 version = "1.8.0"
-database_version = "6"
+database_version = "7"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -27,6 +27,7 @@ try:  # try to import required modules
     import shutil
     import doingstuffoverlay
     import folders_database_migrator
+    import resend_interface
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -40,7 +41,6 @@ except Exception, error:
         print("error writing critical error log for error: " + str(error) + "\n" +
               "operation failed with error: " + str(big_error))
         raise SystemExit
-
 
 # prevent multiple instances from running
 me = singleton.SingleInstance()
@@ -270,8 +270,8 @@ def make_users_list():
             Button(active_folder_button_frame, text="Delete",
                    command=lambda name=folders_name['id']:
                    delete_folder_entry_wrapper(name)).grid(column=2, row=0, sticky=E)
-            Button(active_folder_button_frame, text="Send", command=lambda name=folders_name['id']:
-                   send_single(name)).grid(column=1, row=0)
+            Button(active_folder_button_frame, text="Send",
+                   command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
                    edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
@@ -1091,7 +1091,8 @@ def mark_active_as_processed():
                                         copy_destination="N/A",
                                         ftp_destination="N/A",
                                         email_destination="N/A",
-                                        sent_date_time="N/A"))
+                                        sent_date_time=datetime.datetime.now(),
+                                        resend_flag=False))
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
 
@@ -1167,9 +1168,10 @@ def export_processed_report(name):
     processed_log = open(processed_log_path, 'w')
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
-        processed_log.write(line['file_name'] + "," + str(line['sent_date_time']) + "," + line['copy_destination'] +
-                            "," + line['ftp_destination'] + "," +
-                            str(line['email_destination']).replace(",", ";") + "\n")
+        processed_log.write(
+            line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
+            "," + line['ftp_destination'] + "," +
+            str(line['email_destination']).replace(",", ";") + "\n")
     processed_log.close()
     showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 
@@ -1194,7 +1196,7 @@ def processed_files_popup():
         folder_alias = folder_dict['alias']
         Button(processed_files_list_frame.interior, text=folder_alias,
                command=lambda name=folder_row['folder_id']:
-               export_processed_report(name)).pack()
+               export_processed_report(name)).pack(fill=X)
     processed_files_list_container.pack()
     processed_files_list_frame.pack()
 
@@ -1214,6 +1216,10 @@ edit_reporting = Button(options_frame, text="Edit Reporting",
                         command=lambda: EditReportingDialog(root, oversight_and_defaults.find_one(id=1)))
 process_folder_button = Button(options_frame, text="Process Folders",
                                command=lambda: graphical_process_directories(folders_table))
+
+allow_resend_button = Button(options_frame, text="Enable Resend",
+                             command=lambda: resend_interface.do(database_connection, root))
+
 maintenance_button = Button(options_frame, text="Maintenance", command=maintenance_functions_popup)
 processed_files_button = Button(options_frame, text="Processed Files Report", command=processed_files_popup)
 options_frame_divider = Separator(root, orient=VERTICAL)
@@ -1226,6 +1232,8 @@ edit_reporting.pack(side=TOP, fill=X, pady=2, padx=2)
 process_folder_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
 Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
+allow_resend_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
+Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 processed_files_button.pack(side=TOP, fill=X, pady=2, padx=2)
 options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
