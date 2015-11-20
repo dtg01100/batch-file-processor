@@ -12,6 +12,7 @@ import cStringIO
 import re
 import edi_validator
 import doingstuffoverlay
+import edi_tweaks
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -131,6 +132,21 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                             print str(error)
                             errors = True
                             record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
+                else:
+                    output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                   os.path.basename(filename))
+                    if os.path.exists(os.path.dirname(output_filename)) is False:
+                        os.mkdir(os.path.dirname(output_filename))
+                        empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+                    try:
+                        edi_tweaks.edi_tweak(filename, output_filename, parameters_dict['pad_a_records'],
+                                             parameters_dict['a_record_padding'])
+                        filename = output_filename
+                    except Exception, error:
+                        print str(error)
+                        errors = True
+                        record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
+
                 # the following blocks process the files using the specified backend, and log in the event of any errors
                 if parameters_dict['process_backend_copy'] is True and errors is False:
                     try:

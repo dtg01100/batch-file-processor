@@ -71,8 +71,6 @@ def do(database_connection, master_window):
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
 
-        print alias
-
     resend_interface_scrollable_folders_frame.pack()
     resend_interface_scrollable_files_frame.pack()
     resend_interface_folders_frame.pack(side=LEFT)
