@@ -83,6 +83,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
             file_count_total = len(files)
             for filename in filtered_files:  # iterate over all files in directory
                 original_filename = filename
+                stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', filename)
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total)
@@ -92,7 +93,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                             # if the current file is recognized as a valid edi file,
                             # then convert it to csv, otherwise log and carry on
                             output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                                           os.path.basename(filename) + ".csv")
+                                                           os.path.basename(stripped_filename) + ".csv")
                             if os.path.exists(os.path.dirname(output_filename)) is False:
                                 os.mkdir(os.path.dirname(output_filename))
                             empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
@@ -118,7 +119,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                                             " is not an edi file", filename, "edi validator")
                     if parameters_dict['convert_to_format'] == "insight":
                         output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                                       os.path.basename(filename) + ".txt")
+                                                       os.path.basename(stripped_filename) + ".txt")
                         if os.path.exists(os.path.dirname(output_filename)) is False:
                             os.mkdir(os.path.dirname(output_filename))
                         empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
@@ -134,7 +135,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                             record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
                 else:
                     output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                                   os.path.basename(filename))
+                                                   os.path.basename(stripped_filename))
                     if os.path.exists(os.path.dirname(output_filename)) is False:
                         os.mkdir(os.path.dirname(output_filename))
                         empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
