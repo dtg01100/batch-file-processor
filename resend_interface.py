@@ -48,7 +48,7 @@ def do(database_connection, master_window):
             self.var = BooleanVar()
             self.var.set(self.resend_flag)
             c = Checkbutton(master=master,
-                            text=os.path.basename(file_name),
+                            text=os.path.basename(file_name).ljust(15),
                             variable=self.var,
                             onvalue=True,
                             offvalue=False,
@@ -66,7 +66,7 @@ def do(database_connection, master_window):
     resend_interface_scrollable_files_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_files_frame)
 
     for folder, alias in folder_list:
-        Tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias,
+        Tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.rjust(15),
                             variable=folder_button_variable,
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
