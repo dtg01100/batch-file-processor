@@ -25,7 +25,8 @@ def process(folders_database, run_log, emails_table, run_log_directory,
             doingstuffoverlay.destroy_overlay()
             doingstuffoverlay.make_overlay(parent=root,
                                            overlay_text=overlay_text + " folder " + str(
-                                               dispatch_folder_count) + " of " + str(folder_total) + " file " + str(
+                                               dispatch_folder_count) + " of " + str(
+                                               folder_total) + "," + " file " + str(
                                                dispatch_file_count) + " of " + str(file_total))
 
     def empty_directory(top):
