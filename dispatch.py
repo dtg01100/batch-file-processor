@@ -187,7 +187,8 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                         errors = True
                 if errors is False:
                     try:
-                        if processed_files.count(file_name=str(os.path.abspath(original_filename))) > 0:
+                        if processed_files.count(file_name=str(os.path.abspath(original_filename)),
+                                                 resend_flag=True) > 0:
                             file_old_id = processed_files.find_one(file_name=str(os.path.abspath(original_filename)),
                                                                    resend_flag=True)
                             processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
