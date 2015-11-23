@@ -235,12 +235,14 @@ def edit_folder_selector(folder_to_be_edited):
 
 
 def send_single(folder_id):
+    doingstuffoverlay.make_overlay(root, "Working...")
     try:
         single_table = session_database['single_table']
         single_table.drop()
     finally:
         single_table = session_database['single_table']
         single_table.insert(folders_table.find_one(id=folder_id))
+        doingstuffoverlay.destroy_overlay()
         graphical_process_directories(single_table)
         single_table.drop()
 
