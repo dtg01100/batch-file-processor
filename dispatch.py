@@ -246,10 +246,13 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                     run_log.write("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n")
                     run_log.write(folder_errors_log.getvalue())
                     run_log.write("\r\n\r\nEnd of Error file\r\n\r\n")
+            else:
+                processed_files_update = dict(resend_flag=False, folder_id=parameters_dict['id'])
+                processed_files.update(processed_files_update, ['folder_id'])
             folder_errors_log.close()
         else:
             # if the folder doesn't exist anymore, mark it as inactive
-            data = dict(id=parameters_dict['id'], folder_is_active="False")
+            data = dict(id=int(parameters_dict['id']), folder_is_active="False")
             folders_database.update(data, ['id'])
             run_log.write("\r\nfolder missing for " + parameters_dict['alias'] + ", disabling\r\n\r\n")
             print("folder missing for " + parameters_dict['alias'] + ", disabling")
