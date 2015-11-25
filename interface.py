@@ -1,12 +1,10 @@
-version = "1.8.5"
+version = "1.8.6"
 database_version = "7"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
     from tkFileDialog import askdirectory
-    from tkMessageBox import showerror
-    from tkMessageBox import showinfo
-    from tkMessageBox import askokcancel
+    from tkMessageBox import showerror, askyesno, showinfo, askokcancel
     from ttk import *
     from validate_email import validate_email
     import rclick_menu
@@ -846,8 +844,12 @@ def delete_folder_entry(folder_to_be_removed):
     emails_table.delete(folder_id=folder_to_be_removed)
 
 
-def delete_folder_entry_wrapper(
-        folder_to_be_removed):  # a wrapper function to both delete the folder entry and update the users list
+def delete_folder_entry_wrapper(folder_to_be_removed):
+    # a wrapper function to both delete the folder entry and update the users list,
+    # asking first if user wants to export file send history.
+    if processed_files.count(id=folder_to_be_removed) > 0:
+        if askyesno(message="Export Processed Report?"):
+            export_processed_report(folder_to_be_removed)
     delete_folder_entry(folder_to_be_removed)
     refresh_users_list()
 
@@ -1057,9 +1059,9 @@ def mark_active_as_processed():
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
                                        overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                           folder_count) +
-                                                    " of " + str(folder_total) + " file " + str(file_count) +
-                                                    " of " + str(file_total))
+                                            folder_count) +
+                                       " of " + str(folder_total) + " file " + str(file_count) +
+                                       " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
