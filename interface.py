@@ -1181,28 +1181,28 @@ def export_processed_report(name):
 
 
 def processed_files_popup():
-    processed_files_popup = Toplevel()
-    processed_files_popup.title("Generate Processed Files Report")
-    processed_files_popup.transient(root)
+    processed_files_popup_dialog = Toplevel()
+    processed_files_popup_dialog.title("Generate Processed Files Report")
+    processed_files_popup_dialog.transient(root)
     # center dialog on main window
-    processed_files_popup.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
-    processed_files_popup.grab_set()
-    processed_files_popup.focus_set()
-    processed_files_popup.resizable(width=FALSE, height=FALSE)
-    processed_files_list_container = Frame(processed_files_popup)
-    processed_files_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_list_container)
+    processed_files_popup_dialog.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
+    processed_files_popup_dialog.grab_set()
+    processed_files_popup_dialog.focus_set()
+    processed_files_popup_dialog.resizable(width=FALSE, height=FALSE)
+    processed_files_popup_list_container = Frame(processed_files_popup_dialog)
+    processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
     if processed_files.count() == 0:
-        no_processed_label = Label(processed_files_list_frame, text="No Folders With Processed Files")
+        no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
     for folders_name in processed_files.distinct('folder_id'):
         folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
         folder_dict = folders_table.find_one(id=folders_name['folder_id'])
         folder_alias = folder_dict['alias']
-        Button(processed_files_list_frame.interior, text=folder_alias,
+        Button(processed_files_popup_list_frame.interior, text=folder_alias,
                command=lambda name=folder_row['folder_id']:
                export_processed_report(name)).pack(fill=X)
-    processed_files_list_container.pack()
-    processed_files_list_frame.pack()
+    processed_files_popup_list_container.pack()
+    processed_files_popup_list_frame.pack()
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')
