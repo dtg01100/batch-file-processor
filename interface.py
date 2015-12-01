@@ -1,5 +1,5 @@
-version = "1.8.6"
-database_version = "7"
+version = "1.9.0"
+database_version = "8"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -165,6 +165,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               include_c_records=defaults['include_c_records'],
                               include_headers=defaults['include_headers'],
                               filter_ampersand=defaults['filter_ampersand'],
+                              tweak_edi=defaults['tweak_edi'],
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
                               email_smtp_port=defaults['email_smtp_port'],
@@ -475,6 +476,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.c_rec_var_check = StringVar(master)  # define "C record" checkbox state variable
         self.headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
+        self.tweak_edi_check = BooleanVar(master)
         self.pad_arec_check = StringVar(master)
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
@@ -575,6 +577,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                onvalue="True", offvalue="False")
         self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, text="Filter Ampersand:",
                                                  onvalue="True", offvalue="False")
+        self.tweak_edi_checkbutton = Checkbutton(self.ediframe, variable=self.tweak_edi_check, text="Apply Edi Tweaks",
+                                                 onvalue=True, offvalue=False)
         self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check,
                                                      text="Pad \"A\" Records (6 Characters)",
                                                      onvalue="True", offvalue="False")
@@ -605,6 +609,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.headers_check.set(self.foldersnameinput['include_headers'])
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
         self.pad_arec_check.set(self.foldersnameinput['pad_a_records'])
+        self.tweak_edi_check.set(self.foldersnameinput['tweak_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
 
         self.active_checkbutton_object.grid(row=1, column=0, columnspan=2, padx=3)
@@ -632,8 +637,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.c_record_checkbutton.grid(row=5, column=3, sticky=W, padx=3)
         self.headers_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
         self.ampersand_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
-        self.pad_a_records_checkbutton.grid(row=8, column=3, sticky=W, padx=3)
-        self.a_record_padding_field.grid(row=8, column=4)
+        self.tweak_edi_checkbutton.grid(row=8, column=3, sticky=W, padx=3)
+        self.pad_a_records_checkbutton.grid(row=9, column=3, sticky=W, padx=3)
+        self.a_record_padding_field.grid(row=9, column=4)
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
@@ -688,6 +694,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['include_c_records'] = str(self.c_rec_var_check.get())
         apply_to_folder['include_headers'] = str(self.headers_check.get())
         apply_to_folder['filter_ampersand'] = str(self.ampersand_check.get())
+        apply_to_folder['tweak_edi'] = self.tweak_edi_check.get()
         apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
         apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
 

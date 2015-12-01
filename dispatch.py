@@ -134,7 +134,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                             print str(error)
                             errors = True
                             record_error.do(run_log, folder_errors_log, str(error), str(filename), "EDI Processor")
-                else:
+                if parameters_dict['tweak_edi'] is True:
                     output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                                    os.path.basename(stripped_filename))
                     if os.path.exists(os.path.dirname(output_filename)) is False:
