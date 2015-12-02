@@ -33,7 +33,7 @@ def do(process_parameters, filename):
 
     msg.attach(MIMEText(body, 'plain'))
 
-    attachment = open(filename)
+    attachment = open(filename, 'rb')
 
     part = MIMEBase('application', 'octet-stream')
     part.set_payload(attachment.read())
