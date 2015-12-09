@@ -34,3 +34,22 @@ def upgrade_database(database_connection):
 
         update_version = dict(id=1, version="7")
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "7":
+        folders_table = database_connection['folders']
+        administrative_section = database_connection['administrative']
+        administrative_section.create_column('tweak_edi', sqlalchemy.Boolean)
+        administrative_section_update_dict = administrative_section.find_one(id=1)
+        administrative_section_update_dict['tweak_edi'] = False
+        administrative_section.update(administrative_section_update_dict, ['id'])
+
+        folders_table.create_column('tweak_edi', sqlalchemy.Boolean)
+        for line in folders_table:
+            if line['pad_a_records'] == 'False':
+                line['tweak_edi'] = False
+                folders_table.update(line, ['id'])
+            else:
+                line['tweak_edi'] = True
+                folders_table.update(line, ['id'])
+        update_version = dict(id=1, version="8")
+        db_version.update(update_version, ['id'])

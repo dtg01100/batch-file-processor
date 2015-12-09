@@ -1,5 +1,5 @@
-version = "1.8.8"
-database_version = "7"
+version = "1.9.0"
+database_version = "8"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -165,6 +165,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               include_c_records=defaults['include_c_records'],
                               include_headers=defaults['include_headers'],
                               filter_ampersand=defaults['filter_ampersand'],
+                              tweak_edi=defaults['tweak_edi'],
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
                               email_smtp_port=defaults['email_smtp_port'],
@@ -469,12 +470,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.separatorv2 = Separator(master, orient=VERTICAL)
         self.backendvariable = StringVar(master)
         self.active_checkbutton = StringVar(master)
+        self.ediconvert_options = StringVar(master)
         self.process_edi = StringVar(master)
         self.upc_var_check = StringVar(master)  # define  "UPC calculation" checkbox state variable
         self.a_rec_var_check = StringVar(master)  # define "A record checkbox state variable
         self.c_rec_var_check = StringVar(master)  # define "C record" checkbox state variable
         self.headers_check = StringVar(master)  # define "Column Headers" checkbox state variable
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
+        self.tweak_edi = BooleanVar(master)
         self.pad_arec_check = StringVar(master)
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
@@ -501,11 +504,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Email Subject:").grid(row=18, sticky=E)
         Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
-        Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=3, columnspan=2, pady=3)
-        self.convert_options_frame.grid(column=3, row=2, columnspan=2, sticky=W)
-        Label(self.convert_options_frame, text="Convert To: ").grid(row=0, column=0, sticky=W)
-        OptionMenu(self.convert_options_frame, self.convert_formats_var, self.foldersnameinput['convert_to_format'],
-                   'csv', 'insight').grid(row=0, column=1, sticky=W, columnspan=2)
+        Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=0, columnspan=2, pady=3)
+        Separator(self.ediframe, orient=HORIZONTAL).grid(row=4, columnspan=2, sticky=E + W, pady=1)
+        self.convert_options_frame.grid(column=0, row=5, columnspan=2, sticky=W)
+        self.convert_to_selector_frame = Frame(self.convert_options_frame)
+        self.convert_to_selector_label = Label(self.convert_to_selector_frame, text="Convert To: ")
+        self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
+                                                   self.foldersnameinput['convert_to_format'],
+                                                   'csv', 'insight')
 
         def select_copy_to_directory():
             global copy_to_directory
@@ -561,24 +567,30 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_port_field = Entry(self.prefsframe, width=30)
         rclick_email_smtp_port_field = rclick_menu.RightClickMenu(self.email_smtp_port_field)
         self.email_smtp_port_field.bind("<3>", rclick_email_smtp_port_field)
-        self.process_edi_checkbutton = Checkbutton(self.ediframe, variable=self.process_edi, text="Process EDI",
+        self.process_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.process_edi,
+                                                   text="Process EDI",
                                                    onvalue="True", offvalue="False")
-        self.upc_variable_process_checkbutton = Checkbutton(self.ediframe, variable=self.upc_var_check,
+        self.upc_variable_process_checkbutton = Checkbutton(self.convert_options_frame, variable=self.upc_var_check,
                                                             text="Calculate UPC Check Digit",
                                                             onvalue="True", offvalue="False")
-        self.a_record_checkbutton = Checkbutton(self.ediframe, variable=self.a_rec_var_check,
+        self.a_record_checkbutton = Checkbutton(self.convert_options_frame, variable=self.a_rec_var_check,
                                                 text="Include " + "A " + "Records",
                                                 onvalue="True", offvalue="False")
-        self.c_record_checkbutton = Checkbutton(self.ediframe, variable=self.c_rec_var_check,
+        self.c_record_checkbutton = Checkbutton(self.convert_options_frame, variable=self.c_rec_var_check,
                                                 text="Include " + "C " + "Records", onvalue="True", offvalue="False")
-        self.headers_checkbutton = Checkbutton(self.ediframe, variable=self.headers_check, text="Include Headings",
+        self.headers_checkbutton = Checkbutton(self.convert_options_frame, variable=self.headers_check,
+                                               text="Include Headings",
                                                onvalue="True", offvalue="False")
-        self.ampersand_checkbutton = Checkbutton(self.ediframe, variable=self.ampersand_check, text="Filter Ampersand:",
+        self.ampersand_checkbutton = Checkbutton(self.convert_options_frame, variable=self.ampersand_check,
+                                                 text="Filter Ampersand:",
                                                  onvalue="True", offvalue="False")
-        self.pad_a_records_checkbutton = Checkbutton(self.ediframe, variable=self.pad_arec_check,
+        self.tweak_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.tweak_edi,
+                                                 text="Apply Edi Tweaks",
+                                                 onvalue=True, offvalue=False)
+        self.pad_a_records_checkbutton = Checkbutton(self.convert_options_frame, variable=self.pad_arec_check,
                                                      text="Pad \"A\" Records (6 Characters)",
                                                      onvalue="True", offvalue="False")
-        self.a_record_padding_field = Entry(self.ediframe, width=10)
+        self.a_record_padding_field = Entry(self.convert_options_frame, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
         if self.foldersnameinput['folder_name'] != 'template':
@@ -605,7 +617,51 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.headers_check.set(self.foldersnameinput['include_headers'])
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
         self.pad_arec_check.set(self.foldersnameinput['pad_a_records'])
+        self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
+
+        def reset_ediconvert_options(argument):
+            for child in self.convert_options_frame.winfo_children():
+                child.grid_forget()
+            make_ediconvert_options(argument)
+
+        def make_ediconvert_options(argument):
+            if argument == 'Do Nothing':
+                self.tweak_edi.set(False)
+                self.process_edi.set('False')
+                Label(self.convert_options_frame, text="Send As Is").grid()
+            if argument == 'Convert EDI':
+                self.process_edi.set('True')
+                self.tweak_edi.set(False)
+                self.convert_to_selector_frame.grid(row=0, column=0, columnspan=2)
+                self.convert_to_selector_label.grid(row=0, column=0, sticky=W)
+                self.convert_to_selector_menu.grid(row=0, column=1, sticky=W)
+                self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
+                self.a_record_checkbutton.grid(row=4, column=0, sticky=W, padx=3)
+                self.c_record_checkbutton.grid(row=5, column=0, sticky=W, padx=3)
+                self.headers_checkbutton.grid(row=6, column=0, sticky=W, padx=3)
+                self.ampersand_checkbutton.grid(row=7, column=0, sticky=W, padx=3)
+                self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
+                self.a_record_padding_field.grid(row=9, column=2)
+            if argument == 'Tweak EDI':
+                self.tweak_edi.set(True)
+                self.process_edi.set('False')
+                self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
+                self.a_record_padding_field.grid(row=9, column=2)
+
+        if self.foldersnameinput['process_edi'] == 'True':
+            self.ediconvert_options.set("Convert EDI")
+            make_ediconvert_options('Convert EDI')
+        elif self.foldersnameinput['tweak_edi'] is True:
+            self.ediconvert_options.set("Tweak EDI")
+            make_ediconvert_options('Tweak EDI')
+        else:
+            self.ediconvert_options.set("Do Nothing")
+            make_ediconvert_options('Do Nothing')
+
+        self.edi_options_menu = OptionMenu(self.ediframe, self.ediconvert_options, self.ediconvert_options.get(),
+                                           'Do Nothing', 'Convert EDI', 'Tweak EDI',
+                                           command=reset_ediconvert_options).grid(row=3)
 
         self.active_checkbutton_object.grid(row=1, column=0, columnspan=2, padx=3)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
@@ -626,14 +682,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_sender_subject_field.grid(row=18, column=1)
         self.email_smtp_field.grid(row=19, column=1)
         self.email_smtp_port_field.grid(row=20, column=1)
-        self.process_edi_checkbutton.grid(row=1, column=3, sticky=W, padx=3)
-        self.upc_variable_process_checkbutton.grid(row=3, column=3, sticky=W, padx=3)
-        self.a_record_checkbutton.grid(row=4, column=3, sticky=W, padx=3)
-        self.c_record_checkbutton.grid(row=5, column=3, sticky=W, padx=3)
-        self.headers_checkbutton.grid(row=6, column=3, sticky=W, padx=3)
-        self.ampersand_checkbutton.grid(row=7, column=3, sticky=W, padx=3)
-        self.pad_a_records_checkbutton.grid(row=8, column=3, sticky=W, padx=3)
-        self.a_record_padding_field.grid(row=8, column=4)
+
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
         self.prefsframe.pack(side=LEFT, anchor='n')
@@ -688,6 +737,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['include_c_records'] = str(self.c_rec_var_check.get())
         apply_to_folder['include_headers'] = str(self.headers_check.get())
         apply_to_folder['filter_ampersand'] = str(self.ampersand_check.get())
+        apply_to_folder['tweak_edi'] = self.tweak_edi.get()
         apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
         apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
 
@@ -1059,9 +1109,9 @@ def mark_active_as_processed():
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
                                        overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                            folder_count) +
-                                       " of " + str(folder_total) + " file " + str(file_count) +
-                                       " of " + str(file_total))
+                                           folder_count) +
+                                                    " of " + str(folder_total) + " file " + str(file_count) +
+                                                    " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory

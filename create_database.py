@@ -23,6 +23,7 @@ def do(database_version):  # create database file with some default settings
                                        include_c_records='False',
                                        include_headers='False',
                                        filter_ampersand='False',
+                                       tweak_edi=False,
                                        pad_a_records='False',
                                        a_record_padding='',
                                        reporting_email='',
