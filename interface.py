@@ -505,7 +505,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
         Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=0, columnspan=2, pady=3)
-        Separator(self.ediframe, orient=HORIZONTAL).grid(row=4, columnspan=2, sticky=E + W, pady=2)
+        Separator(self.ediframe, orient=HORIZONTAL).grid(row=4, columnspan=2, sticky=E + W, pady=1)
         self.convert_options_frame.grid(column=0, row=5, columnspan=2, sticky=W)
         self.convert_to_selector_frame = Frame(self.convert_options_frame)
         self.convert_to_selector_label = Label(self.convert_to_selector_frame, text="Convert To: ")
