@@ -2,7 +2,6 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email import encoders
 import time
 import os
 
@@ -35,16 +34,14 @@ def do(process_parameters, filename):
 
     attachment = open(filename, 'rb')
 
-    part = MIMEBase('application', 'octet-stream')
+    part = MIMEBase('application', 'octet-stream; name="%s"' % filename_no_path)
     part.set_payload(attachment.read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', "attachment; filename= %s" % filename_no_path)
+    part.add_header('X-Attachment-Id', '1')
+    part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
 
     msg.attach(part)
-
     server = smtplib.SMTP(process_parameters['email_origin_smtp_server'], process_parameters['email_smtp_port'])
     server.starttls()
     server.login(from_address, process_parameters['email_origin_password'])
-    text = msg.as_string()
-    server.sendmail(from_address, to_address_list, text)
+    server.sendmail(from_address, to_address_list, msg.as_string())
     server.close()
