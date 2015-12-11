@@ -2,6 +2,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
+from binaryornot.check import is_binary
+from email import encoders
 import time
 import os
 
@@ -36,6 +38,8 @@ def do(process_parameters, filename):
 
     part = MIMEBase('application', 'octet-stream; name="%s"' % filename_no_path)
     part.set_payload(attachment.read())
+    if is_binary(filename):
+        encoders.encode_base64(part)
     part.add_header('X-Attachment-Id', '1')
     part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
 
