@@ -1,4 +1,4 @@
-version = "1.9.1"
+version = "1.9.2"
 database_version = "8"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
