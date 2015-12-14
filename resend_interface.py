@@ -33,10 +33,12 @@ def do(database_connection, master_window):
             child.destroy()
         file_list = []
         file_name_list = []
-        for processed_line in processed_files_table.find(folder_id=button.get(), order_by="-sent_date_time", _limit=10):
+        for processed_line in processed_files_table.find(folder_id=button.get(), order_by="-sent_date_time"):
             if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
                 file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id']])
                 file_name_list.append(processed_line['file_name'])
+            if len(file_list) == 10:
+                break
         for file_name, resend_flag, identifier in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier)
 
