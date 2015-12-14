@@ -85,7 +85,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
             for filename in filtered_files:  # iterate over all files in directory
                 filename = os.path.abspath(filename)
                 original_filename = filename
-                stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', filename)
+                stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(filename))
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total)
