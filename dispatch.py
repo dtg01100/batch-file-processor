@@ -83,6 +83,7 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                 print("No files in directory")
             file_count_total = len(files)
             for filename in filtered_files:  # iterate over all files in directory
+                filename = os.path.abspath(filename)
                 original_filename = filename
                 stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', filename)
                 file_count += 1
@@ -187,14 +188,14 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                         errors = True
                 if errors is False:
                     try:
-                        if processed_files.count(file_name=str(os.path.abspath(original_filename)),
+                        if processed_files.count(file_name=str(original_filename),
                                                  resend_flag=True) > 0:
-                            file_old_id = processed_files.find_one(file_name=str(os.path.abspath(original_filename)),
+                            file_old_id = processed_files.find_one(file_name=str(original_filename),
                                                                    resend_flag=True)
                             processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
                             processed_files.update(processed_files_update, ['id'])
 
-                        processed_files.insert(dict(file_name=str(os.path.abspath(original_filename)),
+                        processed_files.insert(dict(file_name=str(original_filename),
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
                                                     file_checksum=hashlib.md5(
