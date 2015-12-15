@@ -973,7 +973,7 @@ def process_directories(folders_table_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(folders_table_process, run_log, emails_table, reporting['logs_directory'], reporting,
+        dispatch.process(database_connection, folders_table_process, run_log, emails_table, reporting['logs_directory'], reporting,
                          processed_files, root, args, version, errors_directory, edi_converter_scratch_folder)
         os.chdir(original_folder)
     except Exception, dispatch_error:

@@ -18,7 +18,7 @@ import edi_tweaks
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
-def process(folders_database, run_log, emails_table, run_log_directory,
+def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
             reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder):
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total):
         if not args.automatic:
@@ -248,6 +248,9 @@ def process(folders_database, run_log, emails_table, run_log_directory,
                     run_log.write(folder_errors_log.getvalue())
                     run_log.write("\r\n\r\nEnd of Error file\r\n\r\n")
             else:
+                database_connection.query("DELETE FROM processed_files WHERE ROWID IN (SELECT id FROM processed_files"
+                                          " WHERE folder_id=" + str(parameters_dict['id']) +
+                                          " ORDER BY id DESC LIMIT -1 OFFSET 5000)")
                 processed_files_update = dict(resend_flag=False, folder_id=parameters_dict['id'])
                 processed_files.update(processed_files_update, ['folder_id'])
             folder_errors_log.close()
