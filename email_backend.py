@@ -23,7 +23,8 @@ def do(process_parameters, filename):
     if process_parameters['email_subject_line'] != "":
         date_time = str(time.ctime())
         subject_line_constructor = process_parameters['email_subject_line']
-        msg['Subject'] = subject_line_constructor.replace("%datetime%", date_time)
+        msg['Subject'] = subject_line_constructor.replace("%datetime%", date_time).replace("%filename%",
+                                                                                           filename_no_path)
     else:
         msg['Subject'] = str(filename_no_path) + " Attached"
 
