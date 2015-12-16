@@ -7,6 +7,7 @@ try:  # try to import required modules
     from tkMessageBox import showerror, askyesno, showinfo, askokcancel
     from ttk import *
     from validate_email import validate_email
+    import Tkinter
     import rclick_menu
     import hashlib
     import scrollbuttons
@@ -462,12 +463,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         copy_to_directory = self.foldersnameinput['copy_to_directory']
         self.convert_formats_var = StringVar(master)
         self.title("Folder Settings")
-        self.folderframe = Frame(master)
-        self.prefsframe = Frame(master)
-        self.ediframe = Frame(master)
+        self.bodyframe = Frame(master)
+        self.folderframe = Frame(self.bodyframe)
+        self.prefsframe = Frame(self.bodyframe)
+        self.ediframe = Frame(self.bodyframe)
         self.convert_options_frame = Frame(self.ediframe)
-        self.separatorv1 = Separator(master, orient=VERTICAL)
-        self.separatorv2 = Separator(master, orient=VERTICAL)
+        self.separatorv1 = Separator(self.bodyframe, orient=VERTICAL)
+        self.separatorv2 = Separator(self.bodyframe, orient=VERTICAL)
         self.backendvariable = StringVar(master)
         self.active_checkbutton = StringVar(master)
         self.ediconvert_options = StringVar(master)
@@ -482,6 +484,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
+        self.header_frame = Tkinter.Frame(master, relief=RIDGE, borderwidth=2)
+        self.header_label = Tkinter.Label(self.header_frame)
         Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
         if self.foldersnameinput['folder_name'] != 'template':
@@ -517,17 +521,53 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             global copy_to_directory
             copy_to_directory = str(askdirectory())
 
+        def set_send_options_fields_state():
+            if self.process_backend_copy_check.get() is False:
+                copy_state = DISABLED
+            else:
+                copy_state = NORMAL
+            if self.process_backend_email_check.get() is False:
+                email_state = DISABLED
+            else:
+                email_state = NORMAL
+            if self.process_backend_ftp_check.get() is False:
+                ftp_state = DISABLED
+            else:
+                ftp_state = NORMAL
+            self.copy_backend_folder_selection_button.configure(state=copy_state)
+            self.email_recepient_field.configure(state=email_state)
+            self.email_sender_address_field.configure(state=email_state)
+            self.email_sender_username_field.configure(state=email_state)
+            self.email_sender_password_field.configure(state=email_state)
+            self.email_sender_subject_field.configure(state=email_state)
+            self.email_smtp_field.configure(state=email_state)
+            self.email_smtp_port_field.configure(state=email_state)
+            self.ftp_server_field.configure(state=ftp_state)
+            self.ftp_port_field.configure(state=ftp_state)
+            self.ftp_folder_field.configure(state=ftp_state)
+            self.ftp_username_field.configure(state=ftp_state)
+            self.ftp_password_field.configure(state=ftp_state)
+
+        def set_header_state():
+            if self.active_checkbutton.get() == "False":
+                self.header_frame.configure(bg="red")
+                self.header_label.configure(text="Folder Is Disabled", bg="red")
+            else:
+                self.header_frame.configure(bg="green")
+                self.header_label.configure(text="Folder Is Enabled", bg="green")
+
         self.active_checkbutton_object = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
-                                                     onvalue="True", offvalue="False")
+                                                     onvalue="True", offvalue="False", command=set_header_state)
         self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend",
                                                     variable=self.process_backend_copy_check,
-                                                    onvalue=True, offvalue=False)
+                                                    onvalue=True, offvalue=False, command=set_send_options_fields_state)
         self.ftp_backend_checkbutton = Checkbutton(self.folderframe, text="FTP Backend",
                                                    variable=self.process_backend_ftp_check,
-                                                   onvalue=True, offvalue=False)
+                                                   onvalue=True, offvalue=False, command=set_send_options_fields_state)
         self.email_backend_checkbutton = Checkbutton(self.folderframe, text="Email Backend",
                                                      variable=self.process_backend_email_check,
-                                                     onvalue=True, offvalue=False)
+                                                     onvalue=True, offvalue=False,
+                                                     command=set_send_options_fields_state)
         if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
             self.folder_alias_field = Entry(self.folderframe, width=30)
@@ -620,6 +660,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
 
+        set_header_state()
+        set_send_options_fields_state()
+
         def reset_ediconvert_options(argument):
             for child in self.convert_options_frame.winfo_children():
                 child.grid_forget()
@@ -682,6 +725,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_sender_subject_field.grid(row=18, column=1)
         self.email_smtp_field.grid(row=19, column=1)
         self.email_smtp_port_field.grid(row=20, column=1)
+
+        self.header_frame.pack(fill=X)
+        self.header_label.pack()
+        self.bodyframe.pack()
 
         self.folderframe.pack(side=LEFT, anchor='n')
         self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
@@ -973,7 +1020,8 @@ def process_directories(folders_table_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(database_connection, folders_table_process, run_log, emails_table, reporting['logs_directory'], reporting,
+        dispatch.process(database_connection, folders_table_process, run_log, emails_table, reporting['logs_directory'],
+                         reporting,
                          processed_files, root, args, version, errors_directory, edi_converter_scratch_folder)
         os.chdir(original_folder)
     except Exception, dispatch_error:
@@ -981,10 +1029,10 @@ def process_directories(folders_table_process):
         # if processing folders runs into a serious error, report and log
         print(
             "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                dispatch_error) + "\r\n")
+                    dispatch_error) + "\r\n")
         run_log.write(
-            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                dispatch_error) + "\r\n")
+                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                        dispatch_error) + "\r\n")
     run_log.close()
     if reporting['enable_reporting'] == "True":
         # add run log to email queue if reporting is enabled
@@ -1051,7 +1099,7 @@ def process_directories(folders_table_process):
             else:
                 print("Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
                 run_log.write(
-                    "Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
+                        "Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
                 # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
@@ -1109,7 +1157,7 @@ def mark_active_as_processed():
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
                                        overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                           folder_count) +
+                                               folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
                                                     " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
@@ -1223,9 +1271,9 @@ def export_processed_report(name):
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
         processed_log.write(
-            line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
-            "," + line['ftp_destination'] + "," +
-            str(line['email_destination']).replace(",", ";") + "\n")
+                line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
+                "," + line['ftp_destination'] + "," +
+                str(line['email_destination']).replace(",", ";") + "\n")
     processed_log.close()
     showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 
