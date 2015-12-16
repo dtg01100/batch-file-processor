@@ -312,38 +312,50 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.enable_reporting_checkbutton_variable = StringVar(master)
         self.enable_report_printing_checkbutton_variable = StringVar(master)
 
-        Label(master, text="Enable Report Sending:").grid(row=0, sticky=E)
-        Label(master, text="Reporting Email Address:").grid(row=1, sticky=E)
-        Label(master, text="Reporting Email Username:").grid(row=2, sticky=E)
-        Label(master, text="Reporting Email Password:").grid(row=3, sticky=E)
-        Label(master, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
-        Label(master, text="Reporting Email SMTP Port").grid(row=5, sticky=E)
-        Label(master, text="Reporting Email Destination:").grid(row=6, sticky=E)
-        Label(master, text="Log File Folder:").grid(row=7, sticky=E)
-        Label(master, text="Enable Report Printing Fallback:").grid(row=8, sticky=E)
+        report_sending_options_frame = Frame(master)
+
+        Label(master, text="Log File Folder:").grid(row=0, sticky=E)
+        Label(master, text="Enable Report Sending:").grid(row=1, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email Address:").grid(row=1, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email Username:").grid(row=2, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email Password:").grid(row=3, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email SMTP Port").grid(row=5, sticky=E)
+        Label(report_sending_options_frame, text="Reporting Email Destination:").grid(row=6, sticky=E)
+        Label(report_sending_options_frame, text="Enable Report Printing Fallback:").grid(row=7, sticky=E)
+
+        def reporting_options_fields_state_set():
+            if self.enable_reporting_checkbutton_variable.get() == "False":
+                state = DISABLED
+            else:
+                state = NORMAL
+            for child in report_sending_options_frame.winfo_children():
+                child.configure(state=state)
 
         self.run_reporting_checkbutton = Checkbutton(master, variable=self.enable_reporting_checkbutton_variable,
-                                                     onvalue="True", offvalue="False")
-        self.report_email_address_field = Entry(master, width=40)
+                                                     onvalue="True", offvalue="False",
+                                                     command=reporting_options_fields_state_set)
+        self.report_email_address_field = Entry(report_sending_options_frame, width=40)
+        self.report_email_username_field = Entry(report_sending_options_frame, width=40)
+        self.report_email_password_field = Entry(report_sending_options_frame, show="*", width=40)
+        self.report_email_smtp_server_field = Entry(report_sending_options_frame, width=40)
+        self.reporting_smtp_port_field = Entry(report_sending_options_frame, width=40)
+        self.report_email_destination_field = Entry(report_sending_options_frame, width=40)
+        self.log_printing_fallback_checkbutton = \
+            Checkbutton(report_sending_options_frame, variable=self.enable_report_printing_checkbutton_variable,
+                        onvalue="True",
+                        offvalue="False")
         rclick_report_email_address_field = rclick_menu.RightClickMenu(self.report_email_address_field)
-        self.report_email_address_field.bind("<3>", rclick_report_email_address_field)
-        self.report_email_username_field = Entry(master, width=40)
         rclick_report_email_username_field = rclick_menu.RightClickMenu(self.report_email_username_field)
-        self.report_email_username_field.bind("<3>", rclick_report_email_username_field)
-        self.report_email_password_field = Entry(master, show="*", width=40)
-        self.report_email_smtp_server_field = Entry(master, width=40)
         rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.report_email_smtp_server_field)
-        self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
-        self.reporting_smtp_port_field = Entry(master, width=40)
         rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(self.reporting_smtp_port_field)
-        self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
-        self.report_email_destination_field = Entry(master, width=40)
         rclick_report_email_destination_field = rclick_menu.RightClickMenu(self.report_email_destination_field)
+        self.report_email_address_field.bind("<3>", rclick_report_email_address_field)
+        self.report_email_username_field.bind("<3>", rclick_report_email_username_field)
+        self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
+        self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
         self.report_email_destination_field.bind("<3>", rclick_report_email_destination_field)
         self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
-        self.log_printing_fallback_checkbutton = \
-            Checkbutton(master, variable=self.enable_report_printing_checkbutton_variable, onvalue="True",
-                        offvalue="False")
 
         def select_log_directory():
             global logs_directory_edit
@@ -362,15 +374,18 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.report_email_destination_field.insert(0, self.foldersnameinput['report_email_destination'])
         self.enable_report_printing_checkbutton_variable.set(self.foldersnameinput['report_printing_fallback'])
 
-        self.run_reporting_checkbutton.grid(row=0, column=1, padx=2, pady=2, sticky=W)
+        reporting_options_fields_state_set()
+
+        report_sending_options_frame.grid(row=3, columnspan=3)
+        self.run_reporting_checkbutton.grid(row=1, column=1, padx=2, pady=2, sticky=W)
         self.report_email_address_field.grid(row=1, column=1, padx=2, pady=2)
         self.report_email_username_field.grid(row=2, column=1, padx=2, pady=2)
         self.report_email_password_field.grid(row=3, column=1, padx=2, pady=2)
         self.report_email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
         self.reporting_smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
         self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
-        self.select_log_folder_button.grid(row=7, column=1, padx=2, pady=2, sticky=W)
-        self.log_printing_fallback_checkbutton.grid(row=8, column=1, padx=2, pady=2, sticky=W)
+        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=W)
+        self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
 
         return self.report_email_address_field  # initial focus
 
