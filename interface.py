@@ -484,7 +484,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
-        self.header_frame = Tkinter.Frame(master, relief=RIDGE, borderwidth=2)
+        self.header_frame = Tkinter.Frame(master, relief=SUNKEN, borderwidth=2)
         self.header_label = Tkinter.Label(self.header_frame)
         Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
