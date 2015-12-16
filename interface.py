@@ -1,4 +1,4 @@
-version = "1.10.0"
+version = "1.10.1"
 database_version = "8"
 print("Batch Log Sender Version " + version)
 try:  # try to import required modules
@@ -1130,7 +1130,7 @@ def process_directories(folders_table_process):
 
 
 def silent_process_directories(silent_process_folders_table):
-    if silent_process_folders_table.count(is_active="True") > 0:
+    if silent_process_folders_table.count(folder_is_active="True") > 0:
         print "batch processing configured directories"
         try:
             process_directories(silent_process_folders_table)
