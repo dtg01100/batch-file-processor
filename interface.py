@@ -1,6 +1,6 @@
-version = "1.10.2"
+version = "1.10.3 pre"
 database_version = "8"
-print("Batch Log Sender Version " + version)
+print("Batch File Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
     from tkFileDialog import askdirectory
