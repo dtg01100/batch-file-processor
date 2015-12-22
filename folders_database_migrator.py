@@ -1,9 +1,9 @@
 import sqlalchemy
 import shutil
+import os
 
 
 def upgrade_database(database_connection):
-
     shutil.copy('folders.db', 'folders.db.bak')
 
     db_version = database_connection['version']
@@ -52,4 +52,14 @@ def upgrade_database(database_connection):
                 line['tweak_edi'] = True
                 folders_table.update(line, ['id'])
         update_version = dict(id=1, version="8")
+        db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "8":
+        administrative_section = database_connection['administrative']
+        administrative_section_update_dict = dict(id=1, single_add_folder_prior=os.path.join(os.getcwd()),
+                                                  batch_add_folder_prior=os.path.join(os.getcwd()),
+                                                  export_processed_folder_prior=os.path.join(os.getcwd()))
+
+        administrative_section.update(administrative_section_update_dict, ['id'])
+        update_version = dict(id=1, version="9")
         db_version.update(update_version, ['id'])

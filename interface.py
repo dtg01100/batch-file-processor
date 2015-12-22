@@ -1,5 +1,5 @@
 version = "1.10.3 pre"
-database_version = "8"
+database_version = "9"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -179,13 +179,20 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
 def select_folder():
     global folder
     global column_entry_value
-    folder = askdirectory()
+    prior_folder = oversight_and_defaults.find_one(id=1)
+    if os.path.exists(prior_folder['single_add_folder_prior']):
+        initial_directory = prior_folder['single_add_folder_prior']
+    else:
+        initial_directory = os.getcwd()
+    folder = askdirectory(initialdir=initial_directory)
     proposed_folder = folders_table.find_one(folder_name=folder)
     if proposed_folder is None:
         if len(folder) > 0:  # check to see if selected folder has a path
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
+            update_last_folder = dict(id=1, single_add_folder_prior=folder)
+            oversight_and_defaults.update(update_last_folder, ['id'])
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()  # recreate list
     else:
@@ -197,8 +204,15 @@ def select_folder():
 def batch_add_folders():
     added = 0
     skipped = 0
-    containing_folder = askdirectory()
+    prior_folder = oversight_and_defaults.find_one(id=1)
+    if os.path.exists(prior_folder['batch_add_folder_prior']):
+        initial_directory = prior_folder['batch_add_folder_prior']
+    else:
+        initial_directory = os.getcwd()
+    containing_folder = askdirectory(initialdir=initial_directory)
     if len(containing_folder) > 0:
+        update_last_folder = dict(id=1, batch_add_folder_prior=folder)
+        oversight_and_defaults.update(update_last_folder, ['id'])
         os.chdir(str(containing_folder))
         folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
         print("adding " + str(len(folders_list)) + " folders")
@@ -304,10 +318,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
     def body(self, master):
 
         self.resizable(width=FALSE, height=FALSE)
-        global logs_directory_edit
-        logs_directory_edit = None
-        global logs_directory_is_altered
-        logs_directory_is_altered = False
+        self.logs_directory = self.foldersnameinput['logs_directory']
         self.title("Edit Reporting Options")
         self.enable_reporting_checkbutton_variable = StringVar(master)
         self.enable_report_printing_checkbutton_variable = StringVar(master)
@@ -358,12 +369,16 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
 
         def select_log_directory():
-            global logs_directory_edit
-            global logs_directory_is_altered
-            logs_directory_edit_proposed = str(askdirectory())
-            if logs_directory_edit_proposed != '':
-                logs_directory_edit = logs_directory_edit_proposed
-            logs_directory_is_altered = True
+            try:
+                if os.path.exists(self.logs_directory):
+                    initial_directory = self.logs_directory
+                else:
+                    initial_directory = os.getcwd()
+            except:
+                initial_directory = os.getcwd()
+            logs_directory_edit_proposed = str(askdirectory(initialdir=initial_directory))
+            if len(logs_directory_edit_proposed) > 0:
+                self.logs_directory = logs_directory_edit_proposed
 
         self.enable_reporting_checkbutton_variable.set(self.foldersnameinput['enable_reporting'])
         self.report_email_address_field.insert(0, self.foldersnameinput['report_email_address'])
@@ -451,13 +466,9 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def apply(self, folders_name_apply):
 
-        global logs_directory_edit
-        global logs_directory_is_altered
-
         doingstuffoverlay.make_overlay(self, "Applying Changes...")
         folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
-        if logs_directory_is_altered is True:
-            folders_name_apply['logs_directory'] = logs_directory_edit
+        folders_name_apply['logs_directory'] = self.logs_directory
         folders_name_apply['report_email_address'] = str(self.report_email_address_field.get())
         folders_name_apply['report_email_username'] = str(self.report_email_username_field.get())
         folders_name_apply['report_email_password'] = str(self.report_email_password_field.get())
@@ -534,7 +545,14 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         def select_copy_to_directory():
             global copy_to_directory
-            copy_to_directory = str(askdirectory())
+            try:
+                if os.path.exists(copy_to_directory):
+                    initial_directory = copy_to_directory
+                else:
+                    initial_directory = os.getcwd()
+            except:
+                initial_directory = os.getcwd()
+            copy_to_directory = str(askdirectory(initialdir=initial_directory))
 
         def set_send_options_fields_state():
             if self.process_backend_copy_check.get() is False:
@@ -1277,10 +1295,17 @@ def maintenance_functions_popup():
 
 
 def export_processed_report(name):
-    output_folder = askdirectory()
+    prior_folder = oversight_and_defaults.find_one(id=1)
+    if os.path.exists(prior_folder['export_processed_folder_prior']):
+        initial_directory = prior_folder['export_processed_folder_prior']
+    else:
+        initial_directory = os.getcwd()
+    output_folder = askdirectory(initialdir=initial_directory)
     if output_folder == "":
         return
     folder_alias = folders_table.find_one(id=name)
+    update_last_folder = dict(id=1, export_processed_folder_prior=output_folder)
+    oversight_and_defaults.update(update_last_folder, ['id'])
     processed_log_path = str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv"))
     processed_log = open(processed_log_path, 'w')
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
