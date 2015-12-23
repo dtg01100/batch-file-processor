@@ -1329,6 +1329,7 @@ def processed_files_popup():
     processed_files_popup_dialog.resizable(width=FALSE, height=FALSE)
     processed_files_popup_list_container = Frame(processed_files_popup_dialog)
     processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
+    processed_files_popup_close_frame = Frame(processed_files_popup_dialog)
     if processed_files.count() == 0:
         no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
@@ -1339,8 +1340,16 @@ def processed_files_popup():
         Button(processed_files_popup_list_frame.interior, text=folder_alias,
                command=lambda name=folder_row['folder_id']:
                export_processed_report(name)).pack(fill=X)
+
+    def close_processed_files_popup():
+        processed_files_popup_dialog.destroy()
+        return
+
+    close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
+    close_button.pack()
     processed_files_popup_list_container.pack()
     processed_files_popup_list_frame.pack()
+    processed_files_popup_close_frame.pack()
 
 
 launch_options.add_argument('-a', '--automatic', action='store_true')
