@@ -21,8 +21,10 @@ def do(database_connection, master_window):
     resend_interface.grab_set()
     resend_interface.focus_set()
     resend_interface.resizable(width=FALSE, height=FALSE)
-    resend_interface_folders_frame = Frame(resend_interface)
-    resend_interface_files_frame = Frame(resend_interface)
+    resend_interface_files_and_folders_frame = Frame(resend_interface)
+    resend_interface_folders_frame = Frame(resend_interface_files_and_folders_frame)
+    resend_interface_files_frame = Frame(resend_interface_files_and_folders_frame)
+    resend_interface_close_frame = Frame(resend_interface)
 
     def set_resend_flag(identifier, resend_flag):
         processed_files_update = dict(dict(resend_flag=resend_flag, id=identifier))
@@ -74,7 +76,16 @@ def do(database_connection, master_window):
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
 
+    def close_window():
+        resend_interface.destroy()
+        return
+
+    close_button = Button(resend_interface_close_frame, text="Close", command=close_window)
+    close_button.pack()
+
     resend_interface_scrollable_folders_frame.pack()
     resend_interface_scrollable_files_frame.pack()
     resend_interface_folders_frame.pack(side=LEFT)
     resend_interface_files_frame.pack(side=RIGHT)
+    resend_interface_files_and_folders_frame.pack()
+    resend_interface_close_frame.pack()
