@@ -284,8 +284,8 @@ def make_users_list():
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Delete",
-                   command=lambda name=folders_name['id']:
-                   delete_folder_entry_wrapper(name)).grid(column=2, row=0, sticky=E)
+                   command=lambda name=folders_name['id'], alias=folders_name['alias']:
+                   delete_folder_entry_wrapper(name, alias)).grid(column=2, row=0, sticky=E)
             Button(active_folder_button_frame, text="Send",
                    command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
@@ -295,8 +295,8 @@ def make_users_list():
         else:
             inactive_folder_button_frame = Frame(inactive_users_list_frame.interior)
             Button(inactive_folder_button_frame, text="Delete",
-                   command=lambda name=folders_name['id']:
-                   delete_folder_entry_wrapper(name)).grid(column=1, row=0, sticky=E)
+                   command=lambda name=folders_name['id'], alias=folders_name['alias']:
+                   delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=E)
             Button(inactive_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
                    edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
@@ -510,7 +510,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
-        self.header_frame = Tkinter.Frame(master, relief=SUNKEN, borderwidth=2)
+        self.header_frame_frame = Frame(master, relief=SUNKEN, borderwidth=2)
+        self.header_frame = Tkinter.Frame(self.header_frame_frame)
         self.header_label = Tkinter.Label(self.header_frame)
         Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
@@ -759,6 +760,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_field.grid(row=19, column=1)
         self.email_smtp_port_field.grid(row=20, column=1)
 
+        self.header_frame_frame.pack(fill=X)
         self.header_frame.pack(fill=X)
         self.header_label.pack()
         self.bodyframe.pack()
@@ -974,14 +976,12 @@ def delete_folder_entry(folder_to_be_removed):
     emails_table.delete(folder_id=folder_to_be_removed)
 
 
-def delete_folder_entry_wrapper(folder_to_be_removed):
-    # a wrapper function to both delete the folder entry and update the users list,
-    # asking first if user wants to export file send history.
-    if processed_files.count(id=folder_to_be_removed) > 0:
-        if askyesno(message="Export Processed Report?"):
-            export_processed_report(folder_to_be_removed)
-    delete_folder_entry(folder_to_be_removed)
-    refresh_users_list()
+def delete_folder_entry_wrapper(folder_to_be_removed, alias):
+    # a wrapper function to both delete the folder entry and update the users list.
+    print(folder_to_be_removed)
+    if askyesno(message="Are you sure you want to remove the folder " + alias + "?"):
+        delete_folder_entry(folder_to_be_removed)
+        refresh_users_list()
 
 
 def graphical_process_directories(folders_table_process):  # process folders while showing progress overlay
@@ -1294,18 +1294,8 @@ def maintenance_functions_popup():
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
 
 
-def export_processed_report(name):
-    prior_folder = oversight_and_defaults.find_one(id=1)
-    if os.path.exists(prior_folder['export_processed_folder_prior']):
-        initial_directory = prior_folder['export_processed_folder_prior']
-    else:
-        initial_directory = os.getcwd()
-    output_folder = askdirectory(initialdir=initial_directory)
-    if output_folder == "":
-        return
+def export_processed_report(name, output_folder):
     folder_alias = folders_table.find_one(id=name)
-    update_last_folder = dict(id=1, export_processed_folder_prior=output_folder)
-    oversight_and_defaults.update(update_last_folder, ['id'])
     processed_log_path = str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv"))
     processed_log = open(processed_log_path, 'w')
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
@@ -1319,6 +1309,10 @@ def export_processed_report(name):
 
 
 def processed_files_popup():
+    folder_button_variable = IntVar()
+    output_folder_is_confirmed = False
+    prior_folder = oversight_and_defaults.find_one(id=1)
+    processed_files_output_folder = prior_folder['export_processed_folder_prior']
     processed_files_popup_dialog = Toplevel()
     processed_files_popup_dialog.title("Generate Processed Files Report")
     processed_files_popup_dialog.transient(root)
@@ -1327,9 +1321,12 @@ def processed_files_popup():
     processed_files_popup_dialog.grab_set()
     processed_files_popup_dialog.focus_set()
     processed_files_popup_dialog.resizable(width=FALSE, height=FALSE)
-    processed_files_popup_list_container = Frame(processed_files_popup_dialog)
+    processed_files_popup_body_frame = Frame(processed_files_popup_dialog)
+    processed_files_popup_list_container = Frame(processed_files_popup_body_frame)
     processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
     processed_files_popup_close_frame = Frame(processed_files_popup_dialog)
+    processed_files_popup_actions_frame = Frame(processed_files_popup_body_frame)
+    Label(processed_files_popup_actions_frame, text="Select a Folder.").pack()
     if processed_files.count() == 0:
         no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
@@ -1337,18 +1334,59 @@ def processed_files_popup():
         folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
         folder_dict = folders_table.find_one(id=folders_name['folder_id'])
         folder_alias = folder_dict['alias']
-        Button(processed_files_popup_list_frame.interior, text=folder_alias,
-               command=lambda name=folder_row['folder_id']:
-               export_processed_report(name)).pack(fill=X)
+        Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
+                            variable=folder_button_variable,
+                            value=folder_alias, indicatoron=FALSE,
+                            command=lambda name=folder_row['folder_id']: folder_button_pressed(
+                                    name)).pack(anchor='w',
+                                                fill='x')
 
     def close_processed_files_popup():
         processed_files_popup_dialog.destroy()
         return
 
+    def folder_button_pressed(name):
+        global export_button
+        for child in processed_files_popup_actions_frame.winfo_children():
+            child.destroy()
+        Button(processed_files_popup_actions_frame, text='Choose output Folder',
+               command=set_output_folder).pack(pady=10)
+        export_button = Button(processed_files_popup_actions_frame, text='Export Processed Report',
+                               command=lambda: export_processed_report(name, processed_files_output_folder))
+        if output_folder_is_confirmed is False:
+            export_button.configure(state=DISABLED)
+        else:
+            export_button.configure(state=NORMAL)
+        export_button.pack(pady=10)
+
+    def set_output_folder():
+        global output_folder_is_confirmed
+        global processed_files_output_folder
+        prior_folder = oversight_and_defaults.find_one(id=1)
+        if os.path.exists(prior_folder['export_processed_folder_prior']):
+            initial_directory = prior_folder['export_processed_folder_prior']
+        else:
+            initial_directory = os.getcwd()
+        output_folder_proposed = askdirectory(initialdir=initial_directory)
+        if output_folder_proposed == "":
+            return
+        else:
+            output_folder = output_folder_proposed
+        update_last_folder = dict(id=1, export_processed_folder_prior=output_folder)
+        oversight_and_defaults.update(update_last_folder, ['id'])
+        output_folder_is_confirmed = True
+        processed_files_output_folder = output_folder
+        if output_folder_is_confirmed is False:
+            export_button.configure(state=DISABLED)
+        else:
+            export_button.configure(state=NORMAL)
+
     close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
     close_button.pack()
-    processed_files_popup_list_container.pack()
+    processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()
+    processed_files_popup_actions_frame.pack(side=RIGHT)
+    processed_files_popup_body_frame.pack()
     processed_files_popup_close_frame.pack()
 
 

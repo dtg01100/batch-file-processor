@@ -15,7 +15,7 @@ def do(database_connection, master_window):
     folder_list = []
     folder_button_variable = IntVar()
     resend_interface = Toplevel()
-    resend_interface.title("resend interface")
+    resend_interface.title("Enable Resend")
     resend_interface.transient(master_window)
     resend_interface.geometry("+%d+%d" % (master_window.winfo_rootx() + 50, master_window.winfo_rooty() + 50))
     resend_interface.grab_set()
