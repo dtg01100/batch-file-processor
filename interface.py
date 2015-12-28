@@ -837,6 +837,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             update_folder_alias(apply_to_folder)
         else:
             update_reporting(apply_to_folder)
+        set_main_button_states()
         doingstuffoverlay.destroy_overlay()
 
     def validate(self):
@@ -992,6 +993,7 @@ def delete_folder_entry_wrapper(folder_to_be_removed, alias):
     if askyesno(message="Are you sure you want to remove the folder " + alias + "?"):
         delete_folder_entry(folder_to_be_removed)
         refresh_users_list()
+        set_main_button_states()
 
 
 def graphical_process_directories(folders_table_process):  # process folders while showing progress overlay
@@ -1006,6 +1008,7 @@ def graphical_process_directories(folders_table_process):  # process folders whi
             doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
             process_directories(folders_table_process)
             refresh_users_list()  # refresh the users list in case the active state has changed
+            set_main_button_states()
             doingstuffoverlay.destroy_overlay()
         else:
             showerror("Error", "No Active Folders")
@@ -1240,6 +1243,7 @@ def mark_active_as_processed():
                                         resend_flag=False))
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
+    set_main_button_states()
 
 
 def set_all_inactive():
@@ -1400,6 +1404,19 @@ def processed_files_popup():
     processed_files_popup_close_frame.pack()
 
 
+def set_main_button_states():
+    if folders_table.count(folder_is_active="True") > 0:
+        process_folder_button.configure(state=NORMAL)
+    else:
+        process_folder_button.configure(state=DISABLED)
+    if processed_files.count() > 0:
+        processed_files_button.configure(state=NORMAL)
+        allow_resend_button.configure(state=NORMAL)
+    else:
+        processed_files_button.configure(state=DISABLED)
+        allow_resend_button.configure(state=DISABLED)
+
+
 launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
@@ -1422,6 +1439,8 @@ allow_resend_button = Button(options_frame, text="Enable Resend",
 maintenance_button = Button(options_frame, text="Maintenance", command=maintenance_functions_popup)
 processed_files_button = Button(options_frame, text="Processed Files Report", command=processed_files_popup)
 options_frame_divider = Separator(root, orient=VERTICAL)
+
+set_main_button_states()
 
 # pack main window widgets
 open_folder_button.pack(side=TOP, fill=X, pady=2, padx=2)
