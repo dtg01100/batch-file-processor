@@ -222,7 +222,7 @@ def batch_add_folders():
         initial_directory = os.getcwd()
     containing_folder = askdirectory(initialdir=initial_directory)
     if os.path.exists(containing_folder):
-        update_last_folder = dict(id=1, batch_add_folder_prior=folder)
+        update_last_folder = dict(id=1, batch_add_folder_prior=containing_folder)
         oversight_and_defaults.update(update_last_folder, ['id'])
         os.chdir(str(containing_folder))
         folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
