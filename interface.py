@@ -182,7 +182,7 @@ def check_folder_exists(folder):
         possible_folder_string = possible_folder['folder_name']
         print(possible_folder_string)
         print(folder)
-        if os.stat(possible_folder_string) == os.stat(folder):
+        if os.path.abspath(possible_folder_string) == os.path.abspath(folder):
             return {"truefalse": True, "matched_folder": possible_folder}
     return {"truefalse": False, "matched_folder": None}
 
@@ -196,10 +196,10 @@ def select_folder():
     else:
         initial_directory = os.getcwd()
     folder = askdirectory(initialdir=initial_directory)
-    proposed_folder = check_folder_exists(folder)
+    if os.path.exists(folder):
+        proposed_folder = check_folder_exists(folder)
 
-    if proposed_folder['truefalse'] is False:
-        if len(folder) > 0:  # check to see if selected folder has a path
+        if proposed_folder['truefalse'] is False:
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
@@ -207,11 +207,11 @@ def select_folder():
             oversight_and_defaults.update(update_last_folder, ['id'])
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()  # recreate list
-    else:
-        #  offer to edit the folder if it is already known
-        proposed_folder_dict = proposed_folder['matched_folder']
-        if askokcancel("Query:", "Folder already known, would you like to edit?"):
-            EditDialog(root, proposed_folder_dict)
+        else:
+            #  offer to edit the folder if it is already known
+            proposed_folder_dict = proposed_folder['matched_folder']
+            if askokcancel("Query:", "Folder already known, would you like to edit?"):
+                EditDialog(root, proposed_folder_dict)
 
 
 def batch_add_folders():
@@ -223,7 +223,7 @@ def batch_add_folders():
     else:
         initial_directory = os.getcwd()
     containing_folder = askdirectory(initialdir=initial_directory)
-    if len(containing_folder) > 0:
+    if os.path.exists(containing_folder):
         update_last_folder = dict(id=1, batch_add_folder_prior=folder)
         oversight_and_defaults.update(update_last_folder, ['id'])
         os.chdir(str(containing_folder))
@@ -241,9 +241,8 @@ def batch_add_folders():
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
                 proposed_folder = check_folder_exists(batch_folder_add_proposed_folder)
                 if proposed_folder['truefalse'] is False:
-                    if batch_folder_add_proposed_folder != '':  # check to see if selected folder has a path
-                        add_folder_entry(batch_folder_add_proposed_folder)
-                        added += 1
+                    add_folder_entry(batch_folder_add_proposed_folder)
+                    added += 1
                 else:
                     print("skipping existing folder: " + batch_folder_add_proposed_folder)
                     skipped += 1
