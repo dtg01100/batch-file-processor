@@ -176,6 +176,17 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
     print("done")
 
 
+def check_folder_exists(folder):
+    folder_list = folders_table.all()
+    for possible_folder in folder_list:
+        possible_folder_string = possible_folder['folder_name']
+        print(possible_folder_string)
+        print(folder)
+        if os.stat(possible_folder_string) == os.stat(folder):
+            return {"truefalse": True, "matched_folder": possible_folder}
+    return {"truefalse": False, "matched_folder": None}
+
+
 def select_folder():
     global folder
     global column_entry_value
@@ -185,8 +196,9 @@ def select_folder():
     else:
         initial_directory = os.getcwd()
     folder = askdirectory(initialdir=initial_directory)
-    proposed_folder = folders_table.find_one(folder_name=folder)
-    if proposed_folder is None:
+    proposed_folder = check_folder_exists(folder)
+
+    if proposed_folder['truefalse'] is False:
         if len(folder) > 0:  # check to see if selected folder has a path
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
@@ -197,8 +209,9 @@ def select_folder():
             refresh_users_list()  # recreate list
     else:
         #  offer to edit the folder if it is already known
+        proposed_folder_dict = proposed_folder['matched_folder']
         if askokcancel("Query:", "Folder already known, would you like to edit?"):
-            EditDialog(root, proposed_folder)
+            EditDialog(root, proposed_folder_dict)
 
 
 def batch_add_folders():
@@ -226,8 +239,8 @@ def batch_add_folders():
                 doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
                                                                          " of " + str(len(folders_list)))
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
-                proposed_folder = folders_table.find_one(folder_name=batch_folder_add_proposed_folder)
-                if proposed_folder is None:
+                proposed_folder = check_folder_exists(batch_folder_add_proposed_folder)
+                if proposed_folder['truefalse'] is False:
                     if batch_folder_add_proposed_folder != '':  # check to see if selected folder has a path
                         add_folder_entry(batch_folder_add_proposed_folder)
                         added += 1
