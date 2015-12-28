@@ -195,14 +195,14 @@ def select_folder():
         initial_directory = os.getcwd()
     folder = askdirectory(initialdir=initial_directory)
     if os.path.exists(folder):
+        update_last_folder = dict(id=1, single_add_folder_prior=folder)
+        oversight_and_defaults.update(update_last_folder, ['id'])
         proposed_folder = check_folder_exists(folder)
 
         if proposed_folder['truefalse'] is False:
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
-            update_last_folder = dict(id=1, single_add_folder_prior=folder)
-            oversight_and_defaults.update(update_last_folder, ['id'])
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()  # recreate list
         else:
