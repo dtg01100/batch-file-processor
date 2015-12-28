@@ -180,8 +180,6 @@ def check_folder_exists(folder):
     folder_list = folders_table.all()
     for possible_folder in folder_list:
         possible_folder_string = possible_folder['folder_name']
-        print(possible_folder_string)
-        print(folder)
         if os.path.abspath(possible_folder_string) == os.path.abspath(folder):
             return {"truefalse": True, "matched_folder": possible_folder}
     return {"truefalse": False, "matched_folder": None}
