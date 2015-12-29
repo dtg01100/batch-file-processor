@@ -25,9 +25,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             doingstuffoverlay.destroy_overlay()
             doingstuffoverlay.make_overlay(parent=root,
                                            overlay_text=overlay_text + " folder " + str(
-                                               dispatch_folder_count) + " of " + str(
-                                               folder_total) + "," + " file " + str(
-                                               dispatch_file_count) + " of " + str(file_total))
+                                                   dispatch_folder_count) + " of " + str(
+                                                   folder_total) + "," + " file " + str(
+                                                   dispatch_file_count) + " of " + str(file_total))
 
     def empty_directory(top):
         if top == '/' or top == "\\":
@@ -73,7 +73,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                         open(f, 'rb').read()).hexdigest()) is None or \
                         processed_files.find_one(
-                            file_name=os.path.join(os.getcwd(), f), resend_flag=True):
+                                file_name=os.path.join(os.getcwd(), f), resend_flag=True):
                     filtered_files.append(f)
 
             file_count = 0
@@ -199,7 +199,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
                                                     file_checksum=hashlib.md5(
-                                                        open(original_filename, 'rb').read()).hexdigest(),
+                                                            open(original_filename, 'rb').read()).hexdigest(),
                                                     sent_date_time=datetime.datetime.now(),
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
@@ -255,10 +255,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 processed_files.update(processed_files_update, ['folder_id'])
             folder_errors_log.close()
         else:
-            # if the folder doesn't exist anymore, mark it as inactive
-            data = dict(id=int(parameters_dict['id']), folder_is_active="False")
-            folders_database.update(data, ['id'])
-            run_log.write("\r\nfolder missing for " + parameters_dict['alias'] + ", disabling\r\n\r\n")
-            print("folder missing for " + parameters_dict['alias'] + ", disabling")
+            # if the folder is missing, complain and increment error counter
+            run_log.write("\r\nerror: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
+                          parameters_dict['alias'] + "\r\n\r\n")
+            print(
+            "error: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " + parameters_dict[
+                'alias'])
+            error_counter += 1
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
     run_log.write("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors")

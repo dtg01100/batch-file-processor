@@ -1,4 +1,4 @@
-version = "1.10.3"
+version = "1.10.4"
 database_version = "9"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -1002,7 +1002,7 @@ def graphical_process_directories(folders_table_process):  # process folders whi
         if not os.path.exists(folder_test['folder_name']):
             missing_folder = True
     if missing_folder is True:
-        showerror("Error", "One or more expected folders are missing.\n Are all drives mounted?")
+        showerror("Error", "One or more expected folders are missing.")
     else:
         if folders_table_process.count(folder_is_active="True") > 0:
             doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
