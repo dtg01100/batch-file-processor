@@ -68,7 +68,7 @@ def do(database_connection, master_window):
 
     resend_interface_scrollable_folders_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_folders_frame)
     resend_interface_scrollable_files_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_files_frame)
-    Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder").pack()
+    Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder.").pack()
 
     for folder, alias in folder_list:
         Tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.rjust(15),

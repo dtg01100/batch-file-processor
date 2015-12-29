@@ -335,15 +335,12 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
         report_sending_options_frame = Frame(master)
 
-        Label(master, text="Log File Folder:").grid(row=0, sticky=E)
-        Label(master, text="Enable Report Sending:").grid(row=1, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email Address:").grid(row=1, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email Username:").grid(row=2, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email Password:").grid(row=3, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email SMTP Port").grid(row=5, sticky=E)
         Label(report_sending_options_frame, text="Reporting Email Destination:").grid(row=6, sticky=E)
-        Label(report_sending_options_frame, text="Enable Report Printing Fallback:").grid(row=7, sticky=E)
 
         def reporting_options_fields_state_set():
             if self.enable_reporting_checkbutton_variable.get() == "False":
@@ -355,7 +352,8 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
         self.run_reporting_checkbutton = Checkbutton(master, variable=self.enable_reporting_checkbutton_variable,
                                                      onvalue="True", offvalue="False",
-                                                     command=reporting_options_fields_state_set)
+                                                     command=reporting_options_fields_state_set,
+                                                     text="Enable Report Sending")
         self.report_email_address_field = Entry(report_sending_options_frame, width=40)
         self.report_email_username_field = Entry(report_sending_options_frame, width=40)
         self.report_email_password_field = Entry(report_sending_options_frame, show="*", width=40)
@@ -365,7 +363,8 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.log_printing_fallback_checkbutton = \
             Checkbutton(report_sending_options_frame, variable=self.enable_report_printing_checkbutton_variable,
                         onvalue="True",
-                        offvalue="False")
+                        offvalue="False",
+                        text="Enable Report Printing Fallback:")
         rclick_report_email_address_field = rclick_menu.RightClickMenu(self.report_email_address_field)
         rclick_report_email_username_field = rclick_menu.RightClickMenu(self.report_email_username_field)
         rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.report_email_smtp_server_field)
@@ -376,7 +375,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
         self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
         self.report_email_destination_field.bind("<3>", rclick_report_email_destination_field)
-        self.select_log_folder_button = Button(master, text="Select Folder", command=lambda: select_log_directory())
+        self.select_log_folder_button = Button(master, text="Select Log Folder...", command=lambda: select_log_directory())
 
         def select_log_directory():
             try:
@@ -402,14 +401,14 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         reporting_options_fields_state_set()
 
         report_sending_options_frame.grid(row=3, columnspan=3)
-        self.run_reporting_checkbutton.grid(row=1, column=1, padx=2, pady=2, sticky=W)
+        self.run_reporting_checkbutton.grid(row=0, column=0, padx=2, pady=2, sticky=W)
         self.report_email_address_field.grid(row=1, column=1, padx=2, pady=2)
         self.report_email_username_field.grid(row=2, column=1, padx=2, pady=2)
         self.report_email_password_field.grid(row=3, column=1, padx=2, pady=2)
         self.report_email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
         self.reporting_smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
         self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
-        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=W)
+        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=E)
         self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
 
         return self.report_email_address_field  # initial focus
@@ -563,7 +562,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copy_to_directory = str(askdirectory(initialdir=initial_directory))
 
         def set_send_options_fields_state():
-            if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and\
+            if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
                             self.process_backend_email_check.get() is False:
                 self.edi_options_menu.configure(state=DISABLED)
             else:
@@ -1407,7 +1406,7 @@ def processed_files_popup():
     close_button.pack()
     processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()
-    processed_files_popup_actions_frame.pack(side=RIGHT)
+    processed_files_popup_actions_frame.pack(side=RIGHT, anchor=N)
     processed_files_popup_body_frame.pack()
     processed_files_popup_close_frame.pack()
 
