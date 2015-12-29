@@ -1,4 +1,4 @@
-version = "1.10.4"
+version = "1.10.5 pre"
 database_version = "9"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -520,10 +520,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
-        self.header_frame_frame = Frame(master, relief=SUNKEN, borderwidth=2)
-        self.header_frame = Tkinter.Frame(self.header_frame_frame)
-        self.header_label = Tkinter.Label(self.header_frame)
-        Label(self.folderframe, text="Folder State:").grid(row=0, columnspan=2, pady=3)
+        self.header_frame_frame = Frame(master)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
         if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
@@ -566,6 +563,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copy_to_directory = str(askdirectory(initialdir=initial_directory))
 
         def set_send_options_fields_state():
+            if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and\
+                            self.process_backend_email_check.get() is False:
+                self.edi_options_menu.configure(state=DISABLED)
+            else:
+                self.edi_options_menu.configure(state=NORMAL)
             if self.process_backend_copy_check.get() is False:
                 copy_state = DISABLED
             else:
@@ -594,14 +596,21 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         def set_header_state():
             if self.active_checkbutton.get() == "False":
-                self.header_frame.configure(bg="red")
-                self.header_label.configure(text="Folder Is Disabled", bg="red")
+                self.active_checkbutton_object.configure(text="Folder Is Disabled", activebackground="green")
+                self.copy_backend_checkbutton.configure(state=DISABLED)
+                self.ftp_backend_checkbutton.configure(state=DISABLED)
+                self.email_backend_checkbutton.configure(state=DISABLED)
             else:
-                self.header_frame.configure(bg="green")
-                self.header_label.configure(text="Folder Is Enabled", bg="green")
+                self.active_checkbutton_object.configure(text="Folder Is Enabled", activebackground="red")
+                self.copy_backend_checkbutton.configure(state=NORMAL)
+                self.ftp_backend_checkbutton.configure(state=NORMAL)
+                self.email_backend_checkbutton.configure(state=NORMAL)
 
-        self.active_checkbutton_object = Checkbutton(self.folderframe, text="Active", variable=self.active_checkbutton,
-                                                     onvalue="True", offvalue="False", command=set_header_state)
+        self.active_checkbutton_object = Tkinter.Checkbutton(self.header_frame_frame, text="Active",
+                                                             variable=self.active_checkbutton,
+                                                             onvalue="True", offvalue="False", command=set_header_state,
+                                                             indicatoron=FALSE, selectcolor="green",
+                                                             background="red")
         self.copy_backend_checkbutton = Checkbutton(self.folderframe, text="Copy Backend",
                                                     variable=self.process_backend_copy_check,
                                                     onvalue=True, offvalue=False, command=set_send_options_fields_state)
@@ -704,9 +713,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
 
-        set_header_state()
-        set_send_options_fields_state()
-
         def reset_ediconvert_options(argument):
             for child in self.convert_options_frame.winfo_children():
                 child.grid_forget()
@@ -748,9 +754,13 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         self.edi_options_menu = OptionMenu(self.ediframe, self.ediconvert_options, self.ediconvert_options.get(),
                                            'Do Nothing', 'Convert EDI', 'Tweak EDI',
-                                           command=reset_ediconvert_options).grid(row=3)
+                                           command=reset_ediconvert_options)
 
-        self.active_checkbutton_object.grid(row=1, column=0, columnspan=2, padx=3)
+        set_header_state()
+        set_send_options_fields_state()
+
+        self.edi_options_menu.grid(row=3)
+        self.active_checkbutton_object.pack(fill=X)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
         self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
@@ -771,8 +781,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_port_field.grid(row=20, column=1)
 
         self.header_frame_frame.pack(fill=X)
-        self.header_frame.pack(fill=X)
-        self.header_label.pack()
         self.bodyframe.pack()
 
         self.folderframe.pack(side=LEFT, anchor='n')
@@ -1425,19 +1433,19 @@ if args.automatic:
 make_users_list()
 
 # define main window widgets
-open_folder_button = Button(options_frame, text="Add Directory", command=select_folder)
-open_multiple_folder_button = Button(options_frame, text="Batch Add Directories", command=batch_add_folders)
-default_settings = Button(options_frame, text="Set Defaults", command=set_defaults_popup)
-edit_reporting = Button(options_frame, text="Edit Reporting",
+open_folder_button = Button(options_frame, text="Add Directory...", command=select_folder)
+open_multiple_folder_button = Button(options_frame, text="Batch Add Directories...", command=batch_add_folders)
+default_settings = Button(options_frame, text="Set Defaults...", command=set_defaults_popup)
+edit_reporting = Button(options_frame, text="Edit Reporting...",
                         command=lambda: EditReportingDialog(root, oversight_and_defaults.find_one(id=1)))
 process_folder_button = Button(options_frame, text="Process Folders",
                                command=lambda: graphical_process_directories(folders_table))
 
-allow_resend_button = Button(options_frame, text="Enable Resend",
+allow_resend_button = Button(options_frame, text="Enable Resend...",
                              command=lambda: resend_interface.do(database_connection, root))
 
-maintenance_button = Button(options_frame, text="Maintenance", command=maintenance_functions_popup)
-processed_files_button = Button(options_frame, text="Processed Files Report", command=processed_files_popup)
+maintenance_button = Button(options_frame, text="Maintenance...", command=maintenance_functions_popup)
+processed_files_button = Button(options_frame, text="Processed Files Report...", command=processed_files_popup)
 options_frame_divider = Separator(root, orient=VERTICAL)
 
 set_main_button_states()
