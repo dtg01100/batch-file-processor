@@ -524,7 +524,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         if self.foldersnameinput['folder_name'] != 'template':
             Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
-        Label(self.prefsframe, text="Copy Destination:").grid(row=4, sticky=E)
         Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E + W, pady=2)
         Label(self.prefsframe, text="Ftp Backend Settings:").grid(row=6, columnspan=2, pady=3)
         Label(self.prefsframe, text="FTP Server:").grid(row=7, sticky=E)
@@ -625,7 +624,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             self.folder_alias_field = Entry(self.folderframe, width=30)
             rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
             self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
-        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Folder",
+        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Copy Backend Destination Folder...",
                                                            command=lambda: select_copy_to_directory())
         self.ftp_server_field = Entry(self.prefsframe, width=30)
         rclick_ftp_server_field = rclick_menu.RightClickMenu(self.ftp_server_field)
@@ -765,7 +764,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
         if self.foldersnameinput['folder_name'] != 'template':
             self.folder_alias_field.grid(row=6, column=1)
-        self.copy_backend_folder_selection_button.grid(row=4, column=1)
+        self.copy_backend_folder_selection_button.grid(row=4, column=0, columnspan=2)
         self.ftp_server_field.grid(row=7, column=1)
         self.ftp_port_field.grid(row=8, column=1)
         self.ftp_folder_field.grid(row=9, column=1)
