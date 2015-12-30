@@ -20,14 +20,15 @@ import edi_tweaks
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
             reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder):
-    def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, message):
+    def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, header,
+                       footer):
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " + str(
                                                      dispatch_folder_count) + " of " + str(
                                                      folder_total) + "," + " file " + str(
                                                      dispatch_file_count) + " of " + str(
-                                                     file_total), message=message)
+                                                     file_total), header=header, footer=footer)
 
     def empty_directory(top):
         if top == '/' or top == "\\":
@@ -48,7 +49,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         folder_count += 1
         file_count = 0
         file_count_total = 0
-        update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total, "")
+        update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total,
+                       "Working Folder: " + os.getcwd(), "")
         if os.path.isdir(parameters_dict['folder_name']) is True:
             print("entering folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
             run_log.write("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
@@ -69,7 +71,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             for f in files:
                 file_count += 1
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Checking File: " + f)
+                               file_count, file_count_total, "Working Folder: " + os.getcwd(), "Checking File: " + f)
                 if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                         open(f, 'rb').read()).hexdigest()) is None or \
                         processed_files.find_one(
@@ -88,7 +90,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(filename))
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
+                               file_count, file_count_total, "Working Folder: " + os.getcwd(),
+                               "Sending File: " + os.path.basename(original_filename))
                 if parameters_dict['process_edi'] == "True" and errors is False:
                     if parameters_dict['convert_to_format'] == "csv":
                         if edi_validator.check(filename):
