@@ -28,7 +28,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                      dispatch_folder_count) + " of " + str(
                                                      folder_total) + "," + " file " + str(
                                                      dispatch_file_count) + " of " + str(
-                                                     file_total), header=header, footer=footer)
+                                                     file_total), header=header, footer=footer, overlay_height=120)
 
     def empty_directory(top):
         if top == '/' or top == "\\":

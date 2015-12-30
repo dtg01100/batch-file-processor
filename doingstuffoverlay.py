@@ -7,7 +7,7 @@ class DoingStuffOverlay:
         self.parent = parent
 
 
-def make_overlay(parent, overlay_text, header="", footer="", overlay_height=120):
+def make_overlay(parent, overlay_text, header="", footer="", overlay_height=100):
     global doing_stuff_frame
     global doing_stuff
     global label_var
@@ -37,8 +37,8 @@ def update_overlay(parent, overlay_text, header="", footer="", overlay_height=No
     doing_stuff.configure(text=overlay_text)
     header_label.configure(text=header)
     footer_label.configure(text=footer)
-    if overlay_height is not None:
-        doing_stuff_frame.configure(height=overlay_height)
+    if overlay_height is not None and overlay_height != doing_stuff_frame.winfo_height():
+        doing_stuff_frame.place(height=overlay_height)
     parent.update()
 
 
