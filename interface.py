@@ -375,7 +375,8 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
         self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
         self.report_email_destination_field.bind("<3>", rclick_report_email_destination_field)
-        self.select_log_folder_button = Button(master, text="Select Log Folder...", command=lambda: select_log_directory())
+        self.select_log_folder_button = Button(master, text="Select Log Folder...",
+                                               command=lambda: select_log_directory())
 
         def select_log_directory():
             try:
@@ -624,7 +625,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             self.folder_alias_field = Entry(self.folderframe, width=30)
             rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
             self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
-        self.copy_backend_folder_selection_button = Button(self.prefsframe, text="Select Copy Backend Destination Folder...",
+        self.copy_backend_folder_selection_button = Button(self.prefsframe,
+                                                           text="Select Copy Backend Destination Folder...",
                                                            command=lambda: select_copy_to_directory())
         self.ftp_server_field = Entry(self.prefsframe, width=30)
         rclick_ftp_server_field = rclick_menu.RightClickMenu(self.ftp_server_field)
@@ -995,7 +997,6 @@ def delete_folder_entry(folder_to_be_removed):
 
 def delete_folder_entry_wrapper(folder_to_be_removed, alias):
     # a wrapper function to both delete the folder entry and update the users list.
-    print(folder_to_be_removed)
     if askyesno(message="Are you sure you want to remove the folder " + alias + "?"):
         delete_folder_entry(folder_to_be_removed)
         refresh_users_list()
@@ -1072,9 +1073,13 @@ def process_directories(folders_table_process):
     run_log.write("starting run at " + time.ctime() + "\r\n")
     # call dispatch module to process active folders
     try:
-        dispatch.process(database_connection, folders_table_process, run_log, emails_table, reporting['logs_directory'],
-                         reporting,
-                         processed_files, root, args, version, errors_directory, edi_converter_scratch_folder)
+        run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
+                                          reporting['logs_directory'],
+                                          reporting,
+                                          processed_files, root, args, version, errors_directory,
+                                          edi_converter_scratch_folder)
+        if run_error_bool is True and not args.automatic:
+            showinfo("Run Status", "Run completed with errors.")
         os.chdir(original_folder)
     except Exception, dispatch_error:
         os.chdir(original_folder)

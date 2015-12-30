@@ -264,3 +264,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             error_counter += 1
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
     run_log.write("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors")
+    if error_counter > 0:
+        return True
+    else:
+        return False
