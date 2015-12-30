@@ -3,12 +3,11 @@ from ttk import *
 
 
 class DoingStuffOverlay:
-
     def __init__(self, parent):
         self.parent = parent
 
 
-def make_overlay(parent, overlay_text, header="", footer=""):
+def make_overlay(parent, overlay_text, header="", footer="", overlay_height=120):
     global doing_stuff_frame
     global doing_stuff
     global label_var
@@ -30,14 +29,16 @@ def make_overlay(parent, overlay_text, header="", footer=""):
     header_label.place(relx=.05, rely=.15, anchor=W)
     footer_label = Label(doing_stuff_frame, text=footer_var.get())
     footer_label.place(relx=.05, rely=.85, anchor=W)
-    doing_stuff_frame.place(relx=.5, rely=.5, height=120, relwidth=1, anchor=CENTER)
+    doing_stuff_frame.place(relx=.5, rely=.5, height=overlay_height, relwidth=1, anchor=CENTER)
     parent.update()
 
 
-def update_overlay(parent, overlay_text, header="", footer=""):
+def update_overlay(parent, overlay_text, header="", footer="", overlay_height=None):
     doing_stuff.configure(text=overlay_text)
     header_label.configure(text=header)
     footer_label.configure(text=footer)
+    if overlay_height is not None:
+        doing_stuff_frame.configure(height=overlay_height)
     parent.update()
 
 
