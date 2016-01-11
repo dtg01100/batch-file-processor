@@ -1,4 +1,4 @@
-version = "1.10.5"
+version = "1.10.6"
 database_version = "9"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -448,9 +448,12 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             error_list.append("Reporting Email Destination Is A Required Field\r")
             errors = True
         else:
-            if (validate_email(str(self.report_email_destination_field.get()), verify=True)) is False:
-                error_list.append("Invalid Email Destination Address\r")
-                errors = True
+            email_recepients = str(self.report_email_destination_field.get()).split(", ")
+            for email_recepient in email_recepients:
+                print(email_recepient)
+                if (validate_email(str(email_recepient), verify=True)) is False:
+                    error_list.append("Invalid Email Destination Address\r\n")
+                    errors = True
 
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
