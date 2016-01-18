@@ -1,4 +1,4 @@
-import upc_check_digit
+import upc_e_to_upc_a
 
 
 def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers,
@@ -32,14 +32,25 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
 
         if line.startswith("B"):
             blank_upc = False
+            upc_string = ""
+            print(line[1:12])
             try:
-                line_check = int(line[1:10])
-            except ValueError:
+                upc_test = int(line[1:12].rstrip())
+            except Exception:
                 blank_upc = True
+
+            if blank_upc is False:
+                proposed_upc = line[1:12]
+                if len(str(proposed_upc).rstrip()) == 11:
+                    upc_string = str(proposed_upc) + str(upc_e_to_upc_a.calc_check_digit(proposed_upc))
+                else:
+                    if len(str(proposed_upc).rstrip()) == 8:
+                        upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc.rstrip()))
+                print(upc_string)
 
             f.write(
                 '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".format
-                (("\t" + upc_check_digit.add_check_digit(line[1:12]) if conv_calc_upc != "False" and blank_upc is False
+                (("\t" + upc_string if conv_calc_upc != "False" and blank_upc is False
                   else line[1:12]),
                  line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
                  line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else line[46:47] +
