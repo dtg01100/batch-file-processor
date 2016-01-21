@@ -332,6 +332,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.title("Edit Reporting Options")
         self.enable_reporting_checkbutton_variable = StringVar(master)
         self.enable_report_printing_checkbutton_variable = StringVar(master)
+        self.report_edi_validator_warnings_checkbutton_variable = StringVar(master)
 
         report_sending_options_frame = Frame(master)
 
@@ -354,6 +355,10 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
                                                      onvalue="True", offvalue="False",
                                                      command=reporting_options_fields_state_set,
                                                      text="Enable Report Sending")
+        self.report_edi_validator_warnings_checkbutton = \
+            Checkbutton(master, variable=self.report_edi_validator_warnings_checkbutton_variable,
+                        onvalue=True, offvalue=False,
+                        text="Report EDI Validator Warnings")
         self.report_email_address_field = Entry(report_sending_options_frame, width=40)
         self.report_email_username_field = Entry(report_sending_options_frame, width=40)
         self.report_email_password_field = Entry(report_sending_options_frame, show="*", width=40)
@@ -398,18 +403,20 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         self.reporting_smtp_port_field.insert(0, self.foldersnameinput['reporting_smtp_port'])
         self.report_email_destination_field.insert(0, self.foldersnameinput['report_email_destination'])
         self.enable_report_printing_checkbutton_variable.set(self.foldersnameinput['report_printing_fallback'])
+        self.report_edi_validator_warnings_checkbutton_variable.set(self.foldersnameinput['report_edi_errors'])
 
         reporting_options_fields_state_set()
 
         report_sending_options_frame.grid(row=3, columnspan=3)
         self.run_reporting_checkbutton.grid(row=0, column=0, padx=2, pady=2, sticky=W)
+        self.report_edi_validator_warnings_checkbutton.grid(row=1, column=0, padx=2, pady=2, sticky=W)
         self.report_email_address_field.grid(row=1, column=1, padx=2, pady=2)
         self.report_email_username_field.grid(row=2, column=1, padx=2, pady=2)
         self.report_email_password_field.grid(row=3, column=1, padx=2, pady=2)
         self.report_email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
         self.reporting_smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
         self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
-        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=E)
+        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=E, rowspan=2)
         self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
 
         return self.report_email_address_field  # initial focus
@@ -488,6 +495,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         folders_name_apply['report_email_smtp_server'] = str(self.report_email_smtp_server_field.get())
         folders_name_apply['reporting_smtp_port'] = str(self.reporting_smtp_port_field.get())
         folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
+        folders_name_apply['report_edi_errors'] = self.report_edi_validator_warnings_checkbutton_variable.get()
 
         update_reporting(folders_name_apply)
         doingstuffoverlay.destroy_overlay()
