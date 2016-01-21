@@ -64,7 +64,7 @@ def upgrade_database(database_connection):
         update_version = dict(id=1, version="9")
         db_version.update(update_version, ['id'])
 
-    if db_version['version'] == "9":
+    if db_version_dict['version'] == "9":
         administrative_section = database_connection['administrative']
         administrative_section_update_dict = dict(id=1, report_edi_errors=False)
         administrative_section.update(administrative_section_update_dict, ['id'])

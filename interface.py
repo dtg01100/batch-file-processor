@@ -85,9 +85,9 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
 # open table required for database check in database
 db_version = database_connection['version']
 db_version_dict = db_version.find_one(id=1)
-if db_version_dict['version'] < database_version:
+if int(db_version_dict['version']) < int(database_version):
     folders_database_migrator.upgrade_database(database_connection)
-if db_version_dict['version'] > database_version:
+if int(db_version_dict['version']) > int(database_version):
     Tk().withdraw()
     showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
     raise SystemExit
