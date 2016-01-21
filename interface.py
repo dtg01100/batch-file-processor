@@ -1,5 +1,5 @@
 version = "1.11.0"
-database_version = "9"
+database_version = "10"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
