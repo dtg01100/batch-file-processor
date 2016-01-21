@@ -39,6 +39,19 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 for name in dirs:
                     os.rmdir(os.path.join(folder_root, name))
 
+    edi_validator_errors = cStringIO.StringIO()
+    global_edi_validator_error_status = False
+
+    def validate_file(input_file, file_name):
+        global edi_validator_errors
+        global global_edi_validator_error_status
+        edi_validator_output, edi_validator_error_status = edi_validator.report_edi_issues(input_file)
+        if edi_validator_error_status is True:
+            edi_validator_errors.write("Errors for " + file_name + ":\r\n")
+            edi_validator_errors.write(edi_validator_output.getvalue())
+            global_edi_validator_error_status = True
+            edi_validator_output.close()
+
     error_counter = 0
     processed_counter = 0
     folder_count = 0
@@ -89,6 +102,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
+                if reporting['report_edi_errors']:
+                    validate_file(filename, original_filename)
                 if parameters_dict['process_edi'] == "True" and errors is False:
                     if parameters_dict['convert_to_format'] == "csv":
                         if edi_validator.check(filename):
@@ -263,6 +278,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 parameters_dict[
                     'alias'])
             error_counter += 1
+    if global_edi_validator_error_status is True:
+        validator_log_name_constructor = "Validator Log " + str(time.ctime()).replace(":", "-") + ".txt"
+        validator_log_path = os.path.join(run_log_directory, validator_log_name_constructor)
+        validator_log_file = open(validator_log_path, 'w')
+        validator_log_file.write(edi_validator_errors.getvalue())
+        edi_validator_errors.close()
+        validator_log_file.close()
+        if reporting['enable_reporting'] == "True":
+            emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
     run_log.write("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors")
     if error_counter > 0:
