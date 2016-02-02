@@ -1,4 +1,4 @@
-version = "1.12.1"
+version = "1.12.2"
 database_version = "10"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -1161,13 +1161,13 @@ def process_directories(folders_table_process):
         except Exception, dispatch_error:
             emails_table_batch.delete()
             run_log = open(run_log_full_path, 'a')
-            if reporting['report_printing_fallback'] != "True":
-                print("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
-                run_log.write("Emailing report log failed with: " + str(dispatch_error) + ", printing file\r\n")
+            if reporting['report_printing_fallback'] == "True":
+                print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
+                run_log.write("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
             else:
-                print("Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
+                print("Emailing report log failed with error: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
                 run_log.write(
-                        "Emailing report log failed with: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
+                        "Emailing report log failed with error: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
                 # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
