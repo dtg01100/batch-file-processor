@@ -1,4 +1,4 @@
-version = "1.12.2"
+version = "1.12.3"
 database_version = "10"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -290,7 +290,7 @@ def make_users_list():
         no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
-    for folders_name in folders_table.all():
+    for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Delete",
