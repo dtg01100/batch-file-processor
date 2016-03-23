@@ -1,4 +1,4 @@
-version = "1.12.3"
+version = "1.12.4 (unreleased)"
 database_version = "10"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -68,7 +68,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
 
 try:  # try to connect to database
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
-    session_database = dataset.connect("sqlite:///session.db")
+    session_database = dataset.connect("sqlite:///")
 except Exception, error:  # if that doesn't work for some reason, log and quit
     try:
         print(str(error))

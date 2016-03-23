@@ -24,10 +24,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " + str(
-                                                     dispatch_folder_count) + " of " + str(
-                                                     folder_total) + "," + " file " + str(
-                                                     dispatch_file_count) + " of " + str(
-                                                     file_total), footer=footer, overlay_height=120)
+                                                 dispatch_folder_count) + " of " + str(
+                                                 folder_total) + "," + " file " + str(
+                                                 dispatch_file_count) + " of " + str(
+                                                 file_total), footer=footer, overlay_height=120)
 
     def empty_directory(top):
         if top == '/' or top == "\\":
@@ -38,6 +38,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     os.remove(os.path.join(folder_root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(folder_root, name))
+
     global edi_validator_errors
     global global_edi_validator_error_status
     edi_validator_errors = cStringIO.StringIO()
@@ -87,7 +88,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                         open(f, 'rb').read()).hexdigest()) is None or \
                         processed_files.find_one(
-                                file_name=os.path.join(os.getcwd(), f), resend_flag=True):
+                            file_name=os.path.join(os.getcwd(), f), resend_flag=True):
                     filtered_files.append(f)
 
             file_count = 0
@@ -215,11 +216,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
                                                     file_checksum=hashlib.md5(
-                                                            open(original_filename, 'rb').read()).hexdigest(),
+                                                        open(original_filename, 'rb').read()).hexdigest(),
                                                     sent_date_time=datetime.datetime.now(),
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
-                                                    ftp_destination=parameters_dict['ftp_server'] if
+                                                    ftp_destination=parameters_dict['ftp_server'] + parameters_dict[
+                                                        'ftp_folder'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",
