@@ -1097,10 +1097,10 @@ def process_directories(folders_table_process):
         # if processing folders runs into a serious error, report and log
         print(
             "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                    dispatch_error) + "\r\n")
+                dispatch_error) + "\r\n")
         run_log.write(
-                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                        dispatch_error) + "\r\n")
+            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                dispatch_error) + "\r\n")
     run_log.close()
     if reporting['enable_reporting'] == "True":
         # add run log to email queue if reporting is enabled
@@ -1165,9 +1165,10 @@ def process_directories(folders_table_process):
                 print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
                 run_log.write("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
             else:
-                print("Emailing report log failed with error: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
-                run_log.write(
-                        "Emailing report log failed with error: " + str(dispatch_error) + ", printing disabled, stopping\r\n")
+                print("Emailing report log failed with error: " + str(
+                    dispatch_error) + ", printing disabled, stopping\r\n")
+                run_log.write("Emailing report log failed with error: " + str(
+                    dispatch_error) + ", printing disabled, stopping\r\n")
             run_log.close()
             if reporting['report_printing_fallback'] == "True":
                 # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
@@ -1225,7 +1226,7 @@ def mark_active_as_processed():
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(parent=maintenance_popup,
                                        overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                               folder_count) +
+                                           folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
                                                     " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
@@ -1337,9 +1338,9 @@ def export_processed_report(name, output_folder):
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
         processed_log.write(
-                line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
-                "," + line['ftp_destination'] + "," +
-                str(line['email_destination']).replace(",", ";") + "\n")
+            line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
+            "," + line['ftp_destination'] + "," +
+            str(line['email_destination']).replace(",", ";") + "\n")
     processed_log.close()
     showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 
@@ -1375,8 +1376,8 @@ def processed_files_popup():
                             variable=folder_button_variable,
                             value=folder_alias, indicatoron=FALSE,
                             command=lambda name=folder_row['folder_id']: folder_button_pressed(
-                                    name)).pack(anchor='w',
-                                                fill='x')
+                                name)).pack(anchor='w',
+                                            fill='x')
 
     def close_processed_files_popup():
         processed_files_popup_dialog.destroy()
