@@ -167,6 +167,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               include_headers=defaults['include_headers'],
                               filter_ampersand=defaults['filter_ampersand'],
                               tweak_edi=defaults['tweak_edi'],
+                              split_edi=defaults['split_edi'],
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
                               email_smtp_port=defaults['email_smtp_port'],
@@ -519,6 +520,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.separatorv2 = Separator(self.bodyframe, orient=VERTICAL)
         self.backendvariable = StringVar(master)
         self.active_checkbutton = StringVar(master)
+        self.split_edi = BooleanVar(master)
         self.ediconvert_options = StringVar(master)
         self.process_edi = StringVar(master)
         self.upc_var_check = StringVar(master)  # define  "UPC calculation" checkbox state variable
@@ -575,8 +577,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         def set_send_options_fields_state():
             if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
                             self.process_backend_email_check.get() is False:
+                self.split_edi_checkbutton.configure(state=DISABLED)
                 self.edi_options_menu.configure(state=DISABLED)
             else:
+                self.split_edi_checkbutton.configure(state=NORMAL)
                 self.edi_options_menu.configure(state=NORMAL)
             if self.process_backend_copy_check.get() is False:
                 copy_state = DISABLED
@@ -671,6 +675,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_smtp_port_field = Entry(self.prefsframe, width=30)
         rclick_email_smtp_port_field = rclick_menu.RightClickMenu(self.email_smtp_port_field)
         self.email_smtp_port_field.bind("<3>", rclick_email_smtp_port_field)
+        self.split_edi_checkbutton = Checkbutton(self.ediframe, variable=self.split_edi, text="Split Edi", onvalue=True,
+                                                 offvalue=False)
         self.process_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.process_edi,
                                                    text="Process EDI",
                                                    onvalue="True", offvalue="False")
@@ -722,12 +728,15 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
         self.pad_arec_check.set(self.foldersnameinput['pad_a_records'])
         self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
+        self.split_edi.set(self.foldersnameinput['split_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
 
         def reset_ediconvert_options(argument):
             for child in self.convert_options_frame.winfo_children():
                 child.grid_forget()
             make_ediconvert_options(argument)
+
+        self.split_edi_checkbutton.grid(row=1, column=0, columnspan=2, sticky=W)
 
         def make_ediconvert_options(argument):
             if argument == 'Do Nothing':
@@ -849,6 +858,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['include_headers'] = str(self.headers_check.get())
         apply_to_folder['filter_ampersand'] = str(self.ampersand_check.get())
         apply_to_folder['tweak_edi'] = self.tweak_edi.get()
+        apply_to_folder['split_edi'] = self.split_edi.get()
         apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
         apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
 

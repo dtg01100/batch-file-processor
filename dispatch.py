@@ -104,20 +104,23 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
                 filename = os.path.abspath(filename)
                 original_filename = filename
-                stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(filename))
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
                 if reporting['report_edi_errors']:
                     validate_file(filename, original_filename)
-                if parameters_dict['process_edi'] == "True" and errors is False:
-                    if parameters_dict['split_edi'] and edi_validator.check(filename):
+                if parameters_dict['split_edi'] and edi_validator.check(filename):
+                    try:
                         split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
-                            'edi_converter_scratch_folder'])
-                    else:
+                        'edi_converter_scratch_folder'])
+                    except Exception:
                         split_edi_list.append(filename)
-                    for send_filename in split_edi_list:
-                        if send_filename is not None:
+                else:
+                    split_edi_list.append(filename)
+                for send_filename in split_edi_list:
+                    stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(send_filename))
+                    if os.path.exists(send_filename):
+                        if parameters_dict['process_edi'] == "True" and errors is False:
                             if parameters_dict['convert_to_format'] == "csv":
                                 if edi_validator.check(send_filename):
                                     # if the current file is recognized as a valid edi file,
