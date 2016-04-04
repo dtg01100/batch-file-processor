@@ -70,3 +70,18 @@ def upgrade_database(database_connection):
         administrative_section.update(administrative_section_update_dict, ['id'])
         update_version = dict(id=1, version="10")
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "10":
+        folders_table = database_connection['folders']
+        administrative_section = database_connection['administrative']
+        administrative_section.create_column('split_edi', sqlalchemy.Boolean)
+        administrative_section_update_dict = administrative_section.find_one(id=1)
+        administrative_section_update_dict['split_edi'] = False
+        administrative_section.update(administrative_section_update_dict, ['id'])
+
+        folders_table.create_column('split_edi', sqlalchemy.Boolean)
+        for line in folders_table:
+            line['split_edi'] = False
+            folders_table.update(line, ['id'])
+        update_version = dict(id=1, version="11")
+        db_version.update(update_version, ['id'])
