@@ -57,7 +57,8 @@ def do(database_version):  # create database file with some default settings
                                        single_add_folder_prior=os.path.join(os.getcwd()),
                                        batch_add_folder_prior=os.path.join(os.getcwd()),
                                        export_processed_folder_prior=os.path.join(os.getcwd()),
-                                       report_edi_errors=False))
+                                       report_edi_errors=False,
+                                       split_edi=False))
 
     processed_files = database_connection['processed_files']
     processed_files.create_column('file_name', sqlalchemy.types.String)
