@@ -6,15 +6,18 @@ def check(input_file):
 
     file_to_test = open(input_file)
     for line in file_to_test:
-        if line[0][0] != "A" and line[0] != "B" and line[0] != "C":
+        if line[0] != "A" and line[0] != "B" and line[0] != "C":
             return False
         else:
             try:
                 if line[0] == "B":
-                    line_check = int(line[1:12])
+                    if len(line) != 77:
+                        return False
+                    _ = int(line[1:12])
             except Exception:
                 if not line[1:12] == "           ":
                     return False
+
     return 1
 
 

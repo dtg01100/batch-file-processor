@@ -15,11 +15,12 @@ def do(reporting, emails_table, sent_emails_removal_queue, time, args, root, bat
 
     msg['From'] = from_address
     msg['To'] = to_address
-    msg['Subject'] = "Logs from run at: " + time
 
     if emails_table.count() != 1:
+        msg['Subject'] = "Logs from run at: " + time
         body = "See attached logs"
     else:
+        msg['Subject'] = "Log from run at: " + time
         body = "See attached log"
 
     msg.attach(MIMEText(body, 'plain'))
