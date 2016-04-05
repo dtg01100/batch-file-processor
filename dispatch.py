@@ -112,9 +112,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if parameters_dict['split_edi'] and edi_validator.check(filename):
                     try:
                         split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
-                        'edi_converter_scratch_folder'])
-                    except Exception:
+                            'edi_converter_scratch_folder'])
+                    except Exception as error:
                         split_edi_list.append(filename)
+                        record_error.do(run_log, folder_errors_log,
+                                        "splitting edi file failed with error: " + str(error), filename, "edi splitter")
                 else:
                     split_edi_list.append(filename)
                 for send_filename in split_edi_list:
