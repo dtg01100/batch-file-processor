@@ -5,6 +5,9 @@ import cStringIO
 def check(input_file):
 
     file_to_test = open(input_file)
+    if file_to_test.read(1) != "A":
+        return False
+    file_to_test.seek(0)
     for line in file_to_test:
         if line[0] != "A" and line[0] != "B" and line[0] != "C":
             return False
