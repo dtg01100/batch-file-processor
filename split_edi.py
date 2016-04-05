@@ -25,4 +25,6 @@ def do_split_edi(edi_process, work_directory):
         f.close()  # close output file
         edi_send_list.append(output_file_path)
         edi_send_list.pop(0)
+        if len(edi_send_list) < 1:
+            raise Exception("No Split EDIs")
         return edi_send_list
