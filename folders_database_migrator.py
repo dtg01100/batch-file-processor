@@ -1,10 +1,8 @@
 import sqlalchemy
-import shutil
 import os
 
 
-def upgrade_database(database_connection, database_path):
-    shutil.copy(database_path, database_path + '.bak')
+def upgrade_database(database_connection):
 
     db_version = database_connection['version']
     db_version_dict = db_version.find_one(id=1)

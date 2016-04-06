@@ -91,7 +91,8 @@ if int(db_version_dict['version']) < int(database_version):
     updating_database_popup = Tk()
     Label(updating_database_popup, text="Updating database file...").pack()
     updating_database_popup.update()
-    folders_database_migrator.upgrade_database(database_connection, 'folders.db')
+    shutil.copy('folders.db', 'folders.db.bak')
+    folders_database_migrator.upgrade_database(database_connection)
     updating_database_popup.destroy()
     print("done")
 if int(db_version_dict['version']) > int(database_version):
