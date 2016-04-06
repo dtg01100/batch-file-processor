@@ -254,10 +254,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                             email_destination=parameters_dict['email_to'] if
                                                             parameters_dict['process_backend_email'] is True else "N/A",
                                                             resend_flag=False))
-                                processed_counter += 1
                             except Exception, error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename), "Dispatch")
                                 errors = True
+                if errors is False:
+                    processed_counter += 1
             if errors is True:
                 error_counter += 1
                 if os.path.exists(errors_folder['errors_folder']) is False:
