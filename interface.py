@@ -27,6 +27,7 @@ try:  # try to import required modules
     import doingstuffoverlay
     import folders_database_migrator
     import resend_interface
+    import database_import
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -90,7 +91,7 @@ if int(db_version_dict['version']) < int(database_version):
     updating_database_popup = Tk()
     Label(updating_database_popup, text="Updating database file...").pack()
     updating_database_popup.update()
-    folders_database_migrator.upgrade_database(database_connection)
+    folders_database_migrator.upgrade_database(database_connection, 'folders.db')
     updating_database_popup.destroy()
     print("done")
 if int(db_version_dict['version']) > int(database_version):
@@ -1316,6 +1317,10 @@ def clear_processed_files_log():
         set_main_button_states()
 
 
+def database_import_wrapper():
+    database_import.import_interface(maintenance_popup, database_connection)
+    refresh_users_list()
+
 def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
@@ -1344,6 +1349,8 @@ def maintenance_functions_popup():
                                      command=remove_inactive_folders)
         clear_processed_files_log_button = Button(maintenance_popup_button_frame, text="Clear sent file records",
                                                   command=clear_processed_files_log)
+        database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations",
+                                        command=database_import_wrapper)
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
@@ -1351,6 +1358,7 @@ def maintenance_functions_popup():
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_processed_files_log_button.pack(side=TOP, fill=X, padx=2, pady=2)
+        database_import_button.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
 

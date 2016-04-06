@@ -3,8 +3,8 @@ import shutil
 import os
 
 
-def upgrade_database(database_connection):
-    shutil.copy('folders.db', 'folders.db.bak')
+def upgrade_database(database_connection, database_path):
+    shutil.copy(database_path, database_path + '.bak')
 
     db_version = database_connection['version']
     db_version_dict = db_version.find_one(id=1)
