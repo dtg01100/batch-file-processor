@@ -294,9 +294,6 @@ def make_users_list():
     for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
-            Button(active_folder_button_frame, text="Delete",
-                   command=lambda name=folders_name['id'], alias=folders_name['alias']:
-                   delete_folder_entry_wrapper(name, alias)).grid(column=2, row=0, sticky=E)
             Button(active_folder_button_frame, text="Send",
                    command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
@@ -905,7 +902,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 errors = True
 
             try:
-                temp_smtp_port_check = int(self.ftp_port_field.get())
+                _ = int(self.ftp_port_field.get())
             except Exception:
                 error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
                 errors = True
@@ -951,7 +948,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 errors = True
             else:
                 try:
-                    temp_smtp_port_check = int(self.email_smtp_port_field.get())
+                    _ = int(self.email_smtp_port_field.get())
                 except Exception:
                     error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
                     errors = True
@@ -1093,6 +1090,9 @@ def process_directories(folders_table_process):
     run_log = open(run_log_full_path, 'w')
     run_log.write("Batch File Sender Version " + version + "\r\n")
     run_log.write("starting run at " + time.ctime() + "\r\n")
+    if reporting['enable_reporting'] == "True":
+        # add run log to email queue if reporting is enabled
+        emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
     # call dispatch module to process active folders
     try:
         run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
@@ -1114,8 +1114,6 @@ def process_directories(folders_table_process):
                 dispatch_error) + "\r\n")
     run_log.close()
     if reporting['enable_reporting'] == "True":
-        # add run log to email queue if reporting is enabled
-        emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
         try:
             sent_emails_removal_queue.delete()
             total_size = 0
@@ -1306,6 +1304,12 @@ def set_all_active():
         refresh_users_list()
 
 
+def clear_processed_files_log():
+    if askokcancel(message="This will clear all records of sent files.\nAre you sure?"):
+        processed_files.delete()
+        set_main_button_states()
+
+
 def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
@@ -1322,22 +1326,25 @@ def maintenance_functions_popup():
         maintenance_popup_button_frame = Frame(maintenance_popup)
         # a persistent warning that this dialog can break things...
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
-        set_all_active_button = Button(maintenance_popup_button_frame, text="move all to active",
+        set_all_active_button = Button(maintenance_popup_button_frame, text="Move all to active",
                                        command=set_all_active)
-        set_all_inactive_button = Button(maintenance_popup_button_frame, text="move all to inactive",
+        set_all_inactive_button = Button(maintenance_popup_button_frame, text=">ove all to inactive",
                                          command=set_all_inactive)
-        clear_emails_queue = Button(maintenance_popup_button_frame, text="clear queued emails",
+        clear_emails_queue = Button(maintenance_popup_button_frame, text="Clear queued emails",
                                     command=emails_table.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Mark all in active as processed",
                                            command=mark_active_as_processed)
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations",
                                      command=remove_inactive_folders)
+        clear_processed_files_log_button = Button(maintenance_popup_button_frame, text="Clear sent file records",
+                                                  command=clear_processed_files_log)
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
+        clear_processed_files_log_button.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
 

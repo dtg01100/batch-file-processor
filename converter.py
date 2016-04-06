@@ -8,14 +8,15 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
     conv_inc_arec = inc_arec
     conv_inc_crec = inc_crec
     conv_inc_headers = inc_headers
-    with open(edi_process) as work_file: # open input file
+    with open(edi_process) as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         f = open(output_filename, 'wb')  # open work file, overwriting old file
 
         if conv_inc_headers != "False":  # include headers if flag is set
             # write line out to file
             f.write("{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}\r\n".format("UPC", "Qty. Shipped", "Cost",
-                                                                                          "Suggested Retail", "Description",
+                                                                                          "Suggested Retail",
+                                                                                          "Description",
                                                                                           "Case Pack",
                                                                                           "Item Number"))
 
@@ -23,7 +24,8 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
 
             # if include "A" records flag is set and line starts with "A"
             if line.startswith("A") and conv_inc_arec != "False":
-                f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(line)  # write "A" line
+                f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(
+                    line)  # write "A" line
 
             # the following block writes "B" lines, dependent on filter and convert settings
             # ternary conditional operator: puts if-then-else statement in one line
@@ -51,12 +53,12 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
                     (("\t" + upc_string if conv_calc_upc != "False" and blank_upc is False
                       else line[1:12]),
                      line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
-                     line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else line[46:47] +
-                     "." + line[47:49],
-                     line[63:65].lstrip("0") + "." + line[65:68] if not line[63:65] == "00" else line[64:65] + "." +
-                     line[65:68],
+                     line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else "{0}.{1}".format(
+                         line[46:47], line[47:49]),
+                     line[63:65].lstrip("0") + "." + line[65:68] if not line[63:65] == "00" else "{0}.{1}".format(
+                         line[64:65], line[65:68]),
                      (line.replace("&", "AND")[12:37].rstrip(" ") if filter_ampersand != "False" else
-                     line[12:37].rstrip(" ")),
+                      line[12:37].rstrip(" ")),
                      line[53:57].lstrip("0") if not line[53:57].lstrip("0") == "" else line[57],
                      line[37:43].lstrip("0") if not line[37:43].lstrip("0") == "" else line[38:43]))
 
