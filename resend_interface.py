@@ -62,6 +62,10 @@ def do(database_connection, master_window):
         def cb(self):
             set_resend_flag(self.identifier, self.var.get())
 
+    loading_label = Label(master=resend_interface, text="Loading...")
+    loading_label.pack()
+    master_window.update()
+
     for line in processed_files_table.distinct('folder_id'):
         folder_alias = configured_folders_table.find_one(id=line['folder_id'])
         folder_list.append([line['folder_id'], folder_alias['alias']])
@@ -83,6 +87,7 @@ def do(database_connection, master_window):
     close_button = Button(resend_interface_close_frame, text="Close", command=close_window)
     close_button.pack()
 
+    loading_label.destroy()
     resend_interface_scrollable_folders_frame.pack()
     resend_interface_scrollable_files_frame.pack()
     resend_interface_folders_frame.pack(side=LEFT)

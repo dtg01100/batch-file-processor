@@ -1364,40 +1364,6 @@ def export_processed_report(name, output_folder):
 
 
 def processed_files_popup():
-    global processed_files_output_folder
-    global output_folder_is_confirmed
-    folder_button_variable = IntVar()
-    output_folder_is_confirmed = False
-    prior_folder = oversight_and_defaults.find_one(id=1)
-    processed_files_output_folder = prior_folder['export_processed_folder_prior']
-    processed_files_popup_dialog = Toplevel()
-    processed_files_popup_dialog.title("Generate Processed Files Report")
-    processed_files_popup_dialog.transient(root)
-    # center dialog on main window
-    processed_files_popup_dialog.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
-    processed_files_popup_dialog.grab_set()
-    processed_files_popup_dialog.focus_set()
-    processed_files_popup_dialog.resizable(width=FALSE, height=FALSE)
-    processed_files_popup_body_frame = Frame(processed_files_popup_dialog)
-    processed_files_popup_list_container = Frame(processed_files_popup_body_frame)
-    processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
-    processed_files_popup_close_frame = Frame(processed_files_popup_dialog)
-    processed_files_popup_actions_frame = Frame(processed_files_popup_body_frame)
-    Label(processed_files_popup_actions_frame, text="Select a Folder.").pack()
-    if processed_files.count() == 0:
-        no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
-        no_processed_label.pack(fill=BOTH, expand=1, padx=10)
-    for folders_name in processed_files.distinct('folder_id'):
-        folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
-        folder_dict = folders_table.find_one(id=folders_name['folder_id'])
-        folder_alias = folder_dict['alias']
-        Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
-                            variable=folder_button_variable,
-                            value=folder_alias, indicatoron=FALSE,
-                            command=lambda name=folder_row['folder_id']: folder_button_pressed(
-                                name)).pack(anchor='w',
-                                            fill='x')
-
     def close_processed_files_popup():
         processed_files_popup_dialog.destroy()
         return
@@ -1440,8 +1406,45 @@ def processed_files_popup():
         else:
             export_button.configure(state=NORMAL)
 
+    global processed_files_output_folder
+    global output_folder_is_confirmed
+    folder_button_variable = IntVar()
+    output_folder_is_confirmed = False
+    prior_folder = oversight_and_defaults.find_one(id=1)
+    processed_files_output_folder = prior_folder['export_processed_folder_prior']
+    processed_files_popup_dialog = Toplevel()
+    processed_files_popup_dialog.title("Generate Processed Files Report")
+    processed_files_popup_dialog.transient(root)
+    # center dialog on main window
+    processed_files_popup_dialog.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
+    processed_files_popup_dialog.grab_set()
+    processed_files_popup_dialog.focus_set()
+    processed_files_popup_dialog.resizable(width=FALSE, height=FALSE)
+    processed_files_popup_body_frame = Frame(processed_files_popup_dialog)
+    processed_files_popup_list_container = Frame(processed_files_popup_body_frame)
+    processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
+    processed_files_popup_close_frame = Frame(processed_files_popup_dialog)
+    processed_files_popup_actions_frame = Frame(processed_files_popup_body_frame)
+    processed_files_loading_label = Label(master=processed_files_popup_dialog, text="Loading...")
+    processed_files_loading_label.pack()
+    root.update()
+    Label(processed_files_popup_actions_frame, text="Select a Folder.").pack()
+    if processed_files.count() == 0:
+        no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
+        no_processed_label.pack(fill=BOTH, expand=1, padx=10)
+    for folders_name in processed_files.distinct('folder_id'):
+        folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
+        folder_dict = folders_table.find_one(id=folders_name['folder_id'])
+        folder_alias = folder_dict['alias']
+        Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
+                            variable=folder_button_variable,
+                            value=folder_alias, indicatoron=FALSE,
+                            command=lambda name=folder_row['folder_id']: folder_button_pressed(
+                                name)).pack(anchor='w',
+                                            fill='x')
     close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
     close_button.pack()
+    processed_files_loading_label.destroy()
     processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()
     processed_files_popup_actions_frame.pack(side=RIGHT, anchor=N)
