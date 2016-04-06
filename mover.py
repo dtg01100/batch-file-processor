@@ -28,14 +28,14 @@ class DbMigrationThing:
         def test_line_for_match(line):
             line_match = False
             new_db_line = None
-            for db_line in new_folders_table.find(folder_is_active="True"):
+            for db_line in old_folders_table.find(folder_is_active="True"):
                 if os.path.abspath(db_line['folder_name']) == os.path.abspath(line['folder_name']):
                     new_db_line = db_line
                     line_match = True
                     break
             return line_match, new_db_line
 
-        for line in old_folders_table.find(folder_is_active="True"):
+        for line in new_folders_table.find(folder_is_active="True"):
             line_match, new_db_line = test_line_for_match(line)
             print(str(line_match))
             if line_match is True:
