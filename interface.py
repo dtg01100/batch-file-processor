@@ -1007,6 +1007,7 @@ def refresh_users_list():
     users_list_frame.destroy()  # destroy old users list
     make_users_list()  # create new users list
     users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)  # repack new users list
+    set_main_button_states()
 
 
 def delete_folder_entry(folder_to_be_removed):
