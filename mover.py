@@ -13,10 +13,10 @@ class DbMigrationThing:
         self.progress_of_folders = IntVar()
 
     def do_migrate(self, progress_bar, master, original_database_connection):
-        shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".bak")
+        shutil.copy(os.path.abspath(self.original_folder_path), os.path.abspath(self.original_folder_path) + ".bak")
 
         new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path)
-        folders_database_migrator.upgrade_database(original_database_connection, self.original_folder_path)
+        folders_database_migrator.upgrade_database(new_database_connection, self.new_folder_path)
 
         new_folders_table = new_database_connection['folders']
         old_folders_table = original_database_connection['folders']
@@ -63,12 +63,13 @@ class DbMigrationThing:
                                                email_smtp_port=new_db_line['email_smtp_port'],
                                                email_subject_line=new_db_line['email_subject_line'],
                                                id=line['id']))
-                new_folders_table.update(update_db_line, ['id'])
+                old_folders_table.update(update_db_line, ['id'])
 
             else:
                 print("adding line")
                 del line['id']
-                new_folders_table.insert(line)
+                print(line)
+                old_folders_table.insert(line)
             self.progress_of_folders += 1
             progress_bar.configure(value=self.progress_of_folders)
             master.update()

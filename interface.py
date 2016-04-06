@@ -1318,8 +1318,9 @@ def clear_processed_files_log():
 
 
 def database_import_wrapper():
-    database_import.import_interface(maintenance_popup, database_connection)
+    database_import.import_interface(maintenance_popup, database_connection, 'folders.db')
     refresh_users_list()
+
 
 def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
