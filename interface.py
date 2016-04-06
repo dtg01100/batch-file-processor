@@ -1365,6 +1365,7 @@ def export_processed_report(name, output_folder):
 
 def processed_files_popup():
     global processed_files_output_folder
+    global output_folder_is_confirmed
     folder_button_variable = IntVar()
     output_folder_is_confirmed = False
     prior_folder = oversight_and_defaults.find_one(id=1)
@@ -1404,6 +1405,7 @@ def processed_files_popup():
     def folder_button_pressed(name):
         global export_button
         global processed_files_output_folder
+        global output_folder_is_confirmed
         for child in processed_files_popup_actions_frame.winfo_children():
             child.destroy()
         Button(processed_files_popup_actions_frame, text='Choose output Folder',
