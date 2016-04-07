@@ -1320,10 +1320,10 @@ def clear_processed_files_log():
 
 
 def database_import_wrapper():
-    database_import.import_interface(maintenance_popup, database_connection, 'folders.db')
+    if database_import.import_interface(maintenance_popup, database_connection, 'folders.db'):
+        refresh_users_list()
     maintenance_popup.grab_set()
     maintenance_popup.focus_set()
-    refresh_users_list()
 
 
 def maintenance_functions_popup():

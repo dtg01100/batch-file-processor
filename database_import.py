@@ -6,12 +6,14 @@ import mover
 
 
 def import_interface(master_window, database_connection, original_database_path):
+    global run_has_happened
     import_interface_window = Toplevel()
     import_interface_window.title("folders.db merging utility")
     import_interface_window.transient(master_window)
     import_interface_window.geometry("+%d+%d" % (master_window.winfo_rootx() + 50, master_window.winfo_rooty() + 50))
     import_interface_window.grab_set()
     import_interface_window.focus_set()
+    run_has_happened = False
 
     new_database_path = ""
 
@@ -25,12 +27,14 @@ def import_interface(master_window, database_connection, original_database_path)
             database_migrate_job = mover.DbMigrationThing(original_database_path, new_database_path)
 
     def database_migrate_job_wrapper():
+        global run_has_happened
         process_database_files_button.configure(state=DISABLED)
         select_database_button.configure(state=DISABLED)
         database_migrate_job.do_migrate(progress_bar, import_interface_window, database_connection)
         new_database_label.configure(text="Import Completed")
         select_database_button.configure(state=NORMAL)
         progress_bar.configure(maximum=1, value=0)
+        run_has_happened = True
 
     new_database_file_frame = Frame(import_interface_window)
     go_button_frame = Frame(import_interface_window)
@@ -59,3 +63,4 @@ def import_interface(master_window, database_connection, original_database_path)
     import_interface_window.minsize(300, import_interface_window.winfo_height())
     import_interface_window.resizable(width=TRUE, height=FALSE)
     master_window.wait_window(import_interface_window)
+    return run_has_happened
