@@ -32,13 +32,12 @@ def import_interface(master_window, database_connection, original_database_path)
         select_database_button.configure(state=NORMAL)
         progress_bar.configure(maximum=1, value=0)
 
-
     new_database_file_frame = Frame(import_interface_window)
     go_button_frame = Frame(import_interface_window)
     progress_bar_frame = Frame(import_interface_window)
 
     select_database_button = Button(master=new_database_file_frame, text="Select New Database File",
-           command=select_database)
+                                    command=select_database)
     select_database_button.pack(anchor='w')
 
     new_database_label = Label(master=new_database_file_frame, text="No File Selected", relief=SUNKEN)

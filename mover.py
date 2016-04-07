@@ -3,6 +3,7 @@ import shutil
 from Tkinter import IntVar
 import dataset
 import folders_database_migrator
+import threading
 
 
 class DbMigrationThing:
@@ -13,17 +14,28 @@ class DbMigrationThing:
         self.progress_of_folders = IntVar()
 
     def do_migrate(self, progress_bar, master, original_database_connection):
-        shutil.copy(os.path.abspath(self.original_folder_path), os.path.abspath(self.original_folder_path) + ".bak")
-        shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".updated")
+        def database_preimport_operations():
+            global new_database_connection
+            global original_database_connection
+            shutil.copy(os.path.abspath(self.original_folder_path), os.path.abspath(self.original_folder_path) + ".bak")
+            shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".updated")
 
-        new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path + '.updated')
-        original_db_version = original_database_connection['version']
-        original_db_version_dict = original_db_version.find_one(id=1)
-        new_db_version = new_database_connection['version']
-        new_db_version_dict = new_db_version.find_one(id=1)
-        if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
-            folders_database_migrator.upgrade_database(new_database_connection)
+            new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path + '.updated')
+            original_db_version = original_database_connection['version']
+            original_db_version_dict = original_db_version.find_one(id=1)
+            new_db_version = new_database_connection['version']
+            new_db_version_dict = new_db_version.find_one(id=1)
+            if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
+                folders_database_migrator.upgrade_database(new_database_connection)
 
+        preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
+        preimport_operations_thread_object.start()
+        progress_bar.configure(mode='indeterminate', maximum=100)
+        progress_bar.start()
+        while preimport_operations_thread_object.isAlive():
+            master.update()
+        progress_bar.stop()
+        progress_bar.configure(maximum=100, value=0, mode='determinate')
         new_folders_table = new_database_connection['folders']
         old_folders_table = original_database_connection['folders']
         self.number_of_folders = new_folders_table.count(folder_is_active="True")
