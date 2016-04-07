@@ -26,7 +26,8 @@ def import_interface(master_window, database_connection, original_database_path)
 
     def database_migrate_job_wrapper():
         database_migrate_job.do_migrate(progress_bar, import_interface_window, database_connection)
-
+        new_database_label.configure(text="Import Completed")
+        progress_bar.configure(maximum=1, value=0)
         process_database_files_button.configure(state=DISABLED)
 
     new_database_file_frame = Frame(import_interface_window)
@@ -39,7 +40,7 @@ def import_interface(master_window, database_connection, original_database_path)
     new_database_label = Label(master=new_database_file_frame, text="No File Selected")
     new_database_label.pack(anchor='w')
 
-    process_database_files_button = Button(master=go_button_frame, text="Move Active Folders",
+    process_database_files_button = Button(master=go_button_frame, text="Import Active Folders",
                                            command=database_migrate_job_wrapper)
 
     process_database_files_button.configure(state=DISABLED)
