@@ -14,9 +14,9 @@ class DbMigrationThing:
 
     def do_migrate(self, progress_bar, master, original_database_connection):
         shutil.copy(os.path.abspath(self.original_folder_path), os.path.abspath(self.original_folder_path) + ".bak")
-        shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".bak")
+        shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".updated")
 
-        new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path)
+        new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path.updated)
         folders_database_migrator.upgrade_database(new_database_connection)
 
         new_folders_table = new_database_connection['folders']
