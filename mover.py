@@ -1,9 +1,9 @@
 import os
-import shutil
 from Tkinter import IntVar
 import dataset
 import folders_database_migrator
 import threading
+import backup_increment
 
 
 class DbMigrationThing:
@@ -17,10 +17,9 @@ class DbMigrationThing:
         def database_preimport_operations():
             global new_database_connection
             global original_database_connection
-            shutil.copy(os.path.abspath(self.original_folder_path), os.path.abspath(self.original_folder_path) + ".bak")
-            shutil.copy(os.path.abspath(self.new_folder_path), os.path.abspath(self.new_folder_path) + ".updated")
-
-            new_database_connection = dataset.connect('sqlite:///' + self.new_folder_path + '.updated')
+            backup_increment.do_backup(self.original_folder_path)
+            modified_new_folder_path = backup_increment.do_backup(self.new_folder_path)
+            new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
             original_db_version = original_database_connection['version']
             original_db_version_dict = original_db_version.find_one(id=1)
             new_db_version = new_database_connection['version']
@@ -58,12 +57,12 @@ class DbMigrationThing:
             if line_match is True:
                 update_db_line = new_db_line
                 if new_db_line['process_backend_copy'] is True:
-                    print("adding copy backend settings")
+                    print("merging copy backend settings")
                     update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
                                                copy_to_directory=new_db_line['copy_to_directory'],
                                                id=line['id']))
                 if new_db_line['process_backend_ftp'] is True:
-                    print("adding ftp backend settings")
+                    print("merging ftp backend settings")
                     update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
                                                ftp_folder=new_db_line['ftp_folder'],
                                                ftp_username=new_db_line['ftp_username'],
@@ -71,7 +70,7 @@ class DbMigrationThing:
                                                ftp_port=new_db_line['ftp_port'],
                                                id=line['id']))
                 if new_db_line['process_backend_email'] is True:
-                    print("adding email backend settings")
+                    print("merging email backend settings")
                     update_db_line.update(dict(email_to=new_db_line['email_to'],
                                                email_origin_address=new_db_line['email_origin_address'],
                                                email_origin_username=new_db_line['email_origin_username'],

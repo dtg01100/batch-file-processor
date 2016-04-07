@@ -28,6 +28,7 @@ try:  # try to import required modules
     import folders_database_migrator
     import resend_interface
     import database_import
+    import backup_increment
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -91,7 +92,7 @@ if int(db_version_dict['version']) < int(database_version):
     updating_database_popup = Tk()
     Label(updating_database_popup, text="Updating database file...").pack()
     updating_database_popup.update()
-    shutil.copy('folders.db', 'folders.db.bak')
+    backup_increment.do_backup('folders.db')
     folders_database_migrator.upgrade_database(database_connection)
     updating_database_popup.destroy()
     print("done")
