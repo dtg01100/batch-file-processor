@@ -26,6 +26,7 @@ def import_interface(master_window, database_connection, original_database_path)
 
     def database_migrate_job_wrapper():
         database_migrate_job.do_migrate(progress_bar, import_interface_window, database_connection)
+
         process_database_files_button.configure(state=DISABLED)
 
     new_database_file_frame = Frame(import_interface_window)
@@ -51,3 +52,4 @@ def import_interface(master_window, database_connection, original_database_path)
     new_database_file_frame.pack(anchor='w')
     go_button_frame.pack(side=LEFT, anchor='w')
     progress_bar_frame.pack(side=RIGHT, anchor='e')
+    master_window.wait_window(import_interface_window)

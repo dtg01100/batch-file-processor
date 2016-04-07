@@ -1341,7 +1341,7 @@ def maintenance_functions_popup():
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         set_all_active_button = Button(maintenance_popup_button_frame, text="Move all to active",
                                        command=set_all_active)
-        set_all_inactive_button = Button(maintenance_popup_button_frame, text=">ove all to inactive",
+        set_all_inactive_button = Button(maintenance_popup_button_frame, text="Move all to inactive",
                                          command=set_all_inactive)
         clear_emails_queue = Button(maintenance_popup_button_frame, text="Clear queued emails",
                                     command=emails_table.delete)
