@@ -1353,7 +1353,7 @@ def maintenance_functions_popup():
                                      command=remove_inactive_folders)
         clear_processed_files_log_button = Button(maintenance_popup_button_frame, text="Clear sent file records",
                                                   command=clear_processed_files_log)
-        database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations",
+        database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations...",
                                         command=database_import_wrapper)
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
