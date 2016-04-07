@@ -37,7 +37,7 @@ def import_interface(master_window, database_connection, original_database_path)
     Button(master=new_database_file_frame, text="Select New Database File",
            command=select_database).pack(anchor='w')
 
-    new_database_label = Label(master=new_database_file_frame, text="No File Selected")
+    new_database_label = Label(master=new_database_file_frame, text="No File Selected", relief=SUNKEN)
     new_database_label.pack(anchor='w')
 
     process_database_files_button = Button(master=go_button_frame, text="Import Active Folders",
@@ -53,4 +53,6 @@ def import_interface(master_window, database_connection, original_database_path)
     new_database_file_frame.pack(anchor='w')
     go_button_frame.pack(side=LEFT, anchor='w')
     progress_bar_frame.pack(side=RIGHT, anchor='e')
+    import_interface_window.minsize(300, import_interface_window.winfo_height())
+    import_interface_window.resizable(width=TRUE, height=FALSE)
     master_window.wait_window(import_interface_window)
