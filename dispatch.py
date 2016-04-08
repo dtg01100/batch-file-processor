@@ -264,6 +264,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 errors = True
                 if errors is False:
                     processed_counter += 1
+                else:
+                    break
             if errors is True:
                 error_counter += 1
                 if os.path.exists(errors_folder['errors_folder']) is False:
