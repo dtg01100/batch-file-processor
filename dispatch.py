@@ -98,6 +98,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             if len(files) == 0:  # if there are no files in directory, record in log
                 run_log.write("No files in directory\r\n\r\n")
                 print("No files in directory")
+            if len(filtered_files) == 0 and len(files) > 0:
+                run_log.write("No new files in directory\r\n\r\n")
+                print("No new files in directory")
             file_count_total = len(files)
             for filename in filtered_files:  # iterate over all files in directory
                 split_edi_list = []
@@ -206,10 +209,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         if parameters_dict['process_backend_ftp'] is True and errors is False:
                             try:
                                 print(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) + str(
+                                        parameters_dict['ftp_folder']) +
                                     " with FTP backend")
                                 run_log.write(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) + str(
+                                        parameters_dict['ftp_folder']) +
                                     " with FTP backend\r\n\r\n")
                                 ftp_backend.do(parameters_dict, send_filename)
                                 run_log.write("Success\r\n\r\n")
