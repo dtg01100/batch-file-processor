@@ -1130,19 +1130,22 @@ def process_directories(folders_table_process):
             email_errors = cStringIO.StringIO()
             total_emails = emails_table.count()
             emails_count = 0
+            loop_count = 0
             batch_number = 1
             for log in emails_table.all():
                 emails_count += 1
+                loop_count += 1
                 if os.path.isfile(log['log']):
                     # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                     total_size += total_size + os.path.getsize(log['log'])  # add size of current file to total
                     emails_table_batch.insert(log)
                     # if the total size is more than 9mb, then send that set and reset the total
-                    if total_size > 9000000:
+                    if total_size > 9000000 or loop_count >= 15:
                         batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args,
                                             root, batch_number, emails_count, total_emails)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
+                        loop_count = 0
                         batch_number += 1
                 else:
                     email_errors.write("\r\n" + log['log'] + " missing, skipping")
