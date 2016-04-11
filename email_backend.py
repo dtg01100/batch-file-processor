@@ -39,21 +39,22 @@ def do(process_parameters, filename):
 
             msg.attach(MIMEText(body, 'plain'))
 
-            attachment = open(filename, 'rb')
+            with open(filename, 'rb') as attachment:
 
-            part = MIMEBase('application', 'octet-stream; name="%s"' % filename_no_path)
-            part.set_payload(attachment.read())
-            if is_binary(filename):
-                encoders.encode_base64(part)
-            part.add_header('X-Attachment-Id', '1')
-            part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
+                part = MIMEBase('application', 'octet-stream; name="%s"' % filename_no_path)
+                part.set_payload(attachment.read())
+                if is_binary(filename):
+                    encoders.encode_base64(part)
+                part.add_header('X-Attachment-Id', '1')
+                part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
 
-            msg.attach(part)
-            server = smtplib.SMTP(process_parameters['email_origin_smtp_server'], process_parameters['email_smtp_port'])
-            server.starttls()
-            server.login(from_address, process_parameters['email_origin_password'])
-            server.sendmail(from_address, to_address_list, msg.as_string())
-            server.close()
+                msg.attach(part)
+                server = smtplib.SMTP(process_parameters['email_origin_smtp_server'], process_parameters['email_smtp_port'])
+                server.starttls()
+                server.login(from_address, process_parameters['email_origin_password'])
+                server.sendmail(from_address, to_address_list, msg.as_string())
+                server.close()
+                file_pass = True
         except Exception as exception:
             if counter == 10:
                 raise Exception(exception)
