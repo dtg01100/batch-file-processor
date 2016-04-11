@@ -113,15 +113,24 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if reporting['report_edi_errors']:
                     validate_file(filename, original_filename)
                 if parameters_dict['split_edi'] and edi_validator.check(filename):
+                    run_log.write("Splitting edi file...\r\n")
+                    print("Splitting edi file")
                     try:
                         split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
                             'edi_converter_scratch_folder'])
+                        if len(split_edi_list) > 1:
+                            run_log.write("edi file split into " + str(len(split_edi_list)) + " files\r\n")
+                            print("edi file split into " + str(len(split_edi_list)) + " files")
                     except Exception as error:
                         split_edi_list.append(filename)
                         record_error.do(run_log, folder_errors_log,
                                         "splitting edi file failed with error: " + str(error), filename, "edi splitter")
                 else:
                     split_edi_list.append(filename)
+                if len(split_edi_list) == 1:
+                    run_log.write("Cannot split edi file\r\n")
+                    print("Cannot split edi file")
+                    split_edi_list = [filename]
                 for send_filename in split_edi_list:
                     stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(send_filename))
                     if os.path.exists(send_filename):

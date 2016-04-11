@@ -55,7 +55,7 @@ def do(process_parameters, filename):
                 server.sendmail(from_address, to_address_list, msg.as_string())
                 server.close()
                 file_pass = True
-        except Exception as exception:
+        except Exception:
             if counter == 10:
                 raise
             counter += 1
