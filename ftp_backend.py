@@ -22,5 +22,5 @@ def do(process_parameters, filename):
 
         except Exception as exception:
             if counter == 10:
-                raise Exception(exception)
+                raise
             counter += 1

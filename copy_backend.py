@@ -13,5 +13,5 @@ def do(process_parameters, filename):
             file_pass = True
         except IOError as exception:
             if counter == 10:
-                raise IOError(exception)
+                raise
             counter += 1

@@ -1096,32 +1096,32 @@ def process_directories(folders_table_process):
     run_log_path = reporting['logs_directory']
     run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
     run_log_full_path = os.path.join(run_log_path, run_log_name_constructor)
-    run_log = open(run_log_full_path, 'w')
-    run_log.write("Batch File Sender Version " + version + "\r\n")
-    run_log.write("starting run at " + time.ctime() + "\r\n")
-    if reporting['enable_reporting'] == "True":
-        # add run log to email queue if reporting is enabled
-        emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
-    # call dispatch module to process active folders
-    try:
-        run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
-                                          reporting['logs_directory'],
-                                          reporting,
-                                          processed_files, root, args, version, errors_directory,
-                                          edi_converter_scratch_folder)
-        if run_error_bool is True and not args.automatic:
-            showinfo("Run Status", "Run completed with errors.")
-        os.chdir(original_folder)
-    except Exception, dispatch_error:
-        os.chdir(original_folder)
-        # if processing folders runs into a serious error, report and log
-        print(
-            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                dispatch_error) + "\r\n")
-        run_log.write(
-            "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                dispatch_error) + "\r\n")
-    run_log.close()
+    with open(run_log_full_path, 'w') as run_log:
+        run_log.write("Batch File Sender Version " + version + "\r\n")
+        run_log.write("starting run at " + time.ctime() + "\r\n")
+        if reporting['enable_reporting'] == "True":
+            # add run log to email queue if reporting is enabled
+            emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
+        # call dispatch module to process active folders
+        try:
+            run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
+                                              reporting['logs_directory'],
+                                              reporting,
+                                              processed_files, root, args, version, errors_directory,
+                                              edi_converter_scratch_folder)
+            if run_error_bool is True and not args.automatic:
+                showinfo("Run Status", "Run completed with errors.")
+            os.chdir(original_folder)
+        except Exception, dispatch_error:
+            os.chdir(original_folder)
+            # if processing folders runs into a serious error, report and log
+            print(
+                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                    dispatch_error) + "\r\n")
+            run_log.write(
+                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
+                    dispatch_error) + "\r\n")
+        run_log.close()
     if reporting['enable_reporting'] == "True":
         try:
             sent_emails_removal_queue.delete()

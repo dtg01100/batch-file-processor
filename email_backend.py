@@ -57,5 +57,5 @@ def do(process_parameters, filename):
                 file_pass = True
         except Exception as exception:
             if counter == 10:
-                raise Exception(exception)
+                raise
             counter += 1
