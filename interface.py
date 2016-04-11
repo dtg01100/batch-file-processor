@@ -242,9 +242,8 @@ def batch_add_folders():
             folder_count = 0
             # loop over all folders in target directory, skipping them if they are already known
             for batch_folder_add_proposed_folder in folders_list:
-                doingstuffoverlay.destroy_overlay()
                 folder_count += 1
-                doingstuffoverlay.make_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
+                doingstuffoverlay.update_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
                                                                          " of " + str(len(folders_list)))
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
                 proposed_folder = check_folder_exists(batch_folder_add_proposed_folder)
@@ -1225,12 +1224,14 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
         users_refresh = True
     folders_total = folders_table.count(folder_is_active="False")
     folders_count = 0
+    doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
+                                     str(folders_total))
     for folder_to_be_removed in folders_table.find(folder_is_active="False"):
         folders_count += 1
-        doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
+        doingstuffoverlay.update_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
                                        str(folders_total))
         delete_folder_entry(folder_to_be_removed['id'])
-        doingstuffoverlay.destroy_overlay()
+    doingstuffoverlay.destroy_overlay()
     if users_refresh:
         refresh_users_list()
 
@@ -1244,8 +1245,7 @@ def mark_active_as_processed():
         file_total = 0
         file_count = 0
         folder_count += 1
-        doingstuffoverlay.destroy_overlay()
-        doingstuffoverlay.make_overlay(parent=maintenance_popup,
+        doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                        overlay_text="adding files to processed list...\n\n" + " folder " + str(
                                            folder_count) +
                                                     " of " + str(folder_total) + " file " + str(file_count) +
@@ -1257,8 +1257,7 @@ def mark_active_as_processed():
         filtered_files = []
         for f in files:
             file_count += 1
-            doingstuffoverlay.destroy_overlay()
-            doingstuffoverlay.make_overlay(parent=maintenance_popup,
+            doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                            overlay_text="checking files for already processed\n\n" + str(folder_count) +
                                                         " of " + str(folder_total) + " file " + str(file_count) +
                                                         " of " + str(file_total))
@@ -1270,8 +1269,7 @@ def mark_active_as_processed():
         for filename in filtered_files:
             print filename
             file_count += 1
-            doingstuffoverlay.destroy_overlay()
-            doingstuffoverlay.make_overlay(parent=maintenance_popup,
+            doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                            overlay_text="adding files to processed list...\n\n" + " folder " +
                                                         str(folder_count) + " of " + str(folder_total) +
                                                         " file " + str(file_count) + " of " + str(file_total))
@@ -1293,12 +1291,13 @@ def mark_active_as_processed():
 def set_all_inactive():
     total = folders_table.count(folder_is_active="True")
     count = 0
+    doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
     for folder_to_be_inactive in folders_table.find(folder_is_active="True"):
         count += 1
-        doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        doingstuffoverlay.update_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_inactive['folder_is_active'] = "False"
         folders_table.update(folder_to_be_inactive, ['id'])
-        doingstuffoverlay.destroy_overlay()
+    doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
 
@@ -1306,12 +1305,13 @@ def set_all_inactive():
 def set_all_active():
     total = folders_table.count(folder_is_active="False")
     count = 0
+    doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
     for folder_to_be_active in folders_table.find(folder_is_active="False"):
         count += 1
-        doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
+        doingstuffoverlay.update_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
         folder_to_be_active['folder_is_active'] = "True"
         folders_table.update(folder_to_be_active, ['id'])
-        doingstuffoverlay.destroy_overlay()
+    doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
 
