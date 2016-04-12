@@ -59,7 +59,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     processed_counter = 0
     folder_count = 0
     folder_total_count = folders_database.count(folder_is_active="True")
-    for parameters_dict in folders_database.find(folder_is_active="True"):  # loop over all known active folders
+    # loop over all known active folders, in order of alias name
+    for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
         global filename
         global send_filename
         folder_count += 1
