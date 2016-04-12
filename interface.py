@@ -303,7 +303,7 @@ def make_users_list():
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Send",
-                   command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0)
+                   command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0, padx=5)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
                    edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
@@ -312,7 +312,7 @@ def make_users_list():
             inactive_folder_button_frame = Frame(inactive_users_list_frame.interior)
             Button(inactive_folder_button_frame, text="Delete",
                    command=lambda name=folders_name['id'], alias=folders_name['alias']:
-                   delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=E)
+                   delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=E, padx=5)
             Button(inactive_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
                    edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W)
