@@ -83,6 +83,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)
+            run_log.write("Checking for new files\r\n")
+            print("Checking for new files")
             for f in files:
                 file_count += 1
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
@@ -101,6 +103,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             if len(filtered_files) == 0 and len(files) > 0:
                 run_log.write("No new files in directory\r\n\r\n")
                 print("No new files in directory")
+            if len(filtered_files) != 0:
+                run_log.write(str(len(filtered_files)) + " found\r\n\r\n")
+                print(str(len(filtered_files)) + " found")
             file_count_total = len(files)
             for filename in filtered_files:  # iterate over all files in directory
                 split_edi_list = []
@@ -113,13 +118,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if reporting['report_edi_errors']:
                     validate_file(filename, original_filename)
                 if parameters_dict['split_edi'] and edi_validator.check(filename):
-                    run_log.write("Splitting edi file...\r\n")
-                    print("Splitting edi file")
+                    run_log.write("Splitting edi file " + original_filename + "...\r\n")
+                    print("Splitting edi file " + original_filename + "...")
                     try:
                         split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
                             'edi_converter_scratch_folder'])
                         if len(split_edi_list) > 1:
-                            run_log.write("edi file split into " + str(len(split_edi_list)) + " files\r\n")
+                            run_log.write("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n")
                             print("edi file split into " + str(len(split_edi_list)) + " files")
                     except Exception as error:
                         split_edi_list.append(filename)
@@ -128,7 +133,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 else:
                     split_edi_list.append(filename)
                 if len(split_edi_list) <= 1:
-                    run_log.write("Cannot split edi file\r\n")
+                    run_log.write("Cannot split edi file\r\n\r\n")
                     print("Cannot split edi file")
                     split_edi_list = [filename]
                 for send_filename in split_edi_list:
