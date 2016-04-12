@@ -20,7 +20,7 @@ def do(process_parameters, filename):
                 ftp.close()
                 file_pass = True
 
-        except Exception as exception:
+        except Exception:
             if counter == 10:
                 raise
             counter += 1
