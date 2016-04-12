@@ -127,7 +127,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         "splitting edi file failed with error: " + str(error), filename, "edi splitter")
                 else:
                     split_edi_list.append(filename)
-                if len(split_edi_list) == 1:
+                if len(split_edi_list) <= 1:
                     run_log.write("Cannot split edi file\r\n")
                     print("Cannot split edi file")
                     split_edi_list = [filename]
