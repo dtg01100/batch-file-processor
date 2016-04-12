@@ -7,12 +7,12 @@ def do_split_edi(edi_process, work_directory):
         numbers_list = []
         _number = number
         while _number != 0:
-            first_character_number = divmod(_number, 26)
-            _number = first_character_number[0]
-            if len(numbers_list) > 0 and first_character_number[0] == 0:
-                number_to_insert = first_character_number[1] - 1
+            quotient, remainder = divmod(_number, 26)
+            _number = quotient
+            if len(numbers_list) > 0 and quotient == 0:
+                number_to_insert = remainder - 1
             else:
-                number_to_insert = first_character_number[1]
+                number_to_insert = remainder
             numbers_list.insert(0, number_to_insert)
         letters_list = []
         for letter_number in numbers_list:
