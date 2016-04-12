@@ -280,6 +280,13 @@ def send_single(folder_id):
         single_table.drop()
 
 
+def disable_folder(folder_id):
+    folder_dict = folders_table.find_one(id=folder_id)
+    folder_dict['folder_is_active'] = "False"
+    folders_table.update(folder_dict, ['id'])
+    refresh_users_list()
+
+
 def make_users_list():
     global users_list_frame
     global active_users_list_frame
@@ -303,10 +310,12 @@ def make_users_list():
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Send",
-                   command=lambda name=folders_name['id']: send_single(name)).grid(column=1, row=0, padx=(0, 10))
+                   command=lambda name=folders_name['id']: send_single(name)).grid(column=2, row=0, padx=(0, 10))
+            Button(active_folder_button_frame, text="<-",
+                   command=lambda name=folders_name['id']: disable_folder(name)).grid(column=0, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
-                   edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
+                   edit_folder_selector(name)).grid(column=1, row=0, sticky=E + W)
             active_folder_button_frame.pack(anchor='e', pady=1)
         else:
             inactive_folder_button_frame = Frame(inactive_users_list_frame.interior)
