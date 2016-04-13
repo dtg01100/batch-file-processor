@@ -1387,7 +1387,7 @@ def export_processed_report(name, output_folder):
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
         processed_log.write(
-            line['file_name'] + "," + "\t" + str(line['sent_date_time']) + "," + line['copy_destination'] +
+            line['file_name'] + "," + "\t" + str(line['sent_date_time'])[:-7] + "," + line['copy_destination'] +
             "," + line['ftp_destination'] + "," +
             str(line['email_destination']).replace(",", ";") + "\n")
     processed_log.close()
