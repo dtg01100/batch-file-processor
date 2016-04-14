@@ -253,32 +253,32 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "Email Backend")
                                 errors = True
-                if errors is False:
-                    try:
-                        if processed_files.count(file_name=str(original_filename),
-                                                 resend_flag=True) > 0:
-                            file_old_id = processed_files.find_one(file_name=str(original_filename),
-                                                                   resend_flag=True)
-                            processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
-                            processed_files.update(processed_files_update, ['id'])
+            if errors is False:
+                try:
+                    if processed_files.count(file_name=str(original_filename),
+                                             resend_flag=True) > 0:
+                        file_old_id = processed_files.find_one(file_name=str(original_filename),
+                                                               resend_flag=True)
+                        processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
+                        processed_files.update(processed_files_update, ['id'])
 
-                        processed_files.insert(dict(file_name=str(original_filename),
-                                                    folder_id=parameters_dict['id'],
-                                                    folder_alias=parameters_dict['alias'],
-                                                    file_checksum=hashlib.md5(
-                                                        open(original_filename, 'rb').read()).hexdigest(),
-                                                    sent_date_time=datetime.datetime.now(),
-                                                    copy_destination=parameters_dict['copy_to_directory'] if
-                                                    parameters_dict['process_backend_copy'] is True else "N/A",
-                                                    ftp_destination=parameters_dict['ftp_server'] +
-                                                                    parameters_dict['ftp_folder'] if
-                                                    parameters_dict['process_backend_ftp'] is True else "N/A",
-                                                    email_destination=parameters_dict['email_to'] if
-                                                    parameters_dict['process_backend_email'] is True else "N/A",
-                                                    resend_flag=False))
-                    except Exception, error:
-                        record_error.do(run_log, folder_errors_log, str(error), str(original_filename), "Dispatch")
-                        errors = True
+                    processed_files.insert(dict(file_name=str(original_filename),
+                                                folder_id=parameters_dict['id'],
+                                                folder_alias=parameters_dict['alias'],
+                                                file_checksum=hashlib.md5(
+                                                    open(original_filename, 'rb').read()).hexdigest(),
+                                                sent_date_time=datetime.datetime.now(),
+                                                copy_destination=parameters_dict['copy_to_directory'] if
+                                                parameters_dict['process_backend_copy'] is True else "N/A",
+                                                ftp_destination=parameters_dict['ftp_server'] +
+                                                                parameters_dict['ftp_folder'] if
+                                                parameters_dict['process_backend_ftp'] is True else "N/A",
+                                                email_destination=parameters_dict['email_to'] if
+                                                parameters_dict['process_backend_email'] is True else "N/A",
+                                                resend_flag=False))
+                except Exception, error:
+                    record_error.do(run_log, folder_errors_log, str(error), str(original_filename), "Dispatch")
+                    errors = True
                 if errors is False:
                     processed_counter += 1
                 else:
