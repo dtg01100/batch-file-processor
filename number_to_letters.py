@@ -1,3 +1,6 @@
+from __future__ import print_function
+
+
 def generate_letters(number_from_input):
     number = int(number_from_input)
     if number < 0:
