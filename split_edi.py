@@ -1,8 +1,15 @@
 import os
-import number_to_letters
 
 
 def do_split_edi(edi_process, work_directory):
+    #  credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642
+    def col_to_excel(col):  # col is 1 based
+        excel_col = str()
+        div = col
+        while div:
+            (div, mod) = divmod(div - 1, 26)  # will return (x, 0 .. 25)
+            excel_col = chr(mod + 65) + excel_col
+        return excel_col
 
     f = None
     output_file_path = None
@@ -26,7 +33,7 @@ def do_split_edi(edi_process, work_directory):
             writeable_line = line
             if writeable_line.startswith("A"):
                 count += 1
-                prepend_letters = number_to_letters.generate_letters(count)
+                prepend_letters = col_to_excel(count)
                 if not len(edi_send_list) == 0:
                     f.close()
                 edi_send_list.append(output_file_path)
