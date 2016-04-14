@@ -25,8 +25,8 @@ def do_split_edi(edi_process, work_directory):
         for line_mum, line in enumerate(work_file_lined):  # iterate over work file contents
             writeable_line = line
             if writeable_line.startswith("A"):
-                prepend_letters = number_to_letters.generate_letters(count)
                 count += 1
+                prepend_letters = number_to_letters.generate_letters(count)
                 if not len(edi_send_list) == 0:
                     f.close()
                 edi_send_list.append(output_file_path)

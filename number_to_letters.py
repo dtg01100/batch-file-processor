@@ -3,16 +3,14 @@ from __future__ import print_function
 
 def generate_letters(number_from_input):
     number = int(number_from_input)
-    if number < 0:
-        raise Exception("Input number needs to be positive integer")
+    if number < 1:
+        raise Exception("Input number needs to be greater than one")
     numbers_list = []
     _number = number
-    if _number == 0:
-        numbers_list.append(number)
     while _number != 0:
         quotient, remainder = divmod(_number, 26)
         _number = quotient
-        if len(numbers_list) > 0 and quotient == 0:
+        if quotient == 0 and remainder < 25:
             number_to_insert = remainder - 1
         else:
             number_to_insert = remainder
