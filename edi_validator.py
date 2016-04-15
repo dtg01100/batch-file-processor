@@ -1,4 +1,5 @@
 import cStringIO
+import line_from_edi_to_dict
 
 
 # this function does a simple check to see if input file is an edi file, and returns false if it isn't
@@ -25,6 +26,10 @@ def check(input_file):
 
 
 def report_edi_issues(input_file):
+    def _insert_description_and_number(line):
+        line_dict = line_from_edi_to_dict.capture_records(line)
+        in_memory_log.write("Item description: " + line_dict['description'] + "\r\n")
+        in_memory_log.write("Item number: " + line_dict['vendor_item'] + "\r\n\r\n")
     in_memory_log = cStringIO.StringIO()
     line_number = 0
     has_errors = False
@@ -40,14 +45,17 @@ def report_edi_issues(input_file):
                         in_memory_log.write("Suppressed UPC in line " + str(line_number) + "\r\n")
                         in_memory_log.write("line is:\r\n")
                         in_memory_log.write(line)
+                        _insert_description_and_number(line)
                     if line[1:12] == "           ":
                         has_errors = True
                         in_memory_log.write("Blank UPC in line " + str(line_number) + "\r\n")
                         in_memory_log.write("line is:\r\n")
                         in_memory_log.write(line)
+                        _insert_description_and_number(line)
             except Exception, error:
                 has_errors = True
                 in_memory_log.write("Validator produced error " + str(error) + " in line " + str(line_number) + "\r\n")
                 in_memory_log.write("line is:\r\n")
                 in_memory_log.write(line)
+                _insert_description_and_number(line)
     return in_memory_log, has_errors
