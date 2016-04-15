@@ -244,7 +244,7 @@ def batch_add_folders():
             for batch_folder_add_proposed_folder in folders_list:
                 folder_count += 1
                 doingstuffoverlay.update_overlay(parent=root, overlay_text="adding folders... " + str(folder_count) +
-                                                                         " of " + str(len(folders_list)))
+                                                                           " of " + str(len(folders_list)))
                 batch_folder_add_proposed_folder = os.path.join(containing_folder, batch_folder_add_proposed_folder)
                 proposed_folder = check_folder_exists(batch_folder_add_proposed_folder)
                 if proposed_folder['truefalse'] is False:
@@ -920,7 +920,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
             try:
                 _ = int(self.ftp_port_field.get())
-            except Exception:
+            except ValueError:
                 error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
                 errors = True
 
@@ -966,7 +966,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             else:
                 try:
                     _ = int(self.email_smtp_port_field.get())
-                except Exception:
+                except ValueError:
                     error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
                     errors = True
 
@@ -1234,11 +1234,11 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
     folders_total = folders_table.count(folder_is_active="False")
     folders_count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
-                                     str(folders_total))
+                                   str(folders_total))
     for folder_to_be_removed in folders_table.find(folder_is_active="False"):
         folders_count += 1
         doingstuffoverlay.update_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
-                                       str(folders_total))
+                                         str(folders_total))
         delete_folder_entry(folder_to_be_removed['id'])
     doingstuffoverlay.destroy_overlay()
     if users_refresh:
@@ -1255,10 +1255,9 @@ def mark_active_as_processed():
         file_count = 0
         folder_count += 1
         doingstuffoverlay.update_overlay(parent=maintenance_popup,
-                                       overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                           folder_count) +
-                                                    " of " + str(folder_total) + " file " + str(file_count) +
-                                                    " of " + str(file_total))
+                                         overlay_text="adding files to processed list...\n\n" + " folder " + str(
+                                             folder_count) + " of " + str(folder_total) + " file " + str(file_count) +
+                                         " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
@@ -1267,9 +1266,9 @@ def mark_active_as_processed():
         for f in files:
             file_count += 1
             doingstuffoverlay.update_overlay(parent=maintenance_popup,
-                                           overlay_text="checking files for already processed\n\n" + str(folder_count) +
-                                                        " of " + str(folder_total) + " file " + str(file_count) +
-                                                        " of " + str(file_total))
+                                             overlay_text="checking files for already processed\n\n" + str(
+                                                 folder_count) + " of " + str(folder_total) + " file " +
+                                                 str(file_count) + " of " + str(file_total))
             if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                     open(f, 'rb').read()).hexdigest()) is None:
                 filtered_files.append(f)
@@ -1279,9 +1278,9 @@ def mark_active_as_processed():
             print filename
             file_count += 1
             doingstuffoverlay.update_overlay(parent=maintenance_popup,
-                                           overlay_text="adding files to processed list...\n\n" + " folder " +
-                                                        str(folder_count) + " of " + str(folder_total) +
-                                                        " file " + str(file_count) + " of " + str(file_total))
+                                             overlay_text="adding files to processed list...\n\n" + " folder " +
+                                                          str(folder_count) + " of " + str(folder_total) +
+                                                          " file " + str(file_count) + " of " + str(file_total))
             processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
                                         file_checksum=hashlib.md5
                                         (open(filename, 'rb').read()).hexdigest(),
