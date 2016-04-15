@@ -18,7 +18,7 @@ def check(input_file):
                     if len(line) != 77:
                         return False
                     _ = int(line[1:12])
-            except Exception:
+            except ValueError:
                 if not line[1:12] == "           ":
                     return False
 

@@ -24,7 +24,7 @@ def do(filename):
 
         h_printer = win32print.OpenPrinter(printer_name)
         try:
-            h_job = win32print.StartDocPrinter(h_printer, 1, ("Log File Printout", None, "RAW"))
+            _ = win32print.StartDocPrinter(h_printer, 1, ("Log File Printout", None, "RAW"))
             try:
                 win32print.StartPagePrinter(h_printer)
                 win32print.WritePrinter(h_printer, raw_data)

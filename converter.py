@@ -36,8 +36,8 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
                 blank_upc = False
                 upc_string = ""
                 try:
-                    upc_test = int(line[1:12].rstrip())
-                except Exception:
+                    _ = int(line[1:12].rstrip())
+                except ValueError:
                     blank_upc = True
 
                 if blank_upc is False:
@@ -49,18 +49,20 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
                             upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc.rstrip()))
 
                 f.write(
-                    '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".format
-                    (("\t" + upc_string if conv_calc_upc != "False" and blank_upc is False
-                      else line[1:12]),
-                     line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
-                     line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else "{0}.{1}".format(
-                         line[46:47], line[47:49]),
-                     line[63:65].lstrip("0") + "." + line[65:68] if not line[63:65] == "00" else "{0}.{1}".format(
-                         line[64:65], line[65:68]),
-                     (line.replace("&", "AND")[12:37].rstrip(" ") if filter_ampersand != "False" else
-                      line[12:37].rstrip(" ")),
-                     line[53:57].lstrip("0") if not line[53:57].lstrip("0") == "" else line[57],
-                     line[37:43].lstrip("0") if not line[37:43].lstrip("0") == "" else line[38:43]))
+                    '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".
+                    format(("\t" + upc_string if conv_calc_upc != "False" and blank_upc is False
+                            else line[1:12]),
+                           line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
+                           line[45:47].lstrip("0") + "." + line[47:49] if not line[
+                                                                              45:47] == "00" else "{0}.{1}".format(
+                               line[46:47], line[47:49]),
+                           line[63:65].lstrip("0") + "." + line[65:68] if not line[
+                                                                              63:65] == "00" else "{0}.{1}".format(
+                               line[64:65], line[65:68]),
+                           (line.replace("&", "AND")[12:37].rstrip(" ") if filter_ampersand != "False" else
+                            line[12:37].rstrip(" ")),
+                           line[53:57].lstrip("0") if not line[53:57].lstrip("0") == "" else line[57],
+                           line[37:43].lstrip("0") if not line[37:43].lstrip("0") == "" else line[38:43]))
 
             # if include "C" records flag is set and line starts with "C"
             if line.startswith("C") and conv_inc_crec != "False":

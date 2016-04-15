@@ -11,7 +11,7 @@ def do(process_parameters, filename):
         try:
             shutil.copy(filename, process_parameters['copy_to_directory'])
             file_pass = True
-        except IOError as exception:
+        except IOError:
             if counter == 10:
                 raise
             counter += 1

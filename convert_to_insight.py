@@ -17,7 +17,7 @@ def edi_convert(edi_process, output_filename):
 
             unit_cost_with_decimal = records['unit_cost'][:-2] + "." + records['unit_cost'][-2:]
             suggested_retail_price_with_decimal = records['suggested_retail_price'][:-2] + \
-                                                  "." + records['suggested_retail_price'][-2:]
+                "." + records['suggested_retail_price'][-2:]
 
             f.write(records['record_type'] + records['upc_number'] + "  " +
                     records['description'] + records['vendor_item'][-5:] +
