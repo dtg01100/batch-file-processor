@@ -47,7 +47,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
         sent_emails_removal_queue.insert(log)
 
-    server = smtplib.SMTP(settings['email_smtp_server'], settings['email_smtp_port'])
+    server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['email_smtp_port']))
     server.starttls()
     server.login(from_address, settings['email_password'])
     text = msg.as_string()

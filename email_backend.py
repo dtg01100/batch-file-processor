@@ -49,8 +49,8 @@ def do(process_parameters, settings, filename):
                 part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
 
                 msg.attach(part)
-                server = smtplib.SMTP(settings['email_smtp_server'],
-                                      settings['email_smtp_port'])
+                server = smtplib.SMTP(str(settings['email_smtp_server']),
+                                      str(settings['email_smtp_port']))
                 server.starttls()
                 server.login(from_address, settings['email_password'])
                 server.sendmail(from_address, to_address_list, msg.as_string())

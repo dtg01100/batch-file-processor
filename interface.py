@@ -176,7 +176,6 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               split_edi=defaults['split_edi'],
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
-                              reporting_smtp_port=defaults['reporting_smtp_port'],
                               ftp_port=defaults['ftp_port'],
                               email_subject_line=defaults['email_subject_line']))
     print("done")
