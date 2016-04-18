@@ -646,7 +646,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 self.active_checkbutton_object.configure(text="Folder Is Enabled", activebackground="red")
                 self.copy_backend_checkbutton.configure(state=NORMAL)
                 self.ftp_backend_checkbutton.configure(state=NORMAL)
-                self.email_backend_checkbutton.configure(state=NORMAL)
+                if self.settings['enable_email']:
+                    self.email_backend_checkbutton.configure(state=NORMAL)
 
         self.active_checkbutton_object = Tkinter.Checkbutton(self.header_frame_frame, text="Active",
                                                              variable=self.active_checkbutton,
