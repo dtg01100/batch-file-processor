@@ -1257,7 +1257,7 @@ def mark_active_as_processed():
         doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                          overlay_text="adding files to processed list...\n\n" + " folder " + str(
                                              folder_count) + " of " + str(folder_total) + " file " + str(file_count) +
-                                         " of " + str(file_total))
+                                                      " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
@@ -1268,7 +1268,7 @@ def mark_active_as_processed():
             doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                              overlay_text="checking files for already processed\n\n" + str(
                                                  folder_count) + " of " + str(folder_total) + " file " +
-                                                 str(file_count) + " of " + str(file_total))
+                                                          str(file_count) + " of " + str(file_total))
             if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                     open(f, 'rb').read()).hexdigest()) is None:
                 filtered_files.append(f)
@@ -1353,7 +1353,8 @@ def maintenance_functions_popup():
         maintenance_popup_button_frame = Frame(maintenance_popup)
         # a persistent warning that this dialog can break things...
         maintenance_popup_warning_label = Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
-        set_all_active_button = Button(maintenance_popup_button_frame, text="Move all to active",
+        set_all_active_button = Button(maintenance_popup_button_frame,
+                                       text="Move all to active (Skips Settings Validation)",
                                        command=set_all_active)
         set_all_inactive_button = Button(maintenance_popup_button_frame, text="Move all to inactive",
                                          command=set_all_inactive)
