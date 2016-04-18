@@ -7,8 +7,8 @@ import os
 import doingstuffoverlay
 
 
-def do(reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count, total_emails):
-    from_address = reporting['report_email_address']
+def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count, total_emails):
+    from_address = settings['email_address']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")
     msg = MIMEMultipart()
@@ -47,9 +47,9 @@ def do(reporting, emails_table, sent_emails_removal_queue, time, args, root, bat
 
         sent_emails_removal_queue.insert(log)
 
-    server = smtplib.SMTP(reporting['report_email_smtp_server'], reporting['reporting_smtp_port'])
+    server = smtplib.SMTP(settings['email_smtp_server'], settings['email_smtp_port'])
     server.starttls()
-    server.login(from_address, reporting['report_email_password'])
+    server.login(from_address, settings['email_password'])
     text = msg.as_string()
     print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
     server.sendmail(from_address, to_address_list, text)

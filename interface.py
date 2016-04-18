@@ -1,5 +1,5 @@
 version = "1.13.0 (unreleased)"
-database_version = "11"
+database_version = "12"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
     from Tkinter import *
@@ -108,6 +108,7 @@ emails_table_batch = database_connection['working_batch_emails_to_send']
 sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
 oversight_and_defaults = database_connection['administrative']
 processed_files = database_connection['processed_files']
+settings = database_connection['settings']
 
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
@@ -164,10 +165,6 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               ftp_username=defaults['ftp_username'],
                               ftp_password=defaults['ftp_password'],
                               email_to=defaults['email_to'],
-                              email_origin_address=defaults['email_origin_address'],
-                              email_origin_username=defaults['email_origin_username'],
-                              email_origin_password=defaults['email_origin_password'],
-                              email_origin_smtp_server=defaults['email_origin_smtp_server'],
                               process_edi=defaults['process_edi'],
                               convert_to_format=defaults['convert_to_format'],
                               calculate_upc_check_digit=defaults['calculate_upc_check_digit'],
@@ -179,7 +176,6 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               split_edi=defaults['split_edi'],
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
-                              email_smtp_port=defaults['email_smtp_port'],
                               reporting_smtp_port=defaults['reporting_smtp_port'],
                               ftp_port=defaults['ftp_port'],
                               email_subject_line=defaults['email_subject_line']))
@@ -338,25 +334,28 @@ def make_users_list():
     users_list_frame.update()
 
 
-class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configuration.
+class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
     def body(self, master):
 
+        self.settings = settings.find_one(id=1)
         self.resizable(width=FALSE, height=FALSE)
         self.logs_directory = self.foldersnameinput['logs_directory']
-        self.title("Edit Reporting Options")
+        self.title("Edit Settings")
+        self.enable_email_checkbutton_variable = BooleanVar(master)
         self.enable_reporting_checkbutton_variable = StringVar(master)
         self.enable_report_printing_checkbutton_variable = StringVar(master)
         self.report_edi_validator_warnings_checkbutton_variable = StringVar(master)
 
         report_sending_options_frame = Frame(master)
+        email_options_frame = Frame(master)
 
-        Label(report_sending_options_frame, text="Reporting Email Address:").grid(row=1, sticky=E)
-        Label(report_sending_options_frame, text="Reporting Email Username:").grid(row=2, sticky=E)
-        Label(report_sending_options_frame, text="Reporting Email Password:").grid(row=3, sticky=E)
-        Label(report_sending_options_frame, text="Reporting Email SMTP Server:").grid(row=4, sticky=E)
-        Label(report_sending_options_frame, text="Reporting Email SMTP Port").grid(row=5, sticky=E)
-        Label(report_sending_options_frame, text="Reporting Email Destination:").grid(row=6, sticky=E)
+        Label(email_options_frame, text="Email Address:").grid(row=1, sticky=E)
+        Label(email_options_frame, text="Email Username:").grid(row=2, sticky=E)
+        Label(email_options_frame, text="Email Password:").grid(row=3, sticky=E)
+        Label(email_options_frame, text="Email SMTP Server:").grid(row=4, sticky=E)
+        Label(email_options_frame, text="Email SMTP Port").grid(row=5, sticky=E)
+        Label(report_sending_options_frame, text="Email Destination:").grid(row=6, sticky=E)
 
         def reporting_options_fields_state_set():
             if self.enable_reporting_checkbutton_variable.get() == "False":
@@ -366,6 +365,20 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             for child in report_sending_options_frame.winfo_children():
                 child.configure(state=state)
 
+        def email_options_fields_state_set():
+            if self.enable_email_checkbutton_variable.get() is False:
+                self.enable_reporting_checkbutton_variable.set("False")
+                state = DISABLED
+            else:
+                state = NORMAL
+            for child in email_options_frame.winfo_children():
+                child.configure(state=state)
+            reporting_options_fields_state_set()
+            self.run_reporting_checkbutton.configure(state=state)
+
+        self.enable_email_checkbutton = Checkbutton(master, variable=self.enable_email_checkbutton_variable,
+                                                    onvalue=True, offvalue=False,
+                                                    command=email_options_fields_state_set, text="Enable Email")
         self.run_reporting_checkbutton = Checkbutton(master, variable=self.enable_reporting_checkbutton_variable,
                                                      onvalue="True", offvalue="False",
                                                      command=reporting_options_fields_state_set,
@@ -374,26 +387,26 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             Checkbutton(master, variable=self.report_edi_validator_warnings_checkbutton_variable,
                         onvalue=True, offvalue=False,
                         text="Report EDI Validator Warnings")
-        self.report_email_address_field = Entry(report_sending_options_frame, width=40)
-        self.report_email_username_field = Entry(report_sending_options_frame, width=40)
-        self.report_email_password_field = Entry(report_sending_options_frame, show="*", width=40)
-        self.report_email_smtp_server_field = Entry(report_sending_options_frame, width=40)
-        self.reporting_smtp_port_field = Entry(report_sending_options_frame, width=40)
+        self.email_address_field = Entry(email_options_frame, width=40)
+        self.email_username_field = Entry(email_options_frame, width=40)
+        self.email_password_field = Entry(email_options_frame, show="*", width=40)
+        self.email_smtp_server_field = Entry(email_options_frame, width=40)
+        self.smtp_port_field = Entry(email_options_frame, width=40)
         self.report_email_destination_field = Entry(report_sending_options_frame, width=40)
         self.log_printing_fallback_checkbutton = \
             Checkbutton(report_sending_options_frame, variable=self.enable_report_printing_checkbutton_variable,
                         onvalue="True",
                         offvalue="False",
                         text="Enable Report Printing Fallback:")
-        rclick_report_email_address_field = rclick_menu.RightClickMenu(self.report_email_address_field)
-        rclick_report_email_username_field = rclick_menu.RightClickMenu(self.report_email_username_field)
-        rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.report_email_smtp_server_field)
-        rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(self.reporting_smtp_port_field)
+        rclick_report_email_address_field = rclick_menu.RightClickMenu(self.email_address_field)
+        rclick_report_email_username_field = rclick_menu.RightClickMenu(self.email_username_field)
+        rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.email_smtp_server_field)
+        rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(self.smtp_port_field)
         rclick_report_email_destination_field = rclick_menu.RightClickMenu(self.report_email_destination_field)
-        self.report_email_address_field.bind("<3>", rclick_report_email_address_field)
-        self.report_email_username_field.bind("<3>", rclick_report_email_username_field)
-        self.report_email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
-        self.reporting_smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
+        self.email_address_field.bind("<3>", rclick_report_email_address_field)
+        self.email_username_field.bind("<3>", rclick_report_email_username_field)
+        self.email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
+        self.smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
         self.report_email_destination_field.bind("<3>", rclick_report_email_destination_field)
         self.select_log_folder_button = Button(master, text="Select Log Folder...",
                                                command=lambda: select_log_directory())
@@ -410,31 +423,35 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
             if len(logs_directory_edit_proposed) > 0:
                 self.logs_directory = logs_directory_edit_proposed
 
+        self.enable_email_checkbutton_variable.set(self.settings['enable_email'])
         self.enable_reporting_checkbutton_variable.set(self.foldersnameinput['enable_reporting'])
-        self.report_email_address_field.insert(0, self.foldersnameinput['report_email_address'])
-        self.report_email_username_field.insert(0, self.foldersnameinput['report_email_username'])
-        self.report_email_password_field.insert(0, self.foldersnameinput['report_email_password'])
-        self.report_email_smtp_server_field.insert(0, self.foldersnameinput['report_email_smtp_server'])
-        self.reporting_smtp_port_field.insert(0, self.foldersnameinput['reporting_smtp_port'])
+        self.email_address_field.insert(0, self.settings['email_address'])
+        self.email_username_field.insert(0, self.settings['email_username'])
+        self.email_password_field.insert(0, self.settings['email_password'])
+        self.email_smtp_server_field.insert(0, self.settings['email_smtp_server'])
+        self.smtp_port_field.insert(0, self.settings['smtp_port'])
         self.report_email_destination_field.insert(0, self.foldersnameinput['report_email_destination'])
         self.enable_report_printing_checkbutton_variable.set(self.foldersnameinput['report_printing_fallback'])
         self.report_edi_validator_warnings_checkbutton_variable.set(self.foldersnameinput['report_edi_errors'])
 
+        email_options_fields_state_set()
         reporting_options_fields_state_set()
 
-        report_sending_options_frame.grid(row=3, columnspan=3)
-        self.run_reporting_checkbutton.grid(row=0, column=0, padx=2, pady=2, sticky=W)
-        self.report_edi_validator_warnings_checkbutton.grid(row=1, column=0, padx=2, pady=2, sticky=W)
-        self.report_email_address_field.grid(row=1, column=1, padx=2, pady=2)
-        self.report_email_username_field.grid(row=2, column=1, padx=2, pady=2)
-        self.report_email_password_field.grid(row=3, column=1, padx=2, pady=2)
-        self.report_email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
-        self.reporting_smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
+        self.enable_email_checkbutton.grid(row=0, columnspan=3, sticky=W)
+        email_options_frame.grid(row=1, columnspan=3)
+        report_sending_options_frame.grid(row=4, columnspan=3)
+        self.run_reporting_checkbutton.grid(row=2, column=0, padx=2, pady=2, sticky=W)
+        self.report_edi_validator_warnings_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
+        self.email_address_field.grid(row=1, column=1, padx=2, pady=2)
+        self.email_username_field.grid(row=2, column=1, padx=2, pady=2)
+        self.email_password_field.grid(row=3, column=1, padx=2, pady=2)
+        self.email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
+        self.smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
         self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
-        self.select_log_folder_button.grid(row=0, column=1, padx=2, pady=2, sticky=E, rowspan=2)
+        self.select_log_folder_button.grid(row=2, column=1, padx=2, pady=2, sticky=E, rowspan=2)
         self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
 
-        return self.report_email_address_field  # initial focus
+        return self.email_address_field  # initial focus
 
     def validate(self):
 
@@ -442,40 +459,42 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         error_list = []
         errors = False
 
-        if self.report_email_address_field.get() == '':
-            error_list.append("Reporting Email Address Is A Required Field\r")
-            errors = True
-        else:
-            if (validate_email(str(self.report_email_address_field.get()), verify=True)) is False:
-                error_list.append("Invalid Email Origin Address\r")
+        if self.enable_email_checkbutton_variable.get():
+            if self.email_address_field.get() == '':
+                error_list.append("Email Address Is A Required Field\r")
+                errors = True
+            else:
+                if (validate_email(str(self.email_address_field.get()), verify=True)) is False:
+                    error_list.append("Invalid Email Origin Address\r")
+                    errors = True
+
+            if self.email_username_field.get() == '':
+                error_list.append("Email Username Is A Required Field\r")
                 errors = True
 
-        if self.report_email_username_field.get() == '':
-            error_list.append("Reporting Email Username Is A Required Field\r")
-            errors = True
+            if self.email_password_field.get() == '':
+                error_list.append("Email Password Is A Required Field\r")
+                errors = True
 
-        if self.report_email_password_field.get() == '':
-            error_list.append("Reporting Email Password Is A Required Field\r")
-            errors = True
+            if self.email_smtp_server_field.get() == '':
+                error_list.append("SMTP Server Address Is A Required Field\r")
+                errors = True
 
-        if self.report_email_smtp_server_field.get() == '':
-            error_list.append("Reporting Email Address Is A Required Field\r")
-            errors = True
+            if self.smtp_port_field.get() == '':
+                error_list.append("SMTP Port Is A Required Field\r")
+                errors = True
 
-        if self.reporting_smtp_port_field.get() == '':
-            error_list.append("SMTP Port Is A Required Field\r")
-            errors = True
-
-        if self.report_email_destination_field.get() == '':
-            error_list.append("Reporting Email Destination Is A Required Field\r")
-            errors = True
-        else:
-            email_recepients = str(self.report_email_destination_field.get()).split(", ")
-            for email_recepient in email_recepients:
-                print(email_recepient)
-                if (validate_email(str(email_recepient), verify=True)) is False:
-                    error_list.append("Invalid Email Destination Address\r\n")
-                    errors = True
+        if self.enable_reporting_checkbutton_variable.get() == "True":
+            if self.report_email_destination_field.get() == '':
+                error_list.append("Reporting Email Destination Is A Required Field\r")
+                errors = True
+            else:
+                email_recepients = str(self.report_email_destination_field.get()).split(", ")
+                for email_recepient in email_recepients:
+                    print(email_recepient)
+                    if (validate_email(str(email_recepient), verify=True)) is False:
+                        error_list.append("Invalid Email Destination Address\r\n")
+                        errors = True
 
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
@@ -487,7 +506,7 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
 
     def ok(self, event=None):
 
-        if self.enable_reporting_checkbutton_variable.get() == "True":
+        if self.enable_reporting_checkbutton_variable.get() == "True" or self.enable_email_checkbutton_variable.get():
             if not self.validate():
                 self.initial_focus.focus_set()  # put focus back
                 return
@@ -504,14 +523,16 @@ class EditReportingDialog(dialog.Dialog):  # modal dialog for folder configurati
         doingstuffoverlay.make_overlay(self, "Applying Changes...")
         folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
         folders_name_apply['logs_directory'] = self.logs_directory
-        folders_name_apply['report_email_address'] = str(self.report_email_address_field.get())
-        folders_name_apply['report_email_username'] = str(self.report_email_username_field.get())
-        folders_name_apply['report_email_password'] = str(self.report_email_password_field.get())
-        folders_name_apply['report_email_smtp_server'] = str(self.report_email_smtp_server_field.get())
-        folders_name_apply['reporting_smtp_port'] = str(self.reporting_smtp_port_field.get())
+        self.settings['enable_email'] = self.enable_email_checkbutton_variable.get()
+        self.settings['email_address'] = str(self.email_address_field.get())
+        self.settings['email_username'] = str(self.email_username_field.get())
+        self.settings['email_password'] = str(self.email_password_field.get())
+        self.settings['email_smtp_server'] = str(self.email_smtp_server_field.get())
+        self.settings['email_smtp_port'] = str(self.smtp_port_field.get())
         folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
         folders_name_apply['report_edi_errors'] = self.report_edi_validator_warnings_checkbutton_variable.get()
 
+        settings.update(self.settings, ['id'])
         update_reporting(folders_name_apply)
         doingstuffoverlay.destroy_overlay()
 
@@ -520,6 +541,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
     def body(self, master):
 
+        self.settings = settings.find_one(id=1)
         self.resizable(width=FALSE, height=FALSE)
         global copy_to_directory
         copy_to_directory = self.foldersnameinput['copy_to_directory']
@@ -562,12 +584,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         Separator(self.prefsframe, orient=HORIZONTAL).grid(row=12, columnspan=2, sticky=E + W, pady=2)
         Label(self.prefsframe, text="Email Backend Settings:").grid(row=13, columnspan=2, pady=3)
         Label(self.prefsframe, text="Recipient Address:").grid(row=14, sticky=E)
-        Label(self.prefsframe, text="Sender Address:").grid(row=15, sticky=E)
-        Label(self.prefsframe, text="Sender Username:").grid(row=16, sticky=E)
-        Label(self.prefsframe, text="Sender Password:").grid(row=17, sticky=E)
         Label(self.prefsframe, text="Email Subject:").grid(row=18, sticky=E)
-        Label(self.prefsframe, text="Sender SMTP Server:").grid(row=19, sticky=E)
-        Label(self.prefsframe, text="SMTP Server Port:").grid(row=20, sticky=E)
         Label(self.ediframe, text="EDI Convert Settings:").grid(row=0, column=0, columnspan=2, pady=3)
         Separator(self.ediframe, orient=HORIZONTAL).grid(row=4, columnspan=2, sticky=E + W, pady=1)
         self.convert_options_frame.grid(column=0, row=5, columnspan=2, sticky=W)
@@ -589,6 +606,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             copy_to_directory = str(askdirectory(initialdir=initial_directory))
 
         def set_send_options_fields_state():
+            if not self.settings['enable_email']:
+                self.email_backend_checkbutton.configure(state=DISABLED)
             if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
                             self.process_backend_email_check.get() is False:
                 self.split_edi_checkbutton.configure(state=DISABLED)
@@ -600,7 +619,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 copy_state = DISABLED
             else:
                 copy_state = NORMAL
-            if self.process_backend_email_check.get() is False:
+            if self.process_backend_email_check.get() is False or self.settings['enable_email'] is False:
                 email_state = DISABLED
             else:
                 email_state = NORMAL
@@ -610,12 +629,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 ftp_state = NORMAL
             self.copy_backend_folder_selection_button.configure(state=copy_state)
             self.email_recepient_field.configure(state=email_state)
-            self.email_sender_address_field.configure(state=email_state)
-            self.email_sender_username_field.configure(state=email_state)
-            self.email_sender_password_field.configure(state=email_state)
             self.email_sender_subject_field.configure(state=email_state)
-            self.email_smtp_field.configure(state=email_state)
-            self.email_smtp_port_field.configure(state=email_state)
             self.ftp_server_field.configure(state=ftp_state)
             self.ftp_port_field.configure(state=ftp_state)
             self.ftp_folder_field.configure(state=ftp_state)
@@ -673,22 +687,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_recepient_field = Entry(self.prefsframe, width=30)
         rclick_email_recepient_field = rclick_menu.RightClickMenu(self.email_recepient_field)
         self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
-        self.email_sender_address_field = Entry(self.prefsframe, width=30)
-        rclick_email_sender_address_field = rclick_menu.RightClickMenu(self.email_sender_address_field)
-        self.email_sender_address_field.bind("<3>", rclick_email_sender_address_field)
-        self.email_sender_username_field = Entry(self.prefsframe, width=30)
-        rclick_email_sender_username_field = rclick_menu.RightClickMenu(self.email_sender_username_field)
-        self.email_sender_username_field.bind("<3>", rclick_email_sender_username_field)
-        self.email_sender_password_field = Entry(self.prefsframe, show="*", width=30)
         self.email_sender_subject_field = Entry(self.prefsframe, width=30)
         rclick_email_sender_subject_field = rclick_menu.RightClickMenu(self.email_sender_subject_field)
         self.email_sender_subject_field.bind("<3>", rclick_email_sender_subject_field)
-        self.email_smtp_field = Entry(self.prefsframe, width=30)
-        rclick_email_smtp_field = rclick_menu.RightClickMenu(self.email_smtp_field)
-        self.email_smtp_field.bind("<3>", rclick_email_smtp_field)
-        self.email_smtp_port_field = Entry(self.prefsframe, width=30)
-        rclick_email_smtp_port_field = rclick_menu.RightClickMenu(self.email_smtp_port_field)
-        self.email_smtp_port_field.bind("<3>", rclick_email_smtp_port_field)
         self.split_edi_checkbutton = Checkbutton(self.ediframe, variable=self.split_edi, text="Split Edi", onvalue=True,
                                                  offvalue=False)
         self.process_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.process_edi,
@@ -728,12 +729,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ftp_username_field.insert(0, self.foldersnameinput['ftp_username'])
         self.ftp_password_field.insert(0, self.foldersnameinput['ftp_password'])
         self.email_recepient_field.insert(0, self.foldersnameinput['email_to'])
-        self.email_sender_address_field.insert(0, self.foldersnameinput['email_origin_address'])
-        self.email_sender_username_field.insert(0, self.foldersnameinput['email_origin_username'])
-        self.email_sender_password_field.insert(0, self.foldersnameinput['email_origin_password'])
         self.email_sender_subject_field.insert(0, self.foldersnameinput['email_subject_line'])
-        self.email_smtp_field.insert(0, self.foldersnameinput['email_origin_smtp_server'])
-        self.email_smtp_port_field.insert(0, self.foldersnameinput['email_smtp_port'])
         self.process_edi.set(self.foldersnameinput['process_edi'])
         self.upc_var_check.set(self.foldersnameinput['calculate_upc_check_digit'])
         self.a_rec_var_check.set(self.foldersnameinput['include_a_records'])
@@ -807,12 +803,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ftp_username_field.grid(row=10, column=1)
         self.ftp_password_field.grid(row=11, column=1)
         self.email_recepient_field.grid(row=14, column=1)
-        self.email_sender_address_field.grid(row=15, column=1)
-        self.email_sender_username_field.grid(row=16, column=1)
-        self.email_sender_password_field.grid(row=17, column=1)
         self.email_sender_subject_field.grid(row=18, column=1)
-        self.email_smtp_field.grid(row=19, column=1)
-        self.email_smtp_port_field.grid(row=20, column=1)
 
         self.header_frame_frame.pack(fill=X)
         self.bodyframe.pack()
@@ -858,12 +849,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['ftp_username'] = str(self.ftp_username_field.get())
         apply_to_folder['ftp_password'] = str(self.ftp_password_field.get())
         apply_to_folder['email_to'] = str(self.email_recepient_field.get())
-        apply_to_folder['email_origin_address'] = str(self.email_sender_address_field.get())
-        apply_to_folder['email_origin_username'] = str(self.email_sender_username_field.get())
-        apply_to_folder['email_origin_password'] = str(self.email_sender_password_field.get())
         apply_to_folder['email_subject_line'] = str(self.email_sender_subject_field.get())
-        apply_to_folder['email_origin_smtp_server'] = str(self.email_smtp_field.get())
-        apply_to_folder['email_smtp_port'] = int(self.email_smtp_port_field.get())
         apply_to_folder['process_edi'] = str(self.process_edi.get())
         apply_to_folder['convert_to_format'] = str(self.convert_formats_var.get())
         apply_to_folder['calculate_upc_check_digit'] = str(self.upc_var_check.get())
@@ -939,36 +925,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                         if (validate_email(str(email_recepient), verify=True)) is False:
                             error_string_constructor_list.append("Invalid Email Destination Address\r\n")
                             errors = True
-
-            if self.email_sender_address_field.get() == "":
-                error_string_constructor_list.append("Email Origin Address Field Is Required\r\n")
-                errors = True
-            else:
-                if (validate_email(str(self.email_sender_address_field.get()), verify=True)) is False:
-                    error_string_constructor_list.append("Invalid Email Origin Address\r\n")
-                    errors = True
-
-            if self.email_sender_username_field.get() == "":
-                error_string_constructor_list.append("Email Username Field Is Required\r\n")
-                errors = True
-
-            if self.email_sender_password_field.get() == "":
-                error_string_constructor_list.append("Email Password Field Is Required\r\n")
-                errors = True
-
-            if self.email_smtp_field.get() == "":
-                error_string_constructor_list.append("SMTP Server Field Is Required\r\n")
-                errors = True
-
-            if self.email_smtp_port_field.get() == "":
-                error_string_constructor_list.append("SMTP Port Field Is Required\r\n")
-                errors = True
-            else:
-                try:
-                    _ = int(self.email_smtp_port_field.get())
-                except ValueError:
-                    error_string_constructor_list.append("SMTP Port Field Needs To Be A Number\r\n")
-                    errors = True
 
         if self.process_backend_copy_check.get() is True:
 
@@ -1065,6 +1021,7 @@ def set_defaults_popup():
 def process_directories(folders_table_process):
     original_folder = os.getcwd()
     global emails_table
+    settings_dict = settings.find_one(id=1)
     log_folder_creation_error = False
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
@@ -1081,7 +1038,7 @@ def process_directories(folders_table_process):
             while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
                 if askokcancel("Error", "Can't write to log directory,\r\n"
                                         " would you like to change reporting settings?"):
-                    EditReportingDialog(root, oversight_and_defaults.find_one(id=1))
+                    EditSettingsDialog(root, oversight_and_defaults.find_one(id=1))
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
                     showerror(message="Can't write to log directory, exiting")
@@ -1116,7 +1073,7 @@ def process_directories(folders_table_process):
                                               reporting['logs_directory'],
                                               reporting,
                                               processed_files, root, args, version, errors_directory,
-                                              edi_converter_scratch_folder)
+                                              edi_converter_scratch_folder, settings_dict)
             if run_error_bool is True and not args.automatic:
                 showinfo("Run Status", "Run completed with errors.")
             os.chdir(original_folder)
@@ -1149,8 +1106,8 @@ def process_directories(folders_table_process):
                     emails_table_batch.insert(log)
                     # if the total size is more than 9mb, then send that set and reset the total
                     if total_size > 9000000 or loop_count >= 15:
-                        batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args,
-                                            root, batch_number, emails_count, total_emails)
+                        batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                                            start_time, args, root, batch_number, emails_count, total_emails)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
                         loop_count = 0
@@ -1162,8 +1119,8 @@ def process_directories(folders_table_process):
                     sent_emails_removal_queue.insert(log)
             if emails_table_batch.count() > 0:
                 # send the remainder of emails
-                batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args, root,
-                                    batch_number, emails_count, total_emails)
+                batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue, start_time,
+                                    args, root, batch_number, emails_count, total_emails)
                 emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
@@ -1180,8 +1137,8 @@ def process_directories(folders_table_process):
                 emails_table_batch.insert(dict(log=email_errors_log_full_path,
                                                folder_alias=email_errors_log_name_constructor))
                 try:
-                    batch_log_sender.do(reporting, emails_table_batch, sent_emails_removal_queue, start_time, args,
-                                        root, batch_number, emails_count, total_emails)
+                    batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                                        start_time, args, root, batch_number, emails_count, total_emails)
                     emails_table_batch.delete()
                 except Exception, email_send_error:
                     print(email_send_error)
@@ -1507,8 +1464,8 @@ make_users_list()
 open_folder_button = Button(options_frame, text="Add Directory...", command=select_folder)
 open_multiple_folder_button = Button(options_frame, text="Batch Add Directories...", command=batch_add_folders)
 default_settings = Button(options_frame, text="Set Defaults...", command=set_defaults_popup)
-edit_reporting = Button(options_frame, text="Edit Reporting...",
-                        command=lambda: EditReportingDialog(root, oversight_and_defaults.find_one(id=1)))
+edit_reporting = Button(options_frame, text="Edit Settings...",
+                        command=lambda: EditSettingsDialog(root, oversight_and_defaults.find_one(id=1)))
 process_folder_button = Button(options_frame, text="Process Folders",
                                command=lambda: graphical_process_directories(folders_table))
 

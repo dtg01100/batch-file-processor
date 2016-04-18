@@ -12,12 +12,12 @@ import os
 # note: process_parameters is a dict from a row in the database, passed into this module
 
 
-def do(process_parameters, filename):
+def do(process_parameters, settings, filename):
     file_pass = False
     counter = 0
     while not file_pass:
         try:
-            from_address = process_parameters['email_origin_address']
+            from_address = settings['email_address']
             to_address = process_parameters['email_to']
             to_address_list = to_address.split(", ")
             msg = MIMEMultipart()
@@ -49,10 +49,10 @@ def do(process_parameters, filename):
                 part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
 
                 msg.attach(part)
-                server = smtplib.SMTP(process_parameters['email_origin_smtp_server'],
-                                      process_parameters['email_smtp_port'])
+                server = smtplib.SMTP(settings['email_smtp_server'],
+                                      settings['email_smtp_port'])
                 server.starttls()
-                server.login(from_address, process_parameters['email_origin_password'])
+                server.login(from_address, settings['email_password'])
                 server.sendmail(from_address, to_address_list, msg.as_string())
                 server.close()
                 file_pass = True

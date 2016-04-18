@@ -20,7 +20,7 @@ import split_edi
 
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
-            reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder):
+            reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder, settings):
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
@@ -240,14 +240,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "FTP Backend")
                                 errors = True
-                        if parameters_dict['process_backend_email'] is True and errors is False:
+                        if parameters_dict['process_backend_email'] is True and errors is False and \
+                                settings['enable_email']:
                             try:
                                 print("sending " + str(send_filename) + " to " + str(parameters_dict['email_to']) +
                                       " with email backend")
                                 run_log.write(
                                     "sending " + str(send_filename) + " to " + str(parameters_dict['email_to']) +
                                     " with email backend\r\n\r\n")
-                                email_backend.do(parameters_dict, send_filename)
+                                email_backend.do(parameters_dict, settings, send_filename)
                                 run_log.write("Success\r\n\r\n")
                             except Exception, error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),

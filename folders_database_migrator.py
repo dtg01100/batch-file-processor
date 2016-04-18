@@ -3,7 +3,6 @@ import os
 
 
 def upgrade_database(database_connection):
-
     db_version = database_connection['version']
     db_version_dict = db_version.find_one(id=1)
 
@@ -82,4 +81,23 @@ def upgrade_database(database_connection):
             line['split_edi'] = False
             folders_table.update(line, ['id'])
         update_version = dict(id=1, version="11")
+        db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "11":
+        administrative_section = database_connection['administrative']
+        database_connection.create_table('settings')
+        settings_table = database_connection['settings']
+        administrative_section_dict = administrative_section.find_one(id=1)
+        if administrative_section_dict['enable_reporting'] == "True":
+            email_state = True
+        else:
+            email_state = False
+
+        settings_table.insert(dict(enable_email=email_state,
+                                   email_address=administrative_section_dict['report_email_address'],
+                                   email_username=administrative_section_dict['report_email_username'],
+                                   email_password=administrative_section_dict['report_email_password'],
+                                   email_smtp_server=administrative_section_dict['report_email_smtp_server'],
+                                   smtp_port=administrative_section_dict['reporting_smtp_port']))
+        update_version = dict(id=1, version="12")
         db_version.update(update_version, ['id'])
