@@ -603,8 +603,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_email_check = BooleanVar(master)
         self.header_frame_frame = Frame(master)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
-        if self.foldersnameinput['folder_name'] != 'template':
-            Label(self.folderframe, text="Alias:").grid(row=5, sticky=E)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
         Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E + W, pady=2)
         Label(self.prefsframe, text="Ftp Backend Settings:").grid(row=6, columnspan=2, pady=3)
@@ -717,10 +715,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                      onvalue=True, offvalue=False,
                                                      command=set_send_options_fields_state)
         if self.foldersnameinput['folder_name'] != 'template':
-            Label(self.folderframe, text="Folder Alias:").grid(row=6, sticky=W)
-            self.folder_alias_field = Entry(self.folderframe, width=30)
+            self.folder_alias_frame = Frame(self.folderframe)
+            Label(self.folder_alias_frame, text="Folder Alias:").grid(row=0, sticky=W)
+            self.folder_alias_field = Entry(self.folder_alias_frame, width=30)
             rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
             self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
+            self.folder_alias_field.grid(row=0, column=1)
         self.copy_backend_folder_selection_button = Button(self.prefsframe,
                                                            text="Select Copy Backend Destination Folder...",
                                                            command=lambda: select_copy_to_directory())
@@ -848,7 +848,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=W)
         self.email_backend_checkbutton.grid(row=5, column=0, sticky=W)
         if self.foldersnameinput['folder_name'] != 'template':
-            self.folder_alias_field.grid(row=6, column=1)
+            self.folder_alias_frame.grid(row=6, column=0, columnspan=2)
         self.copy_backend_folder_selection_button.grid(row=4, column=0, columnspan=2)
         self.ftp_server_field.grid(row=7, column=1)
         self.ftp_port_field.grid(row=8, column=1)
