@@ -1413,6 +1413,7 @@ def export_processed_report(name, output_folder):
                 counter += 1
             clear_file_path = input_file_name + " " + str(counter) + ".csv"
             return clear_file_path
+
     folder_alias = folders_table.find_one(id=name)
     processed_log_path = avoid_overwrite(str(os.path.join(output_folder, folder_alias['alias'] + " processed report")))
     processed_log = open(processed_log_path, 'w')
@@ -1495,10 +1496,18 @@ def processed_files_popup():
     if processed_files.count() == 0:
         no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
-    for folders_name in processed_files.distinct('folder_id'):
-        folder_row = processed_files.find_one(folder_id=folders_name['folder_id'])
-        folder_dict = folders_table.find_one(id=folders_name['folder_id'])
+    processed_files_distinct_list = []
+    for row in processed_files.distinct('folder_id'):
+        processed_files_distinct_list.append(row['folder_id'])
+    folder_entry_tuple_list = []
+    for entry in processed_files_distinct_list:
+        folder_dict = folders_table.find_one(id=str(entry))
         folder_alias = folder_dict['alias']
+        folder_entry_tuple_list.append([entry, folder_alias])
+    sorted_folder_list = sorted(folder_entry_tuple_list, key=lambda folder_entry_tuple_list: folder_entry_tuple_list[1])
+
+    for folders_name, folder_alias in sorted_folder_list:
+        folder_row = processed_files.find_one(folder_id=str(folders_name))
         Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
                             variable=folder_button_variable,
                             value=folder_alias, indicatoron=FALSE,
