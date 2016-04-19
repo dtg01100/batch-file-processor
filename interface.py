@@ -607,6 +607,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         def set_send_options_fields_state():
             if not self.settings['enable_email']:
                 self.email_backend_checkbutton.configure(state=DISABLED)
+                self.process_backend_email_check.set(False)
             if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
                             self.process_backend_email_check.get() is False:
                 self.split_edi_checkbutton.configure(state=DISABLED)
