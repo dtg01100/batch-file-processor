@@ -73,11 +73,6 @@ class DbMigrationThing:
                     print("merging email backend settings")
                     update_db_line.update(dict(email_to=new_db_line['email_to'],
                                                email_origin_address=new_db_line['email_origin_address'],
-                                               email_origin_username=new_db_line['email_origin_username'],
-                                               email_origin_password=new_db_line['email_origin_password'],
-                                               email_origin_smtp_server=new_db_line[
-                                                   'email_origin_smtp_server'],
-                                               email_smtp_port=new_db_line['email_smtp_port'],
                                                email_subject_line=new_db_line['email_subject_line'],
                                                id=line['id']))
                 old_folders_table.update(update_db_line, ['id'])
