@@ -22,6 +22,8 @@ def upgrade_database(database_connection):
         update_version = dict(id=1, version="6")
         db_version.update(update_version, ['id'])
 
+    db_version_dict = db_version.find_one(id=1)
+
     if db_version_dict['version'] == "6":
         processed_table = database_connection['processed_files']
         processed_table.create_column('resend_flag', sqlalchemy.Boolean)
@@ -31,6 +33,8 @@ def upgrade_database(database_connection):
 
         update_version = dict(id=1, version="7")
         db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
 
     if db_version_dict['version'] == "7":
         folders_table = database_connection['folders']
@@ -51,6 +55,8 @@ def upgrade_database(database_connection):
         update_version = dict(id=1, version="8")
         db_version.update(update_version, ['id'])
 
+    db_version_dict = db_version.find_one(id=1)
+
     if db_version_dict['version'] == "8":
         administrative_section = database_connection['administrative']
         administrative_section_update_dict = dict(id=1, single_add_folder_prior=os.path.join(os.getcwd()),
@@ -61,12 +67,16 @@ def upgrade_database(database_connection):
         update_version = dict(id=1, version="9")
         db_version.update(update_version, ['id'])
 
+    db_version_dict = db_version.find_one(id=1)
+
     if db_version_dict['version'] == "9":
         administrative_section = database_connection['administrative']
         administrative_section_update_dict = dict(id=1, report_edi_errors=False)
         administrative_section.update(administrative_section_update_dict, ['id'])
         update_version = dict(id=1, version="10")
         db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
 
     if db_version_dict['version'] == "10":
         folders_table = database_connection['folders']
@@ -77,11 +87,13 @@ def upgrade_database(database_connection):
         administrative_section.update(administrative_section_update_dict, ['id'])
 
         folders_table.create_column('split_edi', sqlalchemy.Boolean)
-        for line in folders_table:
+        for line in folders_table.all():
             line['split_edi'] = False
             folders_table.update(line, ['id'])
         update_version = dict(id=1, version="11")
         db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
 
     if db_version_dict['version'] == "11":
         administrative_section = database_connection['administrative']

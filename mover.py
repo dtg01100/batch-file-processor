@@ -16,7 +16,6 @@ class DbMigrationThing:
     def do_migrate(self, progress_bar, master, original_database_connection):
         def database_preimport_operations():
             global new_database_connection
-            global original_database_connection
             backup_increment.do_backup(self.original_folder_path)
             modified_new_folder_path = backup_increment.do_backup(self.new_folder_path)
             new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
@@ -25,6 +24,7 @@ class DbMigrationThing:
             new_db_version = new_database_connection['version']
             new_db_version_dict = new_db_version.find_one(id=1)
             if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
+                print("db needs upgrading")
                 folders_database_migrator.upgrade_database(new_database_connection)
 
         preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)

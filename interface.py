@@ -501,20 +501,28 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             doingstuffoverlay.destroy_overlay()
             return False
         doingstuffoverlay.destroy_overlay()
+
+        if not self.enable_email_checkbutton_variable.get():
+            number_of_disabled_email_backends = folders_table.count(process_backend_email=True)
+            number_of_disabled_folders = folders_table.count(process_backend_email=True, process_backend_ftp=False,
+                                                             process_backend_copy=False, folder_is_active="True")
+            if number_of_disabled_folders != 0:
+                if not askokcancel(message="This will disable the email backend in " + str(
+                        number_of_disabled_email_backends) + " folders.\nAs a result, " + str(
+                        number_of_disabled_folders) + " folders will be disabled"):
+                    return False
         return 1
 
     def ok(self, event=None):
 
-        if self.enable_reporting_checkbutton_variable.get() == "True" or self.enable_email_checkbutton_variable.get():
-            if not self.validate():
-                self.initial_focus.focus_set()  # put focus back
-                return
+        if not self.validate():
+            self.initial_focus.focus_set()  # put focus back
+            return
 
         self.withdraw()
         self.update_idletasks()
 
         self.apply(self.foldersnameinput)
-
         self.cancel()
 
     def apply(self, folders_name_apply):
@@ -530,10 +538,21 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.settings['email_smtp_port'] = str(self.smtp_port_field.get())
         folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
         folders_name_apply['report_edi_errors'] = self.report_edi_validator_warnings_checkbutton_variable.get()
+        if not self.enable_email_checkbutton_variable.get():
+            for email_backend_to_disable in folders_table.find(process_backend_email=True):
+                email_backend_to_disable['process_backend_email'] = False
+                folders_table.update(email_backend_to_disable, ['id'])
+            for folder_to_disable in folders_table.find(process_backend_email=False, process_backend_ftp=False,
+                                                        process_backend_copy=False, folder_is_active="True"):
+                folder_to_disable['folder_is_active'] = "False"
+                folders_table.update(folder_to_disable, ['id'])
+            folders_name_apply['folder_is_active'] = 'False'
+            folders_name_apply['process_backend_email'] = False
 
         settings.update(self.settings, ['id'])
         update_reporting(folders_name_apply)
         doingstuffoverlay.destroy_overlay()
+        refresh_users_list()
 
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -607,7 +626,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         def set_send_options_fields_state():
             if not self.settings['enable_email']:
                 self.email_backend_checkbutton.configure(state=DISABLED)
-                self.process_backend_email_check.set(False)
             if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
                             self.process_backend_email_check.get() is False:
                 self.split_edi_checkbutton.configure(state=DISABLED)
