@@ -101,6 +101,7 @@ if int(db_version_dict['version']) > int(database_version):
     showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
     raise SystemExit
 
+
 # open required tables in database
 
 
@@ -119,6 +120,7 @@ def open_tables():
     oversight_and_defaults = database_connection['administrative']
     processed_files = database_connection['processed_files']
     settings = database_connection['settings']
+
 
 open_tables()
 
@@ -521,7 +523,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " + str(
                         number_of_disabled_email_backends) + " folders.\nAs a result, " + str(
-                        number_of_disabled_folders) + " folders will be disabled"):
+                    number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
@@ -642,9 +644,29 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                             self.process_backend_email_check.get() is False:
                 self.split_edi_checkbutton.configure(state=DISABLED)
                 self.edi_options_menu.configure(state=DISABLED)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=DISABLED)
+                    except TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=DISABLED)
+                    except TclError:
+                        pass
             else:
                 self.split_edi_checkbutton.configure(state=NORMAL)
                 self.edi_options_menu.configure(state=NORMAL)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=NORMAL)
+                    except TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=NORMAL)
+                    except TclError:
+                        pass
             if self.process_backend_copy_check.get() is False:
                 copy_state = DISABLED
             else:
