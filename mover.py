@@ -72,7 +72,6 @@ class DbMigrationThing:
                 if new_db_line['process_backend_email'] is True:
                     print("merging email backend settings")
                     update_db_line.update(dict(email_to=new_db_line['email_to'],
-                                               email_origin_address=new_db_line['email_origin_address'],
                                                email_subject_line=new_db_line['email_subject_line'],
                                                id=line['id']))
                 old_folders_table.update(update_db_line, ['id'])

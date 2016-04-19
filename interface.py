@@ -102,13 +102,25 @@ if int(db_version_dict['version']) > int(database_version):
     raise SystemExit
 
 # open required tables in database
-folders_table = database_connection['folders']
-emails_table = database_connection['emails_to_send']
-emails_table_batch = database_connection['working_batch_emails_to_send']
-sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
-oversight_and_defaults = database_connection['administrative']
-processed_files = database_connection['processed_files']
-settings = database_connection['settings']
+
+
+def open_tables():
+    global folders_table
+    global emails_table
+    global emails_table_batch
+    global sent_emails_removal_queue
+    global oversight_and_defaults
+    global processed_files
+    global settings
+    folders_table = database_connection['folders']
+    emails_table = database_connection['emails_to_send']
+    emails_table_batch = database_connection['working_batch_emails_to_send']
+    sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
+    oversight_and_defaults = database_connection['administrative']
+    processed_files = database_connection['processed_files']
+    settings = database_connection['settings']
+
+open_tables()
 
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
@@ -1308,7 +1320,20 @@ def clear_processed_files_log():
 
 def database_import_wrapper():
     if database_import.import_interface(maintenance_popup, database_connection, 'folders.db'):
+        doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
+        open_tables()
+        settings_dict = settings.find_one(id=1)
+        print(settings_dict['enable_email'])
+        if not settings_dict['enable_email']:
+            for email_backend_to_disable in folders_table.find(process_backend_email=True):
+                email_backend_to_disable['process_backend_email'] = False
+                folders_table.update(email_backend_to_disable, ['id'])
+            for folder_to_disable in folders_table.find(process_backend_email=False, process_backend_ftp=False,
+                                                        process_backend_copy=False, folder_is_active="True"):
+                folder_to_disable['folder_is_active'] = "False"
+                folders_table.update(folder_to_disable, ['id'])
         refresh_users_list()
+        doingstuffoverlay.destroy_overlay()
     maintenance_popup.grab_set()
     maintenance_popup.focus_set()
 
