@@ -64,7 +64,7 @@ target/
 /edi_converter_scratch_folder
 /errors
 
-folders.db
+folders.db*
 .idea/
 run_logs
 setup.py
