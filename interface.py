@@ -1404,8 +1404,17 @@ def maintenance_functions_popup():
 
 
 def export_processed_report(name, output_folder):
+    def avoid_overwrite(input_file_name):
+        counter = 2
+        if not os.path.exists(input_file_name + ".csv"):
+            return input_file_name + ".csv"
+        else:
+            while os.path.exists(input_file_name + " " + str(counter) + ".csv"):
+                counter += 1
+            clear_file_path = input_file_name + " " + str(counter) + ".csv"
+            return clear_file_path
     folder_alias = folders_table.find_one(id=name)
-    processed_log_path = str(os.path.join(output_folder, folder_alias['alias'] + " processed report " + ".csv"))
+    processed_log_path = avoid_overwrite(str(os.path.join(output_folder, folder_alias['alias'] + " processed report")))
     processed_log = open(processed_log_path, 'w')
     processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
     for line in processed_files.find(folder_id=name):
