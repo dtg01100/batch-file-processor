@@ -29,6 +29,7 @@ try:  # try to import required modules
     import resend_interface
     import database_import
     import backup_increment
+    from operator import itemgetter
     from tendo import singleton
 except Exception, error:
     try:  # if importing doesn't work, not much to do other than log and quit
@@ -1504,7 +1505,7 @@ def processed_files_popup():
         folder_dict = folders_table.find_one(id=str(entry))
         folder_alias = folder_dict['alias']
         folder_entry_tuple_list.append([entry, folder_alias])
-    sorted_folder_list = sorted(folder_entry_tuple_list, key=lambda folder_entry_tuple_list: folder_entry_tuple_list[1])
+    sorted_folder_list = sorted(folder_entry_tuple_list, key=itemgetter(1))
 
     for folders_name, folder_alias in sorted_folder_list:
         folder_row = processed_files.find_one(folder_id=str(folders_name))

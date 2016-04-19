@@ -4,6 +4,7 @@ import Tkinter
 from tkMessageBox import showerror
 import scrollbuttons
 import os
+from operator import itemgetter
 
 
 def do(database_connection, master_window):
@@ -69,7 +70,7 @@ def do(database_connection, master_window):
     for line in processed_files_table.distinct('folder_id'):
         folder_alias = configured_folders_table.find_one(id=line['folder_id'])
         folder_list.append([line['folder_id'], folder_alias['alias']])
-    sorted_folder_list = sorted(folder_list, key=lambda folder_list: folder_list[1])
+    sorted_folder_list = sorted(folder_list, key=itemgetter(1))
 
     resend_interface_scrollable_folders_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_folders_frame)
     resend_interface_scrollable_files_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_files_frame)
