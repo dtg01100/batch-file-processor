@@ -87,7 +87,7 @@ def do(database_connection, master_window):
         return
 
     close_button = Button(resend_interface_close_frame, text="Close", command=close_window)
-    close_button.pack()
+    close_button.pack(pady=5)
 
     loading_label.destroy()
     resend_interface_scrollable_folders_frame.pack()

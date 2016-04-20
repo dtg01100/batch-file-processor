@@ -1525,7 +1525,7 @@ def processed_files_popup():
                                 name)).pack(anchor='w',
                                             fill='x')
     close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
-    close_button.pack()
+    close_button.pack(pady=5)
     processed_files_loading_label.destroy()
     processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()
