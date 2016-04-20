@@ -52,7 +52,7 @@ def report_edi_issues(input_file):
                         in_memory_log.write("line is:\r\n")
                         in_memory_log.write(line)
                         _insert_description_and_number(line)
-            except Exception, error:
+            except Exception as error:
                 has_errors = True
                 in_memory_log.write("Validator produced error " + str(error) + " in line " + str(line_number) + "\r\n")
                 in_memory_log.write("line is:\r\n")

@@ -7,6 +7,7 @@ try:  # try to import required modules
     from tkMessageBox import showerror, askyesno, showinfo, askokcancel
     from ttk import *
     from validate_email import validate_email
+    from __future__ import print_function
     import Tkinter
     import rclick_menu
     import hashlib
@@ -31,7 +32,7 @@ try:  # try to import required modules
     import backup_increment
     from operator import itemgetter
     from tendo import singleton
-except Exception, error:
+except Exception as error:
     try:  # if importing doesn't work, not much to do other than log and quit
         print(str(error))
         critical_log = open("critical_error.log", 'a')
@@ -39,7 +40,7 @@ except Exception, error:
         critical_log.write(str(error) + "\r\n")
         critical_log.close()
         raise SystemExit
-    except Exception, big_error:  # if logging doesn't work, at least complain
+    except Exception as big_error:  # if logging doesn't work, at least complain
         print("error writing critical error log for error: " + str(error) + "\n" +
               "operation failed with error: " + str(big_error))
         raise SystemExit
@@ -56,7 +57,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
         create_database.do(database_version)  # make a new one
         print("done")
         creating_database_popup.destroy()
-    except Exception, error:  # if that doesn't work for some reason, log and quit
+    except Exception as error:  # if that doesn't work for some reason, log and quit
         try:
             print(str(error))
             critical_log = open("critical_error.log", 'a')
@@ -64,7 +65,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
             critical_log.close()
             raise SystemExit
-        except Exception, big_error:  # if logging doesn't work, at least complain
+        except Exception as big_error:  # if logging doesn't work, at least complain
             print("error writing critical error log for error: " + str(error) + "\n" +
                   "operation failed with error: " + str(big_error))
             raise SystemExit
@@ -72,7 +73,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
 try:  # try to connect to database
     database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
     session_database = dataset.connect("sqlite:///")
-except Exception, error:  # if that doesn't work for some reason, log and quit
+except Exception as error:  # if that doesn't work for some reason, log and quit
     try:
         print(str(error))
         critical_log = open("critical_error.log", 'a')
@@ -80,7 +81,7 @@ except Exception, error:  # if that doesn't work for some reason, log and quit
         critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
         critical_log.close()
         raise SystemExit
-    except Exception, big_error:  # if logging doesn't work, at least complain
+    except Exception as big_error:  # if logging doesn't work, at least complain
         print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " +
               str(big_error))
         raise SystemExit
@@ -141,7 +142,7 @@ def check_logs_directory():
         test_log_file = open(os.path.join(logs_directory['logs_directory'], 'test_log_file'), 'w')
         test_log_file.close()
         os.remove(os.path.join(logs_directory['logs_directory'], 'test_log_file'))
-    except IOError, log_directory_error:
+    except IOError as log_directory_error:
         print(str(log_directory_error))
         return False
 
@@ -162,7 +163,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
         folder_alias_deduplicate_constructor = folder_alias_constructor
         while folder_alias_checker(folder_alias_deduplicate_constructor) is False:
             folder_alias_end_suffix += folder_alias_end_suffix + 1
-            print str(folder_alias_end_suffix)
+            print(str(folder_alias_end_suffix))
             folder_alias_deduplicate_constructor = folder_alias_constructor + " " + str(folder_alias_end_suffix)
         folder_alias_constructor = folder_alias_deduplicate_constructor
 
@@ -524,7 +525,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " + str(
                         number_of_disabled_email_backends) + " folders.\nAs a result, " + str(
-                    number_of_disabled_folders) + " folders will be disabled"):
+                        number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
@@ -1131,7 +1132,7 @@ def process_directories(folders_table_process):
             if run_error_bool is True and not args.automatic:
                 showinfo("Run Status", "Run completed with errors.")
             os.chdir(original_folder)
-        except Exception, dispatch_error:
+        except Exception as dispatch_error:
             os.chdir(original_folder)
             # if processing folders runs into a serious error, report and log
             print(
@@ -1194,11 +1195,11 @@ def process_directories(folders_table_process):
                     batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
                                         start_time, args, root, batch_number, emails_count, total_emails)
                     emails_table_batch.delete()
-                except Exception, email_send_error:
+                except Exception as email_send_error:
                     print(email_send_error)
                     doingstuffoverlay.destroy_overlay()
                     emails_table_batch.delete()
-        except Exception, dispatch_error:
+        except Exception as dispatch_error:
             emails_table_batch.delete()
             run_log = open(run_log_full_path, 'a')
             if reporting['report_printing_fallback'] == "True":
@@ -1216,7 +1217,7 @@ def process_directories(folders_table_process):
                     run_log = open(run_log_full_path, 'r')
                     print_run_log.do(run_log)
                     run_log.close()
-                except Exception, dispatch_error:
+                except Exception as dispatch_error:
                     print("printing error log failed with error: " + str(dispatch_error) + "\r\n")
                     run_log = open(run_log_full_path, 'a')
                     run_log.write("Printing error log failed with error: " + str(dispatch_error) + "\r\n")
@@ -1225,10 +1226,10 @@ def process_directories(folders_table_process):
 
 def silent_process_directories(silent_process_folders_table):
     if silent_process_folders_table.count(folder_is_active="True") > 0:
-        print "batch processing configured directories"
+        print("batch processing configured directories")
         try:
             process_directories(silent_process_folders_table)
-        except Exception, silent_process_error:
+        except Exception as silent_process_error:
             print(str(silent_process_error))
             silent_process_critical_log = open("critical_error.log", 'a')
             silent_process_critical_log.write(str(silent_process_error) + "\r\n")
@@ -1286,7 +1287,7 @@ def mark_active_as_processed():
         file_total = len(filtered_files)
         file_count = 0
         for filename in filtered_files:
-            print filename
+            print(filename)
             file_count += 1
             doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                              overlay_text="adding files to processed list...\n\n" + " folder " +

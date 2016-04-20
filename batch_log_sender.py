@@ -7,7 +7,8 @@ import os
 import doingstuffoverlay
 
 
-def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count, total_emails):
+def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count,
+       total_emails):
     from_address = settings['email_address']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")

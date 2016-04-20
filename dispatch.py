@@ -1,3 +1,4 @@
+from __future__ import print_function
 import hashlib
 import datetime
 import copy_backend
@@ -164,8 +165,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                               parameters_dict['a_record_padding'])
                                         run_log.write("Success\r\n\r\n")
                                         send_filename = output_filename
-                                    except Exception, error:
-                                        print str(error)
+                                    except Exception as error:
+                                        print(str(error))
                                         errors = True
                                         record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                         "EDI Processor")
@@ -184,8 +185,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     convert_to_insight.edi_convert(send_filename, output_filename)
                                     run_log.write("Success\r\n\r\n")
                                     send_filename = output_filename
-                                except Exception, error:
-                                    print str(error)
+                                except Exception as error:
+                                    print(str(error))
                                     errors = True
                                     record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                     "EDI Processor")
@@ -200,8 +201,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                      parameters_dict['pad_a_records'],
                                                      parameters_dict['a_record_padding'])
                                 send_filename = output_filename
-                            except Exception, error:
-                                print str(error)
+                            except Exception as error:
+                                print(str(error))
                                 errors = True
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "EDI Processor")
@@ -217,8 +218,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                       'copy_to_directory']) + " with copy backend\r\n\r\n")
                                 copy_backend.do(parameters_dict, send_filename)
                                 run_log.write("Success\r\n\r\n")
-                            except Exception, error:
-                                print str(error)
+                            except Exception as error:
+                                print(str(error))
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "Copy Backend")
                                 errors = True
@@ -234,8 +235,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     " with FTP backend\r\n\r\n")
                                 ftp_backend.do(parameters_dict, send_filename)
                                 run_log.write("Success\r\n\r\n")
-                            except Exception, error:
-                                print str(error)
+                            except Exception as error:
+                                print(str(error))
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "FTP Backend")
                                 errors = True
@@ -249,7 +250,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     " with email backend\r\n\r\n")
                                 email_backend.do(parameters_dict, settings, send_filename)
                                 run_log.write("Success\r\n\r\n")
-                            except Exception, error:
+                            except Exception as error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "Email Backend")
                                 errors = True
@@ -276,7 +277,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",
                                                     resend_flag=False))
-                    except Exception, error:
+                    except Exception as error:
                         record_error.do(run_log, folder_errors_log, str(error), str(original_filename), "Dispatch")
                         errors = True
                 if errors is False:
@@ -310,7 +311,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         emails_table.insert(dict(log=folder_error_log_name_full_path,
                                                  folder_alias=parameters_dict['alias'],
                                                  folder_id=parameters_dict['id']))
-                except Exception, error:
+                except Exception as error:
                     # if file can't be created in either directory, put error log inline in the run log
                     print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")
                     run_log.write("can't open error log file,\r\n error is " + str(error) +
