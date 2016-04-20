@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 version = "1.13.0 (unreleased)"
 database_version = "12"
 print("Batch File Sender Version " + version)
@@ -7,7 +9,6 @@ try:  # try to import required modules
     from tkMessageBox import showerror, askyesno, showinfo, askokcancel
     from ttk import *
     from validate_email import validate_email
-    from __future__ import print_function
     import Tkinter
     import rclick_menu
     import hashlib
@@ -1269,7 +1270,7 @@ def mark_active_as_processed():
         doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                          overlay_text="adding files to processed list...\n\n" + " folder " + str(
                                              folder_count) + " of " + str(folder_total) + " file " + str(file_count) +
-                                                      " of " + str(file_total))
+                                         " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
