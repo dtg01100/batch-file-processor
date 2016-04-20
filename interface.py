@@ -154,9 +154,10 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
 
     def folder_alias_checker(check):
         # check database to see if the folder alias exists, and return false if it does
-        add_folder_entry_proposed_folder = folders_table.find_one(alias=check)
-        if add_folder_entry_proposed_folder is not None:
-            return False
+        if not folders_table.count() == 0:
+            add_folder_entry_proposed_folder = folders_table.find_one(alias=check)
+            if add_folder_entry_proposed_folder is not None:
+                return False
 
     if folder_alias_checker(folder_alias_constructor) is False:
         # auto generate a number to add to automatic aliases
@@ -311,12 +312,18 @@ def make_users_list():
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
     # make labels for empty lists
-    if folders_table.count(folder_is_active="True") == 0:
+    if folders_table.count() == 0:
         no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
-    if folders_table.count(folder_is_active="False") == 0:
         no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
+    else:
+        if folders_table.count(folder_is_active="True") == 0:
+            no_active_label = Label(active_users_list_frame, text="No Active Folders")
+            no_active_label.pack(fill=BOTH, expand=1, padx=10)
+        if folders_table.count(folder_is_active="False") == 0:
+            no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
+            no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
     for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
@@ -1528,10 +1535,13 @@ def processed_files_popup():
 
 
 def set_main_button_states():
-    if folders_table.count(folder_is_active="True") > 0:
-        process_folder_button.configure(state=NORMAL)
-    else:
+    if folders_table.count() == 0:
         process_folder_button.configure(state=DISABLED)
+    else:
+        if folders_table.count(folder_is_active="True") > 0:
+            process_folder_button.configure(state=NORMAL)
+        else:
+            process_folder_button.configure(state=DISABLED)
     if processed_files.count() > 0:
         processed_files_button.configure(state=NORMAL)
         allow_resend_button.configure(state=NORMAL)
