@@ -1280,7 +1280,7 @@ def silent_process_directories(silent_process_folders_table):
 
 
 def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
-    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+    maintenance_popup.unbind("<Escape>")
     users_refresh = False
     if folders_table.count(folder_is_active="False") > 0:
         users_refresh = True
@@ -1300,7 +1300,7 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
 
 
 def mark_active_as_processed():
-    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+    maintenance_popup.unbind("<Escape>")
     starting_folder = os.getcwd()
     folder_total = folders_table.count(folder_is_active="True")
     folder_count = 0
@@ -1353,7 +1353,7 @@ def mark_active_as_processed():
 
 
 def set_all_inactive():
-    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+    maintenance_popup.unbind("<Escape>")
     total = folders_table.count(folder_is_active="True")
     count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
@@ -1369,7 +1369,7 @@ def set_all_inactive():
 
 
 def set_all_active():
-    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+    maintenance_popup.unbind("<Escape>")
     total = folders_table.count(folder_is_active="False")
     count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
@@ -1386,7 +1386,7 @@ def set_all_active():
 
 def clear_processed_files_log():
     if askokcancel(message="This will clear all records of sent files.\nAre you sure?"):
-        maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+        maintenance_popup.unbind("<Escape>")
         processed_files.delete()
         set_main_button_states()
         maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
@@ -1398,7 +1398,7 @@ def destroy_maintenance_popup(event=None):
 
 def database_import_wrapper():
     if database_import.import_interface(maintenance_popup, 'folders.db'):
-        maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
+        maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         open_tables()
         settings_dict = settings.find_one(id=1)
