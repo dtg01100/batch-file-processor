@@ -366,12 +366,14 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.logs_directory = self.foldersnameinput['logs_directory']
         self.title("Edit Settings")
         self.enable_email_checkbutton_variable = BooleanVar(master)
+        self.enable_interval_backup_variable = BooleanVar(master)
         self.enable_reporting_checkbutton_variable = StringVar(master)
         self.enable_report_printing_checkbutton_variable = StringVar(master)
         self.report_edi_validator_warnings_checkbutton_variable = StringVar(master)
 
         report_sending_options_frame = Frame(master)
         email_options_frame = Frame(master)
+        interval_backups_frame = Frame(master)
 
         Label(email_options_frame, text="Email Address:").grid(row=1, sticky=E)
         Label(email_options_frame, text="Email Username:").grid(row=2, sticky=E)
@@ -399,6 +401,14 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             reporting_options_fields_state_set()
             self.run_reporting_checkbutton.configure(state=state)
 
+        def interval_backup_options_set():
+            if self.enable_interval_backup_variable.get():
+                self.interval_backup_spinbox.configure(state=NORMAL)
+                self.interval_backup_interval_label.configure(state=NORMAL)
+            else:
+                self.interval_backup_spinbox.configure(state=DISABLED)
+                self.interval_backup_interval_label.configure(state=DISABLED)
+
         self.enable_email_checkbutton = Checkbutton(master, variable=self.enable_email_checkbutton_variable,
                                                     onvalue=True, offvalue=False,
                                                     command=email_options_fields_state_set, text="Enable Email")
@@ -410,6 +420,12 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             Checkbutton(master, variable=self.report_edi_validator_warnings_checkbutton_variable,
                         onvalue=True, offvalue=False,
                         text="Report EDI Validator Warnings")
+        self.enable_interval_backup_checkbutton = Checkbutton(interval_backups_frame, variable=self.enable_interval_backup_variable,
+                                                              onvalue=True, offvalue=False,
+                                                              command=interval_backup_options_set,
+                                                              text="Enable interval backup")
+        self.interval_backup_interval_label = Label(interval_backups_frame, text="Backup interval: ")
+        self.interval_backup_spinbox = Spinbox(interval_backups_frame, from_=1, to=5000, width=4, justify=RIGHT)
         self.email_address_field = Entry(email_options_frame, width=40)
         self.email_username_field = Entry(email_options_frame, width=40)
         self.email_password_field = Entry(email_options_frame, show="*", width=40)
@@ -454,8 +470,11 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.email_smtp_server_field.insert(0, self.settings['email_smtp_server'])
         self.smtp_port_field.insert(0, self.settings['smtp_port'])
         self.report_email_destination_field.insert(0, self.foldersnameinput['report_email_destination'])
+        self.enable_interval_backup_variable.set(self.settings['enable_interval_backups'])
         self.enable_report_printing_checkbutton_variable.set(self.foldersnameinput['report_printing_fallback'])
         self.report_edi_validator_warnings_checkbutton_variable.set(self.foldersnameinput['report_edi_errors'])
+        self.interval_backup_spinbox.delete(0, "end")
+        self.interval_backup_spinbox.insert(0, self.settings['backup_counter_maximum'])
 
         email_options_fields_state_set()
         reporting_options_fields_state_set()
@@ -463,6 +482,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.enable_email_checkbutton.grid(row=0, columnspan=3, sticky=W)
         email_options_frame.grid(row=1, columnspan=3)
         report_sending_options_frame.grid(row=4, columnspan=3)
+        interval_backups_frame.grid(row=8, column=0, columnspan=3, sticky=W+E)
+        interval_backups_frame.columnconfigure(0, weight=1)
         self.run_reporting_checkbutton.grid(row=2, column=0, padx=2, pady=2, sticky=W)
         self.report_edi_validator_warnings_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
         self.email_address_field.grid(row=1, column=1, padx=2, pady=2)
@@ -473,6 +494,10 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
         self.select_log_folder_button.grid(row=2, column=1, padx=2, pady=2, sticky=E, rowspan=2)
         self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
+        self.enable_interval_backup_checkbutton.grid(row=0, column=0, sticky=W, padx=2, pady=2)
+        self.interval_backup_interval_label.grid(row=0, column=1, sticky=E, padx=2, pady=2)
+        self.interval_backup_interval_label.columnconfigure(0, weight=1)
+        self.interval_backup_spinbox.grid(row=0, column=2, sticky=E, padx=2, pady=2)
 
         return self.email_address_field  # initial focus
 
@@ -560,6 +585,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.settings['email_password'] = str(self.email_password_field.get())
         self.settings['email_smtp_server'] = str(self.email_smtp_server_field.get())
         self.settings['email_smtp_port'] = str(self.smtp_port_field.get())
+        self.settings['enable_interval_backups'] = self.enable_interval_backup_variable.get()
+        self.settings['backup_counter_maximum'] = int(self.interval_backup_spinbox.get())
         folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
         folders_name_apply['report_edi_errors'] = self.report_edi_validator_warnings_checkbutton_variable.get()
         if not self.enable_email_checkbutton_variable.get():
@@ -1085,7 +1112,8 @@ def process_directories(folders_table_process):
     original_folder = os.getcwd()
     global emails_table
     settings_dict = settings.find_one(id=1)
-    if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= settings_dict['backup_counter_maximum']:
+    if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= settings_dict[
+        'backup_counter_maximum']:
         backup_increment.do_backup('folders.db')
         settings_dict['backup_counter'] = 0
     settings_dict['backup_counter'] += 1
@@ -1282,7 +1310,7 @@ def mark_active_as_processed():
         doingstuffoverlay.update_overlay(parent=maintenance_popup,
                                          overlay_text="adding files to processed list...\n\n" + " folder " + str(
                                              folder_count) + " of " + str(folder_total) + " file " + str(file_count) +
-                                         " of " + str(file_total))
+                                                      " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
