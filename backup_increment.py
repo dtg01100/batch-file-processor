@@ -16,6 +16,5 @@ def do_backup(input_file):
         os.mkdir(backup_folder_path)
     backup_path = os.path.join(backup_folder_path,
                                os.path.basename(input_file) + '.bak' + "-" + str(time.ctime()).replace(":", "-"))
-    print(backup_path)
     shutil.copy(input_file, backup_path)
     return backup_path
