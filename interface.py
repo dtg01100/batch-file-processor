@@ -1280,6 +1280,7 @@ def silent_process_directories(silent_process_folders_table):
 
 
 def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
+    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
     users_refresh = False
     if folders_table.count(folder_is_active="False") > 0:
         users_refresh = True
@@ -1295,9 +1296,11 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
     doingstuffoverlay.destroy_overlay()
     if users_refresh:
         refresh_users_list()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def mark_active_as_processed():
+    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
     starting_folder = os.getcwd()
     folder_total = folders_table.count(folder_is_active="True")
     folder_count = 0
@@ -1346,9 +1349,11 @@ def mark_active_as_processed():
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
     set_main_button_states()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def set_all_inactive():
+    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
     total = folders_table.count(folder_is_active="True")
     count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
@@ -1360,9 +1365,11 @@ def set_all_inactive():
     doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def set_all_active():
+    maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
     total = folders_table.count(folder_is_active="False")
     count = 0
     doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
@@ -1374,16 +1381,24 @@ def set_all_active():
     doingstuffoverlay.destroy_overlay()
     if total > 0:
         refresh_users_list()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def clear_processed_files_log():
     if askokcancel(message="This will clear all records of sent files.\nAre you sure?"):
+        maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
         processed_files.delete()
         set_main_button_states()
+        maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
+
+
+def destroy_maintenance_popup(event=None):
+    maintenance_popup.destroy()
 
 
 def database_import_wrapper():
     if database_import.import_interface(maintenance_popup, 'folders.db'):
+        maintenance_popup.unbind("<Escape>", destroy_maintenance_popup)
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         open_tables()
         settings_dict = settings.find_one(id=1)
@@ -1398,6 +1413,7 @@ def database_import_wrapper():
                 folders_table.update(folder_to_disable, ['id'])
         refresh_users_list()
         doingstuffoverlay.destroy_overlay()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
     maintenance_popup.grab_set()
     maintenance_popup.focus_set()
 
@@ -1435,8 +1451,6 @@ def maintenance_functions_popup():
         database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations...",
                                         command=database_import_wrapper)
 
-        def destroy_maintenance_popup(event=None):
-            maintenance_popup.destroy()
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)

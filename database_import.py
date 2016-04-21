@@ -27,6 +27,7 @@ def import_interface(master_window, original_database_path):
             database_migrate_job = mover.DbMigrationThing(original_database_path, new_database_path)
 
     def database_migrate_job_wrapper():
+        import_interface_window.unbind("<Escape>", close_database_import_window)
         global run_has_happened
         process_database_files_button.configure(state=DISABLED)
         select_database_button.configure(state=DISABLED)
@@ -35,6 +36,7 @@ def import_interface(master_window, original_database_path):
         select_database_button.configure(state=NORMAL)
         progress_bar.configure(maximum=1, value=0)
         run_has_happened = True
+        import_interface_window.bind("<Escape>", close_database_import_window)
     new_database_file_frame = Frame(import_interface_window)
     go_button_frame = Frame(import_interface_window)
     progress_bar_frame = Frame(import_interface_window)
