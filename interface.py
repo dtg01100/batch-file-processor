@@ -1434,6 +1434,9 @@ def maintenance_functions_popup():
                                                   command=clear_processed_files_log)
         database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations...",
                                         command=database_import_wrapper)
+
+        def destroy_maintenance_popup(event=None):
+            maintenance_popup.destroy()
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
@@ -1444,6 +1447,7 @@ def maintenance_functions_popup():
         database_import_button.pack(side=TOP, fill=X, padx=2, pady=2)
         maintenance_popup_button_frame.pack(side=LEFT)
         maintenance_popup_warning_label.pack(side=RIGHT, padx=20)
+        maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def export_processed_report(name, output_folder):
@@ -1471,7 +1475,7 @@ def export_processed_report(name, output_folder):
 
 
 def processed_files_popup():
-    def close_processed_files_popup():
+    def close_processed_files_popup(event=None):
         processed_files_popup_dialog.destroy()
         return
 
@@ -1559,6 +1563,7 @@ def processed_files_popup():
                                             fill='x')
     close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
     close_button.pack(pady=5)
+    processed_files_popup_dialog.bind("<Escape>", close_processed_files_popup)
     processed_files_loading_label.destroy()
     processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()

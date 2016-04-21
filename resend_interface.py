@@ -82,12 +82,13 @@ def do(database_connection, master_window):
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
 
-    def close_window():
+    def close_window(event=None):
         resend_interface.destroy()
         return
 
     close_button = Button(resend_interface_close_frame, text="Close", command=close_window)
     close_button.pack(pady=5)
+    resend_interface.bind("<Escape>", close_window)
 
     loading_label.destroy()
     resend_interface_scrollable_folders_frame.pack()

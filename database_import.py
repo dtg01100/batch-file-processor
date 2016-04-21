@@ -56,10 +56,14 @@ def import_interface(master_window, database_connection, original_database_path)
     progress_bar = Progressbar(master=progress_bar_frame)
     progress_bar.pack()
 
+    def close_database_import_window(event=None):
+        import_interface_window.destroy()
+
     new_database_file_frame.pack(anchor='w')
     go_button_frame.pack(side=LEFT, anchor='w')
     progress_bar_frame.pack(side=RIGHT, anchor='e')
     import_interface_window.minsize(300, import_interface_window.winfo_height())
     import_interface_window.resizable(width=TRUE, height=FALSE)
+    import_interface_window.bind("<Escape>", close_database_import_window)
     master_window.wait_window(import_interface_window)
     return run_has_happened
