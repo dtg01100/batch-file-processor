@@ -68,4 +68,5 @@ folders.db*
 .idea/
 run_logs
 setup.py
+/backups
 setup.bat

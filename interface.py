@@ -1085,6 +1085,11 @@ def process_directories(folders_table_process):
     original_folder = os.getcwd()
     global emails_table
     settings_dict = settings.find_one(id=1)
+    if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= settings_dict['backup_counter_maximum']:
+        backup_increment.do_backup('folders.db')
+        settings_dict['backup_counter'] = 0
+    settings_dict['backup_counter'] += 1
+    settings.update(settings_dict, ['id'])
     log_folder_creation_error = False
     start_time = str(datetime.datetime.now())
     reporting = oversight_and_defaults.find_one(id=1)
@@ -1374,6 +1379,7 @@ def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
                            " Are you sure you want to continue?"):
+        backup_increment.do_backup('folders.db')
         global maintenance_popup
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")

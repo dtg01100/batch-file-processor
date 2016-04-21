@@ -56,7 +56,10 @@ def do(database_version):  # create database file with some default settings
                                email_username='',
                                email_password='',
                                email_smtp_server='smtp.gmail.com',
-                               smtp_port=587))
+                               smtp_port=587,
+                               backup_counter=0,
+                               backup_counter_maximum=200,
+                               enable_interval_backups=True))
 
     processed_files = database_connection['processed_files']
     processed_files.create_column('file_name', sqlalchemy.types.String)

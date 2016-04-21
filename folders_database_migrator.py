@@ -110,6 +110,9 @@ def upgrade_database(database_connection):
                                    email_username=administrative_section_dict['report_email_username'],
                                    email_password=administrative_section_dict['report_email_password'],
                                    email_smtp_server=administrative_section_dict['report_email_smtp_server'],
-                                   smtp_port=administrative_section_dict['reporting_smtp_port']))
+                                   smtp_port=administrative_section_dict['reporting_smtp_port'],
+                                   backup_counter=0,
+                                   backup_counter_maximum=200,
+                                   enable_interval_backups=True))
         update_version = dict(id=1, version="12")
         db_version.update(update_version, ['id'])
