@@ -5,7 +5,7 @@ import tkFileDialog
 import mover
 
 
-def import_interface(master_window, database_connection, original_database_path):
+def import_interface(master_window, original_database_path):
     global run_has_happened
     import_interface_window = Toplevel()
     import_interface_window.title("folders.db merging utility")
@@ -30,7 +30,7 @@ def import_interface(master_window, database_connection, original_database_path)
         global run_has_happened
         process_database_files_button.configure(state=DISABLED)
         select_database_button.configure(state=DISABLED)
-        database_migrate_job.do_migrate(progress_bar, import_interface_window, database_connection)
+        database_migrate_job.do_migrate(progress_bar, import_interface_window, original_database_path)
         new_database_label.configure(text="Import Completed")
         select_database_button.configure(state=NORMAL)
         progress_bar.configure(maximum=1, value=0)

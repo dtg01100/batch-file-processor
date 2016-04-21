@@ -1383,7 +1383,7 @@ def clear_processed_files_log():
 
 
 def database_import_wrapper():
-    if database_import.import_interface(maintenance_popup, database_connection, 'folders.db'):
+    if database_import.import_interface(maintenance_popup, 'folders.db'):
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         open_tables()
         settings_dict = settings.find_one(id=1)

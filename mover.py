@@ -13,14 +13,16 @@ class DbMigrationThing:
         self.number_of_folders = IntVar()
         self.progress_of_folders = IntVar()
 
-    def do_migrate(self, progress_bar, master, original_database_connection):
+    def do_migrate(self, progress_bar, master, original_database_path):
         def database_preimport_operations():
             global new_database_connection
+            global modified_new_folder_path
+            original_database_connection_for_migrate = dataset.connect('sqlite:///' + original_database_path)
             backup_increment.do_backup(self.original_folder_path)
             modified_new_folder_path = backup_increment.do_backup(self.new_folder_path)
-            new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
-            original_db_version = original_database_connection['version']
+            original_db_version = original_database_connection_for_migrate['version']
             original_db_version_dict = original_db_version.find_one(id=1)
+            new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
             new_db_version = new_database_connection['version']
             new_db_version_dict = new_db_version.find_one(id=1)
             if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
@@ -35,7 +37,9 @@ class DbMigrationThing:
             master.update()
         progress_bar.stop()
         progress_bar.configure(maximum=100, value=0, mode='determinate')
+        new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
         new_folders_table = new_database_connection['folders']
+        original_database_connection = dataset.connect('sqlite:///' + original_database_path)
         old_folders_table = original_database_connection['folders']
         self.number_of_folders = new_folders_table.count(folder_is_active="True")
         self.progress_of_folders = 0
