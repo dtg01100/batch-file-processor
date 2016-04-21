@@ -110,7 +110,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 print(str(len(filtered_files)) + " found")
             file_count_total = len(files)
             for filename in filtered_files:  # iterate over all files in directory
-                split_edi_list = []
                 empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
                 filename = os.path.abspath(filename)
                 original_filename = filename
