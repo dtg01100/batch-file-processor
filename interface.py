@@ -1004,17 +1004,16 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
             backend_count += 1
 
-            if self.foldersnameinput == 'template':
-                if self.email_recepient_field.get() == "":
-                    error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
-                    errors = True
-                else:
-                    email_recepients = str(self.email_recepient_field.get()).split(", ")
-                    for email_recepient in email_recepients:
-                        print(email_recepient)
-                        if (validate_email(str(email_recepient), verify=True)) is False:
-                            error_string_constructor_list.append("Invalid Email Destination Address\r\n")
-                            errors = True
+            if self.email_recepient_field.get() == "":
+                error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
+                errors = True
+            else:
+                email_recepients = str(self.email_recepient_field.get()).split(", ")
+                for email_recepient in email_recepients:
+                    print(email_recepient)
+                    if (validate_email(str(email_recepient), verify=True)) is False:
+                        error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                        errors = True
 
         if self.process_backend_copy_check.get() is True:
 
