@@ -11,7 +11,7 @@ import time
 import record_error
 import cStringIO
 import re
-import edi_validator
+import mtc_edi_validator
 import doingstuffoverlay
 import edi_tweaks
 import split_edi
@@ -49,7 +49,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     def validate_file(input_file, file_name):
         global edi_validator_errors
         global global_edi_validator_error_status
-        edi_validator_output, edi_validator_error_status = edi_validator.report_edi_issues(input_file)
+        edi_validator_output, edi_validator_error_status = mtc_edi_validator.report_edi_issues(input_file)
         if edi_validator_error_status is True:
             edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
             edi_validator_errors.write(edi_validator_output.getvalue())
@@ -118,7 +118,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
                 if reporting['report_edi_errors']:
                     validate_file(filename, original_filename)
-                if parameters_dict['split_edi'] and edi_validator.check(filename):
+                if parameters_dict['split_edi'] and mtc_edi_validator.check(filename):
                     run_log.write("Splitting edi file " + original_filename + "...\r\n")
                     print("Splitting edi file " + original_filename + "...")
                     try:
@@ -144,7 +144,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     if os.path.exists(send_filename):
                         if parameters_dict['process_edi'] == "True" and errors is False:
                             if parameters_dict['convert_to_format'] == "csv":
-                                if edi_validator.check(send_filename):
+                                if mtc_edi_validator.check(send_filename):
                                     # if the current file is recognized as a valid edi file,
                                     # then convert it to csv, otherwise log and carry on
                                     output_filename = os.path.join(

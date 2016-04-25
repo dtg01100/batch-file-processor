@@ -1,4 +1,4 @@
-import line_from_edi_to_dict
+import line_from_mtc_edi_to_dict
 
 
 def edi_convert(edi_process, output_filename):
@@ -11,7 +11,7 @@ def edi_convert(edi_process, output_filename):
 
         if line.startswith("B"):
             try:
-                records = line_from_edi_to_dict.capture_records(line)
+                records = line_from_mtc_edi_to_dict.capture_records(line)
             except Exception:
                 raise Exception("Not An EDI")
 
