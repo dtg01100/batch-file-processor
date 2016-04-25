@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-version = "1.13.4"
+version = "1.13.5"
 database_version = "12"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -576,7 +576,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
 
     def apply(self, folders_name_apply):
 
-        doingstuffoverlay.make_overlay(self, "Applying Changes...")
+        doingstuffoverlay.make_overlay(root, "Applying Changes...")
+        root.update()
         folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
         folders_name_apply['logs_directory'] = self.logs_directory
         self.settings['enable_email'] = self.enable_email_checkbutton_variable.get()
