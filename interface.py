@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-version = "1.13.3"
+version = "1.13.4"
 database_version = "12"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
@@ -584,7 +584,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.settings['email_username'] = str(self.email_username_field.get())
         self.settings['email_password'] = str(self.email_password_field.get())
         self.settings['email_smtp_server'] = str(self.email_smtp_server_field.get())
-        self.settings['email_smtp_port'] = str(self.smtp_port_field.get())
+        self.settings['smtp_port'] = str(self.smtp_port_field.get())
         self.settings['enable_interval_backups'] = self.enable_interval_backup_variable.get()
         self.settings['backup_counter_maximum'] = int(self.interval_backup_spinbox.get())
         folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
