@@ -1393,7 +1393,7 @@ def clear_processed_files_log():
         maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
-def destroy_maintenance_popup(event=None):
+def destroy_maintenance_popup(_=None):
     maintenance_popup.destroy()
 
 
