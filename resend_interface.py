@@ -82,7 +82,7 @@ def do(database_connection, master_window):
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
 
-    def close_window(event=None):
+    def close_window(_=None):
         resend_interface.destroy()
         return
 
