@@ -1490,7 +1490,7 @@ def export_processed_report(name, output_folder):
 
 
 def processed_files_popup():
-    def close_processed_files_popup(event=None):
+    def close_processed_files_popup(_=None):
         processed_files_popup_dialog.destroy()
         return
 

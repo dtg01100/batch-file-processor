@@ -58,7 +58,7 @@ def import_interface(master_window, original_database_path):
     progress_bar = Progressbar(master=progress_bar_frame)
     progress_bar.pack()
 
-    def close_database_import_window(event=None):
+    def close_database_import_window(_=None):
         import_interface_window.destroy()
 
     new_database_file_frame.pack(anchor='w')
