@@ -420,7 +420,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             Checkbutton(master, variable=self.report_edi_validator_warnings_checkbutton_variable,
                         onvalue=True, offvalue=False,
                         text="Report EDI Validator Warnings")
-        self.enable_interval_backup_checkbutton = Checkbutton(interval_backups_frame, variable=self.enable_interval_backup_variable,
+        self.enable_interval_backup_checkbutton = Checkbutton(interval_backups_frame,
+                                                              variable=self.enable_interval_backup_variable,
                                                               onvalue=True, offvalue=False,
                                                               command=interval_backup_options_set,
                                                               text="Enable interval backup")
@@ -482,7 +483,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.enable_email_checkbutton.grid(row=0, columnspan=3, sticky=W)
         email_options_frame.grid(row=1, columnspan=3)
         report_sending_options_frame.grid(row=4, columnspan=3)
-        interval_backups_frame.grid(row=8, column=0, columnspan=3, sticky=W+E)
+        interval_backups_frame.grid(row=8, column=0, columnspan=3, sticky=W + E)
         interval_backups_frame.columnconfigure(0, weight=1)
         self.run_reporting_checkbutton.grid(row=2, column=0, padx=2, pady=2, sticky=W)
         self.report_edi_validator_warnings_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
@@ -558,7 +559,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " + str(
                         number_of_disabled_email_backends) + " folders.\nAs a result, " + str(
-                        number_of_disabled_folders) + " folders will be disabled"):
+                    number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 

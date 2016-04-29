@@ -26,8 +26,8 @@ def check(input_file):
 
 
 def report_edi_issues(input_file):
-    def _insert_description_and_number(line):
-        line_dict = line_from_mtc_edi_to_dict.capture_records(line)
+    def _insert_description_and_number(issue_line):
+        line_dict = line_from_mtc_edi_to_dict.capture_records(issue_line)
         in_memory_log.write("Item description: " + line_dict['description'] + "\r\n")
         in_memory_log.write("Item number: " + line_dict['vendor_item'] + "\r\n\r\n")
     in_memory_log = cStringIO.StringIO()
