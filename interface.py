@@ -418,8 +418,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                                                      text="Enable Report Sending")
         self.report_edi_validator_warnings_checkbutton = \
             Checkbutton(master, variable=self.report_edi_validator_warnings_checkbutton_variable,
-                        onvalue=True, offvalue=False,
-                        text="Report EDI Validator Warnings")
+                        onvalue=True, offvalue=False, text="Report EDI Validator Warnings")
         self.enable_interval_backup_checkbutton = Checkbutton(interval_backups_frame,
                                                               variable=self.enable_interval_backup_variable,
                                                               onvalue=True, offvalue=False,
@@ -435,9 +434,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.report_email_destination_field = Entry(report_sending_options_frame, width=40)
         self.log_printing_fallback_checkbutton = \
             Checkbutton(report_sending_options_frame, variable=self.enable_report_printing_checkbutton_variable,
-                        onvalue="True",
-                        offvalue="False",
-                        text="Enable Report Printing Fallback:")
+                        onvalue="True", offvalue="False", text="Enable Report Printing Fallback:")
         rclick_report_email_address_field = rclick_menu.RightClickMenu(self.email_address_field)
         rclick_report_email_username_field = rclick_menu.RightClickMenu(self.email_username_field)
         rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.email_smtp_server_field)
@@ -557,9 +554,9 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
             number_of_disabled_folders = folders_table.count(process_backend_email=True, process_backend_ftp=False,
                                                              process_backend_copy=False, folder_is_active="True")
             if number_of_disabled_folders != 0:
-                if not askokcancel(message="This will disable the email backend in " + str(
-                        number_of_disabled_email_backends) + " folders.\nAs a result, " + str(
-                    number_of_disabled_folders) + " folders will be disabled"):
+                if not askokcancel(message="This will disable the email backend in " +
+                                   str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
+                                   str(number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
@@ -660,8 +657,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.convert_to_selector_frame = Frame(self.convert_options_frame)
         self.convert_to_selector_label = Label(self.convert_to_selector_frame, text="Convert To: ")
         self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
-                                                   self.foldersnameinput['convert_to_format'],
-                                                   'csv', 'insight')
+                                                   self.foldersnameinput['convert_to_format'], 'csv', 'insight')
 
         def select_copy_to_directory():
             global copy_to_directory
@@ -782,8 +778,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.email_sender_subject_field = Entry(self.prefsframe, width=30)
         rclick_email_sender_subject_field = rclick_menu.RightClickMenu(self.email_sender_subject_field)
         self.email_sender_subject_field.bind("<3>", rclick_email_sender_subject_field)
-        self.split_edi_checkbutton = Checkbutton(self.ediframe, variable=self.split_edi, text="Split Edi", onvalue=True,
-                                                 offvalue=False)
+
+        self.split_edi_checkbutton = Checkbutton(self.ediframe, variable=self.split_edi,
+                                                 text="Split Edi",
+                                                 onvalue=True, offvalue=False)
         self.process_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.process_edi,
                                                    text="Process EDI",
                                                    onvalue="True", offvalue="False")
@@ -794,7 +792,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                 text="Include " + "A " + "Records",
                                                 onvalue="True", offvalue="False")
         self.c_record_checkbutton = Checkbutton(self.convert_options_frame, variable=self.c_rec_var_check,
-                                                text="Include " + "C " + "Records", onvalue="True", offvalue="False")
+                                                text="Include " + "C " + "Records",
+                                                onvalue="True", offvalue="False")
         self.headers_checkbutton = Checkbutton(self.convert_options_frame, variable=self.headers_check,
                                                text="Include Headings",
                                                onvalue="True", offvalue="False")
@@ -807,6 +806,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.pad_a_records_checkbutton = Checkbutton(self.convert_options_frame, variable=self.pad_arec_check,
                                                      text="Pad \"A\" Records (6 Characters)",
                                                      onvalue="True", offvalue="False")
+
         self.a_record_padding_field = Entry(self.convert_options_frame, width=10)
 
         self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
@@ -875,8 +875,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             make_ediconvert_options('Do Nothing')
 
         self.edi_options_menu = OptionMenu(self.ediframe, self.ediconvert_options, self.ediconvert_options.get(),
-                                           'Do Nothing', 'Convert EDI', 'Tweak EDI',
-                                           command=reset_ediconvert_options)
+                                           'Do Nothing', 'Convert EDI', 'Tweak EDI', command=reset_ediconvert_options)
 
         set_header_state()
         set_send_options_fields_state()
@@ -1113,8 +1112,8 @@ def process_directories(folders_table_process):
     original_folder = os.getcwd()
     global emails_table
     settings_dict = settings.find_one(id=1)
-    if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= settings_dict[
-        'backup_counter_maximum']:
+    if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= \
+            settings_dict['backup_counter_maximum']:
         backup_increment.do_backup('folders.db')
         settings_dict['backup_counter'] = 0
     settings_dict['backup_counter'] += 1
@@ -1134,7 +1133,7 @@ def process_directories(folders_table_process):
             # offer to make new log directory
             while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
                 if askokcancel("Error", "Can't write to log directory,\r\n"
-                                        " would you like to change reporting settings?"):
+                               " would you like to change reporting settings?"):
                     EditSettingsDialog(root, oversight_and_defaults.find_one(id=1))
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
@@ -1167,22 +1166,18 @@ def process_directories(folders_table_process):
         # call dispatch module to process active folders
         try:
             run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
-                                              reporting['logs_directory'],
-                                              reporting,
-                                              processed_files, root, args, version, errors_directory,
-                                              edi_converter_scratch_folder, settings_dict)
+                                              reporting['logs_directory'], reporting, processed_files, root, args,
+                                              version, errors_directory, edi_converter_scratch_folder, settings_dict)
             if run_error_bool is True and not args.automatic:
                 showinfo("Run Status", "Run completed with errors.")
             os.chdir(original_folder)
         except Exception as dispatch_error:
             os.chdir(original_folder)
             # if processing folders runs into a serious error, report and log
-            print(
-                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                    dispatch_error) + "\r\n")
-            run_log.write(
-                "Run failed, check your configuration \r\nError from dispatch module is: \r\n" + str(
-                    dispatch_error) + "\r\n")
+            print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
+                  str(dispatch_error) + "\r\n")
+            run_log.write("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
+                          str(dispatch_error) + "\r\n")
         run_log.close()
     if reporting['enable_reporting'] == "True":
         try:
@@ -1288,8 +1283,7 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
         users_refresh = True
     folders_total = folders_table.count(folder_is_active="False")
     folders_count = 0
-    doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
-                                   str(folders_total))
+    doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " + str(folders_total))
     for folder_to_be_removed in folders_table.find(folder_is_active="False"):
         folders_count += 1
         doingstuffoverlay.update_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
@@ -1312,9 +1306,9 @@ def mark_active_as_processed():
         file_count = 0
         folder_count += 1
         doingstuffoverlay.update_overlay(parent=maintenance_popup,
-                                         overlay_text="adding files to processed list...\n\n" + " folder " + str(
-                                             folder_count) + " of " + str(folder_total) + " file " + str(file_count) +
-                                                      " of " + str(file_total))
+                                         overlay_text="adding files to processed list...\n\n" + " folder " +
+                                                      str(folder_count) + " of " + str(folder_total) + " file " +
+                                                      str(file_count) + " of " + str(file_total))
         os.chdir(parameters_dict['folder_name'])
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
@@ -1323,8 +1317,8 @@ def mark_active_as_processed():
         for f in files:
             file_count += 1
             doingstuffoverlay.update_overlay(parent=maintenance_popup,
-                                             overlay_text="checking files for already processed\n\n" + str(
-                                                 folder_count) + " of " + str(folder_total) + " file " +
+                                             overlay_text="checking files for already processed\n\n" +
+                                                          str(folder_count) + " of " + str(folder_total) + " file " +
                                                           str(file_count) + " of " + str(file_total))
             if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                     open(f, 'rb').read()).hexdigest()) is None:
@@ -1484,8 +1478,7 @@ def export_processed_report(name, output_folder):
     for line in processed_files.find(folder_id=name):
         processed_log.write(
             line['file_name'] + "," + "\t" + str(line['sent_date_time'])[:-7] + "," + line['copy_destination'] +
-            "," + line['ftp_destination'] + "," +
-            str(line['email_destination']).replace(",", ";") + "\n")
+            "," + line['ftp_destination'] + "," + str(line['email_destination']).replace(",", ";") + "\n")
     processed_log.close()
     showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 
@@ -1574,9 +1567,8 @@ def processed_files_popup():
         Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
                             variable=folder_button_variable,
                             value=folder_alias, indicatoron=FALSE,
-                            command=lambda name=folder_row['folder_id']: folder_button_pressed(
-                                name)).pack(anchor='w',
-                                            fill='x')
+                            command=lambda name=folder_row['folder_id']:
+                            folder_button_pressed(name)).pack(anchor='w', fill='x')
     close_button = Button(processed_files_popup_close_frame, text="Close", command=close_processed_files_popup)
     close_button.pack(pady=5)
     processed_files_popup_dialog.bind("<Escape>", close_processed_files_popup)

@@ -1,8 +1,8 @@
 import upc_e_to_upc_a
 
 
-def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_headers,
-                filter_ampersand, pad_arec, arec_padding):
+def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
+                inc_headers, filter_ampersand, pad_arec, arec_padding):
     # save input parameters as variables
     conv_calc_upc = calc_upc
     conv_inc_arec = inc_arec
@@ -14,18 +14,16 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
 
         if conv_inc_headers != "False":  # include headers if flag is set
             # write line out to file
-            f.write("{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}\r\n".format("UPC", "Qty. Shipped", "Cost",
-                                                                                          "Suggested Retail",
-                                                                                          "Description",
-                                                                                          "Case Pack",
-                                                                                          "Item Number"))
+            f.write("{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}\r\n"
+                    .format("UPC", "Qty. Shipped", "Cost", "Suggested Retail",
+                            "Description", "Case Pack", "Item Number"))
 
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
 
             # if include "A" records flag is set and line starts with "A"
             if line.startswith("A") and conv_inc_arec != "False":
-                f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(
-                    line)  # write "A" line
+                # write "A" line
+                f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(line)
 
             # the following block writes "B" lines, dependent on filter and convert settings
             # ternary conditional operator: puts if-then-else statement in one line
@@ -53,12 +51,10 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec, inc_
                     format(("\t" + upc_string if conv_calc_upc != "False" and blank_upc is False
                             else line[1:12]),
                            line[59:62].lstrip("0") if not line[59:62].lstrip("0") == "" else line[61],
-                           line[45:47].lstrip("0") + "." + line[47:49] if not line[
-                                                                              45:47] == "00" else "{0}.{1}".format(
-                               line[46:47], line[47:49]),
-                           line[63:65].lstrip("0") + "." + line[65:68] if not line[
-                                                                              63:65] == "00" else "{0}.{1}".format(
-                               line[64:65], line[65:68]),
+                           line[45:47].lstrip("0") + "." + line[47:49] if not line[45:47] == "00" else "{0}.{1}"
+                           .format(line[46:47], line[47:49]),
+                           line[63:65].lstrip("0") + "." + line[65:68] if not line[63:65] == "00" else "{0}.{1}"
+                           .format(line[64:65], line[65:68]),
                            (line.replace("&", "AND")[12:37].rstrip(" ") if filter_ampersand != "False" else
                             line[12:37].rstrip(" ")),
                            line[53:57].lstrip("0") if not line[53:57].lstrip("0") == "" else line[57],

@@ -25,11 +25,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
-                                             overlay_text=overlay_text + " folder " + str(
-                                                 dispatch_folder_count) + " of " + str(
-                                                 folder_total) + "," + " file " + str(
-                                                 dispatch_file_count) + " of " + str(
-                                                 file_total), footer=footer, overlay_height=120)
+                                             overlay_text=overlay_text + " folder " +
+                                             str(dispatch_folder_count) + " of " +
+                                             str(folder_total) + "," + " file " +
+                                             str(dispatch_file_count) + " of " +
+                                             str(file_total), footer=footer, overlay_height=120)
 
     def empty_directory(top):
         if top == '/' or top == "\\":
@@ -91,10 +91,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 file_count += 1
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Checking File: " + f)
-                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
-                        open(f, 'rb').read()).hexdigest()) is None or \
-                        processed_files.find_one(
-                            file_name=os.path.join(os.getcwd(), f), resend_flag=True):
+                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f),
+                                            file_checksum=hashlib.md5(open(f, 'rb').read()).hexdigest()) is None or \
+                        processed_files.find_one(file_name=os.path.join(os.getcwd(), f), resend_flag=True):
                     filtered_files.append(f)
 
             file_count = 0
@@ -191,9 +190,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                     "EDI Processor")
                         if parameters_dict['tweak_edi'] is True:
-                            output_filename = os.path.join(
-                                edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                os.path.basename(stripped_filename))
+                            output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                           os.path.basename(stripped_filename))
                             if os.path.exists(os.path.dirname(output_filename)) is False:
                                 os.mkdir(os.path.dirname(output_filename))
                             try:
@@ -214,8 +212,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 print("sending " + str(send_filename) + " to " +
                                       str(parameters_dict['copy_to_directory']) + " with copy backend")
                                 run_log.write("sending " + str(send_filename) + " to " +
-                                              str(parameters_dict[
-                                                      'copy_to_directory']) + " with copy backend\r\n\r\n")
+                                              str(parameters_dict['copy_to_directory']) + " with copy backend\r\n\r\n")
                                 copy_backend.do(parameters_dict, send_filename)
                                 run_log.write("Success\r\n\r\n")
                             except Exception as error:
@@ -226,13 +223,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         if parameters_dict['process_backend_ftp'] is True and errors is False:
                             try:
                                 print(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) + str(
-                                        parameters_dict['ftp_folder']) +
-                                    " with FTP backend")
+                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    str(parameters_dict['ftp_folder']) + " with FTP backend")
                                 run_log.write(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) + str(
-                                        parameters_dict['ftp_folder']) +
-                                    " with FTP backend\r\n\r\n")
+                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    str(parameters_dict['ftp_folder']) + " with FTP backend\r\n\r\n")
                                 ftp_backend.do(parameters_dict, send_filename)
                                 run_log.write("Success\r\n\r\n")
                             except Exception as error:
@@ -258,16 +253,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     try:
                         if processed_files.count(file_name=str(original_filename),
                                                  resend_flag=True) > 0:
-                            file_old_id = processed_files.find_one(file_name=str(original_filename),
-                                                                   resend_flag=True)
+                            file_old_id = processed_files.find_one(file_name=str(original_filename), resend_flag=True)
                             processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
                             processed_files.update(processed_files_update, ['id'])
 
                         processed_files.insert(dict(file_name=str(original_filename),
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
-                                                    file_checksum=hashlib.md5(
-                                                        open(original_filename, 'rb').read()).hexdigest(),
+                                                    file_checksum=hashlib.md5(open(original_filename, 'rb').read())
+                                                    .hexdigest(),
                                                     sent_date_time=datetime.datetime.now(),
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
@@ -330,10 +324,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             # if the folder is missing, complain and increment error counter
             run_log.write("\r\nerror: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
                           parameters_dict['alias'] + "\r\n\r\n")
-            print(
-                "error: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
-                parameters_dict[
-                    'alias'])
+            print("error: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
+                  parameters_dict['alias'])
             error_counter += 1
     if global_edi_validator_error_status is True:
         validator_log_name_constructor = "Validator Log " + str(time.ctime()).replace(":", "-") + ".txt"

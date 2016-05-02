@@ -26,12 +26,17 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
     msg.attach(MIMEText(body, 'plain'))
 
+    if not args.automatic:
+        doingstuffoverlay.destroy_overlay()
+        doingstuffoverlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
+                                       " attachment " + str(emails_count) + " of " + str(total_emails))
+
     for log in emails_table.all():
 
         if not args.automatic:
-            doingstuffoverlay.destroy_overlay()
-            doingstuffoverlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
-                                           " attachment " + str(emails_count) + " of " + str(total_emails))
+            doingstuffoverlay.update_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
+                                             " attachment " + str(emails_count) + " of " + str(total_emails))
+            root.update()
 
         filename = log['log']
         attachment = open(filename, "r")
@@ -55,3 +60,5 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
     print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
     server.sendmail(from_address, to_address_list, text)
     server.quit()
+    if not args.automatic:
+        doingstuffoverlay.destroy_overlay()
