@@ -226,6 +226,9 @@ def select_folder():
             doingstuffoverlay.make_overlay(root, "Adding Folder...")
             column_entry_value = folder
             add_folder_entry(folder)
+            if askyesno(message="Do you want to mark files in folder as processed?"):
+                folder_dict = folders_table.find_one(folder_name=folder)
+                mark_active_as_processed(root, folder_dict['id'])
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()  # recreate list
         else:
@@ -244,6 +247,7 @@ def batch_add_folders():
     else:
         initial_directory = os.getcwd()
     containing_folder = askdirectory(initialdir=initial_directory)
+    starting_directory = os.getcwd()
     if os.path.exists(containing_folder):
         update_last_folder = dict(id=1, batch_add_folder_prior=containing_folder)
         oversight_and_defaults.update(update_last_folder, ['id'])
@@ -270,6 +274,7 @@ def batch_add_folders():
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()
             showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
+    os.chdir(starting_directory)
 
 
 def edit_folder_selector(folder_to_be_edited):
@@ -1295,28 +1300,36 @@ def remove_inactive_folders():  # loop over folders and safely remove ones marke
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
-def mark_active_as_processed():
-    maintenance_popup.unbind("<Escape>")
+def mark_active_as_processed(master, selected_folder=None):
+    if selected_folder is None:
+        maintenance_popup.unbind("<Escape>")
     starting_folder = os.getcwd()
     folder_total = folders_table.count(folder_is_active="True")
     folder_count = 0
-    doingstuffoverlay.make_overlay(maintenance_popup, "adding files to processed list...")
-    for parameters_dict in folders_table.find(folder_is_active="True"):  # create list of active directories
+    folders_table_list = []
+    if selected_folder is None:
+        for row in folders_table.find(folder_is_active="True"):
+            folders_table_list.append(row)
+    else:
+        folders_table_list = [folders_table.find_one(id=selected_folder)]
+    if selected_folder is None:
+        doingstuffoverlay.make_overlay(master, "adding files to processed list...")
+    for parameters_dict in folders_table_list:  # create list of active directories
         file_total = 0
         file_count = 0
         folder_count += 1
-        doingstuffoverlay.update_overlay(parent=maintenance_popup,
+        doingstuffoverlay.update_overlay(parent=master,
                                          overlay_text="adding files to processed list...\n\n" + " folder " +
                                                       str(folder_count) + " of " + str(folder_total) + " file " +
                                                       str(file_count) + " of " + str(file_total))
-        os.chdir(parameters_dict['folder_name'])
+        os.chdir(os.path.abspath(parameters_dict['folder_name']))
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         # create list of all files in directory
         file_total = len(files)
         filtered_files = []
         for f in files:
             file_count += 1
-            doingstuffoverlay.update_overlay(parent=maintenance_popup,
+            doingstuffoverlay.update_overlay(parent=master,
                                              overlay_text="checking files for already processed\n\n" +
                                                           str(folder_count) + " of " + str(folder_total) + " file " +
                                                           str(file_count) + " of " + str(file_total))
@@ -1328,7 +1341,7 @@ def mark_active_as_processed():
         for filename in filtered_files:
             print(filename)
             file_count += 1
-            doingstuffoverlay.update_overlay(parent=maintenance_popup,
+            doingstuffoverlay.update_overlay(parent=master,
                                              overlay_text="adding files to processed list...\n\n" + " folder " +
                                                           str(folder_count) + " of " + str(folder_total) +
                                                           " file " + str(file_count) + " of " + str(file_total))
@@ -1345,7 +1358,8 @@ def mark_active_as_processed():
     doingstuffoverlay.destroy_overlay()
     os.chdir(starting_folder)
     set_main_button_states()
-    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
+    if selected_folder is None:
+        maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def set_all_inactive():
@@ -1439,7 +1453,7 @@ def maintenance_functions_popup():
         clear_emails_queue = Button(maintenance_popup_button_frame, text="Clear queued emails",
                                     command=emails_table.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Mark all in active as processed",
-                                           command=mark_active_as_processed)
+                                           command=lambda: mark_active_as_processed(maintenance_popup))
         remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations",
                                      command=remove_inactive_folders)
         clear_processed_files_log_button = Button(maintenance_popup_button_frame, text="Clear sent file records",
