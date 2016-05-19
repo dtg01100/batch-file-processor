@@ -1,5 +1,5 @@
-from Tkinter import *  # from x import * is bad practice
-from ttk import *
+from tkinter import *  # from x import * is bad practice
+from tkinter.ttk import *
 
 
 # http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame

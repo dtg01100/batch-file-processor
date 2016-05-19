@@ -16,14 +16,14 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
             # write line out to file
             f.write("{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}\r\n"
                     .format("UPC", "Qty. Shipped", "Cost", "Suggested Retail",
-                            "Description", "Case Pack", "Item Number"))
+                            "Description", "Case Pack", "Item Number").encode())
 
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
 
             # if include "A" records flag is set and line starts with "A"
             if line.startswith("A") and conv_inc_arec != "False":
                 # write "A" line
-                f.write(line[0:1] + arec_padding[0:6] + line[7:]) if pad_arec == "True" else f.write(line)
+                f.write((line[0:1] + arec_padding[0:6] + line[7:]).encode()) if pad_arec == "True" else f.write(line.encode())
 
             # the following block writes "B" lines, dependent on filter and convert settings
             # ternary conditional operator: puts if-then-else statement in one line
@@ -58,10 +58,10 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
                            (line.replace("&", "AND")[12:37].rstrip(" ") if filter_ampersand != "False" else
                             line[12:37].rstrip(" ")),
                            line[53:57].lstrip("0") if not line[53:57].lstrip("0") == "" else line[57],
-                           line[37:43].lstrip("0") if not line[37:43].lstrip("0") == "" else line[38:43]))
+                           line[37:43].lstrip("0") if not line[37:43].lstrip("0") == "" else line[38:43]).encode())
 
             # if include "C" records flag is set and line starts with "C"
             if line.startswith("C") and conv_inc_crec != "False":
-                f.write(line)  # write "C" line
+                f.write(line.encode())  # write "C" line
 
         f.close()  # close output file

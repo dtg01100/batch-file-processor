@@ -1,5 +1,5 @@
 import os
-from Tkinter import IntVar
+from tkinter import IntVar
 import dataset
 import folders_database_migrator
 import threading

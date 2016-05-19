@@ -1,7 +1,7 @@
-from Tkinter import *
-from ttk import *
-import Tkinter
-from tkMessageBox import showerror
+from tkinter import *
+from tkinter.ttk import *
+import tkinter
+from tkinter.messagebox import showerror
 import scrollbuttons
 import os
 from operator import itemgetter
@@ -77,7 +77,7 @@ def do(database_connection, master_window):
     Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder.").pack()
 
     for folder, alias in sorted_folder_list:
-        Tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.rjust(15),
+        tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.rjust(15),
                             variable=folder_button_variable,
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')

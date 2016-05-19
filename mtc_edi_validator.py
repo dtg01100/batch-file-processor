@@ -1,4 +1,4 @@
-import cStringIO
+from io import StringIO
 import line_from_mtc_edi_to_dict
 
 
@@ -10,7 +10,7 @@ def check(input_file):
         return False
     file_to_test.seek(0)
     for line in file_to_test:
-        if line[0] != "A" and line[0] != "B" and line[0] != "C":
+        if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
             return False
         else:
             try:
@@ -30,7 +30,7 @@ def report_edi_issues(input_file):
         line_dict = line_from_mtc_edi_to_dict.capture_records(issue_line)
         in_memory_log.write("Item description: " + line_dict['description'] + "\r\n")
         in_memory_log.write("Item number: " + line_dict['vendor_item'] + "\r\n\r\n")
-    in_memory_log = cStringIO.StringIO()
+    in_memory_log = StringIO()
     line_number = 0
     has_errors = False
     input_file_handle = open(input_file)

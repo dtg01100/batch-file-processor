@@ -9,13 +9,12 @@ import convert_to_insight
 import os
 import time
 import record_error
-import cStringIO
+from io import StringIO
 import re
 import mtc_edi_validator
 import doingstuffoverlay
 import edi_tweaks
 import split_edi
-
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
@@ -43,7 +42,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
     global edi_validator_errors
     global global_edi_validator_error_status
-    edi_validator_errors = cStringIO.StringIO()
+    edi_validator_errors = StringIO()
     global_edi_validator_error_status = False
 
     def validate_file(input_file, file_name):
@@ -81,7 +80,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             folder_error_log_name_full_path = os.path.join(errors_folder['errors_folder'],
                                                            os.path.basename(parameters_dict['folder_name']),
                                                            folder_error_log_name_constructor)
-            folder_errors_log = cStringIO.StringIO()
+            folder_errors_log = StringIO()
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)

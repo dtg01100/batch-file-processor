@@ -7,7 +7,7 @@ def edi_convert(edi_process, output_filename):
 
     for line in work_file.readlines():
         if line.startswith("A"):
-            f.write(line + "\r\n")
+            f.write((line + "\r\n").encode())
 
         if line.startswith("B"):
             try:

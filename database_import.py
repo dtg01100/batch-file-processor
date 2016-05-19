@@ -1,7 +1,7 @@
-from Tkinter import *
-from ttk import *
+from tkinter import *
+from tkinter.ttk import *
 import os
-import tkFileDialog
+import tkinter.filedialog as tkFileDialog
 import mover
 
 

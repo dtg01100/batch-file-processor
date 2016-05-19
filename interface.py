@@ -1,15 +1,15 @@
 from __future__ import print_function
 
-version = "1.14.0"
+version = "1.15.0"
 database_version = "12"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
-    from Tkinter import *
-    from tkFileDialog import askdirectory
-    from tkMessageBox import showerror, askyesno, showinfo, askokcancel
-    from ttk import *
+    from tkinter import *
+    from tkinter.filedialog import askdirectory
+    from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
+    from tkinter.ttk import *
     from validate_email import validate_email
-    import Tkinter
+    import tkinter
     import rclick_menu
     import hashlib
     import scrollbuttons
@@ -24,7 +24,7 @@ try:  # try to import required modules
     import print_run_log
     import argparse
     import sqlalchemy.dialects.sqlite  # needed for py2exe
-    import cStringIO
+    from io import StringIO
     import shutil
     import doingstuffoverlay
     import folders_database_migrator
@@ -739,7 +739,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 if self.settings['enable_email']:
                     self.email_backend_checkbutton.configure(state=NORMAL)
 
-        self.active_checkbutton_object = Tkinter.Checkbutton(self.header_frame_frame, text="Active",
+        self.active_checkbutton_object = tkinter.Checkbutton(self.header_frame_frame, text="Active",
                                                              variable=self.active_checkbutton,
                                                              onvalue="True", offvalue="False", command=set_header_state,
                                                              indicatoron=FALSE, selectcolor="green",
@@ -1189,7 +1189,7 @@ def process_directories(folders_table_process):
             sent_emails_removal_queue.delete()
             total_size = 0
             skipped_files = 0
-            email_errors = cStringIO.StringIO()
+            email_errors = StringIO()
             total_emails = emails_table.count()
             emails_count = 0
             loop_count = 0
@@ -1578,7 +1578,7 @@ def processed_files_popup():
 
     for folders_name, folder_alias in sorted_folder_list:
         folder_row = processed_files.find_one(folder_id=str(folders_name))
-        Tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
+        tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
                             variable=folder_button_variable,
                             value=folder_alias, indicatoron=FALSE,
                             command=lambda name=folder_row['folder_id']:
