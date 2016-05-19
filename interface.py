@@ -342,7 +342,7 @@ def make_users_list():
                 pass
             else:
                 active_folder_alias_list.append(alias)
-        active_folder_edit_length = len(max(active_folder_alias_list))
+        active_folder_edit_length = len(max(active_folder_alias_list, key=len))
     if not folders_table.count(folder_is_active="False") == 0:
         inactive_folder_alias_list = []
         for entry in inactive_folder_dict_list:
@@ -351,7 +351,7 @@ def make_users_list():
                 pass
             else:
                 inactive_folder_alias_list.append(alias)
-        inactive_folder_edit_length = len(max(inactive_folder_alias_list))
+        inactive_folder_edit_length = len(max(inactive_folder_alias_list, key=len))
 
     for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
