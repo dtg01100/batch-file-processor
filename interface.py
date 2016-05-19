@@ -330,6 +330,29 @@ def make_users_list():
             no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
             no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     # iterate over list of known folders, sorting into lists of active and inactive
+    active_folder_dict_list = folders_table.find(folder_is_active="True")
+    inactive_folder_dict_list = folders_table.find(folder_is_active="False")
+    active_folder_edit_length = 0
+    inactive_folder_edit_length = 0
+    active_folder_alias_list = []
+    if not folders_table.count(folder_is_active="True") == 0:
+        for entry in active_folder_dict_list:
+            alias = entry['alias']
+            if alias is None:
+                pass
+            else:
+                active_folder_alias_list.append(alias)
+        active_folder_edit_length = len(max(active_folder_alias_list))
+    if not folders_table.count(folder_is_active="False") == 0:
+        inactive_folder_alias_list = []
+        for entry in inactive_folder_dict_list:
+            alias = entry['alias']
+            if alias is None:
+                pass
+            else:
+                inactive_folder_alias_list.append(alias)
+        inactive_folder_edit_length = len(max(inactive_folder_alias_list))
+
     for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
@@ -339,7 +362,8 @@ def make_users_list():
                    command=lambda name=folders_name['id']: disable_folder(name)).grid(column=0, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
-                   edit_folder_selector(name)).grid(column=1, row=0, sticky=E + W)
+                   edit_folder_selector(name),
+                   width=active_folder_edit_length + 6).grid(column=1, row=0, sticky=E + W)
             active_folder_button_frame.pack(anchor='e', pady=1)
         else:
             inactive_folder_button_frame = Frame(inactive_users_list_frame.interior)
@@ -348,7 +372,8 @@ def make_users_list():
                    delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=E, padx=(0, 10))
             Button(inactive_folder_button_frame, text="Edit: " + folders_name['alias'],
                    command=lambda name=folders_name['id']:
-                   edit_folder_selector(name)).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
+                   edit_folder_selector(name),
+                   width=inactive_folder_edit_length + 6).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
             inactive_folder_button_frame.pack(anchor='e', pady=1)
     # pack widgets in correct order
     active_users_list_label.pack(pady=5)
@@ -560,8 +585,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                                                              process_backend_copy=False, folder_is_active="True")
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " +
-                                   str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
-                                   str(number_of_disabled_folders) + " folders will be disabled"):
+                        str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
+                        str(number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
@@ -1138,7 +1163,7 @@ def process_directories(folders_table_process):
             # offer to make new log directory
             while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
                 if askokcancel("Error", "Can't write to log directory,\r\n"
-                               " would you like to change reporting settings?"):
+                                        " would you like to change reporting settings?"):
                     EditSettingsDialog(root, oversight_and_defaults.find_one(id=1))
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
