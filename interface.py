@@ -361,8 +361,7 @@ def make_users_list():
             Button(active_folder_button_frame, text="<-",
                    command=lambda name=folders_name['id']: disable_folder(name)).grid(column=0, row=0)
             Button(active_folder_button_frame, text="Edit: " + folders_name['alias'],
-                   command=lambda name=folders_name['id']:
-                   edit_folder_selector(name),
+                   command=lambda name=folders_name['id']: edit_folder_selector(name),
                    width=active_folder_edit_length + 6).grid(column=1, row=0, sticky=E + W)
             active_folder_button_frame.pack(anchor='e', pady=1)
         else:
@@ -371,8 +370,7 @@ def make_users_list():
                    command=lambda name=folders_name['id'], alias=folders_name['alias']:
                    delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=E, padx=(0, 10))
             Button(inactive_folder_button_frame, text="Edit: " + folders_name['alias'],
-                   command=lambda name=folders_name['id']:
-                   edit_folder_selector(name),
+                   command=lambda name=folders_name['id']: edit_folder_selector(name),
                    width=inactive_folder_edit_length + 6).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
             inactive_folder_button_frame.pack(anchor='e', pady=1)
     # pack widgets in correct order
