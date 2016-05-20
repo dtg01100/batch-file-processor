@@ -329,12 +329,14 @@ def make_users_list():
         if folders_table.count(folder_is_active="False") == 0:
             no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
             no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
-    # iterate over list of known folders, sorting into lists of active and inactive
+
+    # this finds the length of the longest folder aliases for both active and inactive lists
     active_folder_dict_list = folders_table.find(folder_is_active="True")
     inactive_folder_dict_list = folders_table.find(folder_is_active="False")
     active_folder_edit_length = 0
     inactive_folder_edit_length = 0
     active_folder_alias_list = []
+    inactive_folder_alias_list = []
     if not folders_table.count(folder_is_active="True") == 0:
         for entry in active_folder_dict_list:
             alias = entry['alias']
@@ -344,7 +346,6 @@ def make_users_list():
                 active_folder_alias_list.append(alias)
         active_folder_edit_length = len(max(active_folder_alias_list, key=len))
     if not folders_table.count(folder_is_active="False") == 0:
-        inactive_folder_alias_list = []
         for entry in inactive_folder_dict_list:
             alias = entry['alias']
             if alias is None:
@@ -353,6 +354,7 @@ def make_users_list():
                 inactive_folder_alias_list.append(alias)
         inactive_folder_edit_length = len(max(inactive_folder_alias_list, key=len))
 
+    # iterate over list of known folders, sorting into lists of active and inactive
     for folders_name in folders_table.find(order_by="alias"):
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
