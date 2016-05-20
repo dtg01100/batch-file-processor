@@ -52,13 +52,16 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
                 upc_in_csv = "\t" + upc_string if conv_calc_upc != "False" and blank_upc is False \
                     else input_edi_dict['upc_number']
 
-                quantity_shipped_in_csv = input_edi_dict['qty_of_units'].lstrip("0") if not \
-                    input_edi_dict['qty_of_units'].lstrip("0") == "" else input_edi_dict['qty_of_units']
+                quantity_shipped_in_csv = input_edi_dict['qty_of_units'].lstrip("0") \
+                    if not input_edi_dict['qty_of_units'].lstrip("0") == "" else input_edi_dict['qty_of_units']
 
-                cost_in_csv = input_edi_dict['unit_cost'][:-2].lstrip("0") + "." + input_edi_dict['unit_cost'][-2:]
+                cost_in_csv = (input_edi_dict['unit_cost'][:-2].lstrip("0") if not
+                               input_edi_dict['unit_cost'][:-2].lstrip("0") == "" else "0")\
+                    + "." + input_edi_dict['unit_cost'][-2:]
 
-                suggested_retail_in_csv = input_edi_dict['suggested_retail_price'][:-2].lstrip("0") + "." + \
-                    input_edi_dict['suggested_retail_price'][-2:]
+                suggested_retail_in_csv = (input_edi_dict['suggested_retail_price'][:-2].lstrip("0")
+                                           if not input_edi_dict['suggested_retail_price'][:-2].lstrip(
+                    "0") == "" else "0") + "." + input_edi_dict['suggested_retail_price'][-2:]
 
                 description_in_csv = (input_edi_dict['description'].replace("&", "AND").rstrip(" ")
                                       if filter_ampersand != "False" else
@@ -72,8 +75,8 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
 
                 f.write(
                     '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".
-                    format(upc_in_csv, quantity_shipped_in_csv, cost_in_csv, suggested_retail_in_csv,
-                           description_in_csv, case_pack_in_csv, item_number_in_csv).encode())
+                        format(upc_in_csv, quantity_shipped_in_csv, cost_in_csv, suggested_retail_in_csv,
+                               description_in_csv, case_pack_in_csv, item_number_in_csv).encode())
 
             # if include "C" records flag is set and line starts with "C"
             if line.startswith("C") and conv_inc_crec != "False":
