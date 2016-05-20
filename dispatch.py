@@ -4,7 +4,7 @@ import datetime
 import copy_backend
 import ftp_backend
 import email_backend
-import converter
+import convert_to_csv
 import convert_to_insight
 import os
 import time
@@ -153,14 +153,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     try:
                                         run_log.write("converting " + send_filename + " from EDI to CSV\r\n")
                                         print("converting " + send_filename + " from EDI to CSV")
-                                        converter.edi_convert(send_filename, output_filename,
-                                                              parameters_dict['calculate_upc_check_digit'],
-                                                              parameters_dict['include_a_records'],
-                                                              parameters_dict['include_c_records'],
-                                                              parameters_dict['include_headers'],
-                                                              parameters_dict['filter_ampersand'],
-                                                              parameters_dict['pad_a_records'],
-                                                              parameters_dict['a_record_padding'])
+                                        convert_to_csv.edi_convert(send_filename, output_filename,
+                                                                   parameters_dict['calculate_upc_check_digit'],
+                                                                   parameters_dict['include_a_records'],
+                                                                   parameters_dict['include_c_records'],
+                                                                   parameters_dict['include_headers'],
+                                                                   parameters_dict['filter_ampersand'],
+                                                                   parameters_dict['pad_a_records'],
+                                                                   parameters_dict['a_record_padding'])
                                         run_log.write("Success\r\n\r\n")
                                         send_filename = output_filename
                                     except Exception as error:
