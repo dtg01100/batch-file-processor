@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-version = "1.15.0"
+version = "(Git Branch: Master)"
 database_version = "12"
 print("Batch File Sender Version " + version)
 try:  # try to import required modules
