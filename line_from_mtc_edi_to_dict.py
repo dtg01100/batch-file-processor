@@ -23,5 +23,7 @@ def capture_records(line):
                       description=line[4:29],
                       amount=line[29:38])
         return fields
+    if line.startswith(""):
+        return None
     else:
         raise Exception("Not An EDI")
