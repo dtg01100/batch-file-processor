@@ -75,8 +75,8 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
 
                 f.write(
                     '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".
-                        format(upc_in_csv, quantity_shipped_in_csv, cost_in_csv, suggested_retail_in_csv,
-                               description_in_csv, case_pack_in_csv, item_number_in_csv).encode())
+                    format(upc_in_csv, quantity_shipped_in_csv, cost_in_csv, suggested_retail_in_csv,
+                           description_in_csv, case_pack_in_csv, item_number_in_csv).encode())
 
             # if include "C" records flag is set and line starts with "C"
             if line.startswith("C") and conv_inc_crec != "False":
