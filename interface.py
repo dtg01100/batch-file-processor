@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 version = "(Git Branch: Master)"
 database_version = "12"
 print("Batch File Sender Version " + version)

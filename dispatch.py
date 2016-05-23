@@ -1,4 +1,3 @@
-from __future__ import print_function
 import hashlib
 import datetime
 import copy_backend
