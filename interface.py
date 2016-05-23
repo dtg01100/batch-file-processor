@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from tkinter import *
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
