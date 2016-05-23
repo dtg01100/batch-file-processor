@@ -1,48 +1,36 @@
+from tkinter import *
+from tkinter.filedialog import askdirectory
+from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
+from tkinter.ttk import *
+from validate_email import validate_email
+import tkinter
+import rclick_menu
+import hashlib
+import scrollbuttons
+import dataset
+import dialog
+import dispatch
+import os
+import create_database
+import time
+import datetime
+import batch_log_sender
+import print_run_log
+import argparse
+import sqlalchemy.dialects.sqlite  # needed for py2exe
+from io import StringIO
+import doingstuffoverlay
+import folders_database_migrator
+import resend_interface
+import database_import
+import backup_increment
+from operator import itemgetter
+from tendo import singleton
+
+
 version = "(Git Branch: Master)"
 database_version = "12"
 print("Batch File Sender Version " + version)
-try:  # try to import required modules
-    from tkinter import *
-    from tkinter.filedialog import askdirectory
-    from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
-    from tkinter.ttk import *
-    from validate_email import validate_email
-    import tkinter
-    import rclick_menu
-    import hashlib
-    import scrollbuttons
-    import dataset
-    import dialog
-    import dispatch
-    import os
-    import create_database
-    import time
-    import datetime
-    import batch_log_sender
-    import print_run_log
-    import argparse
-    import sqlalchemy.dialects.sqlite  # needed for py2exe
-    from io import StringIO
-    import shutil
-    import doingstuffoverlay
-    import folders_database_migrator
-    import resend_interface
-    import database_import
-    import backup_increment
-    from operator import itemgetter
-    from tendo import singleton
-except Exception as error:
-    try:  # if importing doesn't work, not much to do other than log and quit
-        print(str(error))
-        critical_log = open("critical_error.log", 'a')
-        critical_log.write("program version is " + version)
-        critical_log.write(str(error) + "\r\n")
-        critical_log.close()
-        raise SystemExit
-    except Exception as big_error:  # if logging doesn't work, at least complain
-        print("error writing critical error log for error: " + str(error) + "\n" +
-              "operation failed with error: " + str(big_error))
-        raise SystemExit
 
 # prevent multiple instances from running
 me = singleton.SingleInstance()
