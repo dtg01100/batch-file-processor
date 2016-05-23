@@ -19,7 +19,6 @@ import datetime
 import batch_log_sender
 import print_run_log
 import argparse
-import sqlalchemy.dialects.sqlite  # needed for py2exe
 from io import StringIO
 import doingstuffoverlay
 import folders_database_migrator
