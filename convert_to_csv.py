@@ -11,7 +11,7 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
     conv_inc_headers = inc_headers
     with open(edi_process) as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-        f = open(output_filename, 'wb')  # open work file, overwriting old file
+        f = open(output_filename, 'w')  # open work file, overwriting old file
 
         if conv_inc_headers != "False":  # include headers if flag is set
             # write line out to file
@@ -25,8 +25,8 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
             # if include "A" records flag is set and line starts with "A"
             if line.startswith("A") and conv_inc_arec != "False":
                 # write "A" line
-                f.write((line[0:1] + arec_padding[0:6] + line[7:]).encode()) if pad_arec == "True" else f.write(
-                    line.encode())
+                f.write((line[0:1] + arec_padding[0:6] + line[7:])) if pad_arec == "True" else f.write(
+                    line)
 
             # the following block writes "B" lines, dependent on filter and convert settings
             # ternary conditional operator: puts if-then-else statement in one line
@@ -76,10 +76,10 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
                 f.write(
                     '"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'","'"'"{}"'"'"\r\n".
                     format(upc_in_csv, quantity_shipped_in_csv, cost_in_csv, suggested_retail_in_csv,
-                           description_in_csv, case_pack_in_csv, item_number_in_csv).encode())
+                           description_in_csv, case_pack_in_csv, item_number_in_csv))
 
             # if include "C" records flag is set and line starts with "C"
             if line.startswith("C") and conv_inc_crec != "False":
-                f.write(line.encode())  # write "C" line
+                f.write(line)  # write "C" line
 
         f.close()  # close output file

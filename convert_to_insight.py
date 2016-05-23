@@ -3,11 +3,11 @@ import line_from_mtc_edi_to_dict
 
 def edi_convert(edi_process, output_filename):
     work_file = open(edi_process)  # open input file
-    f = open(output_filename, 'wb')  # open work file, overwriting old file
+    f = open(output_filename, 'w')  # open work file, overwriting old file
 
     for line in work_file.readlines():
         if line.startswith("A"):
-            f.write((line + "\r\n").encode())
+            f.write((line + "\r\n"))
 
         if line.startswith("B"):
             try:
