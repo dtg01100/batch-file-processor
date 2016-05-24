@@ -559,6 +559,15 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                         error_list.append("Invalid Email Destination Address\r\n")
                         errors = True
 
+        if self.enable_interval_backup_variable.get():
+            try:
+                backup_interval = int(self.interval_backup_spinbox.get())
+                if backup_interval < 1 or backup_interval > 5000:
+                    raise ValueError
+            except ValueError:
+                error_list.append("Backup Interval Needs To Be A Number Between 1 and 5000")
+                errors = True
+
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
             showerror(message=error_report)  # display generated error string in error dialog
