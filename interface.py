@@ -552,10 +552,10 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                 error_list.append("Reporting Email Destination Is A Required Field\r")
                 errors = True
             else:
-                email_recepients = str(self.report_email_destination_field.get()).split(", ")
-                for email_recepient in email_recepients:
-                    print(email_recepient)
-                    if (validate_email(str(email_recepient), verify=True)) is False:
+                email_recipients = str(self.report_email_destination_field.get()).split(", ")
+                for email_recipient in email_recipients:
+                    print(email_recipient)
+                    if (validate_email(str(email_recipient), verify=True)) is False:
                         error_list.append("Invalid Email Destination Address\r\n")
                         errors = True
 
