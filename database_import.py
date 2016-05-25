@@ -20,7 +20,7 @@ def import_interface(master_window, original_database_path):
     def select_database():
         global new_database_path
         global database_migrate_job
-        new_database_path = tkFileDialog.askopenfilename()
+        new_database_path = tkFileDialog.askopenfilename(initialdir=os.path.expanduser('~'))
         if os.path.exists(new_database_path):
             new_database_label.configure(text=new_database_path)
             process_database_files_button.configure(state=NORMAL)

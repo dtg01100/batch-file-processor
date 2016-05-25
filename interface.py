@@ -202,7 +202,7 @@ def select_folder():
     if os.path.exists(prior_folder['single_add_folder_prior']):
         initial_directory = prior_folder['single_add_folder_prior']
     else:
-        initial_directory = os.getcwd()
+        initial_directory = os.path.expanduser('~')
     folder = askdirectory(initialdir=initial_directory)
     if os.path.exists(folder):
         update_last_folder = dict(id=1, single_add_folder_prior=folder)
@@ -232,7 +232,7 @@ def batch_add_folders():
     if os.path.exists(prior_folder['batch_add_folder_prior']):
         initial_directory = prior_folder['batch_add_folder_prior']
     else:
-        initial_directory = os.getcwd()
+        initial_directory = os.path.expanduser('~')
     containing_folder = askdirectory(initialdir=initial_directory)
     starting_directory = os.getcwd()
     if os.path.exists(containing_folder):
@@ -1541,7 +1541,7 @@ def processed_files_popup():
         if os.path.exists(prior_folder['export_processed_folder_prior']):
             initial_directory = prior_folder['export_processed_folder_prior']
         else:
-            initial_directory = os.getcwd()
+            initial_directory = os.path.expanduser('~')
         output_folder_proposed = askdirectory(initialdir=initial_directory)
         if output_folder_proposed == "":
             return

@@ -44,9 +44,9 @@ def do(database_version):  # create database file with some default settings
                                        report_printing_fallback="False",
                                        ftp_port=21,
                                        email_subject_line="",
-                                       single_add_folder_prior=os.path.join(os.getcwd()),
-                                       batch_add_folder_prior=os.path.join(os.getcwd()),
-                                       export_processed_folder_prior=os.path.join(os.getcwd()),
+                                       single_add_folder_prior=os.path.expanduser('~'),
+                                       batch_add_folder_prior=os.path.expanduser('~'),
+                                       export_processed_folder_prior=os.path.expanduser('~'),
                                        report_edi_errors=False,
                                        split_edi=False))
 
