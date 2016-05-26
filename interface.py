@@ -1222,7 +1222,8 @@ def process_directories(folders_table_process):
                 loop_count += 1
                 if os.path.isfile(os.path.abspath(log['log'])):
                     # iterate over emails to send queue, breaking it into 9mb chunks if necessary
-                    total_size += total_size + os.path.getsize(os.path.abspath(log['log']))  # add size of current file to total
+                    # add size of current file to total
+                    total_size += total_size + os.path.getsize(os.path.abspath(log['log']))
                     emails_table_batch.insert(dict(log=log['log']))
                     # if the total size is more than 9mb, then send that set and reset the total
                     if total_size > 9000000 or emails_table_batch.count() >= 15:
