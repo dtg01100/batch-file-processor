@@ -1235,6 +1235,11 @@ def process_directories(folders_table_process):
                     email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                     skipped_files += 1
                     sent_emails_removal_queue.insert(log)
+            if emails_table_batch.count() > 0:
+                # send the remainder of emails
+                batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue, start_time,
+                                    args, root, batch_number, emails_count, total_emails)
+                emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
