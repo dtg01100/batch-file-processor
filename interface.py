@@ -1212,18 +1212,20 @@ def process_directories(folders_table_process):
             skipped_files = 0
             email_errors = StringIO()
             total_emails = emails_table.count()
+            emails_table_batch.delete()
             emails_count = 0
             loop_count = 0
             batch_number = 1
+
             for log in emails_table.all():
                 emails_count += 1
                 loop_count += 1
-                if os.path.isfile(log['log']):
+                if os.path.isfile(os.path.abspath(log['log'])):
                     # iterate over emails to send queue, breaking it into 9mb chunks if necessary
-                    total_size += total_size + os.path.getsize(log['log'])  # add size of current file to total
-                    emails_table_batch.insert(log)
+                    total_size += total_size + os.path.getsize(os.path.abspath(log['log']))  # add size of current file to total
+                    emails_table_batch.insert(dict(log=log['log']))
                     # if the total size is more than 9mb, then send that set and reset the total
-                    if total_size > 9000000 or loop_count >= 15:
+                    if total_size > 9000000 or emails_table_batch.count() >= 15:
                         batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
                                             start_time, args, root, batch_number, emails_count, total_emails)
                         emails_table_batch.delete()  # clear batch
@@ -1235,11 +1237,9 @@ def process_directories(folders_table_process):
                     email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                     skipped_files += 1
                     sent_emails_removal_queue.insert(log)
-            if emails_table_batch.count() > 0:
-                # send the remainder of emails
-                batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue, start_time,
-                                    args, root, batch_number, emails_count, total_emails)
-                emails_table_batch.delete()  # clear batch
+            batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                                start_time, args, root, batch_number, emails_count, total_emails)
+            emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
             sent_emails_removal_queue.delete()
