@@ -58,4 +58,7 @@ def report_edi_issues(input_file):
                 in_memory_log.write("line is:\r\n")
                 in_memory_log.write(line)
                 _insert_description_and_number(line)
+    else:
+        has_errors = True
+        in_memory_log.write("\r\n" + input_file + " is not a valid edi file\r\n\r\n")
     return in_memory_log, has_errors
