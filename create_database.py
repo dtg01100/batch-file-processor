@@ -3,8 +3,8 @@ import sqlalchemy
 import os
 
 
-def do(database_version):  # create database file with some default settings
-    database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+def do(database_version, database_path, config_folder):  # create database file with some default settings
+    database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
 
     version = database_connection['version']
 
@@ -36,10 +36,10 @@ def do(database_version):  # create database file with some default settings
                                        ftp_username='',
                                        ftp_password='',
                                        email_to='',
-                                       logs_directory=os.path.join(os.getcwd(), "run_logs"),
-                                       edi_converter_scratch_folder=os.path.join(os.getcwd(),
+                                       logs_directory=os.path.join(config_folder, "run_logs"),
+                                       edi_converter_scratch_folder=os.path.join(config_folder,
                                                                                  "edi_converter_scratch_folder"),
-                                       errors_folder=os.path.join(os.getcwd(), "errors"),
+                                       errors_folder=os.path.join(config_folder, "errors"),
                                        enable_reporting="False",
                                        report_printing_fallback="False",
                                        ftp_port=21,

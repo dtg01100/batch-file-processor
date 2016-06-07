@@ -25,24 +25,34 @@ import folders_database_migrator
 import resend_interface
 import database_import
 import backup_increment
+import appdirs
 from operator import itemgetter
 from tendo import singleton
 
 
+appname = "Batch File Sender"
 version = "(Git Branch: Master)"
-database_version = "12"
-print("Batch File Sender Version " + version)
+database_version = "13"
+print(appname + " Version " + version)
+
+config_folder = appdirs.user_data_dir(appname)
+database_path = os.path.join(config_folder, 'folders.db')
+
+try:
+    os.makedirs(config_folder)
+except FileExistsError:
+    pass
 
 # prevent multiple instances from running
 me = singleton.SingleInstance()
 
-if not os.path.isfile('folders.db'):  # if the database file is missing
+if not os.path.isfile(database_path):  # if the database file is missing
     try:
         print("creating initial database file...")
         creating_database_popup = Tk()
         Label(creating_database_popup, text="Creating initial database file...").pack()
         creating_database_popup.update()
-        create_database.do(database_version)  # make a new one
+        create_database.do(database_version, database_path, config_folder)  # make a new one
         print("done")
         creating_database_popup.destroy()
     except Exception as error:  # if that doesn't work for some reason, log and quit
@@ -59,7 +69,7 @@ if not os.path.isfile('folders.db'):  # if the database file is missing
             raise SystemExit
 
 try:  # try to connect to database
-    database_connection = dataset.connect('sqlite:///folders.db')  # connect to database
+    database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
     session_database = dataset.connect("sqlite:///")
 except Exception as error:  # if that doesn't work for some reason, log and quit
     try:
@@ -82,8 +92,8 @@ if int(db_version_dict['version']) < int(database_version):
     updating_database_popup = Tk()
     Label(updating_database_popup, text="Updating database file...").pack()
     updating_database_popup.update()
-    backup_increment.do_backup('folders.db')
-    folders_database_migrator.upgrade_database(database_connection)
+    backup_increment.do_backup(database_path)
+    folders_database_migrator.upgrade_database(database_connection, config_folder)
     updating_database_popup.destroy()
     print("done")
 if int(db_version_dict['version']) > int(database_version):
@@ -116,7 +126,7 @@ open_tables()
 
 launch_options = argparse.ArgumentParser()
 root = Tk()  # create root window
-root.title("Sender Interface " + version)
+root.title(appname + " " + version)
 folder = NONE
 options_frame = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
@@ -1139,7 +1149,7 @@ def process_directories(folders_table_process):
     settings_dict = settings.find_one(id=1)
     if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= \
             settings_dict['backup_counter_maximum']:
-        backup_increment.do_backup('folders.db')
+        backup_increment.do_backup(database_path)
         settings_dict['backup_counter'] = 0
     settings_dict['backup_counter'] += 1
     settings.update(settings_dict, ['id'])
@@ -1428,7 +1438,7 @@ def destroy_maintenance_popup(_=None):
 
 
 def database_import_wrapper():
-    if database_import.import_interface(maintenance_popup, 'folders.db'):
+    if database_import.import_interface(maintenance_popup, database_path):
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         open_tables()
@@ -1453,7 +1463,7 @@ def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
                            " Are you sure you want to continue?"):
-        backup_increment.do_backup('folders.db')
+        backup_increment.do_backup(database_path)
         global maintenance_popup
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")

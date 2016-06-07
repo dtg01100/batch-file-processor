@@ -2,7 +2,7 @@ import sqlalchemy
 import os
 
 
-def upgrade_database(database_connection):
+def upgrade_database(database_connection, config_folder):
     db_version = database_connection['version']
     db_version_dict = db_version.find_one(id=1)
 
@@ -115,4 +115,18 @@ def upgrade_database(database_connection):
                                    backup_counter_maximum=200,
                                    enable_interval_backups=True))
         update_version = dict(id=1, version="12")
+        db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
+
+    if db_version_dict['version'] == "12":
+        administrative_section = database_connection['administrative']
+        administrative_section_update_dict = dict(
+            id=1,
+            logs_directory=os.path.join(config_folder, "run_logs"),
+            edi_converter_scratch_folder=os.path.join(config_folder, "edi_converter_scratch_folder"),
+            errors_folder=os.path.join(config_folder, "errors")
+        )
+        administrative_section.update(administrative_section_update_dict, ['id'])
+        update_version = dict(id=1, version="13")
         db_version.update(update_version, ['id'])
