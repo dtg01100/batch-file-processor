@@ -29,7 +29,7 @@ from operator import itemgetter
 from tendo import singleton
 
 
-version = "(Git Branch: Master)"
+version = "1.15.0"
 database_version = "12"
 print("Batch File Sender Version " + version)
 
