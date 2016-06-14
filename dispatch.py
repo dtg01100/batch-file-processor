@@ -30,14 +30,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                              str(file_total), footer=footer, overlay_height=120)
 
     def empty_directory(top):
-        if top == '/' or top == "\\":
-            return
-        else:
-            for folder_root, dirs, files_delete in os.walk(top, topdown=False):
-                for name in files_delete:
-                    os.remove(os.path.join(folder_root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(folder_root, name))
+        for folder_root, dirs, files_delete in os.walk(top, topdown=False):
+            for name in files_delete:
+                os.remove(os.path.join(folder_root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(folder_root, name))
 
     global edi_validator_errors
     global global_edi_validator_error_status
