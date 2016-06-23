@@ -1403,33 +1403,15 @@ def mark_active_as_processed(master, selected_folder=None):
 
 def set_all_inactive():
     maintenance_popup.unbind("<Escape>")
-    total = folders_table.count(folder_is_active="True")
-    count = 0
-    doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-    for folder_to_be_inactive in folders_table.find(folder_is_active="True"):
-        count += 1
-        doingstuffoverlay.update_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder_to_be_inactive['folder_is_active'] = "False"
-        folders_table.update(folder_to_be_inactive, ['id'])
-    doingstuffoverlay.destroy_overlay()
-    if total > 0:
-        refresh_users_list()
+    database_connection.query('update folders set folder_is_active="False" where folder_is_active="True"')
+    refresh_users_list()
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def set_all_active():
     maintenance_popup.unbind("<Escape>")
-    total = folders_table.count(folder_is_active="False")
-    count = 0
-    doingstuffoverlay.make_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-    for folder_to_be_active in folders_table.find(folder_is_active="False"):
-        count += 1
-        doingstuffoverlay.update_overlay(maintenance_popup, "processing " + str(count) + " of " + str(total))
-        folder_to_be_active['folder_is_active'] = "True"
-        folders_table.update(folder_to_be_active, ['id'])
-    doingstuffoverlay.destroy_overlay()
-    if total > 0:
-        refresh_users_list()
+    database_connection.query('update folders set folder_is_active="True" where folder_is_active="False"')
+    refresh_users_list()
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
