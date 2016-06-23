@@ -1,26 +1,25 @@
 from tkinter import *
 from tkinter.ttk import *
 import os
-import tkinter.filedialog as tkFileDialog
+from tkinter.filedialog import askopenfilename
 import mover
+
+run_has_happened = False
+new_database_path = ""
 
 
 def import_interface(master_window, original_database_path):
-    global run_has_happened
     import_interface_window = Toplevel()
     import_interface_window.title("folders.db merging utility")
     import_interface_window.transient(master_window)
     import_interface_window.geometry("+%d+%d" % (master_window.winfo_rootx() + 50, master_window.winfo_rooty() + 50))
     import_interface_window.grab_set()
     import_interface_window.focus_set()
-    run_has_happened = False
-
-    new_database_path = ""
 
     def select_database():
         global new_database_path
         global database_migrate_job
-        new_database_path = tkFileDialog.askopenfilename(initialdir=os.path.expanduser('~'))
+        new_database_path = askopenfilename(initialdir=os.path.expanduser('~'))
         if os.path.exists(new_database_path):
             new_database_label.configure(text=new_database_path)
             process_database_files_button.configure(state=NORMAL)

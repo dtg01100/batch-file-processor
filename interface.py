@@ -68,21 +68,28 @@ if not os.path.isfile(database_path):  # if the database file is missing
                   "operation failed with error: " + str(big_error))
             raise SystemExit
 
-try:  # try to connect to database
-    database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
-    session_database = dataset.connect("sqlite:///")
-except Exception as error:  # if that doesn't work for some reason, log and quit
-    try:
-        print(str(error))
-        critical_log = open("critical_error.log", 'a')
-        critical_log.write("program version is " + version)
-        critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
-        critical_log.close()
-        raise SystemExit
-    except Exception as big_error:  # if logging doesn't work, at least complain
-        print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " +
-              str(big_error))
-        raise SystemExit
+
+def connect_to_databases():
+    global database_connection
+    global session_database
+    try:  # try to connect to database
+        database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
+        session_database = dataset.connect("sqlite:///")
+    except Exception as error:  # if that doesn't work for some reason, log and quit
+        try:
+            print(str(error))
+            critical_log = open("critical_error.log", 'a')
+            critical_log.write("program version is " + version)
+            critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
+            critical_log.close()
+            raise SystemExit
+        except Exception as big_error:  # if logging doesn't work, at least complain
+            print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " +
+                  str(big_error))
+            raise SystemExit
+
+connect_to_databases()
+
 
 # open table required for database check in database
 db_version = database_connection['version']
@@ -113,6 +120,7 @@ def open_tables():
     global oversight_and_defaults
     global processed_files
     global settings
+    global database_connection
     folders_table = database_connection['folders']
     emails_table = database_connection['emails_to_send']
     emails_table_batch = database_connection['working_batch_emails_to_send']
@@ -1441,6 +1449,7 @@ def database_import_wrapper():
     if database_import.import_interface(maintenance_popup, database_path):
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
+        connect_to_databases()
         open_tables()
         settings_dict = settings.find_one(id=1)
         print(settings_dict['enable_email'])
