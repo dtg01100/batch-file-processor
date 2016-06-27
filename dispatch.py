@@ -15,6 +15,7 @@ import doingstuffoverlay
 import edi_tweaks
 import split_edi
 
+
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 
@@ -24,10 +25,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " +
-                                             str(dispatch_folder_count) + " of " +
-                                             str(folder_total) + "," + " file " +
-                                             str(dispatch_file_count) + " of " +
-                                             str(file_total), footer=footer, overlay_height=120)
+                                                          str(dispatch_folder_count) + " of " +
+                                                          str(folder_total) + "," + " file " +
+                                                          str(dispatch_file_count) + " of " +
+                                                          str(file_total), footer=footer, overlay_height=120)
 
     def empty_directory(top):
         if top == '/' or top == "\\":
@@ -68,8 +69,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total, "")
         if os.path.isdir(parameters_dict['folder_name']) is True:
             print("entering folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
-            run_log.write("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
-                          parameters_dict['alias'] + "\r\n\r\n")
+            run_log.write(("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
+                           parameters_dict['alias'] + "\r\n\r\n").encode())
             os.chdir(parameters_dict['folder_name'])
             # strip potentially invalid send_filename characters from alias string
             cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])
@@ -83,7 +84,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)
-            run_log.write("Checking for new files\r\n")
+            run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
             for f in files:
                 file_count += 1
@@ -97,13 +98,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             file_count = 0
             errors = False
             if len(files) == 0:  # if there are no files in directory, record in log
-                run_log.write("No files in directory\r\n\r\n")
+                run_log.write("No files in directory\r\n\r\n".encode())
                 print("No files in directory")
             if len(filtered_files) == 0 and len(files) > 0:
-                run_log.write("No new files in directory\r\n\r\n")
+                run_log.write("No new files in directory\r\n\r\n".encode())
                 print("No new files in directory")
             if len(filtered_files) != 0:
-                run_log.write(str(len(filtered_files)) + " found\r\n\r\n")
+                run_log.write((str(len(filtered_files)) + " found\r\n\r\n").encode())
                 print(str(len(filtered_files)) + " found")
             file_count_total = len(filtered_files)
             for filename in filtered_files:  # iterate over all files in directory
@@ -116,13 +117,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if reporting['report_edi_errors']:
                     validate_file(filename, original_filename)
                 if parameters_dict['split_edi'] and mtc_edi_validator.check(filename):
-                    run_log.write("Splitting edi file " + original_filename + "...\r\n")
+                    run_log.write(("Splitting edi file " + original_filename + "...\r\n").encode())
                     print("Splitting edi file " + original_filename + "...")
                     try:
                         split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
                             'edi_converter_scratch_folder'])
                         if len(split_edi_list) > 1:
-                            run_log.write("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n")
+                            run_log.write(
+                                ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n").encode())
                             print("edi file split into " + str(len(split_edi_list)) + " files")
                     except Exception as error:
                         split_edi_list = [filename]
@@ -131,7 +133,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 else:
                     split_edi_list = [filename]
                 if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
-                    run_log.write("Cannot split edi file\r\n\r\n")
+                    run_log.write("Cannot split edi file\r\n\r\n".encode())
                     print("Cannot split edi file")
                     split_edi_list = [filename]
                 for send_filename in split_edi_list:
@@ -150,7 +152,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:
-                                        run_log.write("converting " + send_filename + " from EDI to CSV\r\n")
+                                        run_log.write(("converting " + send_filename + " from EDI to CSV\r\n").encode())
                                         print("converting " + send_filename + " from EDI to CSV")
                                         convert_to_csv.edi_convert(send_filename, output_filename,
                                                                    parameters_dict['calculate_upc_check_digit'],
@@ -160,7 +162,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                    parameters_dict['filter_ampersand'],
                                                                    parameters_dict['pad_a_records'],
                                                                    parameters_dict['a_record_padding'])
-                                        run_log.write("Success\r\n\r\n")
+                                        run_log.write("Success\r\n\r\n".encode())
                                         send_filename = output_filename
                                     except Exception as error:
                                         print(str(error))
@@ -209,10 +211,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                             try:
                                 print("sending " + str(send_filename) + " to " +
                                       str(parameters_dict['copy_to_directory']) + " with copy backend")
-                                run_log.write("sending " + str(send_filename) + " to " +
-                                              str(parameters_dict['copy_to_directory']) + " with copy backend\r\n\r\n")
+                                run_log.write(("sending " + str(send_filename) + " to " +
+                                               str(parameters_dict[
+                                                       'copy_to_directory']) + " with copy backend\r\n\r\n").encode())
                                 copy_backend.do(parameters_dict, send_filename)
-                                run_log.write("Success\r\n\r\n")
+                                run_log.write("Success\r\n\r\n".encode())
                             except Exception as error:
                                 print(str(error))
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
@@ -224,10 +227,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
                                     str(parameters_dict['ftp_folder']) + " with FTP backend")
                                 run_log.write(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
-                                    str(parameters_dict['ftp_folder']) + " with FTP backend\r\n\r\n")
+                                    ("sending " + str(send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                     str(parameters_dict['ftp_folder']) + " with FTP backend\r\n\r\n").encode())
                                 ftp_backend.do(parameters_dict, send_filename)
-                                run_log.write("Success\r\n\r\n")
+                                run_log.write("Success\r\n\r\n".encode())
                             except Exception as error:
                                 print(str(error))
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
@@ -239,10 +242,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 print("sending " + str(send_filename) + " to " + str(parameters_dict['email_to']) +
                                       " with email backend")
                                 run_log.write(
-                                    "sending " + str(send_filename) + " to " + str(parameters_dict['email_to']) +
-                                    " with email backend\r\n\r\n")
+                                    ("sending " + str(send_filename) + " to " + str(parameters_dict['email_to']) +
+                                     " with email backend\r\n\r\n").encode())
                                 email_backend.do(parameters_dict, settings, send_filename)
-                                run_log.write("Success\r\n\r\n")
+                                run_log.write("Success\r\n\r\n".encode())
                             except Exception as error:
                                 record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                 "Email Backend")
@@ -264,7 +267,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
                                                     ftp_destination=parameters_dict['ftp_server'] +
-                                                    parameters_dict['ftp_folder'] if
+                                                                    parameters_dict['ftp_folder'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",
@@ -296,9 +299,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         folder_error_log_name_full_path = os.path.join(run_log_directory,
                                                                        folder_error_log_name_constructor)
                 try:
-                    folder_errors_log_write = open(folder_error_log_name_full_path, 'w')
-                    folder_errors_log_write.write("Program Version = " + version + "\r\n\r\n")
-                    folder_errors_log_write.write(folder_errors_log.getvalue())
+                    folder_errors_log_write = open(folder_error_log_name_full_path, 'wb')
+                    folder_errors_log_write.write(("Program Version = " + version + "\r\n\r\n").encode())
+                    folder_errors_log_write.write(folder_errors_log.getvalue().encode())
                     if reporting['enable_reporting'] == "True":
                         emails_table.insert(dict(log=folder_error_log_name_full_path,
                                                  folder_alias=parameters_dict['alias'],
@@ -306,11 +309,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 except Exception as error:
                     # if file can't be created in either directory, put error log inline in the run log
                     print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")
-                    run_log.write("can't open error log file,\r\n error is " + str(error) +
-                                  "\r\ndumping to run log\r\n")
-                    run_log.write("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n")
-                    run_log.write(folder_errors_log.getvalue())
-                    run_log.write("\r\n\r\nEnd of Error file\r\n\r\n")
+                    run_log.write(("can't open error log file,\r\n error is " + str(error) +
+                                   "\r\ndumping to run log\r\n").encode())
+                    run_log.write(("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n").encode())
+                    run_log.write(folder_errors_log.getvalue().encode())
+                    run_log.write("\r\n\r\nEnd of Error file\r\n\r\n".encode())
             else:
                 database_connection.query("DELETE FROM processed_files WHERE ROWID IN (SELECT id FROM processed_files"
                                           " WHERE folder_id=" + str(parameters_dict['id']) +
@@ -320,8 +323,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             folder_errors_log.close()
         else:
             # if the folder is missing, complain and increment error counter
-            run_log.write("\r\nerror: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
-                          parameters_dict['alias'] + "\r\n\r\n")
+            run_log.write(("\r\nerror: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
+                           parameters_dict['alias'] + "\r\n\r\n").encode())
             print("error: " + os.path.abspath(parameters_dict['folder_name']) + " is missing " + " for " +
                   parameters_dict['alias'])
             error_counter += 1
@@ -335,7 +338,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if reporting['enable_reporting'] == "True":
             emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
-    run_log.write("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors" + "\r\n\r\n")
+    run_log.write(
+        ("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors" + "\r\n\r\n").encode())
     if error_counter > 0:
         return True
     else:
