@@ -32,7 +32,7 @@ from tendo import singleton
 
 appname = "Batch File Sender"
 version = "(Git Branch: Master)"
-database_version = "13"
+database_version = "14"
 print(appname + " Version " + version)
 
 config_folder = appdirs.user_data_dir(appname)
@@ -701,7 +701,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.convert_to_selector_frame = Frame(self.convert_options_frame)
         self.convert_to_selector_label = Label(self.convert_to_selector_frame, text="Convert To: ")
         self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
-                                                   self.foldersnameinput['convert_to_format'], 'csv', 'insight')
+                                                   self.foldersnameinput['convert_to_format'], 'csv')
 
         def select_copy_to_directory():
             global copy_to_directory

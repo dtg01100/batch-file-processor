@@ -130,3 +130,10 @@ def upgrade_database(database_connection, config_folder):
         administrative_section.update(administrative_section_update_dict, ['id'])
         update_version = dict(id=1, version="13")
         db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
+
+    if db_version_dict['version'] == "13":
+        database_connection.query('update "folders" set "convert_to_format"="" where "convert_to_format"="csv"')
+        update_version = dict(id=1, version="14")
+        db_version.update(update_version, ['id'])

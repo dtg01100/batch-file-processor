@@ -4,7 +4,6 @@ import copy_backend
 import ftp_backend
 import email_backend
 import convert_to_csv
-import convert_to_insight
 import os
 import time
 import record_error
@@ -167,23 +166,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 else:
                                     record_error.do(run_log, folder_errors_log, send_filename +
                                                     " is not an edi file", send_filename, "edi validator")
-                            if parameters_dict['convert_to_format'] == "insight":
-                                output_filename = os.path.join(
-                                    edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                    os.path.basename(stripped_filename) + ".txt")
-                                if os.path.exists(os.path.dirname(output_filename)) is False:
-                                    os.mkdir(os.path.dirname(output_filename))
-                                try:
-                                    run_log.write("converting " + send_filename + " from EDI to Insight\r\n")
-                                    print("converting " + send_filename + " from EDI to Insight")
-                                    convert_to_insight.edi_convert(send_filename, output_filename)
-                                    run_log.write("Success\r\n\r\n")
-                                    send_filename = output_filename
-                                except Exception as error:
-                                    print(str(error))
-                                    errors = True
-                                    record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
-                                                    "EDI Processor")
                         if parameters_dict['tweak_edi'] is True:
                             output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                                            os.path.basename(stripped_filename))
