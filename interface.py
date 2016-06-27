@@ -31,7 +31,7 @@ from tendo import singleton
 
 
 appname = "Batch File Sender"
-version = "1.16.1"
+version = "1.16.2"
 database_version = "13"
 print(appname + " Version " + version)
 
