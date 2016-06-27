@@ -17,7 +17,7 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
             # write line out to file
             f.write("{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}" "," "{}\r\n"
                     .format("UPC", "Qty. Shipped", "Cost", "Suggested Retail",
-                            "Description", "Case Pack", "Item Number").encode())
+                            "Description", "Case Pack", "Item Number"))
 
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
             input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
