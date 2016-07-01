@@ -9,6 +9,9 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
     conv_inc_arec = inc_arec
     conv_inc_crec = inc_crec
     conv_inc_headers = inc_headers
+
+    def convert_to_price(value):
+        return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
     with open(edi_process) as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         f = open(output_filename, 'wb')  # open work file, overwriting old file
@@ -56,13 +59,9 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
                 quantity_shipped_in_csv = input_edi_dict['qty_of_units'].lstrip("0") \
                     if not input_edi_dict['qty_of_units'].lstrip("0") == "" else input_edi_dict['qty_of_units']
 
-                cost_in_csv = (input_edi_dict['unit_cost'][:-2].lstrip("0") if not
-                input_edi_dict['unit_cost'][:-2].lstrip("0") == "" else "0") \
-                              + "." + input_edi_dict['unit_cost'][-2:]
+                cost_in_csv = convert_to_price(input_edi_dict['unit_cost'])
 
-                suggested_retail_in_csv = (input_edi_dict['suggested_retail_price'][:-2].lstrip("0")
-                                           if not input_edi_dict['suggested_retail_price'][:-2].lstrip(
-                    "0") == "" else "0") + "." + input_edi_dict['suggested_retail_price'][-2:]
+                suggested_retail_in_csv = convert_to_price(input_edi_dict['suggested_retail_price'])
 
                 description_in_csv = (input_edi_dict['description'].replace("&", "AND").rstrip(" ")
                                       if filter_ampersand != "False" else
