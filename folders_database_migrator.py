@@ -134,6 +134,7 @@ def upgrade_database(database_connection, config_folder):
     db_version_dict = db_version.find_one(id=1)
 
     if db_version_dict['version'] == "13":
-        database_connection.query('update "folders" set "convert_to_format"="" where "convert_to_format"="csv"')
+        database_connection.query(
+            'update "folders" set "convert_to_format"="", "process_edi"="False" where "convert_to_format"="csv"')
         update_version = dict(id=1, version="14")
         db_version.update(update_version, ['id'])
