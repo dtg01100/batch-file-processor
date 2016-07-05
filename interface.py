@@ -1403,15 +1403,23 @@ def mark_active_as_processed(master, selected_folder=None):
 
 def set_all_inactive():
     maintenance_popup.unbind("<Escape>")
+    doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
+    maintenance_popup.update()
     database_connection.query('update folders set folder_is_active="False" where folder_is_active="True"')
     refresh_users_list()
+    doingstuffoverlay.destroy_overlay()
+    maintenance_popup.update()
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
 def set_all_active():
     maintenance_popup.unbind("<Escape>")
+    doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
+    maintenance_popup.update()
     database_connection.query('update folders set folder_is_active="True" where folder_is_active="False"')
     refresh_users_list()
+    doingstuffoverlay.destroy_overlay()
+    maintenance_popup.update()
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
