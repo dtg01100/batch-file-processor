@@ -26,6 +26,7 @@ import resend_interface
 import database_import
 import backup_increment
 import appdirs
+import platform
 from operator import itemgetter
 from tendo import singleton
 
@@ -34,6 +35,8 @@ appname = "Batch File Sender"
 version = "(Git Branch: Master)"
 database_version = "14"
 print(appname + " Version " + version)
+running_platform = platform.system()
+print("Running on " + running_platform)
 
 config_folder = appdirs.user_data_dir(appname)
 database_path = os.path.join(config_folder, 'folders.db')
@@ -52,7 +55,7 @@ if not os.path.isfile(database_path):  # if the database file is missing
         creating_database_popup = Tk()
         Label(creating_database_popup, text="Creating initial database file...").pack()
         creating_database_popup.update()
-        create_database.do(database_version, database_path, config_folder)  # make a new one
+        create_database.do(database_version, database_path, config_folder, running_platform)  # make a new one
         print("done")
         creating_database_popup.destroy()
     except Exception as error:  # if that doesn't work for some reason, log and quit
@@ -100,7 +103,7 @@ if int(db_version_dict['version']) < int(database_version):
     Label(updating_database_popup, text="Updating database file...").pack()
     updating_database_popup.update()
     backup_increment.do_backup(database_path)
-    folders_database_migrator.upgrade_database(database_connection, config_folder)
+    folders_database_migrator.upgrade_database(database_connection, config_folder, running_platform)
     updating_database_popup.destroy()
     print("done")
 if int(db_version_dict['version']) > int(database_version):
@@ -108,6 +111,16 @@ if int(db_version_dict['version']) > int(database_version):
     showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
     raise SystemExit
 
+connect_to_databases()
+db_version = database_connection['version']
+db_version_dict = db_version.find_one(id=1)
+if db_version_dict['os'] != running_platform:
+    Tk().withdraw()
+    showerror("Error", "The operating system detected is: " + '"' + running_platform + '",' +
+              " this does not match the configuration creator, which is stored as: " + '"' +
+              db_version_dict['os'] + '".' + "\r\n"
+              "Folder paths are not portable between operating systems. Exiting")
+    raise SystemExit
 
 # open required tables in database
 

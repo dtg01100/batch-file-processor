@@ -2,7 +2,7 @@ import sqlalchemy
 import os
 
 
-def upgrade_database(database_connection, config_folder):
+def upgrade_database(database_connection, config_folder, running_platform):
     db_version = database_connection['version']
     db_version_dict = db_version.find_one(id=1)
 
@@ -136,5 +136,5 @@ def upgrade_database(database_connection, config_folder):
     if db_version_dict['version'] == "13":
         database_connection.query(
             'update "folders" set "convert_to_format"="", "process_edi"="False" where "convert_to_format"="insight"')
-        update_version = dict(id=1, version="14")
+        update_version = dict(id=1, version="14", os=running_platform)
         db_version.update(update_version, ['id'])

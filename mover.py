@@ -27,7 +27,7 @@ class DbMigrationThing:
             new_db_version_dict = new_db_version.find_one(id=1)
             if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
                 print("db needs upgrading")
-                folders_database_migrator.upgrade_database(new_database_connection, None)
+                folders_database_migrator.upgrade_database(new_database_connection, None, "Null")
 
         preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
         preimport_operations_thread_object.start()
