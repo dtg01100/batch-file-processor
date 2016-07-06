@@ -46,17 +46,17 @@ def import_interface(master_window, original_database_path, running_platform, ba
             if int(new_db_version_var > current_db_version):
                 if askokcancel(message="The proposed database version is newer than the version supported by this "
                                        "program.\nContinue?"):
-                    if askokcancel(
+                    run_can_continue = askokcancel(
                             message="THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT TO CONTINUE?\n"
-                                    "Backup is stored at: " + backup_path):
-                        if not new_db_version_dict['os'] == running_platform:
-                            run_can_continue = askokcancel(
-                                message="The operating system specified in the configuration does"
-                                        " not match the currently running operating system.\n"
-                                        "There is no guarantee that the imported folders will work, "
-                                        "Continue?")
-                        else:
-                            run_can_continue = True
+                                    "Backup is stored at: " + backup_path)
+            elif not new_db_version_dict['os'] == running_platform:
+                run_can_continue = askokcancel(
+                    message="The operating system specified in the configuration does"
+                            " not match the currently running operating system.\n"
+                            "There is no guarantee that the imported folders will work, "
+                            "Continue?")
+            else:
+                run_can_continue = True
         if run_can_continue is True:
             process_database_files_button.configure(state=DISABLED)
             select_database_button.configure(state=DISABLED)
