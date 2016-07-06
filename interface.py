@@ -1448,8 +1448,9 @@ def destroy_maintenance_popup(_=None):
     maintenance_popup.destroy()
 
 
-def database_import_wrapper():
-    if database_import.import_interface(maintenance_popup, database_path):
+def database_import_wrapper(backup_path):
+    if database_import.import_interface(maintenance_popup, database_path,
+                                        running_platform, backup_path, database_version):
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         connect_to_databases()
@@ -1475,7 +1476,7 @@ def maintenance_functions_popup():
     # first, warn the user that they can do very bad things with this dialog, and give them a chance to go back
     if askokcancel(message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
                            " Are you sure you want to continue?"):
-        backup_increment.do_backup(database_path)
+        backup_path = backup_increment.do_backup(database_path)
         global maintenance_popup
         maintenance_popup = Toplevel()
         maintenance_popup.title("Maintenance Functions")
@@ -1502,7 +1503,7 @@ def maintenance_functions_popup():
         clear_processed_files_log_button = Button(maintenance_popup_button_frame, text="Clear sent file records",
                                                   command=clear_processed_files_log)
         database_import_button = Button(maintenance_popup_button_frame, text="Import old configurations...",
-                                        command=database_import_wrapper)
+                                        command=lambda: database_import_wrapper(backup_path))
 
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
