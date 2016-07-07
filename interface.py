@@ -1356,7 +1356,6 @@ def mark_active_as_processed(master, selected_folder=None):
     if selected_folder is None:
         maintenance_popup.unbind("<Escape>")
     starting_folder = os.getcwd()
-    folder_total = folders_table.count(folder_is_active="True")
     folder_count = 0
     folders_table_list = []
     if selected_folder is None:
@@ -1364,6 +1363,7 @@ def mark_active_as_processed(master, selected_folder=None):
             folders_table_list.append(row)
     else:
         folders_table_list = [folders_table.find_one(id=selected_folder)]
+    folder_total = len(folders_table_list)
     if selected_folder is None:
         doingstuffoverlay.make_overlay(master, "adding files to processed list...")
     for parameters_dict in folders_table_list:  # create list of active directories
