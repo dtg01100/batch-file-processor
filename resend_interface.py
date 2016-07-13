@@ -15,6 +15,8 @@ def do(database_connection, master_window):
     configured_folders_table = database_connection['folders']
     folder_list = []
     folder_button_variable = IntVar()
+    files_count_variable = StringVar()
+    files_count_variable.set(str(10))
     resend_interface = Toplevel()
     resend_interface.title("Enable Resend")
     resend_interface.transient(master_window)
@@ -23,6 +25,7 @@ def do(database_connection, master_window):
     resend_interface.focus_set()
     resend_interface.resizable(width=FALSE, height=FALSE)
     resend_interface_files_and_folders_frame = Frame(resend_interface)
+    resend_interface_file_count_frame = Frame(resend_interface)
     resend_interface_folders_frame = Frame(resend_interface_files_and_folders_frame)
     resend_interface_files_frame = Frame(resend_interface_files_and_folders_frame)
     resend_interface_close_frame = Frame(resend_interface)
@@ -31,19 +34,25 @@ def do(database_connection, master_window):
         processed_files_update = dict(dict(resend_flag=resend_flag, id=identifier))
         processed_files_table.update(processed_files_update, ['id'])
 
-    def folder_button_pressed(button):
+    def make_file_checkbutton_list(_=None):
         for child in resend_interface_scrollable_files_frame.interior.winfo_children():
             child.destroy()
         file_list = []
         file_name_list = []
-        for processed_line in processed_files_table.find(folder_id=button.get(), order_by="-sent_date_time"):
+        for processed_line in processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"):
             if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
                 file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id']])
                 file_name_list.append(processed_line['file_name'])
-            if len(file_list) == 10:
+            if len(file_list) == int(resend_interface_files_list_count_spinbox.get()):
                 break
         for file_name, resend_flag, identifier in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier)
+
+    def folder_button_pressed(button):
+        global folder_id
+        folder_id = button.get()
+        make_file_checkbutton_list()
+        resend_interface_files_list_count_spinbox.configure(state='readonly')
 
     class CheckButtons:
         def __init__(self, master, file_name, resend_flag, identifier):
@@ -90,7 +99,15 @@ def do(database_connection, master_window):
     close_button.pack(pady=5)
     resend_interface.bind("<Escape>", close_window)
 
+    resend_interface_files_list_count_spinbox = Spinbox(resend_interface_file_count_frame, from_=10, to=5000,
+                                                        increment=5, width=4,
+                                                        command=make_file_checkbutton_list)
+    resend_interface_files_list_count_spinbox.configure(state=DISABLED)
+
     loading_label.destroy()
+    resend_interface_file_count_frame.pack()
+    Label(master=resend_interface_file_count_frame, text="File Limit:").pack(side=LEFT)
+    resend_interface_files_list_count_spinbox.pack(side=RIGHT)
     resend_interface_scrollable_folders_frame.pack()
     resend_interface_scrollable_files_frame.pack()
     resend_interface_folders_frame.pack(side=LEFT)
