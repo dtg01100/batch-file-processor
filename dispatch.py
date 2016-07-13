@@ -13,6 +13,7 @@ import mtc_edi_validator
 import doingstuffoverlay
 import edi_tweaks
 import split_edi
+import clear_old_logs
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -279,6 +280,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                        folder_error_log_name_constructor)
                 try:
                     folder_errors_log_write = open(folder_error_log_name_full_path, 'wb')
+                    clear_old_logs.do_clear(os.path.dirname(folder_error_log_name_full_path), 500)
                     folder_errors_log_write.write(("Program Version = " + version + "\r\n\r\n").encode())
                     folder_errors_log_write.write(folder_errors_log.getvalue().encode())
                     if reporting['enable_reporting'] == "True":

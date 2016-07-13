@@ -1,6 +1,7 @@
 import shutil
 import os
 import time
+import clear_old_logs
 
 
 def do_backup(input_file):
@@ -17,4 +18,5 @@ def do_backup(input_file):
     backup_path = os.path.join(backup_folder_path,
                                os.path.basename(input_file) + '.bak' + "-" + str(time.ctime()).replace(":", "-"))
     shutil.copy(input_file, backup_path)
+    clear_old_logs.do_clear(os.path.dirname(backup_path), 50)
     return backup_path
