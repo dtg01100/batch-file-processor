@@ -356,6 +356,9 @@ def make_users_list():
     active_folder_dict_list = folders_table.find(folder_is_active="True")
     inactive_folder_dict_list = folders_table.find(folder_is_active="False")
     folders_dict_list = folders_table.find(order_by="alias")
+    if folders_table.count() == 0:
+        for child in search_frame.winfo_children():
+            child.configure(state=DISABLED)
     if folder_filter != "":
         filtered_folder_dict_list = [d for d in folders_dict_list if folder_filter.lower() in d['alias'].lower()]
         filtered_active_folder_dict_list = [d for d in active_folder_dict_list if
@@ -432,8 +435,8 @@ def make_users_list():
     Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
     inactive_users_list_label.pack(pady=5)
     Separator(inactive_users_list_container, orient=HORIZONTAL).pack(fill=X)
-    active_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
-    inactive_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
+    active_users_list_frame.pack(fill=BOTH, expand=TRUE, anchor=E, padx=3, pady=3)
+    inactive_users_list_frame.pack(fill=BOTH, expand=TRUE, anchor=E, padx=3, pady=3)
     active_users_list_container.grid(row=0, column=1, sticky=N + S)
     active_users_list_container.rowconfigure(0, weight=1)
     inactive_users_list_container.grid(row=0, column=0, sticky=N + S)
@@ -442,7 +445,7 @@ def make_users_list():
     search_button.pack(side=RIGHT)
     Separator(users_list_frame, orient=HORIZONTAL).grid(row=1, column=0, columnspan=2, sticky=W + E)
     search_frame.grid(row=2, column=0, columnspan=2, ipady=5)
-    users_list_frame.update()
+    users_list_frame.pack(side=RIGHT, fill=BOTH, expand=TRUE)
 
 
 class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
@@ -1733,7 +1736,6 @@ Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 processed_files_button.pack(side=TOP, fill=X, pady=2, padx=2)
 options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
-users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
 
 # set parameters for root window
 
@@ -1741,6 +1743,6 @@ users_list_frame.pack(side=RIGHT, fill=BOTH, expand=1)
 root.update()  # update window geometry
 # don't allow window to be resized smaller than current dimensions
 root.minsize(root.winfo_width(), root.winfo_height())
-root.resizable(width=FALSE, height=TRUE)
+root.resizable(width=FALSE, height=FALSE)
 
 root.mainloop()
