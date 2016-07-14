@@ -331,16 +331,14 @@ def set_folders_filter(filter_field_contents):
     refresh_users_list()
 
 
-def search_field_callback(_):
-    filter_field = search_field.get()
-    set_folders_filter(filter_field)
-
-
 def make_users_list():
+    def search_field_callback(_=None):
+        if folder_filter != search_field.get():
+            filter_field = search_field.get()
+            set_folders_filter(filter_field)
     global users_list_frame
     global active_users_list_frame
     global inactive_users_list_frame
-    global search_field
     users_list_frame = Frame(root)
     search_frame = Frame(users_list_frame)
     active_users_list_container = Frame(users_list_frame)
@@ -354,7 +352,7 @@ def make_users_list():
     right_click_search_field = rclick_menu.RightClickMenu(search_field)
     search_field.bind("<3>", right_click_search_field)
     search_field.bind("<Return>", search_field_callback)
-    search_button = Button(master=search_frame, text="Filter", command=lambda: set_folders_filter(search_field.get()))
+    search_button = Button(master=search_frame, text="Filter", command=search_field_callback)
     active_folder_dict_list = folders_table.find(folder_is_active="True")
     inactive_folder_dict_list = folders_table.find(folder_is_active="False")
     folders_dict_list = folders_table.find(order_by="alias")
