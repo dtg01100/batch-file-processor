@@ -352,7 +352,7 @@ def make_users_list():
     right_click_search_field = rclick_menu.RightClickMenu(search_field)
     search_field.bind("<3>", right_click_search_field)
     search_field.bind("<Return>", search_field_callback)
-    search_button = Button(master=search_frame, text="Filter", command=search_field_callback)
+    search_button = Button(master=search_frame, text="Update Filter", command=search_field_callback)
     active_folder_dict_list = folders_table.find(folder_is_active="True")
     inactive_folder_dict_list = folders_table.find(folder_is_active="False")
     folders_dict_list = folders_table.find(order_by="alias")
