@@ -31,9 +31,8 @@ import clear_old_logs
 from operator import itemgetter
 from tendo import singleton
 
-
 appname = "Batch File Sender"
-version = "(Git Branch: Master)"
+version = "1.17.0"
 database_version = "14"
 print(appname + " Version " + version)
 running_platform = platform.system()
@@ -92,8 +91,8 @@ def connect_to_databases():
                   str(big_error))
             raise SystemExit
 
-connect_to_databases()
 
+connect_to_databases()
 
 # open table required for database check in database
 db_version = database_connection['version']
@@ -120,8 +119,9 @@ if db_version_dict['os'] != running_platform:
     showerror("Error", "The operating system detected is: " + '"' + running_platform + '",' +
               " this does not match the configuration creator, which is stored as: " + '"' +
               db_version_dict['os'] + '".' + "\r\n"
-              "Folder paths are not portable between operating systems. Exiting")
+                                             "Folder paths are not portable between operating systems. Exiting")
     raise SystemExit
+
 
 # open required tables in database
 
@@ -154,6 +154,7 @@ options_frame = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
 errors_directory = oversight_and_defaults.find_one(id=1)
 edi_converter_scratch_folder = oversight_and_defaults.find_one(id=1)
+folder_filter = ""
 
 
 def check_logs_directory():
@@ -324,57 +325,91 @@ def disable_folder(folder_id):
     refresh_users_list()
 
 
+def set_folders_filter(filter_field_contents):
+    global folder_filter
+    folder_filter = filter_field_contents
+    refresh_users_list()
+
+
+def search_field_callback(_):
+    filter_field = search_field.get()
+    set_folders_filter(filter_field)
+
+
 def make_users_list():
     global users_list_frame
     global active_users_list_frame
     global inactive_users_list_frame
+    global search_field
     users_list_frame = Frame(root)
+    search_frame = Frame(users_list_frame)
     active_users_list_container = Frame(users_list_frame)
     inactive_users_list_container = Frame(users_list_frame)
     active_users_list_frame = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
     inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
     inactive_users_list_label = Label(inactive_users_list_container, text="Inactive Folders")  # inactive users title
+    search_field = Entry(search_frame)
+    search_field.insert(0, folder_filter)
+    right_click_search_field = rclick_menu.RightClickMenu(search_field)
+    search_field.bind("<3>", right_click_search_field)
+    search_field.bind("<Return>", search_field_callback)
+    search_button = Button(master=search_frame, text="Filter", command=lambda: set_folders_filter(search_field.get()))
+    active_folder_dict_list = folders_table.find(folder_is_active="True")
+    inactive_folder_dict_list = folders_table.find(folder_is_active="False")
+    folders_dict_list = folders_table.find(order_by="alias")
+    if folder_filter != "":
+        filtered_folder_dict_list = [d for d in folders_dict_list if folder_filter.lower() in d['alias'].lower()]
+        filtered_active_folder_dict_list = [d for d in active_folder_dict_list if
+                                            folder_filter.lower() in d['alias'].lower()]
+        filtered_inactive_folder_dict_list = [d for d in inactive_folder_dict_list if
+                                              folder_filter.lower() in d['alias'].lower()]
+    else:
+        filtered_folder_dict_list = [d for d in folders_dict_list]
+        filtered_active_folder_dict_list = [d for d in active_folder_dict_list]
+        filtered_inactive_folder_dict_list = [d for d in inactive_folder_dict_list]
+
     # make labels for empty lists
-    if folders_table.count() == 0:
+    if len(list(filtered_folder_dict_list)) == 0:
         no_active_label = Label(active_users_list_frame, text="No Active Folders")
         no_active_label.pack(fill=BOTH, expand=1, padx=10)
         no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
         no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
     else:
-        if folders_table.count(folder_is_active="True") == 0:
+        if len(list(filtered_active_folder_dict_list)) == 0:
             no_active_label = Label(active_users_list_frame, text="No Active Folders")
             no_active_label.pack(fill=BOTH, expand=1, padx=10)
-        if folders_table.count(folder_is_active="False") == 0:
+        if len(list(filtered_inactive_folder_dict_list)) == 0:
             no_inactive_label = Label(inactive_users_list_frame, text="No Inactive Folders")
             no_inactive_label.pack(fill=BOTH, expand=1, padx=10)
 
     # this finds the length of the longest folder aliases for both active and inactive lists
-    active_folder_dict_list = folders_table.find(folder_is_active="True")
-    inactive_folder_dict_list = folders_table.find(folder_is_active="False")
     active_folder_edit_length = 0
     inactive_folder_edit_length = 0
     active_folder_alias_list = []
     inactive_folder_alias_list = []
     if not folders_table.count(folder_is_active="True") == 0:
-        for entry in active_folder_dict_list:
+        for entry in filtered_active_folder_dict_list:
             alias = entry['alias']
             if alias is None:
                 pass
             else:
                 active_folder_alias_list.append(alias)
-        active_folder_edit_length = len(max(active_folder_alias_list, key=len))
+        if not len(list(active_folder_alias_list)) == 0:
+            active_folder_edit_length = len(max(list(active_folder_alias_list), key=len))
+
     if not folders_table.count(folder_is_active="False") == 0:
-        for entry in inactive_folder_dict_list:
+        for entry in filtered_inactive_folder_dict_list:
             alias = entry['alias']
             if alias is None:
                 pass
             else:
                 inactive_folder_alias_list.append(alias)
-        inactive_folder_edit_length = len(max(inactive_folder_alias_list, key=len))
+        if not len(list(inactive_folder_alias_list)) == 0:
+            inactive_folder_edit_length = len(max(list(inactive_folder_alias_list), key=len))
 
     # iterate over list of known folders, sorting into lists of active and inactive
-    for folders_name in folders_table.find(order_by="alias"):
+    for folders_name in filtered_folder_dict_list:
         if str(folders_name['folder_is_active']) != "False":
             active_folder_button_frame = Frame(active_users_list_frame.interior)
             Button(active_folder_button_frame, text="Send",
@@ -401,8 +436,14 @@ def make_users_list():
     Separator(inactive_users_list_container, orient=HORIZONTAL).pack(fill=X)
     active_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
     inactive_users_list_frame.pack(fill=BOTH, expand=1, anchor=E, padx=3, pady=3)
-    active_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
-    inactive_users_list_container.pack(side=RIGHT, fill=Y, expand=1, anchor=E)
+    active_users_list_container.grid(row=0, column=1, sticky=N + S)
+    active_users_list_container.rowconfigure(0, weight=1)
+    inactive_users_list_container.grid(row=0, column=0, sticky=N + S)
+    inactive_users_list_container.rowconfigure(0, weight=1)
+    search_field.pack(side=LEFT)
+    search_button.pack(side=RIGHT)
+    Separator(users_list_frame, orient=HORIZONTAL).grid(row=1, column=0, columnspan=2, sticky=W + E)
+    search_frame.grid(row=2, column=0, columnspan=2, ipady=5)
     users_list_frame.update()
 
 
@@ -1235,7 +1276,7 @@ def process_directories(folders_table_process):
             print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
                   str(dispatch_error) + "\r\n")
             run_log.write(("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
-                          str(dispatch_error) + "\r\n").encode())
+                           str(dispatch_error) + "\r\n").encode())
         run_log.close()
     if reporting['enable_reporting'] == "True":
         try:
@@ -1669,7 +1710,7 @@ open_multiple_folder_button = Button(options_frame, text="Batch Add Directories.
 default_settings = Button(options_frame, text="Set Defaults...", command=set_defaults_popup)
 edit_reporting = Button(options_frame, text="Edit Settings...",
                         command=lambda: EditSettingsDialog(root, oversight_and_defaults.find_one(id=1)))
-process_folder_button = Button(options_frame, text="Process Folders",
+process_folder_button = Button(options_frame, text="Process All Folders",
                                command=lambda: graphical_process_directories(folders_table))
 
 allow_resend_button = Button(options_frame, text="Enable Resend...",
