@@ -340,9 +340,10 @@ def make_users_list():
     global active_users_list_frame
     global inactive_users_list_frame
     users_list_frame = Frame(root)
+    scrollable_lists_frame = Frame(users_list_frame)
     search_frame = Frame(users_list_frame)
-    active_users_list_container = Frame(users_list_frame)
-    inactive_users_list_container = Frame(users_list_frame)
+    active_users_list_container = Frame(scrollable_lists_frame)
+    inactive_users_list_container = Frame(scrollable_lists_frame)
     active_users_list_frame = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
     inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
     active_users_list_label = Label(active_users_list_container, text="Active Folders")  # active users title
@@ -437,14 +438,13 @@ def make_users_list():
     Separator(inactive_users_list_container, orient=HORIZONTAL).pack(fill=X)
     active_users_list_frame.pack(fill=BOTH, expand=TRUE, anchor=E, padx=3, pady=3)
     inactive_users_list_frame.pack(fill=BOTH, expand=TRUE, anchor=E, padx=3, pady=3)
-    active_users_list_container.grid(row=0, column=1, sticky=N + S)
-    active_users_list_container.rowconfigure(0, weight=1)
-    inactive_users_list_container.grid(row=0, column=0, sticky=N + S)
-    inactive_users_list_container.rowconfigure(0, weight=1)
+    active_users_list_container.pack(side=RIGHT, expand=TRUE, fill=Y)
+    inactive_users_list_container.pack(side=LEFT, expand=TRUE, fill=Y)
     search_field.pack(side=LEFT)
     search_button.pack(side=RIGHT)
-    Separator(users_list_frame, orient=HORIZONTAL).grid(row=1, column=0, columnspan=2, sticky=W + E)
-    search_frame.grid(row=2, column=0, columnspan=2, ipady=5)
+    search_frame.pack(side=BOTTOM, ipady=5)
+    Separator(users_list_frame, orient=HORIZONTAL).pack(side=BOTTOM, fill=X)
+    scrollable_lists_frame.pack(side=BOTTOM, expand=TRUE, fill=Y)
     users_list_frame.pack(side=RIGHT, fill=BOTH, expand=TRUE)
 
 
@@ -1743,6 +1743,6 @@ options_frame_divider.pack(side=LEFT, fill=Y)
 root.update()  # update window geometry
 # don't allow window to be resized smaller than current dimensions
 root.minsize(root.winfo_width(), root.winfo_height())
-root.resizable(width=FALSE, height=FALSE)
+root.resizable(width=FALSE, height=TRUE)
 
 root.mainloop()
