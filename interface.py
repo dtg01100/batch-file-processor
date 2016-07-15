@@ -336,6 +336,7 @@ def make_users_list():
         if folder_filter != search_field.get():
             filter_field = search_field.get()
             set_folders_filter(filter_field)
+
     global users_list_frame
     global active_users_list_frame
     global inactive_users_list_frame
@@ -432,6 +433,10 @@ def make_users_list():
                    width=inactive_folder_edit_length + 6).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
             inactive_folder_button_frame.pack(anchor='e', pady=1)
     # pack widgets in correct order
+    if len(list(filtered_folder_dict_list)) != folders_table.count():
+        folders_count_label = Label(search_frame, text=(
+                str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
+        folders_count_label.pack(side=RIGHT)
     active_users_list_label.pack(pady=5)
     Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
     inactive_users_list_label.pack(pady=5)
