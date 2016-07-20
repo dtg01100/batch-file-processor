@@ -8,7 +8,7 @@ import doingstuffoverlay
 
 
 def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count,
-       total_emails):
+       total_emails, simple_output):
     from_address = settings['email_address']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")
@@ -30,13 +30,19 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         doingstuffoverlay.destroy_overlay()
         doingstuffoverlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
                                        " attachment " + str(emails_count) + " of " + str(total_emails))
+    else:
+        simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
+                                     " attachment " + str(emails_count) + " of " + str(total_emails))
 
     for log in emails_table.all():
 
         if not args.automatic:
             doingstuffoverlay.update_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
                                              " attachment " + str(emails_count) + " of " + str(total_emails))
-            root.update()
+        else:
+            simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
+                                         " attachment " + str(emails_count) + " of " + str(total_emails))
+        root.update()
 
         filename = log['log']
         attachment = open(filename, "r")

@@ -41,8 +41,8 @@ root = Tk()  # create root window
 root.title(appname + " " + version)
 folder = NONE
 options_frame = Frame(root)  # initialize left frame
-loading_text = Label(root, text="Loading...")
-loading_text.pack()
+feedback_text = Label(root, text="Loading...")
+feedback_text.pack(side=BOTTOM)
 root.update()
 
 config_folder = appdirs.user_data_dir(appname)
@@ -438,7 +438,7 @@ def make_users_list():
     # pack widgets in correct order
     if len(list(filtered_folder_dict_list)) != folders_table.count():
         folders_count_label = Label(search_frame, text=(
-                str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
+            str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
         folders_count_label.pack(side=RIGHT)
     active_users_list_label.pack(pady=5)
     Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
@@ -1275,7 +1275,8 @@ def process_directories(folders_table_process):
         try:
             run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
                                               reporting['logs_directory'], reporting, processed_files, root, args,
-                                              version, errors_directory, edi_converter_scratch_folder, settings_dict)
+                                              version, errors_directory, edi_converter_scratch_folder, settings_dict,
+                                              simple_output=None if not args.automatic else feedback_text)
             if run_error_bool is True and not args.automatic:
                 showinfo("Run Status", "Run completed with errors.")
             os.chdir(original_folder)
@@ -1310,7 +1311,8 @@ def process_directories(folders_table_process):
                     # if the total size is more than 9mb, then send that set and reset the total
                     if total_size > 9000000 or emails_table_batch.count() >= 15:
                         batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
-                                            start_time, args, root, batch_number, emails_count, total_emails)
+                                            start_time, args, root, batch_number, emails_count, total_emails,
+                                            feedback_text)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
                         loop_count = 0
@@ -1321,7 +1323,7 @@ def process_directories(folders_table_process):
                     skipped_files += 1
                     sent_emails_removal_queue.insert(log)
             batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
-                                start_time, args, root, batch_number, emails_count, total_emails)
+                                start_time, args, root, batch_number, emails_count, total_emails, feedback_text)
             emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
@@ -1339,7 +1341,7 @@ def process_directories(folders_table_process):
                                                folder_alias=email_errors_log_name_constructor))
                 try:
                     batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
-                                        start_time, args, root, batch_number, emails_count, total_emails)
+                                        start_time, args, root, batch_number, emails_count, total_emails, feedback_text)
                     emails_table_batch.delete()
                 except Exception as email_send_error:
                     print(email_send_error)
@@ -1370,16 +1372,19 @@ def process_directories(folders_table_process):
                     run_log.close()
 
 
-def silent_process_directories(silent_process_folders_table):
-    if silent_process_folders_table.count(folder_is_active="True") > 0:
+def automatic_process_directories(automatic_process_folders_table):
+    if automatic_process_folders_table.count(folder_is_active="True") > 0:
         print("batch processing configured directories")
         try:
-            process_directories(silent_process_folders_table)
-        except Exception as silent_process_error:
-            print(str(silent_process_error))
-            silent_process_critical_log = open("critical_error.log", 'a')
-            silent_process_critical_log.write(str(silent_process_error) + "\r\n")
-            silent_process_critical_log.close()
+            Label(root, text="Running In Automatic Mode...").pack(side=TOP)
+            root.minsize(400, root.winfo_height())
+            root.update()
+            process_directories(automatic_process_folders_table)
+        except Exception as automatic_process_error:
+            print(str(automatic_process_error))
+            automatic_process_critical_log = open("critical_error.log", 'a')
+            automatic_process_critical_log.write(str(automatic_process_error) + "\r\n")
+            automatic_process_critical_log.close()
     else:
         print("Error, No Active Folders")
     raise SystemExit
@@ -1709,7 +1714,7 @@ def set_main_button_states():
 launch_options.add_argument('-a', '--automatic', action='store_true')
 args = launch_options.parse_args()
 if args.automatic:
-    silent_process_directories(folders_table)
+    automatic_process_directories(folders_table)
 
 make_users_list()
 
@@ -1742,7 +1747,7 @@ maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 allow_resend_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
 Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 processed_files_button.pack(side=TOP, fill=X, pady=2, padx=2)
-loading_text.destroy()
+feedback_text.destroy()
 options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
 

@@ -20,7 +20,8 @@ import clear_old_logs
 
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
-            reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder, settings):
+            reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder, settings,
+            simple_output=None):
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
@@ -29,6 +30,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                           str(folder_total) + "," + " file " +
                                                           str(dispatch_file_count) + " of " +
                                                           str(file_total), footer=footer, overlay_height=120)
+        elif simple_output is not None:
+            simple_output.configure(text=overlay_text + " folder " +
+                                         str(dispatch_folder_count) + " of " +
+                                         str(folder_total) + "," + " file " +
+                                         str(dispatch_file_count) + " of " +
+                                         str(file_total))
+        root.update()
 
     def empty_directory(top):
         for folder_root, dirs, files_delete in os.walk(top, topdown=False):
