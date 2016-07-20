@@ -70,3 +70,4 @@ run_logs
 setup.py
 /backups
 setup.bat
+/build.bat

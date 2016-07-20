@@ -37,6 +37,13 @@ database_version = "14"
 print(appname + " Version " + version)
 running_platform = platform.system()
 print("Running on " + running_platform)
+root = Tk()  # create root window
+root.title(appname + " " + version)
+folder = NONE
+options_frame = Frame(root)  # initialize left frame
+loading_text = Label(root, text="Loading...")
+loading_text.pack()
+root.update()
 
 config_folder = appdirs.user_data_dir(appname)
 database_path = os.path.join(config_folder, 'folders.db')
@@ -147,10 +154,6 @@ def open_tables():
 open_tables()
 
 launch_options = argparse.ArgumentParser()
-root = Tk()  # create root window
-root.title(appname + " " + version)
-folder = NONE
-options_frame = Frame(root)  # initialize left frame
 logs_directory = oversight_and_defaults.find_one(id=1)
 errors_directory = oversight_and_defaults.find_one(id=1)
 edi_converter_scratch_folder = oversight_and_defaults.find_one(id=1)
@@ -1739,6 +1742,7 @@ maintenance_button.pack(side=TOP, fill=X, pady=2, padx=2)
 allow_resend_button.pack(side=BOTTOM, fill=X, pady=2, padx=2)
 Separator(options_frame, orient=HORIZONTAL).pack(fill='x', side=BOTTOM)
 processed_files_button.pack(side=TOP, fill=X, pady=2, padx=2)
+loading_text.destroy()
 options_frame.pack(side=LEFT, anchor='n', fill=Y)
 options_frame_divider.pack(side=LEFT, fill=Y)
 
