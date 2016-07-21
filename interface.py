@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 
 from tkinter import *
+from tkinter.ttk import *
+import platform
+
+# initialize gui here to show something as early as possible
+appname = "Batch File Sender"
+version = "(Git Branch: Master)"
+database_version = "14"
+print(appname + " Version " + version)
+running_platform = platform.system()
+print("Running on " + running_platform)
+root = Tk()  # create root window
+root.title(appname + " " + version)
+folder = NONE
+options_frame = Frame(root)  # initialize left frame
+feedback_text = Label(root, text="Loading...")
+feedback_text.pack(side=BOTTOM)
+root.update()
+
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
-from tkinter.ttk import *
-from validate_email import validate_email
 import tkinter
+from validate_email import validate_email
 import rclick_menu
 import hashlib
 import scrollbuttons
@@ -26,24 +43,9 @@ import resend_interface
 import database_import
 import backup_increment
 import appdirs
-import platform
 import clear_old_logs
 from operator import itemgetter
 from tendo import singleton
-
-appname = "Batch File Sender"
-version = "(Git Branch: Master)"
-database_version = "14"
-print(appname + " Version " + version)
-running_platform = platform.system()
-print("Running on " + running_platform)
-root = Tk()  # create root window
-root.title(appname + " " + version)
-folder = NONE
-options_frame = Frame(root)  # initialize left frame
-feedback_text = Label(root, text="Loading...")
-feedback_text.pack(side=BOTTOM)
-root.update()
 
 config_folder = appdirs.user_data_dir(appname)
 database_path = os.path.join(config_folder, 'folders.db')
