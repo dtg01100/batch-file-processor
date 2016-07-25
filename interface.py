@@ -1495,6 +1495,16 @@ def set_all_active():
     maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
 
+def clear_resend_flags():
+    maintenance_popup.unbind("<Escape>")
+    doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
+    maintenance_popup.update()
+    database_connection.query('update processed_files set resend_flag=0 where resend_flag=1')
+    doingstuffoverlay.destroy_overlay()
+    maintenance_popup.update()
+    maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
+
+
 def clear_processed_files_log():
     if askokcancel(message="This will clear all records of sent files.\nAre you sure?"):
         maintenance_popup.unbind("<Escape>")
@@ -1553,6 +1563,8 @@ def maintenance_functions_popup():
                                        command=set_all_active)
         set_all_inactive_button = Button(maintenance_popup_button_frame, text="Move all to inactive",
                                          command=set_all_inactive)
+        clear_resend_flags_button = Button(maintenance_popup_button_frame, text="Clear all resend flags",
+                                           command=clear_resend_flags)
         clear_emails_queue = Button(maintenance_popup_button_frame, text="Clear queued emails",
                                     command=emails_table.delete)
         move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Mark all in active as processed",
@@ -1567,6 +1579,7 @@ def maintenance_functions_popup():
         # pack widgets into dialog
         set_all_active_button.pack(side=TOP, fill=X, padx=2, pady=2)
         set_all_inactive_button.pack(side=TOP, fill=X, padx=2, pady=2)
+        clear_resend_flags_button.pack(side=TOP, fill=X, padx=2, pady=2)
         clear_emails_queue.pack(side=TOP, fill=X, padx=2, pady=2)
         move_active_to_obe_button.pack(side=TOP, fill=X, padx=2, pady=2)
         remove_all_inactive.pack(side=TOP, fill=X, padx=2, pady=2)
