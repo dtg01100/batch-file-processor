@@ -70,6 +70,7 @@ def do(database_connection, master_window):
                             offvalue=False,
                             command=self.cb)
             c.pack(anchor="e", fill=X, padx=5)
+            Separator(master=master, orient=HORIZONTAL).pack(fill='x')
 
         def cb(self):
             set_resend_flag(self.identifier, self.var.get())
