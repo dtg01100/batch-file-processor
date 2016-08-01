@@ -1663,7 +1663,7 @@ def processed_files_popup():
     prior_folder = oversight_and_defaults.find_one(id=1)
     processed_files_output_folder = prior_folder['export_processed_folder_prior']
     processed_files_popup_dialog = Toplevel()
-    processed_files_popup_dialog.title("Generate Processed Files Report")
+    processed_files_popup_dialog.title("Processed Files Report")
     processed_files_popup_dialog.transient(root)
     # center dialog on main window
     processed_files_popup_dialog.geometry("+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50))
@@ -1678,7 +1678,7 @@ def processed_files_popup():
     processed_files_loading_label = Label(master=processed_files_popup_dialog, text="Loading...")
     processed_files_loading_label.pack()
     root.update()
-    Label(processed_files_popup_actions_frame, text="Select a Folder.").pack()
+    Label(processed_files_popup_actions_frame, text="Select a Folder.").pack(padx=10)
     if processed_files.count() == 0:
         no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
         no_processed_label.pack(fill=BOTH, expand=1, padx=10)
@@ -1694,7 +1694,7 @@ def processed_files_popup():
 
     for folders_name, folder_alias in sorted_folder_list:
         folder_row = processed_files.find_one(folder_id=str(folders_name))
-        tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias,
+        tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias.center(15),
                             variable=folder_button_variable,
                             value=folder_alias, indicatoron=FALSE,
                             command=lambda name=folder_row['folder_id']:
@@ -1707,6 +1707,7 @@ def processed_files_popup():
     processed_files_popup_list_frame.pack()
     processed_files_popup_actions_frame.pack(side=RIGHT, anchor=N)
     processed_files_popup_body_frame.pack()
+    Separator(master=processed_files_popup_dialog, orient=HORIZONTAL).pack(fill='x')
     processed_files_popup_close_frame.pack()
 
 

@@ -83,10 +83,10 @@ def do(database_connection, master_window):
 
     resend_interface_scrollable_folders_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_folders_frame)
     resend_interface_scrollable_files_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_files_frame)
-    Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder.").pack()
+    Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder.").pack(padx=10)
 
     for folder, alias in sorted_folder_list:
-        tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.rjust(15),
+        tkinter.Radiobutton(resend_interface_scrollable_folders_frame.interior, text=alias.center(15),
                             variable=folder_button_variable,
                             value=folder, indicatoron=FALSE,
                             command=lambda: folder_button_pressed(folder_button_variable)).pack(anchor='w', fill='x')
@@ -108,9 +108,11 @@ def do(database_connection, master_window):
     resend_interface_file_count_frame.pack()
     Label(master=resend_interface_file_count_frame, text="File Limit:").pack(side=LEFT)
     resend_interface_files_list_count_spinbox.pack(side=RIGHT)
+    Separator(master=resend_interface, orient=HORIZONTAL).pack(fill='x')
     resend_interface_scrollable_folders_frame.pack()
     resend_interface_scrollable_files_frame.pack()
     resend_interface_folders_frame.pack(side=LEFT)
     resend_interface_files_frame.pack(side=RIGHT)
     resend_interface_files_and_folders_frame.pack()
+    Separator(master=resend_interface, orient=HORIZONTAL).pack(fill='x')
     resend_interface_close_frame.pack()
