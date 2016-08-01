@@ -1,3 +1,4 @@
+import platform
 from tkinter import *  # from x import * is bad practice
 from tkinter.ttk import *
 
@@ -22,6 +23,8 @@ class VerticalScrolledFrame(Frame):
                         yscrollcommand=vscrollbar.set)
         canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
         vscrollbar.config(command=canvas.yview)
+        canvas.configure(yscrollcommand=vscrollbar.set)
+        vscrollbar['command'] = canvas.yview
 
         # reset the view
         canvas.xview_moveto(0)
@@ -50,3 +53,59 @@ class VerticalScrolledFrame(Frame):
                 canvas.itemconfigure(interior_id, width=canvas.winfo_width())
 
         canvas.bind('<Configure>', _configure_canvas)
+
+        OS = platform.system()
+
+        factor = 2
+
+        activeArea = None
+
+        def onMouseWheel(event):
+            global activeArea
+            if activeArea:
+                activeArea.onMouseWheel(event)
+
+        def build_function_onMouseWheel(widget, orient, factor):
+            view_command = getattr(widget, orient + 'view')
+
+            if OS == 'Linux':
+                def onMouseWheel(event):
+                    if event.num == 4:
+                        view_command("scroll", (-1) * factor, "units")
+                    elif event.num == 5:
+                        view_command("scroll", factor, "units")
+
+            elif OS == 'Windows':
+                def onMouseWheel(event):
+                    view_command("scroll", (-1) * int((event.delta / 120) * factor), "units")
+
+            elif OS == 'Darwin':
+                def onMouseWheel(event):
+                    view_command("scroll", event.delta, "units")
+
+            return onMouseWheel
+
+        if OS == "Linux":
+            vscrollbar.bind_all('<4>', onMouseWheel, add='+')
+            vscrollbar.bind_all('<5>', onMouseWheel, add='+')
+        else:
+            # Windows and MacOS
+            vscrollbar.bind_all("<MouseWheel>", onMouseWheel, add='+')
+
+        def mouseWheel_bind(self, widget):
+            global activeArea
+            activeArea = widget
+
+        def mouseWheel_unbind(self):
+            global activeArea
+            activeArea = None
+
+        if vscrollbar and not hasattr(vscrollbar, 'onMouseWheel'):
+            vscrollbar.onMouseWheel = build_function_onMouseWheel(canvas, 'y', factor)
+
+        self.interior.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
+        self.interior.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+        vscrollbar.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
+        vscrollbar.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+
+        canvas.onMouseWheel = vscrollbar.onMouseWheel
