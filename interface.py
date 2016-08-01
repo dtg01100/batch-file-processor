@@ -1705,7 +1705,7 @@ def processed_files_popup():
     processed_files_loading_label.destroy()
     processed_files_popup_list_container.pack(side=LEFT)
     processed_files_popup_list_frame.pack()
-    processed_files_popup_actions_frame.pack(side=RIGHT, anchor=N)
+    processed_files_popup_actions_frame.pack(side=RIGHT, anchor=N, padx=5)
     processed_files_popup_body_frame.pack()
     Separator(master=processed_files_popup_dialog, orient=HORIZONTAL).pack(fill='x')
     processed_files_popup_close_frame.pack()

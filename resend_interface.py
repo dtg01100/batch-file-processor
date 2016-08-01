@@ -69,7 +69,7 @@ def do(database_connection, master_window):
                             onvalue=True,
                             offvalue=False,
                             command=self.cb)
-            c.pack(anchor="e", fill=X)
+            c.pack(anchor="e", fill=X, padx=5)
 
         def cb(self):
             set_resend_flag(self.identifier, self.var.get())
