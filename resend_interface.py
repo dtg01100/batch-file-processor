@@ -41,12 +41,14 @@ def do(database_connection, master_window):
         file_name_list = []
         for processed_line in processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"):
             if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
-                file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id']])
+                file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
+                                  processed_line['sent_date_time']])
                 file_name_list.append(processed_line['file_name'])
             if len(file_list) == int(resend_interface_files_list_count_spinbox.get()):
                 break
-        for file_name, resend_flag, identifier in file_list:
-            CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier)
+        for file_name, resend_flag, identifier, sent_date_time in file_list:
+            CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
+                         sent_date_time)
 
     def folder_button_pressed(button):
         global folder_id
@@ -55,14 +57,14 @@ def do(database_connection, master_window):
         resend_interface_files_list_count_spinbox.configure(state='readonly')
 
     class CheckButtons:
-        def __init__(self, master, file_name, resend_flag, identifier):
+        def __init__(self, master, file_name, resend_flag, identifier, sent_date_time):
             self.identifier = identifier
             self.resend_flag = resend_flag
             self.file_name = file_name
             self.var = BooleanVar()
             self.var.set(self.resend_flag)
             c = Checkbutton(master=master,
-                            text=os.path.basename(file_name).ljust(15),
+                            text=os.path.basename(file_name).ljust(15) + " " + str(sent_date_time)[:-16],
                             variable=self.var,
                             onvalue=True,
                             offvalue=False,
