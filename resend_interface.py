@@ -17,6 +17,7 @@ def do(database_connection, master_window):
     folder_button_variable = IntVar()
     files_count_variable = StringVar()
     files_count_variable.set(str(10))
+    file_name_length = 0
     resend_interface = Toplevel()
     resend_interface.title("Enable Resend")
     resend_interface.transient(master_window)
@@ -35,6 +36,7 @@ def do(database_connection, master_window):
         processed_files_table.update(processed_files_update, ['id'])
 
     def make_file_checkbutton_list(_=None):
+        global file_name_length
         for child in resend_interface_scrollable_files_frame.interior.winfo_children():
             child.destroy()
         file_list = []
@@ -46,6 +48,7 @@ def do(database_connection, master_window):
                 file_name_list.append(processed_line['file_name'])
             if len(file_list) == int(resend_interface_files_list_count_spinbox.get()):
                 break
+        file_name_length = len(max(list(file_list), key=len))
         for file_name, resend_flag, identifier, sent_date_time in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
                          sent_date_time)
@@ -64,7 +67,7 @@ def do(database_connection, master_window):
             self.var = BooleanVar()
             self.var.set(self.resend_flag)
             c = Checkbutton(master=master,
-                            text=os.path.basename(file_name).ljust(15) + " (" +
+                            text=os.path.basename(file_name).ljust(file_name_length) + " (" +
                             str(sent_date_time)[:-16].replace("-", "/") + ")",
                             variable=self.var,
                             onvalue=True,
