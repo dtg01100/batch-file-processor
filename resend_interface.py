@@ -17,6 +17,7 @@ def do(database_connection, master_window):
     folder_button_variable = IntVar()
     files_count_variable = StringVar()
     files_count_variable.set(str(10))
+    file_list = []
     file_name_length = 0
     resend_interface = Toplevel()
     resend_interface.title("Enable Resend")
@@ -36,6 +37,7 @@ def do(database_connection, master_window):
         processed_files_table.update(processed_files_update, ['id'])
 
     def make_file_checkbutton_list(_=None):
+        global file_list
         global file_name_length
         for child in resend_interface_scrollable_files_frame.interior.winfo_children():
             child.destroy()
@@ -54,9 +56,20 @@ def do(database_connection, master_window):
                          sent_date_time, file_name_length)
 
     def folder_button_pressed(button):
+        def round_to_next5(n):
+            return n + (5 - n) % 5
         global folder_id
+        global file_list
         folder_id = button.get()
         make_file_checkbutton_list()
+        number_of_files = processed_files_table.count(folder_id=folder_id)
+        resend_interface_files_list_count_spinbox.configure(state='normal')
+        resend_interface_files_list_count_spinbox.configure(
+            to=(round_to_next5(number_of_files) if number_of_files > 10 else 10))
+        if int(resend_interface_files_list_count_spinbox.get()) > number_of_files:
+            resend_interface_files_list_count_spinbox.delete(0, "end")
+            resend_interface_files_list_count_spinbox.insert(0, str(
+                round_to_next5(number_of_files) if number_of_files > 10 else 10))
         resend_interface_files_list_count_spinbox.configure(state='readonly')
 
     class CheckButtons:
@@ -110,6 +123,8 @@ def do(database_connection, master_window):
     resend_interface_files_list_count_spinbox = Spinbox(resend_interface_file_count_frame, from_=10, to=5000,
                                                         increment=5, width=4,
                                                         command=make_file_checkbutton_list)
+    resend_interface_files_list_count_spinbox.delete(0, "end")
+    resend_interface_files_list_count_spinbox.insert(0, 10)
     resend_interface_files_list_count_spinbox.configure(state=DISABLED)
 
     loading_label.destroy()
