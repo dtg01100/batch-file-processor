@@ -48,10 +48,10 @@ def do(database_connection, master_window):
                 file_name_list.append(processed_line['file_name'])
             if len(file_list) == int(resend_interface_files_list_count_spinbox.get()):
                 break
-        file_name_length = len(max(list(file_list), key=len))
+        file_name_length = len(os.path.basename(max(list(file_name_list), key=len)))
         for file_name, resend_flag, identifier, sent_date_time in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
-                         sent_date_time)
+                         sent_date_time, file_name_length)
 
     def folder_button_pressed(button):
         global folder_id
@@ -60,14 +60,15 @@ def do(database_connection, master_window):
         resend_interface_files_list_count_spinbox.configure(state='readonly')
 
     class CheckButtons:
-        def __init__(self, master, file_name, resend_flag, identifier, sent_date_time):
+        def __init__(self, master, file_name, resend_flag, identifier, sent_date_time, checkbutton_file_name_length):
             self.identifier = identifier
             self.resend_flag = resend_flag
             self.file_name = file_name
             self.var = BooleanVar()
             self.var.set(self.resend_flag)
+            self.file_name_length = checkbutton_file_name_length
             c = Checkbutton(master=master,
-                            text=os.path.basename(file_name).ljust(file_name_length) + " (" +
+                            text=os.path.basename(file_name).ljust(self.file_name_length) + " (" +
                             str(sent_date_time)[:-16].replace("-", "/") + ")",
                             variable=self.var,
                             onvalue=True,
