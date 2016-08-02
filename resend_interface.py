@@ -64,7 +64,8 @@ def do(database_connection, master_window):
             self.var = BooleanVar()
             self.var.set(self.resend_flag)
             c = Checkbutton(master=master,
-                            text=os.path.basename(file_name).ljust(15) + " " + str(sent_date_time)[:-16],
+                            text=os.path.basename(file_name).ljust(15) + " (" +
+                            str(sent_date_time)[:-16].replace("-", "/") + ")",
                             variable=self.var,
                             onvalue=True,
                             offvalue=False,
