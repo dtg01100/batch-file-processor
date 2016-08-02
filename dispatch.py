@@ -320,8 +320,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     if global_edi_validator_error_status is True:
         validator_log_name_constructor = "Validator Log " + str(time.ctime()).replace(":", "-") + ".txt"
         validator_log_path = os.path.join(run_log_directory, validator_log_name_constructor)
-        validator_log_file = open(validator_log_path, 'w')
-        validator_log_file.write(edi_validator_errors.getvalue())
+        validator_log_file = open(validator_log_path, 'wb')
+        validator_log_file.write(edi_validator_errors.getvalue().encode())
         edi_validator_errors.close()
         validator_log_file.close()
         if reporting['enable_reporting'] == "True":

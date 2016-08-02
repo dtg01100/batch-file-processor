@@ -4,6 +4,9 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
+
+from binaryornot.check import is_binary
+
 import doingstuffoverlay
 
 
@@ -51,7 +54,8 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
         part = MIMEBase('application', 'octet-stream')
         part.set_payload(attachment.read())
-        encoders.encode_base64(part)
+        if is_binary(filename):
+            encoders.encode_base64(part)
         part.add_header('Content-Disposition', "attachment; filename= %s" % tail)
 
         print("attaching " + filename)
