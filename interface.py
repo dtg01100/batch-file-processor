@@ -298,7 +298,7 @@ def batch_add_folders():
             print("done adding folders")
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()
-            showinfo(message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
+            showinfo(parent=root, message=str(added) + " folders added, " + str(skipped) + " folders skipped.")
     os.chdir(starting_directory)
 
 
@@ -654,7 +654,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
 
         if errors is True:
             error_report = ''.join(error_list)  # combine error messages into single string
-            showerror(message=error_report)  # display generated error string in error dialog
+            showerror(parent=self, message=error_report)  # display generated error string in error dialog
             doingstuffoverlay.destroy_overlay()
             return False
         doingstuffoverlay.destroy_overlay()
@@ -769,6 +769,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
                                                    self.foldersnameinput['convert_to_format'], 'csv')
 
+        def show_folder_path():
+            showinfo(parent=master, title="Folder Path", message=self.foldersnameinput['folder_name'])
+
         def select_copy_to_directory():
             global copy_to_directory
             try:
@@ -866,6 +869,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
             self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
             self.folder_alias_field.grid(row=0, column=1)
+            Button(master=self.folder_alias_frame, text="Show Folder Path",
+                   command=show_folder_path).grid(row=1, columnspan=2, sticky=W, pady=5)
         self.copy_backend_folder_selection_button = Button(self.prefsframe,
                                                            text="Select Copy Backend Destination Folder...",
                                                            command=lambda: select_copy_to_directory())
@@ -1155,7 +1160,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         if errors is True:
             doingstuffoverlay.destroy_overlay()
             error_string = ''.join(error_string_constructor_list)  # combine error messages into single string
-            showerror(message=error_string)  # display generated error in dialog box
+            showerror(parent=self, message=error_string)  # display generated error in dialog box
             return False
 
         doingstuffoverlay.destroy_overlay()
@@ -1200,7 +1205,7 @@ def graphical_process_directories(folders_table_process):  # process folders whi
         if not os.path.exists(folder_test['folder_name']):
             missing_folder = True
     if missing_folder is True:
-        showerror("Error", "One or more expected folders are missing.")
+        showerror(parent=root, title="Error", text="One or more expected folders are missing.")
     else:
         if folders_table_process.count(folder_is_active="True") > 0:
             doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
@@ -1209,7 +1214,7 @@ def graphical_process_directories(folders_table_process):  # process folders whi
             set_main_button_states()
             doingstuffoverlay.destroy_overlay()
         else:
-            showerror("Error", "No Active Folders")
+            showerror(parent=root, title="Error", text="No Active Folders")
 
 
 def set_defaults_popup():
@@ -1246,7 +1251,7 @@ def process_directories(folders_table_process):
                     EditSettingsDialog(root, oversight_and_defaults.find_one(id=1))
                 else:
                     # the logs must flow. aka, stop here if user declines selecting a new writable log folder
-                    showerror(message="Can't write to log directory, exiting")
+                    showerror(parent=root, message="Can't write to log directory, exiting")
                     raise SystemExit
         else:
             try:
@@ -1280,7 +1285,7 @@ def process_directories(folders_table_process):
                                               version, errors_directory, edi_converter_scratch_folder, settings_dict,
                                               simple_output=None if not args.automatic else feedback_text)
             if run_error_bool is True and not args.automatic:
-                showinfo("Run Status", "Run completed with errors.")
+                showinfo(parent=root, title="Run Status", text="Run completed with errors.")
             os.chdir(original_folder)
         except Exception as dispatch_error:
             os.chdir(original_folder)
