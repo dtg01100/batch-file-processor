@@ -56,35 +56,37 @@ class DbMigrationThing:
             return line_match, new_db_line
 
         for line in new_folders_table.find(folder_is_active="True"):
-            line_match, new_db_line = test_line_for_match(line)
-            print(str(line_match))
-            if line_match is True:
-                update_db_line = new_db_line
-                if new_db_line['process_backend_copy'] is True:
-                    print("merging copy backend settings")
-                    update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
-                                               copy_to_directory=new_db_line['copy_to_directory'],
-                                               id=line['id']))
-                if new_db_line['process_backend_ftp'] is True:
-                    print("merging ftp backend settings")
-                    update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
-                                               ftp_folder=new_db_line['ftp_folder'],
-                                               ftp_username=new_db_line['ftp_username'],
-                                               ftp_password=new_db_line['ftp_password'],
-                                               ftp_port=new_db_line['ftp_port'],
-                                               id=line['id']))
-                if new_db_line['process_backend_email'] is True:
-                    print("merging email backend settings")
-                    update_db_line.update(dict(email_to=new_db_line['email_to'],
-                                               email_subject_line=new_db_line['email_subject_line'],
-                                               id=line['id']))
-                old_folders_table.update(update_db_line, ['id'])
+            try:
+                line_match, new_db_line = test_line_for_match(line)
+                print(str(line_match))
+                if line_match is True:
+                    update_db_line = new_db_line
+                    if new_db_line['process_backend_copy'] is True:
+                        print("merging copy backend settings")
+                        update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
+                                                   copy_to_directory=new_db_line['copy_to_directory'],
+                                                   id=line['id']))
+                    if new_db_line['process_backend_ftp'] is True:
+                        print("merging ftp backend settings")
+                        update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
+                                                   ftp_folder=new_db_line['ftp_folder'],
+                                                   ftp_username=new_db_line['ftp_username'],
+                                                   ftp_password=new_db_line['ftp_password'],
+                                                   ftp_port=new_db_line['ftp_port'],
+                                                   id=line['id']))
+                    if new_db_line['process_backend_email'] is True:
+                        print("merging email backend settings")
+                        update_db_line.update(dict(email_to=new_db_line['email_to'],
+                                                   email_subject_line=new_db_line['email_subject_line'],
+                                                   id=line['id']))
+                    old_folders_table.update(update_db_line, ['id'])
 
-            else:
-                print("adding line")
-                del line['id']
-                print(line)
-                old_folders_table.insert(line)
-            self.progress_of_folders += 1
-            progress_bar.configure(value=self.progress_of_folders)
-            master.update()
+                else:
+                    print("adding line")
+                    del line['id']
+                    print(line)
+                    old_folders_table.insert(line)
+            finally:
+                self.progress_of_folders += 1
+                progress_bar.configure(value=self.progress_of_folders)
+                master.update()
