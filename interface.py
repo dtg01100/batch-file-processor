@@ -228,7 +228,7 @@ def check_folder_exists(folder):
     folder_list = folders_table.all()
     for possible_folder in folder_list:
         possible_folder_string = possible_folder['folder_name']
-        if os.path.abspath(possible_folder_string) == os.path.abspath(folder):
+        if os.path.samefile(possible_folder_string, folder):
             return {"truefalse": True, "matched_folder": possible_folder}
     return {"truefalse": False, "matched_folder": None}
 

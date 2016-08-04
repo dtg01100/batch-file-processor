@@ -49,7 +49,7 @@ class DbMigrationThing:
             line_match = False
             new_db_line = None
             for db_line in old_folders_table.find(folder_is_active="True"):
-                if os.path.abspath(db_line['folder_name']) == os.path.abspath(line['folder_name']):
+                if os.path.samefile(db_line['folder_name'], line['folder_name']):
                     new_db_line = db_line
                     line_match = True
                     break
