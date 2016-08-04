@@ -86,7 +86,8 @@ class DbMigrationThing:
                     del line['id']
                     print(line)
                     old_folders_table.insert(line)
-            finally:
-                self.progress_of_folders += 1
-                progress_bar.configure(value=self.progress_of_folders)
-                master.update()
+            except Exception as error:
+                print("import of folder failed with " + str(error))
+            self.progress_of_folders += 1
+            progress_bar.configure(value=self.progress_of_folders)
+            master.update()
