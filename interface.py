@@ -557,7 +557,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                     initial_directory = os.getcwd()
             except:
                 initial_directory = os.getcwd()
-            logs_directory_edit_proposed = str(askdirectory(initialdir=initial_directory))
+            logs_directory_edit_proposed = str(askdirectory(parent=master, initialdir=initial_directory))
             if len(logs_directory_edit_proposed) > 0:
                 self.logs_directory = logs_directory_edit_proposed
 
@@ -781,7 +781,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                     initial_directory = os.getcwd()
             except:
                 initial_directory = os.getcwd()
-            copy_to_directory = str(askdirectory(initialdir=initial_directory))
+            copy_to_directory = str(askdirectory(parent=self.prefsframe, initialdir=initial_directory))
 
         def set_send_options_fields_state():
             if not self.settings['enable_email']:
@@ -1647,7 +1647,7 @@ def processed_files_popup():
             initial_directory = prior_folder['export_processed_folder_prior']
         else:
             initial_directory = os.path.expanduser('~')
-        output_folder_proposed = askdirectory(initialdir=initial_directory)
+        output_folder_proposed = askdirectory(parent=processed_files_popup_actions_frame, initialdir=initial_directory)
         if output_folder_proposed == "":
             return
         else:
