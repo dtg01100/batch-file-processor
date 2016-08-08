@@ -60,9 +60,16 @@ def do(database_connection, master_window):
             return n + (5 - n) % 5
         global folder_id
         global file_list
+        file_list = []
+        file_name_list = []
         folder_id = button.get()
-        make_file_checkbutton_list()
-        number_of_files = processed_files_table.count(folder_id=folder_id)
+        for processed_line in processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"):
+            if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
+                file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
+                                  processed_line['sent_date_time']])
+                file_name_list.append(processed_line['file_name'])
+
+        number_of_files = len(file_name_list)
         resend_interface_files_list_count_spinbox.configure(state='normal')
         resend_interface_files_list_count_spinbox.configure(
             to=(round_to_next5(number_of_files) if number_of_files > 10 else 10))
@@ -71,6 +78,7 @@ def do(database_connection, master_window):
             resend_interface_files_list_count_spinbox.insert(0, str(
                 round_to_next5(number_of_files) if number_of_files > 10 else 10))
         resend_interface_files_list_count_spinbox.configure(state='readonly')
+        make_file_checkbutton_list()
 
     class CheckButtons:
         def __init__(self, master, file_name, resend_flag, identifier, sent_date_time, checkbutton_file_name_length):
