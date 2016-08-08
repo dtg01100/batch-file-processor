@@ -36,6 +36,8 @@ class VerticalScrolledFrame(Frame):
         # track changes to the canvas and frame width and sync them,
         # also updating the scrollbar
         def _configure_interior(event):
+            # configure scrollwheel on changes
+            _configure_scrollwheel()
             # update the scrollbars to match the size of the inner frame
             size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
             canvas.config(scrollregion="0 0 %s %s" % size)
@@ -54,62 +56,95 @@ class VerticalScrolledFrame(Frame):
 
         OS = platform.system()
 
-        if OS != "Windows" and OS != "Linux" and OS != "Darwin":
-            pass
-        else:
-            canvas.configure(yscrollcommand=vscrollbar.set)
-            vscrollbar['command'] = canvas.yview
+        def _configure_scrollwheel():
+            # giant try except block. this attempts to unbind scroll events,
+            #  to keep from binding scroll events every time this is called.
+            try:
+                self.interior.unbind('<Enter>')
+            except Exception:
+                pass
+            try:
+                self.interior.unbind('<Leave>')
+            except Exception:
+                pass
+            try:
+                vscrollbar.unbind('<Enter>')
+            except Exception:
+                pass
+            try:
+                vscrollbar.unbind('<Leave>')
+            except Exception:
+                pass
+            try:
+                vscrollbar.unbind_all('<4>')
+            except Exception:
+                pass
+            try:
+                vscrollbar.unbind_all('<5>')
+            except Exception:
+                pass
+            try:
+                vscrollbar.unbind_all("<MouseWheel>")
+            except Exception:
+                pass
 
-            factor = 2
-
-            activeArea = None
-
-            def onMouseWheel(event):
-                global activeArea
-                if activeArea:
-                    activeArea.onMouseWheel(event)
-
-            def build_function_onMouseWheel(widget, orient, factor):
-                view_command = getattr(widget, orient + 'view')
-
-                if OS == 'Linux':
-                    def onMouseWheel(event):
-                        if event.num == 4:
-                            view_command("scroll", (-1) * factor, "units")
-                        elif event.num == 5:
-                            view_command("scroll", factor, "units")
-
-                elif OS == 'Windows':
-                    def onMouseWheel(event):
-                        view_command("scroll", (-1) * int((event.delta / 120) * factor), "units")
-
-                elif OS == 'Darwin':
-                    def onMouseWheel(event):
-                        view_command("scroll", event.delta, "units")
-
-                return onMouseWheel
-
-            if OS == "Linux":
-                vscrollbar.bind_all('<4>', onMouseWheel, add='+')
-                vscrollbar.bind_all('<5>', onMouseWheel, add='+')
+            if OS != "Windows" and OS != "Linux" and OS != "Darwin":
+                pass
             else:
-                # Windows and MacOS
-                vscrollbar.bind_all("<MouseWheel>", onMouseWheel, add='+')
+                canvas.configure(yscrollcommand=vscrollbar.set)
+                vscrollbar['command'] = canvas.yview
 
-            def mouseWheel_bind(self, widget):
-                global activeArea
-                activeArea = widget
+                factor = 2
 
-            def mouseWheel_unbind(self):
-                global activeArea
                 activeArea = None
 
-            if vscrollbar and not hasattr(vscrollbar, 'onMouseWheel'):
-                vscrollbar.onMouseWheel = build_function_onMouseWheel(canvas, 'y', factor)
+                def onMouseWheel(event):
+                    global activeArea
+                    if activeArea:
+                        activeArea.onMouseWheel(event)
 
-            self.interior.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
-            self.interior.bind('<Leave>', lambda event: mouseWheel_unbind(event))
-            vscrollbar.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
-            vscrollbar.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+                def build_function_onMouseWheel(widget, orient, factor):
+                    view_command = getattr(widget, orient + 'view')
 
-            canvas.onMouseWheel = vscrollbar.onMouseWheel
+                    if OS == 'Linux':
+                        def onMouseWheel(event):
+                            if event.num == 4:
+                                view_command("scroll", (-1) * factor, "units")
+                            elif event.num == 5:
+                                view_command("scroll", factor, "units")
+
+                    elif OS == 'Windows':
+                        def onMouseWheel(event):
+                            view_command("scroll", (-1) * int((event.delta / 120) * factor), "units")
+
+                    elif OS == 'Darwin':
+                        def onMouseWheel(event):
+                            view_command("scroll", event.delta, "units")
+
+                    return onMouseWheel
+
+                if OS == "Linux":
+                    vscrollbar.bind_all('<4>', onMouseWheel, add='+')
+                    vscrollbar.bind_all('<5>', onMouseWheel, add='+')
+                else:
+                    # Windows and MacOS
+                    vscrollbar.bind_all("<MouseWheel>", onMouseWheel, add='+')
+
+                def mouseWheel_bind(self, widget):
+                    global activeArea
+                    activeArea = widget
+
+                def mouseWheel_unbind(self):
+                    global activeArea
+                    activeArea = None
+
+                if vscrollbar and not hasattr(vscrollbar, 'onMouseWheel'):
+                    vscrollbar.onMouseWheel = build_function_onMouseWheel(canvas, 'y', factor)
+
+                self.interior.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
+                self.interior.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+                vscrollbar.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
+                vscrollbar.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+
+                canvas.onMouseWheel = vscrollbar.onMouseWheel
+        _configure_scrollwheel()
