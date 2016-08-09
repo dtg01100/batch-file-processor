@@ -337,11 +337,22 @@ def set_folders_filter(filter_field_contents):
 
 
 def make_users_list():
+    global search_field
+
     def search_field_callback(_=None):
         if folder_filter != search_field.get():
+            try:
+                root.unbind(0, "<Escape>")
+            except:
+                pass
             filter_field = search_field.get()
             set_folders_filter(filter_field)
+            if not filter_field == "":
+                root.bind("<Escape>", clear_search_field)
 
+    def clear_search_field(_=None):
+        search_field.delete(0, "end")
+        search_field_callback()
     global users_list_frame
     global active_users_list_frame
     global inactive_users_list_frame
