@@ -147,10 +147,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(send_filename))
                     if os.path.exists(send_filename):
                         if parameters_dict['process_edi'] == "True" and errors is False:
-                            if parameters_dict['convert_to_format'] == "csv":
-                                if mtc_edi_validator.check(send_filename):
-                                    # if the current file is recognized as a valid edi file,
-                                    # then convert it to csv, otherwise log and carry on
+                            if mtc_edi_validator.check(send_filename):
+                                # if the current file is recognized as a valid edi file,
+                                # then allow conversion, otherwise log and carry on
+                                if parameters_dict['convert_to_format'] == "csv":
                                     output_filename = os.path.join(
                                         edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                         os.path.basename(stripped_filename) + ".csv")
@@ -174,9 +174,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         errors = True
                                         record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                         "EDI Processor")
-                                else:
-                                    record_error.do(run_log, folder_errors_log, send_filename +
-                                                    " is not an edi file", send_filename, "edi validator")
+                            else:
+                                record_error.do(run_log, folder_errors_log, send_filename +
+                                                " is not an edi file", send_filename, "edi validator")
                         if parameters_dict['tweak_edi'] is True:
                             output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                                            os.path.basename(stripped_filename))
