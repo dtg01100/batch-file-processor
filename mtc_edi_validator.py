@@ -7,22 +7,24 @@ def check(input_file):
 
     file_to_test = open(input_file)
     if file_to_test.read(1) != "A":
-        return False
+        return False, 1
     file_to_test.seek(0)
+    line_number = 0
     for line in file_to_test:
+        line_number += 1
         if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
-            return False
+            return False, line_number
         else:
             try:
                 if line[0] == "B":
                     if len(line) != 77:
-                        return False
+                        return False, line_number
                     _ = int(line[1:12])
             except ValueError:
                 if not line[1:12] == "           ":
-                    return False
+                    return False, line_number
 
-    return 1
+    return 1, line_number
 
 
 def report_edi_issues(input_file):
@@ -34,7 +36,8 @@ def report_edi_issues(input_file):
     line_number = 0
     has_errors = False
     input_file_handle = open(input_file)
-    if check(input_file):
+    check_error, check_line_number = check(input_file)
+    if not check_error:
         for line in input_file_handle:
             line_number += 1
             try:
@@ -58,4 +61,7 @@ def report_edi_issues(input_file):
                 in_memory_log.write("line is:\r\n")
                 in_memory_log.write(line)
                 _insert_description_and_number(line)
+    else:
+        in_memory_log.write("EDI check failed on line number: " + str(check_line_number) + "\r\n")
+        has_errors = True
     return in_memory_log, has_errors

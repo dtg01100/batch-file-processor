@@ -59,6 +59,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             edi_validator_errors.write(edi_validator_output.getvalue())
             global_edi_validator_error_status = True
             edi_validator_output.close()
+        return edi_validator_error_status
 
     error_counter = 0
     processed_counter = 0
@@ -119,9 +120,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 file_count += 1
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
-                if reporting['report_edi_errors']:
-                    validate_file(filename, original_filename)
-                if parameters_dict['split_edi'] and mtc_edi_validator.check(filename):
+                valid_edi_file = True
+                if reporting['report_edi_errors'] and \
+                        (parameters_dict['process_edi'] == "True"
+                         or parameters_dict['tweak_edi']
+                         or parameters_dict['split_edi']):
+                    if validate_file(filename, original_filename):
+                        valid_edi_file = False
+                if parameters_dict['split_edi'] and valid_edi_file:
                     run_log.write(("Splitting edi file " + original_filename + "...\r\n").encode())
                     print("Splitting edi file " + original_filename + "...")
                     try:
@@ -146,8 +152,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         break
                     stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(send_filename))
                     if os.path.exists(send_filename):
-                        if parameters_dict['process_edi'] == "True" and errors is False:
-                            if mtc_edi_validator.check(send_filename):
+                        if valid_edi_file:
+                            if parameters_dict['process_edi'] == "True" and errors is False:
                                 # if the current file is recognized as a valid edi file,
                                 # then allow conversion, otherwise log and carry on
                                 if parameters_dict['convert_to_format'] == "csv":
@@ -174,24 +180,22 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         errors = True
                                         record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
                                                         "EDI Processor")
-                            else:
-                                record_error.do(run_log, folder_errors_log, send_filename +
-                                                " is not an edi file", send_filename, "edi validator")
-                        if parameters_dict['tweak_edi'] is True:
-                            output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
-                                                           os.path.basename(stripped_filename))
-                            if os.path.exists(os.path.dirname(output_filename)) is False:
-                                os.mkdir(os.path.dirname(output_filename))
-                            try:
-                                edi_tweaks.edi_tweak(send_filename, output_filename,
-                                                     parameters_dict['pad_a_records'],
-                                                     parameters_dict['a_record_padding'])
-                                send_filename = output_filename
-                            except Exception as error:
-                                print(str(error))
-                                errors = True
-                                record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
-                                                "EDI Processor")
+
+                            if parameters_dict['tweak_edi'] is True:
+                                output_filename = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                               os.path.basename(stripped_filename))
+                                if os.path.exists(os.path.dirname(output_filename)) is False:
+                                    os.mkdir(os.path.dirname(output_filename))
+                                try:
+                                    edi_tweaks.edi_tweak(send_filename, output_filename,
+                                                         parameters_dict['pad_a_records'],
+                                                         parameters_dict['a_record_padding'])
+                                    send_filename = output_filename
+                                except Exception as error:
+                                    print(str(error))
+                                    errors = True
+                                    record_error.do(run_log, folder_errors_log, str(error), str(send_filename),
+                                                    "EDI Processor")
 
                         # the following blocks process the files using the specified backend,
                         # and log in the event of any errors
