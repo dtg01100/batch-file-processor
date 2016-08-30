@@ -24,7 +24,7 @@ def check(input_file):
                 if not line[1:12] == "           ":
                     return False, line_number
 
-    return 1, line_number
+    return True, line_number
 
 
 def report_edi_issues(input_file):
@@ -36,8 +36,8 @@ def report_edi_issues(input_file):
     line_number = 0
     has_errors = False
     input_file_handle = open(input_file)
-    check_error, check_line_number = check(input_file)
-    if not check_error:
+    check_pass, check_line_number = check(input_file)
+    if check_pass is True:
         for line in input_file_handle:
             line_number += 1
             try:

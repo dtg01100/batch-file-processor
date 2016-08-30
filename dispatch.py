@@ -54,7 +54,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         global edi_validator_errors
         global global_edi_validator_error_status
         edi_validator_output, edi_validator_error_status = mtc_edi_validator.report_edi_issues(input_file)
-        if edi_validator_error_status is True:
+        if edi_validator_error_status is True and reporting['report_edi_errors']:
             edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
             edi_validator_errors.write(edi_validator_output.getvalue())
             global_edi_validator_error_status = True
@@ -121,10 +121,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
                 valid_edi_file = True
-                if reporting['report_edi_errors'] and \
-                        (parameters_dict['process_edi'] == "True"
-                         or parameters_dict['tweak_edi']
-                         or parameters_dict['split_edi']):
+                if parameters_dict['process_edi'] == "True" \
+                        or parameters_dict['tweak_edi'] \
+                        or parameters_dict['split_edi']:
                     if validate_file(filename, original_filename):
                         valid_edi_file = False
                 if parameters_dict['split_edi'] and valid_edi_file:
