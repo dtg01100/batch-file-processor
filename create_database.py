@@ -48,7 +48,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        batch_add_folder_prior=os.path.expanduser('~'),
                                        export_processed_folder_prior=os.path.expanduser('~'),
                                        report_edi_errors=False,
-                                       split_edi=False))
+                                       split_edi=False,
+                                       force_edi_validation=False))
 
     settings_table = database_connection['settings']
     settings_table.insert(dict(enable_email=False,

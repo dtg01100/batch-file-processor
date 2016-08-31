@@ -121,9 +121,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
                 valid_edi_file = True
-                if parameters_dict['process_edi'] == "True" \
-                        or parameters_dict['tweak_edi'] \
-                        or parameters_dict['split_edi']:
+                if (parameters_dict['process_edi'] == "True"
+                        or parameters_dict['tweak_edi']
+                        or parameters_dict['split_edi'])\
+                        or parameters_dict['force_edi_validation']:
                     if validate_file(filename, original_filename):
                         valid_edi_file = False
                 if parameters_dict['split_edi'] and valid_edi_file:

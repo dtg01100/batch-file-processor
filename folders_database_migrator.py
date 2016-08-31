@@ -138,3 +138,13 @@ def upgrade_database(database_connection, config_folder, running_platform):
             'update "folders" set "convert_to_format"="", "process_edi"="False" where "convert_to_format"="insight"')
         update_version = dict(id=1, version="14", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    db_version_dict = db_version.find_one(id=1)
+
+    if db_version_dict['version'] == "14":
+        database_connection.query("alter table 'folders' add column 'force_edi_validation'")
+        database_connection.query('UPDATE "folders" SET "force_edi_validation" = 0')
+        database_connection.query("alter table 'administrative' add column 'force_edi_validation'")
+        database_connection.query('UPDATE "administrative" SET "force_edi_validation" = 0')
+        update_version = dict(id=1, version="15", os=running_platform)
+        db_version.update(update_version, ['id'])

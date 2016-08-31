@@ -7,7 +7,7 @@ import platform
 # initialize gui here to show something as early as possible
 appname = "Batch File Sender"
 version = "(Git Branch: Master)"
-database_version = "14"
+database_version = "15"
 print(appname + " Version " + version)
 running_platform = platform.system()
 print("Running on " + running_platform)
@@ -758,6 +758,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
+        self.force_edi_check_var = BooleanVar(master)
         self.header_frame_frame = Frame(master)
         Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
         Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
@@ -905,8 +906,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         rclick_email_sender_subject_field = rclick_menu.RightClickMenu(self.email_sender_subject_field)
         self.email_sender_subject_field.bind("<3>", rclick_email_sender_subject_field)
 
+        self.force_edi_check_checkbutton = Checkbutton(self.ediframe, variable=self.force_edi_check_var,
+                                                       text="Force EDI Validation",
+                                                       onvalue=True, offvalue=False)
+
         self.split_edi_checkbutton = Checkbutton(self.ediframe, variable=self.split_edi,
-                                                 text="Split Edi",
+                                                 text="Split EDI",
                                                  onvalue=True, offvalue=False)
         self.process_edi_checkbutton = Checkbutton(self.convert_options_frame, variable=self.process_edi,
                                                    text="Process EDI",
@@ -948,6 +953,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ftp_password_field.insert(0, self.foldersnameinput['ftp_password'])
         self.email_recepient_field.insert(0, self.foldersnameinput['email_to'])
         self.email_sender_subject_field.insert(0, self.foldersnameinput['email_subject_line'])
+        self.force_edi_check_var.set(self.foldersnameinput['force_edi_validation'])
         self.process_edi.set(self.foldersnameinput['process_edi'])
         self.upc_var_check.set(self.foldersnameinput['calculate_upc_check_digit'])
         self.a_rec_var_check.set(self.foldersnameinput['include_a_records'])
@@ -964,7 +970,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 child.grid_forget()
             make_ediconvert_options(argument)
 
-        self.split_edi_checkbutton.grid(row=1, column=0, columnspan=2, sticky=W)
+        self.split_edi_checkbutton.grid(row=2, column=0, columnspan=2, sticky=W)
 
         def make_ediconvert_options(argument):
             if argument == 'Do Nothing':
@@ -1006,6 +1012,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         set_header_state()
         set_send_options_fields_state()
 
+        self.force_edi_check_checkbutton.grid(row=1)
         self.edi_options_menu.grid(row=3)
         self.active_checkbutton_object.pack(fill=X)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
@@ -1074,6 +1081,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['include_c_records'] = str(self.c_rec_var_check.get())
         apply_to_folder['include_headers'] = str(self.headers_check.get())
         apply_to_folder['filter_ampersand'] = str(self.ampersand_check.get())
+        apply_to_folder['force_edi_validation'] = self.force_edi_check_var.get()
         apply_to_folder['tweak_edi'] = self.tweak_edi.get()
         apply_to_folder['split_edi'] = self.split_edi.get()
         apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
