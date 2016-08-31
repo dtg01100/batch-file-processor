@@ -220,7 +220,8 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               pad_a_records=defaults['pad_a_records'],
                               a_record_padding=defaults['a_record_padding'],
                               ftp_port=defaults['ftp_port'],
-                              email_subject_line=defaults['email_subject_line']))
+                              email_subject_line=defaults['email_subject_line'],
+                              force_edi_validation=defaults['force_edi_validation']))
     print("done")
 
 
@@ -1012,7 +1013,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         set_header_state()
         set_send_options_fields_state()
 
-        self.force_edi_check_checkbutton.grid(row=1)
+        self.force_edi_check_checkbutton.grid(row=1, column=0, columnspan=2, sticky=W)
         self.edi_options_menu.grid(row=3)
         self.active_checkbutton_object.pack(fill=X)
         self.copy_backend_checkbutton.grid(row=3, column=0, sticky=W)
