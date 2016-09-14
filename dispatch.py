@@ -53,12 +53,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     def validate_file(input_file, file_name):
         global edi_validator_errors
         global global_edi_validator_error_status
-        edi_validator_output, edi_validator_error_status = mtc_edi_validator.report_edi_issues(input_file)
-        if edi_validator_error_status is True and reporting['report_edi_errors']:
+        edi_validator_output, edi_validator_error_status, minor_edi_errors = mtc_edi_validator.report_edi_issues(input_file)
+        if minor_edi_errors or edi_validator_error_status and reporting['report_edi_errors']:
             edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
             edi_validator_errors.write(edi_validator_output.getvalue())
-            global_edi_validator_error_status = True
             edi_validator_output.close()
+            if edi_validator_error_status:
+                global_edi_validator_error_status = True
         return edi_validator_error_status
 
     error_counter = 0
