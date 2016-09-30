@@ -58,8 +58,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
             edi_validator_errors.write(edi_validator_output.getvalue())
             edi_validator_output.close()
-            if edi_validator_error_status:
-                global_edi_validator_error_status = True
+            global_edi_validator_error_status = True
         return edi_validator_error_status
 
     error_counter = 0
