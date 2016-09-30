@@ -6,7 +6,7 @@ import platform
 
 # initialize gui here to show something as early as possible
 appname = "Batch File Sender"
-version = "1.19.1"
+version = "1.19.2"
 database_version = "15"
 print(appname + " Version " + version)
 running_platform = platform.system()
