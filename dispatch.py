@@ -331,9 +331,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if reporting['enable_reporting'] == "True":
             emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
+
+    run_summary_string = str(processed_counter) + " processed, " + str(error_counter) + " errors"
     run_log.write(
-        ("\r\n\r\n" + str(processed_counter) + " processed, " + str(error_counter) + " errors" + "\r\n\r\n").encode())
+        ("\r\n\r\n" + run_summary_string + "\r\n\r\n").encode())
     if error_counter > 0:
-        return True
+        return True, run_summary_string
     else:
-        return False
+        return False, run_summary_string
