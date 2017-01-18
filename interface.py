@@ -32,7 +32,7 @@ from operator import itemgetter
 from tendo import singleton
 
 appname = "Batch File Sender"
-version = "(Git Branch: Master)"
+version = "1.20.0"
 database_version = "15"
 print(appname + " Version " + version)
 running_platform = platform.system()
@@ -1289,6 +1289,9 @@ def process_directories(folders_table_process):
     run_log_path = reporting['logs_directory']
     run_log_path = str(run_log_path)  # convert possible unicode path to standard python string to fix weird path bugs
     run_log_full_path = os.path.join(run_log_path, run_log_name_constructor)
+
+    run_summary_string = ""
+
     with open(run_log_full_path, 'wb') as run_log:
         clear_old_logs.do_clear(run_log_path, 1000)
         run_log.write(("Batch File Sender Version " + version + "\r\n").encode())
@@ -1298,10 +1301,13 @@ def process_directories(folders_table_process):
             emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
         # call dispatch module to process active folders
         try:
-            run_error_bool = dispatch.process(database_connection, folders_table_process, run_log, emails_table,
-                                              reporting['logs_directory'], reporting, processed_files, root, args,
-                                              version, errors_directory, edi_converter_scratch_folder, settings_dict,
-                                              simple_output=None if not args.automatic else feedback_text)
+            run_error_bool, run_summary_string = dispatch.process(database_connection, folders_table_process, run_log,
+                                                                  emails_table, reporting['logs_directory'], reporting,
+                                                                  processed_files, root, args, version,
+                                                                  errors_directory, edi_converter_scratch_folder,
+                                                                  settings_dict,
+                                                                  simple_output=None if not args.automatic else
+                                                                  feedback_text)
             if run_error_bool is True and not args.automatic:
                 showinfo(parent=root, title="Run Status", text="Run completed with errors.")
             os.chdir(original_folder)
@@ -1337,7 +1343,7 @@ def process_directories(folders_table_process):
                     if total_size > 9000000 or emails_table_batch.count() >= 15:
                         batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
                                             start_time, args, root, batch_number, emails_count, total_emails,
-                                            feedback_text)
+                                            feedback_text, run_summary_string)
                         emails_table_batch.delete()  # clear batch
                         total_size = 0
                         loop_count = 0
@@ -1348,7 +1354,8 @@ def process_directories(folders_table_process):
                     skipped_files += 1
                     sent_emails_removal_queue.insert(log)
             batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
-                                start_time, args, root, batch_number, emails_count, total_emails, feedback_text)
+                                start_time, args, root, batch_number, emails_count, total_emails, feedback_text,
+                                run_summary_string)
             emails_table_batch.delete()  # clear batch
             for line in sent_emails_removal_queue.all():
                 emails_table.delete(log=str(line['log']))
@@ -1366,7 +1373,8 @@ def process_directories(folders_table_process):
                                                folder_alias=email_errors_log_name_constructor))
                 try:
                     batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
-                                        start_time, args, root, batch_number, emails_count, total_emails, feedback_text)
+                                        start_time, args, root, batch_number, emails_count, total_emails, feedback_text,
+                                        "Error, cannot send all logs. ")
                     emails_table_batch.delete()
                 except Exception as email_send_error:
                     print(email_send_error)

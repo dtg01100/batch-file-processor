@@ -11,7 +11,7 @@ import doingstuffoverlay
 
 
 def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count,
-       total_emails, simple_output):
+       total_emails, simple_output, run_summary_string):
     from_address = settings['email_address']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")
@@ -22,10 +22,10 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
     if emails_table.count() != 1:
         msg['Subject'] = "Logs from run at: " + time
-        body = "See attached logs"
+        body = run_summary_string + ". See attached logs"
     else:
         msg['Subject'] = "Log from run at: " + time
-        body = "See attached log"
+        body = run_summary_string + ". See attached log"
 
     msg.attach(MIMEText(body, 'plain'))
 
