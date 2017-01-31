@@ -332,7 +332,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
 
-    run_summary_string = str(processed_counter) + " processed, " + str(error_counter) + " errors"
+    if global_edi_validator_error_status:
+        edi_validator_error_report_string = ", has EDI validator errors"
+    else:
+        edi_validator_error_report_string = ""
+
+    run_summary_string = "{0} processed, {1} errors{2}".format(str(processed_counter), str(error_counter),
+                                                               edi_validator_error_report_string)
     run_log.write(
         ("\r\n\r\n" + run_summary_string + "\r\n\r\n").encode())
     if error_counter > 0:
