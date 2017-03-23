@@ -17,9 +17,12 @@ def check(input_file):
         else:
             try:
                 if line[0] == "B":
-                    if len(line) != 77:
+                    print(line[51:67])
+                    if len(line) != 77 and len(line) != 71:
                         return False, line_number
                     _ = int(line[1:12])
+                    if len(line) == 71 and line[51:67] != "                ":
+                        return False, line_number
             except ValueError:
                 if not line[1:12] == "           ":
                     return False, line_number
@@ -53,6 +56,14 @@ def report_edi_issues(input_file):
                     if line[1:12] == "           ":
                         has_minor_errors = True
                         in_memory_log.write("Blank UPC in line " + str(line_number) + "\r\n")
+                        in_memory_log.write("line is:\r\n")
+                        in_memory_log.write(line)
+                        _insert_description_and_number(line)
+                    if len(line) == 71:
+                        has_minor_errors = True
+                        has_minor_errors = True
+                        in_memory_log.write("Missing pricing information in line " + str(line_number) +
+                                            ". Is this a sample?" +"\r\n")
                         in_memory_log.write("line is:\r\n")
                         in_memory_log.write(line)
                         _insert_description_and_number(line)
