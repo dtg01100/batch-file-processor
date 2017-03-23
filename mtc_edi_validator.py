@@ -17,7 +17,6 @@ def check(input_file):
         else:
             try:
                 if line[0] == "B":
-                    print(line[51:67])
                     if len(line) != 77 and len(line) != 71:
                         return False, line_number
                     _ = int(line[1:12])
