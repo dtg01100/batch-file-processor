@@ -50,8 +50,10 @@ def do(process_parameters, settings, filename):
 
                 msg.attach(part)
                 server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+                server.ehlo()
                 server.starttls()
-                server.login(from_address, settings['email_password'])
+                if from_address == "" and settings['email_password'] == "":
+                    server.login(from_address, settings['email_password'])
                 server.sendmail(from_address, to_address_list, msg.as_string())
                 server.close()
                 file_pass = True

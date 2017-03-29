@@ -28,6 +28,7 @@ import database_import
 import backup_increment
 import appdirs
 import clear_old_logs
+import smtplib
 from operator import itemgetter
 from tendo import singleton
 
@@ -610,6 +611,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
 
         return self.email_address_field  # initial focus
 
+    @property
     def validate(self):
 
         doingstuffoverlay.make_overlay(self, "Testing Changes...")
@@ -625,12 +627,24 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                     error_list.append("Invalid Email Origin Address\r")
                     errors = True
 
-            if self.email_username_field.get() == '':
-                error_list.append("Email Username Is A Required Field\r")
+            try:
+                server = smtplib.SMTP(str(self.email_smtp_server_field.get()), str(self.smtp_port_field.get()))
+                server.ehlo()
+                server.starttls()
+                if self.email_username_field.get() != "" and self.email_password_field.get() != "":
+                    server.login(str(self.email_username_field.get()), str(self.email_password_field.get()))
+                server.quit()
+            except Exception as email_test_login_result_string:
+                print(email_test_login_result_string)
+                error_list.append("Test Login Failed With Error\r" + str(email_test_login_result_string))
                 errors = True
 
-            if self.email_password_field.get() == '':
-                error_list.append("Email Password Is A Required Field\r")
+            if self.email_username_field.get() == '' and self.email_password_field.get() != '':
+                error_list.append("Email Username Required If Password Is Set\r")
+                errors = True
+
+            if self.email_password_field.get() == '' and self.email_username_field.get() != '':
+                error_list.append("Email Username Without Password Is Not Supported\r")
                 errors = True
 
             if self.email_smtp_server_field.get() == '':
@@ -682,7 +696,7 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
 
     def ok(self, event=None):
 
-        if not self.validate():
+        if not self.validate:
             self.initial_focus.focus_set()  # put focus back
             return
 

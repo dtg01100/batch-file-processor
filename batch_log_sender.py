@@ -64,8 +64,10 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         sent_emails_removal_queue.insert(log)
 
     server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+    server.ehlo()
     server.starttls()
-    server.login(from_address, settings['email_password'])
+    if from_address == "" and settings['email_password'] == "":
+        server.login(from_address, settings['email_password'])
     text = msg.as_string()
     print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
     server.sendmail(from_address, to_address_list, text)
