@@ -18,6 +18,7 @@ def do(process_parameters, settings, filename):
     while not file_pass:
         try:
             from_address = settings['email_address']
+            email_username = settings['email_username']
             to_address = process_parameters['email_to']
             to_address_list = to_address.split(", ")
             msg = MIMEMultipart()
@@ -52,8 +53,8 @@ def do(process_parameters, settings, filename):
                 server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
                 server.ehlo()
                 server.starttls()
-                if from_address == "" and settings['email_password'] == "":
-                    server.login(from_address, settings['email_password'])
+                if email_username != "" and settings['email_password'] != "":
+                    server.login(email_username, settings['email_password'])
                 server.sendmail(from_address, to_address_list, msg.as_string())
                 server.close()
                 file_pass = True

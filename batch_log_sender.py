@@ -13,6 +13,7 @@ import doingstuffoverlay
 def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count,
        total_emails, simple_output, run_summary_string):
     from_address = settings['email_address']
+    email_username = settings['email_username']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")
     msg = MIMEMultipart()
@@ -66,8 +67,8 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
     server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
     server.ehlo()
     server.starttls()
-    if from_address == "" and settings['email_password'] == "":
-        server.login(from_address, settings['email_password'])
+    if email_username != "" and settings['email_password'] != "":
+        server.login(email_username, settings['email_password'])
     text = msg.as_string()
     print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
     server.sendmail(from_address, to_address_list, text)
