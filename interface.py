@@ -1161,19 +1161,25 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 ftp = ftplib.FTP()
 
                 try:
-                    ftp.connect(str(self.ftp_server_field.get()), self.ftp_port_field.get())
+                    ftp.connect(str(self.ftp_server_field.get()), int(self.ftp_port_field.get()))
                     try:
                         ftp.login(self.ftp_username_field.get(), self.ftp_password_field.get())
                         try:
                             ftp.cwd(self.ftp_folder_field.get())
-                        except Exception:
+                        except Exception as ftp_error:
+                            print("cwd")
+                            print(ftp_error)
                             error_string_constructor_list.append("FTP Folder Field Incorrect")
                             errors = True
-                    except Exception:
+                    except Exception as ftp_error:
+                        print("username/password")
+                        print(ftp_error)
                         error_string_constructor_list.append("FTP Username or Password Incorrect")
                         errors = True
                     ftp.close()
-                except Exception:
+                except Exception as ftp_error:
+                    print("server/port")
+                    print(ftp_error)
                     error_string_constructor_list.append("FTP Server or Port Field Incorrect\r\n")
                     errors = True
 
