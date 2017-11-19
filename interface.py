@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import ftplib
 from tkinter import *
 from tkinter.ttk import *
 import platform
@@ -1118,35 +1118,65 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
             backend_count += 1
 
+            ftp_errors = False
+
             if self.ftp_server_field.get() == "":
                 error_string_constructor_list.append("FTP Server Field Is Required\r\n")
                 errors = True
+                ftp_errors = True
 
             if self.ftp_port_field.get() == "":
                 error_string_constructor_list.append("FTP Port Field Is Required\r\n")
                 errors = True
+                ftp_errors = True
 
             if self.ftp_folder_field.get() == "":
                 error_string_constructor_list.append("FTP Folder Field Is Required\r\n")
                 errors = True
+                ftp_errors = True
             else:
                 if self.ftp_folder_field.get()[-1] is not "/":
                     error_string_constructor_list.append("FTP Folder Path Needs To End In /\r\n")
                     errors = True
+                    ftp_errors = True
 
             if self.ftp_username_field.get() == "":
                 error_string_constructor_list.append("FTP Username Field Is Required\r\n")
                 errors = True
+                ftp_errors = True
 
             if self.ftp_password_field.get() == "":
                 error_string_constructor_list.append("FTP Password Field Is Required\r\n")
                 errors = True
+                ftp_errors = True
 
             try:
                 _ = int(self.ftp_port_field.get())
             except ValueError:
                 error_string_constructor_list.append("FTP Port Field Needs To Be A Number\r\n")
                 errors = True
+                ftp_errors = True
+
+            if not ftp_errors:
+                ftp = ftplib.FTP()
+
+                try:
+                    ftp.connect(str(self.ftp_server_field.get()), self.ftp_port_field.get())
+                    try:
+                        ftp.login(self.ftp_username_field.get(), self.ftp_password_field.get())
+                        try:
+                            ftp.cwd(self.ftp_folder_field.get())
+                        except Exception:
+                            error_string_constructor_list.append("FTP Folder Field Incorrect")
+                            errors = True
+                    except Exception:
+                        error_string_constructor_list.append("FTP Username or Password Incorrect")
+                        errors = True
+                    ftp.close()
+                except Exception:
+                    error_string_constructor_list.append("FTP Server or Port Field Incorrect\r\n")
+                    errors = True
+
 
         if self.process_backend_email_check.get() is True:
 
