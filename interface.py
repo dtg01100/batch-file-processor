@@ -1169,12 +1169,12 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                         except Exception as ftp_error:
                             print("cwd")
                             print(ftp_error)
-                            error_string_constructor_list.append("FTP Folder Field Incorrect")
+                            error_string_constructor_list.append("FTP Folder Field Incorrect\r\n")
                             errors = True
                     except Exception as ftp_error:
                         print("username/password")
                         print(ftp_error)
-                        error_string_constructor_list.append("FTP Username or Password Incorrect")
+                        error_string_constructor_list.append("FTP Username or Password Incorrect\r\n")
                         errors = True
                     ftp.close()
                 except Exception as ftp_error:
