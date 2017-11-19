@@ -1183,7 +1183,6 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                     error_string_constructor_list.append("FTP Server or Port Field Incorrect\r\n")
                     errors = True
 
-
         if self.process_backend_email_check.get() is True:
 
             backend_count += 1
