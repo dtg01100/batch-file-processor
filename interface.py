@@ -27,7 +27,7 @@ import resend_interface
 import database_import
 import backup_increment
 import appdirs
-import clear_old_logs
+import clear_old_files
 import smtplib
 from operator import itemgetter
 from tendo import singleton
@@ -1342,7 +1342,7 @@ def process_directories(folders_table_process):
     run_summary_string = ""
 
     with open(run_log_full_path, 'wb') as run_log:
-        clear_old_logs.do_clear(run_log_path, 1000)
+        clear_old_files.do_clear(run_log_path, 1000)
         run_log.write(("Batch File Sender Version " + version + "\r\n").encode())
         run_log.write(("starting run at " + time.ctime() + "\r\n").encode())
         if reporting['enable_reporting'] == "True":
