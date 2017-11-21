@@ -353,6 +353,7 @@ def make_users_list():
     def clear_search_field(_=None):
         search_field.delete(0, "end")
         search_field_callback()
+
     global users_list_frame
     global active_users_list_frame
     global inactive_users_list_frame
@@ -689,8 +690,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                                                              process_backend_copy=False, folder_is_active="True")
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " +
-                        str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
-                        str(number_of_disabled_folders) + " folders will be disabled"):
+                                   str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
+                                   str(number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
