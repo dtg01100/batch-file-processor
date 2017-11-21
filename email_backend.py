@@ -58,7 +58,10 @@ def do(process_parameters, settings, filename):
                 server.sendmail(from_address, to_address_list, msg.as_string())
                 server.close()
                 file_pass = True
-        except Exception:
+        except Exception as email_error:
             if counter == 10:
+                print("Retried 10 times, passing exception to dispatch")
                 raise
             counter += 1
+            print("Encountered an error. Retry number " + str(counter))
+            print("Error is :" + str(email_error))

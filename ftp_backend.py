@@ -20,7 +20,10 @@ def do(process_parameters, filename):
                 ftp.close()
                 file_pass = True
 
-        except Exception:
+        except Exception as ftp_error:
             if counter == 10:
+                print("Retried 10 times, passing exception to dispatch")
                 raise
             counter += 1
+            print("Encountered an error. Retry number " + str(counter))
+            print("Error is :" + str(ftp_error))
