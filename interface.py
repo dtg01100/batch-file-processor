@@ -343,7 +343,7 @@ def make_users_list():
         if folder_filter != search_field.get():
             try:
                 root.unbind(0, "<Escape>")
-            except:
+            except TclError:
                 pass
             filter_field = search_field.get()
             set_folders_filter(filter_field)
