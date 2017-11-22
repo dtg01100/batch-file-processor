@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import fuzzywuzzy.process
 import ftplib
 from tkinter import *
 from tkinter.ttk import *
@@ -379,11 +380,36 @@ def make_users_list():
         for child in search_frame.winfo_children():
             child.configure(state=DISABLED)
     if folder_filter != "":
-        filtered_folder_dict_list = [d for d in folders_dict_list if folder_filter.lower() in d['alias'].lower()]
-        filtered_active_folder_dict_list = [d for d in active_folder_dict_list if
-                                            folder_filter.lower() in d['alias'].lower()]
-        filtered_inactive_folder_dict_list = [d for d in inactive_folder_dict_list if
-                                              folder_filter.lower() in d['alias'].lower()]
+        folder_alias_list = []
+        fuzzy_filtered_alias = []
+        for folder_alias in folders_dict_list:
+            folder_alias_list.append(folder_alias['alias'])
+        fuzzy_filter = list(fuzzywuzzy.process.extractWithoutOrder(folder_filter, folder_alias_list, score_cutoff=80))
+        fuzzy_filter.sort(key=itemgetter(1), reverse=True)
+        for fuzzy_alias, score in fuzzy_filter:
+            fuzzy_filtered_alias.append(fuzzy_alias)
+        filtered_folder_dict_list = []
+        filtered_active_folder_dict_list = []
+        filtered_inactive_folder_dict_list = []
+        pre_filtered_folder_dict_list = []
+        pre_filtered_active_folder_dict_list = []
+        pre_filtered_inactive_folder_dict_list = []
+
+        def copyf(dictlist, key, valuelist):
+            return [dictio for dictio in dictlist if dictio[key] in valuelist]
+
+        for entry in fuzzy_filtered_alias:
+            pre_filtered_folder_dict_list.append(copyf(
+                folders_table.find(order_by="alias"), 'alias', entry))
+            pre_filtered_active_folder_dict_list.append(copyf(
+                folders_table.find(folder_is_active="True"), 'alias', entry))
+            pre_filtered_inactive_folder_dict_list.append(copyf(
+                folders_table.find(folder_is_active="False"), 'alias', entry))
+            filtered_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
+            filtered_active_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
+            filtered_inactive_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
+
+
     else:
         filtered_folder_dict_list = [d for d in folders_dict_list]
         filtered_active_folder_dict_list = [d for d in active_folder_dict_list]
