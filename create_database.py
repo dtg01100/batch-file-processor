@@ -51,7 +51,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        split_edi=False,
                                        force_edi_validation=False,
                                        append_a_records='False',
-                                       a_record_append_text=''
+                                       a_record_append_text='',
+                                       force_txt_file_ext="False"
                                        ))
 
     settings_table = database_connection['settings']

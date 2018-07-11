@@ -796,6 +796,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.tweak_edi = BooleanVar(master)
         self.pad_arec_check = StringVar(master)
         self.append_arec_check = StringVar(master)
+        self.force_txt_file_ext_check = StringVar(master)
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
@@ -985,6 +986,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                                                         text="Append to \"A\" Records (6 Characters)",
                                                         onvalue="True", offvalue="False")
         self.a_record_append_field = Entry(self.convert_options_frame, width=10)
+        self.force_txt_file_ext_checkbutton = Checkbutton(self.convert_options_frame,
+                                                          variable=self.force_txt_file_ext_check,
+                                                          text="Force .txt file extension",
+                                                          onvalue="True", offvalue="False")
 
         self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
         if self.foldersnameinput['folder_name'] != 'template':
@@ -1012,6 +1017,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
         self.append_arec_check.set(self.foldersnameinput['append_a_records'])
         self.a_record_append_field.insert(0, self.foldersnameinput['a_record_append_text'])
+        self.force_txt_file_ext_check.set(self.foldersnameinput['force_txt_file_ext'])
 
         def reset_ediconvert_options(argument):
             for child in self.convert_options_frame.winfo_children():
@@ -1045,6 +1051,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 self.a_record_padding_field.grid(row=9, column=2)
                 self.append_a_records_checkbutton.grid(row=10, column=0, sticky=W, padx=3)
                 self.a_record_append_field.grid(row=10, column=2)
+                self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=W, padx=3)
 
         if self.foldersnameinput['process_edi'] == 'True':
             self.ediconvert_options.set("Convert EDI")
@@ -1138,6 +1145,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
         apply_to_folder['append_a_records'] = str(self.append_arec_check.get())
         apply_to_folder['a_record_append_text'] = str(self.a_record_append_field.get())
+        apply_to_folder['force_txt_file_ext'] = str(self.force_txt_file_ext_check.get())
 
         if self.foldersnameinput['folder_name'] != 'template':
             update_folder_alias(apply_to_folder)
