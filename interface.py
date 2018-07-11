@@ -35,7 +35,7 @@ from tendo import singleton
 
 appname = "Batch File Sender"
 version = "(Git Branch: Master)"
-database_version = "15"
+database_version = "16"
 print(appname + " Version " + version)
 running_platform = platform.system()
 print("Running on " + running_platform)
@@ -795,6 +795,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.ampersand_check = StringVar(master)  # define "Filter Ampersand" checkbox state variable
         self.tweak_edi = BooleanVar(master)
         self.pad_arec_check = StringVar(master)
+        self.append_arec_check = StringVar(master)
         self.process_backend_copy_check = BooleanVar(master)
         self.process_backend_ftp_check = BooleanVar(master)
         self.process_backend_email_check = BooleanVar(master)
@@ -980,6 +981,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         self.a_record_padding_field = Entry(self.convert_options_frame, width=10)
 
+        self.append_a_records_checkbutton = Checkbutton(self.convert_options_frame, variable=self.append_arec_check,
+                                                        text="Append to \"A\" Records (6 Characters)",
+                                                        onvalue="True", offvalue="False")
+        self.a_record_append_field = Entry(self.convert_options_frame, width=10)
+
         self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
         if self.foldersnameinput['folder_name'] != 'template':
             self.folder_alias_field.insert(0, self.foldersnameinput['alias'])
@@ -1004,6 +1010,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
         self.split_edi.set(self.foldersnameinput['split_edi'])
         self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
+        self.append_arec_check.set(self.foldersnameinput['append_a_records'])
+        self.a_record_append_field.insert(0, self.foldersnameinput['a_record_append_text'])
 
         def reset_ediconvert_options(argument):
             for child in self.convert_options_frame.winfo_children():
@@ -1035,6 +1043,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                 self.process_edi.set('False')
                 self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
                 self.a_record_padding_field.grid(row=9, column=2)
+                self.append_a_records_checkbutton.grid(row=10, column=0, sticky=W, padx=3)
+                self.a_record_append_field.grid(row=10, column=2)
 
         if self.foldersnameinput['process_edi'] == 'True':
             self.ediconvert_options.set("Convert EDI")
@@ -1126,6 +1136,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         apply_to_folder['split_edi'] = self.split_edi.get()
         apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
         apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
+        apply_to_folder['append_a_records'] = str(self.append_arec_check.get())
+        apply_to_folder['a_record_append_text'] = str(self.a_record_append_field.get())
 
         if self.foldersnameinput['folder_name'] != 'template':
             update_folder_alias(apply_to_folder)
@@ -1239,6 +1251,10 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
         if len(str(self.a_record_padding_field.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
             error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
+            errors = True
+
+        if len(str(self.a_record_append_field.get())) is not 6 and str(self.append_arec_check.get()) == "True":
+            error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters\r\n')
             errors = True
 
         if self.foldersnameinput['folder_name'] != 'template':

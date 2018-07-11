@@ -191,7 +191,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 try:
                                     edi_tweaks.edi_tweak(send_filename, output_filename,
                                                          parameters_dict['pad_a_records'],
-                                                         parameters_dict['a_record_padding'])
+                                                         parameters_dict['a_record_padding'],
+                                                         parameters_dict['append_a_records'],
+                                                         parameters_dict['a_record_append_text'])
                                     send_filename = output_filename
                                 except Exception as error:
                                     print(str(error))

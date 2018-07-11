@@ -49,7 +49,10 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        export_processed_folder_prior=os.path.expanduser('~'),
                                        report_edi_errors=False,
                                        split_edi=False,
-                                       force_edi_validation=False))
+                                       force_edi_validation=False,
+                                       append_a_records='False',
+                                       a_record_append_text=''
+                                       ))
 
     settings_table = database_connection['settings']
     settings_table.insert(dict(enable_email=False,

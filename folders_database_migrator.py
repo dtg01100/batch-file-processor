@@ -148,3 +148,15 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "force_edi_validation" = 0')
         update_version = dict(id=1, version="15", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '15':
+        database_connection.query("alter table 'folders' add column 'append_a_records'")
+        database_connection.query('UPDATE "folders" SET "append_a_records" = "False"')
+        database_connection.query("alter table 'folders' add column 'a_record_append_text'")
+        database_connection.query('UPDATE "folders" SET "a_record_append_text" = ""')
+        database_connection.query("alter table 'administrative' add column 'append_a_records'")
+        database_connection.query('UPDATE "folders" SET "append_a_records" = "False"')
+        database_connection.query("alter table 'administrative' add column 'a_record_append_text'")
+        database_connection.query('UPDATE "folders" SET "a_record_append_text" = ""')
+        update_version = dict(id=1, version="16", os=running_platform)
+        db_version.update(update_version, ['id'])
