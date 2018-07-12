@@ -26,16 +26,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " +
-                                             str(dispatch_folder_count) + " of " +
-                                             str(folder_total) + "," + " file " +
-                                             str(dispatch_file_count) + " of " +
-                                             str(file_total), footer=footer, overlay_height=120)
+                                                          str(dispatch_folder_count) + " of " +
+                                                          str(folder_total) + "," + " file " +
+                                                          str(dispatch_file_count) + " of " +
+                                                          str(file_total), footer=footer, overlay_height=120)
         elif simple_output is not None:
             simple_output.configure(text=overlay_text + " folder " +
-                                    str(dispatch_folder_count) + " of " +
-                                    str(folder_total) + "," + " file " +
-                                    str(dispatch_file_count) + " of " +
-                                    str(file_total))
+                                         str(dispatch_folder_count) + " of " +
+                                         str(folder_total) + "," + " file " +
+                                         str(dispatch_file_count) + " of " +
+                                         str(file_total))
         root.update()
 
     def empty_directory(top):
@@ -189,13 +189,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 if os.path.exists(os.path.dirname(output_filename)) is False:
                                     os.mkdir(os.path.dirname(output_filename))
                                 try:
-                                    edi_tweaks.edi_tweak(send_filename, output_filename,
-                                                         parameters_dict['pad_a_records'],
-                                                         parameters_dict['a_record_padding'],
-                                                         parameters_dict['append_a_records'],
-                                                         parameters_dict['a_record_append_text'],
-                                                         parameters_dict['force_txt_file_ext'])
-                                    send_filename = output_filename
+                                    send_filename = edi_tweaks.edi_tweak(send_filename, output_filename,
+                                                                         parameters_dict['pad_a_records'],
+                                                                         parameters_dict['a_record_padding'],
+                                                                         parameters_dict['append_a_records'],
+                                                                         parameters_dict['a_record_append_text'],
+                                                                         parameters_dict['force_txt_file_ext'])
                                 except Exception as error:
                                     print(str(error))
                                     errors = True
@@ -264,7 +263,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
                                                     ftp_destination=parameters_dict['ftp_server'] +
-                                                    parameters_dict['ftp_folder'] if
+                                                                    parameters_dict['ftp_folder'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",

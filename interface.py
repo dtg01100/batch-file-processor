@@ -221,7 +221,11 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
                               a_record_padding=defaults['a_record_padding'],
                               ftp_port=defaults['ftp_port'],
                               email_subject_line=defaults['email_subject_line'],
-                              force_edi_validation=defaults['force_edi_validation']))
+                              force_edi_validation=defaults['force_edi_validation'],
+                              append_a_records=defaults['append_a_records'],
+                              a_record_append_text=defaults['a_record_append_text'],
+                              force_txt_file_ext=defaults['force_txt_file_ext']
+                              ))
     print("done")
 
 

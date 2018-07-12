@@ -15,3 +15,4 @@ def edi_tweak(edi_process, output_filename, pad_arec, arec_padding, append_arec,
         f.write(chr(26).encode())
 
     f.close()  # close output file
+    return output_filename
