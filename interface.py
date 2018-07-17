@@ -987,7 +987,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.a_record_padding_field = Entry(self.convert_options_frame, width=10)
 
         self.append_a_records_checkbutton = Checkbutton(self.convert_options_frame, variable=self.append_arec_check,
-                                                        text="Append to \"A\" Records (6 Characters)",
+                                                        text="Append to \"A\" Records (6 Characters)\n(Series2K)",
                                                         onvalue="True", offvalue="False")
         self.a_record_append_field = Entry(self.convert_options_frame, width=10)
         self.force_txt_file_ext_checkbutton = Checkbutton(self.convert_options_frame,
