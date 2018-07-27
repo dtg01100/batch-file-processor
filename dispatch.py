@@ -14,6 +14,7 @@ import doingstuffoverlay
 import edi_tweaks
 import split_edi
 import clear_old_files
+import concurrent.futures
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -62,6 +63,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             global_edi_validator_error_status = True
         return edi_validator_error_status
 
+    def generate_file_hash(file_path):
+        print(file_path)
+        file_name = os.path.join(os.getcwd(), file_path)
+        file_checksum = hashlib.md5(open(file_path, 'rb').read()).hexdigest()
+        print(file_name, file_checksum)
+        return file_name, file_checksum
+
     error_counter = 0
     processed_counter = 0
     folder_count = 0
@@ -91,16 +99,31 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)
+            run_log.write("Generating file hashes\r\n".encode())
+            print("Generating file hashes")
+
+            file_hashes = []
+
+            doingstuffoverlay.update_overlay(parent=root,
+                                             overlay_text="Generating File Hashes", overlay_height=120)
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for file_path, file_hash in executor.map(generate_file_hash, files):
+                    print(file_path)
+                    file_hash_appender = [file_path, file_hash]
+                    file_hashes.append(file_hash_appender)
+
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
-            for f in files:
+            for f in file_hashes:
                 file_count += 1
+                print(f)
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Checking File: " + f)
-                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f),
-                                            file_checksum=hashlib.md5(open(f, 'rb').read()).hexdigest()) is None or \
-                        processed_files.find_one(file_name=os.path.join(os.getcwd(), f), resend_flag=True):
-                    filtered_files.append(f)
+                               file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
+                if processed_files.find_one(file_name=f[0],
+                                            file_checksum=str(f[1])) is None or \
+                        processed_files.find_one(file_name=str(f[0]), resend_flag=True):
+                    filtered_files.append(os.path.basename(f[0]))
 
             file_count = 0
             errors = False
