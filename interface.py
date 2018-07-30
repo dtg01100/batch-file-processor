@@ -87,17 +87,18 @@ def connect_to_databases():
     try:  # try to connect to database
         database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
         session_database = dataset.connect("sqlite:///")
-    except Exception as error:  # if that doesn't work for some reason, log and quit
+    except Exception as connect_error:  # if that doesn't work for some reason, log and quit
         try:
-            print(str(error))
-            critical_log = open("critical_error.log", 'a')
-            critical_log.write("program version is " + version)
-            critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
-            critical_log.close()
+            print(str(connect_error))
+            connect_critical_log = open("critical_error.log", 'a')
+            connect_critical_log.write("program version is " + version)
+            connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
+            connect_critical_log.close()
             raise SystemExit
-        except Exception as big_error:  # if logging doesn't work, at least complain
-            print("error writing critical error log for error: " + str(error) + "\n" + "operation failed with error: " +
-                  str(big_error))
+        except Exception as connect_big_error:  # if logging doesn't work, at least complain
+            print("error writing critical error log for error: " + str(connect_error)
+                  + "\n" + "operation failed with error: " +
+                  str(connect_big_error))
             raise SystemExit
 
 
@@ -229,11 +230,11 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
     print("done")
 
 
-def check_folder_exists(folder):
+def check_folder_exists(check_folder):
     folder_list = folders_table.all()
     for possible_folder in folder_list:
         possible_folder_string = possible_folder['folder_name']
-        if os.path.samefile(possible_folder_string, folder):
+        if os.path.samefile(possible_folder_string, check_folder):
             return {"truefalse": True, "matched_folder": possible_folder}
     return {"truefalse": False, "matched_folder": None}
 
@@ -413,7 +414,6 @@ def make_users_list():
             filtered_active_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
             filtered_inactive_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
 
-
     else:
         filtered_folder_dict_list = [d for d in folders_dict_list]
         filtered_active_folder_dict_list = [d for d in active_folder_dict_list]
@@ -482,7 +482,7 @@ def make_users_list():
     # pack widgets in correct order
     if len(list(filtered_folder_dict_list)) != folders_table.count():
         folders_count_label = Label(search_frame, text=(
-            str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
+                str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
         folders_count_label.pack(side=RIGHT)
     active_users_list_label.pack(pady=5)
     Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
@@ -597,7 +597,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                     initial_directory = self.logs_directory
                 else:
                     initial_directory = os.getcwd()
-            except:
+            except Exception as folder_select_error:
+                print(folder_select_error)
                 initial_directory = os.getcwd()
             logs_directory_edit_proposed = str(askdirectory(parent=master, initialdir=initial_directory))
             if len(logs_directory_edit_proposed) > 0:
@@ -720,8 +721,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
                                                              process_backend_copy=False, folder_is_active="True")
             if number_of_disabled_folders != 0:
                 if not askokcancel(message="This will disable the email backend in " +
-                                   str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
-                                   str(number_of_disabled_folders) + " folders will be disabled"):
+                                           str(number_of_disabled_email_backends) + " folders.\nAs a result, " +
+                                           str(number_of_disabled_folders) + " folders will be disabled"):
                     return False
         return 1
 
@@ -837,7 +838,8 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
                     initial_directory = copy_to_directory
                 else:
                     initial_directory = os.getcwd()
-            except:
+            except Exception as select_copy_directory_error:
+                print(select_copy_directory_error)
                 initial_directory = os.getcwd()
             copy_to_directory = str(askdirectory(parent=self.prefsframe, initialdir=initial_directory))
 
@@ -845,7 +847,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             if not self.settings['enable_email']:
                 self.email_backend_checkbutton.configure(state=DISABLED)
             if self.process_backend_copy_check.get() is False and self.process_backend_ftp_check.get() is False and \
-                            self.process_backend_email_check.get() is False:
+                    self.process_backend_email_check.get() is False:
                 self.split_edi_checkbutton.configure(state=DISABLED)
                 self.edi_options_menu.configure(state=DISABLED)
                 for child in self.convert_options_frame.winfo_children():
@@ -1772,9 +1774,9 @@ def processed_files_popup():
     def set_output_folder():
         global output_folder_is_confirmed
         global processed_files_output_folder
-        prior_folder = oversight_and_defaults.find_one(id=1)
-        if os.path.exists(prior_folder['export_processed_folder_prior']):
-            initial_directory = prior_folder['export_processed_folder_prior']
+        set_output_prior_folder = oversight_and_defaults.find_one(id=1)
+        if os.path.exists(set_output_prior_folder['export_processed_folder_prior']):
+            initial_directory = set_output_prior_folder['export_processed_folder_prior']
         else:
             initial_directory = os.path.expanduser('~')
         output_folder_proposed = askdirectory(parent=processed_files_popup_actions_frame, initialdir=initial_directory)
