@@ -14,7 +14,6 @@ import doingstuffoverlay
 import edi_tweaks
 import split_edi
 import clear_old_files
-import concurrent.futures
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -27,16 +26,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " +
-                                             str(dispatch_folder_count) + " of " +
-                                             str(folder_total) + "," + " file " +
-                                             str(dispatch_file_count) + " of " +
-                                             str(file_total), footer=footer, overlay_height=120)
+                                                          str(dispatch_folder_count) + " of " +
+                                                          str(folder_total) + "," + " file " +
+                                                          str(dispatch_file_count) + " of " +
+                                                          str(file_total), footer=footer, overlay_height=120)
         elif simple_output is not None:
             simple_output.configure(text=overlay_text + " folder " +
-                                    str(dispatch_folder_count) + " of " +
-                                    str(folder_total) + "," + " file " +
-                                    str(dispatch_file_count) + " of " +
-                                    str(file_total))
+                                         str(dispatch_folder_count) + " of " +
+                                         str(folder_total) + "," + " file " +
+                                         str(dispatch_file_count) + " of " +
+                                         str(file_total))
         root.update()
 
     def empty_directory(top):
@@ -62,13 +61,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             edi_validator_output.close()
             global_edi_validator_error_status = True
         return edi_validator_error_status
-
-    def generate_file_hash(source_file_path):
-        print(source_file_path)
-        file_name = os.path.join(os.getcwd(), source_file_path)
-        file_checksum = hashlib.md5(open(source_file_path, 'rb').read()).hexdigest()
-        print(file_name, file_checksum)
-        return file_name, file_checksum
 
     error_counter = 0
     processed_counter = 0
@@ -99,31 +91,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             files = [f for f in os.listdir('.')]  # create list of all files in directory
             filtered_files = []
             file_count_total = len(files)
-            run_log.write("Generating file hashes\r\n".encode())
-            print("Generating file hashes")
-
-            file_hashes = []
-
-            doingstuffoverlay.update_overlay(parent=root,
-                                             overlay_text="Generating File Hashes", overlay_height=120)
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                for file_path, file_hash in executor.map(generate_file_hash, files):
-                    print(file_path)
-                    file_hash_appender = [file_path, file_hash]
-                    file_hashes.append(file_hash_appender)
-
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
-            for f in file_hashes:
+            for f in files:
                 file_count += 1
-                print(f)
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
-                if processed_files.find_one(file_name=f[0],
-                                            file_checksum=str(f[1])) is None or \
-                        processed_files.find_one(file_name=str(f[0]), resend_flag=True):
-                    filtered_files.append(os.path.basename(f[0]))
+                               file_count, file_count_total, "Checking File: " + f)
+                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f),
+                                            file_checksum=hashlib.md5(open(f, 'rb').read()).hexdigest()) is None or \
+                        processed_files.find_one(file_name=os.path.join(os.getcwd(), f), resend_flag=True):
+                    filtered_files.append(f)
 
             file_count = 0
             errors = False
@@ -286,7 +263,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
                                                     ftp_destination=parameters_dict['ftp_server'] +
-                                                    parameters_dict['ftp_folder'] if
+                                                                    parameters_dict['ftp_folder'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",
