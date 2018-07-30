@@ -26,16 +26,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " +
-                                                          str(dispatch_folder_count) + " of " +
-                                                          str(folder_total) + "," + " file " +
-                                                          str(dispatch_file_count) + " of " +
-                                                          str(file_total), footer=footer, overlay_height=120)
+                                             str(dispatch_folder_count) + " of " +
+                                             str(folder_total) + "," + " file " +
+                                             str(dispatch_file_count) + " of " +
+                                             str(file_total), footer=footer, overlay_height=120)
         elif simple_output is not None:
             simple_output.configure(text=overlay_text + " folder " +
-                                         str(dispatch_folder_count) + " of " +
-                                         str(folder_total) + "," + " file " +
-                                         str(dispatch_file_count) + " of " +
-                                         str(file_total))
+                                    str(dispatch_folder_count) + " of " +
+                                    str(folder_total) + "," + " file " +
+                                    str(dispatch_file_count) + " of " +
+                                    str(file_total))
         root.update()
 
     def empty_directory(top):
@@ -263,7 +263,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
                                                     ftp_destination=parameters_dict['ftp_server'] +
-                                                                    parameters_dict['ftp_folder'] if
+                                                    parameters_dict['ftp_folder'] if
                                                     parameters_dict['process_backend_ftp'] is True else "N/A",
                                                     email_destination=parameters_dict['email_to'] if
                                                     parameters_dict['process_backend_email'] is True else "N/A",
