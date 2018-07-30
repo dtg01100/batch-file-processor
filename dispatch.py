@@ -19,6 +19,8 @@ import concurrent.futures
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
+hash_counter = 0
+
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
             reporting, processed_files, root, args, version, errors_folder, edi_converter_scratch_folder, settings,
@@ -64,6 +66,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         return edi_validator_error_status
 
     def generate_file_hash(source_file_path):
+        global hash_counter
+        hash_counter += 1
         print(source_file_path)
         file_name = os.path.join(os.getcwd(), source_file_path)
         file_checksum = hashlib.md5(open(source_file_path, 'rb').read()).hexdigest()
@@ -76,11 +80,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     folder_total_count = folders_database.count(folder_is_active="True")
     # loop over all known active folders, in order of alias name
     for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
+        global hash_counter
         global filename
         global send_filename
         folder_count += 1
         file_count = 0
         file_count_total = 0
+        hash_counter = 0
         update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total, "")
         if os.path.isdir(parameters_dict['folder_name']) is True:
             print("entering folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
@@ -112,6 +118,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     print(file_path)
                     file_hash_appender = [file_path, file_hash]
                     file_hashes.append(file_hash_appender)
+                    update_overlay("processing folder... (generating file hash)\n\n", folder_count, folder_total_count,
+                                   str(hash_counter), file_count_total, "")
 
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
