@@ -70,9 +70,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         hash_counter += 1
         print(source_file_path)
         file_name = os.path.join(os.getcwd(), source_file_path)
-        file_checksum = hashlib.md5(open(source_file_path, 'rb').read()).hexdigest()
-        print(file_name, file_checksum)
-        return file_name, file_checksum
+        generated_file_checksum = hashlib.md5(open(source_file_path, 'rb').read()).hexdigest()
+        print(file_name, generated_file_checksum)
+        return file_name, generated_file_checksum
 
     error_counter = 0
     processed_counter = 0
@@ -131,7 +131,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if processed_files.find_one(file_name=f[0],
                                             file_checksum=str(f[1])) is None or \
                         processed_files.find_one(file_name=str(f[0]), resend_flag=True):
-                    filtered_files.append(os.path.basename(f[0]))
+                    filtered_files.append((os.path.basename(f[0]), f[1]))
 
             file_count = 0
             errors = False
@@ -145,8 +145,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 run_log.write((str(len(filtered_files)) + " found\r\n\r\n").encode())
                 print(str(len(filtered_files)) + " found")
             file_count_total = len(filtered_files)
-            for filename in filtered_files:  # iterate over all files in directory
-                empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+            empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+            for filename, file_checksum in filtered_files:  # iterate over all files in directory
+                file_scratch_folder = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                                   filename)
                 filename = os.path.abspath(filename)
                 original_filename = filename
                 file_count += 1
@@ -163,8 +165,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     run_log.write(("Splitting edi file " + original_filename + "...\r\n").encode())
                     print("Splitting edi file " + original_filename + "...")
                     try:
-                        split_edi_list = split_edi.do_split_edi(filename, edi_converter_scratch_folder[
-                            'edi_converter_scratch_folder'])
+                        split_edi_list = split_edi.do_split_edi(filename, file_scratch_folder)
                         if len(split_edi_list) > 1:
                             run_log.write(
                                 ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n").encode())
@@ -190,7 +191,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 # then allow conversion, otherwise log and carry on
                                 if parameters_dict['convert_to_format'] == "csv":
                                     output_filename = os.path.join(
-                                        edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                        file_scratch_folder,
                                         os.path.basename(stripped_filename) + ".csv")
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
@@ -215,7 +216,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
                             if parameters_dict['tweak_edi'] is True:
                                 output_filename = \
-                                    os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
+                                    os.path.join(file_scratch_folder,
                                                  os.path.basename(stripped_filename))
                                 if os.path.exists(os.path.dirname(output_filename)) is False:
                                     os.mkdir(os.path.dirname(output_filename))
@@ -288,8 +289,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         processed_files.insert(dict(file_name=str(original_filename),
                                                     folder_id=parameters_dict['id'],
                                                     folder_alias=parameters_dict['alias'],
-                                                    file_checksum=hashlib.md5(open(original_filename, 'rb').read())
-                                                    .hexdigest(),
+                                                    file_checksum=file_checksum,
                                                     sent_date_time=datetime.datetime.now(),
                                                     copy_destination=parameters_dict['copy_to_directory'] if
                                                     parameters_dict['process_backend_copy'] is True else "N/A",
