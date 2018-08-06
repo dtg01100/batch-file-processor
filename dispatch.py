@@ -16,7 +16,6 @@ import split_edi
 import clear_old_files
 import concurrent.futures
 
-
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 hash_counter = 0
@@ -161,7 +160,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 file_scratch_folder = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                                    input_filename)
                 input_filename = os.path.abspath(input_filename)
-                original_filename = input_filename
+                process_original_filename = input_filename
                 file_count += 1
 
                 valid_edi_file = True
@@ -169,21 +168,22 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     or parameters_dict['tweak_edi']
                     or parameters_dict['split_edi']) \
                         or parameters_dict['force_edi_validation']:
-                    if validate_file(input_filename, original_filename):
+                    if validate_file(input_filename, process_original_filename):
                         valid_edi_file = False
                 if parameters_dict['split_edi'] and valid_edi_file:
-                    run_log.write(("Splitting edi file " + original_filename + "...\r\n").encode())
-                    print("Splitting edi file " + original_filename + "...")
+                    run_log.write(("Splitting edi file " + process_original_filename + "...\r\n").encode())
+                    print("Splitting edi file " + process_original_filename + "...")
                     try:
                         split_edi_list = split_edi.do_split_edi(input_filename, file_scratch_folder)
                         if len(split_edi_list) > 1:
                             run_log.write(
                                 ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n").encode())
                             print("edi file split into " + str(len(split_edi_list)) + " files")
-                    except Exception as error:
+                    except Exception as process_error:
                         split_edi_list = [input_filename]
                         record_error.do(run_log, folder_errors_log,
-                                        "splitting edi file failed with error: " + str(error), input_filename, "edi splitter")
+                                        "splitting edi file failed with error: " + str(process_error), input_filename,
+                                        "edi splitter")
                 else:
                     split_edi_list = [input_filename]
                 if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
@@ -206,7 +206,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:
-                                        run_log.write(("converting " + output_send_filename + " from EDI to CSV\r\n").encode())
+                                        run_log.write(
+                                            ("converting " + output_send_filename + " from EDI to CSV\r\n").encode())
                                         print("converting " + output_send_filename + " from EDI to CSV")
                                         convert_to_csv.edi_convert(output_send_filename, output_filename,
                                                                    parameters_dict['calculate_upc_check_digit'],
@@ -218,10 +219,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                    parameters_dict['a_record_padding'])
                                         run_log.write("Success\r\n\r\n".encode())
                                         output_send_filename = output_filename
-                                    except Exception as error:
-                                        print(str(error))
+                                    except Exception as process_error:
+                                        print(str(process_error))
                                         errors = True
-                                        record_error.do(run_log, folder_errors_log, str(error), str(output_send_filename),
+                                        record_error.do(run_log, folder_errors_log, str(process_error),
+                                                        str(output_send_filename),
                                                         "EDI Processor")
 
                             if parameters_dict['tweak_edi'] is True:
@@ -232,16 +234,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     os.mkdir(os.path.dirname(output_filename))
                                 try:
                                     output_send_filename = edi_tweaks.edi_tweak(output_send_filename, output_filename,
-                                                                         parameters_dict['pad_a_records'],
-                                                                         parameters_dict['a_record_padding'],
-                                                                         parameters_dict['append_a_records'],
-                                                                         parameters_dict['a_record_append_text'],
-                                                                         parameters_dict['force_txt_file_ext'])
-                                except Exception as error:
-                                    print(str(error))
+                                                                                parameters_dict['pad_a_records'],
+                                                                                parameters_dict['a_record_padding'],
+                                                                                parameters_dict['append_a_records'],
+                                                                                parameters_dict['a_record_append_text'],
+                                                                                parameters_dict['force_txt_file_ext'])
+                                except Exception as process_error:
+                                    print(str(process_error))
                                     errors = True
-                                    record_error.do(run_log, folder_errors_log, str(error), str(output_send_filename),
-                                                    "EDI Processor")
+                                    record_error.do(run_log, folder_errors_log, str(process_error),
+                                                    str(output_send_filename), "EDI Processor")
 
                         # the following blocks process the files using the specified backend,
                         # and log in the event of any errors
@@ -254,56 +256,64 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                        'copy_to_directory']) + " with copy backend\r\n\r\n").encode())
                                 copy_backend.do(parameters_dict, output_send_filename)
                                 run_log.write("Success\r\n\r\n".encode())
-                            except Exception as error:
-                                print(str(error))
-                                record_error.do(run_log, folder_errors_log, str(error), str(output_send_filename),
+                            except Exception as process_error:
+                                print(str(process_error))
+                                record_error.do(run_log, folder_errors_log, str(process_error),
+                                                str(output_send_filename),
                                                 "Copy Backend")
                                 errors = True
                         if parameters_dict['process_backend_ftp'] is True and errors is False:
                             try:
                                 print(
-                                    "sending " + str(output_send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    "sending " + str(output_send_filename) + " to " + str(
+                                        parameters_dict['ftp_server']) +
                                     str(parameters_dict['ftp_folder']) + " with FTP backend")
                                 run_log.write(
-                                    ("sending " + str(output_send_filename) + " to " + str(parameters_dict['ftp_server']) +
+                                    ("sending " + str(output_send_filename) + " to " + str(
+                                        parameters_dict['ftp_server']) +
                                      str(parameters_dict['ftp_folder']) + " with FTP backend\r\n\r\n").encode())
                                 ftp_backend.do(parameters_dict, output_send_filename)
                                 run_log.write("Success\r\n\r\n".encode())
-                            except Exception as error:
-                                print(str(error))
-                                record_error.do(run_log, folder_errors_log, str(error), str(output_send_filename),
+                            except Exception as process_error:
+                                print(str(process_error))
+                                record_error.do(run_log, folder_errors_log, str(process_error),
+                                                str(output_send_filename),
                                                 "FTP Backend")
                                 errors = True
                         if parameters_dict['process_backend_email'] is True and errors is False and \
                                 settings['enable_email']:
                             try:
-                                print("sending " + str(output_send_filename) + " to " + str(parameters_dict['email_to']) +
-                                      " with email backend")
+                                print(
+                                    "sending " + str(output_send_filename) + " to " + str(parameters_dict['email_to']) +
+                                    " with email backend")
                                 run_log.write(
-                                    ("sending " + str(output_send_filename) + " to " + str(parameters_dict['email_to']) +
+                                    ("sending " + str(output_send_filename) + " to " + str(
+                                        parameters_dict['email_to']) +
                                      " with email backend\r\n\r\n").encode())
                                 email_backend.do(parameters_dict, settings, output_send_filename)
                                 run_log.write("Success\r\n\r\n".encode())
-                            except Exception as error:
-                                record_error.do(run_log, folder_errors_log, str(error), str(output_send_filename),
+                            except Exception as process_error:
+                                record_error.do(run_log, folder_errors_log, str(process_error),
+                                                str(output_send_filename),
                                                 "Email Backend")
                                 errors = True
-                return errors, original_filename, input_file_checksum
+                return errors, process_original_filename, input_file_checksum
 
             file_hash_list = [x[1] for x in filtered_files]
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 for errors, original_filename, file_checksum in executor.map(process_files, file_hash_list):
 
-            # for input_tuple in input_data_tuple_list:  # iterate over all files in directory
-            #     errors, original_filename, file_checksum = process_files(input_tuple)
+                    # for input_tuple in input_data_tuple_list:  # iterate over all files in directory
+                    #     errors, original_filename, file_checksum = process_files(input_tuple)
                     update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                    file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
                     if errors is False:
                         try:
                             if processed_files.count(file_name=str(original_filename),
                                                      resend_flag=True) > 0:
-                                file_old_id = processed_files.find_one(file_name=str(original_filename), resend_flag=True)
+                                file_old_id = processed_files.find_one(file_name=str(original_filename),
+                                                                       resend_flag=True)
                                 processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
                                 processed_files.update(processed_files_update, ['id'])
 
@@ -315,7 +325,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                         copy_destination=parameters_dict['copy_to_directory'] if
                                                         parameters_dict['process_backend_copy'] is True else "N/A",
                                                         ftp_destination=parameters_dict['ftp_server'] +
-                                                        parameters_dict['ftp_folder'] if
+                                                                        parameters_dict['ftp_folder'] if
                                                         parameters_dict['process_backend_ftp'] is True else "N/A",
                                                         email_destination=parameters_dict['email_to'] if
                                                         parameters_dict['process_backend_email'] is True else "N/A",
