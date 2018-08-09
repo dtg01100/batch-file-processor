@@ -311,8 +311,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     #     errors, original_filename, file_checksum = process_files(input_tuple)
                     for row in return_log:
                         run_log.write(row.encode())
-                    print(return_error_log)
-                    print(len(return_error_log))
                     if return_errors:
                         for row in return_error_log:
                             folder_errors_log.write(row)
