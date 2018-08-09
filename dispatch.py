@@ -20,7 +20,6 @@ import concurrent.futures
 
 hash_counter = 0
 file_count = 0
-errors = False
 
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
@@ -299,7 +298,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                 str(output_send_filename),
                                                 "Email Backend", True)
                                 errors = True
-                print(errors)
                 return errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log
 
             file_hash_list = [x[1] for x in filtered_files]
