@@ -302,6 +302,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             file_hash_list = [x[1] for x in filtered_files]
 
+            db_updated_counter = 0
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 for return_errors, original_filename, file_checksum, return_log, return_error_log in executor.map(process_files, file_hash_list):
 
@@ -313,8 +315,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         for row in return_error_log:
                             folder_errors_log.write(row)
                             folder_errors = True
-                    update_overlay("processing folder...\n\n", folder_count, folder_total_count,
-                                   file_count, file_count_total, "Sending File: " + os.path.basename(original_filename))
+                    if not file_count == file_count_total:
+                        update_overlay("processing folder...\n\n", folder_count, folder_total_count,
+                                       file_count, file_count_total,
+                                       "Sending File: " + os.path.basename(original_filename))
+                    else:
+                        update_overlay("processing folder... (updating database records)\n\n", folder_count,
+                                       folder_total_count, db_updated_counter, file_count_total,
+                                       "Updating Records For: " + os.path.basename(original_filename))
                     if return_errors is False:
                         try:
                             if processed_files.count(file_name=str(original_filename),
@@ -340,8 +348,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         except Exception as error:
                             record_error.do(run_log, folder_errors_log, str(error), str(original_filename), "Dispatch")
                             folder_errors = True
-                    if folder_errors is False:
+                    if return_errors is False:
                         processed_counter += 1
+                        db_updated_counter += 1
                     else:
                         break
             if folder_errors is True:
