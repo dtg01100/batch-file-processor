@@ -1413,7 +1413,7 @@ def process_directories(folders_table_process):
                                                                   simple_output=None if not args.automatic else
                                                                   feedback_text)
             if run_error_bool is True and not args.automatic:
-                showinfo(parent=root, title="Run Status", text="Run completed with errors.")
+                showinfo(parent=root, title="Run Status", message="Run completed with errors.")
             os.chdir(original_folder)
         except Exception as dispatch_error:
             os.chdir(original_folder)
