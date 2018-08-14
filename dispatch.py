@@ -124,15 +124,17 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
+            index_number = 0
             for f in file_hashes:
                 file_count += 1
+                index_number += 1
                 print(f)
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
                 if processed_files.find_one(file_name=f[0],
                                             file_checksum=str(f[1])) is None or \
                         processed_files.find_one(file_name=str(f[0]), resend_flag=True):
-                    filtered_files.append((os.path.basename(f[0]), f[1]))
+                    filtered_files.append((index_number, os.path.basename(f[0]), f[1]))
 
             file_count = 0
             folder_errors = False
@@ -148,15 +150,17 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             file_count_total = len(filtered_files)
             empty_directory(edi_converter_scratch_folder['edi_converter_scratch_folder'])
 
-            def process_files(input_hash):
+            def process_files(file_index_number):
                 process_files_log = []
                 process_files_error_log = []
                 errors = False
                 input_filename = None
+                input_file_checksum = None
                 for row in filtered_files:
-                    if row[1] == input_hash:
-                        input_filename = row[0]
-                input_file_checksum = input_hash
+                    if row[0] == file_index_number:
+                        input_filename = row[1]
+                        input_file_checksum = row[2]
+                assert input_file_checksum is not None
                 global file_count
                 file_scratch_folder = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
                                                    input_filename)
@@ -300,12 +304,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 errors = True
                 return errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log
 
-            file_hash_list = [x[1] for x in filtered_files]
+            index_number_list = [x[0] for x in filtered_files]
 
             db_updated_counter = 0
 
+            processed_files_insert_list = []
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                for return_errors, original_filename, file_checksum, return_log, return_error_log in executor.map(process_files, file_hash_list):
+                for return_errors, original_filename, file_checksum, return_log, return_error_log in executor.map(process_files, index_number_list):
 
                     # for input_tuple in input_data_tuple_list:  # iterate over all files in directory
                     #     errors, original_filename, file_checksum = process_files(input_tuple)
@@ -332,7 +338,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
                                 processed_files.update(processed_files_update, ['id'])
 
-                            processed_files.insert(dict(file_name=str(original_filename),
+                            processed_files_insert_list.append(dict(file_name=str(original_filename),
                                                         folder_id=parameters_dict['id'],
                                                         folder_alias=parameters_dict['alias'],
                                                         file_checksum=file_checksum,
@@ -353,6 +359,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         db_updated_counter += 1
                     else:
                         break
+            processed_files.insert_many(processed_files_insert_list)
             if folder_errors is True:
                 error_counter += 1
                 if os.path.exists(errors_folder['errors_folder']) is False:
