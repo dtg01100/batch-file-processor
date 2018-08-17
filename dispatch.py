@@ -15,6 +15,7 @@ import edi_tweaks
 import split_edi
 import clear_old_files
 import concurrent.futures
+import dataset
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
@@ -80,6 +81,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     folder_count = 0
     folder_total_count = folders_database.count(folder_is_active="True")
     # loop over all known active folders, in order of alias name
+    temp_database_connection = dataset.connect('sqlite:///')
+    temp_table = temp_database_connection['temp_table']
+
+    temp_table.insert_many(processed_files.find())
     for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
         global hash_counter
         global filename
@@ -125,15 +130,33 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
             index_number = 0
+
             for f in file_hashes:
                 file_count += 1
                 index_number += 1
                 print(f)
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
-                if processed_files.find_one(file_name=f[0],
-                                            file_checksum=str(f[1])) is None or \
-                        processed_files.find_one(file_name=str(f[0]), resend_flag=True):
+                # if processed_files.find_one(file_name=f[0],
+                #                             file_checksum=str(f[1])) is None or \
+                #         processed_files.find_one(file_name=str(f[0]), resend_flag=True):
+                #     filtered_files.append((index_number, os.path.basename(f[0]), f[1]))
+
+                match_iter = temp_table.find(file_name=f[0], file_checksum=f[1])
+                match_list = []
+                for entry in match_iter:
+                    match_list.append(entry)
+                send_file = False
+
+                if len(match_list) == 0:
+                    send_file = True
+                else:
+                    match_list.reverse()
+                    for entry in match_list:
+                        if entry['resend_flag'] is True:
+                            send_file = True
+                            break
+                if send_file:
                     filtered_files.append((index_number, os.path.basename(f[0]), f[1]))
 
             file_count = 0
