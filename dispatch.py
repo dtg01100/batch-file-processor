@@ -95,26 +95,19 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         global parameters_dict_list
         global hash_thread_return_list
         for counter, entry in enumerate(parameters_dict_list):
-            # os.chdir(entry['folder_name'])
             files = [os.path.abspath(os.path.join(os.path.abspath(entry['folder_name']), f)) for f in
                      os.listdir(path=os.path.abspath(entry['folder_name'])) if os.path.isfile(
                     os.path.join(os.path.abspath(entry['folder_name']), f))]  # create list of all files in directory
             file_count_total = len(files)
-            # run_log.write("Generating file hashes\r\n".encode())
             print("Generating file hashes " + str(counter) + " of " + str(len(parameters_dict_list)))
 
             file_hashes = []
-
-            # doingstuffoverlay.update_overlay(parent=root,
-            #                                  overlay_text="Generating File Hashes", overlay_height=120)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 for file_path, file_hash in executor.map(generate_file_hash, files):
                     # print(file_path)
                     file_hash_appender = [file_path, file_hash]
                     file_hashes.append(file_hash_appender)
-                    # update_overlay("processing folder... (generating file hash)\n\n", folder_count, folder_total_count,
-                    #                str(hash_counter), file_count_total, "")
             hash_thread_return_queue.put(dict(folder_name=entry['folder_name'], files=files,
                                               file_count_total=file_count_total, file_hashes=file_hashes))
 
@@ -143,7 +136,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             print("processing folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
             run_log.write(("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
                            parameters_dict['alias'] + "\r\n\r\n").encode())
-            # os.chdir(parameters_dict['folder_name'])
             # strip potentially invalid send_filename characters from alias string
             cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])
             # add iso8601 date/time stamp to send_filename, but filter : for - due to send_filename constraints
@@ -153,24 +145,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                            os.path.basename(parameters_dict['folder_name']),
                                                            folder_error_log_name_constructor)
             folder_errors_log = StringIO()
-            # files = [f for f in os.listdir('.') if os.path.isfile(f)]  # create list of all files in directory
-            # filtered_files = []
-            # file_count_total = len(files)
-            # run_log.write("Generating file hashes\r\n".encode())
-            # print("Generating file hashes")
-            #
-            # file_hashes = []
-            #
-            # doingstuffoverlay.update_overlay(parent=root,
-            #                                  overlay_text="Generating File Hashes", overlay_height=120)
-            #
-            # with concurrent.futures.ThreadPoolExecutor() as executor:
-            #     for file_path, file_hash in executor.map(generate_file_hash, files):
-            #         print(file_path)
-            #         file_hash_appender = [file_path, file_hash]
-            #         file_hashes.append(file_hash_appender)
-            #         update_overlay("processing folder... (generating file hash)\n\n", folder_count, folder_total_count,
-            #                        str(hash_counter), file_count_total, "")
 
             hash_thread_return_dict = hash_thread_return_queue.get()
 
@@ -197,13 +171,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             for f in file_hashes:
                 file_count += 1
                 index_number += 1
-                # print(f)
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
-                # if processed_files.find_one(file_name=f[0],
-                #                             file_checksum=str(f[1])) is None or \
-                #         processed_files.find_one(file_name=str(f[0]), resend_flag=True):
-                #     filtered_files.append((index_number, os.path.basename(f[0]), f[1]))
 
                 match_iter = temp_table.find(file_name=f[0], file_checksum=f[1])
                 match_list = []
