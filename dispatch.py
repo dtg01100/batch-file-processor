@@ -23,7 +23,10 @@ import queue
 
 hash_counter = 0
 file_count = 0
+filename = ''
+send_filename = ''
 parameters_dict_list = []
+hash_thread_return_list = []
 hash_thread_return_queue = queue.Queue()
 
 
@@ -42,16 +45,16 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
                                              overlay_text=overlay_text + " folder " +
-                                                          str(dispatch_folder_count) + " of " +
-                                                          str(folder_total) + "," + " file " +
-                                                          str(dispatch_file_count) + " of " +
-                                                          str(file_total), footer=footer, overlay_height=120)
+                                             str(dispatch_folder_count) + " of " +
+                                             str(folder_total) + "," + " file " +
+                                             str(dispatch_file_count) + " of " +
+                                             str(file_total), footer=footer, overlay_height=120)
         elif simple_output is not None:
             simple_output.configure(text=overlay_text + " folder " +
-                                         str(dispatch_folder_count) + " of " +
-                                         str(folder_total) + "," + " file " +
-                                         str(dispatch_file_count) + " of " +
-                                         str(file_total))
+                                    str(dispatch_folder_count) + " of " +
+                                    str(folder_total) + "," + " file " +
+                                    str(dispatch_file_count) + " of " +
+                                    str(file_total))
         root.update()
 
     def empty_directory(top):
@@ -94,22 +97,23 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     def hash_thread_target():
         global parameters_dict_list
         global hash_thread_return_list
-        for counter, entry in enumerate(parameters_dict_list):
-            files = [os.path.abspath(os.path.join(os.path.abspath(entry['folder_name']), f)) for f in
-                     os.listdir(path=os.path.abspath(entry['folder_name'])) if os.path.isfile(
-                    os.path.join(os.path.abspath(entry['folder_name']), f))]  # create list of all files in directory
-            file_count_total = len(files)
+        for counter, entry_dict in enumerate(parameters_dict_list):
+            # create list of all files in directory
+            hash_files = [os.path.abspath(os.path.join(os.path.abspath(entry_dict['folder_name']), file)) for file in
+                          os.listdir(path=os.path.abspath(entry_dict['folder_name'])) if os.path.isfile(
+                    os.path.join(os.path.abspath(entry_dict['folder_name']), file))]
+            hash_file_count_total = len(hash_files)
             print("Generating file hashes " + str(counter) + " of " + str(len(parameters_dict_list)))
 
-            file_hashes = []
+            thread_file_hashes = []
 
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                for file_path, file_hash in executor.map(generate_file_hash, files):
+            with concurrent.futures.ThreadPoolExecutor() as hash_executor:
+                for file_path, file_hash in hash_executor.map(generate_file_hash, hash_files):
                     # print(file_path)
                     file_hash_appender = [file_path, file_hash]
-                    file_hashes.append(file_hash_appender)
-            hash_thread_return_queue.put(dict(folder_name=entry['folder_name'], files=files,
-                                              file_count_total=file_count_total, file_hashes=file_hashes))
+                    thread_file_hashes.append(file_hash_appender)
+            hash_thread_return_queue.put(dict(folder_name=entry_dict['folder_name'], files=hash_files,
+                                              file_count_total=hash_file_count_total, file_hashes=thread_file_hashes))
 
     hash_thread_object = threading.Thread(target=hash_thread_target)
     hash_thread_object.start()
@@ -211,10 +215,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 errors = False
                 input_filename = None
                 input_file_checksum = None
-                for row in filtered_files:
-                    if row[0] == file_index_number:
-                        input_filename = row[1]
-                        input_file_checksum = row[2]
+                for process_row in filtered_files:
+                    if process_row[0] == file_index_number:
+                        input_filename = process_row[1]
+                        input_file_checksum = process_row[2]
                 assert input_file_checksum is not None
                 global file_count
                 file_scratch_folder = os.path.join(edi_converter_scratch_folder['edi_converter_scratch_folder'],
@@ -377,8 +381,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                                              str(output_send_filename),
                                                                                              "Email Backend", True)
                                 errors = True
-                return errors, process_original_filename, input_file_checksum, \
-                       process_files_log, process_files_error_log
+                return \
+                    errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log
 
             index_number_list = [x[0] for x in filtered_files]
 
@@ -425,7 +429,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                     parameters_dict[
                                                                         'process_backend_copy'] is True else "N/A",
                                                                     ftp_destination=parameters_dict['ftp_server'] +
-                                                                                    parameters_dict['ftp_folder'] if
+                                                                    parameters_dict['ftp_folder'] if
                                                                     parameters_dict[
                                                                         'process_backend_ftp'] is True else "N/A",
                                                                     email_destination=parameters_dict['email_to'] if
