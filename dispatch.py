@@ -37,6 +37,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     global file_count
     global parameters_dict_list
     global hash_thread_return_queue
+    global edi_validator_errors
+    global global_edi_validator_error_status
+    global file_count
+    global hash_counter
+    global filename
+    global send_filename
     hash_counter = 0
     file_count = 0
     hash_thread_return_queue = queue.Queue()
@@ -64,9 +70,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             for name in dirs:
                 os.rmdir(os.path.join(folder_root, name))
 
-    global edi_validator_errors
-    global global_edi_validator_error_status
-    global file_count
     edi_validator_errors = StringIO()
     global_edi_validator_error_status = False
 
@@ -128,9 +131,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
     temp_table.insert_many(processed_files.find())
     for parameters_dict in parameters_dict_list:
-        global hash_counter
-        global filename
-        global send_filename
         folder_count += 1
         file_count = 0
         file_count_total = 0
