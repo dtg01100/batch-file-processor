@@ -46,31 +46,38 @@ def report_edi_issues(input_file):
             try:
                 if line[0] == "B":
                     proposed_upc = line[1:12]
-                    if len(str(proposed_upc).rstrip()) == 8:
+                    if len(str(proposed_upc).strip()) == 8:
                         has_minor_errors = True
                         in_memory_log.write("Suppressed UPC in line " + str(line_number) + "\r\n")
                         in_memory_log.write("line is:\r\n")
-                        in_memory_log.write(line)
+                        in_memory_log.write(line + "\r\n")
                         _insert_description_and_number(line)
+                    else:
+                        if 11 > len(str(proposed_upc).strip()) > 0:
+                            has_minor_errors = True
+                            in_memory_log.write("Truncated UPC in line " + str(line_number) + "\r\n")
+                            in_memory_log.write("line is:\r\n")
+                            in_memory_log.write(line + "\r\n")
+                            _insert_description_and_number(line)
                     if line[1:12] == "           ":
                         has_minor_errors = True
                         in_memory_log.write("Blank UPC in line " + str(line_number) + "\r\n")
                         in_memory_log.write("line is:\r\n")
-                        in_memory_log.write(line)
+                        in_memory_log.write(line + "\r\n")
                         _insert_description_and_number(line)
                     if len(line) == 71:
                         has_minor_errors = True
                         has_minor_errors = True
                         in_memory_log.write("Missing pricing information in line " + str(line_number) +
-                                            ". Is this a sample?" +"\r\n")
+                                            ". Is this a sample?" + "\r\n")
                         in_memory_log.write("line is:\r\n")
-                        in_memory_log.write(line)
+                        in_memory_log.write(line + "\r\n")
                         _insert_description_and_number(line)
             except Exception as error:
                 has_errors = True
                 in_memory_log.write("Validator produced error " + str(error) + " in line " + str(line_number) + "\r\n")
                 in_memory_log.write("line is:\r\n")
-                in_memory_log.write(line)
+                in_memory_log.write(line + "\r\n")
                 _insert_description_and_number(line)
     else:
         in_memory_log.write("EDI check failed on line number: " + str(check_line_number) + "\r\n")
