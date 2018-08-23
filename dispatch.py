@@ -90,7 +90,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         hash_counter += 1
         file_name = os.path.abspath(source_file_path)
         generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
-        print(file_name, generated_file_checksum)
         return file_name, generated_file_checksum
 
     parameters_dict_list = []
