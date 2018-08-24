@@ -177,16 +177,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
                                file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
 
-                match_iter = temp_table.find(file_name=f[0], file_checksum=f[1])
-                match_list = []
-                for entry in match_iter:
-                    match_list.append(entry)
+                match_list = list(temp_table.find(file_name=f[0], file_checksum=f[1]))
                 send_file = False
 
                 if len(match_list) == 0:
                     send_file = True
+                elif len(match_list) == 1:
+                    if match_list[0]['resend_flag'] is True:
+                        send_file = True
                 else:
-                    match_list.reverse()
                     for entry in match_list:
                         if entry['resend_flag'] is True:
                             send_file = True
