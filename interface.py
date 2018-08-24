@@ -34,7 +34,7 @@ from operator import itemgetter
 from tendo import singleton
 
 appname = "Batch File Sender"
-version = "1.23.1"
+version = "1.23.2"
 database_version = "16"
 print(appname + " Version " + version)
 running_platform = platform.system()
