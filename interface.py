@@ -841,7 +841,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             except Exception as select_copy_directory_error:
                 print(select_copy_directory_error)
                 initial_directory = os.getcwd()
-            copy_to_directory = str(askdirectory(parent=self.prefsframe, initialdir=initial_directory))
+            proposed_copy_to_directory = str(askdirectory(parent=self.prefsframe, initialdir=initial_directory))
+            if os.path.isdir(proposed_copy_to_directory):
+                copy_to_directory = proposed_copy_to_directory
 
         def set_send_options_fields_state():
             if not self.settings['enable_email']:
