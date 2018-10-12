@@ -19,6 +19,15 @@ import dataset
 import threading
 import queue
 
+
+def generate_file_hash(source_file_path):
+    # global hash_counter
+    # hash_counter += 1
+    file_name = os.path.abspath(source_file_path)
+    generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
+    return file_name, generated_file_checksum
+
+
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
 hash_counter = 0
@@ -85,13 +94,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             global_edi_validator_error_status = True
         return edi_validator_error_status
 
-    def generate_file_hash(source_file_path):
-        global hash_counter
-        hash_counter += 1
-        file_name = os.path.abspath(source_file_path)
-        generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
-        return file_name, generated_file_checksum
-
     parameters_dict_list = []
     for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
         parameters_dict_list.append(parameters_dict)
@@ -105,11 +107,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                           os.listdir(path=os.path.abspath(entry_dict['folder_name'])) if os.path.isfile(
                     os.path.join(os.path.abspath(entry_dict['folder_name']), file))]
             hash_file_count_total = len(hash_files)
-            print("Generating file hashes " + str(counter) + " of " + str(len(parameters_dict_list)))
+            print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)))
 
             thread_file_hashes = []
 
-            with concurrent.futures.ThreadPoolExecutor() as hash_executor:
+            with concurrent.futures.ProcessPoolExecutor() as hash_executor:
                 for file_path, file_hash in hash_executor.map(generate_file_hash, hash_files):
                     # print(file_path)
                     file_hash_appender = [file_path, file_hash]
@@ -134,7 +136,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         file_count = 0
         file_count_total = 0
         hash_counter = 0
-        update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count, file_count_total, "")
+        update_overlay("processing folder...\n\n", folder_count, folder_total_count, file_count + 1, file_count_total, "")
         if os.path.isdir(parameters_dict['folder_name']) is True:
             print("processing folder " + parameters_dict['folder_name'] + ", aliased as " + parameters_dict['alias'])
             run_log.write(("\r\n\r\nentering folder " + parameters_dict['folder_name'] + ", aliased as " +
@@ -406,7 +408,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                        "Sending File: " + os.path.basename(original_filename))
                     else:
                         update_overlay("processing folder... (updating database records)\n\n", folder_count,
-                                       folder_total_count, db_updated_counter, file_count_total,
+                                       folder_total_count, db_updated_counter + 1, file_count_total,
                                        "Updating Records For: " + os.path.basename(original_filename))
                     if return_errors is False:
                         try:
