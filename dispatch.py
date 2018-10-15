@@ -104,8 +104,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         with concurrent.futures.ProcessPoolExecutor() as hash_executor:
             for counter, entry_dict in enumerate(parameters_dict_list):
                 # create list of all files in directory
-                hash_files = [os.path.abspath(os.path.join(os.path.abspath(entry_dict['folder_name']), file)) for file in
-                              os.listdir(path=os.path.abspath(entry_dict['folder_name'])) if os.path.isfile(
+                hash_files = [os.path.abspath(os.path.join(os.path.abspath(entry_dict['folder_name']), file)) for file
+                              in os.listdir(path=os.path.abspath(entry_dict['folder_name'])) if os.path.isfile(
                         os.path.join(os.path.abspath(entry_dict['folder_name']), file))]
                 hash_file_count_total = len(hash_files)
                 print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)))
@@ -117,7 +117,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     file_hash_appender = [file_path, file_hash]
                     thread_file_hashes.append(file_hash_appender)
                 hash_thread_return_queue.put(dict(folder_name=entry_dict['folder_name'], files=hash_files,
-                                                  file_count_total=hash_file_count_total, file_hashes=thread_file_hashes))
+                                                  file_count_total=hash_file_count_total,
+                                                  file_hashes=thread_file_hashes))
 
     hash_thread_object = threading.Thread(target=hash_thread_target)
     hash_thread_object.start()
