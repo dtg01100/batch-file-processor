@@ -30,11 +30,12 @@ import backup_increment
 import appdirs
 import clear_old_files
 import smtplib
+import multiprocessing
 from operator import itemgetter
 from tendo import singleton
 
 if __name__ == '__main__':
-
+    multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
     database_version = "16"
