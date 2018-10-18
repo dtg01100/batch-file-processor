@@ -15,17 +15,48 @@ import edi_tweaks
 import split_edi
 import clear_old_files
 import concurrent.futures
-import dataset
 import threading
 import queue
+import multiprocessing
 
 
-def generate_file_hash(source_file_path):
-    # global hash_counter
-    # hash_counter += 1
+def generate_match_lists(folder_temp_processed_files_list):
+    folder_hash_dict = []
+    folder_name_dict = []
+    resend_flag_set = []
+
+    for folder_entry in folder_temp_processed_files_list:
+        folder_hash_dict.append((folder_entry['file_name'], folder_entry['file_checksum']))
+        folder_name_dict.append((folder_entry['file_checksum'], folder_entry['file_name']))
+        if folder_entry['resend_flag'] is True:
+            resend_flag_set.append(folder_entry['file_checksum'])
+
+    return folder_hash_dict, folder_name_dict, resend_flag_set
+
+
+def generate_file_hash(source_file_struct):
+    source_file_path, index_number, temp_processed_files_list, \
+       folder_hash_dict, folder_name_dict, resend_flag_set = source_file_struct
+
     file_name = os.path.abspath(source_file_path)
     generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
-    return file_name, generated_file_checksum
+
+    match_found = False
+
+    try:
+        match_hash = folder_hash_dict[file_name]
+        if match_hash == generated_file_checksum:
+            match_found = True
+    except Exception as error:
+        print(error)
+
+    send_file = False
+
+    if not match_found:
+        send_file = True
+    if generated_file_checksum in resend_flag_set:
+        send_file = True
+    return file_name, generated_file_checksum, index_number, send_file
 
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
@@ -99,6 +130,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         parameters_dict_list.append(parameters_dict)
 
     def hash_thread_target():
+        def search_dictionaries(key, value, list_of_dictionaries):
+            return [element for element in list_of_dictionaries if element[key] == value]
+
         global parameters_dict_list
         global hash_thread_return_list
         with concurrent.futures.ProcessPoolExecutor() as hash_executor:
@@ -110,15 +144,56 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 hash_file_count_total = len(hash_files)
                 print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)))
 
-                thread_file_hashes = []
+                folder_temp_processed_files_list = search_dictionaries('folder_id', entry_dict['id'],
+                                                                       temp_processed_files_list)
 
-                for file_path, file_hash in hash_executor.map(generate_file_hash, hash_files):
-                    # print(file_path)
+                folder_hash_dict_list = []
+                folder_name_dict_list = []
+                resend_flag_set_list = []
+
+                split_processed_files_list = [folder_temp_processed_files_list[i:i + multiprocessing.cpu_count()] for
+                                              i in range(0, len(folder_temp_processed_files_list),
+                                                         multiprocessing.cpu_count())]
+
+                for folder_hash_dict, folder_name_dict, resend_flag_set in \
+                        hash_executor.map(generate_match_lists, split_processed_files_list):
+                    folder_hash_dict_list.append(folder_hash_dict)
+                    folder_name_dict_list.append(folder_name_dict)
+                    resend_flag_set_list.append(resend_flag_set)
+
+                folder_hash_dict = []
+                folder_name_dict = []
+                resend_flag_set = []
+
+                list(map(folder_hash_dict.extend, folder_hash_dict_list))
+                list(map(folder_name_dict.extend, folder_name_dict_list))
+                list(map(resend_flag_set.extend, resend_flag_set_list))
+
+                folder_hash_dict = dict(folder_hash_dict)
+                folder_name_dict = dict(folder_name_dict)
+                resend_flag_set = set(resend_flag_set)
+
+                hash_files_struct = zip(hash_files,
+                                        [number for number in range(len(hash_files) + 1)],
+                                        [folder_temp_processed_files_list] * (len(hash_files) + 1),
+                                        [folder_hash_dict] * (len(hash_files) + 1),
+                                        [folder_name_dict] * (len(hash_files) + 1),
+                                        [resend_flag_set] * (len(hash_files) + 1))
+
+                thread_file_hashes = []
+                ahead_filtered_files = []
+
+                for file_path, file_hash, index_number, send_file in hash_executor.map(generate_file_hash,
+                                                                                       hash_files_struct):
                     file_hash_appender = [file_path, file_hash]
                     thread_file_hashes.append(file_hash_appender)
+                    if send_file:
+                        ahead_filtered_files.append(
+                            (index_number, os.path.basename(file_path), file_hash))
+
                 hash_thread_return_queue.put(dict(folder_name=entry_dict['folder_name'], files=hash_files,
                                                   file_count_total=hash_file_count_total,
-                                                  file_hashes=thread_file_hashes))
+                                                  file_hashes=thread_file_hashes, filtered_files=ahead_filtered_files))
 
     hash_thread_object = threading.Thread(target=hash_thread_target)
     hash_thread_object.start()
@@ -127,11 +202,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     processed_counter = 0
     folder_count = 0
     folder_total_count = folders_database.count(folder_is_active="True")
-    # loop over all known active folders, in order of alias name
-    temp_database_connection = dataset.connect('sqlite:///')
-    temp_table = temp_database_connection['temp_table']
+    temp_processed_files_list = []
 
-    temp_table.insert_many(processed_files.find())
+    for entry in processed_files.find():
+        temp_processed_files_list.append(dict(entry))
     for parameters_dict in parameters_dict_list:
         folder_count += 1
         file_count = 0
@@ -154,11 +228,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             hash_thread_return_dict = hash_thread_return_queue.get()
 
-            file_hashes = hash_thread_return_dict['file_hashes']
-
             files = hash_thread_return_dict['files']
 
-            file_count_total = hash_thread_return_dict['file_count_total']
+            filtered_files = hash_thread_return_dict['filtered_files']
 
             print('files are' + str(files))
 
@@ -168,33 +240,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 print("Dictionaries Mismatch")
             assert parameters_dict['folder_name'] == hash_thread_return_dict['folder_name']
 
-            filtered_files = []
+            # filtered_files = []
 
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
-            index_number = 0
-
-            for f in file_hashes:
-                file_count += 1
-                index_number += 1
-                update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Checking File: " + os.path.basename(f[0]))
-
-                match_list = list(temp_table.find(file_name=f[0], file_checksum=f[1]))
-                send_file = False
-
-                if len(match_list) == 0:
-                    send_file = True
-                elif len(match_list) == 1:
-                    if match_list[0]['resend_flag'] is True:
-                        send_file = True
-                else:
-                    for entry in match_list:
-                        if entry['resend_flag'] is True:
-                            send_file = True
-                            break
-                if send_file:
-                    filtered_files.append((index_number, os.path.basename(f[0]), f[1]))
 
             file_count = 0
             folder_errors = False
