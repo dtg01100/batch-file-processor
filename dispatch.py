@@ -17,6 +17,21 @@ import clear_old_files
 import concurrent.futures
 import threading
 import queue
+import multiprocessing
+
+
+def generate_match_lists(folder_temp_processed_files_list):
+    folder_hash_dict = []
+    folder_name_dict = []
+    resend_flag_set = []
+
+    for folder_entry in folder_temp_processed_files_list:
+        folder_hash_dict.append((folder_entry['file_name'], folder_entry['file_checksum']))
+        folder_name_dict.append((folder_entry['file_checksum'], folder_entry['file_name']))
+        if folder_entry['resend_flag'] is True:
+            resend_flag_set.append(folder_entry['file_checksum'])
+
+    return folder_hash_dict, folder_name_dict, resend_flag_set
 
 
 def generate_file_hash(source_file_struct):
@@ -132,15 +147,27 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 folder_temp_processed_files_list = search_dictionaries('folder_id', entry_dict['id'],
                                                                        temp_processed_files_list)
 
+                folder_hash_dict_list = []
+                folder_name_dict_list = []
+                resend_flag_set_list = []
+
+                split_processed_files_list = [folder_temp_processed_files_list[i:i + multiprocessing.cpu_count()] for
+                                              i in range(0, len(folder_temp_processed_files_list),
+                                                         multiprocessing.cpu_count())]
+
+                for folder_hash_dict, folder_name_dict, resend_flag_set in \
+                        hash_executor.map(generate_match_lists, split_processed_files_list):
+                    folder_hash_dict_list.append(folder_hash_dict)
+                    folder_name_dict_list.append(folder_name_dict)
+                    resend_flag_set_list.append(resend_flag_set)
+
                 folder_hash_dict = []
                 folder_name_dict = []
                 resend_flag_set = []
 
-                for folder_entry in folder_temp_processed_files_list:
-                    folder_hash_dict.append((folder_entry['file_name'], folder_entry['file_checksum']))
-                    folder_name_dict.append((folder_entry['file_checksum'], folder_entry['file_name']))
-                    if folder_entry['resend_flag'] is True:
-                        resend_flag_set.append(folder_entry['file_checksum'])
+                list(map(folder_hash_dict.extend, folder_hash_dict_list))
+                list(map(folder_name_dict.extend, folder_name_dict_list))
+                list(map(resend_flag_set.extend, resend_flag_set_list))
 
                 folder_hash_dict = dict(folder_hash_dict)
                 folder_name_dict = dict(folder_name_dict)
