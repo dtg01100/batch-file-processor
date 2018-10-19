@@ -41,14 +41,11 @@ def generate_file_hash(source_file_struct):
     file_name = os.path.abspath(source_file_path)
     generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
 
-    match_found = False
-
     try:
-        match_hash = folder_hash_dict[file_name]
-        if match_hash == generated_file_checksum:
-            match_found = True
-    except Exception as error:
-        print(error)
+        _ = folder_name_dict[generated_file_checksum]
+        match_found = True
+    except KeyError as _:
+        match_found = False
 
     send_file = False
 
@@ -196,7 +193,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                   file_hashes=thread_file_hashes, filtered_files=ahead_filtered_files))
 
     hash_thread_object = threading.Thread(target=hash_thread_target)
-    hash_thread_object.start()
 
     error_counter = 0
     processed_counter = 0
@@ -206,6 +202,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
     for entry in processed_files.find():
         temp_processed_files_list.append(dict(entry))
+    hash_thread_object.start()
     for parameters_dict in parameters_dict_list:
         folder_count += 1
         file_count = 0
