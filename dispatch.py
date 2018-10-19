@@ -17,7 +17,6 @@ import clear_old_files
 import concurrent.futures
 import threading
 import queue
-import multiprocessing
 
 
 def generate_match_lists(folder_temp_processed_files_list):
@@ -148,9 +147,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 folder_name_dict_list = []
                 resend_flag_set_list = []
 
-                split_processed_files_list = [folder_temp_processed_files_list[i:i + multiprocessing.cpu_count()] for
+                split_processed_files_list = [folder_temp_processed_files_list[i:i + 25] for
                                               i in range(0, len(folder_temp_processed_files_list),
-                                                         multiprocessing.cpu_count())]
+                                                         25)]
 
                 for folder_hash_dict, folder_name_dict, resend_flag_set in \
                         hash_executor.map(generate_match_lists, split_processed_files_list):
