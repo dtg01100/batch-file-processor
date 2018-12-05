@@ -34,7 +34,7 @@ from operator import itemgetter
 from tendo import singleton
 
 appname = "Batch File Sender"
-version = "1.23.2"
+version = "1.23.3"
 database_version = "16"
 print(appname + " Version " + version)
 running_platform = platform.system()
@@ -229,7 +229,7 @@ def add_folder_entry(proposed_folder):  # add folder to database, copying config
     print("done")
 
 
-def check_folder_exists(folder):
+def check_folder_exists(check_folder):
     folder_list = folders_table.all()
     for possible_folder in folder_list:
         possible_folder_string = possible_folder['folder_name']
