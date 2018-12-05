@@ -237,7 +237,7 @@ if __name__ == '__main__':
         folder_list = folders_table.all()
         for possible_folder in folder_list:
             possible_folder_string = possible_folder['folder_name']
-            if os.path.samefile(possible_folder_string, check_folder):
+            if os.path.normpath(possible_folder_string) == os.path.normpath(check_folder):
                 return {"truefalse": True, "matched_folder": possible_folder}
         return {"truefalse": False, "matched_folder": None}
 
