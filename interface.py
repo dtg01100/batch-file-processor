@@ -326,7 +326,9 @@ if __name__ == '__main__':
             single_table.drop()
         finally:
             single_table = session_database['single_table']
-            single_table.insert(folders_table.find_one(id=folder_id))
+            table_dict = folders_table.find_one(id=folder_id)
+            table_dict['old_id'] = table_dict.pop('id')
+            single_table.insert(table_dict)
             doingstuffoverlay.destroy_overlay()
             graphical_process_directories(single_table)
             single_table.drop()
