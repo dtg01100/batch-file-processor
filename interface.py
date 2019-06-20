@@ -517,7 +517,7 @@ if __name__ == '__main__':
             self.enable_interval_backup_variable = BooleanVar(master)
             self.enable_reporting_checkbutton_variable = StringVar(master)
             self.enable_report_printing_checkbutton_variable = StringVar(master)
-            self.report_edi_validator_warnings_checkbutton_variable = StringVar(master)
+            self.report_edi_validator_warnings_checkbutton_variable = BooleanVar(master)
 
             report_sending_options_frame = Frame(master)
             email_options_frame = Frame(master)
