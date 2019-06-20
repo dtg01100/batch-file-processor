@@ -1058,6 +1058,7 @@ if __name__ == '__main__':
                 if argument == 'Tweak EDI':
                     self.tweak_edi.set(True)
                     self.process_edi.set('False')
+                    self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
                     self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
                     self.a_record_padding_field.grid(row=9, column=2)
                     self.append_a_records_checkbutton.grid(row=10, column=0, sticky=W, padx=3)

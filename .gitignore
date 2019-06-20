@@ -71,3 +71,7 @@ setup.py
 /backups
 setup.bat
 /build.bat
+/.vscode
+/venv
+.gitignore
+/.mypy_cache
