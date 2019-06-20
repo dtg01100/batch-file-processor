@@ -83,6 +83,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     file_count = 0
     hash_thread_return_queue = queue.Queue()
 
+    try:
+        os.mkdir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
+    except:
+        pass
+
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
         if not args.automatic:
             doingstuffoverlay.update_overlay(parent=root,
@@ -238,19 +243,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             # filtered_files = []
 
-            files = [f for f in os.listdir('.')]  # create list of all files in directory
-            filtered_files = []
-            file_count_total = len(files)
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
-            for f in files:
-                file_count += 1
-                update_overlay("processing folder... (checking files)\n\n", folder_count, folder_total_count,
-                               file_count, file_count_total, "Checking File: " + f)
-                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f),
-                                            file_checksum=hashlib.md5(open(f, 'rb').read()).hexdigest()) is None or \
-                        processed_files.find_one(file_name=os.path.join(os.getcwd(), f), resend_flag=True):
-                    filtered_files.append(f)
 
             file_count = 0
             folder_errors = False
