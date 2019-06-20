@@ -61,6 +61,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
         print("attaching " + filename)
         msg.attach(part)
+        log['old_id'] = log.pop('id')
 
         sent_emails_removal_queue.insert(log)
 
