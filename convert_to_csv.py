@@ -47,12 +47,12 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
                     blank_upc = True
 
                 if blank_upc is False:
-                    proposed_upc = input_edi_dict['upc_number']
-                    if len(str(proposed_upc).rstrip()) == 11:
+                    proposed_upc = input_edi_dict['upc_number'].strip()
+                    if len(str(proposed_upc)) == 11:
                         upc_string = str(proposed_upc) + str(upc_e_to_upc_a.calc_check_digit(proposed_upc))
                     else:
-                        if len(str(proposed_upc).rstrip()) == 8:
-                            upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc.rstrip()))
+                        if len(str(proposed_upc)) == 8:
+                            upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
 
                 upc_in_csv = "\t" + upc_string if conv_calc_upc != "False" and blank_upc is False \
                     else input_edi_dict['upc_number']
