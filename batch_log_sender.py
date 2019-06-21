@@ -49,7 +49,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         root.update()
 
         filename = log['log']
-        attachment = open(filename, "r")
+        attachment = open(filename, "rb")
 
         head, tail = os.path.split(filename)
 
@@ -62,7 +62,8 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         print("attaching " + filename)
         msg.attach(part)
         log['old_id'] = log.pop('id')
-
+        if log['log'].endswith('.zip'):
+            log['log'] = log['log'][:-4]
         sent_emails_removal_queue.insert(log)
 
     server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
