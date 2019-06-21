@@ -33,6 +33,8 @@ import smtplib
 import multiprocessing
 from operator import itemgetter
 from tendo import singleton
+import zipfile
+import copy
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -1449,10 +1451,15 @@ if __name__ == '__main__':
                     emails_count += 1
                     loop_count += 1
                     if os.path.isfile(os.path.abspath(log['log'])):
+                        send_log_file = copy.deepcopy(log)
+                        if os.path.getsize(os.path.abspath(log['log'])) > 9000000:
+                            send_log_file['log'] = str(os.path.abspath(log['log']) + ".zip")
+                            with zipfile.ZipFile(send_log_file['log'], 'w') as zip:
+                                zip.write(os.path.abspath(log['log']), os.path.basename(log['log']), zipfile.ZIP_DEFLATED)
                         # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                         # add size of current file to total
-                        total_size += os.path.getsize(os.path.abspath(log['log']))
-                        emails_table_batch.insert(dict(log=log['log']))
+                        total_size += os.path.getsize(os.path.abspath(send_log_file['log']))
+                        emails_table_batch.insert(dict(log=send_log_file['log']))
                         # if the total size is more than 9mb, then send that set and reset the total
                         if total_size > 9000000 or emails_table_batch.count() >= 15:
                             batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
