@@ -33,7 +33,7 @@ def edi_tweak(edi_process, output_filename, pad_arec, arec_padding, append_arec,
                             upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
                 else:
                     upc_string = "            "
-                writeable_line = "B" + upc_string+line[12:]
+                writeable_line = writeable_line[0:1] + upc_string + writeable_line[12:]
         f.write(writeable_line.replace('\n', "\r\n").encode())
     else:
         f.write(chr(26).encode())
