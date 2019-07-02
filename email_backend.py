@@ -63,5 +63,6 @@ def do(process_parameters, settings, filename):
                 print("Retried 10 times, passing exception to dispatch")
                 raise
             counter += 1
+            time.sleep(counter * counter)
             print("Encountered an error. Retry number " + str(counter))
             print("Error is :" + str(email_error))
