@@ -233,12 +233,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             filtered_files = hash_thread_return_dict['filtered_files']
 
-            print('files are' + str(files))
+            # print('files are' + str(files))
 
             if parameters_dict['folder_name'] == hash_thread_return_dict['folder_name']:
                 print("Dictionaries Match")
             else:
                 print("Dictionaries Mismatch")
+                raise ValueError("desync between current folder {} and current entry in hashed queue {}".format(
+                    parameters_dict['folder_name'], hash_thread_return_dict['folder_name']
+                    ))
             assert parameters_dict['folder_name'] == hash_thread_return_dict['folder_name']
 
             # filtered_files = []
