@@ -128,6 +128,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
     parameters_dict_list = []
     for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
+        try:
+            parameters_dict['old_id'] = parameters_dict.pop('old_id')
+        except KeyError:
+            pass
         parameters_dict_list.append(parameters_dict)
 
     def hash_thread_target():
@@ -145,7 +149,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 hash_file_count_total = len(hash_files)
                 print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)))
 
-                folder_temp_processed_files_list = search_dictionaries('folder_id', entry_dict['id'],
+                try:
+                    search_folder_id = entry_dict['old_id']
+                except KeyError:
+                    search_folder_id = entry_dict['id']
+
+                folder_temp_processed_files_list = search_dictionaries('folder_id', search_folder_id,
                                                                        temp_processed_files_list)
 
                 folder_hash_dict_list = []
