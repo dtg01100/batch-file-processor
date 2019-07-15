@@ -129,7 +129,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     parameters_dict_list = []
     for parameters_dict in folders_database.find(folder_is_active="True", order_by="alias"):
         try:
-            parameters_dict['old_id'] = parameters_dict.pop('old_id')
+            parameters_dict['id'] = parameters_dict.pop('old_id')
         except KeyError:
             pass
         parameters_dict_list.append(parameters_dict)
