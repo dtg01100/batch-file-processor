@@ -32,7 +32,6 @@ import clear_old_files
 import smtplib
 import multiprocessing
 from operator import itemgetter
-from tendo import singleton
 import zipfile
 import copy
 
@@ -59,9 +58,6 @@ if __name__ == '__main__':
         os.makedirs(config_folder)
     except FileExistsError:
         pass
-
-    # prevent multiple instances from running
-    me = singleton.SingleInstance()
 
     if not os.path.isfile(database_path):  # if the database file is missing
         try:
