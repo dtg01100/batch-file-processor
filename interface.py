@@ -230,7 +230,8 @@ if __name__ == '__main__':
                                   force_edi_validation=defaults['force_edi_validation'],
                                   append_a_records=defaults['append_a_records'],
                                   a_record_append_text=defaults['a_record_append_text'],
-                                  force_txt_file_ext=defaults['force_txt_file_ext']
+                                  force_txt_file_ext=defaults['force_txt_file_ext'],
+                                  invoice_date_offset=defaults['invoice_date_offset']
                                   ))
         print("done")
 
