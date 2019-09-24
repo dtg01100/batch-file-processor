@@ -40,7 +40,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "16"
+    database_version = "17"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -814,6 +814,7 @@ if __name__ == '__main__':
             self.process_backend_email_check = BooleanVar(master)
             self.force_edi_check_var = BooleanVar(master)
             self.header_frame_frame = Frame(master)
+            self.invoice_date_offset = IntVar(master)
             Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
             Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
             Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E + W, pady=2)
@@ -1005,6 +1006,9 @@ if __name__ == '__main__':
                                                               variable=self.force_txt_file_ext_check,
                                                               text="Force .txt file extension",
                                                               onvalue="True", offvalue="False")
+            self.invoice_date_offset_spinbox_label = Label(self.convert_options_frame, text="Invoice Offset (Days)")
+            self.invoice_date_offset_spinbox = Spinbox(self.convert_options_frame, textvariable=self.invoice_date_offset,
+                                                       from_=-14, to=14, width=3)
 
             self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
             if self.foldersnameinput['folder_name'] != 'template':
@@ -1033,6 +1037,7 @@ if __name__ == '__main__':
             self.append_arec_check.set(self.foldersnameinput['append_a_records'])
             self.a_record_append_field.insert(0, self.foldersnameinput['a_record_append_text'])
             self.force_txt_file_ext_check.set(self.foldersnameinput['force_txt_file_ext'])
+            self.invoice_date_offset.set(self.foldersnameinput['invoice_date_offset'])
 
             def reset_ediconvert_options(argument):
                 for child in self.convert_options_frame.winfo_children():
@@ -1068,6 +1073,8 @@ if __name__ == '__main__':
                     self.append_a_records_checkbutton.grid(row=10, column=0, sticky=W, padx=3)
                     self.a_record_append_field.grid(row=10, column=2)
                     self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=W, padx=3)
+                    self.invoice_date_offset_spinbox_label.grid(row=12, column=0, sticky=W, padx=3)
+                    self.invoice_date_offset_spinbox.grid(row=12, column=2, sticky=W, padx=3)
 
             if self.foldersnameinput['process_edi'] == 'True':
                 self.ediconvert_options.set("Convert EDI")
@@ -1162,6 +1169,7 @@ if __name__ == '__main__':
             apply_to_folder['append_a_records'] = str(self.append_arec_check.get())
             apply_to_folder['a_record_append_text'] = str(self.a_record_append_field.get())
             apply_to_folder['force_txt_file_ext'] = str(self.force_txt_file_ext_check.get())
+            apply_to_folder['invoice_date_offset'] = int(self.invoice_date_offset.get())
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
@@ -1279,6 +1287,10 @@ if __name__ == '__main__':
 
             if len(str(self.a_record_append_field.get())) is not 6 and str(self.append_arec_check.get()) == "True":
                 error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters\r\n')
+                errors = True
+
+            if int(self.invoice_date_offset.get()) not in [i for i in range(-14,15)]:
+                error_string_constructor_list.append("Invoice date offset not in valid range")
                 errors = True
 
             if self.foldersnameinput['folder_name'] != 'template':

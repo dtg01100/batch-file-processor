@@ -164,3 +164,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "force_txt_file_ext" = "False"')
         update_version = dict(id=1, version="16", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '16':
+        database_connection.query("alter table 'folders' add column 'invoice_date_offset'")
+        database_connection.query('UPDATE "folders" SET "invoice_date_offset" = 0')
+        database_connection.query("alter table 'administrative' add column 'invoice_date_offset'")
+        database_connection.query('UPDATE "administrative" SET "invoice_date_offset" = 0')
+        update_version = dict(id=1, version="17", os=running_platform)
+        db_version.update(update_version, ['id'])

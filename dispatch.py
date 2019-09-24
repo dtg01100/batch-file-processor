@@ -374,7 +374,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                                 parameters_dict['append_a_records'],
                                                                                 parameters_dict['a_record_append_text'],
                                                                                 parameters_dict['force_txt_file_ext'],
-                                                                                parameters_dict['calculate_upc_check_digit'])
+                                                                                parameters_dict['calculate_upc_check_digit'],
+                                                                                parameters_dict['invoice_date_offset'])
                                 except Exception as process_error:
                                     print(str(process_error))
                                     errors = True
