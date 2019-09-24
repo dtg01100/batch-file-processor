@@ -320,7 +320,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
                     process_files_log.append("Cannot split edi file\r\n\r\n")
                     print("Cannot split edi file")
-                    split_edi_list = [input_filename]
                 for output_send_filename in split_edi_list:
                     if errors is True:
                         break

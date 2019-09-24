@@ -1,4 +1,5 @@
 import os
+import line_from_mtc_edi_to_dict
 
 
 def do_split_edi(edi_process, work_directory):
@@ -25,8 +26,6 @@ def do_split_edi(edi_process, work_directory):
         list_of_first_characters = []
         for line in work_file_lined:
             list_of_first_characters.append(line[0])
-        if list_of_first_characters.count("A") == 1:
-            return edi_send_list
         if list_of_first_characters.count("A") > 700:
             return edi_send_list
         for line_mum, line in enumerate(work_file_lined):  # iterate over work file contents
@@ -34,10 +33,15 @@ def do_split_edi(edi_process, work_directory):
             if writeable_line.startswith("A"):
                 count += 1
                 prepend_letters = col_to_excel(count)
+                line_dict = line_from_mtc_edi_to_dict.capture_records(writeable_line)
+                if int(line_dict['invoice_total']) < 0:
+                    file_name_suffix = '.cr'
+                else:
+                    file_name_suffix = '.inv'
                 if not len(edi_send_list) == 0:
                     f.close()
                 edi_send_list.append(output_file_path)
-                output_file_path = os.path.join(work_directory, prepend_letters + " " + os.path.basename(edi_process))
+                output_file_path = os.path.join(work_directory, prepend_letters + " " + os.path.basename(edi_process) + file_name_suffix)
                 f = open(output_file_path, 'wb')
             f.write(writeable_line.replace('\n', "\r\n").encode())
             write_counter += 1
