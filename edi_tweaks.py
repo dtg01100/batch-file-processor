@@ -13,9 +13,11 @@ def edi_tweak(edi_process, output_filename, pad_arec, arec_padding, append_arec,
         writeable_line = line
         if writeable_line.startswith("A"):
             if invoice_date_offset != 0:
-                invoice_date = datetime.strptime(line_from_mtc_edi_to_dict.capture_records(writeable_line)['invoice_date'], '%m%d%y')
-                offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
-                writeable_line = writeable_line[0:17] + datetime.strftime(offset_invoice_date, '%m%d%y') + writeable_line[23:]
+                invoice_date_string = line_from_mtc_edi_to_dict.capture_records(writeable_line)['invoice_date']
+                if not invoice_date_string == '000000':
+                    invoice_date = datetime.strptime(invoice_date_string, '%m%d%y')
+                    offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
+                    writeable_line = writeable_line[0:17] + datetime.strftime(offset_invoice_date, '%m%d%y') + writeable_line[23:]
             if pad_arec == "True":
                 writeable_line = writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:]  # write "A" line
             if append_arec == "True":
