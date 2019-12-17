@@ -1127,6 +1127,14 @@ if __name__ == '__main__':
                                                'Do Nothing', 'Convert EDI', 'Tweak EDI', command=reset_ediconvert_options)
 
             def config_from_others():
+                def recurse_set_default(parent):
+                    for child in parent.winfo_children():
+                        try:
+                            child.configure(state=NORMAL)
+                        except Exception:
+                            pass
+                        recurse_set_default(child)
+                recurse_set_default(master)
                 settings_table = folders_table.find_one(alias=self.otherslistbox.get(ACTIVE))
                 set_dialog_variables(settings_table, True)
                 set_header_state()
