@@ -786,10 +786,12 @@ if __name__ == '__main__':
             self.convert_formats_var = StringVar(master)
             self.title("Folder Settings")
             self.bodyframe = Frame(master)
+            self.othersframe = Frame(self.bodyframe)
             self.folderframe = Frame(self.bodyframe)
             self.prefsframe = Frame(self.bodyframe)
             self.ediframe = Frame(self.bodyframe)
             self.convert_options_frame = Frame(self.ediframe)
+            self.separatorv0 = Separator(self.bodyframe, orient=VERTICAL)
             self.separatorv1 = Separator(self.bodyframe, orient=VERTICAL)
             self.separatorv2 = Separator(self.bodyframe, orient=VERTICAL)
             self.backendvariable = StringVar(master)
@@ -812,6 +814,12 @@ if __name__ == '__main__':
             self.force_edi_check_var = BooleanVar(master)
             self.header_frame_frame = Frame(master)
             self.invoice_date_offset = IntVar(master)
+            self.otherslistboxframe = Frame(master=self.othersframe)
+            self.otherslistbox = Listbox(master=self.otherslistboxframe)
+            self.otherslistboxscrollbar = Scrollbar(master=self.otherslistboxframe, orient=VERTICAL)
+            self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
+            self.otherslistbox.config(yscrollcommand=self.otherslistboxscrollbar.set)
+            self.copyconfigbutton = Button(master=self.othersframe, text="Copy Config")
             Label(self.folderframe, text="Backends:").grid(row=2, sticky=W)
             Label(self.prefsframe, text="Copy Backend Settings:").grid(row=3, columnspan=2, pady=3)
             Separator(self.prefsframe, orient=HORIZONTAL).grid(row=5, columnspan=2, sticky=E + W, pady=2)
@@ -1007,34 +1015,66 @@ if __name__ == '__main__':
             self.invoice_date_offset_spinbox = Spinbox(self.convert_options_frame, textvariable=self.invoice_date_offset,
                                                        from_=-14, to=14, width=3)
 
-            self.active_checkbutton.set(self.foldersnameinput['folder_is_active'])
-            if self.foldersnameinput['folder_name'] != 'template':
-                self.folder_alias_field.insert(0, self.foldersnameinput['alias'])
-            self.process_backend_copy_check.set(self.foldersnameinput['process_backend_copy'])
-            self.process_backend_ftp_check.set(self.foldersnameinput['process_backend_ftp'])
-            self.process_backend_email_check.set(self.foldersnameinput['process_backend_email'])
-            self.ftp_server_field.insert(0, self.foldersnameinput['ftp_server'])
-            self.ftp_port_field.insert(0, self.foldersnameinput['ftp_port'])
-            self.ftp_folder_field.insert(0, self.foldersnameinput['ftp_folder'])
-            self.ftp_username_field.insert(0, self.foldersnameinput['ftp_username'])
-            self.ftp_password_field.insert(0, self.foldersnameinput['ftp_password'])
-            self.email_recepient_field.insert(0, self.foldersnameinput['email_to'])
-            self.email_sender_subject_field.insert(0, self.foldersnameinput['email_subject_line'])
-            self.force_edi_check_var.set(self.foldersnameinput['force_edi_validation'])
-            self.process_edi.set(self.foldersnameinput['process_edi'])
-            self.upc_var_check.set(self.foldersnameinput['calculate_upc_check_digit'])
-            self.a_rec_var_check.set(self.foldersnameinput['include_a_records'])
-            self.c_rec_var_check.set(self.foldersnameinput['include_c_records'])
-            self.headers_check.set(self.foldersnameinput['include_headers'])
-            self.ampersand_check.set(self.foldersnameinput['filter_ampersand'])
-            self.pad_arec_check.set(self.foldersnameinput['pad_a_records'])
-            self.tweak_edi.set(self.foldersnameinput['tweak_edi'])
-            self.split_edi.set(self.foldersnameinput['split_edi'])
-            self.a_record_padding_field.insert(0, self.foldersnameinput['a_record_padding'])
-            self.append_arec_check.set(self.foldersnameinput['append_a_records'])
-            self.a_record_append_field.insert(0, self.foldersnameinput['a_record_append_text'])
-            self.force_txt_file_ext_check.set(self.foldersnameinput['force_txt_file_ext'])
-            self.invoice_date_offset.set(self.foldersnameinput['invoice_date_offset'])
+            def set_dialog_variables(config_dict, copied):
+                if copied:
+                    for child in self.bodyframe.winfo_children():
+                        try:
+                            child.configure(state=NORMAL)
+                        except Exception:
+                            pass
+                self.active_checkbutton.set(config_dict['folder_is_active'])
+                if config_dict['folder_name'] != 'template' and not copied:
+                    self.folder_alias_field.insert(0, config_dict['alias'])
+                self.process_backend_copy_check.set(config_dict['process_backend_copy'])
+                self.process_backend_ftp_check.set(config_dict['process_backend_ftp'])
+                self.process_backend_email_check.set(config_dict['process_backend_email'])
+
+                self.ftp_server_field.delete(0, END)
+                self.ftp_port_field.delete(0, END)
+                self.ftp_folder_field.delete(0, END)
+                self.ftp_username_field.delete(0, END)
+                self.ftp_password_field.delete(0, END)
+                self.email_recepient_field.delete(0, END)
+                self.email_sender_subject_field.delete(0, END)
+                
+                self.ftp_server_field.insert(0, config_dict['ftp_server'])
+                self.ftp_port_field.insert(0, config_dict['ftp_port'])
+                self.ftp_folder_field.insert(0, config_dict['ftp_folder'])
+                self.ftp_username_field.insert(0, config_dict['ftp_username'])
+                self.ftp_password_field.insert(0, config_dict['ftp_password'])
+                self.email_recepient_field.insert(0, config_dict['email_to'])
+                self.email_sender_subject_field.insert(0, config_dict['email_subject_line'])
+
+                self.force_edi_check_var.set(config_dict['force_edi_validation'])
+                self.process_edi.set(config_dict['process_edi'])
+                self.upc_var_check.set(config_dict['calculate_upc_check_digit'])
+                self.a_rec_var_check.set(config_dict['include_a_records'])
+                self.c_rec_var_check.set(config_dict['include_c_records'])
+                self.headers_check.set(config_dict['include_headers'])
+                self.ampersand_check.set(config_dict['filter_ampersand'])
+                self.pad_arec_check.set(config_dict['pad_a_records'])
+                self.tweak_edi.set(config_dict['tweak_edi'])
+                self.split_edi.set(config_dict['split_edi'])
+                self.a_record_padding_field.delete(0, END)
+                self.a_record_padding_field.insert(0, config_dict['a_record_padding'])
+                self.append_arec_check.set(config_dict['append_a_records'])
+                self.a_record_append_field.delete(0, END)
+                self.a_record_append_field.insert(0, config_dict['a_record_append_text'])
+                self.force_txt_file_ext_check.set(config_dict['force_txt_file_ext'])
+                self.invoice_date_offset.set(config_dict['invoice_date_offset'])
+
+                if copied:
+                    if config_dict['process_edi'] == 'True':
+                        self.ediconvert_options.set("Convert EDI")
+                        reset_ediconvert_options('Convert EDI')
+                    elif config_dict['tweak_edi'] is True:
+                        self.ediconvert_options.set("Tweak EDI")
+                        reset_ediconvert_options('Tweak EDI')
+                    else:
+                        self.ediconvert_options.set("Do Nothing")
+                        reset_ediconvert_options('Do Nothing')
+            
+            set_dialog_variables(self.foldersnameinput, False)
 
             def reset_ediconvert_options(argument):
                 for child in self.convert_options_frame.winfo_children():
@@ -1086,6 +1126,14 @@ if __name__ == '__main__':
             self.edi_options_menu = OptionMenu(self.ediframe, self.ediconvert_options, self.ediconvert_options.get(),
                                                'Do Nothing', 'Convert EDI', 'Tweak EDI', command=reset_ediconvert_options)
 
+            def config_from_others():
+                settings_table = folders_table.find_one(alias=self.otherslistbox.get(ACTIVE))
+                set_dialog_variables(settings_table, True)
+                set_header_state()
+                set_send_options_fields_state()
+
+            self.copyconfigbutton.configure(command=config_from_others)
+
             set_header_state()
             set_send_options_fields_state()
 
@@ -1105,10 +1153,20 @@ if __name__ == '__main__':
             self.ftp_password_field.grid(row=11, column=1)
             self.email_recepient_field.grid(row=14, column=1)
             self.email_sender_subject_field.grid(row=18, column=1)
+            self.otherslistbox.pack(side=LEFT, fill=Y)
+            self.otherslistboxscrollbar.pack(side=RIGHT, fill=Y)
+            self.copyconfigbutton.pack()
+
+            for entry in folders_table.all():
+                self.otherslistbox.insert(END, entry['alias'])
+            self.otherslistbox.config(width=0, height=0)
 
             self.header_frame_frame.pack(fill=X)
             self.bodyframe.pack()
 
+            self.othersframe.pack(side=LEFT, fill=Y)
+            self.otherslistboxframe.pack(side=LEFT, fill=Y)
+            self.separatorv0.pack(side=LEFT, fill=Y, padx=2)
             self.folderframe.pack(side=LEFT, anchor='n')
             self.separatorv1.pack(side=LEFT, fill=Y, padx=2)
             self.prefsframe.pack(side=LEFT, anchor='n')
