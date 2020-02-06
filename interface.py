@@ -1185,7 +1185,7 @@ if __name__ == '__main__':
 
             for entry in folders_table.all():
                 self.otherslistbox.insert(END, entry['alias'])
-            self.otherslistbox.config(width=0, height=0)
+            self.otherslistbox.config(width=0, height=10)
 
             self.header_frame_frame.pack(fill=X)
             self.bodyframe.pack()
