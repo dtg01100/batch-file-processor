@@ -38,7 +38,7 @@ import copy
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
-    version = "1.27.0"
+    version = "1.27.1"
     database_version = "17"
     print(appname + " Version " + version)
     running_platform = platform.system()
