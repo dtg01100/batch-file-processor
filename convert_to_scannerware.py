@@ -15,7 +15,7 @@ def edi_convert(edi_process, output_filename, arec_padding, append_arec, append_
         line_builder_list = []
         if writeable_line.startswith("A"):
             line_builder_list.append(input_edi_dict['record_type'])
-            line_builder_list.append(arec_padding)
+            line_builder_list.append(arec_padding.ljust(6))
             line_builder_list.append(input_edi_dict['invoice_number'][-7:])
             line_builder_list.append('   ')
 
