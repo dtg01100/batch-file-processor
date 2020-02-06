@@ -365,7 +365,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 if parameters_dict['convert_to_format'] == "ScannerWare":
                                     output_filename = os.path.join(
                                         file_scratch_folder,
-                                        os.path.basename(stripped_filename) + ".csv")
+                                        os.path.basename(stripped_filename))
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:

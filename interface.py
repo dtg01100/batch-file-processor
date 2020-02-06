@@ -838,8 +838,32 @@ if __name__ == '__main__':
             self.convert_options_frame.grid(column=0, row=5, columnspan=2, sticky=W)
             self.convert_to_selector_frame = Frame(self.convert_options_frame)
             self.convert_to_selector_label = Label(self.convert_to_selector_frame, text="Convert To: ")
+
+            def make_convert_to_options(_=None):
+                for frameentry in [self.upc_variable_process_checkbutton,
+                    self.a_record_checkbutton,
+                    self.c_record_checkbutton,
+                    self.headers_checkbutton,
+                    self.ampersand_checkbutton,
+                    self.pad_a_records_checkbutton,
+                    self.a_record_padding_field]:
+                    frameentry.grid_forget()
+                if self.convert_formats_var.get() == 'csv':
+                    self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
+                    self.a_record_checkbutton.grid(row=4, column=0, sticky=W, padx=3)
+                    self.c_record_checkbutton.grid(row=5, column=0, sticky=W, padx=3)
+                    self.headers_checkbutton.grid(row=6, column=0, sticky=W, padx=3)
+                    self.ampersand_checkbutton.grid(row=7, column=0, sticky=W, padx=3)
+                    self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
+                    self.a_record_padding_field.grid(row=9, column=2)
+                if self.convert_formats_var.get() == 'ScannerWare':
+                    self.pad_a_records_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
+                    self.a_record_padding_field.grid(row=2, column=2)
+                    self.append_a_records_checkbutton.grid(row=3, column=0, sticky=W, padx=3)
+                    self.a_record_append_field.grid(row=3, column=2)
+
             self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
-                                                       self.foldersnameinput['convert_to_format'], 'csv')
+                                                       self.foldersnameinput['convert_to_format'], 'csv', 'ScannerWare', command=make_convert_to_options)
 
             def show_folder_path():
                 showinfo(parent=master, title="Folder Path", message=self.foldersnameinput['folder_name'])
@@ -1094,13 +1118,7 @@ if __name__ == '__main__':
                     self.convert_to_selector_frame.grid(row=0, column=0, columnspan=2)
                     self.convert_to_selector_label.grid(row=0, column=0, sticky=W)
                     self.convert_to_selector_menu.grid(row=0, column=1, sticky=W)
-                    self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
-                    self.a_record_checkbutton.grid(row=4, column=0, sticky=W, padx=3)
-                    self.c_record_checkbutton.grid(row=5, column=0, sticky=W, padx=3)
-                    self.headers_checkbutton.grid(row=6, column=0, sticky=W, padx=3)
-                    self.ampersand_checkbutton.grid(row=7, column=0, sticky=W, padx=3)
-                    self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
-                    self.a_record_padding_field.grid(row=9, column=2)
+                    make_convert_to_options()
                 if argument == 'Tweak EDI':
                     self.tweak_edi.set(True)
                     self.process_edi.set('False')
