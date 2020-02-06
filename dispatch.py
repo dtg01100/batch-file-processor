@@ -4,6 +4,7 @@ import copy_backend
 import ftp_backend
 import email_backend
 import convert_to_csv
+import convert_to_scannerware
 import os
 import time
 import record_error
@@ -360,6 +361,37 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                 output_send_filename),
                                                             "EDI Processor",
                                                             True)
+
+                                if parameters_dict['convert_to_format'] == "ScannerWare":
+                                    output_filename = os.path.join(
+                                        file_scratch_folder,
+                                        os.path.basename(stripped_filename) + ".csv")
+                                    if os.path.exists(os.path.dirname(output_filename)) is False:
+                                        os.mkdir(os.path.dirname(output_filename))
+                                    try:
+                                        process_files_log.append(
+                                            ("converting " + output_send_filename + " from EDI to ScannerWare\r\n"))
+                                        print("converting " + output_send_filename + " from EDI to ScannerWare")
+                                        convert_to_scannerware.edi_convert(output_send_filename, output_filename,
+                                                                   parameters_dict['a_record_padding'],
+                                                                           parameters_dict['append_a_records'],
+                                                                           parameters_dict['a_record_append_text'],
+                                                                           parameters_dict['force_txt_file_ext'],
+                                                                           parameters_dict['invoice_date_offset'])
+                                        process_files_log.append("Success\r\n\r\n")
+                                        output_send_filename = output_filename
+                                    except Exception as process_error:
+                                        print(str(process_error))
+                                        errors = True
+                                        process_files_log, process_files_error_log = \
+                                            record_error.do(process_files_log,
+                                                            process_files_error_log,
+                                                            str(process_error),
+                                                            str(
+                                                                output_send_filename),
+                                                            "EDI Processor",
+                                                            True)
+
 
                             if parameters_dict['tweak_edi'] is True:
                                 output_filename = \
