@@ -373,7 +373,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             ("converting " + output_send_filename + " from EDI to ScannerWare\r\n"))
                                         print("converting " + output_send_filename + " from EDI to ScannerWare")
                                         convert_to_scannerware.edi_convert(output_send_filename, output_filename,
-                                                                   parameters_dict['a_record_padding'],
+                                                                           parameters_dict['a_record_padding'],
                                                                            parameters_dict['append_a_records'],
                                                                            parameters_dict['a_record_append_text'],
                                                                            parameters_dict['force_txt_file_ext'],
@@ -391,7 +391,6 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                 output_send_filename),
                                                             "EDI Processor",
                                                             True)
-
 
                             if parameters_dict['tweak_edi'] is True:
                                 output_filename = \
