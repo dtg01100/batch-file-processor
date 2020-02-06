@@ -1362,6 +1362,10 @@ if __name__ == '__main__':
                 error_string_constructor_list.append("No Backend Is Selected")
                 errors = True
 
+            if not str(self.pad_arec_check.get()) == "True" and self.convert_formats_var.get() == 'ScannerWare':
+                error_string_constructor_list.append('"A" Record Padding Needs To Be Enabled For ScannerWare Backend')
+                errors = True
+
             if len(str(self.a_record_padding_field.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
                 errors = True
