@@ -34,6 +34,7 @@ import multiprocessing
 from operator import itemgetter
 import zipfile
 import copy
+import pyodbc
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -517,6 +518,7 @@ if __name__ == '__main__':
             self.enable_reporting_checkbutton_variable = StringVar(master)
             self.enable_report_printing_checkbutton_variable = StringVar(master)
             self.report_edi_validator_warnings_checkbutton_variable = BooleanVar(master)
+            self.odbc_drivers_var = StringVar(master)
 
             as400_db_connection_frame = Frame(master=master)
             report_sending_options_frame = Frame(master)
@@ -582,6 +584,9 @@ if __name__ == '__main__':
                                                                   text="Enable interval backup")
             self.interval_backup_interval_label = Label(interval_backups_frame, text="Backup interval: ")
             self.interval_backup_spinbox = Spinbox(interval_backups_frame, from_=1, to=5000, width=4, justify=RIGHT)
+            self.odbc_driver_selector_menu = OptionMenu(as400_db_connection_frame, self.odbc_drivers_var,
+                                            self.settings['odbc_driver'], *[i for i in pyodbc.drivers()])
+
             self.as400_address_field = Entry(as400_db_connection_frame, width=40)
             self.as400_username_field = Entry(as400_db_connection_frame, width=40)
             self.as400_password_field = Entry(as400_db_connection_frame, width=40)
@@ -653,6 +658,7 @@ if __name__ == '__main__':
             interval_backups_frame.columnconfigure(0, weight=1)
             self.run_reporting_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
             self.report_edi_validator_warnings_checkbutton.grid(row=4, column=0, padx=2, pady=2, sticky=W)
+            self.odbc_driver_selector_menu.grid(row=1, column=1)
             self.as400_address_field.grid(row=2, column=1, padx=2, pady=2)
             self.as400_username_field.grid(row=3, column=1, padx=2, pady=2)
             self.as400_password_field.grid(row=4, column=1, padx=2, pady=2)
