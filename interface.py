@@ -530,8 +530,8 @@ if __name__ == '__main__':
 
             Label(as400_db_connection_frame, text="ODBC Driver:").grid(row=1, column=0, sticky=E)
             Label(as400_db_connection_frame, text="AS400 Address:").grid(row=2, column=0, sticky=E)
-            Label(as400_db_connection_frame, text="AS400 Password:").grid(row=3, column=0, sticky=E)
-            Label(as400_db_connection_frame, text="AS400 Username:").grid(row=4, column=0, sticky=E)
+            Label(as400_db_connection_frame, text="AS400 Username:").grid(row=3, column=0, sticky=E)
+            Label(as400_db_connection_frame, text="AS400 Password:").grid(row=4, column=0, sticky=E)
 
             Label(email_options_frame, text="Email Address:").grid(row=1, sticky=E)
             Label(email_options_frame, text="Email Username:").grid(row=2, sticky=E)
@@ -778,6 +778,10 @@ if __name__ == '__main__':
             root.update()
             folders_name_apply['enable_reporting'] = str(self.enable_reporting_checkbutton_variable.get())
             folders_name_apply['logs_directory'] = self.logs_directory
+            self.settings['odbc_driver'] = self.odbc_drivers_var.get()
+            self.settings['as400_username'] = self.as400_username_field.get()
+            self.settings['as400_password'] = self.as400_password_field.get()
+            self.settings['as400_address'] = self.as400_address_field.get()
             self.settings['enable_email'] = self.enable_email_checkbutton_variable.get()
             self.settings['email_address'] = str(self.email_address_field.get())
             self.settings['email_username'] = str(self.email_username_field.get())
