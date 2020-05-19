@@ -39,7 +39,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "17"
+    database_version = "18"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -518,16 +518,25 @@ if __name__ == '__main__':
             self.enable_report_printing_checkbutton_variable = StringVar(master)
             self.report_edi_validator_warnings_checkbutton_variable = BooleanVar(master)
 
+            as400_db_connection_frame = Frame(master=master)
             report_sending_options_frame = Frame(master)
             email_options_frame = Frame(master)
             interval_backups_frame = Frame(master)
+
+            # Label(master, text='Test').grid(row=0, column=0)
+            as400_db_connection_frame.grid(row=0, column=0, sticky=(W,E), columnspan=2)
+
+            Label(as400_db_connection_frame, text="ODBC Driver:").grid(row=1, column=0, sticky=E)
+            Label(as400_db_connection_frame, text="AS400 Address:").grid(row=2, column=0, sticky=E)
+            Label(as400_db_connection_frame, text="AS400 Password:").grid(row=3, column=0, sticky=E)
+            Label(as400_db_connection_frame, text="AS400 Username:").grid(row=4, column=0, sticky=E)
 
             Label(email_options_frame, text="Email Address:").grid(row=1, sticky=E)
             Label(email_options_frame, text="Email Username:").grid(row=2, sticky=E)
             Label(email_options_frame, text="Email Password:").grid(row=3, sticky=E)
             Label(email_options_frame, text="Email SMTP Server:").grid(row=4, sticky=E)
             Label(email_options_frame, text="Email SMTP Port").grid(row=5, sticky=E)
-            Label(report_sending_options_frame, text="Email Destination:").grid(row=6, sticky=E)
+            Label(report_sending_options_frame, text="Email Destination:").grid(row=7, sticky=E)
 
             def reporting_options_fields_state_set():
                 if self.enable_reporting_checkbutton_variable.get() == "False":
@@ -573,6 +582,9 @@ if __name__ == '__main__':
                                                                   text="Enable interval backup")
             self.interval_backup_interval_label = Label(interval_backups_frame, text="Backup interval: ")
             self.interval_backup_spinbox = Spinbox(interval_backups_frame, from_=1, to=5000, width=4, justify=RIGHT)
+            self.as400_address_field = Entry(as400_db_connection_frame, width=40)
+            self.as400_username_field = Entry(as400_db_connection_frame, width=40)
+            self.as400_password_field = Entry(as400_db_connection_frame, width=40)
             self.email_address_field = Entry(email_options_frame, width=40)
             self.email_username_field = Entry(email_options_frame, width=40)
             self.email_password_field = Entry(email_options_frame, show="*", width=40)
@@ -582,11 +594,17 @@ if __name__ == '__main__':
             self.log_printing_fallback_checkbutton = \
                 Checkbutton(report_sending_options_frame, variable=self.enable_report_printing_checkbutton_variable,
                             onvalue="True", offvalue="False", text="Enable Report Printing Fallback:")
+            rclick_as400_address_field = rclick_menu.RightClickMenu(self.as400_address_field)
+            rclick_as400_username_field = rclick_menu.RightClickMenu(self.as400_username_field)
+            rclick_as400_password_field = rclick_menu.RightClickMenu(self.as400_password_field)
             rclick_report_email_address_field = rclick_menu.RightClickMenu(self.email_address_field)
             rclick_report_email_username_field = rclick_menu.RightClickMenu(self.email_username_field)
             rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(self.email_smtp_server_field)
             rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(self.smtp_port_field)
             rclick_report_email_destination_field = rclick_menu.RightClickMenu(self.report_email_destination_field)
+            self.as400_address_field.bind("<3>", rclick_as400_address_field)
+            self.as400_username_field.bind("<3>", rclick_as400_username_field)
+            self.as400_password_field.bind("<3>", rclick_as400_password_field)
             self.email_address_field.bind("<3>", rclick_report_email_address_field)
             self.email_username_field.bind("<3>", rclick_report_email_username_field)
             self.email_smtp_server_field.bind("<3>", rclick_report_email_smtp_server_field)
@@ -610,6 +628,9 @@ if __name__ == '__main__':
 
             self.enable_email_checkbutton_variable.set(self.settings['enable_email'])
             self.enable_reporting_checkbutton_variable.set(self.foldersnameinput['enable_reporting'])
+            self.as400_address_field.insert(0, self.settings['as400_address'])
+            self.as400_username_field.insert(0, self.settings['as400_username'])
+            self.as400_password_field.insert(0, self.settings['as400_password'])
             self.email_address_field.insert(0, self.settings['email_address'])
             self.email_username_field.insert(0, self.settings['email_username'])
             self.email_password_field.insert(0, self.settings['email_password'])
@@ -625,21 +646,24 @@ if __name__ == '__main__':
             email_options_fields_state_set()
             reporting_options_fields_state_set()
 
-            self.enable_email_checkbutton.grid(row=0, columnspan=3, sticky=W)
-            email_options_frame.grid(row=1, columnspan=3)
-            report_sending_options_frame.grid(row=4, columnspan=3)
-            interval_backups_frame.grid(row=8, column=0, columnspan=3, sticky=W + E)
+            self.enable_email_checkbutton.grid(row=1, columnspan=3, sticky=W)
+            email_options_frame.grid(row=2, columnspan=3)
+            report_sending_options_frame.grid(row=5, columnspan=3)
+            interval_backups_frame.grid(row=9, column=0, columnspan=3, sticky=W + E)
             interval_backups_frame.columnconfigure(0, weight=1)
-            self.run_reporting_checkbutton.grid(row=2, column=0, padx=2, pady=2, sticky=W)
-            self.report_edi_validator_warnings_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
+            self.run_reporting_checkbutton.grid(row=3, column=0, padx=2, pady=2, sticky=W)
+            self.report_edi_validator_warnings_checkbutton.grid(row=4, column=0, padx=2, pady=2, sticky=W)
+            self.as400_address_field.grid(row=2, column=1, padx=2, pady=2)
+            self.as400_username_field.grid(row=3, column=1, padx=2, pady=2)
+            self.as400_password_field.grid(row=4, column=1, padx=2, pady=2)
             self.email_address_field.grid(row=1, column=1, padx=2, pady=2)
             self.email_username_field.grid(row=2, column=1, padx=2, pady=2)
             self.email_password_field.grid(row=3, column=1, padx=2, pady=2)
             self.email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
             self.smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
-            self.report_email_destination_field.grid(row=6, column=1, padx=2, pady=2)
-            self.select_log_folder_button.grid(row=2, column=1, padx=2, pady=2, sticky=E, rowspan=2)
-            self.log_printing_fallback_checkbutton.grid(row=7, column=1, padx=2, pady=2, sticky=W)
+            self.report_email_destination_field.grid(row=7, column=1, padx=2, pady=2)
+            self.select_log_folder_button.grid(row=3, column=1, padx=2, pady=2, sticky=E, rowspan=2)
+            self.log_printing_fallback_checkbutton.grid(row=8, column=1, padx=2, pady=2, sticky=W)
             self.enable_interval_backup_checkbutton.grid(row=0, column=0, sticky=W, padx=2, pady=2)
             self.interval_backup_interval_label.grid(row=0, column=1, sticky=E, padx=2, pady=2)
             self.interval_backup_interval_label.columnconfigure(0, weight=1)

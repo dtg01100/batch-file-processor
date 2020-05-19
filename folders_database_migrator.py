@@ -172,3 +172,15 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "invoice_date_offset" = 0')
         update_version = dict(id=1, version="17", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '17':
+        database_connection.query("alter table 'settings' add column 'odbc_driver'")
+        database_connection.query('UPDATE "settings" SET "odbc_driver" = "Select ODBC Driver..."')
+        database_connection.query("alter table 'settings' add column 'as400_username'")
+        database_connection.query('UPDATE "settings" SET "as400_username" = ""')
+        database_connection.query("alter table 'settings' add column 'as400_password'")
+        database_connection.query('UPDATE "settings" SET "as400_password" = ""')
+        database_connection.query("alter table 'settings' add column 'as400_address'")
+        database_connection.query('UPDATE "settings" SET "as400_address" = ""')
+        update_version = dict(id=1, version="18", os=running_platform)
+        db_version.update(update_version, ['id'])
