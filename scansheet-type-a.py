@@ -55,6 +55,9 @@ def edi_convert(edi_process, output_filename, settings_dict):
     output_spreadsheet = openpyxl.Workbook()
     output_worksheet = output_spreadsheet.worksheets[0]
 
+    invoice_rows = []
+    invoice_row_counter = 0
+
     for invoice in invoice_list:
 
         result = query_object.run_arbitrary_query(f"""SELECT buj4cd AS "UPC",
@@ -83,8 +86,11 @@ def edi_convert(edi_process, output_filename, settings_dict):
             print(trow)
 
         output_worksheet.append(['', invoice])
+        invoice_row_counter += 1
+        invoice_rows.append(invoice_row_counter)
         for items_list_entry in rows_for_export:
             output_worksheet.append(items_list_entry)
+            invoice_row_counter += 1
         adjust_column_width(output_worksheet)
         output_spreadsheet_name = output_filename
         output_spreadsheet.save(output_spreadsheet_name)
@@ -157,29 +163,30 @@ def edi_convert(edi_process, output_filename, settings_dict):
             for _ in output_worksheet.iter_rows():  # iterate over all rows in current worksheet
                 try:
                     count += 1
-                    # get code from column selected in input_colum_spinbox, on current row,
-                    # add a zeroes to the end if option is selected to make seven or 12 digits
-                    print("getting cell contents on line number " + str(count))
-                    upc_barcode_string = str(output_worksheet["B" + str(count)].value)
-                    print("cell contents are: " + upc_barcode_string)
-                    print(upc_barcode_string[-12:][:-1])
-                    upc_barcode_string = interpret_barcode_string(upc_barcode_string[-12:][:-1])
-                    print(upc_barcode_string)
-                    generated_barcode_path, width, height = generate_barcode(upc_barcode_string, tempdir)
-                    # resize cell to size of image
-                    output_worksheet.column_dimensions['A'].width = int(math.ceil(float(width) * .15))
-                    output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
+                    if count not in invoice_rows:
+                        # get code from column selected in input_colum_spinbox, on current row,
+                        # add a zeroes to the end if option is selected to make seven or 12 digits
+                        print("getting cell contents on line number " + str(count))
+                        upc_barcode_string = str(output_worksheet["B" + str(count)].value)
+                        print("cell contents are: " + upc_barcode_string)
+                        print(upc_barcode_string[-12:][:-1])
+                        upc_barcode_string = interpret_barcode_string(upc_barcode_string[-12:][:-1])
+                        print(upc_barcode_string)
+                        generated_barcode_path, width, height = generate_barcode(upc_barcode_string, tempdir)
+                        # resize cell to size of image
+                        output_worksheet.column_dimensions['A'].width = int(math.ceil(float(width) * .15))
+                        output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
 
-                    # open image with as openpyxl image object
-                    print("opening " + generated_barcode_path + " to insert into output spreadsheet")
-                    img = OpenPyXlImage(generated_barcode_path)
-                    print("success")
-                    # attach image to cell
-                    print("adding image to cell")
-                    # add image to cell
-                    output_worksheet.add_image(img, anchor='A' + str(count))
-                    save_counter += 1
-                    print("success")
+                        # open image with as openpyxl image object
+                        print("opening " + generated_barcode_path + " to insert into output spreadsheet")
+                        img = OpenPyXlImage(generated_barcode_path)
+                        print("success")
+                        # attach image to cell
+                        print("adding image to cell")
+                        # add image to cell
+                        output_worksheet.add_image(img, anchor='A' + str(count))
+                        save_counter += 1
+                        print("success")
                 except Exception as barcode_error:
                     print(barcode_error)
                 # This save in the loop frees references to the barcode images,
