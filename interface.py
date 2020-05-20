@@ -897,7 +897,7 @@ if __name__ == '__main__':
                     self.a_record_append_field.grid(row=3, column=2)
 
             self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
-                                                       self.foldersnameinput['convert_to_format'], 'csv', 'ScannerWare', command=make_convert_to_options)
+                                                       self.foldersnameinput['convert_to_format'], 'csv', 'ScannerWare', 'scansheet-type-a', command=make_convert_to_options)
 
             def show_folder_path():
                 showinfo(parent=master, title="Folder Path", message=self.foldersnameinput['folder_name'])
