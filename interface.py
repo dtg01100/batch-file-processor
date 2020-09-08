@@ -689,7 +689,7 @@ if __name__ == '__main__':
                     error_list.append("Email Address Is A Required Field\r")
                     errors = True
                 else:
-                    if (validate_email(str(self.email_address_field.get()), verify=True)) is False:
+                    if (validate_email(str(self.email_address_field.get()))) is False:
                         error_list.append("Invalid Email Origin Address\r")
                         errors = True
 
@@ -729,7 +729,7 @@ if __name__ == '__main__':
                     email_recipients = str(self.report_email_destination_field.get()).split(", ")
                     for email_recipient in email_recipients:
                         print(email_recipient)
-                        if (validate_email(str(email_recipient), verify=True)) is False:
+                        if (validate_email(str(email_recipient))) is False:
                             error_list.append("Invalid Email Destination Address\r\n")
                             errors = True
 
@@ -1379,7 +1379,7 @@ if __name__ == '__main__':
                 else:
                     email_recepients = str(self.email_recepient_field.get()).split(", ")
                     for email_recepient in email_recepients:
-                        if (validate_email(str(email_recepient), verify=True)) is False:
+                        if (validate_email(str(email_recepient))) is False:
                             error_string_constructor_list.append("Invalid Email Destination Address\r\n")
                             errors = True
 
