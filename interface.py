@@ -1217,8 +1217,12 @@ if __name__ == '__main__':
             self.otherslistboxscrollbar.pack(side=RIGHT, fill=Y)
             self.copyconfigbutton.pack()
 
+            self.aliaslist = []
             for entry in folders_table.all():
-                self.otherslistbox.insert(END, entry['alias'])
+                self.aliaslist.append(entry['alias'])
+            self.aliaslist.sort()
+            for alias in self.aliaslist:
+                self.otherslistbox.insert(END, alias)
             self.otherslistbox.config(width=0, height=10)
 
             self.header_frame_frame.pack(fill=X)
