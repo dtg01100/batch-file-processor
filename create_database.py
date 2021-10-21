@@ -65,7 +65,11 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                smtp_port=587,
                                backup_counter=0,
                                backup_counter_maximum=200,
-                               enable_interval_backups=True))
+                               enable_interval_backups=True,
+                               odbc_driver = "Select ODBC Driver...",
+                               as400_address = '',
+                                as400_username = '',
+                                as400_password = ''))
 
     processed_files = database_connection['processed_files']
     processed_files.create_column('file_name', sqlalchemy.types.String)
