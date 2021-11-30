@@ -39,7 +39,7 @@ import pyodbc
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
-    version = "1.28.4"
+    version = "1.28.5"
     database_version = "18"
     print(appname + " Version " + version)
     running_platform = platform.system()
