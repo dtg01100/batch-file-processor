@@ -150,7 +150,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                               in os.listdir(path=os.path.abspath(entry_dict['folder_name'])) if os.path.isfile(
                         os.path.join(os.path.abspath(entry_dict['folder_name']), file))]
                 hash_file_count_total = len(hash_files)
-                print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)))
+                print("Generating file hashes " + str(counter + 1) + " of " + str(len(parameters_dict_list)) + f" ({entry_dict['folder_name']})")
 
                 try:
                     search_folder_id = entry_dict['old_id']
