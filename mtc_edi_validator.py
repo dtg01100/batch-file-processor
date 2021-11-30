@@ -5,29 +5,32 @@ import line_from_mtc_edi_to_dict
 # this function does a simple check to see if input file is an edi file, and returns false if it isn't
 def check(input_file):
 
-    file_to_test = open(input_file)
-    if file_to_test.read(1) != "A":
-        return False, 1
-    file_to_test.seek(0)
-    line_number = 0
-    for line in file_to_test:
-        line_number += 1
-        if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
-            return False, line_number
-        else:
-            try:
-                if line[0] == "B":
-                    if len(line) != 77 and len(line) != 71:
+    try:
+        line_number = 0
+        file_to_test = open(input_file)
+        if file_to_test.read(1) != "A":
+            return False, 1
+        file_to_test.seek(0)
+        for line in file_to_test:
+            line_number += 1
+            if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
+                return False, line_number
+            else:
+                try:
+                    if line[0] == "B":
+                        if len(line) != 77 and len(line) != 71:
+                            return False, line_number
+                        _ = int(line[1:12])
+                        if len(line) == 71 and line[51:67] != "                ":
+                            return False, line_number
+                except ValueError:
+                    if not line[1:12] == "           ":
                         return False, line_number
-                    _ = int(line[1:12])
-                    if len(line) == 71 and line[51:67] != "                ":
-                        return False, line_number
-            except ValueError:
-                if not line[1:12] == "           ":
-                    return False, line_number
 
-    return True, line_number
-
+        return True, line_number
+    except Exception as eerror:
+        print(eerror)
+        return False, line_number
 
 def report_edi_issues(input_file):
     def _insert_description_and_number(issue_line):
