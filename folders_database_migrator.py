@@ -184,3 +184,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "settings" SET "as400_address" = ""')
         update_version = dict(id=1, version="18", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '18':
+        database_connection.query("alter table 'folders' add column 'retail_uom'")
+        database_connection.query('UPDATE "folders" SET "retail_uom" = 0')
+        database_connection.query("alter table 'administrative' add column 'retail_uom'")
+        database_connection.query('UPDATE "administrative" SET "retail_uom" = 0')
+        update_version = dict(id=1, version="19", os=running_platform)
+        db_version.update(update_version, ['id'])

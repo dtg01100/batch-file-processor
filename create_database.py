@@ -53,7 +53,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        append_a_records='False',
                                        a_record_append_text='',
                                        force_txt_file_ext="False",
-                                       invoice_date_offset=0
+                                       invoice_date_offset=0,
+                                       retail_uom=False
                                        ))
 
     settings_table = database_connection['settings']
