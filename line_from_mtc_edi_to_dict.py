@@ -15,7 +15,9 @@ def capture_records(line):
                       combo_code=line[49:51],
                       unit_multiplier=line[51:57],
                       qty_of_units=line[57:62],
-                      suggested_retail_price=line[62:67])
+                      suggested_retail_price=line[62:67],
+                      price_multi_pack = line[67:70],
+                      parent_item_number = line[70:76])
         return fields
     if line.startswith("C"):
         fields = dict(record_type=line[0],

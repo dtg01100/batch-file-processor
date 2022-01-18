@@ -35,6 +35,7 @@ from operator import itemgetter
 import zipfile
 import copy
 import pyodbc
+import traceback
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -1567,8 +1568,10 @@ if __name__ == '__main__':
                 # if processing folders runs into a serious error, report and log
                 print("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
                       str(dispatch_error) + "\r\n")
+                traceback.print_exc()
                 run_log.write(("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
                                str(dispatch_error) + "\r\n").encode())
+                run_log.write(traceback.print_exc())
             run_log.close()
         if reporting['enable_reporting'] == "True":
             try:

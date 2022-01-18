@@ -19,6 +19,7 @@ import clear_old_files
 import concurrent.futures
 import threading
 import queue
+from query_runner import query_runner
 
 
 def generate_match_lists(folder_temp_processed_files_list):
@@ -40,7 +41,19 @@ def generate_file_hash(source_file_struct):
        folder_hash_dict, folder_name_dict, resend_flag_set = source_file_struct
 
     file_name = os.path.abspath(source_file_path)
-    generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
+    generated_file_checksum = None
+    checksum_attempt = 1
+    while generated_file_checksum is None:
+        try:
+            generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
+        except Exception as error:
+            if checksum_attempt >= 5:
+                time.sleep(checksum_attempt*checksum_attempt)
+                checksum_attempt += 1
+                print(f"retrying open {file_name} for md5sum")
+            else:
+                    print(f"error opening file for md5sum {error}")
+                    raise
     tfilename = ""
     try:
         tfilename = folder_name_dict[generated_file_checksum]
@@ -86,6 +99,20 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     file_count = 0
     hash_thread_return_queue = queue.Queue()
 
+    query_object = query_runner(
+    settings["as400_username"],
+    settings["as400_password"],
+    settings["as400_address"],
+    f"{settings['odbc_driver']}",
+    )
+
+    each_upc_qreturn = query_object.run_arbitrary_query("""
+                        select dsanrep.anbacd, dsanrep.anbgcd
+                    from dacdata.dsanrep dsanrep
+                    """)
+
+    each_upc_dict = dict(each_upc_qreturn)
+
     try:
         os.mkdir(edi_converter_scratch_folder['edi_converter_scratch_folder'])
     except:
@@ -110,9 +137,33 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     def empty_directory(top):
         for folder_root, dirs, files_delete in os.walk(top, topdown=False):
             for name in files_delete:
-                os.remove(os.path.join(folder_root, name))
+                deleted = False
+                delete_attempt_counter = 1
+                while deleted is False:
+                    try:
+                        os.remove(os.path.join(folder_root, name))
+                        deleted = True
+                    except Exception:
+                        if delete_attempt_counter <= 10:
+                            time.sleep(delete_attempt_counter * delete_attempt_counter)
+                            delete_attempt_counter += 1
+                            print(f"error deleting old file/folder {os.path.join(folder_root, name)}, retrying, attempt {str(delete_attempt_counter)}")
+                        else:
+                            raise
             for name in dirs:
-                os.rmdir(os.path.join(folder_root, name))
+                deleted = False
+                delete_attempt_counter = 1
+                while deleted is False:
+                    try:
+                        os.rmdir(os.path.join(folder_root, name))
+                        deleted = True
+                    except Exception:
+                        if delete_attempt_counter <= 10:
+                            time.sleep(delete_attempt_counter * delete_attempt_counter)
+                            delete_attempt_counter += 1
+                            print(f"error deleting old file/folder {os.path.join(folder_root, name)}, retrying, attempt {str(delete_attempt_counter)}")
+                        else:
+                            raise
 
     edi_validator_errors = StringIO()
     global_edi_validator_error_status = False
@@ -426,6 +477,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     os.mkdir(os.path.dirname(output_filename))
                                 try:
                                     output_send_filename = edi_tweaks.edi_tweak(output_send_filename, output_filename,
+                                                                                each_upc_dict,
                                                                                 parameters_dict['pad_a_records'],
                                                                                 parameters_dict['a_record_padding'],
                                                                                 parameters_dict['append_a_records'],
