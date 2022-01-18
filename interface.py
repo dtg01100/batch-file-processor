@@ -229,7 +229,8 @@ if __name__ == '__main__':
                                   append_a_records=defaults['append_a_records'],
                                   a_record_append_text=defaults['a_record_append_text'],
                                   force_txt_file_ext=defaults['force_txt_file_ext'],
-                                  invoice_date_offset=defaults['invoice_date_offset']
+                                  invoice_date_offset=defaults['invoice_date_offset'],
+                                  retail_uom=defaults['retail_uom']
                                   ))
         print("done")
 
@@ -849,6 +850,7 @@ if __name__ == '__main__':
             self.force_edi_check_var = BooleanVar(master)
             self.header_frame_frame = Frame(master)
             self.invoice_date_offset = IntVar(master)
+            self.edi_each_uom_tweak = BooleanVar(master)
             self.otherslistboxframe = Frame(master=self.othersframe)
             self.otherslistbox = Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = Scrollbar(master=self.otherslistboxframe, orient=VERTICAL)
@@ -1073,6 +1075,8 @@ if __name__ == '__main__':
             self.invoice_date_offset_spinbox_label = Label(self.convert_options_frame, text="Invoice Offset (Days)")
             self.invoice_date_offset_spinbox = Spinbox(self.convert_options_frame, textvariable=self.invoice_date_offset,
                                                        from_=-14, to=14, width=3)
+            self.each_uom_edi_tweak_checkbutton = Checkbutton(self.convert_options_frame, variable=self.edi_each_uom_tweak,
+            text="Each UOM")
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -1121,6 +1125,7 @@ if __name__ == '__main__':
                 self.a_record_append_field.insert(0, config_dict['a_record_append_text'])
                 self.force_txt_file_ext_check.set(config_dict['force_txt_file_ext'])
                 self.invoice_date_offset.set(config_dict['invoice_date_offset'])
+                self.edi_each_uom_tweak.set(config_dict['retail_uom'])
 
                 if copied:
                     if config_dict['process_edi'] == 'True':
@@ -1165,6 +1170,8 @@ if __name__ == '__main__':
                     self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=W, padx=3)
                     self.invoice_date_offset_spinbox_label.grid(row=12, column=0, sticky=W, padx=3)
                     self.invoice_date_offset_spinbox.grid(row=12, column=2, sticky=W, padx=3)
+                    self.each_uom_edi_tweak_checkbutton.grid(row=13, column=0, sticky=W, padx=3)
+                    
 
             if self.foldersnameinput['process_edi'] == 'True':
                 self.ediconvert_options.set("Convert EDI")
@@ -1290,6 +1297,7 @@ if __name__ == '__main__':
             apply_to_folder['a_record_append_text'] = str(self.a_record_append_field.get())
             apply_to_folder['force_txt_file_ext'] = str(self.force_txt_file_ext_check.get())
             apply_to_folder['invoice_date_offset'] = int(self.invoice_date_offset.get())
+            apply_to_folder['retail_uom'] = self.edi_each_uom_tweak.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
