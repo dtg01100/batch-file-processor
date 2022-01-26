@@ -43,7 +43,7 @@ def edi_tweak(
     write_attempt_counter = 1
     while f is None:
         try:
-            f = open(output_filename, "wb")  # open work file, overwriting old file
+            f = open(output_filename, "w", newline='\r\n')  # open work file, overwriting old file
         except Exception as error:
             if write_attempt_counter >= 5:
                 time.sleep(write_attempt_counter*write_attempt_counter)
@@ -76,7 +76,7 @@ def edi_tweak(
                     writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:]
                 )  # write "A" line
             if append_arec == "True":
-                writeable_line = writeable_line.rstrip() + append_arec_text + "\r\n"
+                writeable_line = writeable_line.rstrip() + append_arec_text
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
             if retail_uom:
@@ -151,11 +151,11 @@ def edi_tweak(
                 b_rec_edi_dict["suggested_retail_price"],
                 b_rec_edi_dict["price_multi_pack"],
                 b_rec_edi_dict["parent_item_number"],
-                "\r\n")
+                "\n")
             )
-        f.write(writeable_line.encode())
+        f.write(writeable_line)
     else:
-        f.write(chr(26).encode())
+        f.write(chr(26))
 
     f.close()  # close output file
     return output_filename
