@@ -69,14 +69,14 @@ def edi_tweak(
                     writeable_line = (
                         writeable_line[0:17]
                         + datetime.strftime(offset_invoice_date, "%m%d%y")
-                        + writeable_line[23:]
+                        + writeable_line[23:] + "\n"
                     )
             if pad_arec == "True":
                 writeable_line = (
-                    writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:]
+                    writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:] + "\n"
                 )  # write "A" line
             if append_arec == "True":
-                writeable_line = writeable_line.rstrip() + append_arec_text
+                writeable_line = writeable_line.rstrip() + append_arec_text + "\n"
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
             if retail_uom:
