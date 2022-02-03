@@ -75,3 +75,4 @@ setup.bat
 /venv
 .gitignore
 /.mypy_cache
+plugin_test.py
