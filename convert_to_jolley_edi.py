@@ -243,3 +243,4 @@ SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
                     ])
         csv_file.writerow(["","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']))])
         f.close()  # close output file
+    return(output_filename)
