@@ -19,7 +19,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
             + value[-2:]
         )
 
-    def prettify_dates(date_string, offset=0):
+    def prettify_dates(date_string, offset=0, adj_offset=0):
         try:
             date_column_value = date_string
             stripped_date_value = str(date_column_value).strip()
@@ -27,7 +27,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
                 str(int(stripped_date_value[0]) + 19) + stripped_date_value[1:]
             )
             parsed_date_string = parser.isoparse(calculated_date_string).date()
-            corrected_date_string = parsed_date_string + timedelta(days=int(offset))
+            corrected_date_string = parsed_date_string + timedelta(days=int(offset) + adj_offset)
             formatted_date_string = str(datetime.strftime(corrected_date_string, "%m/%d/%y"))
         except Exception:
             formatted_date_string = "Not Available"
@@ -138,7 +138,7 @@ SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
                 prettify_dates(header_fields_dict["Invoice_Date"]),
                 header_fields_dict["Terms_Code"],
                 header_a_record["invoice_number"],
-                prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration']),
+                prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration'], -1),
             ]
         )
         csv_file.writerow(
