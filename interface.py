@@ -900,7 +900,7 @@ if __name__ == '__main__':
                     self.a_record_append_field.grid(row=3, column=2)
 
             self.convert_to_selector_menu = OptionMenu(self.convert_to_selector_frame, self.convert_formats_var,
-                                                       self.foldersnameinput['convert_to_format'], 'csv', 'ScannerWare', 'scansheet-type-a', command=make_convert_to_options)
+                                                       self.foldersnameinput['convert_to_format'], 'csv', 'ScannerWare', 'scansheet-type-a' , 'jolley_custom', command=make_convert_to_options)
 
             def show_folder_path():
                 showinfo(parent=master, title="Folder Path", message=self.foldersnameinput['folder_name'])
@@ -1423,6 +1423,10 @@ if __name__ == '__main__':
 
             if int(self.invoice_date_offset.get()) not in [i for i in range(-14,15)]:
                 error_string_constructor_list.append("Invoice date offset not in valid range")
+                errors = True
+
+            if not self.split_edi.get() and self.convert_formats_var.get() == 'jolley_custom':
+                error_string_constructor_list.append('EDI needs to be split for jolley_custom backend')
                 errors = True
 
             if self.foldersnameinput['folder_name'] != 'template':

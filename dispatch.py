@@ -6,6 +6,7 @@ import email_backend
 import convert_to_csv
 import convert_to_scannerware
 import convert_to_scansheet_type_a
+import convert_to_jolley_edi
 import os
 import time
 import record_error
@@ -455,6 +456,31 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             ("converting " + output_send_filename + " from EDI to scansheet-type-a\r\n"))
                                         print("converting " + output_send_filename + " from EDI to scansheet-type-a")
                                         convert_to_scansheet_type_a.edi_convert(output_send_filename, output_filename, settings)
+                                        process_files_log.append("Success\r\n\r\n")
+                                        output_send_filename = output_filename
+                                    except Exception as process_error:
+                                        print(str(process_error))
+                                        errors = True
+                                        process_files_log, process_files_error_log = \
+                                            record_error.do(process_files_log,
+                                                            process_files_error_log,
+                                                            str(process_error),
+                                                            str(
+                                                                output_send_filename),
+                                                            "EDI Processor",
+                                                            True)
+
+                                if parameters_dict['convert_to_format'] == "jolley_custom":
+                                    output_filename = os.path.join(
+                                        file_scratch_folder,
+                                        os.path.basename(stripped_filename) + ".csv")
+                                    if os.path.exists(os.path.dirname(output_filename)) is False:
+                                        os.mkdir(os.path.dirname(output_filename))
+                                    try:
+                                        process_files_log.append(
+                                            ("converting " + output_send_filename + " from EDI to Jolley Custom Format\r\n"))
+                                        print("converting " + output_send_filename + " from EDI to Jolley Custom Format")
+                                        convert_to_jolley_edi.edi_convert(output_send_filename, output_filename, settings)
                                         process_files_log.append("Success\r\n\r\n")
                                         output_send_filename = output_filename
                                     except Exception as process_error:
