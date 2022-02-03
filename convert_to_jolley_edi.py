@@ -241,6 +241,6 @@ SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
                         "$"+str(convert_to_price(input_edi_dict['amount'])),
                         "$"+str(convert_to_price(input_edi_dict['amount']))
                     ])
-        csv_file.writerow(["","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']))])
+        csv_file.writerow(["","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
         f.close()  # close output file
     return(output_filename)
