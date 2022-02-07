@@ -3,7 +3,6 @@ import line_from_mtc_edi_to_dict
 from datetime import datetime, timedelta
 from decimal import *
 import time
-import mtc_edi_validator
 
 
 
@@ -97,7 +96,7 @@ def edi_tweak(
                     except KeyError:
                         each_upc_string = "           "
                     try:
-                        b_rec_edi_dict["unit_cost"] = str(Decimal(float(b_rec_edi_dict['unit_cost'].strip()) / float(b_rec_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
+                        b_rec_edi_dict["unit_cost"] = str(Decimal((Decimal(b_rec_edi_dict['unit_cost'].strip()) / 100) / Decimal(b_rec_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
                         b_rec_edi_dict['qty_of_units'] = str(int(b_rec_edi_dict['unit_multiplier'].strip()) * int(b_rec_edi_dict['qty_of_units'].strip())).rjust(5,'0')
                         b_rec_edi_dict['upc_number'] = each_upc_string
                         b_rec_edi_dict['unit_multiplier'] = '000001'
