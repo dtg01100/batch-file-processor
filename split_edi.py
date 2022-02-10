@@ -41,7 +41,7 @@ def do_split_edi(edi_process, work_directory):
                 if not len(edi_send_list) == 0:
                     f.close()
                 edi_send_list.append(output_file_path)
-                output_file_path = os.path.join(work_directory, prepend_letters + " " + os.path.basename(edi_process) + file_name_suffix)
+                output_file_path = os.path.join(work_directory, prepend_letters + "_" + os.path.basename(edi_process) + file_name_suffix)
                 f = open(output_file_path, 'wb')
             f.write(writeable_line.replace('\n', "\r\n").encode())
             write_counter += 1
