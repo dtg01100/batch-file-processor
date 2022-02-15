@@ -107,10 +107,12 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     f"{settings['odbc_driver']}",
     )
 
-    each_upc_qreturn = query_object.run_arbitrary_query("""
+    each_upc_qreturn = []
+    for itemno, upc in query_object.run_arbitrary_query("""
                         select dsanrep.anbacd, dsanrep.anbgcd
                     from dacdata.dsanrep dsanrep
-                    """)
+                    """):
+        each_upc_qreturn.append((int(itemno), upc))
 
     each_upc_dict = dict(each_upc_qreturn)
 
