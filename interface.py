@@ -40,7 +40,7 @@ import traceback
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
-    version = "1.30.0"
+    version = "1.30.1"
     database_version = "19"
     print(appname + " Version " + version)
     running_platform = platform.system()
