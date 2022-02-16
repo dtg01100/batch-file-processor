@@ -380,7 +380,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 for output_send_filename in split_edi_list:
                     if errors is True:
                         break
-                    stripped_filename = re.sub('[^A-Za-z0-9. ]+', '', os.path.basename(output_send_filename))
+                    stripped_filename = re.sub('[^A-Za-z0-9. _]+', '', os.path.basename(output_send_filename))
                     if os.path.exists(output_send_filename):
                         if valid_edi_file:
                             if parameters_dict['process_edi'] == "True" and errors is False:
