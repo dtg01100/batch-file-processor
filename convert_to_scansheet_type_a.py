@@ -7,8 +7,8 @@ from query_runner import query_runner
 from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
 import ImageOps as pil_ImageOps
+import barcode
 from barcode.writer import ImageWriter
-import barcode.pybarcode
 import math
 
 
@@ -96,13 +96,13 @@ def edi_convert(edi_process, output_filename, settings_dict):
         output_spreadsheet.save(output_spreadsheet_name)
 
     def generate_barcode(input_string, tempdir):
-        ean = barcode.get("UPCA")
+        ean = barcode.get_barcode_class("UPCA")
         # select output image size via dpi. internally, pybarcode renders as svg, then renders that as a png file.
         # dpi is the conversion from svg image size in mm, to what the image writer thinks is inches.
         options={
             'dpi': 130,
             'module_height': 5.0,
-            'text_distance': 1,
+            'text_distance': 2,
             'font_size': 6,
             'quiet_zone': 2
         }
