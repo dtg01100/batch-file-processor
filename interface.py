@@ -1334,7 +1334,7 @@ if __name__ == '__main__':
                     errors = True
                     ftp_errors = True
                 else:
-                    if self.ftp_folder_field.get()[-1] is not "/":
+                    if self.ftp_folder_field.get()[-1] != "/":
                         error_string_constructor_list.append("FTP Folder Path Needs To End In /\r\n")
                         errors = True
                         ftp_errors = True
@@ -1405,7 +1405,7 @@ if __name__ == '__main__':
                                                          " Please Select One\r\n")
                     errors = True
 
-            if backend_count is 0 and self.active_checkbutton.get() == "True":
+            if backend_count == 0 and self.active_checkbutton.get() == "True":
                 error_string_constructor_list.append("No Backend Is Selected")
                 errors = True
 
@@ -1413,11 +1413,11 @@ if __name__ == '__main__':
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Enabled For ScannerWare Backend')
                 errors = True
 
-            if len(str(self.a_record_padding_field.get())) is not 6 and str(self.pad_arec_check.get()) == "True":
+            if len(str(self.a_record_padding_field.get())) != 6 and str(self.pad_arec_check.get()) == "True":
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
                 errors = True
 
-            if len(str(self.a_record_append_field.get())) is not 6 and str(self.append_arec_check.get()) == "True":
+            if len(str(self.a_record_append_field.get())) != 6 and str(self.append_arec_check.get()) == "True":
                 error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters\r\n')
                 errors = True
 
