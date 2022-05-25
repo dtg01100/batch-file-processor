@@ -81,7 +81,7 @@ def edi_tweak(
             b_rec_edi_dict = input_edi_dict
             try:
                 if force_each_upc:
-                    b_rec_edi_dict['upc_number'] = each_upc_lut[int(b_rec_edi_dict['vendor_item'].strip())]
+                    b_rec_edi_dict['upc_number'] = each_upc_dict[int(b_rec_edi_dict['vendor_item'].strip())]
             except KeyError:
                 b_rec_edi_dict['upc_number'] = ""
             if retail_uom:
