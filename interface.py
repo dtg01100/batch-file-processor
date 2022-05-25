@@ -41,7 +41,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "19"
+    database_version = "20"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -230,7 +230,8 @@ if __name__ == '__main__':
                                   a_record_append_text=defaults['a_record_append_text'],
                                   force_txt_file_ext=defaults['force_txt_file_ext'],
                                   invoice_date_offset=defaults['invoice_date_offset'],
-                                  retail_uom=defaults['retail_uom']
+                                  retail_uom=defaults['retail_uom'],
+                                  force_each_upc=defaults['force_each_upc']
                                   ))
         print("done")
 
@@ -851,6 +852,7 @@ if __name__ == '__main__':
             self.header_frame_frame = Frame(master)
             self.invoice_date_offset = IntVar(master)
             self.edi_each_uom_tweak = BooleanVar(master)
+            self.force_each_upc = BooleanVar(master)
             self.otherslistboxframe = Frame(master=self.othersframe)
             self.otherslistbox = Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = Scrollbar(master=self.otherslistboxframe, orient=VERTICAL)
@@ -883,7 +885,10 @@ if __name__ == '__main__':
                     self.headers_checkbutton,
                     self.ampersand_checkbutton,
                     self.pad_a_records_checkbutton,
-                    self.a_record_padding_field]:
+                    self.a_record_padding_field,
+                    self.append_a_records_checkbutton,
+                    self.a_record_append_field,
+                    self.force_each_upc_checkbutton]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
@@ -893,6 +898,7 @@ if __name__ == '__main__':
                     self.ampersand_checkbutton.grid(row=7, column=0, sticky=W, padx=3)
                     self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=W, padx=3)
                     self.a_record_padding_field.grid(row=9, column=2)
+                    self.force_each_upc_checkbutton.grid(row=10, column=0, sticky=W, padx=3)
                 if self.convert_formats_var.get() == 'ScannerWare':
                     self.pad_a_records_checkbutton.grid(row=2, column=0, sticky=W, padx=3)
                     self.a_record_padding_field.grid(row=2, column=2)
@@ -1077,6 +1083,7 @@ if __name__ == '__main__':
                                                        from_=-14, to=14, width=3)
             self.each_uom_edi_tweak_checkbutton = Checkbutton(self.convert_options_frame, variable=self.edi_each_uom_tweak,
             text="Each UOM")
+            self.force_each_upc_checkbutton = Checkbutton(self.convert_options_frame, variable=self.force_each_upc, text="Force Each UPC")
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -1126,6 +1133,7 @@ if __name__ == '__main__':
                 self.force_txt_file_ext_check.set(config_dict['force_txt_file_ext'])
                 self.invoice_date_offset.set(config_dict['invoice_date_offset'])
                 self.edi_each_uom_tweak.set(config_dict['retail_uom'])
+                self.force_each_upc.set(config_dict['force_each_upc'])
 
                 if copied:
                     if config_dict['process_edi'] == 'True':
@@ -1171,6 +1179,7 @@ if __name__ == '__main__':
                     self.invoice_date_offset_spinbox_label.grid(row=12, column=0, sticky=W, padx=3)
                     self.invoice_date_offset_spinbox.grid(row=12, column=2, sticky=W, padx=3)
                     self.each_uom_edi_tweak_checkbutton.grid(row=13, column=0, sticky=W, padx=3)
+                    self.force_each_upc_checkbutton.grid(row=14, column=0, sticky=W, padx=3)
                     
 
             if self.foldersnameinput['process_edi'] == 'True':
@@ -1298,6 +1307,7 @@ if __name__ == '__main__':
             apply_to_folder['force_txt_file_ext'] = str(self.force_txt_file_ext_check.get())
             apply_to_folder['invoice_date_offset'] = int(self.invoice_date_offset.get())
             apply_to_folder['retail_uom'] = self.edi_each_uom_tweak.get()
+            apply_to_folder['force_each_upc'] = self.force_each_upc.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)

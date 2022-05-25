@@ -398,13 +398,15 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             ("converting " + output_send_filename + " from EDI to CSV\r\n"))
                                         print("converting " + output_send_filename + " from EDI to CSV")
                                         convert_to_csv.edi_convert(output_send_filename, output_filename,
+                                                                   each_upc_dict,
                                                                    parameters_dict['calculate_upc_check_digit'],
                                                                    parameters_dict['include_a_records'],
                                                                    parameters_dict['include_c_records'],
                                                                    parameters_dict['include_headers'],
                                                                    parameters_dict['filter_ampersand'],
                                                                    parameters_dict['pad_a_records'],
-                                                                   parameters_dict['a_record_padding'])
+                                                                   parameters_dict['a_record_padding'],
+                                                                   parameters_dict['force_each_upc'])
                                         process_files_log.append("Success\r\n\r\n")
                                         output_send_filename = output_filename
                                     except Exception as process_error:

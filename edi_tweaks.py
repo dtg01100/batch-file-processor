@@ -17,7 +17,8 @@ def edi_tweak(
     force_txt_file_ext,
     calc_upc,
     invoice_date_offset,
-    retail_uom
+    retail_uom,
+    force_each_upc
 ):
     work_file = None
     read_attempt_counter = 1
@@ -78,6 +79,11 @@ def edi_tweak(
                 writeable_line = writeable_line.rstrip() + append_arec_text + "\n"
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
+            try:
+                if force_each_upc:
+                    b_rec_edi_dict['upc_number'] = each_upc_lut[int(b_rec_edi_dict['vendor_item'].strip())]
+            except KeyError:
+                b_rec_edi_dict['upc_number'] = ""
             if retail_uom:
                 edi_line_pass = False
                 try:

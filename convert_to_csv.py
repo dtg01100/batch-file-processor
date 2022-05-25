@@ -2,8 +2,8 @@ import upc_e_to_upc_a
 import line_from_mtc_edi_to_dict
 
 
-def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
-                inc_headers, filter_ampersand, pad_arec, arec_padding):
+def edi_convert(edi_process, output_filename, each_upc_lut, calc_upc, inc_arec, inc_crec,
+                inc_headers, filter_ampersand, pad_arec, arec_padding, force_each_upc):
     # save input parameters as variables
     conv_calc_upc = calc_upc
     conv_inc_arec = inc_arec
@@ -41,6 +41,11 @@ def edi_convert(edi_process, output_filename, calc_upc, inc_arec, inc_crec,
             if line.startswith("B"):
                 blank_upc = False
                 upc_string = ""
+                if force_each_upc:
+                    try:
+                        input_edi_dict['upc_number'] = each_upc_lut[int(input_edi_dict['vendor_item'].strip())]
+                    except KeyError:
+                        input_edi_dict['upc_number'] = ""
                 try:
                     _ = int(input_edi_dict['upc_number'].rstrip())
                 except ValueError:
