@@ -541,7 +541,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                                 parameters_dict['force_txt_file_ext'],
                                                                                 parameters_dict['calculate_upc_check_digit'],
                                                                                 parameters_dict['invoice_date_offset'],
-                                                                                parameters_dict['retail_uom'])
+                                                                                parameters_dict['retail_uom'],
+                                                                                parameters_dict['force_each_upc'])
                                 except Exception as process_error:
                                     print(str(process_error))
                                     errors = True
