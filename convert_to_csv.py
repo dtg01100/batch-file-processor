@@ -2,9 +2,18 @@ import upc_e_to_upc_a
 import line_from_mtc_edi_to_dict
 
 
-def edi_convert(edi_process, output_filename, each_upc_lut, calc_upc, inc_arec, inc_crec,
-                inc_headers, filter_ampersand, pad_arec, arec_padding, force_each_upc):
+def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     # save input parameters as variables
+
+    calc_upc = parameters_dict['calculate_upc_check_digit']
+    inc_arec = parameters_dict['include_a_records']
+    inc_crec = parameters_dict['include_c_records']
+    inc_headers  = parameters_dict['include_headers']
+    filter_ampersand = parameters_dict['filter_ampersand']
+    pad_arec = parameters_dict['pad_a_records']
+    arec_padding = parameters_dict['a_record_padding']
+    force_each_upc= parameters_dict['force_each_upc']
+
     conv_calc_upc = calc_upc
     conv_inc_arec = inc_arec
     conv_inc_crec = inc_crec

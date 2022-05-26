@@ -10,16 +10,19 @@ def edi_tweak(
     edi_process,
     output_filename,
     each_upc_dict,
-    pad_arec,
-    arec_padding,
-    append_arec,
-    append_arec_text,
-    force_txt_file_ext,
-    calc_upc,
-    invoice_date_offset,
-    retail_uom,
-    force_each_upc
+    parameters_dict
 ):
+
+    pad_arec = parameters_dict['pad_a_records'],
+    arec_padding = parameters_dict['a_record_padding'],
+    append_arec = parameters_dict['append_a_records'],
+    append_arec_text = parameters_dict['a_record_append_text'],
+    force_txt_file_ext = parameters_dict['force_txt_file_ext'],
+    calc_upc = parameters_dict['calculate_upc_check_digit'],
+    invoice_date_offset = parameters_dict['invoice_date_offset'],
+    retail_uom = parameters_dict['retail_uom'],
+    force_each_up = parameters_dict['force_each_upc']
+
     work_file = None
     read_attempt_counter = 1
     while work_file is None:

@@ -399,14 +399,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         print("converting " + output_send_filename + " from EDI to CSV")
                                         convert_to_csv.edi_convert(output_send_filename, output_filename,
                                                                    each_upc_dict,
-                                                                   parameters_dict['calculate_upc_check_digit'],
-                                                                   parameters_dict['include_a_records'],
-                                                                   parameters_dict['include_c_records'],
-                                                                   parameters_dict['include_headers'],
-                                                                   parameters_dict['filter_ampersand'],
-                                                                   parameters_dict['pad_a_records'],
-                                                                   parameters_dict['a_record_padding'],
-                                                                   parameters_dict['force_each_upc'])
+                                                                   parameters_dict)
                                         process_files_log.append("Success\r\n\r\n")
                                         output_send_filename = output_filename
                                     except Exception as process_error:
@@ -432,11 +425,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             ("converting " + output_send_filename + " from EDI to ScannerWare\r\n"))
                                         print("converting " + output_send_filename + " from EDI to ScannerWare")
                                         convert_to_scannerware.edi_convert(output_send_filename, output_filename,
-                                                                           parameters_dict['a_record_padding'],
-                                                                           parameters_dict['append_a_records'],
-                                                                           parameters_dict['a_record_append_text'],
-                                                                           parameters_dict['force_txt_file_ext'],
-                                                                           parameters_dict['invoice_date_offset'])
+                                                                           parameters_dict)
                                         process_files_log.append("Success\r\n\r\n")
                                         output_send_filename = output_filename
                                     except Exception as process_error:
@@ -534,15 +523,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 try:
                                     output_send_filename = edi_tweaks.edi_tweak(output_send_filename, output_filename,
                                                                                 each_upc_dict,
-                                                                                parameters_dict['pad_a_records'],
-                                                                                parameters_dict['a_record_padding'],
-                                                                                parameters_dict['append_a_records'],
-                                                                                parameters_dict['a_record_append_text'],
-                                                                                parameters_dict['force_txt_file_ext'],
-                                                                                parameters_dict['calculate_upc_check_digit'],
-                                                                                parameters_dict['invoice_date_offset'],
-                                                                                parameters_dict['retail_uom'],
-                                                                                parameters_dict['force_each_upc'])
+                                                                                parameters_dict)
                                 except Exception as process_error:
                                     print(str(process_error))
                                     errors = True
