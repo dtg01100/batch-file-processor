@@ -42,7 +42,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
                 invoice_list.append(input_edi_dict["invoice_number"][-7:])
         except TypeError:
             pass
-
+    work_file.close()
     print(invoice_list)
 
     query_object = query_runner(
