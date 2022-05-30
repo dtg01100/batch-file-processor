@@ -1,11 +1,11 @@
 import platform
-from tkinter import *  # from x import * is bad practice
-from tkinter.ttk import *
+import tkinter
+import tkinter.ttk
 
 
 # http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame
 
-class VerticalScrolledFrame(Frame):
+class VerticalScrolledFrame(tkinter.ttk.Frame):
     """A pure Tkinter scrollable frame that actually works!
     * Use the 'interior' attribute to place widgets inside the scrollable frame
     * Construct and pack/place/grid normally
@@ -14,14 +14,14 @@ class VerticalScrolledFrame(Frame):
     """
 
     def __init__(self, parent, *args, **kw):
-        Frame.__init__(self, parent, *args, **kw)
+        tkinter.Frame.__init__(self, parent, *args, **kw)
 
         # create a canvas object and a vertical scrollbar for scrolling it
-        vscrollbar = Scrollbar(self, orient=VERTICAL)
-        vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
-        canvas = Canvas(self, bd=0, highlightthickness=0,
+        vscrollbar = tkinter.ttk.Scrollbar(self, orient=tkinter.VERTICAL)
+        vscrollbar.pack(fill=tkinter.Y, side=tkinter.RIGHT, expand=tkinter.FALSE)
+        canvas = tkinter.Canvas(self, bd=0, highlightthickness=0,
                         yscrollcommand=vscrollbar.set)
-        canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
+        canvas.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=tkinter.TRUE)
         vscrollbar.config(command=canvas.yview)
 
         # reset the view
@@ -29,9 +29,9 @@ class VerticalScrolledFrame(Frame):
         canvas.yview_moveto(0)
 
         # create a frame inside the canvas which will be scrolled with it
-        self.interior = interior = Frame(canvas)
+        self.interior = interior = tkinter.ttk.Frame(canvas)
         interior_id = canvas.create_window(0, 0, window=interior,
-                                           anchor=NW)
+                                           anchor=tkinter.NW)
 
         # track changes to the canvas and frame width and sync them,
         # also updating the scrollbar
