@@ -61,108 +61,92 @@ if __name__ == '__main__':
     except FileExistsError:
         pass
 
-    if not os.path.isfile(database_path):  # if the database file is missing
-        try:
-            print("creating initial database file...")
-            creating_database_popup = Tk()
-            Label(creating_database_popup, text="Creating initial database file...").pack()
-            creating_database_popup.update()
-            create_database.do(database_version, database_path, config_folder, running_platform)  # make a new one
-            print("done")
-            creating_database_popup.destroy()
-        except Exception as error:  # if that doesn't work for some reason, log and quit
-            try:
-                print(str(error))
-                critical_log = open("critical_error.log", 'a')
-                critical_log.write("program version is " + version)
-                critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
-                critical_log.close()
+    class DatabaseObj():
+        def __init__(self, database_path):
+            
+            if not os.path.isfile(database_path):  # if the database file is missing
+                try:
+                    print("creating initial database file...")
+                    creating_database_popup = Tk()
+                    Label(creating_database_popup, text="Creating initial database file...").pack()
+                    creating_database_popup.update()
+                    create_database.do(database_version, database_path, config_folder, running_platform)  # make a new one
+                    print("done")
+                    creating_database_popup.destroy()
+                except Exception as error:  # if that doesn't work for some reason, log and quit
+                    try:
+                        print(str(error))
+                        critical_log = open("critical_error.log", 'a')
+                        critical_log.write("program version is " + version)
+                        critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
+                        critical_log.close()
+                        raise SystemExit
+                    except Exception as big_error:  # if logging doesn't work, at least complain
+                        print("error writing critical error log for error: " + str(error) + "\n" +
+                            "operation failed with error: " + str(big_error))
+                        raise SystemExit
+
+            try:  # try to connect to database
+                self.database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
+                self.session_database = dataset.connect("sqlite:///")
+            except Exception as connect_error:  # if that doesn't work for some reason, log and quit
+                try:
+                    print(str(connect_error))
+                    connect_critical_log = open("critical_error.log", 'a')
+                    connect_critical_log.write("program version is " + version)
+                    connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
+                    connect_critical_log.close()
+                    raise SystemExit
+                except Exception as connect_big_error:  # if logging doesn't work, at least complain
+                    print("error writing critical error log for error: " + str(connect_error)
+                        + "\n" + "operation failed with error: " +
+                        str(connect_big_error))
+                    raise SystemExit
+
+
+            # open table required for database check in database
+            db_version = self.database_connection['version']
+            db_version_dict = db_version.find_one(id=1)
+            if int(db_version_dict['version']) < int(database_version):
+                print("updating database file")
+                updating_database_popup = Tk()
+                Label(updating_database_popup, text="Updating database file...").pack()
+                updating_database_popup.update()
+                backup_increment.do_backup(database_path)
+                folders_database_migrator.upgrade_database(self.database_connection, config_folder, running_platform)
+                updating_database_popup.destroy()
+                print("done")
+            if int(db_version_dict['version']) > int(database_version):
+                Tk().withdraw()
+                showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
                 raise SystemExit
-            except Exception as big_error:  # if logging doesn't work, at least complain
-                print("error writing critical error log for error: " + str(error) + "\n" +
-                      "operation failed with error: " + str(big_error))
+
+            db_version = self.database_connection['version']
+            db_version_dict = db_version.find_one(id=1)
+            if db_version_dict['os'] != running_platform:
+                Tk().withdraw()
+                showerror("Error", "The operating system detected is: " + '"' + running_platform + '",' +
+                        " this does not match the configuration creator, which is stored as: " + '"' +
+                        db_version_dict['os'] + '".' + "\r\n"
+                                                        "Folder paths are not portable between operating systems. Exiting")
                 raise SystemExit
 
 
-    def connect_to_databases():
-        global database_connection
-        global session_database
-        try:  # try to connect to database
-            database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
-            session_database = dataset.connect("sqlite:///")
-        except Exception as connect_error:  # if that doesn't work for some reason, log and quit
-            try:
-                print(str(connect_error))
-                connect_critical_log = open("critical_error.log", 'a')
-                connect_critical_log.write("program version is " + version)
-                connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
-                connect_critical_log.close()
-                raise SystemExit
-            except Exception as connect_big_error:  # if logging doesn't work, at least complain
-                print("error writing critical error log for error: " + str(connect_error)
-                      + "\n" + "operation failed with error: " +
-                      str(connect_big_error))
-                raise SystemExit
+            self.folders_table = self.database_connection['folders']
+            self.emails_table = self.database_connection['emails_to_send']
+            self.emails_table_batch = self.database_connection['working_batch_emails_to_send']
+            self.sent_emails_removal_queue = self.database_connection['sent_emails_removal_queue']
+            self.oversight_and_defaults = self.database_connection['administrative']
+            self.processed_files = self.database_connection['processed_files']
+            self.settings = self.database_connection['settings']
 
 
-    connect_to_databases()
-
-    # open table required for database check in database
-    db_version = database_connection['version']
-    db_version_dict = db_version.find_one(id=1)
-    if int(db_version_dict['version']) < int(database_version):
-        print("updating database file")
-        updating_database_popup = Tk()
-        Label(updating_database_popup, text="Updating database file...").pack()
-        updating_database_popup.update()
-        backup_increment.do_backup(database_path)
-        folders_database_migrator.upgrade_database(database_connection, config_folder, running_platform)
-        updating_database_popup.destroy()
-        print("done")
-    if int(db_version_dict['version']) > int(database_version):
-        Tk().withdraw()
-        showerror("Error", "Program version too old for database version,\r\n please install a more recent release.")
-        raise SystemExit
-
-    connect_to_databases()
-    db_version = database_connection['version']
-    db_version_dict = db_version.find_one(id=1)
-    if db_version_dict['os'] != running_platform:
-        Tk().withdraw()
-        showerror("Error", "The operating system detected is: " + '"' + running_platform + '",' +
-                  " this does not match the configuration creator, which is stored as: " + '"' +
-                  db_version_dict['os'] + '".' + "\r\n"
-                                                 "Folder paths are not portable between operating systems. Exiting")
-        raise SystemExit
-
-
-    # open required tables in database
-
-
-    def open_tables():
-        global folders_table
-        global emails_table
-        global emails_table_batch
-        global sent_emails_removal_queue
-        global oversight_and_defaults
-        global processed_files
-        global settings
-        global database_connection
-        folders_table = database_connection['folders']
-        emails_table = database_connection['emails_to_send']
-        emails_table_batch = database_connection['working_batch_emails_to_send']
-        sent_emails_removal_queue = database_connection['sent_emails_removal_queue']
-        oversight_and_defaults = database_connection['administrative']
-        processed_files = database_connection['processed_files']
-        settings = database_connection['settings']
-
-
-    open_tables()
+    database_obj_instance = DatabaseObj(database_path)
 
     launch_options = argparse.ArgumentParser()
-    logs_directory = oversight_and_defaults.find_one(id=1)
-    errors_directory = oversight_and_defaults.find_one(id=1)
-    edi_converter_scratch_folder = oversight_and_defaults.find_one(id=1)
+    logs_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
+    errors_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
+    edi_converter_scratch_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
     folder_filter = ""
 
 
@@ -178,13 +162,13 @@ if __name__ == '__main__':
 
 
     def add_folder_entry(proposed_folder):  # add folder to database, copying configuration from template
-        defaults = oversight_and_defaults.find_one(id=1)
+        defaults = database_obj_instance.oversight_and_defaults.find_one(id=1)
         folder_alias_constructor = os.path.basename(proposed_folder)
 
         def folder_alias_checker(check):
             # check database to see if the folder alias exists, and return false if it does
-            if not folders_table.count() == 0:
-                add_folder_entry_proposed_folder = folders_table.find_one(alias=check)
+            if not database_obj_instance.folders_table.count() == 0:
+                add_folder_entry_proposed_folder = database_obj_instance.folders_table.find_one(alias=check)
                 if add_folder_entry_proposed_folder is not None:
                     return False
 
@@ -200,7 +184,7 @@ if __name__ == '__main__':
 
         print("adding folder: " + proposed_folder + " with settings from template")
         # create folder entry using the selected folder, the generated alias, and values copied from template
-        folders_table.insert(dict(folder_name=proposed_folder,
+        database_obj_instance.folders_table.insert(dict(folder_name=proposed_folder,
                                   copy_to_directory=defaults['copy_to_directory'],
                                   folder_is_active=defaults['folder_is_active'],
                                   alias=folder_alias_constructor,
@@ -237,7 +221,7 @@ if __name__ == '__main__':
 
 
     def check_folder_exists(check_folder):
-        folder_list = folders_table.all()
+        folder_list = database_obj_instance.folders_table.all()
         for possible_folder in folder_list:
             possible_folder_string = possible_folder['folder_name']
             if os.path.normpath(possible_folder_string) == os.path.normpath(check_folder):
@@ -248,7 +232,7 @@ if __name__ == '__main__':
     def select_folder():
         global folder
         global column_entry_value
-        prior_folder = oversight_and_defaults.find_one(id=1)
+        prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
         if os.path.exists(prior_folder['single_add_folder_prior']):
             initial_directory = prior_folder['single_add_folder_prior']
         else:
@@ -256,7 +240,7 @@ if __name__ == '__main__':
         folder = askdirectory(initialdir=initial_directory)
         if os.path.exists(folder):
             update_last_folder = dict(id=1, single_add_folder_prior=folder)
-            oversight_and_defaults.update(update_last_folder, ['id'])
+            database_obj_instance.oversight_and_defaults.update(update_last_folder, ['id'])
             proposed_folder = check_folder_exists(folder)
 
             if proposed_folder['truefalse'] is False:
@@ -264,7 +248,7 @@ if __name__ == '__main__':
                 column_entry_value = folder
                 add_folder_entry(folder)
                 if askyesno(message="Do you want to mark files in folder as processed?"):
-                    folder_dict = folders_table.find_one(folder_name=folder)
+                    folder_dict = database_obj_instance.folders_table.find_one(folder_name=folder)
                     mark_active_as_processed(root, folder_dict['id'])
                 doingstuffoverlay.destroy_overlay()
                 refresh_users_list()  # recreate list
@@ -278,7 +262,7 @@ if __name__ == '__main__':
     def batch_add_folders():
         added = 0
         skipped = 0
-        prior_folder = oversight_and_defaults.find_one(id=1)
+        prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
         if os.path.exists(prior_folder['batch_add_folder_prior']):
             initial_directory = prior_folder['batch_add_folder_prior']
         else:
@@ -287,7 +271,7 @@ if __name__ == '__main__':
         starting_directory = os.getcwd()
         if os.path.exists(containing_folder):
             update_last_folder = dict(id=1, batch_add_folder_prior=containing_folder)
-            oversight_and_defaults.update(update_last_folder, ['id'])
+            database_obj_instance.oversight_and_defaults.update(update_last_folder, ['id'])
             os.chdir(str(containing_folder))
             folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
             print("adding " + str(len(folders_list)) + " folders")
@@ -318,18 +302,18 @@ if __name__ == '__main__':
         # feed the EditDialog class the the dict for the selected folder from the folders list buttons
         # note: would prefer to be able to do this inline,
         # but variables appear to need to be pushed out of instanced objects
-        edit_folder = folders_table.find_one(id=[folder_to_be_edited])
+        edit_folder = database_obj_instance.folders_table.find_one(id=[folder_to_be_edited])
         EditDialog(root, edit_folder)
 
 
     def send_single(folder_id):
         doingstuffoverlay.make_overlay(root, "Working...")
         try:
-            single_table = session_database['single_table']
+            single_table = database_obj_instance.session_database['single_table']
             single_table.drop()
         finally:
-            single_table = session_database['single_table']
-            table_dict = folders_table.find_one(id=folder_id)
+            single_table = database_obj_instance.session_database['single_table']
+            table_dict = database_obj_instance.folders_table.find_one(id=folder_id)
             table_dict['old_id'] = table_dict.pop('id')
             single_table.insert(table_dict)
             doingstuffoverlay.destroy_overlay()
@@ -338,9 +322,9 @@ if __name__ == '__main__':
 
 
     def disable_folder(folder_id):
-        folder_dict = folders_table.find_one(id=folder_id)
+        folder_dict = database_obj_instance.folders_table.find_one(id=folder_id)
         folder_dict['folder_is_active'] = "False"
-        folders_table.update(folder_dict, ['id'])
+        database_obj_instance.folders_table.update(folder_dict, ['id'])
         refresh_users_list()
 
 
@@ -386,10 +370,10 @@ if __name__ == '__main__':
         search_field.bind("<3>", right_click_search_field)
         search_field.bind("<Return>", search_field_callback)
         search_button = Button(master=search_frame, text="Update Filter", command=search_field_callback)
-        active_folder_dict_list = folders_table.find(folder_is_active="True")
-        inactive_folder_dict_list = folders_table.find(folder_is_active="False")
-        folders_dict_list = folders_table.find(order_by="alias")
-        if folders_table.count() == 0:
+        active_folder_dict_list = database_obj_instance.folders_table.find(folder_is_active="True")
+        inactive_folder_dict_list = database_obj_instance.folders_table.find(folder_is_active="False")
+        folders_dict_list = database_obj_instance.folders_table.find(order_by="alias")
+        if database_obj_instance.folders_table.count() == 0:
             for child in search_frame.winfo_children():
                 child.configure(state=DISABLED)
         if folder_filter != "":
@@ -413,11 +397,11 @@ if __name__ == '__main__':
 
             for entry in fuzzy_filtered_alias:
                 pre_filtered_folder_dict_list.append(copyf(
-                    folders_table.find(order_by="alias"), 'alias', entry))
+                    database_obj_instance.folders_table.find(order_by="alias"), 'alias', entry))
                 pre_filtered_active_folder_dict_list.append(copyf(
-                    folders_table.find(folder_is_active="True"), 'alias', entry))
+                    database_obj_instance.folders_table.find(folder_is_active="True"), 'alias', entry))
                 pre_filtered_inactive_folder_dict_list.append(copyf(
-                    folders_table.find(folder_is_active="False"), 'alias', entry))
+                    database_obj_instance.folders_table.find(folder_is_active="False"), 'alias', entry))
                 filtered_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
                 filtered_active_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
                 filtered_inactive_folder_dict_list = [i[0] for i in pre_filtered_folder_dict_list]
@@ -446,7 +430,7 @@ if __name__ == '__main__':
         inactive_folder_edit_length = 0
         active_folder_alias_list = []
         inactive_folder_alias_list = []
-        if not folders_table.count(folder_is_active="True") == 0:
+        if not database_obj_instance.folders_table.count(folder_is_active="True") == 0:
             for entry in filtered_active_folder_dict_list:
                 alias = entry['alias']
                 if alias is None:
@@ -456,7 +440,7 @@ if __name__ == '__main__':
             if not len(list(active_folder_alias_list)) == 0:
                 active_folder_edit_length = len(max(list(active_folder_alias_list), key=len))
 
-        if not folders_table.count(folder_is_active="False") == 0:
+        if not database_obj_instance.folders_table.count(folder_is_active="False") == 0:
             for entry in filtered_inactive_folder_dict_list:
                 alias = entry['alias']
                 if alias is None:
@@ -488,9 +472,9 @@ if __name__ == '__main__':
                        width=inactive_folder_edit_length + 6).grid(column=0, row=0, sticky=E + W, padx=(10, 0))
                 inactive_folder_button_frame.pack(anchor='e', pady=1)
         # pack widgets in correct order
-        if len(list(filtered_folder_dict_list)) != folders_table.count():
+        if len(list(filtered_folder_dict_list)) != database_obj_instance.folders_table.count():
             folders_count_label = Label(search_frame, text=(
-                    str(len(list(filtered_folder_dict_list))) + " of " + str(folders_table.count()) + " shown"))
+                    str(len(list(filtered_folder_dict_list))) + " of " + str(database_obj_instance.folders_table.count()) + " shown"))
             folders_count_label.pack(side=RIGHT)
         active_users_list_label.pack(pady=5)
         Separator(active_users_list_container, orient=HORIZONTAL).pack(fill=X)
@@ -512,7 +496,7 @@ if __name__ == '__main__':
 
         def body(self, master):
 
-            self.settings = settings.find_one(id=1)
+            self.settings = database_obj_instance.settings.find_one(id=1)
             self.resizable(width=FALSE, height=FALSE)
             self.logs_directory = self.foldersnameinput['logs_directory']
             self.title("Edit Settings")
@@ -753,8 +737,8 @@ if __name__ == '__main__':
             doingstuffoverlay.destroy_overlay()
 
             if not self.enable_email_checkbutton_variable.get():
-                number_of_disabled_email_backends = folders_table.count(process_backend_email=True)
-                number_of_disabled_folders = folders_table.count(process_backend_email=True, process_backend_ftp=False,
+                number_of_disabled_email_backends = database_obj_instance.folders_table.count(process_backend_email=True)
+                number_of_disabled_folders = database_obj_instance.folders_table.count(process_backend_email=True, process_backend_ftp=False,
                                                                  process_backend_copy=False, folder_is_active="True")
                 if number_of_disabled_folders != 0:
                     if not askokcancel(message="This will disable the email backend in " +
@@ -796,17 +780,17 @@ if __name__ == '__main__':
             folders_name_apply['report_email_destination'] = str(self.report_email_destination_field.get())
             folders_name_apply['report_edi_errors'] = self.report_edi_validator_warnings_checkbutton_variable.get()
             if not self.enable_email_checkbutton_variable.get():
-                for email_backend_to_disable in folders_table.find(process_backend_email=True):
+                for email_backend_to_disable in database_obj_instance.folders_table.find(process_backend_email=True):
                     email_backend_to_disable['process_backend_email'] = False
-                    folders_table.update(email_backend_to_disable, ['id'])
-                for folder_to_disable in folders_table.find(process_backend_email=False, process_backend_ftp=False,
+                    database_obj_instance.folders_table.update(email_backend_to_disable, ['id'])
+                for folder_to_disable in database_obj_instance.folders_table.find(process_backend_email=False, process_backend_ftp=False,
                                                             process_backend_copy=False, folder_is_active="True"):
                     folder_to_disable['folder_is_active'] = "False"
-                    folders_table.update(folder_to_disable, ['id'])
+                    database_obj_instance.folders_table.update(folder_to_disable, ['id'])
                 folders_name_apply['folder_is_active'] = 'False'
                 folders_name_apply['process_backend_email'] = False
 
-            settings.update(self.settings, ['id'])
+            database_obj_instance.settings.update(self.settings, ['id'])
             update_reporting(folders_name_apply)
             doingstuffoverlay.destroy_overlay()
             refresh_users_list()
@@ -816,7 +800,7 @@ if __name__ == '__main__':
 
         def body(self, master):
 
-            self.settings = settings.find_one(id=1)
+            self.settings = database_obj_instance.settings.find_one(id=1)
             self.resizable(width=FALSE, height=FALSE)
             global copy_to_directory
             copy_to_directory = self.foldersnameinput['copy_to_directory']
@@ -1204,7 +1188,7 @@ if __name__ == '__main__':
                             pass
                         recurse_set_default(child)
                 recurse_set_default(master)
-                settings_table = folders_table.find_one(alias=self.otherslistbox.get(ACTIVE))
+                settings_table = database_obj_instance.folders_table.find_one(alias=self.otherslistbox.get(ACTIVE))
                 set_dialog_variables(settings_table, True)
                 set_header_state()
                 set_send_options_fields_state()
@@ -1235,7 +1219,7 @@ if __name__ == '__main__':
             self.copyconfigbutton.pack()
 
             self.aliaslist = []
-            for entry in folders_table.all():
+            for entry in database_obj_instance.folders_table.all():
                 self.aliaslist.append(entry['alias'])
             self.aliaslist.sort()
             for alias in self.aliaslist:
@@ -1441,7 +1425,7 @@ if __name__ == '__main__':
 
             if self.foldersnameinput['folder_name'] != 'template':
                 if str(self.folder_alias_field.get()) != self.foldersnameinput['alias']:
-                    proposed_folder = folders_table.find_one(alias=str(self.folder_alias_field.get()))
+                    proposed_folder = database_obj_instance.folders_table.find_one(alias=str(self.folder_alias_field.get()))
                     if proposed_folder is not None:
                         error_string_constructor_list.append("Folder Alias Already In Use\r\n")
                         errors = True
@@ -1461,11 +1445,11 @@ if __name__ == '__main__':
 
     def update_reporting(changes):
         # push new settings into table
-        oversight_and_defaults.update(changes, ['id'])
+        database_obj_instance.oversight_and_defaults.update(changes, ['id'])
 
 
     def update_folder_alias(folder_edit):  # update folder settings in database with results from EditDialog
-        folders_table.update(folder_edit, ['id'])
+        database_obj_instance.folders_table.update(folder_edit, ['id'])
         refresh_users_list()
 
 
@@ -1478,9 +1462,9 @@ if __name__ == '__main__':
 
     def delete_folder_entry(folder_to_be_removed):
         # delete specified folder configuration and it's queued emails and obe queue
-        folders_table.delete(id=folder_to_be_removed)
-        processed_files.delete(folder_id=folder_to_be_removed)
-        emails_table.delete(folder_id=folder_to_be_removed)
+        database_obj_instance.folders_table.delete(id=folder_to_be_removed)
+        database_obj_instance.processed_files.delete(folder_id=folder_to_be_removed)
+        database_obj_instance.emails_table.delete(folder_id=folder_to_be_removed)
 
 
     def delete_folder_entry_wrapper(folder_to_be_removed, alias):
@@ -1510,23 +1494,22 @@ if __name__ == '__main__':
 
 
     def set_defaults_popup():
-        defaults = oversight_and_defaults.find_one(id=1)
+        defaults = database_obj_instance.oversight_and_defaults.find_one(id=1)
         EditDialog(root, defaults)
 
 
     def process_directories(folders_table_process):
         original_folder = os.getcwd()
-        global emails_table
-        settings_dict = settings.find_one(id=1)
+        settings_dict = database_obj_instance.settings.find_one(id=1)
         if settings_dict['enable_interval_backups'] and settings_dict['backup_counter'] >= \
                 settings_dict['backup_counter_maximum']:
             backup_increment.do_backup(database_path)
             settings_dict['backup_counter'] = 0
         settings_dict['backup_counter'] += 1
-        settings.update(settings_dict, ['id'])
+        database_obj_instance.settings.update(settings_dict, ['id'])
         log_folder_creation_error = False
         start_time = str(datetime.datetime.now())
-        reporting = oversight_and_defaults.find_one(id=1)
+        reporting = database_obj_instance.oversight_and_defaults.find_one(id=1)
         run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
         # check for configured logs directory, and create it if necessary
         if not os.path.isdir(logs_directory['logs_directory']):
@@ -1540,7 +1523,7 @@ if __name__ == '__main__':
                 while check_logs_directory() is False:  # don't let user out unless they pick a writable folder, or cancel
                     if askokcancel("Error", "Can't write to log directory,\r\n"
                                             " would you like to change reporting settings?"):
-                        EditSettingsDialog(root, oversight_and_defaults.find_one(id=1))
+                        EditSettingsDialog(root, database_obj_instance.oversight_and_defaults.find_one(id=1))
                     else:
                         # the logs must flow. aka, stop here if user declines selecting a new writable log folder
                         showerror(parent=root, message="Can't write to log directory, exiting")
@@ -1572,12 +1555,12 @@ if __name__ == '__main__':
             run_log.write(("starting run at " + time.ctime() + "\r\n").encode())
             if reporting['enable_reporting'] == "True":
                 # add run log to email queue if reporting is enabled
-                emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
+                database_obj_instance.emails_table.insert(dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
             # call dispatch module to process active folders
             try:
-                run_error_bool, run_summary_string = dispatch.process(database_connection, folders_table_process, run_log,
-                                                                      emails_table, reporting['logs_directory'], reporting,
-                                                                      processed_files, root, args, version,
+                run_error_bool, run_summary_string = dispatch.process(database_obj_instance.database_connection, folders_table_process, run_log,
+                                                                      database_obj_instance.emails_table, reporting['logs_directory'], reporting,
+                                                                      database_obj_instance.processed_files, root, args, version,
                                                                       errors_directory, edi_converter_scratch_folder,
                                                                       settings_dict,
                                                                       simple_output=None if not args.automatic else
@@ -1597,17 +1580,17 @@ if __name__ == '__main__':
             run_log.close()
         if reporting['enable_reporting'] == "True":
             try:
-                sent_emails_removal_queue.delete()
+                database_obj_instance.sent_emails_removal_queue.delete()
                 total_size = 0
                 skipped_files = 0
                 email_errors = StringIO()
-                total_emails = emails_table.count()
-                emails_table_batch.delete()
+                total_emails = database_obj_instance.emails_table.count()
+                database_obj_instance.emails_table.delete()
                 emails_count = 0
                 loop_count = 0
                 batch_number = 1
 
-                for log in emails_table.all():
+                for log in database_obj_instance.emails_table.all():
                     emails_count += 1
                     loop_count += 1
                     if os.path.isfile(os.path.abspath(log['log'])):
@@ -1619,13 +1602,13 @@ if __name__ == '__main__':
                         # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                         # add size of current file to total
                         total_size += os.path.getsize(os.path.abspath(send_log_file['log']))
-                        emails_table_batch.insert(dict(log=send_log_file['log']))
+                        database_obj_instance.emails_table.insert(dict(log=send_log_file['log']))
                         # if the total size is more than 9mb, then send that set and reset the total
-                        if total_size > 9000000 or emails_table_batch.count() >= 15:
-                            batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                        if total_size > 9000000 or database_obj_instance.emails_table.count() >= 15:
+                            batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table_batch, database_obj_instance.sent_emails_removal_queue,
                                                 start_time, args, root, batch_number, emails_count, total_emails,
                                                 feedback_text, run_summary_string)
-                            emails_table_batch.delete()  # clear batch
+                            database_obj_instance.emails_table.delete()  # clear batch
                             total_size = 0
                             loop_count = 0
                             batch_number += 1
@@ -1633,14 +1616,14 @@ if __name__ == '__main__':
                         email_errors.write("\r\n" + log['log'] + " missing, skipping")
                         email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                         skipped_files += 1
-                        sent_emails_removal_queue.insert(log)
-                batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                        database_obj_instance.sent_emails_removal_queue.insert(log)
+                batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table, database_obj_instance.sent_emails_removal_queue,
                                     start_time, args, root, batch_number, emails_count, total_emails, feedback_text,
                                     run_summary_string)
-                emails_table_batch.delete()  # clear batch
-                for line in sent_emails_removal_queue.all():
-                    emails_table.delete(log=str(line['log']))
-                sent_emails_removal_queue.delete()
+                database_obj_instance.emails_table.delete()  # clear batch
+                for line in database_obj_instance.sent_emails_removal_queue.all():
+                    database_obj_instance.emails_table.delete(log=str(line['log']))
+                database_obj_instance.sent_emails_removal_queue.delete()
                 if skipped_files > 0:  # log any skipped files, try to send that error in the run log
                     batch_number += 1
                     emails_count += 1
@@ -1650,19 +1633,19 @@ if __name__ == '__main__':
                     reporting_emails_errors = open(email_errors_log_full_path, 'w')
                     reporting_emails_errors.write(email_errors.getvalue())
                     reporting_emails_errors.close()
-                    emails_table_batch.insert(dict(log=email_errors_log_full_path,
+                    database_obj_instance.emails_table.insert(dict(log=email_errors_log_full_path,
                                                    folder_alias=email_errors_log_name_constructor))
                     try:
-                        batch_log_sender.do(settings_dict, reporting, emails_table_batch, sent_emails_removal_queue,
+                        batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table, database_obj_instance.sent_emails_removal_queue,
                                             start_time, args, root, batch_number, emails_count, total_emails, feedback_text,
                                             "Error, cannot send all logs. ")
-                        emails_table_batch.delete()
+                        database_obj_instance.emails_table.delete()
                     except Exception as email_send_error:
                         print(email_send_error)
                         doingstuffoverlay.destroy_overlay()
-                        emails_table_batch.delete()
+                        database_obj_instance.emails_table.delete()
             except Exception as dispatch_error:
-                emails_table_batch.delete()
+                database_obj_instance.emails_table.delete()
                 run_log = open(run_log_full_path, 'a')
                 if reporting['report_printing_fallback'] == "True":
                     print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
@@ -1687,13 +1670,13 @@ if __name__ == '__main__':
 
 
     def automatic_process_directories(automatic_process_folders_table):
-        if automatic_process_folders_table.count(folder_is_active="True") > 0:
+        if automatic_process_database_obj_instance.folders_table.count(folder_is_active="True") > 0:
             print("batch processing configured directories")
             try:
                 Label(root, text="Running In Automatic Mode...").pack(side=TOP)
                 root.minsize(400, root.winfo_height())
                 root.update()
-                process_directories(automatic_process_folders_table)
+                process_directories(automatic_process_database_obj_instance.folders_table)
             except Exception as automatic_process_error:
                 print(str(automatic_process_error))
                 automatic_process_critical_log = open("critical_error.log", 'a')
@@ -1707,12 +1690,12 @@ if __name__ == '__main__':
     def remove_inactive_folders():  # loop over folders and safely remove ones marked as inactive
         maintenance_popup.unbind("<Escape>")
         users_refresh = False
-        if folders_table.count(folder_is_active="False") > 0:
+        if database_obj_instance.folders_table.count(folder_is_active="False") > 0:
             users_refresh = True
-        folders_total = folders_table.count(folder_is_active="False")
+        folders_total = database_obj_instance.folders_table.count(folder_is_active="False")
         folders_count = 0
         doingstuffoverlay.make_overlay(maintenance_popup, "removing " + str(folders_count) + " of " + str(folders_total))
-        for folder_to_be_removed in folders_table.find(folder_is_active="False"):
+        for folder_to_be_removed in database_obj_instance.folders_table.find(folder_is_active="False"):
             folders_count += 1
             doingstuffoverlay.update_overlay(maintenance_popup, "removing " + str(folders_count) + " of " +
                                              str(folders_total))
@@ -1728,16 +1711,16 @@ if __name__ == '__main__':
             maintenance_popup.unbind("<Escape>")
         starting_folder = os.getcwd()
         folder_count = 0
-        folders_table_list = []
+        database_obj_instance.folders_table_list = []
         if selected_folder is None:
-            for row in folders_table.find(folder_is_active="True"):
-                folders_table_list.append(row)
+            for row in database_obj_instance.folders_table.find(folder_is_active="True"):
+                database_obj_instance.folders_table_list.append(row)
         else:
-            folders_table_list = [folders_table.find_one(id=selected_folder)]
-        folder_total = len(folders_table_list)
+            database_obj_instance.folders_table_list = [database_obj_instance.folders_table.find_one(id=selected_folder)]
+        folder_total = len(database_obj_instance.folders_table_list)
         if selected_folder is None:
             doingstuffoverlay.make_overlay(master, "adding files to processed list...")
-        for parameters_dict in folders_table_list:  # create list of active directories
+        for parameters_dict in database_obj_instance.folders_table_list:  # create list of active directories
             file_total = 0
             file_count = 0
             folder_count += 1
@@ -1756,7 +1739,7 @@ if __name__ == '__main__':
                                                  overlay_text="checking files for already processed\n\n" +
                                                               str(folder_count) + " of " + str(folder_total) + " file " +
                                                               str(file_count) + " of " + str(file_total))
-                if processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
+                if database_obj_instance.processed_files.find_one(file_name=os.path.join(os.getcwd(), f), file_checksum=hashlib.md5(
                         open(f, 'rb').read()).hexdigest()) is None:
                     filtered_files.append(f)
             file_total = len(filtered_files)
@@ -1768,7 +1751,7 @@ if __name__ == '__main__':
                                                  overlay_text="adding files to processed list...\n\n" + " folder " +
                                                               str(folder_count) + " of " + str(folder_total) +
                                                               " file " + str(file_count) + " of " + str(file_total))
-                processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
+                database_obj_instance.processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
                                             file_checksum=hashlib.md5
                                             (open(filename, 'rb').read()).hexdigest(),
                                             folder_id=parameters_dict['id'],
@@ -1789,7 +1772,7 @@ if __name__ == '__main__':
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         maintenance_popup.update()
-        database_connection.query('update folders set folder_is_active="False" where folder_is_active="True"')
+        database_obj_instance.database_connection.query('update folders set folder_is_active="False" where folder_is_active="True"')
         refresh_users_list()
         doingstuffoverlay.destroy_overlay()
         maintenance_popup.update()
@@ -1800,7 +1783,7 @@ if __name__ == '__main__':
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         maintenance_popup.update()
-        database_connection.query('update folders set folder_is_active="True" where folder_is_active="False"')
+        database_obj_instance.database_connection.query('update folders set folder_is_active="True" where folder_is_active="False"')
         refresh_users_list()
         doingstuffoverlay.destroy_overlay()
         maintenance_popup.update()
@@ -1811,7 +1794,7 @@ if __name__ == '__main__':
         maintenance_popup.unbind("<Escape>")
         doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
         maintenance_popup.update()
-        database_connection.query('update processed_files set resend_flag=0 where resend_flag=1')
+        database_obj_instance.database_connection.query('update processed_files set resend_flag=0 where resend_flag=1')
         doingstuffoverlay.destroy_overlay()
         maintenance_popup.update()
         maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
@@ -1820,7 +1803,7 @@ if __name__ == '__main__':
     def clear_processed_files_log():
         if askokcancel(message="This will clear all records of sent files.\nAre you sure?"):
             maintenance_popup.unbind("<Escape>")
-            processed_files.delete()
+            database_obj_instance.processed_files.delete()
             set_main_button_states()
             maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
@@ -1836,16 +1819,16 @@ if __name__ == '__main__':
             doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
             connect_to_databases()
             open_tables()
-            settings_dict = settings.find_one(id=1)
+            settings_dict = database_obj_instance.settings.find_one(id=1)
             print(settings_dict['enable_email'])
             if not settings_dict['enable_email']:
-                for email_backend_to_disable in folders_table.find(process_backend_email=True):
+                for email_backend_to_disable in database_obj_instance.folders_table.find(process_backend_email=True):
                     email_backend_to_disable['process_backend_email'] = False
-                    folders_table.update(email_backend_to_disable, ['id'])
-                for folder_to_disable in folders_table.find(process_backend_email=False, process_backend_ftp=False,
+                    database_obj_instance.folders_table.update(email_backend_to_disable, ['id'])
+                for folder_to_disable in database_obj_instance.folders_table.find(process_backend_email=False, process_backend_ftp=False,
                                                             process_backend_copy=False, folder_is_active="True"):
                     folder_to_disable['folder_is_active'] = "False"
-                    folders_table.update(folder_to_disable, ['id'])
+                    database_obj_instance.folders_table.update(folder_to_disable, ['id'])
             refresh_users_list()
             doingstuffoverlay.destroy_overlay()
         maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
@@ -1878,7 +1861,7 @@ if __name__ == '__main__':
             clear_resend_flags_button = Button(maintenance_popup_button_frame, text="Clear all resend flags",
                                                command=clear_resend_flags)
             clear_emails_queue = Button(maintenance_popup_button_frame, text="Clear queued emails",
-                                        command=emails_table.delete)
+                                        command=database_obj_instance.emails_table.delete)
             move_active_to_obe_button = Button(maintenance_popup_button_frame, text="Mark all in active as processed",
                                                command=lambda: mark_active_as_processed(maintenance_popup))
             remove_all_inactive = Button(maintenance_popup_button_frame, text="Remove all inactive configurations",
@@ -1913,11 +1896,11 @@ if __name__ == '__main__':
                 clear_file_path = input_file_name + " " + str(counter) + ".csv"
                 return clear_file_path
 
-        folder_alias = folders_table.find_one(id=name)
+        folder_alias = database_obj_instance.folders_table.find_one(id=name)
         processed_log_path = avoid_overwrite(str(os.path.join(output_folder, folder_alias['alias'] + " processed report")))
         processed_log = open(processed_log_path, 'w')
         processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
-        for line in processed_files.find(folder_id=name):
+        for line in database_obj_instance.processed_files.find(folder_id=name):
             processed_log.write(
                 line['file_name'] + "," + "\t" + str(line['sent_date_time'])[:-7] + "," + line['copy_destination'] +
                 "," + line['ftp_destination'] + "," + str(line['email_destination']).replace(",", ";") + "\n")
@@ -1949,7 +1932,7 @@ if __name__ == '__main__':
         def set_output_folder():
             global output_folder_is_confirmed
             global processed_files_output_folder
-            set_output_prior_folder = oversight_and_defaults.find_one(id=1)
+            set_output_prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
             if os.path.exists(set_output_prior_folder['export_processed_folder_prior']):
                 initial_directory = set_output_prior_folder['export_processed_folder_prior']
             else:
@@ -1960,7 +1943,7 @@ if __name__ == '__main__':
             else:
                 output_folder = output_folder_proposed
             update_last_folder = dict(id=1, export_processed_folder_prior=output_folder)
-            oversight_and_defaults.update(update_last_folder, ['id'])
+            database_obj_instance.oversight_and_defaults.update(update_last_folder, ['id'])
             output_folder_is_confirmed = True
             processed_files_output_folder = output_folder
             if output_folder_is_confirmed is False:
@@ -1972,7 +1955,7 @@ if __name__ == '__main__':
         global output_folder_is_confirmed
         folder_button_variable = IntVar()
         output_folder_is_confirmed = False
-        prior_folder = oversight_and_defaults.find_one(id=1)
+        prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
         processed_files_output_folder = prior_folder['export_processed_folder_prior']
         processed_files_popup_dialog = Toplevel()
         processed_files_popup_dialog.title("Processed Files Report")
@@ -1991,21 +1974,21 @@ if __name__ == '__main__':
         processed_files_loading_label.pack()
         root.update()
         Label(processed_files_popup_actions_frame, text="Select a Folder.").pack(padx=10)
-        if processed_files.count() == 0:
+        if database_obj_instance.processed_files.count() == 0:
             no_processed_label = Label(processed_files_popup_list_frame, text="No Folders With Processed Files")
             no_processed_label.pack(fill=BOTH, expand=1, padx=10)
         processed_files_distinct_list = []
-        for row in processed_files.distinct('folder_id'):
+        for row in database_obj_instance.processed_files.distinct('folder_id'):
             processed_files_distinct_list.append(row['folder_id'])
         folder_entry_tuple_list = []
         for entry in processed_files_distinct_list:
-            folder_dict = folders_table.find_one(id=str(entry))
+            folder_dict = database_obj_instance.folders_table.find_one(id=str(entry))
             folder_alias = folder_dict['alias']
             folder_entry_tuple_list.append([entry, folder_alias])
         sorted_folder_list = sorted(folder_entry_tuple_list, key=itemgetter(1))
 
         for folders_name, folder_alias in sorted_folder_list:
-            folder_row = processed_files.find_one(folder_id=str(folders_name))
+            folder_row = database_obj_instance.processed_files.find_one(folder_id=str(folders_name))
             tkinter.Radiobutton(processed_files_popup_list_frame.interior, text=folder_alias.center(15),
                                 variable=folder_button_variable,
                                 value=folder_alias, indicatoron=FALSE,
@@ -2024,14 +2007,14 @@ if __name__ == '__main__':
 
 
     def set_main_button_states():
-        if folders_table.count() == 0:
+        if database_obj_instance.folders_table.count() == 0:
             process_folder_button.configure(state=DISABLED)
         else:
-            if folders_table.count(folder_is_active="True") > 0:
+            if database_obj_instance.folders_table.count(folder_is_active="True") > 0:
                 process_folder_button.configure(state=NORMAL)
             else:
                 process_folder_button.configure(state=DISABLED)
-        if processed_files.count() > 0:
+        if database_obj_instance.processed_files.count() > 0:
             processed_files_button.configure(state=NORMAL)
             allow_resend_button.configure(state=NORMAL)
         else:
@@ -2042,7 +2025,7 @@ if __name__ == '__main__':
     launch_options.add_argument('-a', '--automatic', action='store_true')
     args = launch_options.parse_args()
     if args.automatic:
-        automatic_process_directories(folders_table)
+        automatic_process_directories(database_obj_instance.folders_table)
 
     make_users_list()
 
@@ -2051,12 +2034,12 @@ if __name__ == '__main__':
     open_multiple_folder_button = Button(options_frame, text="Batch Add Directories...", command=batch_add_folders)
     default_settings = Button(options_frame, text="Set Defaults...", command=set_defaults_popup)
     edit_reporting = Button(options_frame, text="Edit Settings...",
-                            command=lambda: EditSettingsDialog(root, oversight_and_defaults.find_one(id=1)))
+                            command=lambda: EditSettingsDialog(root, database_obj_instance.oversight_and_defaults.find_one(id=1)))
     process_folder_button = Button(options_frame, text="Process All Folders",
-                                   command=lambda: graphical_process_directories(folders_table))
+                                   command=lambda: graphical_process_directories(database_obj_instance.folders_table))
 
     allow_resend_button = Button(options_frame, text="Enable Resend...",
-                                 command=lambda: resend_interface.do(database_connection, root))
+                                 command=lambda: resend_interface.do(database_obj_instance.database_connection, root))
 
     maintenance_button = Button(options_frame, text="Maintenance...", command=maintenance_functions_popup)
     processed_files_button = Button(options_frame, text="Processed Files Report...", command=processed_files_popup)
