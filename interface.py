@@ -47,7 +47,7 @@ if __name__ == '__main__':
     root = tkinter.Tk()  # create root window
     root.title(appname + " " + version)
     folder = tkinter.NONE
-    options_frame = tkinter.Frame(root)  # initialize left frame
+    options_frame = tkinter.ttk.Frame(root)  # initialize left frame
     feedback_text = tkinter.ttk.Label(root, text="Loading...")
     feedback_text.pack(side=tkinter.BOTTOM)
     root.update()
@@ -379,11 +379,11 @@ if __name__ == '__main__':
         global users_list_frame
         global active_users_list_frame
         global inactive_users_list_frame
-        users_list_frame = tkinter.Frame(root)
-        scrollable_lists_frame = tkinter.Frame(users_list_frame)
-        search_frame = tkinter.Frame(users_list_frame)
-        active_users_list_container = tkinter.Frame(scrollable_lists_frame)
-        inactive_users_list_container = tkinter.Frame(scrollable_lists_frame)
+        users_list_frame = tkinter.ttk.Frame(root)
+        scrollable_lists_frame = tkinter.ttk.Frame(users_list_frame)
+        search_frame = tkinter.ttk.Frame(users_list_frame)
+        active_users_list_container = tkinter.ttk.Frame(scrollable_lists_frame)
+        inactive_users_list_container = tkinter.ttk.Frame(scrollable_lists_frame)
         active_users_list_frame = scrollbuttons.VerticalScrolledFrame(active_users_list_container)
         inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(inactive_users_list_container)
         active_users_list_label = tkinter.ttk.Label(active_users_list_container,
@@ -480,7 +480,7 @@ if __name__ == '__main__':
         # iterate over list of known folders, sorting into lists of active and inactive
         for folders_name in filtered_folder_dict_list:
             if str(folders_name['folder_is_active']) != "False":
-                active_folder_button_frame = tkinter.Frame(active_users_list_frame.interior)
+                active_folder_button_frame = tkinter.ttk.Frame(active_users_list_frame.interior)
                 tkinter.ttk.Button(active_folder_button_frame, text="Send",
                                    command=lambda name=folders_name['id']: send_single(name)).grid(column=2, row=0,
                                                                                                    padx=(0, 10))
@@ -492,7 +492,7 @@ if __name__ == '__main__':
                                                                              sticky=tkinter.E + tkinter.W)
                 active_folder_button_frame.pack(anchor='e', pady=1)
             else:
-                inactive_folder_button_frame = tkinter.Frame(inactive_users_list_frame.interior)
+                inactive_folder_button_frame = tkinter.ttk.Frame(inactive_users_list_frame.interior)
                 tkinter.ttk.Button(inactive_folder_button_frame, text="Delete",
                                    command=lambda name=folders_name['id'], alias=folders_name['alias']:
                                    delete_folder_entry_wrapper(name, alias)).grid(column=1, row=0, sticky=tkinter.E,
@@ -540,10 +540,10 @@ if __name__ == '__main__':
             self.report_edi_validator_warnings_checkbutton_variable = tkinter.BooleanVar(master)
             self.odbc_drivers_var = tkinter.StringVar(master)
 
-            as400_db_connection_frame = tkinter.Frame(master=master)
-            report_sending_options_frame = tkinter.Frame(master)
-            email_options_frame = tkinter.Frame(master)
-            interval_backups_frame = tkinter.Frame(master)
+            as400_db_connection_frame = tkinter.ttk.Frame(master=master)
+            report_sending_options_frame = tkinter.ttk.Frame(master)
+            email_options_frame = tkinter.ttk.Frame(master)
+            interval_backups_frame = tkinter.ttk.Frame(master)
 
             # Label(master, text='Test').grid(row=0, column=0)
             as400_db_connection_frame.grid(row=0, column=0, sticky=(tkinter.W, tkinter.E), columnspan=2)
@@ -850,12 +850,12 @@ if __name__ == '__main__':
             copy_to_directory = self.foldersnameinput['copy_to_directory']
             self.convert_formats_var = tkinter.StringVar(master)
             self.title("Folder Settings")
-            self.bodyframe = tkinter.Frame(master)
-            self.othersframe = tkinter.Frame(self.bodyframe)
-            self.folderframe = tkinter.Frame(self.bodyframe)
-            self.prefsframe = tkinter.Frame(self.bodyframe)
-            self.ediframe = tkinter.Frame(self.bodyframe)
-            self.convert_options_frame = tkinter.Frame(self.ediframe)
+            self.bodyframe = tkinter.ttk.Frame(master)
+            self.othersframe = tkinter.ttk.Frame(self.bodyframe)
+            self.folderframe = tkinter.ttk.Frame(self.bodyframe)
+            self.prefsframe = tkinter.ttk.Frame(self.bodyframe)
+            self.ediframe = tkinter.ttk.Frame(self.bodyframe)
+            self.convert_options_frame = tkinter.ttk.Frame(self.ediframe)
             self.separatorv0 = tkinter.ttk.Separator(self.bodyframe, orient=tkinter.VERTICAL)
             self.separatorv1 = tkinter.ttk.Separator(self.bodyframe, orient=tkinter.VERTICAL)
             self.separatorv2 = tkinter.ttk.Separator(self.bodyframe, orient=tkinter.VERTICAL)
@@ -877,11 +877,11 @@ if __name__ == '__main__':
             self.process_backend_ftp_check = tkinter.BooleanVar(master)
             self.process_backend_email_check = tkinter.BooleanVar(master)
             self.force_edi_check_var = tkinter.BooleanVar(master)
-            self.header_frame_frame = tkinter.Frame(master)
+            self.header_frame_frame = tkinter.ttk.Frame(master)
             self.invoice_date_offset = tkinter.IntVar(master)
             self.edi_each_uom_tweak = tkinter.BooleanVar(master)
             self.force_each_upc = tkinter.BooleanVar(master)
-            self.otherslistboxframe = tkinter.Frame(master=self.othersframe)
+            self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
             self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(master=self.otherslistboxframe, orient=tkinter.VERTICAL)
             self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
@@ -906,7 +906,7 @@ if __name__ == '__main__':
             tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(row=4, columnspan=2,
                                                                                  sticky=tkinter.E + tkinter.W, pady=1)
             self.convert_options_frame.grid(column=0, row=5, columnspan=2, sticky=tkinter.W)
-            self.convert_to_selector_frame = tkinter.Frame(self.convert_options_frame)
+            self.convert_to_selector_frame = tkinter.ttk.Frame(self.convert_options_frame)
             self.convert_to_selector_label = tkinter.ttk.Label(self.convert_to_selector_frame, text="Convert To: ")
 
             def make_convert_to_options(_=None):
@@ -1042,7 +1042,7 @@ if __name__ == '__main__':
                                                                      onvalue=True, offvalue=False,
                                                                      command=set_send_options_fields_state)
             if self.foldersnameinput['folder_name'] != 'template':
-                self.folder_alias_frame = tkinter.Frame(self.folderframe)
+                self.folder_alias_frame = tkinter.ttk.Frame(self.folderframe)
                 tkinter.ttk.Label(self.folder_alias_frame, text="Folder Alias:").grid(row=0, sticky=tkinter.W)
                 self.folder_alias_field = tkinter.ttk.Entry(self.folder_alias_frame, width=30)
                 rclick_folder_alias_field = rclick_menu.RightClickMenu(self.folder_alias_field)
@@ -1939,7 +1939,7 @@ if __name__ == '__main__':
             maintenance_popup.grab_set()
             maintenance_popup.focus_set()
             maintenance_popup.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
-            maintenance_popup_button_frame = tkinter.Frame(maintenance_popup)
+            maintenance_popup_button_frame = tkinter.ttk.Frame(maintenance_popup)
             # a persistent warning that this dialog can break things...
             maintenance_popup_warning_label = tkinter.ttk.Label(maintenance_popup, text="WARNING:\nFOR\nADVANCED"
                                                                                         "\nUSERS\nONLY!")
@@ -2063,11 +2063,11 @@ if __name__ == '__main__':
         processed_files_popup_dialog.grab_set()
         processed_files_popup_dialog.focus_set()
         processed_files_popup_dialog.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
-        processed_files_popup_body_frame = tkinter.Frame(processed_files_popup_dialog)
-        processed_files_popup_list_container = tkinter.Frame(processed_files_popup_body_frame)
+        processed_files_popup_body_frame = tkinter.ttk.Frame(processed_files_popup_dialog)
+        processed_files_popup_list_container = tkinter.ttk.Frame(processed_files_popup_body_frame)
         processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(processed_files_popup_list_container)
-        processed_files_popup_close_frame = tkinter.Frame(processed_files_popup_dialog)
-        processed_files_popup_actions_frame = tkinter.Frame(processed_files_popup_body_frame)
+        processed_files_popup_close_frame = tkinter.ttk.Frame(processed_files_popup_dialog)
+        processed_files_popup_actions_frame = tkinter.ttk.Frame(processed_files_popup_body_frame)
         processed_files_loading_label = tkinter.ttk.Label(master=processed_files_popup_dialog, text="Loading...")
         processed_files_loading_label.pack()
         root.update()
