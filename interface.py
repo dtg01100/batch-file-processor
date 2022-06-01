@@ -1185,6 +1185,7 @@ if __name__ == '__main__':
                 self.force_each_upc.set(config_dict['force_each_upc'])
 
                 if copied:
+                    self.convert_formats_var.set(config_dict['convert_to_format'])
                     if config_dict['process_edi'] == 'True':
                         self.ediconvert_options.set("Convert EDI")
                         reset_ediconvert_options('Convert EDI')
