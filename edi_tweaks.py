@@ -21,7 +21,7 @@ def edi_tweak(
     calc_upc = parameters_dict['calculate_upc_check_digit'],
     invoice_date_offset = parameters_dict['invoice_date_offset'],
     retail_uom = parameters_dict['retail_uom'],
-    force_each_up = parameters_dict['force_each_upc']
+    force_each_upc = parameters_dict['force_each_upc']
 
     work_file = None
     read_attempt_counter = 1
