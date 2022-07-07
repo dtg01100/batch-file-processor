@@ -1,5 +1,5 @@
-from tkinter import *
-from tkinter.ttk import *
+import tkinter
+import tkinter.ttk
 
 
 class DoingStuffOverlay:
@@ -15,21 +15,21 @@ def make_overlay(parent, overlay_text, header="", footer="", overlay_height=100)
     global header_label
     global footer_var
     global footer_label
-    label_var = StringVar()
+    label_var = tkinter.StringVar()
     label_var.set(overlay_text)
-    header_var = StringVar()
+    header_var = tkinter.StringVar()
     header_var.set(header)
-    footer_var = StringVar()
+    footer_var = tkinter.StringVar()
     footer_var.set(footer)
-    doing_stuff_frame = Frame(parent, relief=RIDGE)
+    doing_stuff_frame = tkinter.ttk.Frame(parent, relief=tkinter.RIDGE)
     doing_stuff_frame.grab_set()
-    doing_stuff = Label(doing_stuff_frame, text=label_var.get())
-    doing_stuff.place(relx=.5, rely=.5, anchor=CENTER)
-    header_label = Label(doing_stuff_frame, text=header_var.get())
-    header_label.place(relx=.05, rely=.15, anchor=W)
-    footer_label = Label(doing_stuff_frame, text=footer_var.get())
-    footer_label.place(relx=.05, rely=.85, anchor=W)
-    doing_stuff_frame.place(relx=.5, rely=.5, height=overlay_height, relwidth=1, anchor=CENTER)
+    doing_stuff = tkinter.ttk.Label(doing_stuff_frame, text=label_var.get())
+    doing_stuff.place(relx=.5, rely=.5, anchor=tkinter.CENTER)
+    header_label = tkinter.ttk.Label(doing_stuff_frame, text=header_var.get())
+    header_label.place(relx=.05, rely=.15, anchor=tkinter.W)
+    footer_label = tkinter.ttk.Label(doing_stuff_frame, text=footer_var.get())
+    footer_label.place(relx=.05, rely=.85, anchor=tkinter.W)
+    doing_stuff_frame.place(relx=.5, rely=.5, height=overlay_height, relwidth=1, anchor=tkinter.CENTER)
     parent.update()
 
 
