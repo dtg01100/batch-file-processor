@@ -1,5 +1,6 @@
 import upc_e_to_upc_a
 import line_from_mtc_edi_to_dict
+from decimal import Decimal
 
 
 def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
@@ -13,6 +14,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     pad_arec = parameters_dict['pad_a_records']
     arec_padding = parameters_dict['a_record_padding']
     force_each_upc= parameters_dict['force_each_upc']
+    retail_uom = parameters_dict['retail_uom']
 
     conv_calc_upc = calc_upc
     conv_inc_arec = inc_arec
@@ -48,6 +50,30 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
             # needs to be wrapped an parenthesis to separate statements
 
             if line.startswith("B"):
+                if retail_uom:
+                    edi_line_pass = False
+                    try:
+                        item_number = int(input_edi_dict['vendor_item'].strip())
+                        float(input_edi_dict['unit_cost'].strip())
+                        test_unit_multiplier = int(input_edi_dict['unit_multiplier'].strip())
+                        if test_unit_multiplier == 0:
+                            raise ValueError
+                        int(input_edi_dict['qty_of_units'].strip())
+                        edi_line_pass = True
+                    except Exception:
+                        print("cannot parse b record field, skipping")
+                    if edi_line_pass:
+                        try:
+                            each_upc_string = each_upc_lut[item_number][:11].ljust(11)
+                        except KeyError:
+                            each_upc_string = "           "
+                        try:
+                            input_edi_dict["unit_cost"] = str(Decimal((Decimal(input_edi_dict['unit_cost'].strip()) / 100) / Decimal(input_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
+                            input_edi_dict['qty_of_units'] = str(int(input_edi_dict['unit_multiplier'].strip()) * int(input_edi_dict['qty_of_units'].strip())).rjust(5,'0')
+                            input_edi_dict['upc_number'] = each_upc_string
+                            input_edi_dict['unit_multiplier'] = '000001'
+                        except Exception as error:
+                            print(error)
                 blank_upc = False
                 upc_string = ""
                 if force_each_upc:

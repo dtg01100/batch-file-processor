@@ -919,7 +919,8 @@ if __name__ == '__main__':
                                    self.a_record_padding_field,
                                    self.append_a_records_checkbutton,
                                    self.a_record_append_field,
-                                   self.force_each_upc_checkbutton]:
+                                   self.force_each_upc_checkbutton,
+                                   self.each_uom_edi_tweak_checkbutton]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
@@ -930,11 +931,14 @@ if __name__ == '__main__':
                     self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_padding_field.grid(row=9, column=2)
                     self.force_each_upc_checkbutton.grid(row=10, column=0, sticky=tkinter.W, padx=3)
+                    self.each_uom_edi_tweak_checkbutton.grid(row=11, column=0, sticky=tkinter.W, padx=3)
                 if self.convert_formats_var.get() == 'ScannerWare':
                     self.pad_a_records_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_padding_field.grid(row=2, column=2)
                     self.append_a_records_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_append_field.grid(row=3, column=2)
+                if self.convert_formats_var.get() == 'simplified_csv':
+                    self.each_uom_edi_tweak_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(self.convert_to_selector_frame,
                                                                    self.convert_formats_var,
