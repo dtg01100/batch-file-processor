@@ -13,14 +13,14 @@ def edi_tweak(
     parameters_dict
 ):
 
-    pad_arec = parameters_dict['pad_a_records'],
-    arec_padding = parameters_dict['a_record_padding'],
-    append_arec = parameters_dict['append_a_records'],
-    append_arec_text = parameters_dict['a_record_append_text'],
-    force_txt_file_ext = parameters_dict['force_txt_file_ext'],
-    calc_upc = parameters_dict['calculate_upc_check_digit'],
-    invoice_date_offset = parameters_dict['invoice_date_offset'],
-    retail_uom = parameters_dict['retail_uom'],
+    pad_arec = parameters_dict['pad_a_records']
+    arec_padding = parameters_dict['a_record_padding']
+    append_arec = parameters_dict['append_a_records']
+    append_arec_text = parameters_dict['a_record_append_text']
+    force_txt_file_ext = parameters_dict['force_txt_file_ext']
+    calc_upc = parameters_dict['calculate_upc_check_digit']
+    invoice_date_offset = parameters_dict['invoice_date_offset']
+    retail_uom = parameters_dict['retail_uom']
     force_each_upc = parameters_dict['force_each_upc']
 
     work_file = None
@@ -66,6 +66,7 @@ def edi_tweak(
                 )["invoice_date"]
                 if not invoice_date_string == "000000":
                     invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
+                    print(invoice_date_offset)
                     offset_invoice_date = invoice_date + timedelta(
                         days=invoice_date_offset
                     )
