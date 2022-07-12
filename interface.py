@@ -1664,7 +1664,7 @@ if __name__ == '__main__':
                 skipped_files = 0
                 email_errors = StringIO()
                 total_emails = database_obj_instance.emails_table.count()
-                database_obj_instance.emails_table.delete()
+                database_obj_instance.emails_table_batch.delete()
                 emails_count = 0
                 loop_count = 0
                 batch_number = 1
@@ -1682,14 +1682,14 @@ if __name__ == '__main__':
                         # iterate over emails to send queue, breaking it into 9mb chunks if necessary
                         # add size of current file to total
                         total_size += os.path.getsize(os.path.abspath(send_log_file['log']))
-                        database_obj_instance.emails_table.insert(dict(log=send_log_file['log']))
+                        database_obj_instance.emails_table_batch.insert(dict(log=send_log_file['log']))
                         # if the total size is more than 9mb, then send that set and reset the total
-                        if total_size > 9000000 or database_obj_instance.emails_table.count() >= 15:
+                        if total_size > 9000000 or database_obj_instance.emails_table_batch.count() >= 15:
                             batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table_batch,
                                                 database_obj_instance.sent_emails_removal_queue,
                                                 start_time, args, root, batch_number, emails_count, total_emails,
                                                 feedback_text, run_summary_string)
-                            database_obj_instance.emails_table.delete()  # clear batch
+                            database_obj_instance.emails_table_batch.delete()  # clear batch
                             total_size = 0
                             loop_count = 0
                             batch_number += 1
@@ -1698,11 +1698,11 @@ if __name__ == '__main__':
                         email_errors.write("\r\n file was expected to be at " + log['log'] + " on the sending computer")
                         skipped_files += 1
                         database_obj_instance.sent_emails_removal_queue.insert(log)
-                batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table,
+                batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table_batch,
                                     database_obj_instance.sent_emails_removal_queue,
                                     start_time, args, root, batch_number, emails_count, total_emails, feedback_text,
                                     run_summary_string)
-                database_obj_instance.emails_table.delete()  # clear batch
+                database_obj_instance.emails_table_batch.delete()  # clear batch
                 for line in database_obj_instance.sent_emails_removal_queue.all():
                     database_obj_instance.emails_table.delete(log=str(line['log']))
                 database_obj_instance.sent_emails_removal_queue.delete()
@@ -1716,7 +1716,7 @@ if __name__ == '__main__':
                     reporting_emails_errors = open(email_errors_log_full_path, 'w')
                     reporting_emails_errors.write(email_errors.getvalue())
                     reporting_emails_errors.close()
-                    database_obj_instance.emails_table.insert(dict(log=email_errors_log_full_path,
+                    database_obj_instance.emails_table_batch.insert(dict(log=email_errors_log_full_path,
                                                                    folder_alias=email_errors_log_name_constructor))
                     try:
                         batch_log_sender.do(settings_dict, reporting, database_obj_instance.emails_table,
@@ -1724,13 +1724,13 @@ if __name__ == '__main__':
                                             start_time, args, root, batch_number, emails_count, total_emails,
                                             feedback_text,
                                             "Error, cannot send all logs. ")
-                        database_obj_instance.emails_table.delete()
+                        database_obj_instance.emails_table_batch.delete()
                     except Exception as email_send_error:
                         print(email_send_error)
                         doingstuffoverlay.destroy_overlay()
-                        database_obj_instance.emails_table.delete()
+                        database_obj_instance.emails_table_batch.delete()
             except Exception as dispatch_error:
-                database_obj_instance.emails_table.delete()
+                database_obj_instance.emails_table_batch.delete()
                 run_log = open(run_log_full_path, 'a')
                 if reporting['report_printing_fallback'] == "True":
                     print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
