@@ -8,7 +8,7 @@ def edi_convert(edi_process, output_filename, parameters_dict):
     arec_padding = parameters_dict['a_record_padding']
     append_arec = parameters_dict['append_a_records']
     append_arec_text = parameters_dict['a_record_append_text']
-    force_txt_file_ext = arameters_dict['force_txt_file_ext']
+    force_txt_file_ext = parameters_dict['force_txt_file_ext']
     invoice_date_offset = parameters_dict['invoice_date_offset']
 
     work_file = open(edi_process)  # open input file
