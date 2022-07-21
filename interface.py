@@ -938,7 +938,8 @@ if __name__ == '__main__':
                     self.append_a_records_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_append_field.grid(row=3, column=2)
                 if self.convert_formats_var.get() == 'simplified_csv':
-                    self.each_uom_edi_tweak_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
+                    self.headers_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
+                    self.each_uom_edi_tweak_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(self.convert_to_selector_frame,
                                                                    self.convert_formats_var,

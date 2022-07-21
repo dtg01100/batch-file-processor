@@ -9,6 +9,7 @@ class CustomerLookupError(Exception):
 
 def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     retail_uom = parameters_dict['retail_uom']
+    inc_headers  = parameters_dict['include_headers']
 
     def convert_to_price(value):
         return (
@@ -23,6 +24,9 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
             output_filename, "w", newline=""
         )  # open work file, overwriting old file
         csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
+
+        if inc_headers != "False":  # include headers if flag is set
+            csv_file.writerow(["UPC", "Quantity", "Cost"])
 
         def qty_to_int(qty):
             if qty.startswith('-'):
