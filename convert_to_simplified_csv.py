@@ -9,7 +9,8 @@ class CustomerLookupError(Exception):
 
 def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     retail_uom = parameters_dict['retail_uom']
-    inc_headers  = parameters_dict['include_headers']
+    inc_headers = parameters_dict['include_headers']
+    inc_item_numbers = parameters_dict['include_item_numbers']
 
     def convert_to_price(value):
         return (
@@ -26,7 +27,10 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
         csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
 
         if inc_headers != "False":  # include headers if flag is set
-            csv_file.writerow(["UPC", "Quantity", "Cost"])
+            proposed_header = ["UPC", "Quantity", "Cost"]
+            if inc_item_numbers:
+                proposed_header.insert(0, "Item Number")
+            csv_file.writerow(proposed_header)
 
         def qty_to_int(qty):
             if qty.startswith('-'):
@@ -70,10 +74,15 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
                             except Exception as error:
                                 print(error)
 
-                    csv_file.writerow([
+                    proposed_row = [
                         input_edi_dict['upc_number'],
                         qty_to_int(input_edi_dict['qty_of_units']),
                         convert_to_price(input_edi_dict['unit_cost'])
-                    ])
+                    ]
+
+                    if inc_item_numbers:
+                        proposed_row.insert(0, item_number)
+
+                    csv_file.writerow(proposed_row)
         f.close()  # close output file
     return(output_filename)

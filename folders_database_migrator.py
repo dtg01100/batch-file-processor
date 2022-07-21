@@ -200,3 +200,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "force_each_upc" = 0')
         update_version = dict(id=1, version="20", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '20':
+        database_connection.query("alter table 'folders' add column 'include_item_numbers'")
+        database_connection.query('UPDATE "folders" SET "include_item_numbers" = 0')
+        database_connection.query("alter table 'administrative' add column 'include_item_numbers'")
+        database_connection.query('UPDATE "administrative" SET "include_item_numbers" = 0')
+        update_version = dict(id=1, version="21", os=running_platform)
+        db_version.update(update_version, ['id'])

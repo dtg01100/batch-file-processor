@@ -55,7 +55,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        force_txt_file_ext="False",
                                        invoice_date_offset=0,
                                        retail_uom=False,
-                                       force_each_upc=False
+                                       force_each_upc=False,
+                                       include_item_numbers=False
                                        ))
 
     settings_table = database_connection['settings']
