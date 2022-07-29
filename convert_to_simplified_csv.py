@@ -87,7 +87,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
                         proposed_row.insert(0, input_edi_dict['description'])
 
                     if inc_item_numbers:
-                        proposed_row.insert(0, item_number)
+                        proposed_row.insert(0, int(input_edi_dict['vendor_item'].strip()))
 
                     csv_file.writerow(proposed_row)
         f.close()  # close output file
