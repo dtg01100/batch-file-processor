@@ -208,3 +208,14 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "include_item_numbers" = 0')
         update_version = dict(id=1, version="21", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '21':
+        try:
+            database_connection.query("alter table 'folders' add column 'include_item_description'")
+            database_connection.query('UPDATE "folders" SET "include_item_description" = 0')
+        except sqlalchemy.exc.OperationalError:
+            pass
+        database_connection.query("alter table 'administrative' add column 'include_item_description'")
+        database_connection.query('UPDATE "administrative" SET "include_item_description" = 0')
+        update_version = dict(id=1, version="22", os=running_platform)
+        db_version.update(update_version, ['id'])

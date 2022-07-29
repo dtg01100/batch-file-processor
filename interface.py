@@ -40,7 +40,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "21"
+    database_version = "22"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -240,7 +240,9 @@ if __name__ == '__main__':
                                                         force_txt_file_ext=defaults['force_txt_file_ext'],
                                                         invoice_date_offset=defaults['invoice_date_offset'],
                                                         retail_uom=defaults['retail_uom'],
-                                                        force_each_upc=defaults['force_each_upc']
+                                                        force_each_upc=defaults['force_each_upc'],
+                                                        include_item_numbers=defaults['include_item_numbers'],
+                                                        include_item_description=defaults['include_item_description']
                                                         ))
         print("done")
 
@@ -882,6 +884,7 @@ if __name__ == '__main__':
             self.edi_each_uom_tweak = tkinter.BooleanVar(master)
             self.force_each_upc = tkinter.BooleanVar(master)
             self.include_item_numbers = tkinter.BooleanVar(master)
+            self.include_item_description = tkinter.BooleanVar(master)
             self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
             self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(master=self.otherslistboxframe, orient=tkinter.VERTICAL)
@@ -921,7 +924,9 @@ if __name__ == '__main__':
                                    self.append_a_records_checkbutton,
                                    self.a_record_append_field,
                                    self.force_each_upc_checkbutton,
-                                   self.each_uom_edi_tweak_checkbutton]:
+                                   self.each_uom_edi_tweak_checkbutton,
+                                   self.include_item_numbers_checkbutton,
+                                   self.include_item_description_checkbutton]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
@@ -941,7 +946,8 @@ if __name__ == '__main__':
                 if self.convert_formats_var.get() == 'simplified_csv':
                     self.headers_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
                     self.include_item_numbers_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
-                    self.each_uom_edi_tweak_checkbutton.grid(row=4, column=0, sticky=tkinter.W, padx=3)
+                    self.include_item_description_checkbutton.grid(row=4, column=0, sticky=tkinter.W, padx=3)
+                    self.each_uom_edi_tweak_checkbutton.grid(row=5, column=0, sticky=tkinter.W, padx=3)
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(self.convert_to_selector_frame,
                                                                    self.convert_formats_var,
@@ -1145,6 +1151,10 @@ if __name__ == '__main__':
                                                                       variable=self.include_item_numbers,
                                                                       text="Include Item Numbers")
 
+            self.include_item_description_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
+                                                                      variable=self.include_item_description,
+                                                                      text="Include Item Description")
+
             def set_dialog_variables(config_dict, copied):
                 if copied:
                     for child in self.bodyframe.winfo_children():
@@ -1195,6 +1205,7 @@ if __name__ == '__main__':
                 self.edi_each_uom_tweak.set(config_dict['retail_uom'])
                 self.force_each_upc.set(config_dict['force_each_upc'])
                 self.include_item_numbers.set(config_dict['include_item_numbers'])
+                self.include_item_description.set(config_dict['include_item_description'])
 
                 if copied:
                     self.convert_formats_var.set(config_dict['convert_to_format'])
@@ -1374,6 +1385,7 @@ if __name__ == '__main__':
             apply_to_folder['retail_uom'] = self.edi_each_uom_tweak.get()
             apply_to_folder['force_each_upc'] = self.force_each_upc.get()
             apply_to_folder['include_item_numbers'] = self.include_item_numbers.get()
+            apply_to_folder['include_item_description'] = self.include_item_description.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)

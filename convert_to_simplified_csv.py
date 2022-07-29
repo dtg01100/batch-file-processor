@@ -11,6 +11,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     retail_uom = parameters_dict['retail_uom']
     inc_headers = parameters_dict['include_headers']
     inc_item_numbers = parameters_dict['include_item_numbers']
+    inc_item_desc = parameters_dict['include_item_description']
 
     def convert_to_price(value):
         return (
@@ -28,6 +29,8 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
 
         if inc_headers != "False":  # include headers if flag is set
             proposed_header = ["UPC", "Quantity", "Cost"]
+            if inc_item_desc:
+                proposed_header.insert(0, "Item Descripion")
             if inc_item_numbers:
                 proposed_header.insert(0, "Item Number")
             csv_file.writerow(proposed_header)
@@ -79,6 +82,9 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
                         qty_to_int(input_edi_dict['qty_of_units']),
                         convert_to_price(input_edi_dict['unit_cost'])
                     ]
+
+                    if inc_item_desc:
+                        proposed_row.insert(0, input_edi_dict['description'])
 
                     if inc_item_numbers:
                         proposed_row.insert(0, item_number)
