@@ -72,7 +72,7 @@ setup.py
 setup.bat
 /build.bat
 /.vscode
-/venv
 .gitignore
 /.mypy_cache
 plugin_test.py
+/venv*/
