@@ -57,7 +57,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        retail_uom=False,
                                        force_each_upc=False,
                                        include_item_numbers=False,
-                                       include_item_description=False
+                                       include_item_description=False,
+                                       simple_csv_sort_order="upc_number,qty_of_units,unit_cost,description,vendor_item"
                                        ))
 
     settings_table = database_connection['settings']

@@ -219,3 +219,14 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "include_item_description" = 0')
         update_version = dict(id=1, version="22", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '22':
+        try:
+            database_connection.query("alter table 'folders' add column 'simple_csv_sort_order'")
+            database_connection.query('UPDATE "folders" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"')
+        except sqlalchemy.exc.OperationalError:
+            pass
+        database_connection.query("alter table 'administrative' add column 'simple_csv_sort_order'")
+        database_connection.query('UPDATE "administrative" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"')
+        update_version = dict(id=1, version="23", os=running_platform)
+        db_version.update(update_version, ['id'])

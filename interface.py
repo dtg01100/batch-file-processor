@@ -40,7 +40,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "22"
+    database_version = "23"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -242,7 +242,8 @@ if __name__ == '__main__':
                                                         retail_uom=defaults['retail_uom'],
                                                         force_each_upc=defaults['force_each_upc'],
                                                         include_item_numbers=defaults['include_item_numbers'],
-                                                        include_item_description=defaults['include_item_description']
+                                                        include_item_description=defaults['include_item_description'],
+                                                        simple_csv_sort_order=defaults['simple_csv_sort_order']
                                                         ))
         print("done")
 
@@ -526,6 +527,56 @@ if __name__ == '__main__':
         scrollable_lists_frame.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.Y)
         users_list_frame.pack(side=tkinter.RIGHT, fill=tkinter.BOTH, expand=tkinter.TRUE)
 
+
+    class columnSorterWidget():
+        def __init__(self, parent_widget, input_column_layout_string=""):
+            self.columnstring = input_column_layout_string
+            self.entries_list = self.columnstring.split(",")
+            self.containerframe = tkinter.ttk.Frame(master=parent_widget) 
+            self.listcontainer_frame = tkinter.ttk.Frame(master=self.containerframe)
+            self.entries_listbox = tkinter.Listbox(master=self.listcontainer_frame, height=len(self.entries_list))
+            self.entries_listbox.pack()
+            self.buildinterface()
+            self.listcontainer_frame.pack(side=tkinter.LEFT)
+            self.adjustframe = tkinter.ttk.Frame(master=self.containerframe)
+            move_up_button = tkinter.ttk.Button(master=self.adjustframe, text="UP", command=lambda: self._move_entry(True))
+            move_down_button = tkinter.ttk.Button(master=self.adjustframe, text="DOWN", command=lambda: self._move_entry(False))
+            move_up_button.pack(side=tkinter.TOP)
+            move_down_button.pack(side=tkinter.BOTTOM)
+            self.adjustframe.pack(side=tkinter.RIGHT)
+
+        def set_columnstring(self, columnstring):
+            self.columnstring = columnstring
+            self.buildinterface()
+
+        def buildinterface(self):
+            self.entries_list = self.columnstring.split(",")
+            self.entries_listbox.configure(height=1)
+            for index in range(len(self.entries_list)):
+                self.entries_listbox.delete(index)
+            self.entries_listbox.configure(height=len(self.entries_list))
+            for item in self.entries_list:
+                self.entries_listbox.insert(tkinter.END, item)
+
+        def _move_entry(self, move_up = False):
+            current_selection = self.entries_listbox.selection_get()
+            counter = 0
+            for i in range(len(self.entries_list)):
+                if current_selection == self.entries_listbox.get(i):
+                    break
+                counter += 1
+            self.entries_listbox.delete(counter)
+            if move_up:
+                if counter != 0:
+                    counter -= 1
+            else:
+                if counter != len(self.entries_list) -1:
+                    counter += 1
+            self.entries_listbox.insert(counter, current_selection)
+            self.entries_listbox.select_set(counter)
+
+        def get(self):
+            return ",".join([self.entries_listbox.get(i) for i in range(len(self.entries_list))])
 
     class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
 
@@ -926,7 +977,8 @@ if __name__ == '__main__':
                                    self.force_each_upc_checkbutton,
                                    self.each_uom_edi_tweak_checkbutton,
                                    self.include_item_numbers_checkbutton,
-                                   self.include_item_description_checkbutton]:
+                                   self.include_item_description_checkbutton,
+                                   self.simple_csv_column_sorter.containerframe]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
@@ -948,6 +1000,7 @@ if __name__ == '__main__':
                     self.include_item_numbers_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
                     self.include_item_description_checkbutton.grid(row=4, column=0, sticky=tkinter.W, padx=3)
                     self.each_uom_edi_tweak_checkbutton.grid(row=5, column=0, sticky=tkinter.W, padx=3)
+                    self.simple_csv_column_sorter.containerframe.grid(row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2)
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(self.convert_to_selector_frame,
                                                                    self.convert_formats_var,
@@ -1154,6 +1207,7 @@ if __name__ == '__main__':
             self.include_item_description_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                       variable=self.include_item_description,
                                                                       text="Include Item Description")
+            self.simple_csv_column_sorter = columnSorterWidget(self.convert_options_frame)
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -1206,6 +1260,7 @@ if __name__ == '__main__':
                 self.force_each_upc.set(config_dict['force_each_upc'])
                 self.include_item_numbers.set(config_dict['include_item_numbers'])
                 self.include_item_description.set(config_dict['include_item_description'])
+                self.simple_csv_column_sorter.set_columnstring(config_dict['simple_csv_sort_order'])
 
                 if copied:
                     self.convert_formats_var.set(config_dict['convert_to_format'])
@@ -1386,6 +1441,7 @@ if __name__ == '__main__':
             apply_to_folder['force_each_upc'] = self.force_each_upc.get()
             apply_to_folder['include_item_numbers'] = self.include_item_numbers.get()
             apply_to_folder['include_item_description'] = self.include_item_description.get()
+            apply_to_folder['simple_csv_sort_order'] = self.simple_csv_column_sorter.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
