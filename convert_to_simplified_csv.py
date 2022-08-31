@@ -7,11 +7,13 @@ from decimal import Decimal
 class CustomerLookupError(Exception):
     pass
 
+
 def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
-    retail_uom = parameters_dict['retail_uom']
-    inc_headers = parameters_dict['include_headers']
-    inc_item_numbers = parameters_dict['include_item_numbers']
-    inc_item_desc = parameters_dict['include_item_description']
+    retail_uom = parameters_dict["retail_uom"]
+    inc_headers = parameters_dict["include_headers"]
+    inc_item_numbers = parameters_dict["include_item_numbers"]
+    inc_item_desc = parameters_dict["include_item_description"]
+    columnlayout = parameters_dict["simple_csv_sort_order"]
 
     def convert_to_price(value):
         return (
@@ -20,23 +22,39 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
             + value[-2:]
         )
 
+    def add_row(rowdict):
+        column_list = []
+        for column in columnlayout.split(","):
+            if column in ["description", "vendor_item"]:
+                if inc_item_desc and column == "description":
+                    column_list.append(rowdict[column])
+                if inc_item_numbers and column == "vendor_item":
+                    column_list.append(rowdict[column])
+            else:
+                column_list.append(rowdict[column])
+        csv_file.writerow(column_list)
+
     with open(edi_process) as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         f = open(
             output_filename, "w", newline=""
         )  # open work file, overwriting old file
         csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
+        "upc_number,qty_of_units,unit_cost,description,vendor_item"
+
+        row_dict = dict(
+            upc_number="UPC",
+            qty_of_units="Quantity",
+            unit_cost="Cost",
+            description="Item Description",
+            vendor_item="Item Number",
+        )
 
         if inc_headers != "False":  # include headers if flag is set
-            proposed_header = ["UPC", "Quantity", "Cost"]
-            if inc_item_desc:
-                proposed_header.insert(0, "Item Descripion")
-            if inc_item_numbers:
-                proposed_header.insert(0, "Item Number")
-            csv_file.writerow(proposed_header)
+            add_row(row_dict)
 
         def qty_to_int(qty):
-            if qty.startswith('-'):
+            if qty.startswith("-"):
                 wrkqty = int(qty[1:])
                 wrkqtyint = wrkqty - (wrkqty * 2)
             else:
@@ -51,44 +69,66 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
         ):  # iterate over work file contents
             input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
             if input_edi_dict is not None:
-                if input_edi_dict['record_type'] == 'B':
+                if input_edi_dict["record_type"] == "B":
                     if retail_uom:
                         edi_line_pass = False
                         try:
-                            item_number = int(input_edi_dict['vendor_item'].strip())
-                            float(input_edi_dict['unit_cost'].strip())
-                            test_unit_multiplier = int(input_edi_dict['unit_multiplier'].strip())
+                            item_number = int(input_edi_dict["vendor_item"].strip())
+                            float(input_edi_dict["unit_cost"].strip())
+                            test_unit_multiplier = int(
+                                input_edi_dict["unit_multiplier"].strip()
+                            )
                             if test_unit_multiplier == 0:
                                 raise ValueError
-                            int(input_edi_dict['qty_of_units'].strip())
+                            int(input_edi_dict["qty_of_units"].strip())
                             edi_line_pass = True
                         except Exception:
                             print("cannot parse b record field, skipping")
                         if edi_line_pass:
                             try:
-                                each_upc_string = each_upc_lut[item_number][:11].ljust(11)
+                                each_upc_string = each_upc_lut[item_number][:11].ljust(
+                                    11
+                                )
                             except KeyError:
                                 each_upc_string = "           "
                             try:
-                                input_edi_dict["unit_cost"] = str(Decimal((Decimal(input_edi_dict['unit_cost'].strip()) / 100) / Decimal(input_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
-                                input_edi_dict['qty_of_units'] = str(int(input_edi_dict['unit_multiplier'].strip()) * int(input_edi_dict['qty_of_units'].strip())).rjust(5,'0')
-                                input_edi_dict['upc_number'] = each_upc_string
-                                input_edi_dict['unit_multiplier'] = '000001'
+                                input_edi_dict["unit_cost"] = (
+                                    str(
+                                        Decimal(
+                                            (
+                                                Decimal(
+                                                    input_edi_dict["unit_cost"].strip()
+                                                )
+                                                / 100
+                                            )
+                                            / Decimal(
+                                                input_edi_dict[
+                                                    "unit_multiplier"
+                                                ].strip()
+                                            )
+                                        ).quantize(Decimal(".01"))
+                                    )
+                                    .replace(".", "")[-6:]
+                                    .rjust(6, "0")
+                                )
+                                input_edi_dict["qty_of_units"] = str(
+                                    int(input_edi_dict["unit_multiplier"].strip())
+                                    * int(input_edi_dict["qty_of_units"].strip())
+                                ).rjust(5, "0")
+                                input_edi_dict["upc_number"] = each_upc_string
+                                input_edi_dict["unit_multiplier"] = "000001"
                             except Exception as error:
                                 print(error)
 
-                    proposed_row = [
-                        input_edi_dict['upc_number'],
-                        qty_to_int(input_edi_dict['qty_of_units']),
-                        convert_to_price(input_edi_dict['unit_cost'])
-                    ]
+                    row_dict = dict(
+                        upc_number=input_edi_dict["upc_number"],
+                        qty_of_units=qty_to_int(input_edi_dict["qty_of_units"]),
+                        unit_cost=convert_to_price(input_edi_dict["unit_cost"]),
+                        description=input_edi_dict["description"],
+                        vendor_item=int(input_edi_dict["vendor_item"].strip()),
+                    )
 
-                    if inc_item_desc:
-                        proposed_row.insert(0, input_edi_dict['description'])
+                    add_row(row_dict)
 
-                    if inc_item_numbers:
-                        proposed_row.insert(0, int(input_edi_dict['vendor_item'].strip()))
-
-                    csv_file.writerow(proposed_row)
         f.close()  # close output file
-    return(output_filename)
+    return output_filename
