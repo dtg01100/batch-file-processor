@@ -15,6 +15,7 @@ def edi_tweak(
 
     pad_arec = parameters_dict['pad_a_records']
     arec_padding = parameters_dict['a_record_padding']
+    arec_padding_len = parameters_dict['a_record_padding_length']
     append_arec = parameters_dict['append_a_records']
     append_arec_text = parameters_dict['a_record_append_text']
     force_txt_file_ext = parameters_dict['force_txt_file_ext']
@@ -76,8 +77,12 @@ def edi_tweak(
                         + writeable_line[23:] + "\n"
                     )
             if pad_arec == "True":
+                padding = arec_padding
+                fill = ' '
+                align = '<'
+                width = arec_padding_len
                 writeable_line = (
-                    writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:] + "\n"
+                    writeable_line[0:1] + f'{padding:{fill}{align}{width}}' + writeable_line[7:] + "\n"
                 )  # write "A" line
             if append_arec == "True":
                 writeable_line = writeable_line.rstrip() + append_arec_text + "\n"
