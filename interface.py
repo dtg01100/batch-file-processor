@@ -924,6 +924,7 @@ if __name__ == '__main__':
             self.ampersand_check = tkinter.StringVar(master)  # define "Filter Ampersand" checkbox state variable
             self.tweak_edi = tkinter.BooleanVar(master)
             self.pad_arec_check = tkinter.StringVar(master)
+            self.a_record_padding_length = tkinter.IntVar(master)
             self.append_arec_check = tkinter.StringVar(master)
             self.force_txt_file_ext_check = tkinter.StringVar(master)
             self.process_backend_copy_check = tkinter.BooleanVar(master)
@@ -971,7 +972,9 @@ if __name__ == '__main__':
                                    self.headers_checkbutton,
                                    self.ampersand_checkbutton,
                                    self.pad_a_records_checkbutton,
+                                   self.a_record_padding_frame,
                                    self.a_record_padding_field,
+                                   self.pad_a_records_length_optionmenu,
                                    self.append_a_records_checkbutton,
                                    self.a_record_append_field,
                                    self.force_each_upc_checkbutton,
@@ -1172,12 +1175,19 @@ if __name__ == '__main__':
             self.tweak_edi_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame, variable=self.tweak_edi,
                                                                  text="Apply Edi Tweaks",
                                                                  onvalue=True, offvalue=False)
-            self.pad_a_records_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
-                                                                     variable=self.pad_arec_check,
-                                                                     text="Pad \"A\" Records (6 Characters)",
-                                                                     onvalue="True", offvalue="False")
 
-            self.a_record_padding_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
+            self.a_record_padding_frame = tkinter.ttk.Frame(self.convert_options_frame)
+
+            self.pad_a_records_checkbutton = tkinter.ttk.Checkbutton(self.a_record_padding_frame,
+                                                                     variable=self.pad_arec_check,
+                                                                     text="Pad \"A\" Records",
+                                                                     onvalue="True", offvalue="False")
+            
+            self.pad_a_records_length_optionmenu = tkinter.ttk.OptionMenu(self.a_record_padding_frame, self.a_record_padding_length,
+                                                           self.a_record_padding_length.get(),
+                                                           6,30)
+
+            self.a_record_padding_field = tkinter.ttk.Entry(self.a_record_padding_frame, width=10)
 
             self.append_a_records_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                         variable=self.append_arec_check,
@@ -1251,6 +1261,7 @@ if __name__ == '__main__':
                 self.split_edi.set(config_dict['split_edi'])
                 self.a_record_padding_field.delete(0, tkinter.END)
                 self.a_record_padding_field.insert(0, config_dict['a_record_padding'])
+                self.a_record_padding_length.set(config_dict['a_record_padding_length'])
                 self.append_arec_check.set(config_dict['append_a_records'])
                 self.a_record_append_field.delete(0, tkinter.END)
                 self.a_record_append_field.insert(0, config_dict['a_record_append_text'])
@@ -1299,8 +1310,10 @@ if __name__ == '__main__':
                     self.tweak_edi.set(True)
                     self.process_edi.set('False')
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
-                    self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=tkinter.W, padx=3)
-                    self.a_record_padding_field.grid(row=9, column=2)
+                    self.a_record_padding_frame.grid(row=9, column=0, columnspan=3, sticky=tkinter.W+tkinter.E, padx=3)
+                    self.pad_a_records_checkbutton.grid(row=0, column=0, sticky=tkinter.W)
+                    self.pad_a_records_length_optionmenu.grid(row=0, column=1, sticky=tkinter.W)
+                    self.a_record_padding_field.grid(row=0, column=2, sticky=tkinter.E)
                     self.append_a_records_checkbutton.grid(row=10, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_append_field.grid(row=10, column=2)
                     self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=tkinter.W, padx=3)
@@ -1433,6 +1446,7 @@ if __name__ == '__main__':
             apply_to_folder['split_edi'] = self.split_edi.get()
             apply_to_folder['pad_a_records'] = str(self.pad_arec_check.get())
             apply_to_folder['a_record_padding'] = str(self.a_record_padding_field.get())
+            apply_to_folder['a_record_padding_length'] = int(self.a_record_padding_length.get())
             apply_to_folder['append_a_records'] = str(self.append_arec_check.get())
             apply_to_folder['a_record_append_text'] = str(self.a_record_append_field.get())
             apply_to_folder['force_txt_file_ext'] = str(self.force_txt_file_ext_check.get())
@@ -1557,8 +1571,8 @@ if __name__ == '__main__':
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Enabled For ScannerWare Backend')
                 errors = True
 
-            if len(str(self.a_record_padding_field.get())) != 6 and str(self.pad_arec_check.get()) == "True":
-                error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters\r\n')
+            if len(str(self.a_record_padding_field.get())) > self.a_record_padding_length.get() and str(self.pad_arec_check.get()) == "True":
+                error_string_constructor_list.append(f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters\r\n')
                 errors = True
 
             if len(str(self.a_record_append_field.get())) != 6 and str(self.append_arec_check.get()) == "True":
