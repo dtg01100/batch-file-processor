@@ -1146,6 +1146,9 @@ if __name__ == '__main__':
             self.email_sender_subject_field = tkinter.ttk.Entry(self.prefsframe, width=30)
             rclick_email_sender_subject_field = rclick_menu.RightClickMenu(self.email_sender_subject_field)
             self.email_sender_subject_field.bind("<3>", rclick_email_sender_subject_field)
+            self.invoice_date_custom_format_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
+            rclick_invoice_date_custom_format_field = rclick_menu.RightClickMenu(self.invoice_date_custom_format_field)
+            self.invoice_date_custom_format_field.bind("<3>", rclick_invoice_date_custom_format_field)
 
             self.force_edi_check_checkbutton = tkinter.ttk.Checkbutton(self.ediframe, variable=self.force_edi_check_var,
                                                                        text="Force EDI Validation",
@@ -1204,7 +1207,6 @@ if __name__ == '__main__':
                                                                         variable=self.invoice_date_custom_format,
                                                                         text="Custom Invoice Date Format",
                                                                         onvalue=True, offvalue=False)
-            self.invoice_date_custom_format_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
 
             self.force_txt_file_ext_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                           variable=self.force_txt_file_ext_check,
