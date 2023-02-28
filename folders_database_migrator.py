@@ -230,3 +230,15 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"')
         update_version = dict(id=1, version="23", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '23':
+        database_connection.query("alter table 'folders' add column 'a_record_padding_length'")
+        database_connection.query('UPDATE "folders" SET "a_record_padding_length" = 6')
+        database_connection.query("alter table 'administrative' add column 'a_record_padding_length'")
+        database_connection.query('UPDATE "administrative" SET "a_record_padding_length" = 6')
+        database_connection.query("alter table 'folders' add column 'invoice_date_custom_format_string'")
+        database_connection.query('UPDATE "folders" SET "invoice_date_custom_format_string" = "%Y%m%d"')
+        database_connection.query("alter table 'administrative' add column 'invoice_date_custom_format_string'")
+        database_connection.query('UPDATE "administrative" SET "invoice_date_custom_format_string" = "%Y%m%d"')
+        update_version = dict(id=1, version="24", os=running_platform)
+        db_version.update(update_version, ['id'])
