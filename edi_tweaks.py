@@ -60,27 +60,27 @@ def edi_tweak(
         input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
         writeable_line = line
         if writeable_line.startswith("A"):
+            a_rec_edi_dict = input_edi_dict
             if invoice_date_offset != 0:
-                invoice_date_string = line_from_mtc_edi_to_dict.capture_records(
-                    writeable_line
-                )["invoice_date"]
+                invoice_date_string = a_rec_edi_dict["invoice_date"]
                 if not invoice_date_string == "000000":
                     invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
                     print(invoice_date_offset)
                     offset_invoice_date = invoice_date + timedelta(
                         days=invoice_date_offset
                     )
-                    writeable_line = (
-                        writeable_line[0:17]
-                        + datetime.strftime(offset_invoice_date, "%m%d%y")
-                        + writeable_line[23:] + "\n"
-                    )
+                    a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
             if pad_arec == "True":
-                writeable_line = (
-                    writeable_line[0:1] + arec_padding[0:6] + writeable_line[7:] + "\n"
-                )  # write "A" line
+                a_rec_edi_dict['cust_vendor'] = arec_padding
+            a_rec_line_builder = [a_rec_edi_dict['record_type'],
+                    a_rec_edi_dict['cust_vendor'],
+                    a_rec_edi_dict['invoice_number'],
+                    a_rec_edi_dict['invoice_date'],
+                    a_rec_edi_dict['invoice_total']]            
             if append_arec == "True":
-                writeable_line = writeable_line.rstrip() + append_arec_text + "\n"
+                a_rec_line_builder.append(append_arec_text)
+            a_rec_line_builder.append("\n")
+            writeable_line = "".join(a_rec_line_builder)
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
             try:
