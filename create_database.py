@@ -26,6 +26,7 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        a_record_padding='',
                                        a_record_padding_length = 6,
                                        invoice_date_custom_format_string = "%Y%m%d",
+                                       invoice_date_custom_format = False,
                                        reporting_email='',
                                        folder_name='template',
                                        alias='',
