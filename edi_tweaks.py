@@ -15,6 +15,7 @@ def edi_tweak(
 
     pad_arec = parameters_dict['pad_a_records']
     arec_padding = parameters_dict['a_record_padding']
+    arec_padding_len = parameters_dict['a_record_padding_length']
     append_arec = parameters_dict['append_a_records']
     append_arec_text = parameters_dict['a_record_append_text']
     force_txt_file_ext = parameters_dict['force_txt_file_ext']
@@ -71,7 +72,11 @@ def edi_tweak(
                     )
                     a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
             if pad_arec == "True":
-                a_rec_edi_dict['cust_vendor'] = arec_padding
+                padding = arec_padding
+                fill = ' '
+                align = '<'
+                width = arec_padding_len
+                a_rec_edi_dict['cust_vendor'] = f'{padding:{fill}{align}{width}}'
             a_rec_line_builder = [a_rec_edi_dict['record_type'],
                     a_rec_edi_dict['cust_vendor'],
                     a_rec_edi_dict['invoice_number'],
