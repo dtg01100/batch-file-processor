@@ -986,7 +986,8 @@ if __name__ == '__main__':
                                    self.each_uom_edi_tweak_checkbutton,
                                    self.include_item_numbers_checkbutton,
                                    self.include_item_description_checkbutton,
-                                   self.simple_csv_column_sorter.containerframe]:
+                                   self.simple_csv_column_sorter.containerframe,
+                                   self.a_record_padding_field]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
@@ -994,13 +995,15 @@ if __name__ == '__main__':
                     self.c_record_checkbutton.grid(row=5, column=0, sticky=tkinter.W, padx=3)
                     self.headers_checkbutton.grid(row=6, column=0, sticky=tkinter.W, padx=3)
                     self.ampersand_checkbutton.grid(row=7, column=0, sticky=tkinter.W, padx=3)
-                    self.pad_a_records_checkbutton.grid(row=9, column=0, sticky=tkinter.W, padx=3)
-                    self.a_record_padding_field.grid(row=9, column=2)
+                    self.pad_a_records_checkbutton.grid(row=0, column=0, sticky=tkinter.W)
+                    self.a_record_padding_frame.grid(row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3)
+                    self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
                     self.force_each_upc_checkbutton.grid(row=10, column=0, sticky=tkinter.W, padx=3)
                     self.each_uom_edi_tweak_checkbutton.grid(row=11, column=0, sticky=tkinter.W, padx=3)
                 if self.convert_formats_var.get() == 'ScannerWare':
-                    self.pad_a_records_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
+                    self.pad_a_records_checkbutton.grid(row=0, column=0, sticky=tkinter.W)
                     self.a_record_padding_field.grid(row=2, column=2)
+                    self.a_record_padding_frame.grid(row=2, column=0, columnspan=2, sticky=tkinter.W, padx=3)
                     self.append_a_records_checkbutton.grid(row=3, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_append_field.grid(row=3, column=2)
                 if self.convert_formats_var.get() == 'simplified_csv':
