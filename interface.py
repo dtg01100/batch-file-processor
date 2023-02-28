@@ -243,7 +243,11 @@ if __name__ == '__main__':
                                                         force_each_upc=defaults['force_each_upc'],
                                                         include_item_numbers=defaults['include_item_numbers'],
                                                         include_item_description=defaults['include_item_description'],
-                                                        simple_csv_sort_order=defaults['simple_csv_sort_order']
+                                                        simple_csv_sort_order=defaults['simple_csv_sort_order'],
+                                                        a_record_padding = defaults['a_record_padding'],
+                                                        a_record_padding_length = defaults['a_record_padding_length'],
+                                                        invoice_date_custom_format_string = defaults['invoice_date_custom_format_string'],
+                                                        invoice_date_custom_format = defaults['invoice_date_custom_format'],
                                                         ))
         print("done")
 
