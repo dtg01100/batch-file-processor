@@ -1195,7 +1195,7 @@ if __name__ == '__main__':
                                                            self.a_record_padding_length.get(),
                                                            6,30)
 
-            self.a_record_padding_field = tkinter.ttk.Entry(self.a_record_padding_frame, width=10)
+            self.a_record_padding_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
 
             self.append_a_records_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                         variable=self.append_arec_check,
@@ -1327,10 +1327,10 @@ if __name__ == '__main__':
                     self.tweak_edi.set(True)
                     self.process_edi.set('False')
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
-                    self.a_record_padding_frame.grid(row=9, column=0, columnspan=3, sticky=tkinter.W+tkinter.E, padx=3)
-                    self.pad_a_records_checkbutton.grid(row=0, column=0, sticky=tkinter.W+tkinter.E)
+                    self.a_record_padding_frame.grid(row=9, column=0, columnspan=2, sticky=tkinter.W+tkinter.E, padx=3)
+                    self.pad_a_records_checkbutton.grid(row=0, column=0, sticky=tkinter.W)
                     self.pad_a_records_length_optionmenu.grid(row=0, column=1, sticky=tkinter.E)
-                    self.a_record_padding_field.grid(row=0, column=2, sticky=tkinter.E)
+                    self.a_record_padding_field.grid(row=9, column=2, sticky=tkinter.W, padx=3)
                     self.append_a_records_checkbutton.grid(row=10, column=0, sticky=tkinter.W, padx=3)
                     self.a_record_append_field.grid(row=10, column=2)
                     self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=tkinter.W, padx=3)
