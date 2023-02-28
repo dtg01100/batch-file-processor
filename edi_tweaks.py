@@ -18,6 +18,8 @@ def edi_tweak(
     arec_padding_len = parameters_dict['a_record_padding_length']
     append_arec = parameters_dict['append_a_records']
     append_arec_text = parameters_dict['a_record_append_text']
+    invoice_date_custom_format = parameters_dict['invoice_date_custom_format']
+    invoice_date_custom_format_string = parameters_dict['invoice_date_custom_format_string']
     force_txt_file_ext = parameters_dict['force_txt_file_ext']
     calc_upc = parameters_dict['calculate_upc_check_digit']
     invoice_date_offset = parameters_dict['invoice_date_offset']
@@ -71,6 +73,10 @@ def edi_tweak(
                         days=invoice_date_offset
                     )
                     a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
+            if invoice_date_custom_format:
+                invoice_date_string = a_rec_edi_dict["invoice_date"]
+                invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
+                a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, "%m%d%y")
             if pad_arec == "True":
                 padding = arec_padding
                 fill = ' '
