@@ -936,6 +936,8 @@ if __name__ == '__main__':
             self.force_edi_check_var = tkinter.BooleanVar(master)
             self.header_frame_frame = tkinter.ttk.Frame(master)
             self.invoice_date_offset = tkinter.IntVar(master)
+            self.invoice_date_custom_format_string = tkinter.StringVar(master)
+            self.invoice_date_custom_format = tkinter.BooleanVar(master)
             self.edi_each_uom_tweak = tkinter.BooleanVar(master)
             self.force_each_upc = tkinter.BooleanVar(master)
             self.include_item_numbers = tkinter.BooleanVar(master)
@@ -1197,6 +1199,13 @@ if __name__ == '__main__':
                                                                         text="Append to \"A\" Records (6 Characters)\n(Series2K)",
                                                                         onvalue="True", offvalue="False")
             self.a_record_append_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
+
+            self.invoice_date_custom_format_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
+                                                                        variable=self.invoice_date_custom_format,
+                                                                        text="Custom Invoice Date Format",
+                                                                        onvalue=True, offvalue=False)
+            self.invoice_date_custom_format_field = tkinter.ttk.Entry(self.convert_options_frame, width=10)
+
             self.force_txt_file_ext_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                           variable=self.force_txt_file_ext_check,
                                                                           text="Force .txt file extension",
@@ -1270,6 +1279,9 @@ if __name__ == '__main__':
                 self.a_record_append_field.insert(0, config_dict['a_record_append_text'])
                 self.force_txt_file_ext_check.set(config_dict['force_txt_file_ext'])
                 self.invoice_date_offset.set(config_dict['invoice_date_offset'])
+                self.invoice_date_custom_format.set(config_dict['invoice_date_custom_format'])
+                self.invoice_date_custom_format_field.delete(0, tkinter.END)
+                self.invoice_date_custom_format_field.insert(0, config_dict['invoice_date_custom_format_string'])
                 self.edi_each_uom_tweak.set(config_dict['retail_uom'])
                 self.force_each_upc.set(config_dict['force_each_upc'])
                 self.include_item_numbers.set(config_dict['include_item_numbers'])
@@ -1322,8 +1334,10 @@ if __name__ == '__main__':
                     self.force_txt_file_ext_checkbutton.grid(row=11, column=0, sticky=tkinter.W, padx=3)
                     self.invoice_date_offset_spinbox_label.grid(row=12, column=0, sticky=tkinter.W, padx=3)
                     self.invoice_date_offset_spinbox.grid(row=12, column=2, sticky=tkinter.W, padx=3)
-                    self.each_uom_edi_tweak_checkbutton.grid(row=13, column=0, sticky=tkinter.W, padx=3)
-                    self.force_each_upc_checkbutton.grid(row=14, column=0, sticky=tkinter.W, padx=3)
+                    self.invoice_date_custom_format_checkbutton.grid(row=13, column=0, sticky=tkinter.W, padx=3)
+                    self.invoice_date_custom_format_field.grid(row=13, column=2, sticky=tkinter.W, padx=3)
+                    self.each_uom_edi_tweak_checkbutton.grid(row=14, column=0, sticky=tkinter.W, padx=3)
+                    self.force_each_upc_checkbutton.grid(row=15, column=0, sticky=tkinter.W, padx=3)
 
             if self.foldersnameinput['process_edi'] == 'True':
                 self.ediconvert_options.set("Convert EDI")
@@ -1459,6 +1473,8 @@ if __name__ == '__main__':
             apply_to_folder['include_item_numbers'] = self.include_item_numbers.get()
             apply_to_folder['include_item_description'] = self.include_item_description.get()
             apply_to_folder['simple_csv_sort_order'] = self.simple_csv_column_sorter.get()
+            apply_to_folder['invoice_date_custom_format'] = self.invoice_date_custom_format.get()
+            apply_to_folder['invoice_date_custom_format_string'] = self.invoice_date_custom_format_field.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)

@@ -76,7 +76,7 @@ def edi_tweak(
             if invoice_date_custom_format:
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
-                a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, "%m%d%y")
+                a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, invoice_date_custom_format_string)
             if pad_arec == "True":
                 padding = arec_padding
                 fill = ' '
