@@ -1,9 +1,5 @@
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from binaryornot.check import is_binary
-from email import encoders
+from redmail import EmailSender
+from pathlib import Path
 import time
 import os
 
@@ -17,47 +13,45 @@ def do(process_parameters, settings, filename):
     counter = 0
     while not file_pass:
         try:
-            from_address = settings['email_address']
-            email_username = settings['email_username']
-            to_address = process_parameters['email_to']
-            to_address_list = to_address.split(", ")
-            msg = MIMEMultipart()
-
             filename_no_path = os.path.basename(filename)
-
+            filename_no_path_str = str(filename_no_path)
+            emailer = EmailSender(host=settings['email_smtp_server'], port=settings['smtp_port'])
             if process_parameters['email_subject_line'] != "":
                 date_time = str(time.ctime())
                 subject_line_constructor = process_parameters['email_subject_line']
-                msg['Subject'] = subject_line_constructor.replace("%datetime%", date_time).replace("%filename%",
+                subject_line = subject_line_constructor.replace("%datetime%", date_time).replace("%filename%",
                                                                                                    filename_no_path)
             else:
-                msg['Subject'] = str(filename_no_path) + " Attached"
+                subject_line = str(filename_no_path) + " Attached"
 
-            msg['From'] = from_address
-            msg['To'] = to_address
+            to_address = process_parameters['email_to']
+            to_address_list = to_address.split(", ")
 
-            body = str(filename_no_path) + " Attached"
-
-            msg.attach(MIMEText(body, 'plain'))
-
-            with open(filename, 'rb') as attachment:
-
-                part = MIMEBase('application', 'octet-stream; name="%s"' % filename_no_path)
-                part.set_payload(attachment.read())
-                if is_binary(filename):
-                    encoders.encode_base64(part)
-                part.add_header('X-Attachment-Id', '1')
-                part.add_header('Content-Disposition', 'attachment; filename="%s"' % filename_no_path)
-
-                msg.attach(part)
-                server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
-                server.ehlo()
-                server.starttls()
-                if email_username != "" and settings['email_password'] != "":
-                    server.login(email_username, settings['email_password'])
-                server.sendmail(from_address, to_address_list, msg.as_string())
-                server.close()
-                file_pass = True
+            if settings['email_username'] == "" and settings['email_password'] == '':
+                emailer.send(
+                    subject=subject_line,
+                    sender=settings['email_address'],
+                    receivers=to_address_list,
+                    text=filename_no_path_str + " Attached",
+                    attachments={
+                        filename_no_path_str: Path(filename),
+                    }
+                )
+            else:
+                send_username = settings['email_username']
+                send_password = settings['email_password']
+                emailer.send(
+                    subject=subject_line,
+                    username=send_username,
+                    password=send_password,
+                    sender=settings['email_address'],
+                    receivers=to_address_list,
+                    text=filename_no_path_str + " Attached",
+                    attachments={
+                        filename_no_path_str: Path(filename),
+                    }
+                )
+            file_pass = True
         except Exception as email_error:
             if counter == 10:
                 print("Retried 10 times, passing exception to dispatch")

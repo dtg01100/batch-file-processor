@@ -1,11 +1,6 @@
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 import os
-
-from binaryornot.check import is_binary
+from pathlib import Path
+from redmail import EmailSender
 
 import doingstuffoverlay
 
@@ -16,19 +11,13 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
     email_username = settings['email_username']
     to_address = reporting['report_email_destination']
     to_address_list = to_address.split(", ")
-    msg = MIMEMultipart()
-
-    msg['From'] = from_address
-    msg['To'] = to_address
 
     if emails_table.count() != 1:
-        msg['Subject'] = "Logs from run at: " + time
-        body = run_summary_string + ". See attached logs"
+        subject_line = "Logs from run at: " + time
+        email_body_text = run_summary_string + ". See attached logs"
     else:
-        msg['Subject'] = "Log from run at: " + time
-        body = run_summary_string + ". See attached log"
-
-    msg.attach(MIMEText(body, 'plain'))
+        subject_line = "Log from run at: " + time
+        email_body_text = run_summary_string + ". See attached log"
 
     if not args.automatic:
         doingstuffoverlay.destroy_overlay()
@@ -38,6 +27,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
                                      " attachment " + str(emails_count) + " of " + str(total_emails))
 
+    attachment_dict = {}
     for log in emails_table.all():
 
         if not args.automatic:
@@ -49,31 +39,40 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         root.update()
 
         filename = log['log']
-        attachment = open(filename, "rb")
 
-        head, tail = os.path.split(filename)
+        attachmentpath = Path(filename)
+        attachmentname = os.path.basename(filename)
+        attachment_dict[attachmentname] = attachmentpath
 
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(attachment.read())
-        if is_binary(filename):
-            encoders.encode_base64(part)
-        part.add_header('Content-Disposition', "attachment; filename= %s" % tail)
-
-        print("attaching " + filename)
-        msg.attach(part)
         log['old_id'] = log.pop('id')
         if log['log'].endswith('.zip'):
             log['log'] = log['log'][:-4]
         sent_emails_removal_queue.insert(log)
 
-    server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
-    server.ehlo()
-    server.starttls()
-    if email_username != "" and settings['email_password'] != "":
-        server.login(email_username, settings['email_password'])
-    text = msg.as_string()
-    print("sending " + str(msg['Subject'] + " to " + str(msg['To'])))
-    server.sendmail(from_address, to_address_list, text)
-    server.quit()
+    emailer = EmailSender(host=settings['email_smtp_server'], port=settings['smtp_port'])
+    
+    print("sending " + str(subject_line + " to " + str(to_address_list)))
+
+    if settings['email_username'] == "" and settings['email_password'] == '':
+        emailer.send(
+            subject=subject_line,
+            sender=settings['email_address'],
+            receivers=to_address_list,
+            text=email_body_text,
+            attachments=attachment_dict
+        )
+    else:
+        send_username = settings['email_username']
+        send_password = settings['email_password']
+        emailer.send(
+            subject=subject_line,
+            username=send_username,
+            password=send_password,
+            sender=settings['email_address'],
+            receivers=to_address_list,
+            text=email_body_text,
+            attachments=attachment_dict
+        )
+
     if not args.automatic:
         doingstuffoverlay.destroy_overlay()
