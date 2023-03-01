@@ -1550,18 +1550,18 @@ if __name__ == '__main__':
                             except Exception as ftp_error:
                                 print("cwd")
                                 print(ftp_error)
-                                error_string_constructor_list.append("FTP Folder Field Incorrect\r\n")
+                                error_string_constructor_list.append("FTP Folder Field Incorrect")
                                 errors = True
                         except Exception as ftp_error:
                             print("username/password")
                             print(ftp_error)
-                            error_string_constructor_list.append("FTP Username or Password Incorrect\r\n")
+                            error_string_constructor_list.append("FTP Username or Password Incorrect")
                             errors = True
                         ftp.close()
                     except Exception as ftp_error:
                         print("server/port")
                         print(ftp_error)
-                        error_string_constructor_list.append("FTP Server or Port Field Incorrect\r\n")
+                        error_string_constructor_list.append("FTP Server or Port Field Incorrect")
                         errors = True
 
             if self.process_backend_email_check.get() is True:
@@ -1569,13 +1569,13 @@ if __name__ == '__main__':
                 backend_count += 1
 
                 if self.email_recepient_field.get() == "":
-                    error_string_constructor_list.append("Email Destination Address Field Is Required\r\n")
+                    error_string_constructor_list.append("Email Destination Address Field Is Required")
                     errors = True
                 else:
                     email_recepients = str(self.email_recepient_field.get()).split(", ")
                     for email_recepient in email_recepients:
                         if (validate_email(str(email_recepient))) is False:
-                            error_string_constructor_list.append("Invalid Email Destination Address\r\n")
+                            error_string_constructor_list.append("Invalid Email Destination Address")
                             errors = True
 
             if self.process_backend_copy_check.get() is True:
@@ -1584,7 +1584,7 @@ if __name__ == '__main__':
 
                 if copy_to_directory is None or copy_to_directory == "":
                     error_string_constructor_list.append("Copy Backend Destination Is currently Unset,"
-                                                         " Please Select One\r\n")
+                                                         " Please Select One")
                     errors = True
 
             if backend_count == 0 and self.active_checkbutton.get() == "True":
@@ -1596,11 +1596,16 @@ if __name__ == '__main__':
                 errors = True
 
             if len(str(self.a_record_padding_field.get())) > self.a_record_padding_length.get() and str(self.pad_arec_check.get()) == "True":
-                error_string_constructor_list.append(f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters\r\n')
-                errors = True
+                if not self.convert_formats_var.get() in ['ScannerWare']:
+                    error_string_constructor_list.append(f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters')
+                    errors = True
+
+            if len(str(self.a_record_padding_field.get())) != 6 and str(self.pad_arec_check.get()) == "True":
+                    error_string_constructor_list.append(f'"A" Record Padding Needs To Be Six Characters')
+                    errors = True
 
             if len(str(self.a_record_append_field.get())) != 6 and str(self.append_arec_check.get()) == "True":
-                error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters\r\n')
+                error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters')
                 errors = True
 
             if int(self.invoice_date_offset.get()) not in [i for i in range(-14, 15)]:
@@ -1616,15 +1621,15 @@ if __name__ == '__main__':
                     proposed_folder = database_obj_instance.folders_table.find_one(
                         alias=str(self.folder_alias_field.get()))
                     if proposed_folder is not None:
-                        error_string_constructor_list.append("Folder Alias Already In Use\r\n")
+                        error_string_constructor_list.append("Folder Alias Already In Use")
                         errors = True
 
                 if len(self.folder_alias_field.get()) > 50:
-                    error_string_constructor_list.append("Alias Too Long\r\n")
+                    error_string_constructor_list.append("Alias Too Long")
                     errors = True
             if errors is True:
                 doingstuffoverlay.destroy_overlay()
-                error_string = ''.join(error_string_constructor_list)  # combine error messages into single string
+                error_string = '\r\n'.join(error_string_constructor_list)  # combine error messages into single string
                 showerror(parent=self, message=error_string)  # display generated error in dialog box
                 return False
 
