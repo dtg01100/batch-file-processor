@@ -523,7 +523,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 try:
                                     output_send_filename = edi_tweaks.edi_tweak(output_send_filename, output_filename,
                                                                                 each_upc_dict,
-                                                                                parameters_dict)
+                                                                                parameters_dict,
+                                                                                settings)
                                 except Exception as process_error:
                                     print(str(process_error))
                                     errors = True

@@ -10,7 +10,8 @@ def edi_tweak(
     edi_process,
     output_filename,
     each_upc_dict,
-    parameters_dict
+    parameters_dict,
+    settings_dict
 ):
 
     pad_arec = parameters_dict['pad_a_records']
