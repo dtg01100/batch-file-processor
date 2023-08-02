@@ -27,6 +27,7 @@ def edi_tweak(
     invoice_date_offset = parameters_dict['invoice_date_offset']
     retail_uom = parameters_dict['retail_uom']
     force_each_upc = parameters_dict['force_each_upc']
+    split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
 
     class cRecGenerator:
         def __init__(self, settings_dict) -> None:
