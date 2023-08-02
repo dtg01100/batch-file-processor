@@ -246,3 +246,14 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "invoice_date_custom_format" = 0')
         update_version = dict(id=1, version="24", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '24':
+        try:
+            database_connection.query("alter table 'folders' add column 'split_prepaid_sales_tax_crec'")
+            database_connection.query('UPDATE "folders" SET "split_prepaid_sales_tax_crec" = 0')
+        except sqlalchemy.exc.OperationalError:
+            pass
+        database_connection.query("alter table 'administrative' add column 'split_prepaid_sales_tax_crec'")
+        database_connection.query('UPDATE "administrative" SET "split_prepaid_sales_tax_crec" = 0')
+        update_version = dict(id=1, version="25", os=running_platform)
+        db_version.update(update_version, ['id'])
