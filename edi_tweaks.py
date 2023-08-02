@@ -30,22 +30,28 @@ def edi_tweak(
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
 
     class cRecGenerator:
-        def __init__(self, settings_dict) -> None:
-            self.query_object = query_runner(
-                settings_dict["as400_username"],
-                settings_dict["as400_password"],
-                settings_dict["as400_address"],
-                f"{settings_dict['odbc_driver']}",
-            )
+        def __init__(self, settings_dict):
+            self.query_object = None
             self._invoice_number = 0
             self.unappended_records = False
+            self.settings = settings_dict
+
+        def _db_connect(self):
+            self.query_object = query_runner(
+                self.settings["as400_username"],
+                self.settings["as400_password"],
+                self.settings["as400_address"],
+                f"{self.settings['odbc_driver']}",
+            )
 
         def set_invoice_number(self, invoice_number):
             self._invoice_number = invoice_number
             self.unappended_records = True
 
         def fetch_splitted_sales_tax_totals(self, procfile):
-            qry_ret_non_prepaid, qry_ret_prepaid = self.query_object.run_arbitrary_query(
+            if self.query_object is None:
+                self._db_connect()
+            qry_ret = self.query_object.run_arbitrary_query(
                 f"""
                 SELECT
                     sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
@@ -56,20 +62,22 @@ def edi_tweak(
                     odhst.BUHHNB = {self._invoice_number}
                 """
             )
+            qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]
             def _write_line(typestr:str, amount:int, wprocfile):
                 descstr = typestr.ljust(25, " ")
                 if amount < 0:
                     amount_builder = amount - (amount * 2)
                 else:
                     amount_builder = amount
-                
-                amountstr = str(amount_builder).rjust(8, "0")
+
+                amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
                 if amount < 0:
-                    temp_amount_list = amountstr.split()
+                    temp_amount_list = list(amountstr)
                     temp_amount_list[0] = "-"
                     amountstr = "".join(temp_amount_list)
-                linebuilder = f"CTAB{decstr}{amountstr}"
+                linebuilder = f"CTAB{descstr}{amountstr}\n"
                 wprocfile.write(linebuilder)
+            # print(qry_ret_non_prepaid,qry_ret_prepaid)
             if qry_ret_prepaid != 0:
                 _write_line("Prepaid Sales Tax", qry_ret_prepaid, procfile)
             if qry_ret_non_prepaid != 0:
@@ -110,11 +118,14 @@ def edi_tweak(
                 print(f"error opening file for write {error}")
                 raise
 
+    crec_appender = cRecGenerator(settings_dict)
+
     for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
         input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
         writeable_line = line
         if writeable_line.startswith("A"):
             a_rec_edi_dict = input_edi_dict
+            crec_appender.set_invoice_number(int(a_rec_edi_dict['invoice_number']))
             if invoice_date_offset != 0:
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
                 if not invoice_date_string == "000000":
@@ -143,6 +154,7 @@ def edi_tweak(
                 a_rec_line_builder.append(append_arec_text)
             a_rec_line_builder.append("\n")
             writeable_line = "".join(a_rec_line_builder)
+            f.write(writeable_line)
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
             try:
@@ -224,9 +236,11 @@ def edi_tweak(
                 b_rec_edi_dict["parent_item_number"],
                 "\n")
             )
-        f.write(writeable_line)
-    else:
-        f.write(chr(26))
-
+            f.write(writeable_line)
+        if writeable_line.startswith("C"):
+            if split_prepaid_sales_tax_crec and crec_appender.unappended_records and writeable_line.startswith("CTABSales Tax"):
+                crec_appender.fetch_splitted_sales_tax_totals(f)
+            else:
+                f.write(writeable_line)
     f.close()  # close output file
     return output_filename
