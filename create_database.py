@@ -62,9 +62,6 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        include_item_numbers=False,
                                        include_item_description=False,
                                        simple_csv_sort_order="upc_number,qty_of_units,unit_cost,description,vendor_item",
-                                       a_record_padding_length=6,
-                                       invoice_date_custom_format_string = "%Y%m%d",
-                                       invoice_date_custom_format = False,
                                        split_prepaid_sales_tax_crec=False
                                        ))
 

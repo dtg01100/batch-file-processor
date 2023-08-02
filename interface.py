@@ -40,7 +40,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "24"
+    database_version = "25"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -247,6 +247,7 @@ if __name__ == '__main__':
                                                         a_record_padding_length = defaults['a_record_padding_length'],
                                                         invoice_date_custom_format_string = defaults['invoice_date_custom_format_string'],
                                                         invoice_date_custom_format = defaults['invoice_date_custom_format'],
+                                                        split_prepaid_sales_tax_crec = defaults['split_prepaid_sales_tax_crec']
                                                         ))
         print("done")
 
@@ -942,6 +943,7 @@ if __name__ == '__main__':
             self.force_each_upc = tkinter.BooleanVar(master)
             self.include_item_numbers = tkinter.BooleanVar(master)
             self.include_item_description = tkinter.BooleanVar(master)
+            self.split_sales_tax_prepaid_var = tkinter.BooleanVar(master)
             self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
             self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(master=self.otherslistboxframe, orient=tkinter.VERTICAL)
@@ -1227,6 +1229,10 @@ if __name__ == '__main__':
                                                                       variable=self.force_each_upc,
                                                                       text="Force Each UPC")
 
+            self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(self.convert_options_frame,
+                                                                        variable=self.split_sales_tax_prepaid_var,
+                                                                        text= "Split Sales Tax 'C' Records")
+
             self.include_item_numbers_checkbutton = tkinter.ttk.Checkbutton(self.convert_options_frame,
                                                                       variable=self.include_item_numbers,
                                                                       text="Include Item Numbers")
@@ -1292,6 +1298,7 @@ if __name__ == '__main__':
                 self.include_item_numbers.set(config_dict['include_item_numbers'])
                 self.include_item_description.set(config_dict['include_item_description'])
                 self.simple_csv_column_sorter.set_columnstring(config_dict['simple_csv_sort_order'])
+                self.split_sales_tax_prepaid_var.set(config_dict['split_prepaid_sales_tax_crec'])
 
                 if copied:
                     self.convert_formats_var.set(config_dict['convert_to_format'])
@@ -1343,6 +1350,7 @@ if __name__ == '__main__':
                     self.invoice_date_custom_format_field.grid(row=13, column=2, sticky=tkinter.W, padx=3)
                     self.each_uom_edi_tweak_checkbutton.grid(row=14, column=0, sticky=tkinter.W, padx=3)
                     self.force_each_upc_checkbutton.grid(row=15, column=0, sticky=tkinter.W, padx=3)
+                    self.split_prepaid_sales_tax_crec.grid(row=16, column=0, sticky=tkinter.W, padx=3)
 
             if self.foldersnameinput['process_edi'] == 'True':
                 self.ediconvert_options.set("Convert EDI")
@@ -1480,6 +1488,7 @@ if __name__ == '__main__':
             apply_to_folder['simple_csv_sort_order'] = self.simple_csv_column_sorter.get()
             apply_to_folder['invoice_date_custom_format'] = self.invoice_date_custom_format.get()
             apply_to_folder['invoice_date_custom_format_string'] = self.invoice_date_custom_format_field.get()
+            apply_to_folder['split_prepaid_sales_tax_crec'] = self.split_sales_tax_prepaid_var.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
@@ -1590,8 +1599,9 @@ if __name__ == '__main__':
             if backend_count == 0 and self.active_checkbutton.get() == "True":
                 error_string_constructor_list.append("No Backend Is Selected")
                 errors = True
+            print(self.tweak_edi.get())
 
-            if not str(self.pad_arec_check.get()) == "True" and self.convert_formats_var.get() == 'ScannerWare':
+            if not str(self.pad_arec_check.get()) == "True" and self.convert_formats_var.get() == 'ScannerWare' and self.tweak_edi.get() is False:
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Enabled For ScannerWare Backend')
                 errors = True
 
@@ -1612,7 +1622,7 @@ if __name__ == '__main__':
                 error_string_constructor_list.append("Invoice date offset not in valid range")
                 errors = True
 
-            if not self.split_edi.get() and self.convert_formats_var.get() == 'jolley_custom':
+            if not self.split_edi.get() and self.convert_formats_var.get() == 'jolley_custom' and self.tweak_edi.get() is False:
                 error_string_constructor_list.append('EDI needs to be split for jolley_custom backend')
                 errors = True
 
