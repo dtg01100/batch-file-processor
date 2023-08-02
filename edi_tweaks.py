@@ -1,5 +1,6 @@
 import upc_e_to_upc_a
 import line_from_mtc_edi_to_dict
+from query_runner import query_runner
 from datetime import datetime, timedelta
 from decimal import *
 import time
@@ -26,6 +27,54 @@ def edi_tweak(
     invoice_date_offset = parameters_dict['invoice_date_offset']
     retail_uom = parameters_dict['retail_uom']
     force_each_upc = parameters_dict['force_each_upc']
+
+    class cRecGenerator:
+        def __init__(self, settings_dict) -> None:
+            self.query_object = query_runner(
+                settings_dict["as400_username"],
+                settings_dict["as400_password"],
+                settings_dict["as400_address"],
+                f"{settings_dict['odbc_driver']}",
+            )
+            self._invoice_number = 0
+            self.unappended_records = False
+
+        def set_invoice_number(self, invoice_number):
+            self._invoice_number = invoice_number
+            self.unappended_records = True
+
+        def fetch_splitted_sales_tax_totals(self, procfile):
+            qry_ret_non_prepaid, qry_ret_prepaid = self.query_object.run_arbitrary_query(
+                f"""
+                SELECT
+                    sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
+                    sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
+                FROM
+                    dacdata.odhst odhst
+                WHERE
+                    odhst.BUHHNB = {self._invoice_number}
+                """
+            )
+            def _write_line(typestr:str, amount:int, wprocfile):
+                descstr = typestr.ljust(25, " ")
+                if amount < 0:
+                    amount_builder = amount - (amount * 2)
+                else:
+                    amount_builder = amount
+                
+                amountstr = str(amount_builder).rjust(8, "0")
+                if amount < 0:
+                    temp_amount_list = amountstr.split()
+                    temp_amount_list[0] = "-"
+                    amountstr = "".join(temp_amount_list)
+                linebuilder = f"CTAB{decstr}{amountstr}"
+                wprocfile.write(linebuilder)
+            if qry_ret_prepaid != 0:
+                _write_line("Prepaid Sales Tax", qry_ret_prepaid, procfile)
+            if qry_ret_non_prepaid != 0:
+                _write_line("Sales Tax", qry_ret_non_prepaid, procfile)
+            self.unappended_records = False
+
 
     work_file = None
     read_attempt_counter = 1
