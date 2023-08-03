@@ -171,7 +171,6 @@ if __name__ == '__main__':
     launch_options = argparse.ArgumentParser()
     logs_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
     errors_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
-    edi_converter_scratch_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
     folder_filter = ""
 
 
@@ -1770,7 +1769,7 @@ if __name__ == '__main__':
                                                                       reporting['logs_directory'], reporting,
                                                                       database_obj_instance.processed_files, root, args,
                                                                       version,
-                                                                      errors_directory, edi_converter_scratch_folder,
+                                                                      errors_directory,
                                                                       settings_dict,
                                                                       simple_output=None if not args.automatic else
                                                                       feedback_text)
