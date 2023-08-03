@@ -1,5 +1,7 @@
-from redmail import EmailSender
 from pathlib import Path
+import smtplib
+from email.message import EmailMessage
+import mimetypes
 import time
 import os
 
@@ -15,7 +17,6 @@ def do(process_parameters, settings, filename):
         try:
             filename_no_path = os.path.basename(filename)
             filename_no_path_str = str(filename_no_path)
-            emailer = EmailSender(host=settings['email_smtp_server'], port=settings['smtp_port'])
             if process_parameters['email_subject_line'] != "":
                 date_time = str(time.ctime())
                 subject_line_constructor = process_parameters['email_subject_line']
@@ -27,30 +28,32 @@ def do(process_parameters, settings, filename):
             to_address = process_parameters['email_to']
             to_address_list = to_address.split(", ")
 
-            if settings['email_username'] == "" and settings['email_password'] == '':
-                emailer.send(
-                    subject=subject_line,
-                    sender=settings['email_address'],
-                    receivers=to_address_list,
-                    text=filename_no_path_str + " Attached",
-                    attachments={
-                        filename_no_path_str: Path(filename),
-                    }
-                )
-            else:
-                send_username = settings['email_username']
-                send_password = settings['email_password']
-                emailer.send(
-                    subject=subject_line,
-                    username=send_username,
-                    password=send_password,
-                    sender=settings['email_address'],
-                    receivers=to_address_list,
-                    text=filename_no_path_str + " Attached",
-                    attachments={
-                        filename_no_path_str: Path(filename),
-                    }
-                )
+            message = EmailMessage()
+            message['Subject'] = subject_line
+            message['From'] = settings['email_address']
+            message['To'] = to_address_list
+            message.set_content(filename_no_path_str + " Attached")
+
+            ctype, encoding = mimetypes.guess_type(filename)
+            if ctype is None or encoding is not None:
+                # No guess could be made, or the file is encoded (compressed), so
+                # use a generic bag-of-bits type.
+                ctype = 'application/octet-stream'
+            maintype, subtype = ctype.split('/', 1)
+            with open(filename, 'rb') as fp:
+                message.add_attachment(fp.read(),
+                                maintype=maintype,
+                                subtype=subtype,
+                                filename=filename_no_path_str)
+
+            server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+            server.ehlo()
+            server.starttls()
+            if settings['email_username'] != "" and settings['email_password'] != "":
+                server.login(settings['email_username'], settings['email_password'])
+            server.send_message(message)
+            server.close()
+
             file_pass = True
         except Exception as email_error:
             if counter == 10:

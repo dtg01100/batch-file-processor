@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
-from redmail import EmailSender
-
+import smtplib
+from email.message import EmailMessage
+import mimetypes
 import doingstuffoverlay
 
 
@@ -27,7 +28,12 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
                                      " attachment " + str(emails_count) + " of " + str(total_emails))
 
-    attachment_dict = {}
+    message = EmailMessage()
+    message['Subject'] = subject_line
+    message['From'] = settings['email_address']
+    message['To'] = to_address_list
+    message.set_content(email_body_text)
+
     for log in emails_table.all():
 
         if not args.automatic:
@@ -42,37 +48,32 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
         attachmentpath = Path(filename)
         attachmentname = os.path.basename(filename)
-        attachment_dict[attachmentname] = attachmentpath
+        ctype, encoding = mimetypes.guess_type(attachmentpath)
+        if ctype is None or encoding is not None:
+            # No guess could be made, or the file is encoded (compressed), so
+            # use a generic bag-of-bits type.
+            ctype = 'application/octet-stream'
+        maintype, subtype = ctype.split('/', 1)
+        with open(attachmentpath, 'rb') as fp:
+            message.add_attachment(fp.read(),
+                            maintype=maintype,
+                            subtype=subtype,
+                            filename=attachmentname)
 
         log['old_id'] = log.pop('id')
         if log['log'].endswith('.zip'):
             log['log'] = log['log'][:-4]
         sent_emails_removal_queue.insert(log)
 
-    emailer = EmailSender(host=settings['email_smtp_server'], port=settings['smtp_port'])
-    
     print("sending " + str(subject_line + " to " + str(to_address_list)))
 
-    if settings['email_username'] == "" and settings['email_password'] == '':
-        emailer.send(
-            subject=subject_line,
-            sender=settings['email_address'],
-            receivers=to_address_list,
-            text=email_body_text,
-            attachments=attachment_dict
-        )
-    else:
-        send_username = settings['email_username']
-        send_password = settings['email_password']
-        emailer.send(
-            subject=subject_line,
-            username=send_username,
-            password=send_password,
-            sender=settings['email_address'],
-            receivers=to_address_list,
-            text=email_body_text,
-            attachments=attachment_dict
-        )
-
+    server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+    server.ehlo()
+    server.starttls()
+    if settings['email_username'] != "" and settings['email_password'] != "":
+        server.login(settings['email_username'], settings['email_password'])
+    server.send_message(message)
+    server.close()
+    
     if not args.automatic:
         doingstuffoverlay.destroy_overlay()
