@@ -18,7 +18,7 @@ cssutils==2.7.1
 dataset==1.5.2
 emails==0.6
 et-xmlfile==1.1.0
-future==0.18.2
+future==0.18.3
 fuzzywuzzy==0.18.0
 greenlet==2.0.2
 idna==3.4
