@@ -329,7 +329,7 @@ if __name__ == '__main__':
 
 
     def edit_folder_selector(folder_to_be_edited):
-        # feed the EditDialog class the the dict for the selected folder from the folders list buttons
+        # feed EditDialog class the dict for the selected folder from the folders list buttons
         # note: would prefer to be able to do this inline,
         # but variables appear to need to be pushed out of instanced objects
         edit_folder = database_obj_instance.folders_table.find_one(id=[folder_to_be_edited])
