@@ -61,16 +61,16 @@ if __name__ == '__main__':
         pass
 
 
-    class DatabaseObj():
-        def __init__(self, database_path):
+    class DatabaseObj:
+        def __init__(self, inclass_database_path):
 
-            if not os.path.isfile(database_path):  # if the database file is missing
+            if not os.path.isfile(inclass_database_path):  # if the database file is missing
                 try:
                     print("creating initial database file...")
                     creating_database_popup = tkinter.Tk()
                     tkinter.ttk.Label(creating_database_popup, text="Creating initial database file...").pack()
                     creating_database_popup.update()
-                    create_database.do(database_version, database_path, config_folder,
+                    create_database.do(database_version, inclass_database_path, config_folder,
                                        running_platform)  # make a new one
                     print("done")
                     creating_database_popup.destroy()
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                         raise SystemExit
 
             try:  # try to connect to database
-                self.database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
+                self.database_connection = dataset.connect('sqlite:///' + inclass_database_path)  # connect to database
                 self.session_database = dataset.connect("sqlite:///")
             except Exception as connect_error:  # if that doesn't work for some reason, log and quit
                 try:
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                 updating_database_popup = tkinter.Tk()
                 tkinter.ttk.Label(updating_database_popup, text="Updating database file...").pack()
                 updating_database_popup.update()
-                backup_increment.do_backup(database_path)
+                backup_increment.do_backup(inclass_database_path)
                 folders_database_migrator.upgrade_database(self.database_connection, config_folder, running_platform)
                 updating_database_popup.destroy()
                 print("done")
