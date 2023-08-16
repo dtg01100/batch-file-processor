@@ -97,12 +97,12 @@ if __name__ == '__main__':
                     connect_critical_log.write("program version is " + version)
                     connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
                     connect_critical_log.close()
-                    raise SystemExit
+                    raise SystemExit from connect_error
                 except Exception as connect_big_error:  # if logging doesn't work, at least complain
                     print("error writing critical error log for error: " + str(connect_error)
                           + "\n" + "operation failed with error: " +
                           str(connect_big_error))
-                    raise SystemExit
+                    raise SystemExit from connect_big_error
 
             # open table required for database check in database
             db_version = self.database_connection['version']
@@ -151,12 +151,12 @@ if __name__ == '__main__':
                     connect_critical_log.write("program version is " + version)
                     connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
                     connect_critical_log.close()
-                    raise SystemExit
+                    raise SystemExit from connect_error
                 except Exception as connect_big_error:  # if logging doesn't work, at least complain
                     print("error writing critical error log for error: " + str(connect_error)
                           + "\n" + "operation failed with error: " +
                           str(connect_big_error))
-                    raise SystemExit
+                    raise SystemExit from connect_big_error
             self.folders_table = self.database_connection['folders']
             self.emails_table = self.database_connection['emails_to_send']
             self.emails_table_batch = self.database_connection['working_batch_emails_to_send']
@@ -180,6 +180,7 @@ if __name__ == '__main__':
             test_log_file = open(os.path.join(logs_directory['logs_directory'], 'test_log_file'), 'w')
             test_log_file.close()
             os.remove(os.path.join(logs_directory['logs_directory'], 'test_log_file'))
+            return True
         except IOError as log_directory_error:
             print(str(log_directory_error))
             return False
@@ -195,6 +196,7 @@ if __name__ == '__main__':
                 add_folder_entry_proposed_folder = database_obj_instance.folders_table.find_one(alias=check)
                 if add_folder_entry_proposed_folder is not None:
                     return False
+            return True
 
         if folder_alias_checker(folder_alias_constructor) is False:
             # auto generate a number to add to automatic aliases
@@ -208,46 +210,46 @@ if __name__ == '__main__':
 
         print("adding folder: " + proposed_folder + " with settings from template")
         # create folder entry using the selected folder, the generated alias, and values copied from template
-        database_obj_instance.folders_table.insert(dict(folder_name=proposed_folder,
-                                                        copy_to_directory=defaults['copy_to_directory'],
-                                                        folder_is_active=defaults['folder_is_active'],
-                                                        alias=folder_alias_constructor,
-                                                        process_backend_copy=defaults['process_backend_copy'],
-                                                        process_backend_ftp=defaults['process_backend_ftp'],
-                                                        process_backend_email=defaults['process_backend_email'],
-                                                        ftp_server=defaults['ftp_server'],
-                                                        ftp_folder=defaults['ftp_folder'],
-                                                        ftp_username=defaults['ftp_username'],
-                                                        ftp_password=defaults['ftp_password'],
-                                                        email_to=defaults['email_to'],
-                                                        process_edi=defaults['process_edi'],
-                                                        convert_to_format=defaults['convert_to_format'],
-                                                        calculate_upc_check_digit=defaults['calculate_upc_check_digit'],
-                                                        include_a_records=defaults['include_a_records'],
-                                                        include_c_records=defaults['include_c_records'],
-                                                        include_headers=defaults['include_headers'],
-                                                        filter_ampersand=defaults['filter_ampersand'],
-                                                        tweak_edi=defaults['tweak_edi'],
-                                                        split_edi=defaults['split_edi'],
-                                                        pad_a_records=defaults['pad_a_records'],
-                                                        a_record_padding=defaults['a_record_padding'],
-                                                        ftp_port=defaults['ftp_port'],
-                                                        email_subject_line=defaults['email_subject_line'],
-                                                        force_edi_validation=defaults['force_edi_validation'],
-                                                        append_a_records=defaults['append_a_records'],
-                                                        a_record_append_text=defaults['a_record_append_text'],
-                                                        force_txt_file_ext=defaults['force_txt_file_ext'],
-                                                        invoice_date_offset=defaults['invoice_date_offset'],
-                                                        retail_uom=defaults['retail_uom'],
-                                                        force_each_upc=defaults['force_each_upc'],
-                                                        include_item_numbers=defaults['include_item_numbers'],
-                                                        include_item_description=defaults['include_item_description'],
-                                                        simple_csv_sort_order=defaults['simple_csv_sort_order'],
-                                                        a_record_padding_length = defaults['a_record_padding_length'],
-                                                        invoice_date_custom_format_string = defaults['invoice_date_custom_format_string'],
-                                                        invoice_date_custom_format = defaults['invoice_date_custom_format'],
-                                                        split_prepaid_sales_tax_crec = defaults['split_prepaid_sales_tax_crec']
-                                                        ))
+        database_obj_instance.folders_table.insert({"folder_name":proposed_folder,
+                                                    "copy_to_directory":defaults['copy_to_directory'],
+                                                    "folder_is_active":defaults['folder_is_active'],
+                                                    "alias":folder_alias_constructor,
+                                                    "process_backend_copy":defaults['process_backend_copy'],
+                                                    "process_backend_ftp":defaults['process_backend_ftp'],
+                                                    "process_backend_email":defaults['process_backend_email'],
+                                                    "ftp_server":defaults['ftp_server'],
+                                                    "ftp_folder":defaults['ftp_folder'],
+                                                    "ftp_username":defaults['ftp_username'],
+                                                    "ftp_password":defaults['ftp_password'],
+                                                    "email_to":defaults['email_to'],
+                                                    "process_edi":defaults['process_edi'],
+                                                    "convert_to_format":defaults['convert_to_format'],
+                                                    "calculate_upc_check_digit":defaults['calculate_upc_check_digit'],
+                                                    "include_a_records":defaults['include_a_records'],
+                                                    "include_c_records":defaults['include_c_records'],
+                                                    "include_headers":defaults['include_headers'],
+                                                    "filter_ampersand":defaults['filter_ampersand'],
+                                                    "tweak_edi":defaults['tweak_edi'],
+                                                    "split_edi":defaults['split_edi'],
+                                                    "pad_a_records":defaults['pad_a_records'],
+                                                    "a_record_padding":defaults['a_record_padding'],
+                                                    "ftp_port":defaults['ftp_port'],
+                                                    "email_subject_line":defaults['email_subject_line'],
+                                                    "force_edi_validation":defaults['force_edi_validation'],
+                                                    "append_a_records":defaults['append_a_records'],
+                                                    "a_record_append_text":defaults['a_record_append_text'],
+                                                    "force_txt_file_ext":defaults['force_txt_file_ext'],
+                                                    "invoice_date_offset":defaults['invoice_date_offset'],
+                                                    "retail_uom":defaults['retail_uom'],
+                                                    "force_each_upc":defaults['force_each_upc'],
+                                                    "include_item_numbers":defaults['include_item_numbers'],
+                                                    "include_item_description":defaults['include_item_description'],
+                                                    "simple_csv_sort_order":defaults['simple_csv_sort_order'],
+                                                    "a_record_padding_length" : defaults['a_record_padding_length'],
+                                                    "invoice_date_custom_format_string" : defaults['invoice_date_custom_format_string'],
+                                                    "invoice_date_custom_format" : defaults['invoice_date_custom_format'],
+                                                    "split_prepaid_sales_tax_crec" : defaults['split_prepaid_sales_tax_crec']
+                                                    })
         print("done")
 
 
@@ -268,13 +270,12 @@ if __name__ == '__main__':
             initial_directory = os.path.expanduser('~')
         folder = askdirectory(initialdir=initial_directory)
         if os.path.exists(folder):
-            update_last_folder = dict(id=1, single_add_folder_prior=folder)
+            update_last_folder = {"id":1, "single_add_folder_prior":folder}
             database_obj_instance.oversight_and_defaults.update(update_last_folder, ['id'])
             proposed_folder = check_folder_exists(folder)
 
             if proposed_folder['truefalse'] is False:
                 doingstuffoverlay.make_overlay(root, "Adding Folder...")
-                column_entry_value = folder
                 add_folder_entry(folder)
                 if askyesno(message="Do you want to mark files in folder as processed?"):
                     folder_dict = database_obj_instance.folders_table.find_one(folder_name=folder)
@@ -299,7 +300,7 @@ if __name__ == '__main__':
         containing_folder = askdirectory(initialdir=initial_directory)
         starting_directory = os.getcwd()
         if os.path.exists(containing_folder):
-            update_last_folder = dict(id=1, batch_add_folder_prior=containing_folder)
+            update_last_folder = {"id":1, "batch_add_folder_prior":containing_folder}
             database_obj_instance.oversight_and_defaults.update(update_last_folder, ['id'])
             os.chdir(str(containing_folder))
             folders_list = [f for f in os.listdir('.') if os.path.isdir(f)]  # build list of folders in target directory
@@ -463,24 +464,24 @@ if __name__ == '__main__':
         inactive_folder_edit_length = 0
         active_folder_alias_list = []
         inactive_folder_alias_list = []
-        if not database_obj_instance.folders_table.count(folder_is_active="True") == 0:
+        if database_obj_instance.folders_table.count(folder_is_active="True") != 0:
             for entry in filtered_active_folder_dict_list:
                 alias = entry['alias']
                 if alias is None:
                     pass
                 else:
                     active_folder_alias_list.append(alias)
-            if not len(list(active_folder_alias_list)) == 0:
+            if len(list(active_folder_alias_list)) != 0:
                 active_folder_edit_length = len(max(list(active_folder_alias_list), key=len))
 
-        if not database_obj_instance.folders_table.count(folder_is_active="False") == 0:
+        if database_obj_instance.folders_table.count(folder_is_active="False") != 0:
             for entry in filtered_inactive_folder_dict_list:
                 alias = entry['alias']
                 if alias is None:
                     pass
                 else:
                     inactive_folder_alias_list.append(alias)
-            if not len(list(inactive_folder_alias_list)) == 0:
+            if len(list(inactive_folder_alias_list)) != 0:
                 inactive_folder_edit_length = len(max(list(inactive_folder_alias_list), key=len))
 
         # iterate over list of known folders, sorting into lists of active and inactive
@@ -1600,24 +1601,24 @@ if __name__ == '__main__':
                 errors = True
             print(self.tweak_edi.get())
 
-            if not str(self.pad_arec_check.get()) == "True" and self.convert_formats_var.get() == 'ScannerWare' and self.tweak_edi.get() is False:
+            if str(self.pad_arec_check.get()) != "True" and self.convert_formats_var.get() == 'ScannerWare' and self.tweak_edi.get() is False:
                 error_string_constructor_list.append('"A" Record Padding Needs To Be Enabled For ScannerWare Backend')
                 errors = True
 
             if len(str(self.a_record_padding_field.get())) > self.a_record_padding_length.get() and str(self.pad_arec_check.get()) == "True":
-                if not self.convert_formats_var.get() in ['ScannerWare']:
+                if self.convert_formats_var.get() not in ['ScannerWare']:
                     error_string_constructor_list.append(f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters')
                     errors = True
 
             if len(str(self.a_record_padding_field.get())) != 6 and str(self.pad_arec_check.get()) == "True":
-                    error_string_constructor_list.append(f'"A" Record Padding Needs To Be Six Characters')
-                    errors = True
+                error_string_constructor_list.append('"A" Record Padding Needs To Be Six Characters')
+                errors = True
 
             if len(str(self.a_record_append_field.get())) != 6 and str(self.append_arec_check.get()) == "True":
                 error_string_constructor_list.append('"A" Record Append Field Needs To Be Six Characters')
                 errors = True
 
-            if int(self.invoice_date_offset.get()) not in [i for i in range(-14, 15)]:
+            if int(self.invoice_date_offset.get()) not in list(range(-14, 15)):
                 error_string_constructor_list.append("Invoice date offset not in valid range")
                 errors = True
 
@@ -1760,7 +1761,7 @@ if __name__ == '__main__':
             if reporting['enable_reporting'] == "True":
                 # add run log to email queue if reporting is enabled
                 database_obj_instance.emails_table.insert(
-                    dict(log=run_log_full_path, folder_alias=run_log_name_constructor))
+                    {"log":run_log_full_path, "folder_alias":run_log_name_constructor})
             # call dispatch module to process active folders
             try:
                 run_error_bool, run_summary_string = dispatch.process(database_obj_instance.database_connection,
@@ -1970,16 +1971,15 @@ if __name__ == '__main__':
                                                  overlay_text="adding files to processed list...\n\n" + " folder " +
                                                               str(folder_count) + " of " + str(folder_total) +
                                                               " file " + str(file_count) + " of " + str(file_total))
-                database_obj_instance.processed_files.insert(dict(file_name=str(os.path.abspath(filename)),
-                                                                  file_checksum=hashlib.md5
-                                                                  (open(filename, 'rb').read()).hexdigest(),
-                                                                  folder_id=parameters_dict['id'],
-                                                                  folder_alias=parameters_dict['alias'],
-                                                                  copy_destination="N/A",
-                                                                  ftp_destination="N/A",
-                                                                  email_destination="N/A",
-                                                                  sent_date_time=datetime.datetime.now(),
-                                                                  resend_flag=False))
+                database_obj_instance.processed_files.insert({"file_name":str(os.path.abspath(filename)),
+                                                                "file_checksum":hashlib.md5(open(filename, 'rb').read()).hexdigest(),
+                                                                "folder_id":parameters_dict['id'],
+                                                                "folder_alias":parameters_dict['alias'],
+                                                                "copy_destination":"N/A",
+                                                                "ftp_destination":"N/A",
+                                                                "email_destination":"N/A",
+                                                                "sent_date_time":datetime.datetime.now(),
+                                                                "resend_flag":False})
         doingstuffoverlay.destroy_overlay()
         os.chdir(starting_folder)
         set_main_button_states()
