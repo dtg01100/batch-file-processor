@@ -86,6 +86,13 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
             if input_edi_dict is not None:
                 if input_edi_dict["record_type"] == "A":
                     shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
+                    if len(invoice_accum) > 0:
+                        trailer_row = {
+                        'Record Type': 'T',
+                        'Invoice Cost': sum(invoice_accum)
+                        }
+                        row_dict_list.append(trailer_row)
+                        invoice_index += 1
                     if not input_edi_dict['invoice_date'] == '000000':
                         invoice_date = datetime.strptime(input_edi_dict['invoice_date'], '%m%d%y')
                         write_invoice_date = datetime.strftime(invoice_date, '%Y%m%d')
