@@ -6,11 +6,6 @@ from decimal import Decimal
 from typing import List
 
 
-
-class CustomerLookupError(Exception):
-    pass
-
-
 def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict):
 
     def convert_to_price(value):
@@ -129,7 +124,6 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                     }
 
                     if input_edi_dict['parent_item_number'] == input_edi_dict['vendor_item']:
-                        really_send = True
                         shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
                         print("enter shipper mode")
                         shipper_mode = True
