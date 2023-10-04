@@ -59,96 +59,95 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
 
 
     with open(edi_process) as work_file:  # open input file
-        work_file_lined = [n for n in work_file.readlines()]  # make list of lines
+        work_file_lined = list(work_file.readlines())  # make list of lines
         output_filename = os.path.join(os.path.dirname(output_filename_initial), f'eInvCCANDY.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}')
-        f = open(
+        with open(
             output_filename, "w", newline=""
-        )  # open work file, overwriting old file
-        csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
+        ) as f:  # open work file, overwriting old file
+            csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
 
-        row_dict_list:List[dict] = []
-        shipper_mode = False
-        shipper_parent_item = False
-        shipper_accum = []
-        invoice_accum = []
-        shipper_line_number = 0
+            row_dict_list:List[dict] = []
+            shipper_mode = False
+            shipper_parent_item = False
+            shipper_accum = []
+            invoice_accum = []
+            shipper_line_number = 0
 
-        invoice_index = 0
-        for line_num, line in enumerate(
-            work_file_lined
-        ):  # iterate over work file contents
-            input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
-            if input_edi_dict is not None:
-                if input_edi_dict["record_type"] == "A":
-                    shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
-                    if len(invoice_accum) > 0:
-                        trailer_row = {
-                        'Record Type': 'T',
-                        'Invoice Cost': sum(invoice_accum)
-                        }
-                        row_dict_list.append(trailer_row)
-                        invoice_index += 1
-                        invoice_accum.clear()
-                    if not input_edi_dict['invoice_date'] == '000000':
-                        invoice_date = datetime.strptime(input_edi_dict['invoice_date'], '%m%d%y')
-                        write_invoice_date = datetime.strftime(invoice_date, '%Y%m%d')
-                    else:
-                        write_invoice_date = '00000000'
-                    row_dict = {
-                        'Record Type': 'H',
-                        'Store Number': input_edi_dict['cust_vendor'],
-                        'Vendor OId': 'ccandy',
-                        'Invoice Number': input_edi_dict['invoice_number'],
-                        'Purchase Order': '',
-                        'Invoice Date': write_invoice_date
-                    }
-                    row_dict_list.append(row_dict)
-                    invoice_index += 1
-                if input_edi_dict["record_type"] == "B":
-                    row_dict = {
-                        'Record Type': 'D',
-                        'Detail Type': 'I',
-                        'Subcategory OId': '',
-                        'Vendor Item': input_edi_dict['vendor_item'],
-                        'Vendor Pack': input_edi_dict['unit_multiplier'],
-                        'Item Description': input_edi_dict['description'],
-                        'Item Pack': '',
-                        'GTIN': input_edi_dict['upc_number'],
-                        'GTIN Type': '',
-                        'QTY': qty_to_int(input_edi_dict['qty_of_units']),
-                        'Unit Cost': convert_to_price(input_edi_dict['unit_cost']),
-                        'Unit Retail': convert_to_price(input_edi_dict['suggested_retail_price']),
-                        'Extended Cost': convert_to_price(input_edi_dict['unit_cost']) * qty_to_int(input_edi_dict['qty_of_units']),
-                        'NULL': '',
-                        'Extended Retail': ''
-                    }
-
-                    if input_edi_dict['parent_item_number'] == input_edi_dict['vendor_item']:
+            invoice_index = 0
+            for line_num, line in enumerate(
+                work_file_lined
+            ):  # iterate over work file contents
+                input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                if input_edi_dict is not None:
+                    if input_edi_dict["record_type"] == "A":
                         shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
-                        print("enter shipper mode")
-                        shipper_mode = True
-                        shipper_parent_item = True
-                        row_dict['Detail Type'] = 'D'
-                        shipper_line_number = invoice_index
-                    if shipper_mode:
-                        if input_edi_dict['parent_item_number'] not in ["000000",'\n']:
-                            if shipper_parent_item:
-                                shipper_parent_item = False
-                            else:
-                                row_dict['Detail Type'] = 'C'
-                                shipper_accum.append(convert_to_price(input_edi_dict['unit_cost']) * qty_to_int(input_edi_dict['qty_of_units']))
+                        if len(invoice_accum) > 0:
+                            trailer_row = {
+                            'Record Type': 'T',
+                            'Invoice Cost': sum(invoice_accum)
+                            }
+                            row_dict_list.append(trailer_row)
+                            invoice_index += 1
+                            invoice_accum.clear()
+                        if not input_edi_dict['invoice_date'] == '000000':
+                            invoice_date = datetime.strptime(input_edi_dict['invoice_date'], '%m%d%y')
+                            write_invoice_date = datetime.strftime(invoice_date, '%Y%m%d')
                         else:
-                            try:
-                                shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
-                            except Exception as error:
-                                print(error)
+                            write_invoice_date = '00000000'
+                        row_dict = {
+                            'Record Type': 'H',
+                            'Store Number': input_edi_dict['cust_vendor'],
+                            'Vendor OId': 'ccandy',
+                            'Invoice Number': input_edi_dict['invoice_number'],
+                            'Purchase Order': '',
+                            'Invoice Date': write_invoice_date
+                        }
+                        row_dict_list.append(row_dict)
+                        invoice_index += 1
+                    if input_edi_dict["record_type"] == "B":
+                        row_dict = {
+                            'Record Type': 'D',
+                            'Detail Type': 'I',
+                            'Subcategory OId': '',
+                            'Vendor Item': input_edi_dict['vendor_item'],
+                            'Vendor Pack': input_edi_dict['unit_multiplier'],
+                            'Item Description': input_edi_dict['description'],
+                            'Item Pack': '',
+                            'GTIN': input_edi_dict['upc_number'],
+                            'GTIN Type': '',
+                            'QTY': qty_to_int(input_edi_dict['qty_of_units']),
+                            'Unit Cost': convert_to_price(input_edi_dict['unit_cost']),
+                            'Unit Retail': convert_to_price(input_edi_dict['suggested_retail_price']),
+                            'Extended Cost': convert_to_price(input_edi_dict['unit_cost']) * qty_to_int(input_edi_dict['qty_of_units']),
+                            'NULL': '',
+                            'Extended Retail': ''
+                        }
 
-                    row_dict_list.append(row_dict)
-                    invoice_index += 1
+                        if input_edi_dict['parent_item_number'] == input_edi_dict['vendor_item']:
+                            shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
+                            print("enter shipper mode")
+                            shipper_mode = True
+                            shipper_parent_item = True
+                            row_dict['Detail Type'] = 'D'
+                            shipper_line_number = invoice_index
+                        if shipper_mode:
+                            if input_edi_dict['parent_item_number'] not in ["000000",'\n']:
+                                if shipper_parent_item:
+                                    shipper_parent_item = False
+                                else:
+                                    row_dict['Detail Type'] = 'C'
+                                    shipper_accum.append(convert_to_price(input_edi_dict['unit_cost']) * qty_to_int(input_edi_dict['qty_of_units']))
+                            else:
+                                try:
+                                    shipper_mode, row_dict_list, shipper_line_number, shipper_accum = leave_shipper_mode(shipper_mode, row_dict_list, shipper_line_number, shipper_accum)
+                                except Exception as error:
+                                    print(error)
 
-                    invoice_accum.append(row_dict['Extended Cost'])
-                
-        row_dict_list, shipper_mode, shipper_accum, shipper_line_number = flush_write_queue(row_dict_list, invoice_accum, shipper_line_number, shipper_accum, shipper_mode)
+                        row_dict_list.append(row_dict)
+                        invoice_index += 1
 
-        f.close()  # close output file
+                        invoice_accum.append(row_dict['Extended Cost'])
+                    
+            row_dict_list, shipper_mode, shipper_accum, shipper_line_number = flush_write_queue(row_dict_list, invoice_accum, shipper_line_number, shipper_accum, shipper_mode)
+
     return output_filename
