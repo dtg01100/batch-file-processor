@@ -93,6 +93,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         }
                         row_dict_list.append(trailer_row)
                         invoice_index += 1
+                        invoice_accum.clear()
                     if not input_edi_dict['invoice_date'] == '000000':
                         invoice_date = datetime.strptime(input_edi_dict['invoice_date'], '%m%d%y')
                         write_invoice_date = datetime.strftime(invoice_date, '%Y%m%d')
