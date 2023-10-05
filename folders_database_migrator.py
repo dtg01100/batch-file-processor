@@ -257,3 +257,22 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "split_prepaid_sales_tax_crec" = 0')
         update_version = dict(id=1, version="25", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '25':
+        try:
+            database_connection.query("alter table 'folders' add column 'estore_store_number'")
+            database_connection.query('UPDATE "folders" SET "estore_store_number" = 0')
+            database_connection.query("alter table 'folders' add column 'estore_Vendor_OId'")
+            database_connection.query('UPDATE "folders" SET "estore_Vendor_OId" = 0')
+            database_connection.query("alter table 'folders' add column 'estore_vendor_NameVendorOID'")
+            database_connection.query('UPDATE "folders" SET "estore_vendor_NameVendorOID" = "replaceme')
+        except sqlalchemy.exc.OperationalError:
+            pass
+        database_connection.query("alter table 'administrative' add column 'estore_store_number'")
+        database_connection.query('UPDATE "administrative" SET "estore_store_number" = 0')
+        database_connection.query("alter table 'administrative' add column 'estore_Vendor_OId'")
+        database_connection.query('UPDATE "administrative" SET "estore_Vendor_OId" = 0')
+        database_connection.query("alter table 'administrative' add column 'estore_vendor_NameVendorOID'")
+        database_connection.query("UPDATE 'administrative' SET 'estore_vendor_NameVendorOID' = 'replaceme'")
+        update_version = dict(id=1, version="26", os=running_platform)
+        db_version.update(update_version, ['id'])

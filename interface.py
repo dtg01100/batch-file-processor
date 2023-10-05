@@ -40,7 +40,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     appname = "Batch File Sender"
     version = "(Git Branch: Master)"
-    database_version = "25"
+    database_version = "26"
     print(appname + " Version " + version)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -248,10 +248,13 @@ if __name__ == '__main__':
                                                     "include_item_numbers":defaults['include_item_numbers'],
                                                     "include_item_description":defaults['include_item_description'],
                                                     "simple_csv_sort_order":defaults['simple_csv_sort_order'],
-                                                    "a_record_padding_length" : defaults['a_record_padding_length'],
-                                                    "invoice_date_custom_format_string" : defaults['invoice_date_custom_format_string'],
-                                                    "invoice_date_custom_format" : defaults['invoice_date_custom_format'],
-                                                    "split_prepaid_sales_tax_crec" : defaults['split_prepaid_sales_tax_crec']
+                                                    "a_record_padding_length":defaults['a_record_padding_length'],
+                                                    "invoice_date_custom_format_string":defaults['invoice_date_custom_format_string'],
+                                                    "invoice_date_custom_format":defaults['invoice_date_custom_format'],
+                                                    "split_prepaid_sales_tax_crec":defaults['split_prepaid_sales_tax_crec'],
+                                                    "estore_store_number":defaults['estore_store_number'],
+                                                    "estore_Vendor_OId":defaults['estore_Vendor_OId'],
+                                                    "estore_Vendor_NameVendorOID":defaults['estore_Vendor_NameVendorOID']
                                                     })
         print("done")
 
@@ -992,7 +995,13 @@ if __name__ == '__main__':
                                    self.include_item_numbers_checkbutton,
                                    self.include_item_description_checkbutton,
                                    self.simple_csv_column_sorter.containerframe,
-                                   self.a_record_padding_field]:
+                                   self.a_record_padding_field,
+                                   self.estore_store_number_label,
+                                   self.estore_store_number_field,
+                                   self.estore_vendor_oid_label,
+                                   self.estore_vendor_oid_field,
+                                   self.estore_vendor_namevendoroid_label,
+                                   self.estore_vendor_namevendoroid_field]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == 'csv':
                     self.upc_variable_process_checkbutton.grid(row=2, column=0, sticky=tkinter.W, padx=3)
@@ -1017,12 +1026,20 @@ if __name__ == '__main__':
                     self.include_item_description_checkbutton.grid(row=4, column=0, sticky=tkinter.W, padx=3)
                     self.each_uom_edi_tweak_checkbutton.grid(row=5, column=0, sticky=tkinter.W, padx=3)
                     self.simple_csv_column_sorter.containerframe.grid(row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2)
+                if self.convert_formats_var.get() == 'Estore eInvoice':
+                    self.estore_store_number_label.grid(row=2, column=0, sticky=tkinter.W, padx=3)
+                    self.estore_store_number_field.grid(row=2, column=1, sticky=tkinter.E, padx=3)
+                    self.estore_vendor_oid_label.grid(row=3, column=0, sticky=tkinter.W, padx=3)
+                    self.estore_vendor_oid_field.grid(row=3, column=1, sticky=tkinter.E, padx=3)
+                    self.estore_vendor_namevendoroid_label.grid(row=4, column=0, sticky=tkinter.W, padx=3)
+                    self.estore_vendor_namevendoroid_field.grid(row=4, column=1, sticky=tkinter.E, padx=3)
+
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(self.convert_to_selector_frame,
                                                                    self.convert_formats_var,
                                                                    self.foldersnameinput['convert_to_format'], 'csv',
                                                                    'ScannerWare', 'scansheet-type-a', 'jolley_custom',
-                                                                   'simplified_csv', command=make_convert_to_options)
+                                                                   'simplified_csv', 'Estore eInvoice', command=make_convert_to_options)
 
             def show_folder_path():
                 showinfo(parent=master, title="Folder Path", message=self.foldersnameinput['folder_name'])
@@ -1244,6 +1261,18 @@ if __name__ == '__main__':
                                                                       variable=self.include_item_description,
                                                                       text="Include Item Description")
             self.simple_csv_column_sorter = columnSorterWidget(self.convert_options_frame)
+            self.estore_store_number_label = tkinter.ttk.Label(self.convert_options_frame,
+            text="Estore Store Number")
+            self.estore_vendor_oid_label = tkinter.ttk.Label(self.convert_options_frame,
+            text="Estore Vendor OId")
+            self.estore_vendor_namevendoroid_label = tkinter.ttk.Label(self.convert_options_frame,
+            text="Estore Vendor Name OId")
+            self.estore_store_number_field = tkinter.ttk.Entry(self.convert_options_frame,
+            width=10)
+            self.estore_vendor_oid_field = tkinter.ttk.Entry(self.convert_options_frame,
+            width=10)
+            self.estore_vendor_namevendoroid_field = tkinter.ttk.Entry(self.convert_options_frame,
+            width=10)
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -1302,6 +1331,12 @@ if __name__ == '__main__':
                 self.include_item_description.set(config_dict['include_item_description'])
                 self.simple_csv_column_sorter.set_columnstring(config_dict['simple_csv_sort_order'])
                 self.split_sales_tax_prepaid_var.set(config_dict['split_prepaid_sales_tax_crec'])
+                self.estore_store_number_field.delete(0, tkinter.END)
+                self.estore_store_number_field.insert(0, config_dict['estore_store_number'])
+                self.estore_vendor_oid_field.delete(0, tkinter.END)
+                self.estore_vendor_oid_field.insert(0, config_dict['estore_Vendor_OId'])
+                self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
+                self.estore_vendor_namevendoroid_field.insert(0, config_dict['estore_Vendor_NameVendorOID'])
 
                 if copied:
                     self.convert_formats_var.set(config_dict['convert_to_format'])
@@ -1492,6 +1527,9 @@ if __name__ == '__main__':
             apply_to_folder['invoice_date_custom_format'] = self.invoice_date_custom_format.get()
             apply_to_folder['invoice_date_custom_format_string'] = self.invoice_date_custom_format_field.get()
             apply_to_folder['split_prepaid_sales_tax_crec'] = self.split_sales_tax_prepaid_var.get()
+            apply_to_folder['estore_store_number'] = self.estore_vendor_store_number_field.get()
+            apply_to_folder['estore_Vendor_OId'] = self.estore_vendor_oid_field.get()
+            apply_to_folder['estore_Vendor_NameVendorOID'] = self.estore_vendor_namevendoroid_field.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
@@ -1903,6 +1941,7 @@ if __name__ == '__main__':
                 automatic_process_critical_log.close()
         else:
             print("Error, No Active Folders")
+        database_obj_instance.close()
         raise SystemExit
 
 
@@ -2314,4 +2353,5 @@ if __name__ == '__main__':
     root.resizable(width=tkinter.FALSE, height=tkinter.TRUE)
 
     root.mainloop()
+
     database_obj_instance.close()
