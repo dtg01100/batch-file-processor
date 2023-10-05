@@ -165,6 +165,9 @@ if __name__ == '__main__':
             self.processed_files = self.database_connection['processed_files']
             self.settings = self.database_connection['settings']
 
+        def close(self):
+            self.database_connection.close()
+
 
     database_obj_instance = DatabaseObj(database_path)
 
@@ -2311,3 +2314,4 @@ if __name__ == '__main__':
     root.resizable(width=tkinter.FALSE, height=tkinter.TRUE)
 
     root.mainloop()
+    database_obj_instance.close()
