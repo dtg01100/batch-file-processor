@@ -77,10 +77,9 @@ if __name__ == '__main__':
                 except Exception as error:  # if that doesn't work for some reason, log and quit
                     try:
                         print(str(error))
-                        critical_log = open("critical_error.log", 'a')
-                        critical_log.write("program version is " + version)
-                        critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
-                        critical_log.close()
+                        with open("critical_error.log", 'a') as critical_log
+                            critical_log.write("program version is " + version)
+                            critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
                         raise SystemExit
                     except Exception as big_error:  # if logging doesn't work, at least complain
                         print("error writing critical error log for error: " + str(error) + "\n" +
@@ -93,10 +92,9 @@ if __name__ == '__main__':
             except Exception as connect_error:  # if that doesn't work for some reason, log and quit
                 try:
                     print(str(connect_error))
-                    connect_critical_log = open("critical_error.log", 'a')
-                    connect_critical_log.write("program version is " + version)
-                    connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
-                    connect_critical_log.close()
+                    with open("critical_error.log", 'a') as connect_critical_log:
+                        connect_critical_log.write("program version is " + version)
+                        connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
                     raise SystemExit from connect_error
                 except Exception as connect_big_error:  # if logging doesn't work, at least complain
                     print("error writing critical error log for error: " + str(connect_error)
@@ -147,10 +145,9 @@ if __name__ == '__main__':
             except Exception as connect_error:  # if that doesn't work for some reason, log and quit
                 try:
                     print(str(connect_error))
-                    connect_critical_log = open("critical_error.log", 'a')
-                    connect_critical_log.write("program version is " + version)
-                    connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
-                    connect_critical_log.close()
+                    with open("critical_error.log", 'a') as connect_critical_log:
+                        connect_critical_log.write("program version is " + version)
+                        connect_critical_log.write(str(datetime.datetime.now()) + str(connect_error) + "\r\n")
                     raise SystemExit from connect_error
                 except Exception as connect_big_error:  # if logging doesn't work, at least complain
                     print("error writing critical error log for error: " + str(connect_error)
@@ -1778,11 +1775,10 @@ if __name__ == '__main__':
                     # can't prompt for new logs directory, can only complain in a critical log and quit
                     print("can't write into logs directory. in automatic mode,"
                           " so no prompt. this error will be stored in critical log")
-                    process_folders_critical_log = open("critical_error.log", 'a')
-                    process_folders_critical_log.write(str(datetime.datetime.now()) +
-                                                       "can't write into logs directory."
-                                                       " in automatic mode, so no prompt\r\n")
-                    process_folders_critical_log.close()
+                    with open("critical_error.log", 'a') as process_folders_critical_log:
+                        process_folders_critical_log.write(str(datetime.datetime.now()) +
+                                                        "can't write into logs directory."
+                                                        " in automatic mode, so no prompt\r\n")
                     raise SystemExit
                 except IOError:
                     # can't complain in a critical log, so ill complain in standard output and quit
@@ -1827,7 +1823,6 @@ if __name__ == '__main__':
                 run_log.write(("Run failed, check your configuration \r\nError from dispatch module is: \r\n" +
                                str(dispatch_error) + "\r\n").encode())
                 run_log.write(traceback.print_exc())
-            run_log.close()
         if reporting['enable_reporting'] == "True":
             try:
                 database_obj_instance.sent_emails_removal_queue.delete()
@@ -1884,9 +1879,9 @@ if __name__ == '__main__':
                     email_errors_log_name_constructor = "Email Errors Log " + str(time.ctime()).replace(":",
                                                                                                         "-") + ".txt"
                     email_errors_log_full_path = os.path.join(run_log_path, email_errors_log_name_constructor)
-                    reporting_emails_errors = open(email_errors_log_full_path, 'w')
-                    reporting_emails_errors.write(email_errors.getvalue())
-                    reporting_emails_errors.close()
+                    with open(email_errors_log_full_path, 'w') as reporting_emails_errors:
+                        reporting_emails_errors = open(email_errors_log_full_path, 'w')
+                        reporting_emails_errors.write(email_errors.getvalue())
                     database_obj_instance.emails_table_batch.insert(dict(log=email_errors_log_full_path,
                                                                    folder_alias=email_errors_log_name_constructor))
                     try:
@@ -1902,28 +1897,26 @@ if __name__ == '__main__':
                         database_obj_instance.emails_table_batch.delete()
             except Exception as dispatch_error:
                 database_obj_instance.emails_table_batch.delete()
-                run_log = open(run_log_full_path, 'a')
-                if reporting['report_printing_fallback'] == "True":
-                    print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
-                    run_log.write(
-                        "Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
-                else:
-                    print("Emailing report log failed with error: " + str(
-                        dispatch_error) + ", printing disabled, stopping\r\n")
-                    run_log.write("Emailing report log failed with error: " + str(
-                        dispatch_error) + ", printing disabled, stopping\r\n")
-                run_log.close()
+                with open(run_log_full_path, 'a') as run_log:
+                    if reporting['report_printing_fallback'] == "True":
+                        print("Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
+                        run_log.write(
+                            "Emailing report log failed with error: " + str(dispatch_error) + ", printing file\r\n")
+                    else:
+                        print("Emailing report log failed with error: " + str(
+                            dispatch_error) + ", printing disabled, stopping\r\n")
+                        run_log.write("Emailing report log failed with error: " + str(
+                            dispatch_error) + ", printing disabled, stopping\r\n")
                 if reporting['report_printing_fallback'] == "True":
                     # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
                     try:
-                        run_log = open(run_log_full_path, 'r')
-                        print_run_log.do(run_log)
-                        run_log.close()
+                        with open(run_log_full_path, 'r') as run_log:
+                            run_log = open(run_log_full_path, 'r')
+                            print_run_log.do(run_log)
                     except Exception as dispatch_error:
                         print("printing error log failed with error: " + str(dispatch_error) + "\r\n")
-                        run_log = open(run_log_full_path, 'a')
-                        run_log.write("Printing error log failed with error: " + str(dispatch_error) + "\r\n")
-                        run_log.close()
+                        with open(run_log_full_path, 'a') as run_log:
+                            run_log.write("Printing error log failed with error: " + str(dispatch_error) + "\r\n")
 
 
     def automatic_process_directories(automatic_process_folders_table):
@@ -1936,9 +1929,8 @@ if __name__ == '__main__':
                 process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
                 print(str(automatic_process_error))
-                automatic_process_critical_log = open("critical_error.log", 'a')
-                automatic_process_critical_log.write(str(automatic_process_error) + "\r\n")
-                automatic_process_critical_log.close()
+                with open("critical_error.log", 'a') as automatic_process_critical_log
+                    automatic_process_critical_log.write(str(automatic_process_error) + "\r\n")
         else:
             print("Error, No Active Folders")
         database_obj_instance.close()
@@ -2170,12 +2162,12 @@ if __name__ == '__main__':
         folder_alias = database_obj_instance.folders_table.find_one(id=name)
         processed_log_path = avoid_overwrite(
             str(os.path.join(output_folder, folder_alias['alias'] + " processed report")))
-        processed_log = open(processed_log_path, 'w')
-        processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
-        for line in database_obj_instance.processed_files.find(folder_id=name):
-            processed_log.write(
-                line['file_name'] + "," + "\t" + str(line['sent_date_time'])[:-7] + "," + line['copy_destination'] +
-                "," + line['ftp_destination'] + "," + str(line['email_destination']).replace(",", ";") + "\n")
+        with open(processed_log_path, 'w') as processed_log:
+            processed_log.write("File,Date,Copy Destination,FTP Destination,Email Destination\n")
+            for line in database_obj_instance.processed_files.find(folder_id=name):
+                processed_log.write(
+                    line['file_name'] + "," + "\t" + str(line['sent_date_time'])[:-7] + "," + line['copy_destination'] +
+                    "," + line['ftp_destination'] + "," + str(line['email_destination']).replace(",", ";") + "\n")
         processed_log.close()
         showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
 

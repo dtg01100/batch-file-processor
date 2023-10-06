@@ -31,18 +31,17 @@ def edi_convert(edi_process, output_filename, settings_dict):
             adjusted_width = (max_length + 2) * 1.2
             adjust_worksheet.column_dimensions[column].width = adjusted_width
 
-    work_file = open(edi_process)  # open input file
-    work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-    invoice_list = []
+    with open(edi_process) as work_file:  # open input file
+        work_file_lined = [n for n in work_file.readlines()]  # make list of lines
+        invoice_list = []
 
-    for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
-        input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
-        try:
-            if input_edi_dict["record_type"] == "A":
-                invoice_list.append(input_edi_dict["invoice_number"][-7:])
-        except TypeError:
-            pass
-    work_file.close()
+        for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
+            input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+            try:
+                if input_edi_dict["record_type"] == "A":
+                    invoice_list.append(input_edi_dict["invoice_number"][-7:])
+            except TypeError:
+                pass
     print(invoice_list)
 
     query_object = query_runner(
