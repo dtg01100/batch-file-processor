@@ -66,5 +66,5 @@ tqdm==4.64.0
 typed-ast==1.5.5
 typing_extensions==4.2.0
 tzdata==2023.3
-urllib3==2.0.4
+urllib3==2.0.6
 validate-email==1.3
