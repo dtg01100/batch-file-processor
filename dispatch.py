@@ -488,7 +488,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                 process_files_log.append(
                                                     ("converting " + output_send_filename + " from EDI to Estore eInvoice\r\n"))
                                                 print("converting " + output_send_filename + " from EDI to Estore eInvoice")
-                                                ret_filename = convert_to_estore.edi_convert(output_send_filename, output_filename, settings, parameters_dict)
+                                                ret_filename = convert_to_estore.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
                                                 process_files_log.append("Success\r\n\r\n")
                                                 output_send_filename = ret_filename
                                             except Exception as process_error:

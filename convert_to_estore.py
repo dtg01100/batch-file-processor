@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import List
 
 
-def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -135,15 +135,20 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         row_dict_list.append(row_dict)
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
+                        try:
+                            upc_entry = each_upc_lookup[int(input_edi_dict["vendor_item"])]
+                        except KeyError:
+                            print("cannot find each upc")
+                            upc_entry = input_edi_dict["upc_number"]
                         row_dict = {
                             "Record Type": "D",
                             "Detail Type": "I",
                             "Subcategory OId": "",
                             "Vendor Item": input_edi_dict["vendor_item"],
                             "Vendor Pack": input_edi_dict["unit_multiplier"],
-                            "Item Description": input_edi_dict["description"],
+                            "Item Description": input_edi_dict["description"].strip(),
                             "Item Pack": "",
-                            "GTIN": input_edi_dict["upc_number"],
+                            "GTIN": upc_entry.strip(),
                             "GTIN Type": "",
                             "QTY": qty_to_int(input_edi_dict["qty_of_units"]),
                             "Unit Cost": convert_to_price(input_edi_dict["unit_cost"]),
