@@ -77,7 +77,7 @@ if __name__ == '__main__':
                 except Exception as error:  # if that doesn't work for some reason, log and quit
                     try:
                         print(str(error))
-                        with open("critical_error.log", 'a') as critical_log
+                        with open("critical_error.log", 'a') as critical_log:
                             critical_log.write("program version is " + version)
                             critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
                         raise SystemExit
@@ -1929,7 +1929,7 @@ if __name__ == '__main__':
                 process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
                 print(str(automatic_process_error))
-                with open("critical_error.log", 'a') as automatic_process_critical_log
+                with open("critical_error.log", 'a') as automatic_process_critical_log:
                     automatic_process_critical_log.write(str(automatic_process_error) + "\r\n")
         else:
             print("Error, No Active Folders")
