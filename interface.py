@@ -251,7 +251,7 @@ if __name__ == '__main__':
                                                     "split_prepaid_sales_tax_crec":defaults['split_prepaid_sales_tax_crec'],
                                                     "estore_store_number":defaults['estore_store_number'],
                                                     "estore_Vendor_OId":defaults['estore_Vendor_OId'],
-                                                    "estore_Vendor_NameVendorOID":defaults['estore_Vendor_NameVendorOID']
+                                                    "estore_Vendor_NameVendorOID":defaults['estore_vendor_NameVendorOID']
                                                     })
         print("done")
 
@@ -1333,7 +1333,7 @@ if __name__ == '__main__':
                 self.estore_vendor_oid_field.delete(0, tkinter.END)
                 self.estore_vendor_oid_field.insert(0, config_dict['estore_Vendor_OId'])
                 self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
-                self.estore_vendor_namevendoroid_field.insert(0, config_dict['estore_Vendor_NameVendorOID'])
+                self.estore_vendor_namevendoroid_field.insert(0, config_dict['estore_vendor_NameVendorOID'])
 
                 if copied:
                     self.convert_formats_var.set(config_dict['convert_to_format'])
@@ -1526,7 +1526,7 @@ if __name__ == '__main__':
             apply_to_folder['split_prepaid_sales_tax_crec'] = self.split_sales_tax_prepaid_var.get()
             apply_to_folder['estore_store_number'] = self.estore_vendor_store_number_field.get()
             apply_to_folder['estore_Vendor_OId'] = self.estore_vendor_oid_field.get()
-            apply_to_folder['estore_Vendor_NameVendorOID'] = self.estore_vendor_namevendoroid_field.get()
+            apply_to_folder['estore_vendor_NameVendorOID'] = self.estore_vendor_namevendoroid_field.get()
 
             if self.foldersnameinput['folder_name'] != 'template':
                 update_folder_alias(apply_to_folder)
