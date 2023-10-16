@@ -265,7 +265,7 @@ def upgrade_database(database_connection, config_folder, running_platform):
             database_connection.query("alter table 'folders' add column 'estore_Vendor_OId'")
             database_connection.query('UPDATE "folders" SET "estore_Vendor_OId" = 0')
             database_connection.query("alter table 'folders' add column 'estore_vendor_NameVendorOID'")
-            database_connection.query('UPDATE "folders" SET "estore_vendor_NameVendorOID" = "replaceme')
+            database_connection.query('UPDATE "folders" SET "estore_vendor_NameVendorOID" = "replaceme"')
         except sqlalchemy.exc.OperationalError:
             pass
         database_connection.query("alter table 'administrative' add column 'estore_store_number'")
