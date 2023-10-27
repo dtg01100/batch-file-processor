@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import fuzzywuzzy.process
+import thefuzz.process
 import ftplib
 import platform
 from tkinter.filedialog import askdirectory
@@ -418,7 +418,7 @@ if __name__ == '__main__':
             for folder_alias in folders_dict_list:
                 folder_alias_list.append(folder_alias['alias'])
             fuzzy_filter = list(
-                fuzzywuzzy.process.extractWithoutOrder(folder_filter, folder_alias_list, score_cutoff=80))
+                thefuzz.process.extractWithoutOrder(folder_filter, folder_alias_list, score_cutoff=80))
             fuzzy_filter.sort(key=itemgetter(1), reverse=True)
             for fuzzy_alias, score in fuzzy_filter:
                 fuzzy_filtered_alias.append(fuzzy_alias)
