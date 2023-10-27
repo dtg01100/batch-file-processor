@@ -4,7 +4,6 @@ appdirs==1.4.4
 attrs==21.4.0
 autopep8==1.6.0
 banal==1.0.6
-barcode==1.0.3
 binaryornot==0.4.4
 black==22.3.0
 cachetools==5.3.1
