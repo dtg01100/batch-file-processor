@@ -1524,7 +1524,7 @@ if __name__ == '__main__':
             apply_to_folder['invoice_date_custom_format'] = self.invoice_date_custom_format.get()
             apply_to_folder['invoice_date_custom_format_string'] = self.invoice_date_custom_format_field.get()
             apply_to_folder['split_prepaid_sales_tax_crec'] = self.split_sales_tax_prepaid_var.get()
-            apply_to_folder['estore_store_number'] = self.estore_vendor_store_number_field.get()
+            apply_to_folder['estore_store_number'] = self.estore_store_number_field.get()
             apply_to_folder['estore_Vendor_OId'] = self.estore_vendor_oid_field.get()
             apply_to_folder['estore_vendor_NameVendorOID'] = self.estore_vendor_namevendoroid_field.get()
 
