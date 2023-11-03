@@ -40,21 +40,20 @@ import scrollbuttons
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    appname = "Batch File Sender"
-    version = "(Git Branch: Master)"
-    database_version = "26"
-    print(appname + " Version " + version)
+    APPNAME = "Batch File Sender"
+    VERSION = "(Git Branch: Master)"
+    DATABASE_VERSION = "26"
+    print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
     root = tkinter.Tk()  # create root window
-    root.title(appname + " " + version)
-    folder = tkinter.NONE
+    root.title(APPNAME + " " + VERSION)
     options_frame = tkinter.ttk.Frame(root)  # initialize left frame
     feedback_text = tkinter.ttk.Label(root, text="Loading...")
     feedback_text.pack(side=tkinter.BOTTOM)
     root.update()
 
-    config_folder = appdirs.user_data_dir(appname)
+    config_folder = appdirs.user_data_dir(APPNAME)
     database_path = os.path.join(config_folder, "folders.db")
 
     try:
@@ -76,7 +75,7 @@ if __name__ == "__main__":
                     ).pack()
                     creating_database_popup.update()
                     create_database.do(
-                        database_version,
+                        DATABASE_VERSION,
                         inclass_database_path,
                         config_folder,
                         running_platform,
@@ -91,7 +90,7 @@ if __name__ == "__main__":
                         with open(
                             "critical_error.log", "a", encoding="utf-8"
                         ) as critical_log:
-                            critical_log.write("program version is " + version)
+                            critical_log.write("program version is " + VERSION)
                             critical_log.write(
                                 str(datetime.datetime.now()) + str(error) + "\r\n"
                             )
@@ -121,7 +120,7 @@ if __name__ == "__main__":
                     with open(
                         "critical_error.log", "a", encoding="utf-8"
                     ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + version)
+                        connect_critical_log.write("program version is " + VERSION)
                         connect_critical_log.write(
                             str(datetime.datetime.now()) + str(connect_error) + "\r\n"
                         )
@@ -141,7 +140,7 @@ if __name__ == "__main__":
             # open table required for database check in database
             db_version = self.database_connection["version"]
             db_version_dict = db_version.find_one(id=1)
-            if int(db_version_dict["version"]) < int(database_version):
+            if int(db_version_dict["version"]) < int(DATABASE_VERSION):
                 print("updating database file")
                 updating_database_popup = tkinter.Tk()
                 tkinter.ttk.Label(
@@ -154,7 +153,7 @@ if __name__ == "__main__":
                 )
                 updating_database_popup.destroy()
                 print("done")
-            if int(db_version_dict["version"]) > int(database_version):
+            if int(db_version_dict["version"]) > int(DATABASE_VERSION):
                 tkinter.Tk().withdraw()
                 showerror(
                     "Error",
@@ -207,7 +206,7 @@ if __name__ == "__main__":
                     with open(
                         "critical_error.log", "a", encoding="utf-8"
                     ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + version)
+                        connect_critical_log.write("program version is " + VERSION)
                         connect_critical_log.write(
                             str(datetime.datetime.now()) + str(connect_error) + "\r\n"
                         )
@@ -358,22 +357,22 @@ if __name__ == "__main__":
             initial_directory = prior_folder["single_add_folder_prior"]
         else:
             initial_directory = os.path.expanduser("~")
-        folder = askdirectory(initialdir=initial_directory)
-        if os.path.exists(folder):
-            update_last_folder = {"id": 1, "single_add_folder_prior": folder}
+        selected_folder = askdirectory(initialdir=initial_directory)
+        if os.path.exists(selected_folder):
+            update_last_folder = {"id": 1, "single_add_folder_prior": selected_folder}
             database_obj_instance.oversight_and_defaults.update(
                 update_last_folder, ["id"]
             )
-            proposed_folder = check_folder_exists(folder)
+            proposed_folder = check_folder_exists(selected_folder)
 
             if proposed_folder["truefalse"] is False:
                 doingstuffoverlay.make_overlay(root, "Adding Folder...")
-                add_folder_entry(folder)
+                add_folder_entry(selected_folder)
                 if askyesno(
                     message="Do you want to mark files in folder as processed?"
                 ):
                     folder_dict = database_obj_instance.folders_table.find_one(
-                        folder_name=folder
+                        folder_name=selected_folder
                     )
                     mark_active_as_processed(root, folder_dict["id"])
                 doingstuffoverlay.destroy_overlay()
@@ -553,7 +552,7 @@ if __name__ == "__main__":
                 )
             )
             fuzzy_filter.sort(key=itemgetter(1), reverse=True)
-            for fuzzy_alias, score in fuzzy_filter:
+            for fuzzy_alias, _ in fuzzy_filter:
                 fuzzy_filtered_alias.append(fuzzy_alias)
             filtered_folder_dict_list = []
             filtered_active_folder_dict_list = []
@@ -1097,7 +1096,6 @@ if __name__ == "__main__":
 
             return self.email_address_field  # initial focus
 
-        @property
         def validate(self):
             doingstuffoverlay.make_overlay(self, "Testing Changes...")
             error_list = []
@@ -2601,10 +2599,10 @@ if __name__ == "__main__":
                             " in automatic mode, so no prompt\r\n"
                         )
                     raise SystemExit
-                except IOError:
+                except IOError as exc:
                     # can't complain in a critical log, so ill complain in standard output and quit
                     print("Can't write critical error log, aborting")
-                    raise SystemExit
+                    raise SystemExit from exc
         run_log_path = reporting["logs_directory"]
         run_log_path = str(
             run_log_path
@@ -2615,7 +2613,7 @@ if __name__ == "__main__":
 
         with open(run_log_full_path, "wb") as run_log:
             clear_old_files.do_clear(run_log_path, 1000)
-            run_log.write(("Batch File Sender Version " + version + "\r\n").encode())
+            run_log.write(("Batch File Sender Version " + VERSION + "\r\n").encode())
             run_log.write(("starting run at " + time.ctime() + "\r\n").encode())
             if reporting["enable_reporting"] == "True":
                 # add run log to email queue if reporting is enabled
@@ -2634,7 +2632,7 @@ if __name__ == "__main__":
                     database_obj_instance.processed_files,
                     root,
                     args,
-                    version,
+                    VERSION,
                     errors_directory,
                     settings_dict,
                     simple_output=None if not args.automatic else feedback_text,
@@ -2684,8 +2682,8 @@ if __name__ == "__main__":
                             send_log_file["log"] = str(
                                 os.path.abspath(log["log"]) + ".zip"
                             )
-                            with zipfile.ZipFile(send_log_file["log"], "w") as zip:
-                                zip.write(
+                            with zipfile.ZipFile(send_log_file["log"], "w") as zip_outfile:
+                                zip_outfile.write(
                                     os.path.abspath(log["log"]),
                                     os.path.basename(log["log"]),
                                     zipfile.ZIP_DEFLATED,
@@ -2828,16 +2826,16 @@ if __name__ == "__main__":
                         with open(run_log_full_path, "r", encoding="utf-8") as run_log:
                             run_log = open(run_log_full_path, "r", encoding="utf-8")
                             print_run_log.do(run_log)
-                    except Exception as dispatch_error:
+                    except Exception as printing_error:
                         print(
                             "printing error log failed with error: "
-                            + str(dispatch_error)
+                            + str(printing_error)
                             + "\r\n"
                         )
                         with open(run_log_full_path, "a", encoding="utf-8") as run_log:
                             run_log.write(
                                 "Printing error log failed with error: "
-                                + str(dispatch_error)
+                                + str(printing_error)
                                 + "\r\n"
                             )
 
@@ -3046,7 +3044,7 @@ if __name__ == "__main__":
             database_path,
             running_platform,
             backup_path,
-            database_version,
+            DATABASE_VERSION,
         ):
             maintenance_popup.unbind("<Escape>")
             doingstuffoverlay.make_overlay(maintenance_popup, "Working...")
