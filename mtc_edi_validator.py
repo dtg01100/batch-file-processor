@@ -1,6 +1,7 @@
-from io import StringIO
-import line_from_mtc_edi_to_dict
 import time
+from io import StringIO
+
+import line_from_mtc_edi_to_dict
 
 
 # this function does a simple check to see if input file is an edi file, and returns false if it isn't

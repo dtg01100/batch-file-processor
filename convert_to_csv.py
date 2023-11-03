@@ -1,7 +1,8 @@
 import csv
-import upc_e_to_upc_a
-import line_from_mtc_edi_to_dict
 from decimal import Decimal
+
+import line_from_mtc_edi_to_dict
+import upc_e_to_upc_a
 
 
 def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):

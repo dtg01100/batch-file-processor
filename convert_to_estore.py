@@ -1,9 +1,10 @@
-import line_from_mtc_edi_to_dict
 import csv
 import os
 from datetime import datetime
 from decimal import Decimal
 from typing import List
+
+import line_from_mtc_edi_to_dict
 
 
 def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):

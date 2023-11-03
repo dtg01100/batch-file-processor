@@ -1,10 +1,10 @@
-import upc_e_to_upc_a
-import line_from_mtc_edi_to_dict
-from query_runner import query_runner
+import time
 from datetime import datetime, timedelta
 from decimal import *
-import time
 
+import line_from_mtc_edi_to_dict
+import upc_e_to_upc_a
+from query_runner import query_runner
 
 
 def edi_tweak(

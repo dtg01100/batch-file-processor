@@ -1,6 +1,7 @@
+import os
+
 import dataset
 import sqlalchemy
-import os
 
 
 def do(database_version, database_path, config_folder, running_platform):  # create database file with default settings

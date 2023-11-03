@@ -1,10 +1,9 @@
-from pathlib import Path
-import smtplib
-from email.message import EmailMessage
 import mimetypes
-import time
 import os
-
+import smtplib
+import time
+from email.message import EmailMessage
+from pathlib import Path
 
 # this module sends the file specified in filename to the address specified in the dict process_parameters via email
 # note: process_parameters is a dict from a row in the database, passed into this module

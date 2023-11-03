@@ -1,10 +1,11 @@
-from tkinter import *
-from tkinter.ttk import *
-import tkinter
-from tkinter.messagebox import showerror
-import scrollbuttons
 import os
+import tkinter
 from operator import itemgetter
+from tkinter import *
+from tkinter.messagebox import showerror
+from tkinter.ttk import *
+
+import scrollbuttons
 
 
 def do(database_connection, master_window):

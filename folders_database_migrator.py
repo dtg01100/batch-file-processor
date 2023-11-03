@@ -1,5 +1,6 @@
-import sqlalchemy
 import os
+
+import sqlalchemy
 
 
 def upgrade_database(database_connection, config_folder, running_platform):

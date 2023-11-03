@@ -11,6 +11,7 @@ def do(filename):
     formatted_log = '\r\n'.join(textwrap.wrap(filename, width=75, replace_whitespace=False))
     if platform.system() == 'Windows':  # if we are on windows, print via this section
         import sys
+
         import win32print  # as this module is only available under windows, import it here to prevent errors
         printer_name = win32print.GetDefaultPrinter()
         #

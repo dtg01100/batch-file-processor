@@ -1,10 +1,12 @@
-import line_from_mtc_edi_to_dict
 import csv
 import decimal
+from datetime import datetime, timedelta
+
+from dateutil import parser
+
+import line_from_mtc_edi_to_dict
 import upc_e_to_upc_a
 from query_runner import query_runner
-from datetime import datetime, timedelta
-from dateutil import parser
 
 
 class CustomerLookupError(Exception):

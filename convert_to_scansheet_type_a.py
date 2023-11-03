@@ -1,15 +1,17 @@
-import line_from_mtc_edi_to_dict
+import math
+import os
+import tempfile
+
+import barcode
+import ImageOps as pil_ImageOps
 import openpyxl
 import openpyxl.utils
-import tempfile
-import os
-from query_runner import query_runner
+from barcode.writer import ImageWriter
 from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
-import ImageOps as pil_ImageOps
-import barcode
-from barcode.writer import ImageWriter
-import math
+
+import line_from_mtc_edi_to_dict
+from query_runner import query_runner
 
 
 def edi_convert(edi_process, output_filename, settings_dict):

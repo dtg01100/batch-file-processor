@@ -1,8 +1,9 @@
+import mimetypes
 import os
-from pathlib import Path
 import smtplib
 from email.message import EmailMessage
-import mimetypes
+from pathlib import Path
+
 import doingstuffoverlay
 
 

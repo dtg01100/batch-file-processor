@@ -1,9 +1,11 @@
 import os
-from tkinter import IntVar
-import dataset
-import folders_database_migrator
 import threading
+from tkinter import IntVar
+
+import dataset
+
 import backup_increment
+import folders_database_migrator
 
 
 class DbMigrationThing:

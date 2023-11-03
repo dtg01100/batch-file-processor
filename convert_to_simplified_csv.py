@@ -1,7 +1,8 @@
-import line_from_mtc_edi_to_dict
 import csv
-import upc_e_to_upc_a
 from decimal import Decimal
+
+import line_from_mtc_edi_to_dict
+import upc_e_to_upc_a
 
 
 class CustomerLookupError(Exception):

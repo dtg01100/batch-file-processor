@@ -1,6 +1,6 @@
-import line_from_mtc_edi_to_dict
-
 from datetime import datetime, timedelta
+
+import line_from_mtc_edi_to_dict
 
 
 def edi_convert(edi_process, output_filename, parameters_dict):
@@ -62,8 +62,8 @@ def edi_convert(edi_process, output_filename, parameters_dict):
 
 
 if __name__ == "__main__":
-    import tempfile
     import os
+    import tempfile
     with tempfile.TemporaryDirectory() as workdir:
         infile_path = os.path.abspath(input("input file path: "))
         outfile_path = os.path.join(os.path.expanduser('~'), os.path.basename(infile_path))

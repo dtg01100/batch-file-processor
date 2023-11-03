@@ -2,7 +2,6 @@ import platform
 import tkinter
 import tkinter.ttk
 
-
 # http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame
 
 class VerticalScrolledFrame(tkinter.ttk.Frame):

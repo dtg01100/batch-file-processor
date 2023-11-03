@@ -1,40 +1,42 @@
 #!/usr/bin/env python3
-import thefuzz.process
+import argparse
+import copy
+import datetime
 import ftplib
+import hashlib
+import multiprocessing
+import os
 import platform
-from tkinter.filedialog import askdirectory
-from tkinter.messagebox import showerror, askyesno, showinfo, askokcancel
+import smtplib
+import time
 import tkinter
 import tkinter.ttk
-from validate_email import validate_email
-import rclick_menu
-import hashlib
-import scrollbuttons
+import traceback
+import zipfile
+from io import StringIO
+from operator import itemgetter
+from tkinter.filedialog import askdirectory
+from tkinter.messagebox import askokcancel, askyesno, showerror, showinfo
+
+import appdirs
 import dataset
+import pyodbc
+import thefuzz.process
+from validate_email import validate_email
+
+import backup_increment
+import batch_log_sender
+import clear_old_files
+import create_database
+import database_import
 import dialog
 import dispatch
-import os
-import create_database
-import time
-import datetime
-import batch_log_sender
-import print_run_log
-import argparse
-from io import StringIO
 import doingstuffoverlay
 import folders_database_migrator
+import print_run_log
+import rclick_menu
 import resend_interface
-import database_import
-import backup_increment
-import appdirs
-import clear_old_files
-import smtplib
-import multiprocessing
-from operator import itemgetter
-import zipfile
-import copy
-import pyodbc
-import traceback
+import scrollbuttons
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
