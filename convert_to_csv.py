@@ -26,9 +26,9 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     def convert_to_price(value):
         return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-        with open(output_filename, "w", newline="") as f:  # open work file, overwriting old file
+        with open(output_filename, "w", newline="", encoding="utf-8") as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n", quoting=csv.QUOTE_ALL)
 
             if conv_inc_headers != "False":  # include headers if flag is set

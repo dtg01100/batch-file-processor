@@ -11,11 +11,11 @@ def edi_convert(edi_process, output_filename, parameters_dict):
     force_txt_file_ext = parameters_dict['force_txt_file_ext']
     invoice_date_offset = parameters_dict['invoice_date_offset']
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
     if force_txt_file_ext == "True":
         output_filename = output_filename + ".txt"
-    with open(output_filename, 'wb') as f:  # open work file, overwriting old file
+    with open(output_filename, 'wb', encoding="utf-8") as f:  # open work file, overwriting old file
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
             input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
             writeable_line = line.strip("\r\n")
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         infile_path = os.path.abspath(input("input file path: "))
         outfile_path = os.path.join(os.path.expanduser('~'), os.path.basename(infile_path))
         new_outfile = edi_convert(infile_path, outfile_path, "CAPCDY", "True", "123456", False, 0)
-        with open(new_outfile, 'r') as new_outfile_handle:
+        with open(new_outfile, 'r', encoding="utf-8") as new_outfile_handle:
             for entry in new_outfile_handle.readlines():
                 print(repr(entry))
 

@@ -33,7 +33,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
             adjusted_width = (max_length + 2) * 1.2
             adjust_worksheet.column_dimensions[column].width = adjusted_width
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         invoice_list = []
 

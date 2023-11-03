@@ -72,14 +72,14 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
     vendor_oid = parameters_dict['estore_Vendor_OId']
     vendor_name = parameters_dict['estore_vendor_NameVendorOID']
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = list(work_file.readlines())  # make list of lines
         output_filename = os.path.join(
             os.path.dirname(output_filename_initial),
             f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}',
         )
         with open(
-            output_filename, "w", newline=""
+            output_filename, "w", newline="", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
 

@@ -35,10 +35,10 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
                 column_list.append(rowdict[column])
         csv_file.writerow(column_list)
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         with open(
-            output_filename, "w", newline=""
+            output_filename, "w", newline="", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
             "upc_number,qty_of_units,unit_cost,description,vendor_item"

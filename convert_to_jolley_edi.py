@@ -35,10 +35,10 @@ def edi_convert(edi_process, output_filename, settings_dict):
             formatted_date_string = "Not Available"
         return formatted_date_string
 
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         with open(
-            output_filename, "w", newline="\n"
+            output_filename, "w", newline="\n", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="unix")
             query_object = query_runner(

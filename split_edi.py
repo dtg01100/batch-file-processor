@@ -20,7 +20,7 @@ def do_split_edi(edi_process, work_directory):
     edi_send_list = []
     if not os.path.exists(work_directory):
         os.mkdir(work_directory)
-    with open(edi_process) as work_file:  # open input file
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
         lines_in_edi = sum(1 for _ in work_file)
         work_file.seek(0)
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
@@ -51,7 +51,7 @@ def do_split_edi(edi_process, work_directory):
         edi_send_list.pop(0)
         edi_send_list_lines = 0
         for output_file in edi_send_list:
-            with open(output_file) as file_handle:
+            with open(output_file, encoding="utf-8") as file_handle:
                 edi_send_list_lines += sum(1 for _ in file_handle)
         if not lines_in_edi == write_counter:
             raise Exception("not all lines in input were written out")
