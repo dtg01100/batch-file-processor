@@ -19,10 +19,10 @@ from tkinter.filedialog import askdirectory
 from tkinter.messagebox import askokcancel, askyesno, showerror, showinfo
 
 import appdirs
-import dataset
-import pyodbc
-import thefuzz.process
-from validate_email import validate_email
+import dataset # type: ignore
+import pyodbc # type: ignore
+import thefuzz.process # type: ignore
+from validate_email import validate_email # type: ignore
 
 import backup_increment
 import batch_log_sender
