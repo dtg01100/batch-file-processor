@@ -2,8 +2,10 @@ import os
 
 import line_from_mtc_edi_to_dict
 
+from datetime import datetime
 
-def do_split_edi(edi_process, work_directory):
+
+def do_split_edi(edi_process, work_directory, parameters_dict):
     #  credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642
     def col_to_excel(col):  # col is 1 based
         excel_col = str()
@@ -42,7 +44,12 @@ def do_split_edi(edi_process, work_directory):
                 if not len(edi_send_list) == 0:
                     f.close()
                 edi_send_list.append(output_file_path)
-                output_file_path = os.path.join(work_directory, prepend_letters + "_" + os.path.basename(edi_process) + file_name_suffix)
+                file_name_prefix = prepend_letters + "_"
+                if parameters_dict['prepend_date_files']:
+                    datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
+                    inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
+                    file_name_prefix = inv_date + "_" + file_name_prefix
+                output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
                 f = open(output_file_path, 'wb')
             f.write(writeable_line.replace('\n', "\r\n").encode())
             write_counter += 1

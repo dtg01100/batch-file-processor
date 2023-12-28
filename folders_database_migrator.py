@@ -277,3 +277,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query("UPDATE 'administrative' SET 'estore_vendor_NameVendorOID' = 'replaceme'")
         update_version = dict(id=1, version="26", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "26":
+        database_connection.query("alter table 'folders' add column 'prepend_date_files'")
+        database_connection.query('UPDATE "folders" SET "prepend_date_files" = 0')
+        database_connection.query("alter table 'administrative' add column 'prepend_date_files'")
+        database_connection.query('UPDATE "administrative" SET "prepend_date_files" = 0')
+        update_version = dict(id=1, version="27", os=running_platform)
+        db_version.update(update_version, ['id'])

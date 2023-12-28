@@ -325,7 +325,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         process_files_log.append(("Splitting edi file " + process_original_filename + "...\r\n"))
                         print("Splitting edi file " + process_original_filename + "...")
                         try:
-                            split_edi_list = split_edi.do_split_edi(input_filename, file_scratch_folder)
+                            split_edi_list = split_edi.do_split_edi(input_filename, file_scratch_folder, parameters_dict)
                             if len(split_edi_list) > 1:
                                 process_files_log.append(
                                     ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n"))

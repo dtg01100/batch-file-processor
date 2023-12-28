@@ -42,7 +42,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "26"
+    DATABASE_VERSION = "27"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -312,6 +312,7 @@ if __name__ == "__main__":
                 "filter_ampersand": defaults["filter_ampersand"],
                 "tweak_edi": defaults["tweak_edi"],
                 "split_edi": defaults["split_edi"],
+                "prepend_date_files": defaults["prepend_date_files"],
                 "pad_a_records": defaults["pad_a_records"],
                 "a_record_padding": defaults["a_record_padding"],
                 "ftp_port": defaults["ftp_port"],
@@ -1313,6 +1314,7 @@ if __name__ == "__main__":
             self.backendvariable = tkinter.StringVar(master)
             self.active_checkbutton = tkinter.StringVar(master)
             self.split_edi = tkinter.BooleanVar(master)
+            self.prepend_file_dates = tkinter.BooleanVar(master)
             self.ediconvert_options = tkinter.StringVar(master)
             self.process_edi = tkinter.StringVar(master)
             self.upc_var_check = tkinter.StringVar(
@@ -1401,10 +1403,10 @@ if __name__ == "__main__":
                 row=0, column=0, columnspan=2, pady=3
             )
             tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
-                row=4, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
+                row=5, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
             )
             self.convert_options_frame.grid(
-                column=0, row=5, columnspan=2, sticky=tkinter.W
+                column=0, row=6, columnspan=2, sticky=tkinter.W
             )
             self.convert_to_selector_frame = tkinter.ttk.Frame(
                 self.convert_options_frame
@@ -1562,6 +1564,7 @@ if __name__ == "__main__":
                     and self.process_backend_email_check.get() is False
                 ):
                     self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
+                    self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
                     self.edi_options_menu.configure(state=tkinter.DISABLED)
                     for child in self.convert_options_frame.winfo_children():
                         try:
@@ -1575,6 +1578,7 @@ if __name__ == "__main__":
                             pass
                 else:
                     self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
+                    self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
                     self.edi_options_menu.configure(state=tkinter.NORMAL)
                     for child in self.convert_options_frame.winfo_children():
                         try:
@@ -1738,6 +1742,13 @@ if __name__ == "__main__":
                 self.ediframe,
                 variable=self.split_edi,
                 text="Split EDI",
+                onvalue=True,
+                offvalue=False,
+            )
+            self.prepend_file_dates_checkbutton = tkinter.ttk.Checkbutton(
+                self.ediframe,
+                variable=self.prepend_file_dates,
+                text="Prepend dates",
                 onvalue=True,
                 offvalue=False,
             )
@@ -1943,6 +1954,7 @@ if __name__ == "__main__":
                 self.pad_arec_check.set(config_dict["pad_a_records"])
                 self.tweak_edi.set(config_dict["tweak_edi"])
                 self.split_edi.set(config_dict["split_edi"])
+                self.prepend_file_dates.set(config_dict["prepend_date_files"])
                 self.a_record_padding_field.delete(0, tkinter.END)
                 self.a_record_padding_field.insert(0, config_dict["a_record_padding"])
                 self.a_record_padding_length.set(config_dict["a_record_padding_length"])
@@ -2004,6 +2016,9 @@ if __name__ == "__main__":
 
             self.split_edi_checkbutton.grid(
                 row=2, column=0, columnspan=2, sticky=tkinter.W
+            )
+            self.prepend_file_dates_checkbutton.grid(
+                row=3, column=0, columnspan=2, sticky=tkinter.W
             )
 
             def make_ediconvert_options(argument):
@@ -2120,7 +2135,7 @@ if __name__ == "__main__":
             self.force_edi_check_checkbutton.grid(
                 row=1, column=0, columnspan=2, sticky=tkinter.W
             )
-            self.edi_options_menu.grid(row=3)
+            self.edi_options_menu.grid(row=4)
             self.active_checkbutton_object.pack(fill=tkinter.X)
             self.copy_backend_checkbutton.grid(row=3, column=0, sticky=tkinter.W)
             self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=tkinter.W)
@@ -2216,6 +2231,7 @@ if __name__ == "__main__":
             apply_to_folder["force_edi_validation"] = self.force_edi_check_var.get()
             apply_to_folder["tweak_edi"] = self.tweak_edi.get()
             apply_to_folder["split_edi"] = self.split_edi.get()
+            apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
             apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())
             apply_to_folder["a_record_padding_length"] = int(
@@ -2436,6 +2452,15 @@ if __name__ == "__main__":
             if int(self.invoice_date_offset.get()) not in list(range(-14, 15)):
                 error_string_constructor_list.append(
                     "Invoice date offset not in valid range"
+                )
+                errors = True
+
+            if (
+                self.prepend_file_dates.get() is True
+                and self.split_edi.get() is False
+            ):
+                error_string_constructor_list.append(
+                    "Edi needs to be split for prepending dates"
                 )
                 errors = True
 
