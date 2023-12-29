@@ -41,23 +41,23 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
                     file_name_suffix = '.cr'
                 else:
                     file_name_suffix = '.inv'
-                if not len(edi_send_list) == 0:
+                if len(edi_send_list) != 0:
                     f.close()
-                edi_send_list.append(output_file_path)
                 file_name_prefix = prepend_letters + "_"
                 if parameters_dict['prepend_date_files']:
                     datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
                     inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
                     file_name_prefix = inv_date + "_" + file_name_prefix
                 output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
+                edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
                 f = open(output_file_path, 'wb')
             f.write(writeable_line.replace('\n', "\r\n").encode())
             write_counter += 1
         f.close()  # close output file
-        edi_send_list.append(output_file_path)
-        edi_send_list.pop(0)
+        # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
+        # edi_send_list.pop(0)
         edi_send_list_lines = 0
-        for output_file in edi_send_list:
+        for output_file, _, _ in edi_send_list:
             with open(output_file, encoding="utf-8") as file_handle:
                 edi_send_list_lines += sum(1 for _ in file_handle)
         if not lines_in_edi == write_counter:

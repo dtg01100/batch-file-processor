@@ -285,3 +285,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "prepend_date_files" = 0')
         update_version = dict(id=1, version="27", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "27":
+        database_connection.query("alter table 'folders' add column 'rename_file'")
+        database_connection.query('UPDATE "folders" SET "rename_file" = ""')
+        database_connection.query("alter table 'administrative' add column 'rename_file'")
+        database_connection.query('UPDATE "administrative" SET "rename_file" = ""')
+        update_version = dict(id=1, version="28", os=running_platform)
+        db_version.update(update_version, ['id'])

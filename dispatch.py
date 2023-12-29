@@ -4,6 +4,7 @@ import hashlib
 import os
 import queue
 import re
+import shutil
 import tempfile
 import threading
 import time
@@ -331,7 +332,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n"))
                                 print("edi file split into " + str(len(split_edi_list)) + " files")
                         except Exception as process_error:
-                            split_edi_list = [input_filename]
+                            split_edi_list = [(input_filename, "", "")]
+                            print(process_error)
                             process_files_log, process_files_error_log = \
                                 record_error.do(process_files_log,
                                                 process_files_error_log,
@@ -339,15 +341,35 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     process_error), input_filename,
                                                 "edi splitter", True)
                     else:
-                        split_edi_list = [input_filename]
+                        split_edi_list = [(input_filename, "", "")]
                     if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
                         process_files_log.append("Cannot split edi file\r\n\r\n")
                         print("Cannot split edi file")
-                    for output_send_filename in split_edi_list:
+                    for output_send_filename, filename_prefix, filename_suffix in split_edi_list:
                         if errors is True:
                             break
-                        stripped_filename = re.sub('[^A-Za-z0-9. _]+', '', os.path.basename(output_send_filename))
+                        rename_file = os.path.basename(output_send_filename)
+                        if parameters_dict['rename_file'].strip() != '':
+                            rename_file = "".join([
+                                filename_prefix,
+                                parameters_dict['rename_file'].strip()
+                                ,".",
+                                os.path.basename(input_filename).split(".")[-1],
+                                filename_suffix
+                                ])
+                        stripped_filename = re.sub('[^A-Za-z0-9. _]+', '', rename_file)
                         if os.path.exists(output_send_filename):
+                            if parameters_dict['process_edi'] != "True" and errors is False:
+                                output_filename = os.path.join(
+                                    file_scratch_folder,
+                                    os.path.basename(stripped_filename))
+                                if os.path.exists(os.path.dirname(output_filename)) is False:
+                                    os.mkdir(os.path.dirname(output_filename))
+                                try:
+                                    shutil.copyfile(output_send_filename, output_filename)
+                                    output_send_filename = output_filename
+                                except Exception:
+                                    pass
                             if valid_edi_file:
                                 if parameters_dict['process_edi'] == "True" and errors is False:
                                     # if the current file is recognized as a valid edi file,

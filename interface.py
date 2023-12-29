@@ -42,7 +42,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "27"
+    DATABASE_VERSION = "28"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -313,6 +313,7 @@ if __name__ == "__main__":
                 "tweak_edi": defaults["tweak_edi"],
                 "split_edi": defaults["split_edi"],
                 "prepend_date_files": defaults["prepend_date_files"],
+                "rename_file": defaults["rename_file"],
                 "pad_a_records": defaults["pad_a_records"],
                 "a_record_padding": defaults["a_record_padding"],
                 "ftp_port": defaults["ftp_port"],
@@ -1402,11 +1403,14 @@ if __name__ == "__main__":
             tkinter.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
                 row=0, column=0, columnspan=2, pady=3
             )
+            tkinter.ttk.Label(self.ediframe, text="Rename File:").grid(
+                row=4, column=0, sticky=tkinter.W
+            )
             tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
-                row=5, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
+                row=6, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
             )
             self.convert_options_frame.grid(
-                column=0, row=6, columnspan=2, sticky=tkinter.W
+                column=0, row=7, columnspan=2, sticky=tkinter.W
             )
             self.convert_to_selector_frame = tkinter.ttk.Frame(
                 self.convert_options_frame
@@ -1565,6 +1569,7 @@ if __name__ == "__main__":
                 ):
                     self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
                     self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
+                    self.rename_file_field.configure(state=tkinter.DISABLED)
                     self.edi_options_menu.configure(state=tkinter.DISABLED)
                     for child in self.convert_options_frame.winfo_children():
                         try:
@@ -1579,6 +1584,7 @@ if __name__ == "__main__":
                 else:
                     self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
                     self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
+                    self.rename_file_field.configure(state=tkinter.NORMAL)
                     self.edi_options_menu.configure(state=tkinter.NORMAL)
                     for child in self.convert_options_frame.winfo_children():
                         try:
@@ -1802,6 +1808,11 @@ if __name__ == "__main__":
                 offvalue=False,
             )
 
+            self.rename_file_field = tkinter.ttk.Entry(
+                self.ediframe, width=10
+            )
+
+
             self.a_record_padding_frame = tkinter.ttk.Frame(self.convert_options_frame)
 
             self.pad_a_records_checkbutton = tkinter.ttk.Checkbutton(
@@ -1955,6 +1966,8 @@ if __name__ == "__main__":
                 self.tweak_edi.set(config_dict["tweak_edi"])
                 self.split_edi.set(config_dict["split_edi"])
                 self.prepend_file_dates.set(config_dict["prepend_date_files"])
+                self.rename_file_field.delete(0, tkinter.END)
+                self.rename_file_field.insert(0, config_dict["rename_file"])
                 self.a_record_padding_field.delete(0, tkinter.END)
                 self.a_record_padding_field.insert(0, config_dict["a_record_padding"])
                 self.a_record_padding_length.set(config_dict["a_record_padding_length"])
@@ -2019,6 +2032,9 @@ if __name__ == "__main__":
             )
             self.prepend_file_dates_checkbutton.grid(
                 row=3, column=0, columnspan=2, sticky=tkinter.W
+            )
+            self.rename_file_field.grid(
+                row=4, column=1, sticky=tkinter.E
             )
 
             def make_ediconvert_options(argument):
@@ -2135,7 +2151,7 @@ if __name__ == "__main__":
             self.force_edi_check_checkbutton.grid(
                 row=1, column=0, columnspan=2, sticky=tkinter.W
             )
-            self.edi_options_menu.grid(row=4)
+            self.edi_options_menu.grid(row=5)
             self.active_checkbutton_object.pack(fill=tkinter.X)
             self.copy_backend_checkbutton.grid(row=3, column=0, sticky=tkinter.W)
             self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=tkinter.W)
@@ -2232,6 +2248,7 @@ if __name__ == "__main__":
             apply_to_folder["tweak_edi"] = self.tweak_edi.get()
             apply_to_folder["split_edi"] = self.split_edi.get()
             apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
+            apply_to_folder["rename_file"] = self.rename_file_field.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
             apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())
             apply_to_folder["a_record_padding_length"] = int(
