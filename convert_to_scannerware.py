@@ -15,7 +15,7 @@ def edi_convert(edi_process, output_filename, parameters_dict):
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
     if force_txt_file_ext == "True":
         output_filename = output_filename + ".txt"
-    with open(output_filename, 'wb', encoding="utf-8") as f:  # open work file, overwriting old file
+    with open(output_filename, 'wb') as f:  # open work file, overwriting old file
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
             input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
             writeable_line = line.strip("\r\n")
