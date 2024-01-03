@@ -2457,15 +2457,6 @@ if __name__ == "__main__":
                 )
                 errors = True
 
-            if (
-                len(str(self.a_record_append_field.get())) != 6
-                and str(self.append_arec_check.get()) == "True"
-            ):
-                error_string_constructor_list.append(
-                    '"A" Record Append Field Needs To Be Six Characters'
-                )
-                errors = True
-
             if int(self.invoice_date_offset.get()) not in list(range(-14, 15)):
                 error_string_constructor_list.append(
                     "Invoice date offset not in valid range"

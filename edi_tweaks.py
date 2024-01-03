@@ -29,10 +29,39 @@ def edi_tweak(
     force_each_upc = parameters_dict['force_each_upc']
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
 
+    class poFetcher:
+        def __init__(self, settings_dict):
+            self.query_object = None
+            self.settings = settings_dict
+
+        def _db_connect(self):
+            self.query_object = query_runner(
+                self.settings["as400_username"],
+                self.settings["as400_password"],
+                self.settings["as400_address"],
+                f"{self.settings['odbc_driver']}",
+            )
+
+        def fetch_po_number(self, invoice_number):
+            if self.query_object is None:
+                self._db_connect()
+            qry_ret = self.query_object.run_arbitrary_query(
+                f"""
+                select ohhst.bte4cd
+                from dacdata.ohhst ohhst
+                where ohhst.bthhnb = {int(invoice_number)}
+                """
+            )
+            if len(qry_ret) == 0:
+                ret_str = "no_po_found    "
+            else:
+                ret_str = str(qry_ret[0][0])
+            return ret_str
+
     class cRecGenerator:
         def __init__(self, settings_dict):
             self.query_object = None
-            self._invoice_number = 0
+            self._invoice_number = "0"
             self.unappended_records = False
             self.settings = settings_dict
 
@@ -120,6 +149,8 @@ def edi_tweak(
 
     crec_appender = cRecGenerator(settings_dict)
 
+    po_fetcher = poFetcher(settings_dict)
+
     for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
         input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
         writeable_line = line
@@ -151,6 +182,8 @@ def edi_tweak(
                     a_rec_edi_dict['invoice_date'],
                     a_rec_edi_dict['invoice_total']]            
             if append_arec == "True":
+                if "%po_str%" in append_arec_text:
+                    append_arec_text = append_arec_text.replace("%po_str%", po_fetcher.fetch_po_number(a_rec_edi_dict['invoice_number']))
                 a_rec_line_builder.append(append_arec_text)
             a_rec_line_builder.append("\n")
             writeable_line = "".join(a_rec_line_builder)
