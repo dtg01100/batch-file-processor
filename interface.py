@@ -41,7 +41,7 @@ import scrollbuttons
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
-    VERSION = "1.41.1"
+    VERSION = "1.41.2"
     DATABASE_VERSION = "28"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
