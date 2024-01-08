@@ -512,7 +512,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             process_files_log.append(
                                                 ("converting " + output_send_filename + " from EDI to YellowDog CSV\r\n"))
                                             print("converting " + output_send_filename + " from EDI to YellowDog CSV")
-                                            convert_to_yellowdog_csv.edi_convert(output_send_filename, output_filename, parameters_dict, settings_dict)
+                                            convert_to_yellowdog_csv.edi_convert(output_send_filename, output_filename, parameters_dict, settings)
                                             process_files_log.append("Success\r\n\r\n")
                                             output_send_filename = output_filename
                                         except Exception as process_error:
