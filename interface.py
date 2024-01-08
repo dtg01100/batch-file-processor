@@ -1533,6 +1533,7 @@ if __name__ == "__main__":
                 "jolley_custom",
                 "simplified_csv",
                 "Estore eInvoice",
+                "YellowDog CSV",
                 command=make_convert_to_options,
             )
 

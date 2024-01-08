@@ -17,6 +17,7 @@ import convert_to_jolley_edi
 import convert_to_scannerware
 import convert_to_scansheet_type_a
 import convert_to_simplified_csv
+import convert_to_yellowdog_csv
 import copy_backend
 import doingstuffoverlay
 import edi_tweaks
@@ -487,6 +488,31 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                 ("converting " + output_send_filename + " from EDI to Simplified CSV\r\n"))
                                             print("converting " + output_send_filename + " from EDI to Simplified CSV")
                                             convert_to_simplified_csv.edi_convert(output_send_filename, output_filename, each_upc_dict, parameters_dict)
+                                            process_files_log.append("Success\r\n\r\n")
+                                            output_send_filename = output_filename
+                                        except Exception as process_error:
+                                            print(str(process_error))
+                                            errors = True
+                                            process_files_log, process_files_error_log = \
+                                                record_error.do(process_files_log,
+                                                                process_files_error_log,
+                                                                str(process_error),
+                                                                str(
+                                                                    output_send_filename),
+                                                                "EDI Processor",
+                                                                True)
+                                            
+                                    if parameters_dict['convert_to_format'] == "YellowDog CSV":
+                                        output_filename = os.path.join(
+                                            file_scratch_folder,
+                                            os.path.basename(stripped_filename) + ".csv")
+                                        if os.path.exists(os.path.dirname(output_filename)) is False:
+                                            os.mkdir(os.path.dirname(output_filename))
+                                        try:
+                                            process_files_log.append(
+                                                ("converting " + output_send_filename + " from EDI to YellowDog CSV\r\n"))
+                                            print("converting " + output_send_filename + " from EDI to YellowDog CSV")
+                                            convert_to_yellowdog_csv.edi_convert(output_send_filename, output_filename, parameters_dict, settings_dict)
                                             process_files_log.append("Success\r\n\r\n")
                                             output_send_filename = output_filename
                                         except Exception as process_error:
