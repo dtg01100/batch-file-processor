@@ -1,10 +1,8 @@
 import csv
-import os
-from decimal import Decimal
+from datetime import datetime
 from typing import List, Dict, TextIO
 
 import line_from_mtc_edi_to_dict
-import upc_e_to_upc_a
 from query_runner import query_runner
 
 
@@ -42,6 +40,17 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
 
     def convert_to_price(value):
         return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
+    
+    def dactime_from_datetime(date_time: datetime) -> str:
+        dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
+
+        dactime_date = dactime_date_century_digit + str(
+            datetime.strftime(date_time, "%y%m%d")
+        )
+        return dactime_date
+
+    def datetime_from_dactime(dac_time: int) -> datetime:
+        return datetime.strptime(str(dac_time + 19000000), "%Y%m%d")
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
@@ -56,11 +65,8 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 )
 
         def flush_to_csv(self):
-            expenselist = []
             self.brec_lines.reverse()
             self.crec_lines.reverse()
-            while len(self.crec_lines) > 0:
-                expenselist.append(convert_to_price(self.crec_lines.pop()['amount']))
             while len(self.brec_lines) > 0:
                 curline = self.brec_lines.pop()
                 self.output_csv_writer.writerow(
@@ -68,6 +74,8 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         convert_to_price(self.arec_line['invoice_total']),
                         curline["unit_multiplier"],
                         curline["description"],
+                        curline['vendor_item'],
+                        curline['unit_cost'],
                         curline['qty_of_units'],
                         '',
                         self.arec_line['invoice_date'],
@@ -77,9 +85,29 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         '',
                         '',
                         curline['upc_number']
-                    ] + expenselist
+                    ]
                 )
             print("stub: csv writeout")
+            while len(self.crec_lines) > 0:
+                curline = self.crec_lines.pop()
+                self.output_csv_writer.writerow(
+                [
+                    convert_to_price(self.arec_line['invoice_total']),
+                    1,
+                    curline["description"],
+                    'changeme',
+                    curline['amount'],
+                    1,
+                    '',
+                    self.arec_line['invoice_date'],
+                    '',
+                    self.arec_line['invoice_number'],
+                    self.arec_line['cust_vendor'],
+                    '',
+                    '',
+                    ''
+                ]
+            )
 
         def add_line(self, new_line):
             if new_line is not None:
@@ -92,7 +120,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 if new_line["record_type"] == "C":
                     self.crec_lines.append(new_line)
                     print("stub: crec_handling")
-
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         with open(output_filename, "w", newline="", encoding="utf-8") as outfile_obj:
