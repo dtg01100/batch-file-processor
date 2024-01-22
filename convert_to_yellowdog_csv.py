@@ -37,7 +37,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 ret_str = str(qry_ret[0][0])
             return ret_str
 
-
     def convert_to_price(value):
         return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
     
@@ -63,6 +62,16 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 lineterminator="\r\n",
                 quoting=csv.QUOTE_ALL,
                 )
+            self.output_csv_writer.writerow(
+                [
+                    "Invoice Total",
+                    "Unit Multiplier",
+                    "Description",
+                    "Item Number",
+                    "Cost",
+                    "Quantity",
+                ]
+            )
 
         def flush_to_csv(self):
             self.brec_lines.reverse()
@@ -77,13 +86,9 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         curline['vendor_item'],
                         curline['unit_cost'],
                         curline['qty_of_units'],
-                        '',
                         self.arec_line['invoice_date'],
-                        '',
                         self.arec_line['invoice_number'],
                         self.arec_line['cust_vendor'],
-                        '',
-                        '',
                         curline['upc_number']
                     ]
                 )
@@ -98,14 +103,10 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         'changeme',
                         curline['amount'],
                         1,
-                        '',
                         self.arec_line['invoice_date'],
-                        '',
                         self.arec_line['invoice_number'],
                         self.arec_line['cust_vendor'],
-                        '',
-                        '',
-                        ''
+                        ""
                     ]
                 )
 
