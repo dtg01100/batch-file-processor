@@ -91,23 +91,23 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             while len(self.crec_lines) > 0:
                 curline = self.crec_lines.pop()
                 self.output_csv_writer.writerow(
-                [
-                    convert_to_price(self.arec_line['invoice_total']),
-                    1,
-                    curline["description"],
-                    'changeme',
-                    curline['amount'],
-                    1,
-                    '',
-                    self.arec_line['invoice_date'],
-                    '',
-                    self.arec_line['invoice_number'],
-                    self.arec_line['cust_vendor'],
-                    '',
-                    '',
-                    ''
-                ]
-            )
+                    [
+                        convert_to_price(self.arec_line['invoice_total']),
+                        1,
+                        curline["description"],
+                        'changeme',
+                        curline['amount'],
+                        1,
+                        '',
+                        self.arec_line['invoice_date'],
+                        '',
+                        self.arec_line['invoice_number'],
+                        self.arec_line['cust_vendor'],
+                        '',
+                        '',
+                        ''
+                    ]
+                )
 
         def add_line(self, new_line):
             if new_line is not None:
@@ -122,7 +122,12 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     print("stub: crec_handling")
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
-        with open(output_filename, "w", newline="", encoding="utf-8") as outfile_obj:
+        with open(
+                output_filename,
+                "w",
+                newline="",
+                encoding="utf-8"
+        ) as outfile_obj:
             yellowdog_writer = YDogWriter(outfile_obj)
             for line in work_file.readlines():
                 line_dict = line_from_mtc_edi_to_dict.capture_records(line)
