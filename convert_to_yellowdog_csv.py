@@ -8,10 +8,15 @@ from query_runner import query_runner
 
 def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
 
-    class poFetcher:
+    class invFetcher:
         def __init__(self, settings_dict):
             self.query_object = None
             self.settings = settings_dict
+            self.last_answer_dict = {
+                "invoice_num": "0",
+                "po": 0,
+                "cust": 0,
+            }
 
         def _db_connect(self):
             self.query_object = query_runner(
@@ -21,25 +26,45 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 f"{self.settings['odbc_driver']}",
             )
 
-        def fetch_po_number(self, invoice_number):
+        def fetch_numbers(self, invoice_number):
+            if invoice_number == self.last_answer_dict['invoice_num']:
+                return self.last_answer_dict
             if self.query_object is None:
                 self._db_connect()
             qry_ret = self.query_object.run_arbitrary_query(
                 f"""
-                select ohhst.bte4cd
+                select ohhst.bte4cd, ohhst.btabnb
                 from dacdata.ohhst ohhst
                 where ohhst.bthhnb = {int(invoice_number)}
                 """
             )
+            self.last_answer_dict['invoice_num'] = invoice_number
             if len(qry_ret) == 0:
-                ret_str = "no_po_found    "
+                self.last_answer_dict['po'] = "no_po_found"
+                self.last_answer_dict['cust'] = "no_cust_found"
             else:
-                ret_str = str(qry_ret[0][0])
-            return ret_str
+                self.last_answer_dict['po'] = str(qry_ret[0][0])
+                self.last_answer_dict['cust'] = str(qry_ret[0][1])
+
+        def fetch_po(self, invoice_number):
+            self.fetch_numbers(invoice_number)
+            return self.last_answer_dict['po']
+
+        def fetch_cust(self, invoice_number):
+            self.fetch_numbers(invoice_number)
+            return self.last_answer_dict['cust']
+
+    def dac_str_int_to_int(dacstr: str) -> int:
+        if dacstr.strip() == "":
+            return 0
+        if dacstr.startswith('-'):
+            return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
+        else:
+            return int(dacstr)
 
     def convert_to_price(value):
         return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
-    
+
     def dactime_from_datetime(date_time: datetime) -> str:
         dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
 
@@ -53,6 +78,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
+            self.inv_fetcher = invFetcher(settings_dict)
             self.arec_line: Dict = {}
             self.brec_lines: list[Dict | None] = []
             self.crec_lines: list[Dict | None] = []
@@ -70,6 +96,10 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     "Item Number",
                     "Cost",
                     "Quantity",
+                    "Invoice Date",
+                    "Invoice Number",
+                    "Customer Number",
+                    "UPC",
                 ]
             )
 
@@ -80,15 +110,15 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 curline = self.brec_lines.pop()
                 self.output_csv_writer.writerow(
                     [
-                        convert_to_price(self.arec_line['invoice_total']),
-                        curline["unit_multiplier"],
+                        convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
+                        dac_str_int_to_int(curline["unit_multiplier"]),
                         curline["description"],
                         curline['vendor_item'],
-                        curline['unit_cost'],
-                        curline['qty_of_units'],
+                        convert_to_price(curline['unit_cost']),
+                        dac_str_int_to_int(curline['qty_of_units']),
                         self.arec_line['invoice_date'],
                         self.arec_line['invoice_number'],
-                        self.arec_line['cust_vendor'],
+                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         curline['upc_number']
                     ]
                 )
@@ -97,15 +127,15 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 curline = self.crec_lines.pop()
                 self.output_csv_writer.writerow(
                     [
-                        convert_to_price(self.arec_line['invoice_total']),
+                        convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
                         1,
                         curline["description"],
                         'changeme',
-                        curline['amount'],
+                        dac_str_int_to_int(curline['amount']),
                         1,
                         self.arec_line['invoice_date'],
                         self.arec_line['invoice_number'],
-                        self.arec_line['cust_vendor'],
+                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         ""
                     ]
                 )
@@ -113,6 +143,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
         def add_line(self, new_line):
             if new_line is not None:
                 if new_line["record_type"] == "A":
+                    self.arec_line = new_line
                     if len(self.brec_lines) > 0:
                         self.flush_to_csv()
                     self.arec_line = new_line
@@ -120,7 +151,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     self.brec_lines.append(new_line)
                 if new_line["record_type"] == "C":
                     self.crec_lines.append(new_line)
-                    print("stub: crec_handling")
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         with open(
