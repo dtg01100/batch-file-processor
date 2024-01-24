@@ -350,10 +350,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         if errors is True:
                             break
                         rename_file = os.path.basename(output_send_filename)
+                        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
                         if parameters_dict['rename_file'].strip() != '':
                             rename_file = "".join([
                                 filename_prefix,
-                                parameters_dict['rename_file'].strip()
+                                parameters_dict['rename_file'].strip().replace("%datetime%", date_time)
                                 ,".",
                                 os.path.basename(input_filename).split(".")[-1],
                                 filename_suffix
