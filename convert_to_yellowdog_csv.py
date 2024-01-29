@@ -111,12 +111,12 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 self.output_csv_writer.writerow(
                     [
                         convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
-                        dac_str_int_to_int(curline["unit_multiplier"]),
+                        dac_str_int_to_int(curline["combo_code"]),
                         curline["description"],
                         curline['vendor_item'],
                         convert_to_price(curline['unit_cost']),
                         dac_str_int_to_int(curline['qty_of_units']),
-                        self.arec_line['invoice_date'],
+                        datetime_from_dactime(self.arec_line['invoice_date']),
                         self.arec_line['invoice_number'],
                         self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         curline['upc_number']
@@ -128,12 +128,12 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 self.output_csv_writer.writerow(
                     [
                         convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
-                        1,
+                        '',
                         curline["description"],
                         'changeme',
                         dac_str_int_to_int(curline['amount']),
                         1,
-                        self.arec_line['invoice_date'],
+                        dactime_from_datetime(self.arec_line['invoice_date']),
                         self.arec_line['invoice_number'],
                         self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         ""
