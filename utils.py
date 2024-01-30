@@ -29,3 +29,12 @@ def datetime_from_dactime(dac_time: int) -> datetime:
 
 def datetime_from_invtime(invtime: int) -> datetime:
     return datetime.strptime(invtime, "%m%d%y")
+
+
+def dac_str_int_to_int(dacstr: str) -> int:
+    if dacstr.strip() == "":
+        return 0
+    if dacstr.startswith('-'):
+        return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
+    else:
+        return int(dacstr)

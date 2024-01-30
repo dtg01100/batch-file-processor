@@ -55,13 +55,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             self.fetch_numbers(invoice_number)
             return self.last_answer_dict['cust']
 
-    def dac_str_int_to_int(dacstr: str) -> int:
-        if dacstr.strip() == "":
-            return 0
-        if dacstr.startswith('-'):
-            return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
-        else:
-            return int(dacstr)
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
