@@ -1,8 +1,9 @@
 import csv
-from datetime import datetime
-from typing import List, Dict, TextIO
+import datetime
+from typing import Dict
 
 import line_from_mtc_edi_to_dict
+import utils
 from query_runner import query_runner
 
 
@@ -35,7 +36,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 f"""
                 select ohhst.bte4cd, ohhst.btabnb
                 from dacdata.ohhst ohhst
-                where ohhst.bthhnb = {int(invoice_number)}
+                where ohhst.bthhnb = {str(int(invoice_number))}
                 """
             )
             self.last_answer_dict['invoice_num'] = invoice_number
@@ -61,20 +62,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
         else:
             return int(dacstr)
-
-    def convert_to_price(value):
-        return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
-
-    def dactime_from_datetime(date_time: datetime) -> str:
-        dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
-
-        dactime_date = dactime_date_century_digit + str(
-            datetime.strftime(date_time, "%y%m%d")
-        )
-        return dactime_date
-
-    def datetime_from_dactime(dac_time: int) -> datetime:
-        return datetime.strptime(str(dac_time + 19000000), "%Y%m%d")
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
@@ -106,19 +93,22 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
         def flush_to_csv(self):
             self.brec_lines.reverse()
             self.crec_lines.reverse()
+            customer_number = self.inv_fetcher.fetch_cust(self.arec_line['invoice_number'])
+            invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
+            invoice_total = utils.convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total'])))
             while len(self.brec_lines) > 0:
                 curline = self.brec_lines.pop()
                 self.output_csv_writer.writerow(
                     [
-                        convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
-                        dac_str_int_to_int(curline["combo_code"]),
+                        invoice_total,
+                        curline["combo_code"].strip(),
                         curline["description"],
                         curline['vendor_item'],
-                        convert_to_price(curline['unit_cost']),
-                        dac_str_int_to_int(curline['qty_of_units']),
-                        datetime_from_dactime(self.arec_line['invoice_date']),
+                        utils.convert_to_price(curline['unit_cost']),
+                        utils.dac_str_int_to_int(curline['qty_of_units']),
+                        invoice_date,
                         self.arec_line['invoice_number'],
-                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
+                        customer_number,
                         curline['upc_number']
                     ]
                 )
@@ -127,15 +117,15 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 curline = self.crec_lines.pop()
                 self.output_csv_writer.writerow(
                     [
-                        convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
+                        utils.convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
                         '',
                         curline["description"],
                         'changeme',
-                        dac_str_int_to_int(curline['amount']),
+                        utils.dac_str_int_to_int(curline['amount']),
                         1,
-                        dactime_from_datetime(self.arec_line['invoice_date']),
+                        invoice_total,
                         self.arec_line['invoice_number'],
-                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
+                        customer_number,
                         ""
                     ]
                 )
