@@ -1,5 +1,5 @@
 import csv
-import datetime
+from datetime import datetime
 from typing import Dict
 
 import line_from_mtc_edi_to_dict
