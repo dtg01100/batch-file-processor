@@ -55,7 +55,6 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             self.fetch_numbers(invoice_number)
             return self.last_answer_dict['cust']
 
-
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
             self.inv_fetcher = invFetcher(settings_dict)
@@ -88,7 +87,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             self.crec_lines.reverse()
             customer_number = self.inv_fetcher.fetch_cust(self.arec_line['invoice_number'])
             invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
-            invoice_total = utils.convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total'])))
+            invoice_total = utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total'])))
             while len(self.brec_lines) > 0:
                 curline = self.brec_lines.pop()
                 self.output_csv_writer.writerow(
@@ -110,7 +109,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 curline = self.crec_lines.pop()
                 self.output_csv_writer.writerow(
                     [
-                        utils.convert_to_price(str(dac_str_int_to_int(self.arec_line['invoice_total']))),
+                        utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))),
                         '',
                         curline["description"],
                         'changeme',
