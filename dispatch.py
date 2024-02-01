@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import threading
 import time
+import traceback
 from io import StringIO
 
 import clear_old_files
@@ -59,8 +60,8 @@ def generate_file_hash(source_file_struct):
                 checksum_attempt += 1
                 print(f"retrying open {file_name} for md5sum")
             else:
-                    print(f"error opening file for md5sum {error}")
-                    raise
+                print(f"error opening file for md5sum {error}")
+                raise
     tfilename = ""
     try:
         tfilename = folder_name_dict[generated_file_checksum]
@@ -107,10 +108,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     hash_thread_return_queue = queue.Queue()
 
     query_object = query_runner(
-    settings["as400_username"],
-    settings["as400_password"],
-    settings["as400_address"],
-    f"{settings['odbc_driver']}",
+        settings["as400_username"],
+        settings["as400_password"],
+        settings["as400_address"],
+        f"{settings['odbc_driver']}",
     )
 
     each_upc_qreturn = []
@@ -518,6 +519,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             output_send_filename = output_filename
                                         except Exception as process_error:
                                             print(str(process_error))
+                                            print(traceback.format_exc())
                                             errors = True
                                             process_files_log, process_files_error_log = \
                                                 record_error.do(process_files_log,
@@ -627,6 +629,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     email_backend.do(parameters_dict, settings, output_send_filename)
                                     process_files_log.append("Success\r\n\r\n")
                                 except Exception as process_error:
+                                    print(str(process_error))
+                                    print(traceback.format_exc())
                                     process_files_log, process_files_error_log = record_error.do(process_files_log,
                                                                                                 process_files_error_log,
                                                                                                 str(process_error),
