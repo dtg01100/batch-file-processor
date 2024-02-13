@@ -41,13 +41,19 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     f"""
                 SELECT
                 varchar(odhst.buhunb), --Line Number
-                odhst.buhxtx, --U/M Description
+                CASE odhst.buhvnb
+                    WHEN 1 THEN dsanrep.anb8tx
+                    WHEN 2 THEN dsanrep.anb9tx
+                    WHEN 3 THEN dsanrep.ancatx
+                    END, --U/M Description
                 ohhst.btabnb, --Customer Number
                 ohhst.bte4cd --PO Number
                 FROM
                 dacdata.ohhst ohhst
                 INNER JOIN dacdata.odhst odhst ON
                 ohhst.BTHHNB = odhst.BUHHNB
+                INNER JOIN dacdata.dsanrep dsanrep ON
+                odhst.BUBACD = dsanrep.ANBACD
                 WHERE
                 odhst.BUHHNB = {str(int(invoice_number))}
                 """
@@ -134,11 +140,11 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     [
                         utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))),
                         curline["description"],
-                        'changeme',
+                        '',
                         utils.dac_str_int_to_int(curline['amount']),
                         1,
-                        'NA',
-                        self.invoice_total,
+                        '',
+                        self.invoice_date,
                         self.arec_line['invoice_number'],
                         self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         ""
