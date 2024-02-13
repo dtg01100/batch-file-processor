@@ -7,6 +7,7 @@ import hashlib
 import multiprocessing
 import os
 import platform
+import re
 import smtplib
 import time
 import tkinter
@@ -22,7 +23,6 @@ import appdirs
 import dataset # type: ignore
 import pyodbc # type: ignore
 import thefuzz.process # type: ignore
-from validate_email import validate_email # type: ignore
 
 import backup_increment
 import batch_log_sender
@@ -452,6 +452,13 @@ if __name__ == "__main__":
                     + " folders skipped.",
                 )
         os.chdir(starting_directory)
+
+    def validate_email(email):
+        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+        if re.fullmatch(regex, email):
+            return True
+        else:
+            return False
 
     def edit_folder_selector(folder_to_be_edited):
         # feed EditDialog class the dict for the selected folder from the folders list buttons
