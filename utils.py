@@ -27,8 +27,14 @@ def datetime_from_dactime(dac_time: int) -> datetime:
     return datetime.strptime(str(dac_time_int + 19000000), "%Y%m%d")
 
 
-def datetime_from_invtime(invtime: int) -> datetime:
+def datetime_from_invtime(invtime: str) -> datetime:
     return datetime.strptime(invtime, "%m%d%y")
+
+
+def dactime_from_invtime(inv_no: str):
+    datetime_obj = datetime_from_invtime(inv_no)
+    dactime = dactime_from_datetime(datetime_obj)
+    return dactime
 
 
 def dac_str_int_to_int(dacstr: str) -> int:

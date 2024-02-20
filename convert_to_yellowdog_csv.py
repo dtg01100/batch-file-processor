@@ -15,9 +15,10 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             self.query_object = None
             self.settings = settings_dict
             self.last_invoice_number = 0
-            self.last_invoice_contents = []
+            self.uom_lut = {0: "N/A"}
+            self.last_invno = 0
             self.po = ""
-            self.cust = 0
+            self.cust = ""
 
         def _db_connect(self):
             self.query_object = query_runner(
@@ -33,51 +34,68 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             qry_return = self.query_object.run_arbitrary_query(qry_str)
             return qry_return
 
-        def _fetch_data(self, invoice_number):
+        def fetch_po(self, invoice_number):
             if invoice_number == self.last_invoice_number:
-                return
+                return self.po
             else:
                 qry_ret = self._run_qry(
                     f"""
-                SELECT
-                varchar(odhst.buhunb), --Line Number
-                CASE odhst.buhvnb
-                    WHEN 1 THEN dsanrep.anb8tx
-                    WHEN 2 THEN dsanrep.anb9tx
-                    WHEN 3 THEN dsanrep.ancatx
-                    END, --U/M Description
-                ohhst.btabnb, --Customer Number
-                ohhst.bte4cd --PO Number
-                FROM
-                dacdata.ohhst ohhst
-                INNER JOIN dacdata.odhst odhst ON
-                ohhst.BTHHNB = odhst.BUHHNB
-                INNER JOIN dacdata.dsanrep dsanrep ON
-                odhst.BUBACD = dsanrep.ANBACD
-                WHERE
-                odhst.BUHHNB = {str(int(invoice_number))}
+                    SELECT
+	            ohhst.bte4cd,
+                    ohhst.bthinb
+	            --PO Number
+                    FROM
+	            dacdata.ohhst ohhst
+                    WHERE
+	            ohhst.BTABNB = {str(int(invoice_number))}
                 """
                 )
                 self.last_invoice_number = invoice_number
-                self.po = qry_ret[0][3]
-                self.cust = qry_ret[0][2]
-                self.last_invoice_contents = [i[0:2] for i in qry_ret]
-
-        def fetch_po(self, invoice_number):
-            self._fetch_data(invoice_number)
-            return self.po
+                try:
+                    self.po = qry_ret[0][0]
+                    self.cust = qry_ret[0][1]
+                except IndexError:
+                    self.po = ""
+                return self.po
 
         def fetch_cust(self, invoice_number):
-            self._fetch_data(invoice_number)
+            self.fetch_po(invoice_number)
             return self.cust
 
-        def fetch_uom_desc(self, lineno, invoice_number):
-            self._fetch_data(invoice_number)
-            last_invoice_lut = dict(self.last_invoice_contents)
+        def fetch_uom_desc(self, itemno, uommult, lineno, invno):
+            if invno != self.last_invno:
+                self.uom_lut = {0: "N/A"}
+                qry = f"""
+                    SELECT
+                        BUHUNB,
+                        --lineno
+                        BUHXTX
+                        -- u/m desc
+                    FROM
+                        dacdata.odhst odhst
+                    WHERE
+                        odhst.BUHHNB = {str(int(invno))}
+                """
+                qry_ret = self._run_qry(qry)
+                self.uom_lut = dict(qry_ret)
+                self.last_invno = invno
             try:
-                return last_invoice_lut[str(int(lineno) + 1)]
-            except KeyError:
-                return "?"
+                return self.uom_lut[lineno + 1]
+            except KeyError as error:
+                try:
+                    if int(uommult) > 1:
+                        qry = f"""select dsanrep.ANB9TX
+                                from dacdata.dsanrep dsanrep
+                                where dsanrep.ANBACD = {str(int(itemno))}"""
+                    else:
+                        qry = f"""select dsanrep.ANB8TX
+                                from dacdata.dsanrep dsanrep
+                                where dsanrep.ANBACD = {str(int(itemno))}"""
+                    uomqry_ret = self._run_qry(qry)
+                    return uomqry_ret[0][0]
+                except Exception as error:
+                    print(error)
+                    return "?"
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
@@ -115,8 +133,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
             self.crec_lines.reverse()
             self.invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
             self.invoice_total = utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total'])))
-            self.brec_index = 0
-            self.uom_desc = self.inv_fetcher.fetch_uom_desc(self.brec_index, self.arec_line['invoice_number'])
+            lineno = 0
             while len(self.brec_lines) > 0:
                 curline = self.brec_lines.pop()
                 self.output_csv_writer.writerow(
@@ -126,14 +143,14 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         curline['vendor_item'],
                         utils.convert_to_price(curline['unit_cost']),
                         utils.dac_str_int_to_int(curline['qty_of_units']),
-                        self.inv_fetcher.fetch_uom_desc(self.brec_index, self.arec_line['invoice_number']),
+                        self.inv_fetcher.fetch_uom_desc(curline['vendor_item'], curline['unit_multiplier'], lineno, int(self.arec_line['invoice_number'])),
                         self.invoice_date,
                         self.arec_line['invoice_number'],
                         self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
                         curline['upc_number']
                     ]
                 )
-                self.brec_index += 1
+                lineno += 1
             while len(self.crec_lines) > 0:
                 curline = self.crec_lines.pop()
                 self.output_csv_writer.writerow(
@@ -141,7 +158,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))),
                         curline["description"],
                         '',
-                        utils.dac_str_int_to_int(curline['amount']),
+                        utils.convert_to_price(curline['amount']),
                         1,
                         '',
                         self.invoice_date,
