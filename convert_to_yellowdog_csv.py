@@ -121,7 +121,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     "UOM Desc.",
                     "Invoice Date",
                     "Invoice Number",
-                    "Customer Number",
+                    "Customer PO Number",
                     "UPC",
                 ]
             )
