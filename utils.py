@@ -35,12 +35,3 @@ def dactime_from_invtime(inv_no: str):
     datetime_obj = datetime_from_invtime(inv_no)
     dactime = dactime_from_datetime(datetime_obj)
     return dactime
-
-
-def dac_str_int_to_int(dacstr: str) -> int:
-    if dacstr.strip() == "":
-        return 0
-    if dacstr.startswith('-'):
-        return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
-    else:
-        return int(dacstr)
