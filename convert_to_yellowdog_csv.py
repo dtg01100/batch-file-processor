@@ -41,13 +41,13 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 qry_ret = self._run_qry(
                     f"""
                     SELECT
-	            ohhst.bte4cd,
-                    ohhst.bthinb
+	            trim(ohhst.bte4cd),
+                    trim(ohhst.bthinb)
 	            --PO Number
                     FROM
 	            dacdata.ohhst ohhst
                     WHERE
-	            ohhst.BTABNB = {str(int(invoice_number))}
+	            ohhst.BTHHNB = {str(int(invoice_number))}
                 """
                 )
                 self.last_invoice_number = invoice_number
@@ -121,6 +121,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     "UOM Desc.",
                     "Invoice Date",
                     "Invoice Number",
+                    "Customer Name",
                     "Customer PO Number",
                     "UPC",
                 ]
@@ -149,6 +150,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                         self.invoice_date,
                         self.arec_line['invoice_number'],
                         self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
+                        self.inv_fetcher.fetch_po(self.arec_line['invoice_number']),
                         curline['upc_number']
                     ]
                 )
