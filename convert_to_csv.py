@@ -93,11 +93,12 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
 
                         if blank_upc is False:
                             proposed_upc = input_edi_dict['upc_number'].strip()
+                            if len(str(proposed_upc)) == 12:
+                                upc_string = str(proposed_upc)
                             if len(str(proposed_upc)) == 11:
                                 upc_string = str(proposed_upc) + str(upc_e_to_upc_a.calc_check_digit(proposed_upc))
-                            else:
-                                if len(str(proposed_upc)) == 8:
-                                    upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
+                            if len(str(proposed_upc)) == 8:
+                                upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
 
                         upc_in_csv = "\t" + upc_string if conv_calc_upc != "False" and blank_upc is False \
                             else input_edi_dict['upc_number']
