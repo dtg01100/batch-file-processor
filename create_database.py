@@ -64,7 +64,7 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        split_prepaid_sales_tax_crec=False,
                                        estore_store_number=0,
                                        estore_Vendor_OId=0,
-                                       estore_Vendor_NameVendorOID="replaceme",
+                                       estore_vendor_NameVendorOID="replaceme",
                                        prepend_date_files = False,
                                        rename_file = "",
                                        ))
