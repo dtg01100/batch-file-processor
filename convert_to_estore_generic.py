@@ -158,7 +158,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
 
     store_number = parameters_dict['estore_store_number']
     vendor_oid = parameters_dict['estore_Vendor_OId']
-    vendor_name = parameters_dict['estore_vendor_NameVendorOID']
+    vendor_name = parameters_dict['estore_Vendor_NameVendorOID']
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = list(work_file.readlines())  # make list of lines

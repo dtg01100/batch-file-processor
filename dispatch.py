@@ -13,6 +13,7 @@ from io import StringIO
 import clear_old_files
 import convert_to_csv
 import convert_to_estore
+import convert_to_estore_generic
 import convert_to_jolley_edi
 import convert_to_scannerware
 import convert_to_scansheet_type_a
@@ -512,6 +513,31 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     ("converting " + output_send_filename + " from EDI to Estore eInvoice\r\n"))
                                                 print("converting " + output_send_filename + " from EDI to Estore eInvoice")
                                                 ret_filename = convert_to_estore.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
+                                                process_files_log.append("Success\r\n\r\n")
+                                                output_send_filename = ret_filename
+                                            except Exception as process_error:
+                                                print(str(process_error))
+                                                errors = True
+                                                process_files_log, process_files_error_log = \
+                                                    record_error.do(process_files_log,
+                                                                    process_files_error_log,
+                                                                    str(process_error),
+                                                                    str(
+                                                                        output_send_filename),
+                                                                    "EDI Processor",
+                                                                    True)
+                                                
+                                    if parameters_dict['convert_to_format'] == "Estore eInvoice Generic":
+                                            output_filename = os.path.join(
+                                                file_scratch_folder,
+                                                os.path.basename(stripped_filename) + ".csv")
+                                            if os.path.exists(os.path.dirname(output_filename)) is False:
+                                                os.mkdir(os.path.dirname(output_filename))
+                                            try:
+                                                process_files_log.append(
+                                                    ("converting " + output_send_filename + " from EDI to Estore eInvoice Generic\r\n"))
+                                                print("converting " + output_send_filename + " from EDI to Estore eInvoice Generic")
+                                                ret_filename = convert_to_estore_generic.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
                                                 process_files_log.append("Success\r\n\r\n")
                                                 output_send_filename = ret_filename
                                             except Exception as process_error:
