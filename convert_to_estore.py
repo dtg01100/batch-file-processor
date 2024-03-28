@@ -76,7 +76,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
         work_file_lined = list(work_file.readlines())  # make list of lines
         output_filename = os.path.join(
             os.path.dirname(output_filename_initial),
-            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}',
+            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
         )
         with open(
             output_filename, "w", newline="", encoding="utf-8"
