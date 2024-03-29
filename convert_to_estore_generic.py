@@ -325,8 +325,8 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                     if input_edi_dict["record_type"] == 'C':
 
                         row_dict = {
-                            "Detail Type": "I",
-                            "Subcategory OId": "",
+                            "Detail Type": "S",
+                            "Subcategory OId": 10275,
                             "Vendor Item": "",
                             "Vendor Pack": 1,
                             "Item Description": input_edi_dict["description"].strip(),
