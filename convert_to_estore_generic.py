@@ -322,6 +322,31 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
 
                         invoice_accum.append(row_dict["Extended Cost"])
 
+                    if input_edi_dict["record_type"] == 'C':
+
+                        row_dict = {
+                            "Detail Type": "I",
+                            "Subcategory OId": "",
+                            "Vendor Item": "",
+                            "Vendor Pack": 1,
+                            "Item Description": input_edi_dict["description"].strip(),
+                            "Item Pack": "",
+                            "GTIN": "",
+                            "GTIN Type": "",
+                            "QTY": 1,
+                            "Unit Cost": convert_to_price(input_edi_dict["amount"]),
+                            "Unit Retail": 0,
+                            "Extended Cost": convert_to_price(
+                                input_edi_dict["amount"]
+                            ),
+                            "Extended Retail": "",
+                        }
+
+                        row_dict_list.append({**row_dict_header, **row_dict})
+                        invoice_index += 1
+
+                        invoice_accum.append(row_dict["Extended Cost"])
+
             (
                 row_dict_list,
                 shipper_mode,
