@@ -3,11 +3,103 @@ import os
 from datetime import datetime
 from decimal import Decimal
 from typing import List
+from query_runner import query_runner
 
 import line_from_mtc_edi_to_dict
+import utils
+
+class invFetcher:
+    def __init__(self, settings_dict):
+        self.query_object = None
+        self.settings = settings_dict
+        self.last_invoice_number = 0
+        self.uom_lut = {0: "N/A"}
+        self.last_invno = 0
+        self.po = ""
+        self.cust = ""
+
+    def _db_connect(self):
+        self.query_object = query_runner(
+            self.settings["as400_username"],
+            self.settings["as400_password"],
+            self.settings["as400_address"],
+            f"{self.settings['odbc_driver']}",
+        )
+
+    def _run_qry(self, qry_str):
+        if self.query_object is None:
+            self._db_connect()
+        qry_return = self.query_object.run_arbitrary_query(qry_str)
+        return qry_return
+
+    def fetch_po(self, invoice_number):
+        if invoice_number == self.last_invoice_number:
+            return self.po
+        else:
+            qry_ret = self._run_qry(
+                f"""
+                SELECT
+            trim(ohhst.bte4cd),
+                trim(ohhst.bthinb)
+            --PO Number
+                FROM
+            dacdata.ohhst ohhst
+                WHERE
+            ohhst.BTHHNB = {str(int(invoice_number))}
+            """
+            )
+            self.last_invoice_number = invoice_number
+            try:
+                self.po = qry_ret[0][0]
+                self.cust = qry_ret[0][1]
+            except IndexError:
+                self.po = ""
+            return self.po
+
+    def fetch_cust(self, invoice_number):
+        self.fetch_po(invoice_number)
+        return self.cust
+
+    def fetch_uom_desc(self, itemno, uommult, lineno, invno):
+        if invno != self.last_invno:
+            self.uom_lut = {0: "N/A"}
+            qry = f"""
+                SELECT
+                    BUHUNB,
+                    --lineno
+                    BUHXTX
+                    -- u/m desc
+                FROM
+                    dacdata.odhst odhst
+                WHERE
+                    odhst.BUHHNB = {str(int(invno))}
+            """
+            qry_ret = self._run_qry(qry)
+            self.uom_lut = dict(qry_ret)
+            self.last_invno = invno
+        try:
+            return self.uom_lut[lineno + 1]
+        except KeyError as error:
+            try:
+                if int(uommult) > 1:
+                    qry = f"""select dsanrep.ANB9TX
+                            from dacdata.dsanrep dsanrep
+                            where dsanrep.ANBACD = {str(int(itemno))}"""
+                else:
+                    qry = f"""select dsanrep.ANB8TX
+                            from dacdata.dsanrep dsanrep
+                            where dsanrep.ANBACD = {str(int(itemno))}"""
+                uomqry_ret = self._run_qry(qry)
+                return uomqry_ret[0][0]
+            except Exception as error:
+                if int(uommult) > 1:
+                    return "HI"
+                else:
+                    return "LO"
 
 
 def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
+    inv_fetcher = invFetcher(settings_dict)
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -60,10 +152,6 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
         )
         for row in rowlist:
             add_row(row)
-        # Add trailer
-        if len(invoice_total) > 0:
-            trailer_row = {"Record Type": "T", "Invoice Cost": sum(invoice_total)}
-            add_row(trailer_row)
         rowlist.clear()
         invoice_total.clear()
         return (rowlist, shipper_mode, shipper_accum, shipper_line_number)
@@ -91,6 +179,29 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
             shipper_line_number = 0
 
             invoice_index = 0
+            csv_file.writerow(
+                [
+                    "Store #",
+                    "Vendor (OID)",
+                    "Invoice #",
+                    "Purchase Order #",
+                    "Invoice Date",
+                    "Total Invoice Cost",
+                    "Detail Type",
+                    "Subcategory (OID)",
+                    "Vendor Item #",
+                    "Vendor Pack",
+                    "Item Description",
+                    "Pack",
+                    "GTIN/PLU",
+                    "GTIN Type",
+                    "Quantity",
+                    "Unit Cost",
+                    "Unit Retail",
+                    "Extended Cost",
+                    "Extended Retail",
+                ]
+            )
             for line_num, line in enumerate(
                 work_file_lined
             ):  # iterate over work file contents
@@ -109,11 +220,6 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             shipper_accum,
                         )
                         if len(invoice_accum) > 0:
-                            trailer_row = {
-                                "Record Type": "T",
-                                "Invoice Cost": sum(invoice_accum),
-                            }
-                            row_dict_list.append(trailer_row)
                             invoice_index += 1
                             invoice_accum.clear()
                         if not input_edi_dict["invoice_date"] == "000000":
@@ -125,15 +231,15 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             )
                         else:
                             write_invoice_date = "00000000"
-                        row_dict = {
-                            "Record Type": "H",
+                        row_dict_header = {
                             "Store Number": store_number,
                             "Vendor OId": vendor_oid,
                             "Invoice Number": input_edi_dict["invoice_number"],
-                            "Purchase Order": "",
+                            "Purchase Order": inv_fetcher.fetch_po(input_edi_dict['invoice_number']),
                             "Invoice Date": write_invoice_date,
+                            "Total Invoice Cost": utils.convert_to_price(str(utils.dac_str_int_to_int(input_edi_dict['invoice_total'])))
                         }
-                        row_dict_list.append(row_dict)
+                        # row_dict_list.append(row_dict)
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
                         try:
@@ -142,7 +248,6 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]
                         row_dict = {
-                            "Record Type": "D",
                             "Detail Type": "I",
                             "Subcategory OId": "",
                             "Vendor Item": input_edi_dict["vendor_item"],
@@ -150,7 +255,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             "Item Description": input_edi_dict["description"].strip(),
                             "Item Pack": "",
                             "GTIN": upc_entry.strip(),
-                            "GTIN Type": "",
+                            "GTIN Type": "UP",
                             "QTY": qty_to_int(input_edi_dict["qty_of_units"]),
                             "Unit Cost": convert_to_price(input_edi_dict["unit_cost"]),
                             "Unit Retail": convert_to_price(
@@ -160,7 +265,6 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                                 input_edi_dict["unit_cost"]
                             )
                             * qty_to_int(input_edi_dict["qty_of_units"]),
-                            "NULL": "",
                             "Extended Retail": "",
                         }
 
@@ -213,7 +317,32 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                                 except Exception as error:
                                     print(error)
 
-                        row_dict_list.append(row_dict)
+                        row_dict_list.append({**row_dict_header, **row_dict})
+                        invoice_index += 1
+
+                        invoice_accum.append(row_dict["Extended Cost"])
+
+                    if input_edi_dict["record_type"] == 'C':
+
+                        row_dict = {
+                            "Detail Type": "S",
+                            "Subcategory OId": 10275,
+                            "Vendor Item": "",
+                            "Vendor Pack": 1,
+                            "Item Description": input_edi_dict["description"].strip(),
+                            "Item Pack": "",
+                            "GTIN": "",
+                            "GTIN Type": "",
+                            "QTY": 1,
+                            "Unit Cost": convert_to_price(input_edi_dict["amount"]),
+                            "Unit Retail": 0,
+                            "Extended Cost": convert_to_price(
+                                input_edi_dict["amount"]
+                            ),
+                            "Extended Retail": "",
+                        }
+
+                        row_dict_list.append({**row_dict_header, **row_dict})
                         invoice_index += 1
 
                         invoice_accum.append(row_dict["Extended Cost"])

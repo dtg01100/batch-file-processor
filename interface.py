@@ -338,7 +338,7 @@ if __name__ == "__main__":
                 ],
                 "estore_store_number": defaults["estore_store_number"],
                 "estore_Vendor_OId": defaults["estore_Vendor_OId"],
-                "estore_Vendor_NameVendorOID": defaults["estore_Vendor_NameVendorOID"],
+                "estore_vendor_NameVendorOID": defaults["estore_vendor_NameVendorOID"],
             }
         )
         print("done")
@@ -1529,6 +1529,25 @@ if __name__ == "__main__":
                     self.estore_vendor_namevendoroid_field.grid(
                         row=4, column=1, sticky=tkinter.E, padx=3
                     )
+                if self.convert_formats_var.get() == "Estore eInvoice Generic":
+                    self.estore_store_number_label.grid(
+                        row=2, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.estore_store_number_field.grid(
+                        row=2, column=1, sticky=tkinter.E, padx=3
+                    )
+                    self.estore_Vendor_OId_label.grid(
+                        row=3, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.estore_Vendor_OId_field.grid(
+                        row=3, column=1, sticky=tkinter.E, padx=3
+                    )
+                    self.estore_vendor_namevendoroid_label.grid(
+                        row=4, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.estore_vendor_namevendoroid_field.grid(
+                        row=4, column=1, sticky=tkinter.E, padx=3
+                    )
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
                 self.convert_to_selector_frame,
@@ -1540,6 +1559,7 @@ if __name__ == "__main__":
                 "jolley_custom",
                 "simplified_csv",
                 "Estore eInvoice",
+                "Estore eInvoice Generic",
                 "YellowDog CSV",
                 command=make_convert_to_options,
             )
