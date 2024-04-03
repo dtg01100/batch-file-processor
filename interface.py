@@ -2033,7 +2033,7 @@ if __name__ == "__main__":
                 self.estore_Vendor_OId_field.insert(0, config_dict["estore_Vendor_OId"])
                 self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
                 self.estore_vendor_namevendoroid_field.insert(
-                    0, config_dict["estore_Vendor_NameVendorOID"]
+                    0, config_dict["estore_vendor_NameVendorOID"]
                 )
 
                 if copied:
