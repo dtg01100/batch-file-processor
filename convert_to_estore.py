@@ -7,7 +7,7 @@ from typing import List
 import line_from_mtc_edi_to_dict
 
 
-def edi_convert(edi_process, output_filename_initial, each_upc_lookup, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")

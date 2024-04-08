@@ -98,7 +98,7 @@ class invFetcher:
                     return "LO"
 
 
-def edi_convert(edi_process, output_filename_initial, each_upc_lookup, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
     inv_fetcher = invFetcher(settings_dict)
     def convert_to_price(value):
         retprice = (

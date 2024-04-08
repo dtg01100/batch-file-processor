@@ -9,7 +9,7 @@ class CustomerLookupError(Exception):
     pass
 
 
-def edi_convert(edi_process, output_filename, each_upc_lookup, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     retail_uom = parameters_dict["retail_uom"]
     inc_headers = parameters_dict["include_headers"]
     inc_item_numbers = parameters_dict["include_item_numbers"]

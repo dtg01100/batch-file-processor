@@ -5,7 +5,7 @@ import line_from_mtc_edi_to_dict
 import upc_e_to_upc_a
 
 
-def edi_convert(edi_process, output_filename, each_upc_lookup, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     # save input parameters as variables
 
     calc_upc = parameters_dict['calculate_upc_check_digit']

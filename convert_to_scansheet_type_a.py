@@ -14,7 +14,7 @@ import line_from_mtc_edi_to_dict
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, each_upc_lookup, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename, settings_dict):
 
     def adjust_column_width(adjust_worksheet):
         print(
