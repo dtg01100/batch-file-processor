@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import line_from_mtc_edi_to_dict
 
 
-def edi_convert(edi_process, output_filename, parameters_dict):
+def edi_convert(edi_process, output_filename, each_upc_lookup, parameters_dict, settings_dict):
 
     arec_padding = parameters_dict['a_record_padding']
     append_arec = parameters_dict['append_a_records']

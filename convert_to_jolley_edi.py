@@ -12,7 +12,7 @@ from query_runner import query_runner
 class CustomerLookupError(Exception):
     pass
 
-def edi_convert(edi_process, output_filename, settings_dict):
+def edi_convert(edi_process, output_filename, each_upc_lookup, parameters_dict, settings_dict):
 
     def convert_to_price(value):
         return (
