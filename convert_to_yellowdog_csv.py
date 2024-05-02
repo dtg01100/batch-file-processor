@@ -161,7 +161,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                     [
                         utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))),
                         curline["description"],
-                        '',
+                        9999999,
                         utils.convert_to_price(curline['amount']),
                         1,
                         '',
