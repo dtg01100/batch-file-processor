@@ -1560,6 +1560,7 @@ if __name__ == "__main__":
                 "simplified_csv",
                 "Estore eInvoice",
                 "Estore eInvoice Generic",
+                "YellowDog CSV",
                 command=make_convert_to_options,
             )
 

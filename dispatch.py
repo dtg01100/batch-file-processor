@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import threading
 import time
+import traceback
 from io import StringIO
 
 import clear_old_files
@@ -18,6 +19,7 @@ import convert_to_jolley_edi
 import convert_to_scannerware
 import convert_to_scansheet_type_a
 import convert_to_simplified_csv
+import convert_to_yellowdog_csv
 import copy_backend
 import doingstuffoverlay
 import edi_tweaks
@@ -59,8 +61,8 @@ def generate_file_hash(source_file_struct):
                 checksum_attempt += 1
                 print(f"retrying open {file_name} for md5sum")
             else:
-                    print(f"error opening file for md5sum {error}")
-                    raise
+                print(f"error opening file for md5sum {error}")
+                raise
     tfilename = ""
     try:
         tfilename = folder_name_dict[generated_file_checksum]
@@ -107,10 +109,10 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     hash_thread_return_queue = queue.Queue()
 
     query_object = query_runner(
-    settings["as400_username"],
-    settings["as400_password"],
-    settings["as400_address"],
-    f"{settings['odbc_driver']}",
+        settings["as400_username"],
+        settings["as400_password"],
+        settings["as400_address"],
+        f"{settings['odbc_driver']}",
     )
 
     each_upc_qreturn = []
@@ -350,10 +352,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         if errors is True:
                             break
                         rename_file = os.path.basename(output_send_filename)
+                        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
                         if parameters_dict['rename_file'].strip() != '':
                             rename_file = "".join([
                                 filename_prefix,
-                                parameters_dict['rename_file'].strip()
+                                parameters_dict['rename_file'].strip().replace("%datetime%", date_time)
                                 ,".",
                                 os.path.basename(input_filename).split(".")[-1],
                                 filename_suffix
@@ -501,6 +504,32 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                     output_send_filename),
                                                                 "EDI Processor",
                                                                 True)
+                                            
+                                    if parameters_dict['convert_to_format'] == "YellowDog CSV":
+                                        output_filename = os.path.join(
+                                            file_scratch_folder,
+                                            os.path.basename(stripped_filename) + ".csv")
+                                        if os.path.exists(os.path.dirname(output_filename)) is False:
+                                            os.mkdir(os.path.dirname(output_filename))
+                                        try:
+                                            process_files_log.append(
+                                                ("converting " + output_send_filename + " from EDI to YellowDog CSV\r\n"))
+                                            print("converting " + output_send_filename + " from EDI to YellowDog CSV")
+                                            convert_to_yellowdog_csv.edi_convert(output_send_filename, output_filename, parameters_dict, settings)
+                                            process_files_log.append("Success\r\n\r\n")
+                                            output_send_filename = output_filename
+                                        except Exception as process_error:
+                                            print(str(process_error))
+                                            print(traceback.format_exc())
+                                            errors = True
+                                            process_files_log, process_files_error_log = \
+                                                record_error.do(process_files_log,
+                                                                process_files_error_log,
+                                                                str(process_error),
+                                                                str(
+                                                                    output_send_filename),
+                                                                "EDI Processor",
+                                                                True)
 
                                     if parameters_dict['convert_to_format'] == "Estore eInvoice":
                                             output_filename = os.path.join(
@@ -626,6 +655,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     email_backend.do(parameters_dict, settings, output_send_filename)
                                     process_files_log.append("Success\r\n\r\n")
                                 except Exception as process_error:
+                                    print(str(process_error))
+                                    print(traceback.format_exc())
                                     process_files_log, process_files_error_log = record_error.do(process_files_log,
                                                                                                 process_files_error_log,
                                                                                                 str(process_error),
