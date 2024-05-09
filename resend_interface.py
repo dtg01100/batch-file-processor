@@ -44,14 +44,13 @@ def do(database_connection, master_window):
             child.destroy()
         file_list = []
         file_name_list = []
-        for processed_line in processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"):
+        processed_lines = list(processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"))
+        for processed_line in processed_lines[:int(resend_interface_files_list_count_spinbox.get())]:
             if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
                 file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
                                   processed_line['sent_date_time']])
                 file_name_list.append(processed_line['file_name'])
-            if len(file_list) == int(resend_interface_files_list_count_spinbox.get()):
-                break
-        file_name_length = len(os.path.basename(max(list(file_name_list), key=len)))
+        file_name_length = len(os.path.basename(max(file_name_list, key=len)))
         for file_name, resend_flag, identifier, sent_date_time in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
                          sent_date_time, file_name_length)
