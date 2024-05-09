@@ -259,89 +259,35 @@ if __name__ == "__main__":
             print(str(log_directory_error))
             return False
 
-    def add_folder_entry(
-        proposed_folder,
-    ):  # add folder to database, copying configuration from template
-        defaults = database_obj_instance.oversight_and_defaults.find_one(id=1)
-        folder_alias_constructor = os.path.basename(proposed_folder)
+    def add_folder(folder_path):
+        """Adds a folder to the database, using the default settings from the template."""
+        SKIP_LIST = ["folder_name",
+                    "alias",
+                    "id",
+                    "logs_directory",
+                    "errors_folder",
+                    'enable_reporting',
+                    'report_printing_fallback',
+                    'single_add_folder_prior',
+                    'batch_add_folder_prior',
+                    'export_processed_folder_prior',
+                    'report_edi_errors',
+                    ]
+        template = database_obj_instance.oversight_and_defaults.find_one(id=1)
+        template_settings = {k: v for k, v in template.items() if k not in SKIP_LIST}
 
-        def folder_alias_checker(check):
-            # check database to see if the folder alias exists, and return false if it does
-            if not database_obj_instance.folders_table.count() == 0:
-                add_folder_entry_proposed_folder = (
-                    database_obj_instance.folders_table.find_one(alias=check)
-                )
-                if add_folder_entry_proposed_folder is not None:
-                    return False
-            return True
+        folder_name = os.path.basename(folder_path)
+        counter = 1
+        while database_obj_instance.folders_table.find_one(alias=folder_name):
+            folder_name = os.path.basename(folder_path) + f" {counter}"
+            counter += 1
 
-        if folder_alias_checker(folder_alias_constructor) is False:
-            # auto generate a number to add to automatic aliases
-            folder_alias_end_suffix = 0
-            folder_alias_deduplicate_constructor = folder_alias_constructor
-            while folder_alias_checker(folder_alias_deduplicate_constructor) is False:
-                folder_alias_end_suffix += folder_alias_end_suffix + 1
-                print(str(folder_alias_end_suffix))
-                folder_alias_deduplicate_constructor = (
-                    folder_alias_constructor + " " + str(folder_alias_end_suffix)
-                )
-            folder_alias_constructor = folder_alias_deduplicate_constructor
-
-        print("adding folder: " + proposed_folder + " with settings from template")
-        # create folder entry using the selected folder, the generated alias, and values copied from template
+        template_settings["folder_name"] = folder_path
+        template_settings["alias"] = folder_name
         database_obj_instance.folders_table.insert(
-            {
-                "folder_name": proposed_folder,
-                "copy_to_directory": defaults["copy_to_directory"],
-                "folder_is_active": defaults["folder_is_active"],
-                "alias": folder_alias_constructor,
-                "process_backend_copy": defaults["process_backend_copy"],
-                "process_backend_ftp": defaults["process_backend_ftp"],
-                "process_backend_email": defaults["process_backend_email"],
-                "ftp_server": defaults["ftp_server"],
-                "ftp_folder": defaults["ftp_folder"],
-                "ftp_username": defaults["ftp_username"],
-                "ftp_password": defaults["ftp_password"],
-                "email_to": defaults["email_to"],
-                "process_edi": defaults["process_edi"],
-                "convert_to_format": defaults["convert_to_format"],
-                "calculate_upc_check_digit": defaults["calculate_upc_check_digit"],
-                "include_a_records": defaults["include_a_records"],
-                "include_c_records": defaults["include_c_records"],
-                "include_headers": defaults["include_headers"],
-                "filter_ampersand": defaults["filter_ampersand"],
-                "tweak_edi": defaults["tweak_edi"],
-                "split_edi": defaults["split_edi"],
-                "prepend_date_files": defaults["prepend_date_files"],
-                "rename_file": defaults["rename_file"],
-                "pad_a_records": defaults["pad_a_records"],
-                "a_record_padding": defaults["a_record_padding"],
-                "ftp_port": defaults["ftp_port"],
-                "email_subject_line": defaults["email_subject_line"],
-                "force_edi_validation": defaults["force_edi_validation"],
-                "append_a_records": defaults["append_a_records"],
-                "a_record_append_text": defaults["a_record_append_text"],
-                "force_txt_file_ext": defaults["force_txt_file_ext"],
-                "invoice_date_offset": defaults["invoice_date_offset"],
-                "retail_uom": defaults["retail_uom"],
-                "force_each_upc": defaults["force_each_upc"],
-                "include_item_numbers": defaults["include_item_numbers"],
-                "include_item_description": defaults["include_item_description"],
-                "simple_csv_sort_order": defaults["simple_csv_sort_order"],
-                "a_record_padding_length": defaults["a_record_padding_length"],
-                "invoice_date_custom_format_string": defaults[
-                    "invoice_date_custom_format_string"
-                ],
-                "invoice_date_custom_format": defaults["invoice_date_custom_format"],
-                "split_prepaid_sales_tax_crec": defaults[
-                    "split_prepaid_sales_tax_crec"
-                ],
-                "estore_store_number": defaults["estore_store_number"],
-                "estore_Vendor_OId": defaults["estore_Vendor_OId"],
-                "estore_vendor_NameVendorOID": defaults["estore_vendor_NameVendorOID"],
-            }
+            {**template_settings}
         )
-        print("done")
+
 
     def check_folder_exists(check_folder):
         folder_list = database_obj_instance.folders_table.all()
@@ -369,7 +315,7 @@ if __name__ == "__main__":
 
             if proposed_folder["truefalse"] is False:
                 doingstuffoverlay.make_overlay(root, "Adding Folder...")
-                add_folder_entry(selected_folder)
+                add_folder(selected_folder)
                 if askyesno(
                     message="Do you want to mark files in folder as processed?"
                 ):
@@ -433,7 +379,7 @@ if __name__ == "__main__":
                         batch_folder_add_proposed_folder
                     )
                     if proposed_folder["truefalse"] is False:
-                        add_folder_entry(batch_folder_add_proposed_folder)
+                        add_folder(batch_folder_add_proposed_folder)
                         added += 1
                     else:
                         print(
