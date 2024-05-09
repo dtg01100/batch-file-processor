@@ -334,69 +334,39 @@ if __name__ == "__main__":
                     EditDialog(root, proposed_folder_dict)
 
     def batch_add_folders():
-        added = 0
-        skipped = 0
         prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
-        if os.path.exists(prior_folder["batch_add_folder_prior"]):
-            initial_directory = prior_folder["batch_add_folder_prior"]
-        else:
-            initial_directory = os.path.expanduser("~")
-        containing_folder = askdirectory(initialdir=initial_directory)
         starting_directory = os.getcwd()
-        if os.path.exists(containing_folder):
-            update_last_folder = {"id": 1, "batch_add_folder_prior": containing_folder}
-            database_obj_instance.oversight_and_defaults.update(
-                update_last_folder, ["id"]
-            )
-            os.chdir(str(containing_folder))
-            folders_list = [
-                f for f in os.listdir(".") if os.path.isdir(f)
-            ]  # build list of folders in target directory
-            print("adding " + str(len(folders_list)) + " folders")
-            if askokcancel(
-                message="This will add "
-                + str(len(folders_list))
-                + " directories, are you sure?"
+        selection = askdirectory(
+            initialdir=prior_folder["batch_add_folder_prior"] or os.path.expanduser("~")
+        )
+        if selection:
+            folders_to_add = [
+                os.path.join(selection, folder)
+                for folder in os.listdir(selection)
+                if os.path.isdir(os.path.join(selection, folder))
+            ]
+            if not askokcancel(
+                message=f"This will add {len(folders_to_add)} directories, are you sure?"
             ):
-                doingstuffoverlay.make_overlay(
-                    parent=root, overlay_text="adding folders..."
+                return
+            doingstuffoverlay.make_overlay(parent=root, overlay_text="Adding folders...")
+            added, skipped = 0, 0
+            for folder in folders_to_add:
+                doingstuffoverlay.update_overlay(
+                    parent=root, overlay_text=f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})"
                 )
-                folder_count = 0
-                # loop over all folders in target directory, skipping them if they are already known
-                for batch_folder_add_proposed_folder in folders_list:
-                    folder_count += 1
-                    doingstuffoverlay.update_overlay(
-                        parent=root,
-                        overlay_text="adding folders... "
-                        + str(folder_count)
-                        + " of "
-                        + str(len(folders_list)),
-                    )
-                    batch_folder_add_proposed_folder = os.path.join(
-                        containing_folder, batch_folder_add_proposed_folder
-                    )
-                    proposed_folder = check_folder_exists(
-                        batch_folder_add_proposed_folder
-                    )
-                    if proposed_folder["truefalse"] is False:
-                        add_folder(batch_folder_add_proposed_folder)
-                        added += 1
-                    else:
-                        print(
-                            "skipping existing folder: "
-                            + batch_folder_add_proposed_folder
-                        )
-                        skipped += 1
-                print("done adding folders")
-                doingstuffoverlay.destroy_overlay()
-                refresh_users_list()
-                showinfo(
-                    parent=root,
-                    message=str(added)
-                    + " folders added, "
-                    + str(skipped)
-                    + " folders skipped.",
-                )
+                if check_folder_exists(folder)["truefalse"]:
+                    skipped += 1
+                else:
+                    add_folder(folder)
+                    added += 1
+            print(f"done adding {added} folders")
+            doingstuffoverlay.destroy_overlay()
+            showinfo(
+                parent=root,
+                message=f"{added} folders added, {skipped} folders skipped.",
+            )
+            refresh_users_list()
         os.chdir(starting_directory)
 
     def validate_email(email):
