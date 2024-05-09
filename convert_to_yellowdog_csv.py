@@ -196,4 +196,4 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                 line_dict = line_from_mtc_edi_to_dict.capture_records(line)
                 yellowdog_writer.add_line(line_dict)
             yellowdog_writer.flush_to_csv()
-    return output_filename
+    return output_filename+".csv"

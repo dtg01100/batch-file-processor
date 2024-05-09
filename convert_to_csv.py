@@ -126,4 +126,4 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
 
                     if line.startswith("C") and conv_inc_crec != "False":
                         csv_file.writerow([input_edi_dict['record_type'], input_edi_dict['charge_type'], input_edi_dict['description'], input_edi_dict['amount']])
-        return output_filename
+        return output_filename + ".csv"

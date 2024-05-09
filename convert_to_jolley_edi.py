@@ -286,4 +286,4 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                             "$"+str(convert_to_price(input_edi_dict['amount']))
                         ])
             csv_file.writerow(["","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
-    return(output_filename)
+    return(output_filename + ".csv")

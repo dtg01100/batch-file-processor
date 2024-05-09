@@ -6,6 +6,7 @@ import os
 import queue
 import re
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -314,7 +315,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                 assert input_file_checksum is not None
                 global file_count
                 with tempfile.TemporaryDirectory() as file_scratch_folder:
-                    input_filename = os.path.join(os.path.abspath(parameters_dict['folder_name']), input_filename)
+                    input_filename = os.path.join(str(os.path.abspath(parameters_dict['folder_name'])), str(input_filename))
                     process_original_filename = input_filename
                     file_count += 1
 
@@ -391,6 +392,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
                                             process_files_log.append(("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'] + "\r\n\r\n"))
                                             output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
+                                            print("Success")
                                             process_files_log.append("Success\r\n\r\n")
                                         if parameters_dict['tweak_edi'] is True:
                                             output_send_filename = edi_tweaks.edi_tweak(
@@ -403,36 +405,20 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             process_files_log, process_files_error_log, str(process_error),
                                             str(output_send_filename), "EDI Processor", True)
 
-                            # the following blocks process the files using the specified backend,
-                            # and log in the event of any errors
-                            if parameters_dict['process_backend_copy'] is True and errors is False:
+                        # the following blocks process the files using the specified backend,
+                        # and log in the event of any errors
+                        backends = [
+                            ('copy_backend', 'copy_to_directory', 'Copy Backend'),
+                            ('ftp_backend', 'ftp_server', 'FTP Backend'),
+                            ('email_backend', 'email_to', 'Email Backend')
+                        ]
+                        for backend_name, dir_setting, backend_name_print in backends:
+                            if parameters_dict['process_backend_' + backend_name.split('_')[0]] is True and errors is False:
                                 try:
-                                    print("sending " + str(output_send_filename) + " to " +
-                                        str(parameters_dict['copy_to_directory']) + " with copy backend")
-                                    process_files_log.append(("sending " + str(output_send_filename) + " to " +
-                                                            str(parameters_dict[
-                                                                    'copy_to_directory']) + " with copy backend\r\n\r\n"))
-                                    copy_backend.do(parameters_dict, output_send_filename)
-                                    process_files_log.append("Success\r\n\r\n")
-                                except Exception as process_error:
-                                    print(str(process_error))
-                                    process_files_log, process_files_error_log = record_error.do(process_files_log,
-                                                                                                process_files_error_log,
-                                                                                                str(process_error),
-                                                                                                str(output_send_filename),
-                                                                                                "Copy Backend", True)
-                                    errors = True
-                            if parameters_dict['process_backend_ftp'] is True and errors is False:
-                                try:
-                                    print(
-                                        "sending " + str(output_send_filename) + " to " + str(
-                                            parameters_dict['ftp_server']) +
-                                        str(parameters_dict['ftp_folder']) + " with FTP backend")
+                                    print(f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}")
                                     process_files_log.append(
-                                        ("sending " + str(output_send_filename) + " to " + str(
-                                            parameters_dict['ftp_server']) +
-                                        str(parameters_dict['ftp_folder']) + " with FTP backend\r\n\r\n"))
-                                    ftp_backend.do(parameters_dict, output_send_filename)
+                                        f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}\r\n\r\n")
+                                    getattr(sys.modules[__name__], backend_name).do(parameters_dict, output_send_filename)
                                     process_files_log.append("Success\r\n\r\n")
                                 except Exception as process_error:
                                     print(str(process_error))
@@ -440,28 +426,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                                                                 process_files_error_log,
                                                                                                 str(process_error),
                                                                                                 str(output_send_filename),
-                                                                                                "FTP Backend", True)
-                                    errors = True
-                            if parameters_dict['process_backend_email'] is True and errors is False and \
-                                    settings['enable_email']:
-                                try:
-                                    print(
-                                        "sending " + str(output_send_filename) + " to " + str(parameters_dict['email_to']) +
-                                        " with email backend")
-                                    process_files_log.append(
-                                        ("sending " + str(output_send_filename) + " to " + str(
-                                            parameters_dict['email_to']) +
-                                        " with email backend\r\n\r\n"))
-                                    email_backend.do(parameters_dict, settings, output_send_filename)
-                                    process_files_log.append("Success\r\n\r\n")
-                                except Exception as process_error:
-                                    print(str(process_error))
-                                    print(traceback.format_exc())
-                                    process_files_log, process_files_error_log = record_error.do(process_files_log,
-                                                                                                process_files_error_log,
-                                                                                                str(process_error),
-                                                                                                str(output_send_filename),
-                                                                                                "Email Backend", True)
+                                                                                                backend_name_print, True)
                                     errors = True
                 return \
                     errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log

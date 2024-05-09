@@ -202,4 +202,4 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
             print("success")
 
     do_process_workbook()
-    return output_filename
+    return output_filename + ".xlsx"

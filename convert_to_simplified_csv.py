@@ -131,4 +131,4 @@ def edi_convert(edi_process, output_filename, each_upc_lut, settings_dict, param
 
                         add_row(row_dict)
 
-    return output_filename
+    return output_filename + ".csv"
