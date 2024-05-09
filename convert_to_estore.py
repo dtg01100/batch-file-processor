@@ -79,7 +79,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
             f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
         )
         with open(
-            output_filename, "w", newline="", encoding="utf-8"
+            output_filename + ".csv", "w", newline="", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
 

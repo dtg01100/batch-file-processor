@@ -1,6 +1,7 @@
 import concurrent.futures
 import datetime
 import hashlib
+import importlib
 import os
 import queue
 import re
@@ -378,230 +379,29 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 if parameters_dict['process_edi'] == "True" and errors is False:
                                     # if the current file is recognized as a valid edi file,
                                     # then allow conversion, otherwise log and carry on
-                                    if parameters_dict['convert_to_format'] == "csv":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename) + ".csv")
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to CSV\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to CSV")
-                                            convert_to_csv.edi_convert(output_send_filename, output_filename,
-                                                                    each_upc_dict,
-                                                                    parameters_dict)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-
-                                    if parameters_dict['convert_to_format'] == "ScannerWare":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename))
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to ScannerWare\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to ScannerWare")
-                                            convert_to_scannerware.edi_convert(output_send_filename, output_filename,
-                                                                            parameters_dict)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-                                    if parameters_dict['convert_to_format'] == "scansheet-type-a":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename) + ".xlsx")
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to scansheet-type-a\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to scansheet-type-a")
-                                            convert_to_scansheet_type_a.edi_convert(output_send_filename, output_filename, settings)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-
-                                    if parameters_dict['convert_to_format'] == "jolley_custom":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename) + ".csv")
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to Jolley Custom Format\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to Jolley Custom Format")
-                                            convert_to_jolley_edi.edi_convert(output_send_filename, output_filename, settings)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-
-                                    if parameters_dict['convert_to_format'] == "simplified_csv":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename) + ".csv")
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to Simplified CSV\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to Simplified CSV")
-                                            convert_to_simplified_csv.edi_convert(output_send_filename, output_filename, each_upc_dict, parameters_dict)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-                                            
-                                    if parameters_dict['convert_to_format'] == "YellowDog CSV":
-                                        output_filename = os.path.join(
-                                            file_scratch_folder,
-                                            os.path.basename(stripped_filename) + ".csv")
-                                        if os.path.exists(os.path.dirname(output_filename)) is False:
-                                            os.mkdir(os.path.dirname(output_filename))
-                                        try:
-                                            process_files_log.append(
-                                                ("converting " + output_send_filename + " from EDI to YellowDog CSV\r\n"))
-                                            print("converting " + output_send_filename + " from EDI to YellowDog CSV")
-                                            convert_to_yellowdog_csv.edi_convert(output_send_filename, output_filename, parameters_dict, settings)
-                                            process_files_log.append("Success\r\n\r\n")
-                                            output_send_filename = output_filename
-                                        except Exception as process_error:
-                                            print(str(process_error))
-                                            print(traceback.format_exc())
-                                            errors = True
-                                            process_files_log, process_files_error_log = \
-                                                record_error.do(process_files_log,
-                                                                process_files_error_log,
-                                                                str(process_error),
-                                                                str(
-                                                                    output_send_filename),
-                                                                "EDI Processor",
-                                                                True)
-
-                                    if parameters_dict['convert_to_format'] == "Estore eInvoice":
-                                            output_filename = os.path.join(
-                                                file_scratch_folder,
-                                                os.path.basename(stripped_filename) + ".csv")
-                                            if os.path.exists(os.path.dirname(output_filename)) is False:
-                                                os.mkdir(os.path.dirname(output_filename))
-                                            try:
-                                                process_files_log.append(
-                                                    ("converting " + output_send_filename + " from EDI to Estore eInvoice\r\n"))
-                                                print("converting " + output_send_filename + " from EDI to Estore eInvoice")
-                                                ret_filename = convert_to_estore.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
-                                                process_files_log.append("Success\r\n\r\n")
-                                                output_send_filename = ret_filename
-                                            except Exception as process_error:
-                                                print(str(process_error))
-                                                errors = True
-                                                process_files_log, process_files_error_log = \
-                                                    record_error.do(process_files_log,
-                                                                    process_files_error_log,
-                                                                    str(process_error),
-                                                                    str(
-                                                                        output_send_filename),
-                                                                    "EDI Processor",
-                                                                    True)
-                                                
-                                    if parameters_dict['convert_to_format'] == "Estore eInvoice Generic":
-                                            output_filename = os.path.join(
-                                                file_scratch_folder,
-                                                os.path.basename(stripped_filename) + ".csv")
-                                            if os.path.exists(os.path.dirname(output_filename)) is False:
-                                                os.mkdir(os.path.dirname(output_filename))
-                                            try:
-                                                process_files_log.append(
-                                                    ("converting " + output_send_filename + " from EDI to Estore eInvoice Generic\r\n"))
-                                                print("converting " + output_send_filename + " from EDI to Estore eInvoice Generic")
-                                                ret_filename = convert_to_estore_generic.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
-                                                process_files_log.append("Success\r\n\r\n")
-                                                output_send_filename = ret_filename
-                                            except Exception as process_error:
-                                                print(str(process_error))
-                                                errors = True
-                                                process_files_log, process_files_error_log = \
-                                                    record_error.do(process_files_log,
-                                                                    process_files_error_log,
-                                                                    str(process_error),
-                                                                    str(
-                                                                        output_send_filename),
-                                                                    "EDI Processor",
-                                                                    True)
-
-                                if parameters_dict['tweak_edi'] is True:
-                                    output_filename = \
-                                        os.path.join(file_scratch_folder,
-                                                    os.path.basename(stripped_filename))
+                                    output_filename = os.path.join(
+                                        file_scratch_folder,
+                                        os.path.basename(stripped_filename))
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:
-                                        output_send_filename = edi_tweaks.edi_tweak(output_send_filename, output_filename,
-                                                                                    each_upc_dict,
-                                                                                    parameters_dict,
-                                                                                    settings)
+                                        if parameters_dict['convert_to_format'] in ['csv', 'ScannerWare', 'scansheet-type-a', 'jolley_custom', 'simplified_csv', 'YellowDog CSV', 'Estore eInvoice', 'Estore eInvoice Generic']:
+                                            module_name = 'convert_to_' + parameters_dict['convert_to_format'].lower().replace(' ', '_').replace('-', '_')
+                                            module = importlib.import_module(module_name)
+                                            print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
+                                            process_files_log.append(("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'] + "\r\n\r\n"))
+                                            output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
+                                            process_files_log.append("Success\r\n\r\n")
+                                        if parameters_dict['tweak_edi'] is True:
+                                            output_send_filename = edi_tweaks.edi_tweak(
+                                                output_send_filename, output_filename, each_upc_dict,
+                                                parameters_dict, settings)
                                     except Exception as process_error:
                                         print(str(process_error))
                                         errors = True
-                                        process_files_log, process_files_error_log = \
-                                            record_error.do(process_files_log,
-                                                            process_files_error_log,
-                                                            str(process_error),
-                                                            str(
-                                                                output_send_filename),
-                                                            "EDI Processor", True)
+                                        process_files_log, process_files_error_log = record_error.do(
+                                            process_files_log, process_files_error_log, str(process_error),
+                                            str(output_send_filename), "EDI Processor", True)
 
                             # the following blocks process the files using the specified backend,
                             # and log in the event of any errors

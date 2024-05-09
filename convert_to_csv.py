@@ -4,8 +4,7 @@ from decimal import Decimal
 import line_from_mtc_edi_to_dict
 import upc_e_to_upc_a
 
-
-def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_lut):
     # save input parameters as variables
 
     calc_upc = parameters_dict['calculate_upc_check_digit']
@@ -28,7 +27,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-        with open(output_filename, "w", newline="", encoding="utf-8") as f:  # open work file, overwriting old file
+        with open(output_filename + ".csv", "w", newline="", encoding="utf-8") as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n", quoting=csv.QUOTE_ALL)
 
             if conv_inc_headers != "False":  # include headers if flag is set
@@ -127,3 +126,4 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
 
                     if line.startswith("C") and conv_inc_crec != "False":
                         csv_file.writerow([input_edi_dict['record_type'], input_edi_dict['charge_type'], input_edi_dict['description'], input_edi_dict['amount']])
+        return output_filename
