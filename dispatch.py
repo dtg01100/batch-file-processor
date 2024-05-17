@@ -425,59 +425,58 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
             processed_files_insert_list = []
 
+            # Start a new ThreadPoolExecutor
             with concurrent.futures.ThreadPoolExecutor() as executor:
+                # Map the process_files function to each index_number_list
                 for return_errors, original_filename, file_checksum, return_log, return_error_log in executor.map(
                         process_files, index_number_list):
-
-                    # for input_tuple in input_data_tuple_list:  # iterate over all files in directory
-                    #     errors, original_filename, file_checksum = process_files(input_tuple)
-                    for row in return_log:
-                        run_log.write(row.encode())
+                    # Write the return_log to the run_log
+                    run_log.writelines([row.encode() for row in return_log])
+                    # If there are errors, write the return_error_log to the folder_errors_log
                     if return_errors:
-                        for row in return_error_log:
-                            folder_errors_log.write(row)
-                            folder_errors = True
+                        folder_errors_log.writelines([row.encode() for row in return_error_log])
+                        folder_errors = True
+                    # Update the overlay if not all files have been processed
                     if not file_count == file_count_total:
                         update_overlay("processing folder...\n\n", folder_count, folder_total_count,
                                        file_count, file_count_total,
                                        "Sending File: " + os.path.basename(original_filename))
-                    else:
+                    # Update the overlay if not all records have been updated
+                    elif not db_updated_counter == file_count_total:
                         update_overlay("processing folder... (updating database records)\n\n", folder_count,
                                        folder_total_count, db_updated_counter + 1, file_count_total,
                                        "Updating Records For: " + os.path.basename(original_filename))
-                    if return_errors is False:
+                    # If there are no errors, process the files
+                    if not return_errors:
                         try:
-                            if processed_files.count(file_name=str(original_filename),
-                                                     resend_flag=True) > 0:
+                            # Update the processed_files_insert_list
+                            processed_files_insert_list.append(
+                                dict(file_name=str(original_filename),
+                                     folder_id=parameters_dict['id'],
+                                     folder_alias=parameters_dict['alias'],
+                                     file_checksum=file_checksum,
+                                     sent_date_time=datetime.datetime.now(),
+                                     copy_destination="N/A" if not parameters_dict['process_backend_copy']
+                                     else parameters_dict['copy_to_directory'],
+                                     ftp_destination="N/A" if not parameters_dict['process_backend_ftp']
+                                     else parameters_dict['ftp_server'] + parameters_dict['ftp_folder'],
+                                     email_destination="N/A" if not parameters_dict['process_backend_email']
+                                     else parameters_dict['email_to'],
+                                     resend_flag=False))
+                            # Update the processed_files if the file has been processed before
+                            if processed_files.count(file_name=str(original_filename), resend_flag=True) > 0:
                                 file_old_id = processed_files.find_one(file_name=str(original_filename),
-                                                                       resend_flag=True)
-                                processed_files_update = dict(resend_flag=False, id=file_old_id['id'])
-                                processed_files.update(processed_files_update, ['id'])
-
-                            processed_files_insert_list.append(dict(file_name=str(original_filename),
-                                                                    folder_id=parameters_dict['id'],
-                                                                    folder_alias=parameters_dict['alias'],
-                                                                    file_checksum=file_checksum,
-                                                                    sent_date_time=datetime.datetime.now(),
-                                                                    copy_destination=parameters_dict[
-                                                                        'copy_to_directory'] if
-                                                                    parameters_dict[
-                                                                        'process_backend_copy'] is True else "N/A",
-                                                                    ftp_destination=parameters_dict['ftp_server'] +
-                                                                    parameters_dict['ftp_folder'] if
-                                                                    parameters_dict[
-                                                                        'process_backend_ftp'] is True else "N/A",
-                                                                    email_destination=parameters_dict['email_to'] if
-                                                                    parameters_dict[
-                                                                        'process_backend_email'] is True else "N/A",
-                                                                    resend_flag=False))
+                                                                     resend_flag=True)
+                                processed_files.update(dict(resend_flag=False, id=file_old_id['id']), ['id'])
+                            # Increment the processed_counter and db_updated_counter
+                            processed_counter += 1
+                            db_updated_counter += 1
                         except Exception as error:
+                            # Record the error and set folder_errors to True
                             record_error.do(run_log, folder_errors_log, str(error), str(original_filename), "Dispatch")
                             folder_errors = True
-                    if return_errors is False:
-                        processed_counter += 1
-                        db_updated_counter += 1
                     else:
+                        # If there are errors, break out of the loop
                         break
             processed_files.insert_many(processed_files_insert_list)
             if folder_errors is True:
