@@ -479,48 +479,37 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         # If there are errors, break out of the loop
                         break
             processed_files.insert_many(processed_files_insert_list)
-            if folder_errors is True:
+            if folder_errors:
                 error_counter += 1
-                if os.path.exists(errors_folder['errors_folder']) is False:
+                if not os.path.exists(errors_folder['errors_folder']):
                     record_error.do(run_log, folder_errors_log, "Base errors folder not found",
-                                    str(parameters_dict['folder_name']), "Dispatch Error Logger")
-                    print("Base error folder not found, " + "making one")
+                                    parameters_dict['folder_name'], "Dispatch Error Logger")
                     os.mkdir(errors_folder['errors_folder'])
-                if os.path.exists(os.path.dirname(folder_error_log_name_full_path)) is False:
+                folder_errors_dir = os.path.dirname(folder_error_log_name_full_path)
+                if not os.path.exists(folder_errors_dir):
                     record_error.do(run_log, folder_errors_log, "Error folder Not Found",
-                                    str(parameters_dict['folder_name']),
+                                    parameters_dict['folder_name'],
                                     "Dispatch Error Logger")
-                    print("Error folder not found for " + parameters_dict['folder_name'] + ", " + "making one")
                     try:
-                        os.mkdir(os.path.dirname(folder_error_log_name_full_path))
-                    except IOError:  # if we can't create error logs folder, put it in run log directory
+                        os.mkdir(folder_errors_dir)
+                    except IOError:
                         record_error.do(run_log, folder_errors_log, "Error creating errors folder",
-                                        str(parameters_dict['folder_name']), "Dispatch Error Logger")
+                                        parameters_dict['folder_name'], "Dispatch Error Logger")
                         folder_error_log_name_full_path = os.path.join(run_log_directory,
                                                                        folder_error_log_name_constructor)
-                try:
-                    folder_errors_log_write = open(folder_error_log_name_full_path, 'wb')
-                    clear_old_files.do_clear(os.path.dirname(folder_error_log_name_full_path), 500)
+                with open(folder_error_log_name_full_path, 'wb') as folder_errors_log_write:
+                    clear_old_files.do_clear(folder_errors_dir, 500)
                     folder_errors_log_write.write(("Program Version = " + version + "\r\n\r\n").encode())
                     folder_errors_log_write.write(folder_errors_log.getvalue().encode())
                     if reporting['enable_reporting'] == "True":
                         emails_table.insert(dict(log=folder_error_log_name_full_path,
                                                  folder_alias=parameters_dict['alias'],
                                                  folder_id=parameters_dict['id']))
-                except Exception as error:
-                    # if file can't be created in either directory, put error log inline in the run log
-                    print("can't open error log file,\r\n error is " + str(error) + "\r\ndumping to run log")
-                    run_log.write(("can't open error log file,\r\n error is " + str(error) +
-                                   "\r\ndumping to run log\r\n").encode())
-                    run_log.write(("error log name was: " + folder_error_log_name_constructor + "\r\n\r\n").encode())
-                    run_log.write(folder_errors_log.getvalue().encode())
-                    run_log.write("\r\n\r\nEnd of Error file\r\n\r\n".encode())
             else:
                 database_connection.query("DELETE FROM processed_files WHERE ROWID IN (SELECT id FROM processed_files"
                                           " WHERE folder_id=" + str(parameters_dict['id']) +
                                           " ORDER BY id DESC LIMIT -1 OFFSET 5000)")
-                processed_files_update = dict(resend_flag=False, folder_id=parameters_dict['id'])
-                processed_files.update(processed_files_update, ['folder_id'])
+                processed_files.update(dict(resend_flag=False, folder_id=parameters_dict['id']), ['folder_id'])
             folder_errors_log.close()
         else:
             # if the folder is missing, complain and increment error counter
