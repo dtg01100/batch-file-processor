@@ -42,7 +42,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
         if shipper_mode:
             # write out shipper
             # row_dict_list[shipper_line_number]['Unit Cost'] = sum(shipper_accum)
-            row_dict_list[shipper_line_number]["QTY"] = len(shipper_accum)
+            row_dict_list[shipper_line_number - 1]["QTY"] = len(shipper_accum)
             shipper_accum.clear()
             print("leave shipper mode")
             shipper_mode = False
