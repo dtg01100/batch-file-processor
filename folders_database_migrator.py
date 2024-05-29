@@ -293,3 +293,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "rename_file" = ""')
         update_version = dict(id=1, version="28", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "28":
+        database_connection.query("alter table 'folders' add column 'estore_c_record_OID'")
+        database_connection.query('UPDATE "folders" SET "estore_c_record_OID" = 10025')
+        database_connection.query("alter table 'administrative' add column 'estore_c_record_OID'")
+        database_connection.query('UPDATE "administrative" SET "estore_c_record_OID" = 0')
+        update_version = dict(id=1, version="29", os=running_platform)
+        db_version.update(update_version, ['id'])

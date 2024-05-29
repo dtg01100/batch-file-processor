@@ -326,7 +326,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
 
                         row_dict = {
                             "Detail Type": "S",
-                            "Subcategory OId": 10025,
+                            "Subcategory OId": parameters_dict["estore_c_record_OID"],
                             "Vendor Item": "",
                             "Vendor Pack": 1,
                             "Item Description": input_edi_dict["description"].strip(),

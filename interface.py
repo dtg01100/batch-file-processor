@@ -42,7 +42,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "28"
+    DATABASE_VERSION = "29"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -1464,6 +1464,12 @@ if __name__ == "__main__":
                     self.estore_vendor_namevendoroid_field.grid(
                         row=4, column=1, sticky=tkinter.E, padx=3
                     )
+                    self.estore_c_record_oid_label.grid(
+                        row=5, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.estore_c_record_oid_field.grid(
+                        row=5, column=1, sticky=tkinter.E, padx=3
+                    )
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
                 self.convert_to_selector_frame,
@@ -1864,6 +1870,12 @@ if __name__ == "__main__":
             self.estore_vendor_namevendoroid_field = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
+            self.estore_c_record_oid_label = tkinter.ttk.Label(
+                self.convert_options_frame, text="Estore C Record OId"
+            )
+            self.estore_c_record_oid_field = tkinter.ttk.Entry(
+                self.convert_options_frame, width=10
+            )
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -1950,6 +1962,10 @@ if __name__ == "__main__":
                 self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
                 self.estore_vendor_namevendoroid_field.insert(
                     0, config_dict["estore_vendor_NameVendorOID"]
+                )
+                self.estore_c_record_oid_field.delete(0, tkinter.END)
+                self.estore_c_record_oid_field.insert(
+                    0, config_dict["estore_c_record_OID"]
                 )
 
                 if copied:
