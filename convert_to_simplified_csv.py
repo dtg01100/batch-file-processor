@@ -9,7 +9,7 @@ class CustomerLookupError(Exception):
     pass
 
 
-def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
+def edi_convert(edi_process, output_filename, each_upc_lut, settings_dict, parameters_dict, each_upc_lookup):
     retail_uom = parameters_dict["retail_uom"]
     inc_headers = parameters_dict["include_headers"]
     inc_item_numbers = parameters_dict["include_item_numbers"]
@@ -38,7 +38,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         with open(
-            output_filename, "w", newline="", encoding="utf-8"
+            output_filename + ".csv", "w", newline="", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
             "upc_number,qty_of_units,unit_cost,description,vendor_item"
@@ -131,4 +131,4 @@ def edi_convert(edi_process, output_filename, each_upc_lut, parameters_dict):
 
                         add_row(row_dict)
 
-    return output_filename
+    return output_filename + ".csv"

@@ -12,8 +12,7 @@ from query_runner import query_runner
 class CustomerLookupError(Exception):
     pass
 
-def edi_convert(edi_process, output_filename, settings_dict):
-
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_dict):
     def convert_to_price(value):
         return (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -38,7 +37,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         with open(
-            output_filename, "w", newline="\n", encoding="utf-8"
+            output_filename + ".csv", "w", newline="\n", encoding="utf-8"
         ) as f:  # open work file, overwriting old file
             csv_file = csv.writer(f, dialect="unix")
             query_object = query_runner(
@@ -287,4 +286,4 @@ def edi_convert(edi_process, output_filename, settings_dict):
                             "$"+str(convert_to_price(input_edi_dict['amount']))
                         ])
             csv_file.writerow(["","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
-    return(output_filename)
+    return(output_filename + ".csv")

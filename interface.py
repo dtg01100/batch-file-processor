@@ -3141,43 +3141,50 @@ if __name__ == "__main__":
             maintenance_popup_warning_label.pack(side=tkinter.RIGHT, padx=20)
             maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
-    def export_processed_report(name, output_folder):
-        def avoid_overwrite(input_file_name):
-            counter = 2
-            if not os.path.exists(input_file_name + ".csv"):
-                return input_file_name + ".csv"
-            else:
-                while os.path.exists(input_file_name + " " + str(counter) + ".csv"):
-                    counter += 1
-                clear_file_path = input_file_name + " " + str(counter) + ".csv"
-                return clear_file_path
+    def export_processed_report(folder_id, output_folder):
 
-        folder_alias = database_obj_instance.folders_table.find_one(id=name)
-        processed_log_path = avoid_overwrite(
-            str(
-                os.path.join(output_folder, folder_alias["alias"] + " processed report")
-            )
+        def avoid_duplicate_export_file(file_name, file_extension):
+            """Returns a file path that does not already exist.
+
+            If the proposed file path exists, appends a number to the file name
+            until an available file path is found.
+            """
+            print(f"Checking if {file_name + file_extension} exists")
+            if not os.path.exists(file_name + file_extension):
+                print(f"{file_name + file_extension} does not exist")
+                return file_name + file_extension
+            else:
+                print(f"{file_name + file_extension} exists")
+                i = 1
+                while True:
+                    potential_file_path = file_name + " (" + str(i) + ")" + file_extension
+                    print(f"Checking if {potential_file_path} exists")
+                    if not os.path.exists(potential_file_path):
+                        print(f"{potential_file_path} does not exist")
+                        return potential_file_path
+                    i += 1
+                    print(f"{potential_file_path} exists")
+
+        folder_alias = database_obj_instance.folders_table.find_one(id=folder_id)['alias']
+
+        export_file_path = avoid_duplicate_export_file(
+            os.path.join(output_folder, folder_alias + " processed report"), ".csv"
         )
-        with open(processed_log_path, "w", encoding="utf-8") as processed_log:
+        print(f"Export file path will be: {export_file_path}")
+        with open(export_file_path, "w", encoding="utf-8") as processed_log:
             processed_log.write(
                 "File,Date,Copy Destination,FTP Destination,Email Destination\n"
             )
-            for line in database_obj_instance.processed_files.find(folder_id=name):
+            for line in database_obj_instance.processed_files.find(folder_id=folder_id):
                 processed_log.write(
-                    line["file_name"]
-                    + ","
-                    + "\t"
-                    + str(line["sent_date_time"])[:-7]
-                    + ","
-                    + line["copy_destination"]
-                    + ","
-                    + line["ftp_destination"]
-                    + ","
-                    + str(line["email_destination"]).replace(",", ";")
-                    + "\n"
+                    f"{line['file_name']},"
+                    f"{line['sent_date_time'].strftime('%Y-%m-%d %H:%M:%S')},"
+                    f"{line['copy_destination']},"
+                    f"{line['ftp_destination']},"
+                    f"{line['email_destination']}"
+                    "\n"
                 )
-        processed_log.close()
-        showinfo(message="Processed File Report Exported To\n\n" + processed_log_path)
+            print(f"Wrote {len(list(database_obj_instance.processed_files.find(folder_id=folder_id)))} lines to {export_file_path}")
 
     def processed_files_popup():
         def close_processed_files_popup(_=None):

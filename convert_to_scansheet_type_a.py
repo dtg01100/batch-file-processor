@@ -14,7 +14,7 @@ import line_from_mtc_edi_to_dict
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, settings_dict):
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_lookup):
 
     def adjust_column_width(adjust_worksheet):
         print(
@@ -93,7 +93,7 @@ def edi_convert(edi_process, output_filename, settings_dict):
             output_worksheet.append(items_list_entry)
             invoice_row_counter += 1
         adjust_column_width(output_worksheet)
-        output_spreadsheet_name = output_filename
+        output_spreadsheet_name = output_filename + '.xlsx'
         output_spreadsheet.save(output_spreadsheet_name)
 
     def generate_barcode(input_string, tempdir):
@@ -202,4 +202,4 @@ def edi_convert(edi_process, output_filename, settings_dict):
             print("success")
 
     do_process_workbook()
-    return output_filename
+    return output_filename + ".xlsx"

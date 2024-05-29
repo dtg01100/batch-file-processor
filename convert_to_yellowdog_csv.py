@@ -8,7 +8,7 @@ import utils
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_lookup):
 
     class invFetcher:
         def __init__(self, settings_dict):
@@ -186,7 +186,7 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         with open(
-                output_filename,
+                output_filename+".csv",
                 "w",
                 newline="",
                 encoding="utf-8"
@@ -196,4 +196,4 @@ def edi_convert(edi_process, output_filename, parameters_dict, settings_dict):
                 line_dict = line_from_mtc_edi_to_dict.capture_records(line)
                 yellowdog_writer.add_line(line_dict)
             yellowdog_writer.flush_to_csv()
-    return output_filename
+    return output_filename+".csv"
