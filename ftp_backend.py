@@ -6,7 +6,7 @@ import os
 # note: process_parameters is a dict from a row in the database, passed into this module
 
 
-def do(process_parameters, filename):
+def do(process_parameters, settings_dict, filename):
     file_pass = False
     counter = 0
     ftp_providers = [ftplib.FTP_TLS, ftplib.FTP]

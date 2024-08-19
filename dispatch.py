@@ -406,7 +406,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     print(f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}")
                                     process_files_log.append(
                                         f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}\r\n\r\n")
-                                    importlib.import_module(backend_name).do(parameters_dict, output_send_filename)
+                                    importlib.import_module(backend_name).do(parameters_dict, settings, output_send_filename)
                                     process_files_log.append("Success\r\n\r\n")
                                 except Exception as process_error:
                                     print(str(process_error))
