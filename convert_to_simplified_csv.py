@@ -9,7 +9,7 @@ class CustomerLookupError(Exception):
     pass
 
 
-def edi_convert(edi_process, output_filename, each_upc_lut, settings_dict, parameters_dict, each_upc_lookup):
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_lookup):
     retail_uom = parameters_dict["retail_uom"]
     inc_headers = parameters_dict["include_headers"]
     inc_item_numbers = parameters_dict["include_item_numbers"]
@@ -87,7 +87,7 @@ def edi_convert(edi_process, output_filename, each_upc_lut, settings_dict, param
                                 print("cannot parse b record field, skipping")
                             if edi_line_pass:
                                 try:
-                                    each_upc_string = each_upc_lut[item_number][:11].ljust(
+                                    each_upc_string = each_upc_lookup[item_number][:11].ljust(
                                         11
                                     )
                                 except KeyError:
