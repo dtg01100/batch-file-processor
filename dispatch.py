@@ -365,7 +365,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                 except Exception:
                                     pass
                             if valid_edi_file:
-                                if parameters_dict['process_edi'] == "True" and errors is False:
+                                if errors is False:
                                     # if the current file is recognized as a valid edi file,
                                     # then allow conversion, otherwise log and carry on
                                     output_filename = os.path.join(
@@ -374,7 +374,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:
-                                        if parameters_dict['convert_to_format'] in ['csv', 'ScannerWare', 'scansheet-type-a', 'jolley_custom', 'simplified_csv', 'YellowDog CSV', 'Estore eInvoice', 'Estore eInvoice Generic']:
+                                        if parameters_dict['process_edi'] == "True":
                                             module_name = 'convert_to_' + parameters_dict['convert_to_format'].lower().replace(' ', '_').replace('-', '_')
                                             module = importlib.import_module(module_name)
                                             print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
@@ -383,9 +383,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             print("Success")
                                             process_files_log.append("Success\r\n\r\n")
                                         if parameters_dict['tweak_edi'] is True:
+                                            print("Applying tweaks to " + output_send_filename)
+                                            process_files_log.append(("Applying tweaks to " + output_send_filename + "\r\n\r\n"))
                                             output_send_filename = edi_tweaks.edi_tweak(
                                                 output_send_filename, output_filename, each_upc_dict,
                                                 parameters_dict, settings)
+                                            print("Success")
+                                            process_files_log.append("Success\r\n\r\n")
                                     except Exception as process_error:
                                         print(str(process_error))
                                         errors = True
