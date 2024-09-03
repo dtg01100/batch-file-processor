@@ -60,12 +60,12 @@ def generate_file_hash(source_file_struct):
     except KeyError as _:
         match_found = False
 
+    print(os.path.basename(tfilename), os.path.basename(file_name))
+
     send_file = False
     if not match_found:
         send_file = True
     if generated_file_checksum in resend_flag_set:
-        send_file = True
-    if os.path.basename(tfilename) != os.path.basename(file_name) and match_found:
         send_file = True
     return file_name, generated_file_checksum, index_number, send_file
 
