@@ -436,7 +436,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     run_log.writelines([row.encode() for row in return_log])
                     # If there are errors, write the return_error_log to the folder_errors_log
                     if return_errors:
-                        folder_errors_log.writelines([row.encode() for row in return_error_log])
+                        folder_errors_log.write(str([row.encode() for row in return_error_log]))
                         folder_errors = True
                     # Update the overlay if not all files have been processed
                     if not file_count == file_count_total:
