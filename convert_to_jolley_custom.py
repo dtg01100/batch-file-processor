@@ -85,11 +85,11 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                         ON dsabrep.abajcd = dsadrep.adaecd
                         inner join dacdata.dsagrep dsagrep
                         on ohhst.bta0cd = dsagrep.aga0cd
-                    INNER JOIN dacdata.dsabrep dsabrep_corp
+                    LEFT outer JOIN dacdata.dsabrep dsabrep_corp
                         ON dsabrep.abalnb = dsabrep_corp.ababnb
-                    INNER JOIN dacdata.cvgrrep cvgrrep_corp
+                    LEFT outer JOIN dacdata.cvgrrep cvgrrep_corp
                         ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
-                    INNER JOIN dacdata.dsadrep dsadrep_corp
+                    LEFT outer JOIN dacdata.dsadrep dsadrep_corp
                         ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
                 WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
                     """)
@@ -129,11 +129,11 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                 ON dsabrep.abajcd = dsadrep.adaecd
                 inner join dacdata.dsagrep dsagrep
                 on ohhst.bta0cd = dsagrep.aga0cd
-            INNER JOIN dacdata.dsabrep dsabrep_corp
+            LEFT outer JOIN dacdata.dsabrep dsabrep_corp
                 ON dsabrep.abalnb = dsabrep_corp.ababnb
-            INNER JOIN dacdata.cvgrrep cvgrrep_corp
+            LEFT outer JOIN dacdata.cvgrrep cvgrrep_corp
                 ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
-            INNER JOIN dacdata.dsadrep dsadrep_corp
+            LEFT outer JOIN dacdata.dsadrep dsadrep_corp
                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
         WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
             """
