@@ -14,20 +14,23 @@ def do(process_parameters, settings_dict, filename):
         try:
             with open(filename, 'rb') as send_file:
                 filename_no_path = os.path.basename(filename)
-                for provider in ftp_providers:
+                for provider_index, provider in enumerate(ftp_providers):
                     ftp = provider()
                     try:
                         print(f"Connecting to ftp server: {str(process_parameters['ftp_server'])}")
-                        ftp.connect(str(process_parameters['ftp_server']), process_parameters['ftp_port'])
+                        print(ftp.connect(str(process_parameters['ftp_server']), process_parameters['ftp_port']))
                         print(f"Logging in to {str(process_parameters['ftp_server'])}")
-                        ftp.login(process_parameters['ftp_username'], process_parameters['ftp_password'])
+                        print(ftp.login(process_parameters['ftp_username'], process_parameters['ftp_password']))
                         print("Sending File...")
                         ftp.storbinary("stor " + process_parameters['ftp_folder']+filename_no_path, send_file)
                         print("Success")
                         ftp.close()
                         file_pass = True
                         break
-                    except Exception:
+                    except Exception as error:
+                        print(error)
+                        if provider_index + 1 == len(ftp_providers):
+                            raise
                         print("Falling back to non-TLS...")
 
         except Exception as ftp_error:
