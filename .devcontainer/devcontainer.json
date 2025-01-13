@@ -29,7 +29,8 @@
 		"--net", "host",
 		"-e", "DISPLAY=:0",
 		"-e", "XAUTHORITY=/tmp/.Xauthority",
-		"-v", "${localEnv:XAUTHORITY}:/tmp/.Xauthority"
+		"-v", "${localEnv:XAUTHORITY}:/tmp/.Xauthority",
+		"-v", "${localWorkspaceFolder}/containerhome:/home/vscode"
 		],
 	  "containerUser": "vscode",
 	  "updateRemoteUserUID": true,
