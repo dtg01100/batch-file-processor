@@ -5,7 +5,7 @@ attrs==21.4.0
 autopep8==1.6.0
 banal==1.0.6
 binaryornot==0.4.4
-black==22.3.0
+black==24.3.0
 cachetools==5.3.1
 certifi==2023.7.22
 chardet==4.0.0
