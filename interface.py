@@ -42,7 +42,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "29"
+    DATABASE_VERSION = "30"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)

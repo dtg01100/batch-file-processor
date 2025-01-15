@@ -11,9 +11,7 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
 
     version.insert(dict(version=database_version, os=running_platform))
 
-    oversight_and_defaults = database_connection['administrative']
-
-    oversight_and_defaults.insert(dict(folder_is_active="False",
+    initial_db_dict = dict(folder_is_active="False",
                                        copy_to_directory=None,
                                        process_edi='False',
                                        convert_to_format='csv',
@@ -57,7 +55,6 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        force_txt_file_ext="False",
                                        invoice_date_offset=0,
                                        retail_uom=False,
-                                       force_each_upc=False,
                                        include_item_numbers=False,
                                        include_item_description=False,
                                        simple_csv_sort_order="upc_number,qty_of_units,unit_cost,description,vendor_item",
@@ -68,7 +65,17 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        estore_c_record_OID="",
                                        prepend_date_files = False,
                                        rename_file = "",
-                                       ))
+                                       override_upc_bool = False,
+                                       override_upc_level = 1,
+                                       override_upc_category_filter = "ALL"
+                                       )
+
+    oversight_and_defaults = database_connection['administrative']
+    folders_table = database_connection['folders']
+
+    oversight_and_defaults.insert(initial_db_dict)
+    folders_table.insert(initial_db_dict)
+    database_connection.query('DELETE FROM "folders"')
 
     settings_table = database_connection['settings']
     settings_table.insert(dict(enable_email=False,

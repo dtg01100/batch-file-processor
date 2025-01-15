@@ -301,3 +301,21 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" SET "estore_c_record_OID" = 0')
         update_version = dict(id=1, version="29", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == "29":
+        database_connection.query("alter table 'folders' add column 'override_upc_bool'")
+        database_connection.query('UPDATE "folders" set "override_upc_bool"=False')
+        database_connection.query("alter table 'folders' add column 'override_upc_level'")
+        database_connection.query('UPDATE "folders" set "override_upc_level"=1')
+        database_connection.query("alter table 'folders' add column 'override_upc_category_filter'")
+        database_connection.query('UPDATE "folders" set "override_upc_category_filter"="ALL"')
+        database_connection.query(
+            'update "folders" set "override_upc_bool"=True, "override_upc_level"=1 where "force_each_upc"=True')
+        database_connection.query("alter table 'administrative' add column 'override_upc_bool'")
+        database_connection.query('UPDATE "administrative" set "override_upc_bool"=False')
+        database_connection.query("alter table 'administrative' add column 'override_upc_level'")
+        database_connection.query('UPDATE "administrative" set "override_upc_level"=1')
+        database_connection.query("alter table 'administrative' add column 'override_upc_category_filter'")
+        database_connection.query('UPDATE "administrative" set "override_upc_category_filter"="ALL"')
+        update_version = dict(id=1, version="30", os=running_platform)
+        db_version.update(update_version, ['id'])
