@@ -1270,10 +1270,12 @@ if __name__ == "__main__":
             self.invoice_date_custom_format_string = tkinter.StringVar(master)
             self.invoice_date_custom_format = tkinter.BooleanVar(master)
             self.edi_each_uom_tweak = tkinter.BooleanVar(master)
-            self.force_each_upc = tkinter.BooleanVar(master)
             self.include_item_numbers = tkinter.BooleanVar(master)
             self.include_item_description = tkinter.BooleanVar(master)
             self.split_sales_tax_prepaid_var = tkinter.BooleanVar(master)
+            self.override_upc_bool = tkinter.BooleanVar(master)
+            self.override_upc_level = tkinter.IntVar(master)
+            self.override_upc_category_filter = tkinter.StringVar(master)
             self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
             self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(
@@ -1355,7 +1357,9 @@ if __name__ == "__main__":
                     self.pad_a_records_length_optionmenu,
                     self.append_a_records_checkbutton,
                     self.a_record_append_field,
-                    self.force_each_upc_checkbutton,
+                    self.override_upc_checkbutton,
+                    self.override_upc_level_optionmenu,
+                    self.override_upc_category_filter_entry,
                     self.each_uom_edi_tweak_checkbutton,
                     self.include_item_numbers_checkbutton,
                     self.include_item_description_checkbutton,
@@ -1392,8 +1396,14 @@ if __name__ == "__main__":
                         row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3
                     )
                     self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
-                    self.force_each_upc_checkbutton.grid(
+                    self.override_upc_checkbutton.grid(
                         row=10, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.override_upc_level_optionmenu.grid(
+                        row=10, column=1, sticky=tkinter.W
+                    )
+                    self.override_upc_category_filter_entry.grid(
+                        row=10, column=2, sticky=tkinter.W
                     )
                     self.each_uom_edi_tweak_checkbutton.grid(
                         row=11, column=0, sticky=tkinter.W, padx=3
@@ -1826,10 +1836,19 @@ if __name__ == "__main__":
                 variable=self.edi_each_uom_tweak,
                 text="Each UOM",
             )
-            self.force_each_upc_checkbutton = tkinter.ttk.Checkbutton(
+            self.override_upc_checkbutton = tkinter.ttk.Checkbutton(
                 self.convert_options_frame,
-                variable=self.force_each_upc,
-                text="Force Each UPC",
+                variable=self.override_upc_bool,
+                text="Override UPC",
+            )
+            self.override_upc_level_optionmenu = tkinter.ttk.OptionMenu(
+                self.convert_options_frame, 
+                self.override_upc_level,
+                self.override_upc_level.get(),
+                *range(1, 5)
+            )
+            self.override_upc_category_filter_entry = tkinter.ttk.Entry(
+                self.convert_options_frame, width=10
             )
 
             self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(
@@ -1942,7 +1961,12 @@ if __name__ == "__main__":
                     0, config_dict["invoice_date_custom_format_string"]
                 )
                 self.edi_each_uom_tweak.set(config_dict["retail_uom"])
-                self.force_each_upc.set(config_dict["force_each_upc"])
+                self.override_upc_bool.set(config_dict["override_upc_bool"]),
+                self.override_upc_level.set(config_dict["override_upc_level"]),
+                self.override_upc_category_filter_entry.delete(0, tkinter.END)
+                self.override_upc_category_filter_entry.insert(
+                    0, config_dict["override_upc_category_filter"]
+                )
                 self.include_item_numbers.set(config_dict["include_item_numbers"])
                 self.include_item_description.set(
                     config_dict["include_item_description"]
@@ -2059,8 +2083,14 @@ if __name__ == "__main__":
                     self.each_uom_edi_tweak_checkbutton.grid(
                         row=14, column=0, sticky=tkinter.W, padx=3
                     )
-                    self.force_each_upc_checkbutton.grid(
+                    self.override_upc_checkbutton.grid(
                         row=15, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.override_upc_level_optionmenu.grid(
+                        row=15, column=1, sticky=tkinter.W, padx=3
+                    )
+                    self.override_upc_category_filter_entry.grid(
+                        row=15, column=2, sticky=tkinter.W, padx=3
                     )
                     self.split_prepaid_sales_tax_crec.grid(
                         row=16, column=0, sticky=tkinter.W, padx=3
