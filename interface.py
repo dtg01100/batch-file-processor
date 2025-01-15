@@ -2253,7 +2253,9 @@ if __name__ == "__main__":
             )
             apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
             apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
-            apply_to_folder["force_each_upc"] = self.force_each_upc.get()
+            apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
+            apply_to_folder["override_upc_level"] = self.override_upc_level.get()
+            apply_to_folder["override_upc_category_filter"] = self.override_upc_category_filter_entry.get()
             apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
             apply_to_folder[
                 "include_item_description"
@@ -2471,7 +2473,26 @@ if __name__ == "__main__":
                     "EDI needs to be split for jolley_custom backend"
                 )
                 errors = True
-
+            if self.override_upc_bool.get() is True:
+                if self.override_upc_category_filter_entry.get() == "":
+                    error_string_constructor_list.append(
+                        "Override UPC Category Filter Is Required"
+                    )
+                    errors = True
+                for category in self.override_upc_category_filter_entry.get().split(","):
+                    try:
+                        int(category)
+                        if int(category) not in list(range(1, 100)):
+                            error_string_constructor_list.append(
+                                "Override UPC Category Filter Is Invalid"
+                            )
+                            errors = True
+                    except ValueError:
+                        if category != "ALL":
+                            error_string_constructor_list.append(
+                                "Override UPC Category Filter Is Invalid"
+                            )
+                            errors = True
             if self.foldersnameinput["folder_name"] != "template":
                 if str(self.folder_alias_field.get()) != self.foldersnameinput["alias"]:
                     proposed_folder = database_obj_instance.folders_table.find_one(
