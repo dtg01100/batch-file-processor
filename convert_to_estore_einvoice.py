@@ -7,7 +7,7 @@ from typing import List
 import line_from_mtc_edi_to_dict
 
 
-def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -137,7 +137,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
                         try:
-                            upc_entry = each_upc_lookup[int(input_edi_dict["vendor_item"])]
+                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
                         except KeyError:
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]

@@ -98,7 +98,7 @@ class invFetcher:
                     return "LO"
 
 
-def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, each_upc_lookup):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
     inv_fetcher = invFetcher(settings_dict)
     def convert_to_price(value):
         retprice = (
@@ -243,7 +243,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
                         try:
-                            upc_entry = each_upc_lookup[int(input_edi_dict["vendor_item"])]
+                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
                         except KeyError:
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]

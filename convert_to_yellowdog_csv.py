@@ -8,7 +8,7 @@ import utils
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, each_upc_lookup):
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
 
     class invFetcher:
         def __init__(self, settings_dict):

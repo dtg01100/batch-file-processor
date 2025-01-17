@@ -10,7 +10,7 @@ from query_runner import query_runner
 def edi_tweak(
     edi_process,
     output_filename,
-    each_upc_dict,
+    upc_dict,
     parameters_dict,
     settings_dict
 ):
@@ -26,7 +26,9 @@ def edi_tweak(
     calc_upc = parameters_dict['calculate_upc_check_digit']
     invoice_date_offset = parameters_dict['invoice_date_offset']
     retail_uom = parameters_dict['retail_uom']
-    force_each_upc = parameters_dict['force_each_upc']
+    override_upc = parameters_dict['override_upc_bool']
+    override_upc_level = parameters_dict['override_upc_level']
+    override_upc_category_filter = parameters_dict['override_upc_category_filter']
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
 
     class poFetcher:
@@ -191,8 +193,9 @@ def edi_tweak(
         if writeable_line.startswith("B"):
             b_rec_edi_dict = input_edi_dict
             try:
-                if force_each_upc:
-                    b_rec_edi_dict['upc_number'] = each_upc_dict[int(b_rec_edi_dict['vendor_item'].strip())]
+                if override_upc:
+                    if upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter.split(",") or override_upc_category_filter == "ALL":
+                        b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
             except KeyError:
                 b_rec_edi_dict['upc_number'] = ""
             if retail_uom:
@@ -209,7 +212,7 @@ def edi_tweak(
                     print("cannot parse b record field, skipping")
                 if edi_line_pass:
                     try:
-                        each_upc_string = each_upc_dict[item_number][:11].ljust(11)
+                        each_upc_string = upc_dict[item_number][:11][1].ljust(11)
                     except KeyError:
                         each_upc_string = "           "
                     try:

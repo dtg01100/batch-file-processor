@@ -103,14 +103,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
         f"{settings['odbc_driver']}",
     )
 
-    each_upc_qreturn = []
-    for itemno, upc in query_object.run_arbitrary_query("""
-                        select dsanrep.anbacd, dsanrep.anbgcd
+    upc_qreturn = []
+    for itemno, category, upc1, upc2, upc3, upc4 in query_object.run_arbitrary_query("""
+                        select dsanrep.anbacd, dsanrep.anbbcd, dsanrep.anbgcd, dsanrep.anbhcd, dsanrep.anbicd, dsanrep.anbjcd
                     from dacdata.dsanrep dsanrep
                     """):
-        each_upc_qreturn.append((int(itemno), upc))
+        upc_qreturn.append((int(itemno), [category,upc1, upc2, upc3, upc4]))
 
-    each_upc_dict = dict(each_upc_qreturn)
+    upc_dict = dict(upc_qreturn)
 
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
         if not args.automatic:
@@ -377,14 +377,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                             module = importlib.import_module(module_name)
                                             print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
                                             process_files_log.append(("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'] + "\r\n\r\n"))
-                                            output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, each_upc_dict)
+                                            output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, upc_dict)
                                             print("Success")
                                             process_files_log.append("Success\r\n\r\n")
                                         if parameters_dict['tweak_edi'] is True:
                                             print("Applying tweaks to " + output_send_filename)
                                             process_files_log.append(("Applying tweaks to " + output_send_filename + "\r\n\r\n"))
                                             output_send_filename = edi_tweaks.edi_tweak(
-                                                output_send_filename, output_filename, each_upc_dict,
+                                                output_send_filename, output_filename, upc_dict,
                                                 parameters_dict, settings)
                                             print("Success")
                                             process_files_log.append("Success\r\n\r\n")
