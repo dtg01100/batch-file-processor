@@ -10,7 +10,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
     calc_upc = parameters_dict['calculate_upc_check_digit']
     inc_arec = parameters_dict['include_a_records']
     inc_crec = parameters_dict['include_c_records']
-    inc_headers  = parameters_dict['include_headers']
+    inc_headers = parameters_dict['include_headers']
     filter_ampersand = parameters_dict['filter_ampersand']
     pad_arec = parameters_dict['pad_a_records']
     arec_padding = parameters_dict['a_record_padding']
@@ -70,7 +70,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                 print("cannot parse b record field, skipping")
                             if edi_line_pass:
                                 try:
-                                    each_upc_string = upc_lut[item_number][:11].ljust(11)
+                                    each_upc_string = upc_lut[item_number][1][:11].ljust(11)
                                 except KeyError:
                                     each_upc_string = "           "
                                 try:
@@ -84,8 +84,14 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                         upc_string = ""
                         if override_upc:
                             try:
-                                if int(input_edi_dict['vendor_item'].strip()) in upc_lut:
-                                    if upc_lut[int(input_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter or override_upc_category_filter == "ALL":
+                                if int(input_edi_dict['vendor_item'].strip()) in upc_lut.keys():
+                                    do_updateupc = False
+                                    if override_upc_category_filter == "ALL":
+                                        do_updateupc = True
+                                    else:
+                                        if upc_lut[int(input_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter:
+                                            do_updateupc = True
+                                    if do_updateupc:
                                         input_edi_dict['upc_number'] = upc_lut[int(input_edi_dict['vendor_item'].strip())][override_upc_level]
                                 else:
                                     input_edi_dict['upc_number'] = ""
@@ -93,10 +99,10 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                 input_edi_dict['upc_number'] = ""
                             except ValueError:
                                 input_edi_dict['upc_number'] = ""
-                        try:
-                            _ = int(input_edi_dict['upc_number'].rstrip())
-                        except ValueError:
-                            blank_upc = True
+                            try:
+                                _ = int(input_edi_dict['upc_number'].rstrip())
+                            except ValueError:
+                                blank_upc = True
 
                         if blank_upc is False:
                             proposed_upc = input_edi_dict['upc_number'].strip()

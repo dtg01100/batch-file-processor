@@ -182,7 +182,7 @@ def edi_tweak(
                     a_rec_edi_dict['cust_vendor'],
                     a_rec_edi_dict['invoice_number'],
                     a_rec_edi_dict['invoice_date'],
-                    a_rec_edi_dict['invoice_total']]            
+                    a_rec_edi_dict['invoice_total']]
             if append_arec == "True":
                 if "%po_str%" in append_arec_text:
                     append_arec_text = append_arec_text.replace("%po_str%", po_fetcher.fetch_po_number(a_rec_edi_dict['invoice_number']))
@@ -194,8 +194,11 @@ def edi_tweak(
             b_rec_edi_dict = input_edi_dict
             try:
                 if override_upc:
-                    if upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter.split(",") or override_upc_category_filter == "ALL":
+                    if override_upc_category_filter == "ALL":
                         b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
+                    else:
+                        if upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter.split(","):
+                            b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
             except KeyError:
                 b_rec_edi_dict['upc_number'] = ""
             if retail_uom:
