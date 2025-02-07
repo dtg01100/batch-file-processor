@@ -108,7 +108,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         select dsanrep.anbacd, dsanrep.anbbcd, dsanrep.anbgcd, dsanrep.anbhcd, dsanrep.anbicd, dsanrep.anbjcd
                     from dacdata.dsanrep dsanrep
                     """):
-        upc_qreturn.append((int(itemno), [category,upc1, upc2, upc3, upc4]))
+        upc_qreturn.append((int(itemno), [category, upc1, upc2, upc3, upc4]))
 
     upc_dict = dict(upc_qreturn)
 
