@@ -105,7 +105,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
 
     upc_qreturn = []
     for itemno, category, upc1, upc2, upc3, upc4 in query_object.run_arbitrary_query("""
-                        select dsanrep.anbacd, dsanrep.anbbcd, dsanrep.anbgcd, dsanrep.anbhcd, dsanrep.anbicd, dsanrep.anbjcd
+                    select 
+                        dsanrep.anbacd,
+                        dsanrep.anbbcd,
+                        strip(dsanrep.anbgcd),
+                        strip(dsanrep.anbhcd),
+                        strip(dsanrep.anbicd),
+                        strip(dsanrep.anbjcd)
                     from dacdata.dsanrep dsanrep
                     """):
         upc_qreturn.append((int(itemno), [category, upc1, upc2, upc3, upc4]))
