@@ -94,10 +94,13 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     uomqry_ret = self._run_qry(qry)
                     return uomqry_ret[0][0]
                 except Exception as error:
-                    if int(uommult) > 1:
-                        return "HI"
-                    else:
-                        return "LO"
+                    try:
+                        if int(uommult) > 1:
+                            return "HI"
+                        else:
+                            return "LO"
+                    except ValueError:
+                        return "NA"
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
