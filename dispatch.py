@@ -46,7 +46,7 @@ def generate_file_hash(source_file_struct):
         try:
             generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
         except Exception as error:
-            if checksum_attempt >= 5:
+            if checksum_attempt <= 5:
                 time.sleep(checksum_attempt*checksum_attempt)
                 checksum_attempt += 1
                 print(f"retrying open {file_name} for md5sum")
