@@ -171,6 +171,13 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             if len(header_fields) == 0:
                 raise CustomerLookupError(f"Cannot Find Order {header_a_record['invoice_number']} In History.")
             header_fields_dict = dict(zip(header_fields_list, header_fields[0]))
+            if header_fields_dict["Corporate_Customer_Number"] is None:
+                header_fields_dict["Corporate_Customer_Number"] = header_fields_dict['Customer_Number']
+                header_fields_dict["Corporate_Customer_Name"] = header_fields_dict["Customer_Name"]
+                header_fields_dict["Corporate_Customer_Address"] = header_fields_dict['Customer_Address']
+                header_fields_dict["Corporate_Customer_Town"] = header_fields_dict['Customer_Town']
+                header_fields_dict['Corporate_Customer_State'] = header_fields_dict['Customer_State']
+                header_fields_dict['Corporate_Customer_Zip'] = header_fields_dict['Customer_Zip']
 
             csv_file.writerow(["Invoice Details"])
             csv_file.writerow([""])
