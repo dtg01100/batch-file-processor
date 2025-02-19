@@ -7,12 +7,12 @@ import upc_e_to_upc_a
 from query_runner import query_runner
 
 
-def edi_tweak(
+def edi_convert(
     edi_process,
     output_filename,
-    upc_dict,
+    settings_dict,
     parameters_dict,
-    settings_dict
+    upc_dict,
 ):
 
     pad_arec = parameters_dict['pad_a_records']

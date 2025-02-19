@@ -389,9 +389,8 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         if parameters_dict['tweak_edi'] is True:
                                             print("Applying tweaks to " + output_send_filename)
                                             process_files_log.append(("Applying tweaks to " + output_send_filename + "\r\n\r\n"))
-                                            output_send_filename = edi_tweaks.edi_tweak(
-                                                output_send_filename, output_filename, upc_dict,
-                                                parameters_dict, settings)
+                                            output_send_filename = edi_tweaks.edi_convert(
+                                                output_send_filename, output_filename, settings, parameters_dict, upc_dict)
                                             print("Success")
                                             process_files_log.append("Success\r\n\r\n")
                                     except Exception as process_error:
