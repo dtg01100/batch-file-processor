@@ -51,49 +51,6 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
             header_a_record = line_from_mtc_edi_to_dict.capture_records(work_file_lined[0])
 
-            print(            f"""
-            SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
-                ohhst.btcfdt AS "Invoice Date",
-                TRIM(ohhst.btfdtx) AS "Terms Code",
-                dsagrep.agrrnb AS "Terms Duration",
-                dsabrep.abbvst AS "Customer Status",
-                dsabrep.ababnb AS "Customer Number",
-                TRIM(dsabrep.abaatx) AS "Customer Name",
-                TRIM(dsabrep.ababtx) AS "Customer Address",
-                TRIM(dsabrep.abaetx) AS "Customer Town",
-                TRIM(dsabrep.abaftx) AS "Customer State",
-                TRIM(dsabrep.abagtx) AS "Customer Zip",
-                CONCAT(dsabrep.abadnb, dsabrep.abaenb) AS "Customer Phone",
-                TRIM(cvgrrep.grm9xt) AS "Customer Email",
-                TRIM(cvgrrep.grnaxt) AS "Customer Email 2",
-                dsabrep_corp.abbvst AS "Corporate Customer Status",
-                dsabrep_corp.ababnb AS "Corporate Customer Number",
-                TRIM(dsabrep_corp.abaatx) AS "Corporate Customer Name",
-                TRIM(dsabrep_corp.ababtx) AS "Corporate Customer Address",
-                TRIM(dsabrep_corp.abaetx) AS "Corporate Customer Town",
-                TRIM(dsabrep_corp.abaftx) AS "Corporate Customer State",
-                TRIM(dsabrep_corp.abagtx) AS "Corporate Customer Zip",
-                CONCAT(dsabrep_corp.abadnb, dsabrep.abaenb) AS "Corporate Customer Phone",
-                TRIM(cvgrrep_corp.grm9xt) AS "Corporate Customer Email",
-                TRIM(cvgrrep_corp.grnaxt) AS "Corporate Customer Email 2"
-                FROM dacdata.ohhst ohhst
-                    INNER JOIN dacdata.dsabrep dsabrep
-                        ON ohhst.btabnb = dsabrep.ababnb
-                    INNER JOIN dacdata.cvgrrep cvgrrep
-                        ON dsabrep.ababnb = cvgrrep.grabnb
-                    INNER JOIN dacdata.dsadrep dsadrep
-                        ON dsabrep.abajcd = dsadrep.adaecd
-                        inner join dacdata.dsagrep dsagrep
-                        on ohhst.bta0cd = dsagrep.aga0cd
-                    LEFT outer JOIN dacdata.dsabrep dsabrep_corp
-                        ON dsabrep.abalnb = dsabrep_corp.ababnb
-                    LEFT outer JOIN dacdata.cvgrrep cvgrrep_corp
-                        ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
-                    LEFT outer JOIN dacdata.dsadrep dsadrep_corp
-                        ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
-                WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
-                    """)
-
             header_fields = query_object.run_arbitrary_query(
                 f"""
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
