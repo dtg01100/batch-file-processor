@@ -215,7 +215,7 @@ def edi_convert(
                     print("cannot parse b record field, skipping")
                 if edi_line_pass:
                     try:
-                        each_upc_string = upc_dict[item_number][:11][1].ljust(11)
+                        each_upc_string = upc_dict[item_number][1][:11].ljust(11)
                     except KeyError:
                         each_upc_string = "           "
                     try:
