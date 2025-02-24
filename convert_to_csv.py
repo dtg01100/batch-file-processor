@@ -89,7 +89,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                     if override_upc_category_filter == "ALL":
                                         do_updateupc = True
                                     else:
-                                        if upc_lut[int(input_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter:
+                                        if upc_lut[int(input_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter.split(","):
                                             do_updateupc = True
                                     if do_updateupc:
                                         input_edi_dict['upc_number'] = upc_lut[int(input_edi_dict['vendor_item'].strip())][override_upc_level]
