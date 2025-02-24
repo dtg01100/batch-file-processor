@@ -109,9 +109,9 @@ def edi_convert(
                 linebuilder = f"CTAB{descstr}{amountstr}\n"
                 wprocfile.write(linebuilder)
             # print(qry_ret_non_prepaid,qry_ret_prepaid)
-            if qry_ret_prepaid != 0:
+            if qry_ret_prepaid != 0 and qry_ret_prepaid is not None:
                 _write_line("Prepaid Sales Tax", qry_ret_prepaid, procfile)
-            if qry_ret_non_prepaid != 0:
+            if qry_ret_non_prepaid != 0 and qry_ret_non_prepaid is not None:
                 _write_line("Sales Tax", qry_ret_non_prepaid, procfile)
             self.unappended_records = False
 
