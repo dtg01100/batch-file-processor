@@ -99,10 +99,10 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                 input_edi_dict['upc_number'] = ""
                             except ValueError:
                                 input_edi_dict['upc_number'] = ""
-                            try:
-                                _ = int(input_edi_dict['upc_number'].rstrip())
-                            except ValueError:
-                                blank_upc = True
+                        try:
+                            _ = int(input_edi_dict['upc_number'].rstrip())
+                        except ValueError:
+                            blank_upc = True
 
                         if blank_upc is False:
                             proposed_upc = input_edi_dict['upc_number'].strip()
