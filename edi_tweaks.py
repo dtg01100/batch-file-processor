@@ -170,8 +170,11 @@ def edi_convert(
                     a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
             if invoice_date_custom_format:
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
-                invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
-                a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, invoice_date_custom_format_string)
+                try:
+                    invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
+                    a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, invoice_date_custom_format_string)
+                except ValueError:
+                    a_rec_edi_dict['invoice_date'] = "ERROR"
             if pad_arec == "True":
                 padding = arec_padding
                 fill = ' '
