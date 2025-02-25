@@ -137,7 +137,10 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         def flush_to_csv(self):
             self.brec_lines.reverse()
             self.crec_lines.reverse()
-            self.invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
+            try:
+                self.invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
+            except ValueError:
+                self.invoice_date = "N/A"
             self.invoice_total = utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total'])))
             lineno = 0
             while len(self.brec_lines) > 0:
