@@ -34,9 +34,8 @@ import dispatch
 import doingstuffoverlay
 import folders_database_migrator
 import print_run_log
-import rclick_menu
+import tk_extra_widgets
 import resend_interface
-import scrollbuttons
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
@@ -436,10 +435,10 @@ if __name__ == "__main__":
         search_frame = tkinter.ttk.Frame(users_list_frame)
         active_users_list_container = tkinter.ttk.Frame(scrollable_lists_frame)
         inactive_users_list_container = tkinter.ttk.Frame(scrollable_lists_frame)
-        active_users_list_frame = scrollbuttons.VerticalScrolledFrame(
+        active_users_list_frame = tk_extra_widgets.VerticalScrolledFrame(
             active_users_list_container
         )
-        inactive_users_list_frame = scrollbuttons.VerticalScrolledFrame(
+        inactive_users_list_frame = tk_extra_widgets.VerticalScrolledFrame(
             inactive_users_list_container
         )
         active_users_list_label = tkinter.ttk.Label(
@@ -450,7 +449,7 @@ if __name__ == "__main__":
         )  # inactive users title
         search_field = tkinter.ttk.Entry(search_frame)
         search_field.insert(0, folder_filter)
-        right_click_search_field = rclick_menu.RightClickMenu(search_field)
+        right_click_search_field = tk_extra_widgets.RightClickMenu(search_field)
         search_field.bind("<3>", right_click_search_field)
         search_field.bind("<Return>", search_field_callback)
         search_button = tkinter.ttk.Button(
@@ -890,28 +889,28 @@ if __name__ == "__main__":
                 offvalue="False",
                 text="Enable Report Printing Fallback:",
             )
-            rclick_as400_address_field = rclick_menu.RightClickMenu(
+            rclick_as400_address_field = tk_extra_widgets.RightClickMenu(
                 self.as400_address_field
             )
-            rclick_as400_username_field = rclick_menu.RightClickMenu(
+            rclick_as400_username_field = tk_extra_widgets.RightClickMenu(
                 self.as400_username_field
             )
-            rclick_as400_password_field = rclick_menu.RightClickMenu(
+            rclick_as400_password_field = tk_extra_widgets.RightClickMenu(
                 self.as400_password_field
             )
-            rclick_report_email_address_field = rclick_menu.RightClickMenu(
+            rclick_report_email_address_field = tk_extra_widgets.RightClickMenu(
                 self.email_address_field
             )
-            rclick_report_email_username_field = rclick_menu.RightClickMenu(
+            rclick_report_email_username_field = tk_extra_widgets.RightClickMenu(
                 self.email_username_field
             )
-            rclick_report_email_smtp_server_field = rclick_menu.RightClickMenu(
+            rclick_report_email_smtp_server_field = tk_extra_widgets.RightClickMenu(
                 self.email_smtp_server_field
             )
-            rclick_reporting_smtp_port_field = rclick_menu.RightClickMenu(
+            rclick_reporting_smtp_port_field = tk_extra_widgets.RightClickMenu(
                 self.smtp_port_field
             )
-            rclick_report_email_destination_field = rclick_menu.RightClickMenu(
+            rclick_report_email_destination_field = tk_extra_widgets.RightClickMenu(
                 self.report_email_destination_field
             )
             self.as400_address_field.bind("<3>", rclick_as400_address_field)
@@ -1640,7 +1639,7 @@ if __name__ == "__main__":
                 self.folder_alias_field = tkinter.ttk.Entry(
                     self.folder_alias_frame, width=30
                 )
-                rclick_folder_alias_field = rclick_menu.RightClickMenu(
+                rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
                     self.folder_alias_field
                 )
                 self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
@@ -1656,16 +1655,16 @@ if __name__ == "__main__":
                 command=lambda: select_copy_to_directory(),
             )
             self.ftp_server_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_server_field = rclick_menu.RightClickMenu(self.ftp_server_field)
+            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(self.ftp_server_field)
             self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
             self.ftp_port_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_port_field = rclick_menu.RightClickMenu(self.ftp_port_field)
+            rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
             self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
             self.ftp_folder_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_folder_field = rclick_menu.RightClickMenu(self.ftp_folder_field)
+            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(self.ftp_folder_field)
             self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
             self.ftp_username_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_username_field = rclick_menu.RightClickMenu(
+            rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
                 self.ftp_username_field
             )
             self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
@@ -1673,14 +1672,14 @@ if __name__ == "__main__":
                 self.prefsframe, show="*", width=30
             )
             self.email_recepient_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_email_recepient_field = rclick_menu.RightClickMenu(
+            rclick_email_recepient_field = tk_extra_widgets.RightClickMenu(
                 self.email_recepient_field
             )
             self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
             self.email_sender_subject_field = tkinter.ttk.Entry(
                 self.prefsframe, width=30
             )
-            rclick_email_sender_subject_field = rclick_menu.RightClickMenu(
+            rclick_email_sender_subject_field = tk_extra_widgets.RightClickMenu(
                 self.email_sender_subject_field
             )
             self.email_sender_subject_field.bind(
@@ -1689,7 +1688,7 @@ if __name__ == "__main__":
             self.invoice_date_custom_format_field = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
-            rclick_invoice_date_custom_format_field = rclick_menu.RightClickMenu(
+            rclick_invoice_date_custom_format_field = tk_extra_widgets.RightClickMenu(
                 self.invoice_date_custom_format_field
             )
             self.invoice_date_custom_format_field.bind(
@@ -3336,7 +3335,7 @@ if __name__ == "__main__":
         processed_files_popup_list_container = tkinter.ttk.Frame(
             processed_files_popup_body_frame
         )
-        processed_files_popup_list_frame = scrollbuttons.VerticalScrolledFrame(
+        processed_files_popup_list_frame = tk_extra_widgets.VerticalScrolledFrame(
             processed_files_popup_list_container
         )
         processed_files_popup_close_frame = tkinter.ttk.Frame(

@@ -5,7 +5,7 @@ from tkinter import *
 from tkinter.messagebox import showerror
 from tkinter.ttk import *
 
-import scrollbuttons
+import tk_extra_widgets
 
 
 def do(database_connection, master_window):
@@ -110,8 +110,8 @@ def do(database_connection, master_window):
         folder_list.append([line['folder_id'], folder_alias['alias']])
     sorted_folder_list = sorted(folder_list, key=itemgetter(1))
 
-    resend_interface_scrollable_folders_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_folders_frame)
-    resend_interface_scrollable_files_frame = scrollbuttons.VerticalScrolledFrame(resend_interface_files_frame)
+    resend_interface_scrollable_folders_frame = tk_extra_widgets.VerticalScrolledFrame(resend_interface_folders_frame)
+    resend_interface_scrollable_files_frame = tk_extra_widgets.VerticalScrolledFrame(resend_interface_files_frame)
     Label(master=resend_interface_scrollable_files_frame.interior, text="Select a Folder.").pack(padx=10)
 
     for folder, alias in sorted_folder_list:
