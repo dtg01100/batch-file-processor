@@ -1849,6 +1849,9 @@ if __name__ == "__main__":
             self.override_upc_category_filter_entry = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
+            self.override_upc_category_filter_tooltip = tk_extra_widgets.CreateToolTip(
+                self.override_upc_category_filter_entry,
+                "Enter 'ALL' or a comma separated list of numbers")
 
             self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(
                 self.convert_options_frame,
