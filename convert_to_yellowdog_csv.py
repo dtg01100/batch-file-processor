@@ -3,7 +3,6 @@ import csv
 from datetime import datetime
 from typing import Dict
 
-import line_from_mtc_edi_to_dict
 import utils
 from query_runner import query_runner
 
@@ -199,7 +198,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         ) as outfile_obj:
             yellowdog_writer = YDogWriter(outfile_obj)
             for line in work_file.readlines():
-                line_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                line_dict = utils.capture_records(line)
                 yellowdog_writer.add_line(line_dict)
             yellowdog_writer.flush_to_csv()
     return output_filename+".csv"

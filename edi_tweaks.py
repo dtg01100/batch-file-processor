@@ -2,8 +2,7 @@ import time
 from datetime import datetime, timedelta
 from decimal import *
 
-import line_from_mtc_edi_to_dict
-import upc_e_to_upc_a
+import utils
 from query_runner import query_runner
 
 
@@ -154,7 +153,7 @@ def edi_convert(
     po_fetcher = poFetcher(settings_dict)
 
     for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
-        input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+        input_edi_dict = utils.capture_records(line)
         writeable_line = line
         if writeable_line.startswith("A"):
             a_rec_edi_dict = input_edi_dict
@@ -239,12 +238,12 @@ def edi_convert(
                     proposed_upc = b_rec_edi_dict["upc_number"].strip()
                     if len(str(proposed_upc)) == 11:
                         b_rec_edi_dict['upc_number'] = str(proposed_upc) + str(
-                            upc_e_to_upc_a.calc_check_digit(proposed_upc)
+                            utils.calc_check_digit(proposed_upc)
                         )
                     else:
                         if len(str(proposed_upc)) == 8:
                             b_rec_edi_dict['upc_number'] = str(
-                                upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc)
+                                utils.convert_UPCE_to_UPCA(proposed_upc)
                             )
                 else:
                     b_rec_edi_dict['upc_number'] = "            "

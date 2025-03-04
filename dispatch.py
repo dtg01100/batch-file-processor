@@ -12,12 +12,11 @@ import threading
 import time
 from io import StringIO
 
-import clear_old_files
 import doingstuffoverlay
 import edi_tweaks
 import mtc_edi_validator
 import record_error
-import split_edi
+import utils
 from query_runner import query_runner
 
 
@@ -323,7 +322,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         process_files_log.append(("Splitting edi file " + process_original_filename + "...\r\n"))
                         print("Splitting edi file " + process_original_filename + "...")
                         try:
-                            split_edi_list = split_edi.do_split_edi(input_filename, file_scratch_folder, parameters_dict)
+                            split_edi_list = utils.do_split_edi(input_filename, file_scratch_folder, parameters_dict)
                             if len(split_edi_list) > 1:
                                 process_files_log.append(
                                     ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n"))
@@ -505,7 +504,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         folder_error_log_name_full_path = os.path.join(run_log_directory,
                                                                        folder_error_log_name_constructor)
                 with open(folder_error_log_name_full_path, 'wb') as folder_errors_log_write:
-                    clear_old_files.do_clear(folder_errors_dir, 500)
+                    utils.do_clear_old_files(folder_errors_dir, 500)
                     folder_errors_log_write.write(("Program Version = " + version + "\r\n\r\n").encode())
                     folder_errors_log_write.write(folder_errors_log.getvalue().encode())
                     if reporting['enable_reporting'] == "True":

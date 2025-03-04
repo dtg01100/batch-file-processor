@@ -1,8 +1,7 @@
 import csv
 from decimal import Decimal
 
-import line_from_mtc_edi_to_dict
-import upc_e_to_upc_a
+import utils
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lut):
     # save input parameters as variables
@@ -38,7 +37,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                 "Description", "Case Pack", "Item Number"])
 
             for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
-                input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
 
                     # if include "A" records flag is set and line starts with "A"
@@ -109,9 +108,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                             if len(str(proposed_upc)) == 12:
                                 upc_string = str(proposed_upc)
                             if len(str(proposed_upc)) == 11:
-                                upc_string = str(proposed_upc) + str(upc_e_to_upc_a.calc_check_digit(proposed_upc))
+                                upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
                             if len(str(proposed_upc)) == 8:
-                                upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
+                                upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
 
                         upc_in_csv = "\t" + upc_string if conv_calc_upc != "False" and blank_upc is False \
                             else input_edi_dict['upc_number']

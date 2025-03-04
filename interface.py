@@ -26,7 +26,7 @@ import thefuzz.process # type: ignore
 
 import backup_increment
 import batch_log_sender
-import clear_old_files
+import utils
 import create_database
 import database_import
 import dialog
@@ -2658,7 +2658,7 @@ if __name__ == "__main__":
         run_summary_string = ""
 
         with open(run_log_full_path, "wb") as run_log:
-            clear_old_files.do_clear(run_log_path, 1000)
+            utils.do_clear_old_files(run_log_path, 1000)
             run_log.write(("Batch File Sender Version " + VERSION + "\r\n").encode())
             run_log.write(("starting run at " + time.ctime() + "\r\n").encode())
             if reporting["enable_reporting"] == "True":

@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 
-import line_from_mtc_edi_to_dict
-import upc_e_to_upc_a
+import utils
 from query_runner import query_runner
 
 
@@ -49,7 +48,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
             # build header
 
-            header_a_record = line_from_mtc_edi_to_dict.capture_records(work_file_lined[0])
+            header_a_record = utils.capture_records(work_file_lined[0])
 
             header_fields = query_object.run_arbitrary_query(
                 f"""
@@ -219,16 +218,16 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 if blank_upc is False:
                     proposed_upc = input_upc
                     if len(str(proposed_upc)) == 11:
-                        upc_string = str(proposed_upc) + str(upc_e_to_upc_a.calc_check_digit(proposed_upc))
+                        upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
                     else:
                         if len(str(proposed_upc)) == 8:
-                            upc_string = str(upc_e_to_upc_a.convert_UPCE_to_UPCA(proposed_upc))
+                            upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
                 return upc_string
 
             for line_num, line in enumerate(
                 work_file_lined
             ):  # iterate over work file contents
-                input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
                     if input_edi_dict['record_type'] == 'B':
                         total_price, qtyint = convert_to_item_total(input_edi_dict['unit_cost'], input_edi_dict['qty_of_units'])

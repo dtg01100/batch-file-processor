@@ -5,7 +5,6 @@ from decimal import Decimal
 from typing import List
 from query_runner import query_runner
 
-import line_from_mtc_edi_to_dict
 import utils
 
 class invFetcher:
@@ -205,7 +204,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
             for line_num, line in enumerate(
                 work_file_lined
             ):  # iterate over work file contents
-                input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
                     if input_edi_dict["record_type"] == "A":
                         (

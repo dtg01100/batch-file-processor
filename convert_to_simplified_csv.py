@@ -1,7 +1,7 @@
 import csv
 from decimal import Decimal
 
-import line_from_mtc_edi_to_dict
+import utils
 import upc_e_to_upc_a
 
 
@@ -68,7 +68,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             for line_num, line in enumerate(
                 work_file_lined
             ):  # iterate over work file contents
-                input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+                input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
                     if input_edi_dict["record_type"] == "B":
                         if retail_uom:

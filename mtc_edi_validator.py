@@ -1,7 +1,7 @@
 import time
 from io import StringIO
 
-import line_from_mtc_edi_to_dict
+import utils
 
 
 # this function does a simple check to see if input file is an edi file, and returns false if it isn't
@@ -55,7 +55,7 @@ def check(input_file):
 
 def report_edi_issues(input_file):
     def _insert_description_and_number(issue_line):
-        line_dict = line_from_mtc_edi_to_dict.capture_records(issue_line)
+        line_dict = utils.capture_records(issue_line)
         in_memory_log.write("Item description: " + line_dict['description'] + "\r\n")
         in_memory_log.write("Item number: " + line_dict['vendor_item'] + "\r\n\r\n")
     in_memory_log = StringIO()

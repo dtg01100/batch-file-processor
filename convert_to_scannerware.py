@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-import line_from_mtc_edi_to_dict
+import utils
 
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
@@ -17,7 +17,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         output_filename = output_filename + ".txt"
     with open(output_filename, 'wb') as f:  # open work file, overwriting old file
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
-            input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+            input_edi_dict = utils.capture_records(line)
             writeable_line = line.strip("\r\n")
             line_builder_list = []
             if writeable_line.startswith("A"):
@@ -26,9 +26,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 line_builder_list.append(input_edi_dict['invoice_number'][-7:])
                 line_builder_list.append('   ')
 
-                write_invoice_date = line_from_mtc_edi_to_dict.capture_records(writeable_line)['invoice_date']
+                write_invoice_date = utils.capture_records(writeable_line)['invoice_date']
                 if invoice_date_offset != 0:
-                    invoice_date_string = line_from_mtc_edi_to_dict.capture_records(writeable_line)['invoice_date']
+                    invoice_date_string = utils.capture_records(writeable_line)['invoice_date']
                     if not invoice_date_string == '000000':
                         invoice_date = datetime.strptime(invoice_date_string, '%m%d%y')
                         offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)

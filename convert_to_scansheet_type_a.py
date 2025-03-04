@@ -10,7 +10,7 @@ from barcode.writer import ImageWriter
 from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
 
-import line_from_mtc_edi_to_dict
+import utils
 from query_runner import query_runner
 
 
@@ -38,7 +38,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         invoice_list = []
 
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
-            input_edi_dict = line_from_mtc_edi_to_dict.capture_records(line)
+            input_edi_dict = utils.capture_records(line)
             try:
                 if input_edi_dict["record_type"] == "A":
                     invoice_list.append(input_edi_dict["invoice_number"][-7:])
