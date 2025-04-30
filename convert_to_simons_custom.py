@@ -269,7 +269,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                     if input_edi_dict['record_type'] == 'B':
                         total_price, qtyint = convert_to_item_total(input_edi_dict['unit_cost'], input_edi_dict['qty_of_units'])
                         csv_file.writerow([
-                            input_edi_dict['vendor_item']
+                            input_edi_dict['vendor_item'],
                             input_edi_dict['description'],
                             generate_full_upc(input_edi_dict['upc_number']),
                             qtyint,
