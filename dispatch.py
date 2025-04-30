@@ -342,87 +342,97 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         process_files_log.append("Cannot split edi file\r\n\r\n")
                         print("Cannot split edi file")
                     for output_send_filename, filename_prefix, filename_suffix in split_edi_list:
+                        skip_file = False
+                        if parameters_dict['split_edi'] and valid_edi_file:
+                            file_is_credit = utils.detect_invoice_is_credit(output_send_filename)
+                            if file_is_credit:
+                                if parameters_dict["split_edi_include_credits"] == 0:
+                                    skip_file = True
+                            if file_is_credit is False:
+                                if parameters_dict["split_edi_include_invoices"] == 0:
+                                    skip_file = True
                         if errors is True:
                             break
-                        rename_file = os.path.basename(output_send_filename)
-                        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
-                        if parameters_dict['rename_file'].strip() != '':
-                            rename_file = "".join([
-                                filename_prefix,
-                                parameters_dict['rename_file'].strip().replace("%datetime%", date_time)
-                                ,".",
-                                os.path.basename(input_filename).split(".")[-1],
-                                filename_suffix
-                                ])
-                        stripped_filename = re.sub('[^A-Za-z0-9. _]+', '', rename_file)
-                        if os.path.exists(output_send_filename):
-                            if parameters_dict['process_edi'] != "True" and errors is False:
-                                output_filename = os.path.join(
-                                    file_scratch_folder,
-                                    os.path.basename(stripped_filename))
-                                if os.path.exists(os.path.dirname(output_filename)) is False:
-                                    os.mkdir(os.path.dirname(output_filename))
-                                try:
-                                    shutil.copyfile(output_send_filename, output_filename)
-                                    output_send_filename = output_filename
-                                except Exception:
-                                    pass
-                            if valid_edi_file:
-                                if errors is False:
-                                    # if the current file is recognized as a valid edi file,
-                                    # then allow conversion, otherwise log and carry on
+                        if not skip_file:
+                            rename_file = os.path.basename(output_send_filename)
+                            date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
+                            if parameters_dict['rename_file'].strip() != '':
+                                rename_file = "".join([
+                                    filename_prefix,
+                                    parameters_dict['rename_file'].strip().replace("%datetime%", date_time)
+                                    ,".",
+                                    os.path.basename(input_filename).split(".")[-1],
+                                    filename_suffix
+                                    ])
+                            stripped_filename = re.sub('[^A-Za-z0-9. _]+', '', rename_file)
+                            if os.path.exists(output_send_filename):
+                                if parameters_dict['process_edi'] != "True" and errors is False:
                                     output_filename = os.path.join(
                                         file_scratch_folder,
                                         os.path.basename(stripped_filename))
                                     if os.path.exists(os.path.dirname(output_filename)) is False:
                                         os.mkdir(os.path.dirname(output_filename))
                                     try:
-                                        if parameters_dict['process_edi'] == "True":
-                                            module_name = 'convert_to_' + parameters_dict['convert_to_format'].lower().replace(' ', '_').replace('-', '_')
-                                            module = importlib.import_module(module_name)
-                                            print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
-                                            process_files_log.append(("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'] + "\r\n\r\n"))
-                                            output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, upc_dict)
-                                            print("Success")
-                                            process_files_log.append("Success\r\n\r\n")
-                                        if parameters_dict['tweak_edi'] is True:
-                                            print("Applying tweaks to " + output_send_filename)
-                                            process_files_log.append(("Applying tweaks to " + output_send_filename + "\r\n\r\n"))
-                                            output_send_filename = edi_tweaks.edi_tweak(
-                                                output_send_filename, output_filename, upc_dict,
-                                                parameters_dict, settings)
-                                            print("Success")
-                                            process_files_log.append("Success\r\n\r\n")
+                                        shutil.copyfile(output_send_filename, output_filename)
+                                        output_send_filename = output_filename
+                                    except Exception:
+                                        pass
+                                if valid_edi_file:
+                                    if errors is False:
+                                        # if the current file is recognized as a valid edi file,
+                                        # then allow conversion, otherwise log and carry on
+                                        output_filename = os.path.join(
+                                            file_scratch_folder,
+                                            os.path.basename(stripped_filename))
+                                        if os.path.exists(os.path.dirname(output_filename)) is False:
+                                            os.mkdir(os.path.dirname(output_filename))
+                                        try:
+                                            if parameters_dict['process_edi'] == "True":
+                                                module_name = 'convert_to_' + parameters_dict['convert_to_format'].lower().replace(' ', '_').replace('-', '_')
+                                                module = importlib.import_module(module_name)
+                                                print("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'])
+                                                process_files_log.append(("Converting " + output_send_filename + " to " + parameters_dict['convert_to_format'] + "\r\n\r\n"))
+                                                output_send_filename = module.edi_convert(output_send_filename, output_filename, settings, parameters_dict, upc_dict)
+                                                print("Success")
+                                                process_files_log.append("Success\r\n\r\n")
+                                            if parameters_dict['tweak_edi'] is True:
+                                                print("Applying tweaks to " + output_send_filename)
+                                                process_files_log.append(("Applying tweaks to " + output_send_filename + "\r\n\r\n"))
+                                                output_send_filename = edi_tweaks.edi_tweak(
+                                                    output_send_filename, output_filename, upc_dict,
+                                                    parameters_dict, settings)
+                                                print("Success")
+                                                process_files_log.append("Success\r\n\r\n")
+                                        except Exception as process_error:
+                                            print(str(process_error))
+                                            errors = True
+                                            process_files_log, process_files_error_log = record_error.do(
+                                                process_files_log, process_files_error_log, str(process_error),
+                                                str(output_send_filename), "EDI Processor", True)
+
+                            # the following blocks process the files using the specified backend,
+                            # and log in the event of any errors
+                            backends = [
+                                ('copy_backend', 'copy_to_directory', 'Copy Backend'),
+                                ('ftp_backend', 'ftp_server', 'FTP Backend'),
+                                ('email_backend', 'email_to', 'Email Backend')
+                            ]
+                            for backend_name, dir_setting, backend_name_print in backends:
+                                if parameters_dict['process_backend_' + backend_name.split('_')[0]] is True and errors is False:
+                                    try:
+                                        print(f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}")
+                                        process_files_log.append(
+                                            f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}\r\n\r\n")
+                                        importlib.import_module(backend_name).do(parameters_dict, settings, output_send_filename)
+                                        process_files_log.append("Success\r\n\r\n")
                                     except Exception as process_error:
                                         print(str(process_error))
+                                        process_files_log, process_files_error_log = record_error.do(process_files_log,
+                                                                                                    process_files_error_log,
+                                                                                                    str(process_error),
+                                                                                                    str(output_send_filename),
+                                                                                                    backend_name_print, True)
                                         errors = True
-                                        process_files_log, process_files_error_log = record_error.do(
-                                            process_files_log, process_files_error_log, str(process_error),
-                                            str(output_send_filename), "EDI Processor", True)
-
-                        # the following blocks process the files using the specified backend,
-                        # and log in the event of any errors
-                        backends = [
-                            ('copy_backend', 'copy_to_directory', 'Copy Backend'),
-                            ('ftp_backend', 'ftp_server', 'FTP Backend'),
-                            ('email_backend', 'email_to', 'Email Backend')
-                        ]
-                        for backend_name, dir_setting, backend_name_print in backends:
-                            if parameters_dict['process_backend_' + backend_name.split('_')[0]] is True and errors is False:
-                                try:
-                                    print(f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}")
-                                    process_files_log.append(
-                                        f"sending {output_send_filename} to {parameters_dict[dir_setting]} with {backend_name_print}\r\n\r\n")
-                                    importlib.import_module(backend_name).do(parameters_dict, settings, output_send_filename)
-                                    process_files_log.append("Success\r\n\r\n")
-                                except Exception as process_error:
-                                    print(str(process_error))
-                                    process_files_log, process_files_error_log = record_error.do(process_files_log,
-                                                                                                process_files_error_log,
-                                                                                                str(process_error),
-                                                                                                str(output_send_filename),
-                                                                                                backend_name_print, True)
-                                    errors = True
                 return \
                     errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log
 

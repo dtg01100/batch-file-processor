@@ -319,3 +319,15 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" set "override_upc_category_filter"="ALL"')
         update_version = dict(id=1, version="30", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '30':
+        database_connection.query("alter table 'folders' add column 'split_edi_include_invoices'")
+        database_connection.query('UPDATE "folders" set "split_edi_include_invoices"=True')
+        database_connection.query("alter table 'folders' add column 'split_edi_include_credits'")
+        database_connection.query('UPDATE "folders" set "split_edi_include_credits"=True')
+        database_connection.query("alter table 'administrative' add column 'split_edi_include_invoices'")
+        database_connection.query('UPDATE "administrative" set "split_edi_include_invoices"=True')
+        database_connection.query("alter table 'administrative' add column 'split_edi_include_credits'")
+        database_connection.query('UPDATE "administrative" set "split_edi_include_credits"=True')
+        update_version = dict(id=1, version="31", os=running_platform)
+        db_version.update(update_version, ['id'])

@@ -49,6 +49,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        export_processed_folder_prior=os.path.expanduser('~'),
                                        report_edi_errors=False,
                                        split_edi=False,
+                                       split_edi_include_invoices=True,
+                                       split_edi_include_credits=True,
                                        force_edi_validation=False,
                                        append_a_records='False',
                                        a_record_append_text='',

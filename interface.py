@@ -41,7 +41,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "30"
+    DATABASE_VERSION = "31"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -1237,6 +1237,8 @@ if __name__ == "__main__":
             self.backendvariable = tkinter.StringVar(master)
             self.active_checkbutton = tkinter.StringVar(master)
             self.split_edi = tkinter.BooleanVar(master)
+            self.split_edi_send_credits = tkinter.BooleanVar(master)
+            self.split_edi_send_invoices = tkinter.BooleanVar(master)
             self.prepend_file_dates = tkinter.BooleanVar(master)
             self.ediconvert_options = tkinter.StringVar(master)
             self.process_edi = tkinter.StringVar(master)
@@ -1528,6 +1530,8 @@ if __name__ == "__main__":
                     and self.process_backend_email_check.get() is False
                 ):
                     self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
+                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.DISABLED)
+                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.DISABLED)
                     self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
                     self.rename_file_field.configure(state=tkinter.DISABLED)
                     self.edi_options_menu.configure(state=tkinter.DISABLED)
@@ -1543,6 +1547,8 @@ if __name__ == "__main__":
                             pass
                 else:
                     self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
+                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.NORMAL)
+                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.NORMAL)
                     self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
                     self.rename_file_field.configure(state=tkinter.NORMAL)
                     self.edi_options_menu.configure(state=tkinter.NORMAL)
@@ -1704,10 +1710,26 @@ if __name__ == "__main__":
                 offvalue=False,
             )
 
+            self.split_edi_frame = tkinter.ttk.Frame(self.ediframe)
+
             self.split_edi_checkbutton = tkinter.ttk.Checkbutton(
-                self.ediframe,
+                self.split_edi_frame,
                 variable=self.split_edi,
                 text="Split EDI",
+                onvalue=True,
+                offvalue=False,
+            )
+            self.split_edi_send_invoices_checkbutton = tkinter.ttk.Checkbutton(
+                self.split_edi_frame,
+                variable=self.split_edi_send_invoices,
+                text="Split EDI Send Invoices",
+                onvalue=True,
+                offvalue=False,
+            )
+            self.split_edi_send_credits_checkbutton = tkinter.ttk.Checkbutton(
+                self.split_edi_frame,
+                variable=self.split_edi_send_credits,
+                text="Split EDI Send Credits",
                 onvalue=True,
                 offvalue=False,
             )
@@ -1943,6 +1965,8 @@ if __name__ == "__main__":
                 self.pad_arec_check.set(config_dict["pad_a_records"])
                 self.tweak_edi.set(config_dict["tweak_edi"])
                 self.split_edi.set(config_dict["split_edi"])
+                self.split_edi_send_credits.set(config_dict["split_edi_include_credits"])
+                self.split_edi_send_invoices.set(config_dict["split_edi_include_invoices"])
                 self.prepend_file_dates.set(config_dict["prepend_date_files"])
                 self.rename_file_field.delete(0, tkinter.END)
                 self.rename_file_field.insert(0, config_dict["rename_file"])
@@ -2014,7 +2038,15 @@ if __name__ == "__main__":
                     child.grid_forget()
                 make_ediconvert_options(argument)
 
+            self.split_edi_frame.grid(
+                row=2, column=0, columnspan=2, sticky=tkinter.W)
             self.split_edi_checkbutton.grid(
+                row=0, column=0, columnspan=2, sticky=tkinter.W
+            )
+            self.split_edi_send_invoices_checkbutton.grid(
+                row=1, column=0, columnspan=2, sticky=tkinter.W
+            )
+            self.split_edi_send_credits_checkbutton.grid(
                 row=2, column=0, columnspan=2, sticky=tkinter.W
             )
             self.prepend_file_dates_checkbutton.grid(
@@ -2240,6 +2272,8 @@ if __name__ == "__main__":
             apply_to_folder["force_edi_validation"] = self.force_edi_check_var.get()
             apply_to_folder["tweak_edi"] = self.tweak_edi.get()
             apply_to_folder["split_edi"] = self.split_edi.get()
+            apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
+            apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
             apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
             apply_to_folder["rename_file"] = self.rename_file_field.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())

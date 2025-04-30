@@ -37,6 +37,15 @@ def dactime_from_invtime(inv_no: str):
     dactime = dactime_from_datetime(datetime_obj)
     return dactime
 
+def detect_invoice_is_credit(edi_process):
+    with open(edi_process, encoding="utf-8") as work_file:  # open input file
+        fields = capture_records(work_file.readline())
+        if fields["record_type"] != 'A':
+            raise ValueError("[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen")
+        if dac_str_int_to_int(fields["invoice_total"]) >= 0:
+            return False
+        else:
+            return True
 
 def capture_records(line):
     if line.startswith("A"):
