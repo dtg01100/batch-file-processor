@@ -185,6 +185,22 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                     prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration'], -1),
                 ]
             )
+            if header_fields_dict["Corporate_Customer_Number"] is not None:
+                ship_to_segment = [
+                    str(header_fields_dict['Corporate_Customer_Number']) + "\n" + \
+                    header_fields_dict['Corporate_Customer_Name'] + "\n" + \
+                    header_fields_dict['Corporate_Customer_Address'] + "\n" + \
+                    header_fields_dict['Corporate_Customer_Town'] + ", " + header_fields_dict['Corporate_Customer_State'] + ", " + header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
+                "US",
+                ]
+            else:
+                ship_to_segment = [
+                    str(header_fields_dict['Customer_Number']) + "\n" + \
+                    header_fields_dict['Customer_Name'] + "\n" + \
+                    header_fields_dict['Customer_Address'] + "\n" + \
+                    header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
+                    "US",
+                ]
             csv_file.writerow(
                 ["Bill To:",
                 str(header_fields_dict['Customer_Number']) + "\n" + \
@@ -192,12 +208,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                 header_fields_dict['Customer_Address'] + "\n" + \
                 header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
                 "US",
-                "Ship To:",
-                str(header_fields_dict['Corporate_Customer_Number']) + "\n" + \
-                header_fields_dict['Corporate_Customer_Name'] + "\n" + \
-                header_fields_dict['Corporate_Customer_Address'] + "\n" + \
-                header_fields_dict['Corporate_Customer_Town'] + ", " + header_fields_dict['Corporate_Customer_State'] + ", " + header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
-                "US",]
+                "Ship To:"] + ship_to_segment
             )
             csv_file.writerow([""])
             csv_file.writerow(["Item Number", "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
