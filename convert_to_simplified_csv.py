@@ -2,7 +2,6 @@ import csv
 from decimal import Decimal
 
 import utils
-import upc_e_to_upc_a
 
 
 class CustomerLookupError(Exception):
