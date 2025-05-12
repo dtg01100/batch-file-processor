@@ -170,7 +170,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                 "Bill To:"] + bill_to_segment
             )
             csv_file.writerow([""])
-            csv_file.writerow(["Item Number", "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
+            csv_file.writerow(["Invoice Number", "Store Number", "Item Number", "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
 
             uom_lookup_list = query_object.run_arbitrary_query(f"""
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
@@ -258,5 +258,5 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                             "$"+str(convert_to_price(input_edi_dict['amount'])),
                             "$"+str(convert_to_price(input_edi_dict['amount']))
                         ])
-            csv_file.writerow(["","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
+            csv_file.writerow(["","","","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
     return(output_filename + ".csv")
