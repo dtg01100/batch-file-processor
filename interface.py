@@ -1490,7 +1490,7 @@ if __name__ == "__main__":
                 "ScannerWare",
                 "scansheet-type-a",
                 "jolley_custom",
-                "simons_custom",
+                "stewarts_custom",
                 "simplified_csv",
                 "Estore eInvoice",
                 "Estore eInvoice Generic",
