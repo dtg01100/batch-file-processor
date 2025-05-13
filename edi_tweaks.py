@@ -6,7 +6,7 @@ import utils
 from query_runner import query_runner
 
 
-def edi_convert(
+def edi_tweak(
     edi_process,
     output_filename,
     settings_dict,
