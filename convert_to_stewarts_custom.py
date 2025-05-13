@@ -162,7 +162,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, ea
                 ]
             csv_file.writerow(
                 ["Ship To:",
-                str(header_fields_dict['Customer_Number']) + " " + str(header_fields_dict["Customer_Store_number"]) + "\n" + \
+                str(header_fields_dict['Customer_Number']) + " " + str(header_fields_dict["Customer_Store_Number"]) + "\n" + \
                 header_fields_dict['Customer_Name'] + "\n" + \
                 header_fields_dict['Customer_Address'] + "\n" + \
                 header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
