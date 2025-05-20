@@ -150,7 +150,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 ]
             )
             if header_fields_dict["Corporate_Customer_Number"] is not None:
-                bill_to_segment = [
+                ship_to_segment = [
                     str(header_fields_dict['Corporate_Customer_Number']) + "\n" + \
                     header_fields_dict['Corporate_Customer_Name'] + "\n" + \
                     header_fields_dict['Corporate_Customer_Address'] + "\n" + \
@@ -158,7 +158,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 "US",
                 ]
             else:
-                bill_to_segment = [
+                ship_to_segment = [
                     str(header_fields_dict['Customer_Number']) + "\n" + \
                     header_fields_dict['Customer_Name'] + "\n" + \
                     header_fields_dict['Customer_Address'] + "\n" + \
@@ -166,13 +166,13 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     "US",
                 ]
             csv_file.writerow(
-                ["Ship To:",
+                ["Bill To:",
                 str(header_fields_dict['Customer_Number']) + "\n" + \
                 header_fields_dict['Customer_Name'] + "\n" + \
                 header_fields_dict['Customer_Address'] + "\n" + \
                 header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
                 "US",
-                "Bill To:"] + bill_to_segment
+                "Ship To:"] + ship_to_segment
             )
             csv_file.writerow([""])
             csv_file.writerow(["Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
