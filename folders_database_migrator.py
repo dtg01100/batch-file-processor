@@ -331,3 +331,11 @@ def upgrade_database(database_connection, config_folder, running_platform):
         database_connection.query('UPDATE "administrative" set "split_edi_include_credits"=True')
         update_version = dict(id=1, version="31", os=running_platform)
         db_version.update(update_version, ['id'])
+
+    if db_version_dict['version'] == '31':
+        database_connection.query("alter table 'folders' add column 'fintech_division_id'")
+        database_connection.query('UPDATE "folders" set "fintech_division_id"=0')
+        database_connection.query("alter table 'administrative' add column 'fintech_division_id'")
+        database_connection.query('UPDATE "administrative" set "fintech_division_id"=0')
+        update_version = dict(id=1, version="32", os=running_platform)
+        db_version.update(update_version, ['id'])

@@ -41,7 +41,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "31"
+    DATABASE_VERSION = "32"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -1372,6 +1372,8 @@ if __name__ == "__main__":
                     self.estore_Vendor_OId_field,
                     self.estore_vendor_namevendoroid_label,
                     self.estore_vendor_namevendoroid_field,
+                    self.fintech_divisionid_field,
+                    self.fintech_divisionid_label
                 ]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == "csv":
@@ -1481,6 +1483,13 @@ if __name__ == "__main__":
                     self.estore_c_record_oid_field.grid(
                         row=5, column=1, sticky=tkinter.E, padx=3
                     )
+                if self.convert_formats_var.get() == 'fintech':
+                    self.fintech_divisionid_label.grid(
+                        row=2, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.fintech_divisionid_field.grid(
+                        row=2, column=1, sticky=tkinter.E, padx=3
+                    )
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
                 self.convert_to_selector_frame,
@@ -1495,6 +1504,7 @@ if __name__ == "__main__":
                 "Estore eInvoice",
                 "Estore eInvoice Generic",
                 "YellowDog CSV",
+                "fintech",
                 command=make_convert_to_options,
             )
 
@@ -1920,6 +1930,12 @@ if __name__ == "__main__":
             self.estore_c_record_oid_field = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
+            self.fintech_divisionid_label = tkinter.ttk.Label(
+                self.convert_options_frame, text="Fintech Division_id"
+            )
+            self.fintech_divisionid_field = tkinter.ttk.Entry(
+                self.convert_options_frame, width=10
+            )
 
             def set_dialog_variables(config_dict, copied):
                 if copied:
@@ -2017,6 +2033,10 @@ if __name__ == "__main__":
                 self.estore_c_record_oid_field.delete(0, tkinter.END)
                 self.estore_c_record_oid_field.insert(
                     0, config_dict["estore_c_record_OID"]
+                )
+                self.fintech_divisionid_field.delete(0, tkinter.END)
+                self.fintech_divisionid_field.insert(
+                    0, config_dict["fintech_division_id"]
                 )
 
                 if copied:
@@ -2316,6 +2336,7 @@ if __name__ == "__main__":
             apply_to_folder[
                 "estore_vendor_NameVendorOID"
             ] = self.estore_vendor_namevendoroid_field.get()
+            apply_to_folder['fintech_division_id'] = self.fintech_divisionid_field.get()
 
             if self.foldersnameinput["folder_name"] != "template":
                 update_folder_alias(apply_to_folder)
@@ -2530,6 +2551,14 @@ if __name__ == "__main__":
                                 "Override UPC Category Filter Is Invalid"
                             )
                             errors = True
+            if self.convert_formats_var.get() == "fintech":
+                try:
+                    _ = int(self.fintech_divisionid_field.get())
+                except ValueError:
+                    error_string_constructor_list.append(
+                        "fintech divisionid needs to be a number"
+                    )
+                    errors = True
             if self.foldersnameinput["folder_name"] != "template":
                 if str(self.folder_alias_field.get()) != self.foldersnameinput["alias"]:
                     proposed_folder = database_obj_instance.folders_table.find_one(

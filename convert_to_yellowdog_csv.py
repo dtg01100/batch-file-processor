@@ -9,97 +9,7 @@ from query_runner import query_runner
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
 
-    class invFetcher:
-        def __init__(self, settings_dict):
-            self.query_object = None
-            self.settings = settings_dict
-            self.last_invoice_number = 0
-            self.uom_lut = {0: "N/A"}
-            self.last_invno = 0
-            self.po = ""
-            self.cust = ""
-
-        def _db_connect(self):
-            self.query_object = query_runner(
-                self.settings["as400_username"],
-                self.settings["as400_password"],
-                self.settings["as400_address"],
-                f"{self.settings['odbc_driver']}",
-            )
-
-        def _run_qry(self, qry_str):
-            if self.query_object is None:
-                self._db_connect()
-            qry_return = self.query_object.run_arbitrary_query(qry_str)
-            return qry_return
-
-        def fetch_po(self, invoice_number):
-            if invoice_number == self.last_invoice_number:
-                return self.po
-            else:
-                qry_ret = self._run_qry(
-                    f"""
-                    SELECT
-	            trim(ohhst.bte4cd),
-                    trim(ohhst.bthinb)
-	            --PO Number
-                    FROM
-	            dacdata.ohhst ohhst
-                    WHERE
-	            ohhst.BTHHNB = {str(int(invoice_number))}
-                """
-                )
-                self.last_invoice_number = invoice_number
-                try:
-                    self.po = qry_ret[0][0]
-                    self.cust = qry_ret[0][1]
-                except IndexError:
-                    self.po = ""
-                return self.po
-
-        def fetch_cust(self, invoice_number):
-            self.fetch_po(invoice_number)
-            return self.cust
-
-        def fetch_uom_desc(self, itemno, uommult, lineno, invno):
-            if invno != self.last_invno:
-                self.uom_lut = {0: "N/A"}
-                qry = f"""
-                    SELECT
-                        BUHUNB,
-                        --lineno
-                        BUHXTX
-                        -- u/m desc
-                    FROM
-                        dacdata.odhst odhst
-                    WHERE
-                        odhst.BUHHNB = {str(int(invno))}
-                """
-                qry_ret = self._run_qry(qry)
-                self.uom_lut = dict(qry_ret)
-                self.last_invno = invno
-            try:
-                return self.uom_lut[lineno + 1]
-            except KeyError as error:
-                try:
-                    if int(uommult) > 1:
-                        qry = f"""select dsanrep.ANB9TX
-                                from dacdata.dsanrep dsanrep
-                                where dsanrep.ANBACD = {str(int(itemno))}"""
-                    else:
-                        qry = f"""select dsanrep.ANB8TX
-                                from dacdata.dsanrep dsanrep
-                                where dsanrep.ANBACD = {str(int(itemno))}"""
-                    uomqry_ret = self._run_qry(qry)
-                    return uomqry_ret[0][0]
-                except Exception as error:
-                    try:
-                        if int(uommult) > 1:
-                            return "HI"
-                        else:
-                            return "LO"
-                    except ValueError:
-                        return "NA"
+    invFetcher = utils.invFetcher
 
     class YDogWriter:
         def __init__(self, outfile_obj) -> None:
@@ -154,7 +64,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                         self.inv_fetcher.fetch_uom_desc(curline['vendor_item'], curline['unit_multiplier'], lineno, int(self.arec_line['invoice_number'])),
                         self.invoice_date,
                         self.arec_line['invoice_number'],
-                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
+                        self.inv_fetcher.fetch_cust_name(self.arec_line['invoice_number']),
                         self.inv_fetcher.fetch_po(self.arec_line['invoice_number']),
                         curline['upc_number']
                     ]
@@ -172,7 +82,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                         '',
                         self.invoice_date,
                         self.arec_line['invoice_number'],
-                        self.inv_fetcher.fetch_cust(self.arec_line['invoice_number']),
+                        self.inv_fetcher.fetch_cust_name(self.arec_line['invoice_number']),
                         ""
                     ]
                 )

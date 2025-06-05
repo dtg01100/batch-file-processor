@@ -69,7 +69,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        rename_file = "",
                                        override_upc_bool = False,
                                        override_upc_level = 1,
-                                       override_upc_category_filter = "ALL"
+                                       override_upc_category_filter = "ALL",
+                                       fintech_division_id = 0,
                                        )
 
     oversight_and_defaults = database_connection['administrative']
