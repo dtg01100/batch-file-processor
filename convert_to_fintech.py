@@ -51,7 +51,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                             upc_lut[int(input_edi_dict['vendor_item'])][1],
                             upc_lut[int(input_edi_dict['vendor_item'])][2],
                             input_edi_dict['description'],
-                            input_edi_dict['unit_cost']
+                            utils.convert_to_price(input_edi_dict['unit_cost'])
                         ])
                         lineno += 1
 
