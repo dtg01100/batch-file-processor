@@ -40,7 +40,7 @@ import resend_interface
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
-    VERSION = "(Git Branch: Master)"
+    VERSION = "1.47.0"
     DATABASE_VERSION = "32"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
