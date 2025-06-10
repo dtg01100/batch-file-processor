@@ -8,6 +8,12 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
     invFetcher = utils.invFetcher
 
+    def uomdesc(uommult: int):
+        if uommult > 1:
+            return "EA"
+        else:
+            return "CS"
+
     fintech_division_id = parameters_dict['fintech_division_id']
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
@@ -31,14 +37,12 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
             arec_header = {}
             inv_fetcher = invFetcher(settings_dict)
-            lineno = 0
 
             for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
                 input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
                     if input_edi_dict['record_type'] == "A":
                         arec_header = input_edi_dict
-                        lineno = 0
                     if input_edi_dict['record_type'] == "B":
                         csv_file.writerow([
                             fintech_division_id,
@@ -46,13 +50,26 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                             utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
                             inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
                             int(input_edi_dict['qty_of_units']),
-                            inv_fetcher.fetch_uom_desc(input_edi_dict['vendor_item'], input_edi_dict['unit_multiplier'], lineno, int(arec_header['invoice_number'])),
+                            uomdesc(int(input_edi_dict['unit_multiplier'])),
                             input_edi_dict['vendor_item'],
                             upc_lut[int(input_edi_dict['vendor_item'])][1],
                             upc_lut[int(input_edi_dict['vendor_item'])][2],
                             input_edi_dict['description'],
                             utils.convert_to_price(input_edi_dict['unit_cost'])
                         ])
-                        lineno += 1
+                    if input_edi_dict['record_type'] == "C":
+                        csv_file.writerow([
+                            fintech_division_id,
+                            int(arec_header['invoice_number']),
+                            utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
+                            inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
+                            1,
+                            "EA",
+                            0,
+                            "",
+                            "",
+                            input_edi_dict['description'],
+                            utils.convert_to_price(input_edi_dict['amount'])
+                        ])
 
         return output_filename + ".csv"
