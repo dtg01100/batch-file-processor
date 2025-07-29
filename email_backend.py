@@ -45,7 +45,7 @@ def do(process_parameters, settings, filename):
                                 subtype=subtype,
                                 filename=filename_no_path_str)
 
-            server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+            server = smtplib.SMTP(str(settings['email_smtp_server']), int(settings['smtp_port']))
             server.ehlo()
             server.starttls()
             if settings['email_username'] != "" and settings['email_password'] != "":

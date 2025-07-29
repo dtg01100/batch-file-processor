@@ -72,6 +72,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     if input_edi_dict["record_type"] == "B":
                         if retail_uom:
                             edi_line_pass = False
+                            item_number = None
                             try:
                                 item_number = int(input_edi_dict["vendor_item"].strip())
                                 float(input_edi_dict["unit_cost"].strip())

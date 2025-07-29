@@ -20,19 +20,20 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             input_edi_dict = utils.capture_records(line)
             writeable_line = line.strip("\r\n")
             line_builder_list = []
+            if input_edi_dict is None:
+                continue
             if writeable_line.startswith("A"):
                 line_builder_list.append(input_edi_dict['record_type'])
                 line_builder_list.append(arec_padding.ljust(6))
                 line_builder_list.append(input_edi_dict['invoice_number'][-7:])
                 line_builder_list.append('   ')
 
-                write_invoice_date = utils.capture_records(writeable_line)['invoice_date']
-                if invoice_date_offset != 0:
-                    invoice_date_string = utils.capture_records(writeable_line)['invoice_date']
-                    if not invoice_date_string == '000000':
-                        invoice_date = datetime.strptime(invoice_date_string, '%m%d%y')
-                        offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
-                        write_invoice_date = datetime.strftime(offset_invoice_date, '%m%d%y')
+                captured_record = utils.capture_records(writeable_line)
+                write_invoice_date = captured_record['invoice_date'] if captured_record and 'invoice_date' in captured_record else '000000'
+                if invoice_date_offset != 0 and write_invoice_date != '000000':
+                    invoice_date = datetime.strptime(write_invoice_date, '%m%d%y')
+                    offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
+                    write_invoice_date = datetime.strftime(offset_invoice_date, '%m%d%y')
                 line_builder_list.append(write_invoice_date)
                 line_builder_list.append(input_edi_dict['invoice_total'])
                 if append_arec == "True":
@@ -67,7 +68,18 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as workdir:
         infile_path = os.path.abspath(input("input file path: "))
         outfile_path = os.path.join(os.path.expanduser('~'), os.path.basename(infile_path))
-        new_outfile = edi_convert(infile_path, outfile_path, "CAPCDY", "True", "123456", False, 0)
+        # You need to provide the correct arguments: edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+        # Example dummy values for settings_dict, parameters_dict, and upc_lookup:
+        settings_dict = {}
+        parameters_dict = {
+            'a_record_padding': '',
+            'append_a_records': 'False',
+            'a_record_append_text': '',
+            'force_txt_file_ext': 'False',
+            'invoice_date_offset': 0
+        }
+        upc_lookup = {}
+        new_outfile = edi_convert(infile_path, outfile_path, settings_dict, parameters_dict, upc_lookup)
         with open(new_outfile, 'r', encoding="utf-8") as new_outfile_handle:
             for entry in new_outfile_handle.readlines():
                 print(repr(entry))

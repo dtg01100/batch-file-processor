@@ -28,6 +28,8 @@ class invFetcher:
     def _run_qry(self, qry_str):
         if self.query_object is None:
             self._db_connect()
+        if self.query_object is None:
+            raise RuntimeError("Database connection could not be established.")
         qry_return = self.query_object.run_arbitrary_query(qry_str)
         return qry_return
 
@@ -204,6 +206,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
             for line_num, line in enumerate(
                 work_file_lined
             ):  # iterate over work file contents
+                row_dict_header = {}  # Ensure row_dict_header is always defined
                 input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
                     if input_edi_dict["record_type"] == "A":
@@ -241,11 +244,13 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         # row_dict_list.append(row_dict)
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
+                        print(f"Processing B record: {input_edi_dict}")
                         try:
                             upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
                         except KeyError:
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]
+                        print(f"description: {input_edi_dict['description']}")
                         row_dict = {
                             "Detail Type": "I",
                             "Subcategory OId": "",

@@ -29,7 +29,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             )
             parsed_date_string = parser.isoparse(calculated_date_string).date()
             corrected_date_string = parsed_date_string + timedelta(days=int(offset) + adj_offset)
-            formatted_date_string = str(datetime.strftime(corrected_date_string, "%m/%d/%y"))
+            formatted_date_string = corrected_date_string.strftime("%m/%d/%y")
         except Exception:
             formatted_date_string = "Not Available"
         return formatted_date_string
@@ -50,6 +50,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             # build header
 
             header_a_record = utils.capture_records(work_file_lined[0])
+
+            if header_a_record is None:
+                raise CustomerLookupError("Could not parse header record from input file.")
 
             header_fields = query_object.run_arbitrary_query(
                 f"""

@@ -40,7 +40,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
             input_edi_dict = utils.capture_records(line)
             try:
-                if input_edi_dict["record_type"] == "A":
+                if input_edi_dict is not None and input_edi_dict.get("record_type") == "A":
                     invoice_list.append(input_edi_dict["invoice_number"][-7:])
             except TypeError:
                 pass
@@ -58,6 +58,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
     invoice_rows = []
     invoice_row_counter = 0
+    output_spreadsheet_name = output_filename + '.xlsx'
 
     for invoice in invoice_list:
 
@@ -93,7 +94,6 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             output_worksheet.append(items_list_entry)
             invoice_row_counter += 1
         adjust_column_width(output_worksheet)
-        output_spreadsheet_name = output_filename + '.xlsx'
         output_spreadsheet.save(output_spreadsheet_name)
 
     def generate_barcode(input_string, tempdir):

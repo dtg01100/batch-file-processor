@@ -68,7 +68,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
     print("sending " + str(subject_line + " to " + str(to_address_list)))
 
-    server = smtplib.SMTP(str(settings['email_smtp_server']), str(settings['smtp_port']))
+    server = smtplib.SMTP(str(settings['email_smtp_server']), int(settings['smtp_port']))
     server.ehlo()
     server.starttls()
     if settings['email_username'] != "" and settings['email_password'] != "":

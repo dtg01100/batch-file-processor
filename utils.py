@@ -24,6 +24,8 @@ class invFetcher:
     def _run_qry(self, qry_str):
         if self.query_object is None:
             self._db_connect()
+        if self.query_object is None:
+            raise RuntimeError("Database connection could not be established.")
         qry_return = self.query_object.run_arbitrary_query(qry_str)
         return qry_return
 
@@ -118,7 +120,7 @@ def convert_to_price(value):
 def dactime_from_datetime(date_time: datetime) -> str:
     dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
     dactime_date = dactime_date_century_digit + str(
-        datetime.strftime(date_time.date(), "%y%m%d")
+        date_time.date().strftime("%y%m%d")
     )
     return dactime_date
 
@@ -140,8 +142,8 @@ def dactime_from_invtime(inv_no: str):
 def detect_invoice_is_credit(edi_process):
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         fields = capture_records(work_file.readline())
-        if fields["record_type"] != 'A':
-            raise ValueError("[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen")
+        if fields is None or fields.get("record_type") != 'A':
+            raise ValueError("[Invoice Type Detection]: No A record found at the start of the file")
         if dac_str_int_to_int(fields["invoice_total"]) >= 0:
             return False
         else:
@@ -273,11 +275,13 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
                 count += 1
                 prepend_letters = col_to_excel(count)
                 line_dict = capture_records(writeable_line)
+                if line_dict is None:
+                    continue
                 if int(line_dict['invoice_total']) < 0:
                     file_name_suffix = '.cr'
                 else:
                     file_name_suffix = '.inv'
-                if len(edi_send_list) != 0:
+                if len(edi_send_list) != 0 and f is not None:
                     f.close()
                 file_name_prefix = prepend_letters + "_"
                 if parameters_dict['prepend_date_files']:
@@ -287,9 +291,11 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
                 output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
                 edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
                 f = open(output_file_path, 'wb')
-            f.write(writeable_line.replace('\n', "\r\n").encode())
-            write_counter += 1
-        f.close()  # close output file
+            if f is not None:
+                f.write(writeable_line.replace('\n', "\r\n").encode())
+                write_counter += 1
+        if f is not None:
+            f.close()  # close output file
         # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
         # edi_send_list.pop(0)
         edi_send_list_lines = 0

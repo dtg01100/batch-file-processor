@@ -330,12 +330,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         except Exception as process_error:
                             split_edi_list = [(input_filename, "", "")]
                             print(process_error)
-                            process_files_log, process_files_error_log = \
-                                record_error.do(process_files_log,
-                                                process_files_error_log,
-                                                "splitting edi file failed with error: " + str(
-                                                    process_error), input_filename,
-                                                "edi splitter", True)
+                            result = record_error.do(process_files_log,
+                                                    process_files_error_log,
+                                                    "splitting edi file failed with error: " + str(
+                                                        process_error), input_filename,
+                                                    "edi splitter", True)
+                            if result is not None:
+                                process_files_log, process_files_error_log = result
                     else:
                         split_edi_list = [(input_filename, "", "")]
                     if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
@@ -406,9 +407,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         except Exception as process_error:
                                             print(str(process_error))
                                             errors = True
-                                            process_files_log, process_files_error_log = record_error.do(
+                                            result = record_error.do(
                                                 process_files_log, process_files_error_log, str(process_error),
                                                 str(output_send_filename), "EDI Processor", True)
+                                            if result is not None:
+                                                process_files_log, process_files_error_log = result
 
                             # the following blocks process the files using the specified backend,
                             # and log in the event of any errors
@@ -427,11 +430,13 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                         process_files_log.append("Success\r\n\r\n")
                                     except Exception as process_error:
                                         print(str(process_error))
-                                        process_files_log, process_files_error_log = record_error.do(process_files_log,
-                                                                                                    process_files_error_log,
-                                                                                                    str(process_error),
-                                                                                                    str(output_send_filename),
-                                                                                                    backend_name_print, True)
+                                        result = record_error.do(process_files_log,
+                                                                process_files_error_log,
+                                                                str(process_error),
+                                                                str(output_send_filename),
+                                                                backend_name_print, True)
+                                        if result is not None:
+                                            process_files_log, process_files_error_log = result
                                         errors = True
                 return \
                     errors, process_original_filename, input_file_checksum, process_files_log, process_files_error_log
