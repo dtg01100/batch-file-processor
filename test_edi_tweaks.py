@@ -304,7 +304,7 @@ def test_edi_tweak_split_prepaid_sales_tax_crec(monkeypatch, mock_utils, minimal
         class CustomMockQuery:
             def run_arbitrary_query(self, query):
                 return [
-                    (600, 400),
+                    (60, 40),
                 ]
         class CustomMockQueryRunner:
             def __init__(self, *a, **kw):
