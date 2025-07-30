@@ -37,6 +37,1864 @@ import print_run_log
 import tk_extra_widgets
 import resend_interface
 
+
+class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
+    def body(self, master):
+        self.settings = database_obj_instance.settings.find_one(id=1)
+        self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
+        self.logs_directory = self.foldersnameinput["logs_directory"]
+        self.title("Edit Settings")
+        self.enable_email_checkbutton_variable = tkinter.BooleanVar(master)
+        self.enable_interval_backup_variable = tkinter.BooleanVar(master)
+        self.enable_reporting_checkbutton_variable = tkinter.StringVar(master)
+        self.enable_report_printing_checkbutton_variable = tkinter.StringVar(master)
+        self.report_edi_validator_warnings_checkbutton_variable = (
+            tkinter.BooleanVar(master)
+        )
+        self.odbc_drivers_var = tkinter.StringVar(master)
+
+        as400_db_connection_frame = tkinter.ttk.Frame(master=master)
+        report_sending_options_frame = tkinter.ttk.Frame(master)
+        email_options_frame = tkinter.ttk.Frame(master)
+        interval_backups_frame = tkinter.ttk.Frame(master)
+
+        # Label(master, text='Test').grid(row=0, column=0)
+        as400_db_connection_frame.grid(
+            row=0, column=0, sticky=(tkinter.W, tkinter.E), columnspan=2
+        )
+
+        tkinter.ttk.Label(as400_db_connection_frame, text="ODBC Driver:").grid(
+            row=1, column=0, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Address:").grid(
+            row=2, column=0, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Username:").grid(
+            row=3, column=0, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Password:").grid(
+            row=4, column=0, sticky=tkinter.E
+        )
+
+        tkinter.ttk.Label(email_options_frame, text="Email Address:").grid(
+            row=1, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(email_options_frame, text="Email Username:").grid(
+            row=2, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(email_options_frame, text="Email Password:").grid(
+            row=3, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(email_options_frame, text="Email SMTP Server:").grid(
+            row=4, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(email_options_frame, text="Email SMTP Port").grid(
+            row=5, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(
+            report_sending_options_frame, text="Email Destination:"
+        ).grid(row=7, sticky=tkinter.E)
+
+        def reporting_options_fields_state_set():
+            if self.enable_reporting_checkbutton_variable.get() == "False":
+                state = tkinter.DISABLED
+            else:
+                state = tkinter.NORMAL
+            for child in report_sending_options_frame.winfo_children():
+                child.configure(state=state)
+
+        def email_options_fields_state_set():
+            if self.enable_email_checkbutton_variable.get() is False:
+                self.enable_reporting_checkbutton_variable.set("False")
+                state = tkinter.DISABLED
+            else:
+                state = tkinter.NORMAL
+            for child in email_options_frame.winfo_children():
+                child.configure(state=state)
+            reporting_options_fields_state_set()
+            self.run_reporting_checkbutton.configure(state=state)
+
+        def interval_backup_options_set():
+            if self.enable_interval_backup_variable.get():
+                self.interval_backup_spinbox.configure(state=tkinter.NORMAL)
+                self.interval_backup_interval_label.configure(state=tkinter.NORMAL)
+            else:
+                self.interval_backup_spinbox.configure(state=tkinter.DISABLED)
+                self.interval_backup_interval_label.configure(
+                    state=tkinter.DISABLED
+                )
+
+        self.enable_email_checkbutton = tkinter.ttk.Checkbutton(
+            master,
+            variable=self.enable_email_checkbutton_variable,
+            onvalue=True,
+            offvalue=False,
+            command=email_options_fields_state_set,
+            text="Enable Email",
+        )
+        self.run_reporting_checkbutton = tkinter.ttk.Checkbutton(
+            master,
+            variable=self.enable_reporting_checkbutton_variable,
+            onvalue="True",
+            offvalue="False",
+            command=reporting_options_fields_state_set,
+            text="Enable Report Sending",
+        )
+        self.report_edi_validator_warnings_checkbutton = tkinter.ttk.Checkbutton(
+            master,
+            variable=self.report_edi_validator_warnings_checkbutton_variable,
+            onvalue=True,
+            offvalue=False,
+            text="Report EDI Validator Warnings",
+        )
+        self.enable_interval_backup_checkbutton = tkinter.ttk.Checkbutton(
+            interval_backups_frame,
+            variable=self.enable_interval_backup_variable,
+            onvalue=True,
+            offvalue=False,
+            command=interval_backup_options_set,
+            text="Enable interval backup",
+        )
+        self.interval_backup_interval_label = tkinter.ttk.Label(
+            interval_backups_frame, text="Backup interval: "
+        )
+        self.interval_backup_spinbox = tkinter.ttk.Spinbox(
+            interval_backups_frame, from_=1, to=5000, width=4, justify=tkinter.RIGHT
+        )
+        self.odbc_driver_selector_menu = tkinter.ttk.OptionMenu(
+            as400_db_connection_frame,
+            self.odbc_drivers_var,
+            self.settings["odbc_driver"],
+            *[i for i in pyodbc.drivers()],
+        )
+
+        self.as400_address_field = tkinter.ttk.Entry(
+            as400_db_connection_frame, width=40
+        )
+        self.as400_username_field = tkinter.ttk.Entry(
+            as400_db_connection_frame, width=40
+        )
+        self.as400_password_field = tkinter.ttk.Entry(
+            as400_db_connection_frame, width=40
+        )
+        self.email_address_field = tkinter.ttk.Entry(email_options_frame, width=40)
+        self.email_username_field = tkinter.ttk.Entry(email_options_frame, width=40)
+        self.email_password_field = tkinter.ttk.Entry(
+            email_options_frame, show="*", width=40
+        )
+        self.email_smtp_server_field = tkinter.ttk.Entry(
+            email_options_frame, width=40
+        )
+        self.smtp_port_field = tkinter.ttk.Entry(email_options_frame, width=40)
+        self.report_email_destination_field = tkinter.ttk.Entry(
+            report_sending_options_frame, width=40
+        )
+        self.log_printing_fallback_checkbutton = tkinter.ttk.Checkbutton(
+            report_sending_options_frame,
+            variable=self.enable_report_printing_checkbutton_variable,
+            onvalue="True",
+            offvalue="False",
+            text="Enable Report Printing Fallback:",
+        )
+        rclick_as400_address_field = tk_extra_widgets.RightClickMenu(
+            self.as400_address_field
+        )
+        rclick_as400_username_field = tk_extra_widgets.RightClickMenu(
+            self.as400_username_field
+        )
+        rclick_as400_password_field = tk_extra_widgets.RightClickMenu(
+            self.as400_password_field
+        )
+        rclick_report_email_address_field = tk_extra_widgets.RightClickMenu(
+            self.email_address_field
+        )
+        rclick_report_email_username_field = tk_extra_widgets.RightClickMenu(
+            self.email_username_field
+        )
+        rclick_report_email_smtp_server_field = tk_extra_widgets.RightClickMenu(
+            self.email_smtp_server_field
+        )
+        rclick_reporting_smtp_port_field = tk_extra_widgets.RightClickMenu(
+            self.smtp_port_field
+        )
+        rclick_report_email_destination_field = tk_extra_widgets.RightClickMenu(
+            self.report_email_destination_field
+        )
+        self.as400_address_field.bind("<3>", rclick_as400_address_field)
+        self.as400_username_field.bind("<3>", rclick_as400_username_field)
+        self.as400_password_field.bind("<3>", rclick_as400_password_field)
+        self.email_address_field.bind("<3>", rclick_report_email_address_field)
+        self.email_username_field.bind("<3>", rclick_report_email_username_field)
+        self.email_smtp_server_field.bind(
+            "<3>", rclick_report_email_smtp_server_field
+        )
+        self.smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
+        self.report_email_destination_field.bind(
+            "<3>", rclick_report_email_destination_field
+        )
+        self.select_log_folder_button = tkinter.ttk.Button(
+            master,
+            text="Select Log Folder...",
+            command=lambda: select_log_directory(),
+        )
+
+        def select_log_directory():
+            try:
+                if os.path.exists(self.logs_directory):
+                    initial_directory = self.logs_directory
+                else:
+                    initial_directory = os.getcwd()
+            except Exception as folder_select_error:
+                print(folder_select_error)
+                initial_directory = os.getcwd()
+            logs_directory_edit_proposed = str(
+                askdirectory(parent=master, initialdir=initial_directory)
+            )
+            if len(logs_directory_edit_proposed) > 0:
+                self.logs_directory = logs_directory_edit_proposed
+
+        self.enable_email_checkbutton_variable.set(self.settings["enable_email"])
+        self.enable_reporting_checkbutton_variable.set(
+            self.foldersnameinput["enable_reporting"]
+        )
+        self.as400_address_field.insert(0, self.settings["as400_address"])
+        self.as400_username_field.insert(0, self.settings["as400_username"])
+        self.as400_password_field.insert(0, self.settings["as400_password"])
+        self.email_address_field.insert(0, self.settings["email_address"])
+        self.email_username_field.insert(0, self.settings["email_username"])
+        self.email_password_field.insert(0, self.settings["email_password"])
+        self.email_smtp_server_field.insert(0, self.settings["email_smtp_server"])
+        self.smtp_port_field.insert(0, self.settings["smtp_port"])
+        self.report_email_destination_field.insert(
+            0, self.foldersnameinput["report_email_destination"]
+        )
+        self.enable_interval_backup_variable.set(
+            self.settings["enable_interval_backups"]
+        )
+        self.enable_report_printing_checkbutton_variable.set(
+            self.foldersnameinput["report_printing_fallback"]
+        )
+        self.report_edi_validator_warnings_checkbutton_variable.set(
+            self.foldersnameinput["report_edi_errors"]
+        )
+        self.interval_backup_spinbox.delete(0, "end")
+        self.interval_backup_spinbox.insert(
+            0, self.settings["backup_counter_maximum"]
+        )
+
+        email_options_fields_state_set()
+        reporting_options_fields_state_set()
+
+        self.enable_email_checkbutton.grid(row=1, columnspan=3, sticky=tkinter.W)
+        email_options_frame.grid(row=2, columnspan=3)
+        report_sending_options_frame.grid(row=5, columnspan=3)
+        interval_backups_frame.grid(
+            row=9, column=0, columnspan=3, sticky=tkinter.W + tkinter.E
+        )
+        interval_backups_frame.columnconfigure(0, weight=1)
+        self.run_reporting_checkbutton.grid(
+            row=3, column=0, padx=2, pady=2, sticky=tkinter.W
+        )
+        self.report_edi_validator_warnings_checkbutton.grid(
+            row=4, column=0, padx=2, pady=2, sticky=tkinter.W
+        )
+        self.odbc_driver_selector_menu.grid(row=1, column=1)
+        self.as400_address_field.grid(row=2, column=1, padx=2, pady=2)
+        self.as400_username_field.grid(row=3, column=1, padx=2, pady=2)
+        self.as400_password_field.grid(row=4, column=1, padx=2, pady=2)
+        self.email_address_field.grid(row=1, column=1, padx=2, pady=2)
+        self.email_username_field.grid(row=2, column=1, padx=2, pady=2)
+        self.email_password_field.grid(row=3, column=1, padx=2, pady=2)
+        self.email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
+        self.smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
+        self.report_email_destination_field.grid(row=7, column=1, padx=2, pady=2)
+        self.select_log_folder_button.grid(
+            row=3, column=1, padx=2, pady=2, sticky=tkinter.E, rowspan=2
+        )
+        self.log_printing_fallback_checkbutton.grid(
+            row=8, column=1, padx=2, pady=2, sticky=tkinter.W
+        )
+        self.enable_interval_backup_checkbutton.grid(
+            row=0, column=0, sticky=tkinter.W, padx=2, pady=2
+        )
+        self.interval_backup_interval_label.grid(
+            row=0, column=1, sticky=tkinter.E, padx=2, pady=2
+        )
+        self.interval_backup_interval_label.columnconfigure(0, weight=1)
+        self.interval_backup_spinbox.grid(
+            row=0, column=2, sticky=tkinter.E, padx=2, pady=2
+        )
+
+        return self.email_address_field  # initial focus
+
+    def validate(self):
+        doingstuffoverlay.make_overlay(self, "Testing Changes...")
+        error_list = []
+        errors = False
+
+        if self.enable_email_checkbutton_variable.get():
+            if self.email_address_field.get() == "":
+                error_list.append("Email Address Is A Required Field\r")
+                errors = True
+            else:
+                if (validate_email(str(self.email_address_field.get()))) is False:
+                    error_list.append("Invalid Email Origin Address\r")
+                    errors = True
+
+            try:
+                server = smtplib.SMTP(
+                    str(self.email_smtp_server_field.get()),
+                    str(self.smtp_port_field.get()),
+                )
+                server.ehlo()
+                server.starttls()
+                if (
+                    self.email_username_field.get() != ""
+                    and self.email_password_field.get() != ""
+                ):
+                    server.login(
+                        str(self.email_username_field.get()),
+                        str(self.email_password_field.get()),
+                    )
+                server.quit()
+            except Exception as email_test_login_result_string:
+                print(email_test_login_result_string)
+                error_list.append(
+                    "Test Login Failed With Error\r"
+                    + str(email_test_login_result_string)
+                )
+                errors = True
+
+            if (
+                self.email_username_field.get() == ""
+                and self.email_password_field.get() != ""
+            ):
+                error_list.append("Email Username Required If Password Is Set\r")
+                errors = True
+
+            if (
+                self.email_password_field.get() == ""
+                and self.email_username_field.get() != ""
+            ):
+                error_list.append(
+                    "Email Username Without Password Is Not Supported\r"
+                )
+                errors = True
+
+            if self.email_smtp_server_field.get() == "":
+                error_list.append("SMTP Server Address Is A Required Field\r")
+                errors = True
+
+            if self.smtp_port_field.get() == "":
+                error_list.append("SMTP Port Is A Required Field\r")
+                errors = True
+
+        if self.enable_reporting_checkbutton_variable.get() == "True":
+            if self.report_email_destination_field.get() == "":
+                error_list.append(
+                    "Reporting Email Destination Is A Required Field\r"
+                )
+                errors = True
+            else:
+                email_recipients = str(
+                    self.report_email_destination_field.get()
+                ).split(", ")
+                for email_recipient in email_recipients:
+                    print(email_recipient)
+                    if (validate_email(str(email_recipient))) is False:
+                        error_list.append("Invalid Email Destination Address\r\n")
+                        errors = True
+
+        if self.enable_interval_backup_variable.get():
+            try:
+                backup_interval = int(self.interval_backup_spinbox.get())
+                if backup_interval < 1 or backup_interval > 5000:
+                    raise ValueError
+            except ValueError:
+                error_list.append(
+                    "Backup Interval Needs To Be A Number Between 1 and 5000"
+                )
+                errors = True
+
+        if errors is True:
+            error_report = "".join(
+                error_list
+            )  # combine error messages into single string
+            showerror(
+                parent=self, message=error_report
+            )  # display generated error string in error dialog
+            doingstuffoverlay.destroy_overlay()
+            return False
+        doingstuffoverlay.destroy_overlay()
+
+        if not self.enable_email_checkbutton_variable.get():
+            number_of_disabled_email_backends = (
+                database_obj_instance.folders_table.count(
+                    process_backend_email=True
+                )
+            )
+            number_of_disabled_folders = database_obj_instance.folders_table.count(
+                process_backend_email=True,
+                process_backend_ftp=False,
+                process_backend_copy=False,
+                folder_is_active="True",
+            )
+            if number_of_disabled_folders != 0:
+                if not askokcancel(
+                    message="This will disable the email backend in "
+                    + str(number_of_disabled_email_backends)
+                    + " folders.\nAs a result, "
+                    + str(number_of_disabled_folders)
+                    + " folders will be disabled"
+                ):
+                    return False
+        return 1
+
+    def ok(self, event=None):
+        if not self.validate:
+            self.initial_focus.focus_set()  # put focus back
+            return
+
+        self.withdraw()
+        self.update_idletasks()
+
+        self.apply(self.foldersnameinput)
+        self.cancel()
+
+    def apply(self, folders_name_apply):
+        doingstuffoverlay.make_overlay(root, "Applying Changes...")
+        root.update()
+        folders_name_apply["enable_reporting"] = str(
+            self.enable_reporting_checkbutton_variable.get()
+        )
+        folders_name_apply["logs_directory"] = self.logs_directory
+        self.settings["odbc_driver"] = self.odbc_drivers_var.get()
+        self.settings["as400_username"] = self.as400_username_field.get()
+        self.settings["as400_password"] = self.as400_password_field.get()
+        self.settings["as400_address"] = self.as400_address_field.get()
+        self.settings["enable_email"] = self.enable_email_checkbutton_variable.get()
+        self.settings["email_address"] = str(self.email_address_field.get())
+        self.settings["email_username"] = str(self.email_username_field.get())
+        self.settings["email_password"] = str(self.email_password_field.get())
+        self.settings["email_smtp_server"] = str(self.email_smtp_server_field.get())
+        self.settings["smtp_port"] = str(self.smtp_port_field.get())
+        self.settings[
+            "enable_interval_backups"
+        ] = self.enable_interval_backup_variable.get()
+        self.settings["backup_counter_maximum"] = int(
+            self.interval_backup_spinbox.get()
+        )
+        folders_name_apply["report_email_destination"] = str(
+            self.report_email_destination_field.get()
+        )
+        folders_name_apply[
+            "report_edi_errors"
+        ] = self.report_edi_validator_warnings_checkbutton_variable.get()
+        if not self.enable_email_checkbutton_variable.get():
+            for (
+                email_backend_to_disable
+            ) in database_obj_instance.folders_table.find(
+                process_backend_email=True
+            ):
+                email_backend_to_disable["process_backend_email"] = False
+                database_obj_instance.folders_table.update(
+                    email_backend_to_disable, ["id"]
+                )
+            for folder_to_disable in database_obj_instance.folders_table.find(
+                process_backend_email=False,
+                process_backend_ftp=False,
+                process_backend_copy=False,
+                folder_is_active="True",
+            ):
+                folder_to_disable["folder_is_active"] = "False"
+                database_obj_instance.folders_table.update(
+                    folder_to_disable, ["id"]
+                )
+            folders_name_apply["folder_is_active"] = "False"
+            folders_name_apply["process_backend_email"] = False
+
+        database_obj_instance.settings.update(self.settings, ["id"])
+        update_reporting(folders_name_apply)
+        doingstuffoverlay.destroy_overlay()
+        refresh_users_list()
+
+class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
+    def body(self, master):
+        self.settings = database_obj_instance.settings.find_one(id=1)
+        self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
+        global copy_to_directory
+        copy_to_directory = self.foldersnameinput["copy_to_directory"]
+        self.convert_formats_var = tkinter.StringVar(master)
+        self.title("Folder Settings")
+        self.bodyframe = tkinter.ttk.Frame(master)
+        self.othersframe = tkinter.ttk.Frame(self.bodyframe)
+        self.folderframe = tkinter.ttk.Frame(self.bodyframe)
+        self.prefsframe = tkinter.ttk.Frame(self.bodyframe)
+        self.ediframe = tkinter.ttk.Frame(self.bodyframe)
+        self.convert_options_frame = tkinter.ttk.Frame(self.ediframe)
+        self.separatorv0 = tkinter.ttk.Separator(
+            self.bodyframe, orient=tkinter.VERTICAL
+        )
+        self.separatorv1 = tkinter.ttk.Separator(
+            self.bodyframe, orient=tkinter.VERTICAL
+        )
+        self.separatorv2 = tkinter.ttk.Separator(
+            self.bodyframe, orient=tkinter.VERTICAL
+        )
+        self.backendvariable = tkinter.StringVar(master)
+        self.active_checkbutton = tkinter.StringVar(master)
+        self.split_edi = tkinter.BooleanVar(master)
+        self.split_edi_send_credits = tkinter.BooleanVar(master)
+        self.split_edi_send_invoices = tkinter.BooleanVar(master)
+        self.prepend_file_dates = tkinter.BooleanVar(master)
+        self.ediconvert_options = tkinter.StringVar(master)
+        self.process_edi = tkinter.StringVar(master)
+        self.upc_var_check = tkinter.StringVar(
+            master
+        )  # define  "UPC calculation" checkbox state variable
+        self.a_rec_var_check = tkinter.StringVar(
+            master
+        )  # define "A record checkbox state variable
+        self.c_rec_var_check = tkinter.StringVar(
+            master
+        )  # define "C record" checkbox state variable
+        self.headers_check = tkinter.StringVar(
+            master
+        )  # define "Column Headers" checkbox state variable
+        self.ampersand_check = tkinter.StringVar(
+            master
+        )  # define "Filter Ampersand" checkbox state variable
+        self.tweak_edi = tkinter.BooleanVar(master)
+        self.pad_arec_check = tkinter.StringVar(master)
+        self.a_record_padding_length = tkinter.IntVar(master)
+        self.append_arec_check = tkinter.StringVar(master)
+        self.force_txt_file_ext_check = tkinter.StringVar(master)
+        self.process_backend_copy_check = tkinter.BooleanVar(master)
+        self.process_backend_ftp_check = tkinter.BooleanVar(master)
+        self.process_backend_email_check = tkinter.BooleanVar(master)
+        self.force_edi_check_var = tkinter.BooleanVar(master)
+        self.header_frame_frame = tkinter.ttk.Frame(master)
+        self.invoice_date_offset = tkinter.IntVar(master)
+        self.invoice_date_custom_format_string = tkinter.StringVar(master)
+        self.invoice_date_custom_format = tkinter.BooleanVar(master)
+        self.edi_each_uom_tweak = tkinter.BooleanVar(master)
+        self.include_item_numbers = tkinter.BooleanVar(master)
+        self.include_item_description = tkinter.BooleanVar(master)
+        self.split_sales_tax_prepaid_var = tkinter.BooleanVar(master)
+        self.override_upc_bool = tkinter.BooleanVar(master)
+        self.override_upc_level = tkinter.IntVar(master)
+        self.override_upc_category_filter = tkinter.StringVar(master)
+        self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
+        self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
+        self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(
+            master=self.otherslistboxframe, orient=tkinter.VERTICAL
+        )
+        self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
+        self.otherslistbox.config(yscrollcommand=self.otherslistboxscrollbar.set)
+        self.copyconfigbutton = tkinter.ttk.Button(
+            master=self.othersframe, text="Copy Config"
+        )
+        tkinter.ttk.Label(self.folderframe, text="Backends:").grid(
+            row=2, sticky=tkinter.W
+        )
+        tkinter.ttk.Label(self.prefsframe, text="Copy Backend Settings:").grid(
+            row=3, columnspan=2, pady=3
+        )
+        tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
+            row=5, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
+        )
+        tkinter.ttk.Label(self.prefsframe, text="Ftp Backend Settings:").grid(
+            row=6, columnspan=2, pady=3
+        )
+        tkinter.ttk.Label(self.prefsframe, text="FTP Server:").grid(
+            row=7, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.prefsframe, text="FTP Port:").grid(
+            row=8, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.prefsframe, text="FTP Folder:").grid(
+            row=9, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.prefsframe, text="FTP Username:").grid(
+            row=10, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.prefsframe, text="FTP Password:").grid(
+            row=11, sticky=tkinter.E
+        )
+        tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
+            row=12, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
+        )
+        tkinter.ttk.Label(self.prefsframe, text="Email Backend Settings:").grid(
+            row=13, columnspan=2, pady=3
+        )
+        tkinter.ttk.Label(self.prefsframe, text="Recipient Address:").grid(
+            row=14, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.prefsframe, text="Email Subject:").grid(
+            row=18, sticky=tkinter.E
+        )
+        tkinter.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
+            row=0, column=0, columnspan=2, pady=3
+        )
+        tkinter.ttk.Label(self.ediframe, text="Rename File:").grid(
+            row=4, column=0, sticky=tkinter.W
+        )
+        tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
+            row=6, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
+        )
+        self.convert_options_frame.grid(
+            column=0, row=7, columnspan=2, sticky=tkinter.W
+        )
+        self.convert_to_selector_frame = tkinter.ttk.Frame(
+            self.convert_options_frame
+        )
+        self.convert_to_selector_label = tkinter.ttk.Label(
+            self.convert_to_selector_frame, text="Convert To: "
+        )
+
+        def make_convert_to_options(_=None):
+            for frameentry in [
+                self.upc_variable_process_checkbutton,
+                self.a_record_checkbutton,
+                self.c_record_checkbutton,
+                self.headers_checkbutton,
+                self.ampersand_checkbutton,
+                self.pad_a_records_checkbutton,
+                self.a_record_padding_frame,
+                self.a_record_padding_field,
+                self.pad_a_records_length_optionmenu,
+                self.append_a_records_checkbutton,
+                self.a_record_append_field,
+                self.override_upc_checkbutton,
+                self.override_upc_level_optionmenu,
+                self.override_upc_category_filter_entry,
+                self.each_uom_edi_tweak_checkbutton,
+                self.include_item_numbers_checkbutton,
+                self.include_item_description_checkbutton,
+                self.simple_csv_column_sorter.containerframe,
+                self.a_record_padding_field,
+                self.estore_store_number_label,
+                self.estore_store_number_field,
+                self.estore_Vendor_OId_label,
+                self.estore_Vendor_OId_field,
+                self.estore_vendor_namevendoroid_label,
+                self.estore_vendor_namevendoroid_field,
+                self.fintech_divisionid_field,
+                self.fintech_divisionid_label
+            ]:
+                frameentry.grid_forget()
+            if self.convert_formats_var.get() == "csv":
+                self.upc_variable_process_checkbutton.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_checkbutton.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.c_record_checkbutton.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.headers_checkbutton.grid(
+                    row=6, column=0, sticky=tkinter.W, padx=3
+                )
+                self.ampersand_checkbutton.grid(
+                    row=7, column=0, sticky=tkinter.W, padx=3
+                )
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.a_record_padding_frame.grid(
+                    row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3
+                )
+                self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
+                self.override_upc_checkbutton.grid(
+                    row=10, column=0, sticky=tkinter.W, padx=3
+                )
+                self.override_upc_level_optionmenu.grid(
+                    row=10, column=1, sticky=tkinter.W
+                )
+                self.override_upc_category_filter_entry.grid(
+                    row=10, column=2, sticky=tkinter.W
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=11, column=0, sticky=tkinter.W, padx=3
+                )
+            if self.convert_formats_var.get() == "ScannerWare":
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.a_record_padding_field.grid(row=2, column=2)
+                self.a_record_padding_frame.grid(
+                    row=2, column=0, columnspan=2, sticky=tkinter.W, padx=3
+                )
+                self.append_a_records_checkbutton.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_append_field.grid(row=3, column=2)
+            if self.convert_formats_var.get() == "simplified_csv":
+                self.headers_checkbutton.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.include_item_numbers_checkbutton.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.include_item_description_checkbutton.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.simple_csv_column_sorter.containerframe.grid(
+                    row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2
+                )
+            if self.convert_formats_var.get() == "Estore eInvoice":
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tkinter.E, padx=3
+                )
+            if self.convert_formats_var.get() == "Estore eInvoice Generic":
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_c_record_oid_label.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_c_record_oid_field.grid(
+                    row=5, column=1, sticky=tkinter.E, padx=3
+                )
+            if self.convert_formats_var.get() == 'fintech':
+                self.fintech_divisionid_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.fintech_divisionid_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+
+        self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
+            self.convert_to_selector_frame,
+            self.convert_formats_var,
+            self.foldersnameinput["convert_to_format"],
+            "csv",
+            "ScannerWare",
+            "scansheet-type-a",
+            "jolley_custom",
+            "stewarts_custom",
+            "simplified_csv",
+            "Estore eInvoice",
+            "Estore eInvoice Generic",
+            "YellowDog CSV",
+            "fintech",
+            command=make_convert_to_options,
+        )
+
+        def show_folder_path():
+            showinfo(
+                parent=master,
+                title="Folder Path",
+                message=self.foldersnameinput["folder_name"],
+            )
+
+        def select_copy_to_directory():
+            global copy_to_directory
+            try:
+                if os.path.exists(copy_to_directory):
+                    initial_directory = copy_to_directory
+                else:
+                    initial_directory = os.getcwd()
+            except Exception as select_copy_directory_error:
+                print(select_copy_directory_error)
+                initial_directory = os.getcwd()
+            proposed_copy_to_directory = str(
+                askdirectory(parent=self.prefsframe, initialdir=initial_directory)
+            )
+            if os.path.isdir(proposed_copy_to_directory):
+                copy_to_directory = proposed_copy_to_directory
+
+        def set_send_options_fields_state():
+            if not self.settings["enable_email"]:
+                self.email_backend_checkbutton.configure(state=tkinter.DISABLED)
+            if (
+                self.process_backend_copy_check.get() is False
+                and self.process_backend_ftp_check.get() is False
+                and self.process_backend_email_check.get() is False
+            ):
+                self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
+                self.split_edi_send_invoices_checkbutton.configure(state=tkinter.DISABLED)
+                self.split_edi_send_credits_checkbutton.configure(state=tkinter.DISABLED)
+                self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
+                self.rename_file_field.configure(state=tkinter.DISABLED)
+                self.edi_options_menu.configure(state=tkinter.DISABLED)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=tkinter.DISABLED)
+                    except tkinter.TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=tkinter.DISABLED)
+                    except tkinter.TclError:
+                        pass
+            else:
+                self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
+                self.split_edi_send_invoices_checkbutton.configure(state=tkinter.NORMAL)
+                self.split_edi_send_credits_checkbutton.configure(state=tkinter.NORMAL)
+                self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
+                self.rename_file_field.configure(state=tkinter.NORMAL)
+                self.edi_options_menu.configure(state=tkinter.NORMAL)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=tkinter.NORMAL)
+                    except tkinter.TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=tkinter.NORMAL)
+                    except tkinter.TclError:
+                        pass
+            if self.process_backend_copy_check.get() is False:
+                copy_state = tkinter.DISABLED
+            else:
+                copy_state = tkinter.NORMAL
+            if (
+                self.process_backend_email_check.get() is False
+                or self.settings["enable_email"] is False
+            ):
+                email_state = tkinter.DISABLED
+            else:
+                email_state = tkinter.NORMAL
+            if self.process_backend_ftp_check.get() is False:
+                ftp_state = tkinter.DISABLED
+            else:
+                ftp_state = tkinter.NORMAL
+            self.copy_backend_folder_selection_button.configure(state=copy_state)
+            self.email_recepient_field.configure(state=email_state)
+            self.email_sender_subject_field.configure(state=email_state)
+            self.ftp_server_field.configure(state=ftp_state)
+            self.ftp_port_field.configure(state=ftp_state)
+            self.ftp_folder_field.configure(state=ftp_state)
+            self.ftp_username_field.configure(state=ftp_state)
+            self.ftp_password_field.configure(state=ftp_state)
+
+        def set_header_state():
+            if self.active_checkbutton.get() == "False":
+                self.active_checkbutton_object.configure(
+                    text="Folder Is Disabled", activebackground="green"
+                )
+                self.copy_backend_checkbutton.configure(state=tkinter.DISABLED)
+                self.ftp_backend_checkbutton.configure(state=tkinter.DISABLED)
+                self.email_backend_checkbutton.configure(state=tkinter.DISABLED)
+            else:
+                self.active_checkbutton_object.configure(
+                    text="Folder Is Enabled", activebackground="red"
+                )
+                self.copy_backend_checkbutton.configure(state=tkinter.NORMAL)
+                self.ftp_backend_checkbutton.configure(state=tkinter.NORMAL)
+                if self.settings["enable_email"]:
+                    self.email_backend_checkbutton.configure(state=tkinter.NORMAL)
+
+        self.active_checkbutton_object = tkinter.Checkbutton(
+            self.header_frame_frame,
+            text="Active",
+            variable=self.active_checkbutton,
+            onvalue="True",
+            offvalue="False",
+            command=set_header_state,
+            indicatoron=tkinter.FALSE,
+            selectcolor="green",
+            background="red",
+        )
+        self.copy_backend_checkbutton = tkinter.ttk.Checkbutton(
+            self.folderframe,
+            text="Copy Backend",
+            variable=self.process_backend_copy_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+        self.ftp_backend_checkbutton = tkinter.ttk.Checkbutton(
+            self.folderframe,
+            text="FTP Backend",
+            variable=self.process_backend_ftp_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+        self.email_backend_checkbutton = tkinter.ttk.Checkbutton(
+            self.folderframe,
+            text="Email Backend",
+            variable=self.process_backend_email_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+        if self.foldersnameinput["folder_name"] != "template":
+            self.folder_alias_frame = tkinter.ttk.Frame(self.folderframe)
+            tkinter.ttk.Label(self.folder_alias_frame, text="Folder Alias:").grid(
+                row=0, sticky=tkinter.W
+            )
+            self.folder_alias_field = tkinter.ttk.Entry(
+                self.folder_alias_frame, width=30
+            )
+            rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
+                self.folder_alias_field
+            )
+            self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
+            self.folder_alias_field.grid(row=0, column=1)
+            tkinter.ttk.Button(
+                master=self.folder_alias_frame,
+                text="Show Folder Path",
+                command=show_folder_path,
+            ).grid(row=1, columnspan=2, sticky=tkinter.W, pady=5)
+        self.copy_backend_folder_selection_button = tkinter.ttk.Button(
+            self.prefsframe,
+            text="Select Copy Backend Destination Folder...",
+            command=lambda: select_copy_to_directory(),
+        )
+        self.ftp_server_field = tkinter.ttk.Entry(self.prefsframe, width=30)
+        rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(self.ftp_server_field)
+        self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
+        self.ftp_port_field = tkinter.ttk.Entry(self.prefsframe, width=30)
+        rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
+        self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
+        self.ftp_folder_field = tkinter.ttk.Entry(self.prefsframe, width=30)
+        rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(self.ftp_folder_field)
+        self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
+        self.ftp_username_field = tkinter.ttk.Entry(self.prefsframe, width=30)
+        rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
+            self.ftp_username_field
+        )
+        self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
+        self.ftp_password_field = tkinter.ttk.Entry(
+            self.prefsframe, show="*", width=30
+        )
+        self.email_recepient_field = tkinter.ttk.Entry(self.prefsframe, width=30)
+        rclick_email_recepient_field = tk_extra_widgets.RightClickMenu(
+            self.email_recepient_field
+        )
+        self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
+        self.email_sender_subject_field = tkinter.ttk.Entry(
+            self.prefsframe, width=30
+        )
+        rclick_email_sender_subject_field = tk_extra_widgets.RightClickMenu(
+            self.email_sender_subject_field
+        )
+        self.email_sender_subject_field.bind(
+            "<3>", rclick_email_sender_subject_field
+        )
+        self.invoice_date_custom_format_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        rclick_invoice_date_custom_format_field = tk_extra_widgets.RightClickMenu(
+            self.invoice_date_custom_format_field
+        )
+        self.invoice_date_custom_format_field.bind(
+            "<3>", rclick_invoice_date_custom_format_field
+        )
+
+        self.force_edi_check_checkbutton = tkinter.ttk.Checkbutton(
+            self.ediframe,
+            variable=self.force_edi_check_var,
+            text="Force EDI Validation",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        self.split_edi_frame = tkinter.ttk.Frame(self.ediframe)
+
+        self.split_edi_checkbutton = tkinter.ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi,
+            text="Split EDI",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.split_edi_send_invoices_checkbutton = tkinter.ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi_send_invoices,
+            text="Split EDI Send Invoices",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.split_edi_send_credits_checkbutton = tkinter.ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi_send_credits,
+            text="Split EDI Send Credits",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.prepend_file_dates_checkbutton = tkinter.ttk.Checkbutton(
+            self.ediframe,
+            variable=self.prepend_file_dates,
+            text="Prepend dates",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.process_edi_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.process_edi,
+            text="Process EDI",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.upc_variable_process_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.upc_var_check,
+            text="Calculate UPC Check Digit",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.a_record_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.a_rec_var_check,
+            text="Include " + "A " + "Records",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.c_record_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.c_rec_var_check,
+            text="Include " + "C " + "Records",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.headers_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.headers_check,
+            text="Include Headings",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.ampersand_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.ampersand_check,
+            text="Filter Ampersand:",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.tweak_edi_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.tweak_edi,
+            text="Apply Edi Tweaks",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        self.rename_file_field = tkinter.ttk.Entry(
+            self.ediframe, width=10
+        )
+
+
+        self.a_record_padding_frame = tkinter.ttk.Frame(self.convert_options_frame)
+
+        self.pad_a_records_checkbutton = tkinter.ttk.Checkbutton(
+            self.a_record_padding_frame,
+            variable=self.pad_arec_check,
+            text='Pad "A" Records',
+            onvalue="True",
+            offvalue="False",
+        )
+
+        self.pad_a_records_length_optionmenu = tkinter.ttk.OptionMenu(
+            self.a_record_padding_frame,
+            self.a_record_padding_length,
+            self.a_record_padding_length.get(),
+            6,
+            30,
+        )
+
+        self.a_record_padding_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        self.append_a_records_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.append_arec_check,
+            text='Append to "A" Records (6 Characters)\n(Series2K)',
+            onvalue="True",
+            offvalue="False",
+        )
+        self.a_record_append_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        self.invoice_date_custom_format_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.invoice_date_custom_format,
+            text="Custom Invoice Date Format",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        self.force_txt_file_ext_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.force_txt_file_ext_check,
+            text="Force .txt file extension",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.invoice_date_offset_spinbox_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Invoice Offset (Days)"
+        )
+        self.invoice_date_offset_spinbox = tkinter.ttk.Spinbox(
+            self.convert_options_frame,
+            textvariable=self.invoice_date_offset,
+            from_=-14,
+            to=14,
+            width=3,
+        )
+        self.each_uom_edi_tweak_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.edi_each_uom_tweak,
+            text="Each UOM",
+        )
+        self.override_upc_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.override_upc_bool,
+            text="Override UPC",
+        )
+        self.override_upc_level_optionmenu = tkinter.ttk.OptionMenu(
+            self.convert_options_frame, 
+            self.override_upc_level,
+            self.override_upc_level.get(),
+            *range(1, 5)
+        )
+        self.override_upc_category_filter_entry = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.override_upc_category_filter_tooltip = tk_extra_widgets.CreateToolTip(
+            self.override_upc_category_filter_entry,
+            "Enter 'ALL' or a comma separated list of numbers")
+
+        self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.split_sales_tax_prepaid_var,
+            text="Split Sales Tax 'C' Records",
+        )
+
+        self.include_item_numbers_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.include_item_numbers,
+            text="Include Item Numbers",
+        )
+
+        self.include_item_description_checkbutton = tkinter.ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.include_item_description,
+            text="Include Item Description",
+        )
+        self.simple_csv_column_sorter = columnSorterWidget(
+            self.convert_options_frame
+        )
+        self.estore_store_number_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Estore Store Number"
+        )
+        self.estore_Vendor_OId_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Estore Vendor OId"
+        )
+        self.estore_vendor_namevendoroid_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Estore Vendor Name OId"
+        )
+        self.estore_store_number_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_Vendor_OId_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_vendor_namevendoroid_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_c_record_oid_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Estore C Record OId"
+        )
+        self.estore_c_record_oid_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.fintech_divisionid_label = tkinter.ttk.Label(
+            self.convert_options_frame, text="Fintech Division_id"
+        )
+        self.fintech_divisionid_field = tkinter.ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        def set_dialog_variables(config_dict, copied):
+            if copied:
+                for child in self.bodyframe.winfo_children():
+                    try:
+                        child.configure(state=tkinter.NORMAL)
+                    except Exception:
+                        pass
+            self.active_checkbutton.set(config_dict["folder_is_active"])
+            if config_dict["folder_name"] != "template" and not copied:
+                self.folder_alias_field.insert(0, config_dict["alias"])
+            self.process_backend_copy_check.set(config_dict["process_backend_copy"])
+            self.process_backend_ftp_check.set(config_dict["process_backend_ftp"])
+            self.process_backend_email_check.set(
+                config_dict["process_backend_email"]
+            )
+
+            self.ftp_server_field.delete(0, tkinter.END)
+            self.ftp_port_field.delete(0, tkinter.END)
+            self.ftp_folder_field.delete(0, tkinter.END)
+            self.ftp_username_field.delete(0, tkinter.END)
+            self.ftp_password_field.delete(0, tkinter.END)
+            self.email_recepient_field.delete(0, tkinter.END)
+            self.email_sender_subject_field.delete(0, tkinter.END)
+
+            self.ftp_server_field.insert(0, config_dict["ftp_server"])
+            self.ftp_port_field.insert(0, config_dict["ftp_port"])
+            self.ftp_folder_field.insert(0, config_dict["ftp_folder"])
+            self.ftp_username_field.insert(0, config_dict["ftp_username"])
+            self.ftp_password_field.insert(0, config_dict["ftp_password"])
+            self.email_recepient_field.insert(0, config_dict["email_to"])
+            self.email_sender_subject_field.insert(
+                0, config_dict["email_subject_line"]
+            )
+
+            self.force_edi_check_var.set(config_dict["force_edi_validation"])
+            self.process_edi.set(config_dict["process_edi"])
+            self.upc_var_check.set(config_dict["calculate_upc_check_digit"])
+            self.a_rec_var_check.set(config_dict["include_a_records"])
+            self.c_rec_var_check.set(config_dict["include_c_records"])
+            self.headers_check.set(config_dict["include_headers"])
+            self.ampersand_check.set(config_dict["filter_ampersand"])
+            self.pad_arec_check.set(config_dict["pad_a_records"])
+            self.tweak_edi.set(config_dict["tweak_edi"])
+            self.split_edi.set(config_dict["split_edi"])
+            self.split_edi_send_credits.set(config_dict["split_edi_include_credits"])
+            self.split_edi_send_invoices.set(config_dict["split_edi_include_invoices"])
+            self.prepend_file_dates.set(config_dict["prepend_date_files"])
+            self.rename_file_field.delete(0, tkinter.END)
+            self.rename_file_field.insert(0, config_dict["rename_file"])
+            self.a_record_padding_field.delete(0, tkinter.END)
+            self.a_record_padding_field.insert(0, config_dict["a_record_padding"])
+            self.a_record_padding_length.set(config_dict["a_record_padding_length"])
+            self.append_arec_check.set(config_dict["append_a_records"])
+            self.a_record_append_field.delete(0, tkinter.END)
+            self.a_record_append_field.insert(
+                0, config_dict["a_record_append_text"]
+            )
+            self.force_txt_file_ext_check.set(config_dict["force_txt_file_ext"])
+            self.invoice_date_offset.set(config_dict["invoice_date_offset"])
+            self.invoice_date_custom_format.set(
+                config_dict["invoice_date_custom_format"]
+            )
+            self.invoice_date_custom_format_field.delete(0, tkinter.END)
+            self.invoice_date_custom_format_field.insert(
+                0, config_dict["invoice_date_custom_format_string"]
+            )
+            self.edi_each_uom_tweak.set(config_dict["retail_uom"])
+            self.override_upc_bool.set(config_dict["override_upc_bool"]),
+            self.override_upc_level.set(config_dict["override_upc_level"]),
+            self.override_upc_category_filter_entry.delete(0, tkinter.END)
+            self.override_upc_category_filter_entry.insert(
+                0, config_dict["override_upc_category_filter"]
+            )
+            self.include_item_numbers.set(config_dict["include_item_numbers"])
+            self.include_item_description.set(
+                config_dict["include_item_description"]
+            )
+            self.simple_csv_column_sorter.set_columnstring(
+                config_dict["simple_csv_sort_order"]
+            )
+            self.split_sales_tax_prepaid_var.set(
+                config_dict["split_prepaid_sales_tax_crec"]
+            )
+            self.estore_store_number_field.delete(0, tkinter.END)
+            self.estore_store_number_field.insert(
+                0, config_dict["estore_store_number"]
+            )
+            self.estore_Vendor_OId_field.delete(0, tkinter.END)
+            self.estore_Vendor_OId_field.insert(0, config_dict["estore_Vendor_OId"])
+            self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
+            self.estore_vendor_namevendoroid_field.insert(
+                0, config_dict["estore_vendor_NameVendorOID"]
+            )
+            self.estore_c_record_oid_field.delete(0, tkinter.END)
+            self.estore_c_record_oid_field.insert(
+                0, config_dict["estore_c_record_OID"]
+            )
+            self.fintech_divisionid_field.delete(0, tkinter.END)
+            self.fintech_divisionid_field.insert(
+                0, config_dict["fintech_division_id"]
+            )
+
+            if copied:
+                self.convert_formats_var.set(config_dict["convert_to_format"])
+                if config_dict["process_edi"] == "True":
+                    self.ediconvert_options.set("Convert EDI")
+                    reset_ediconvert_options("Convert EDI")
+                elif config_dict["tweak_edi"] is True:
+                    self.ediconvert_options.set("Tweak EDI")
+                    reset_ediconvert_options("Tweak EDI")
+                else:
+                    self.ediconvert_options.set("Do Nothing")
+                    reset_ediconvert_options("Do Nothing")
+
+        set_dialog_variables(self.foldersnameinput, False)
+
+        def reset_ediconvert_options(argument):
+            for child in self.convert_options_frame.winfo_children():
+                child.grid_forget()
+            make_ediconvert_options(argument)
+
+        self.split_edi_frame.grid(
+            row=2, column=0, columnspan=2, sticky=tkinter.W)
+        self.split_edi_checkbutton.grid(
+            row=0, column=0, columnspan=2, sticky=tkinter.W
+        )
+        self.split_edi_send_invoices_checkbutton.grid(
+            row=1, column=0, columnspan=2, sticky=tkinter.W
+        )
+        self.split_edi_send_credits_checkbutton.grid(
+            row=2, column=0, columnspan=2, sticky=tkinter.W
+        )
+        self.prepend_file_dates_checkbutton.grid(
+            row=3, column=0, columnspan=2, sticky=tkinter.W
+        )
+        self.rename_file_field.grid(
+            row=4, column=1, sticky=tkinter.E
+        )
+
+        def make_ediconvert_options(argument):
+            if argument == "Do Nothing":
+                self.tweak_edi.set(False)
+                self.process_edi.set("False")
+                tkinter.ttk.Label(
+                    self.convert_options_frame, text="Send As Is"
+                ).grid()
+            if argument == "Convert EDI":
+                self.process_edi.set("True")
+                self.tweak_edi.set(False)
+                self.convert_to_selector_frame.grid(row=0, column=0, columnspan=2)
+                self.convert_to_selector_label.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.convert_to_selector_menu.grid(
+                    row=0, column=1, sticky=tkinter.W
+                )
+                make_convert_to_options()
+            if argument == "Tweak EDI":
+                self.tweak_edi.set(True)
+                self.process_edi.set("False")
+                self.upc_variable_process_checkbutton.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_padding_frame.grid(
+                    row=9,
+                    column=0,
+                    columnspan=2,
+                    sticky=tkinter.W + tkinter.E,
+                    padx=3,
+                )
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.pad_a_records_length_optionmenu.grid(
+                    row=0, column=1, sticky=tkinter.E
+                )
+                self.a_record_padding_field.grid(
+                    row=9, column=2, sticky=tkinter.W, padx=3
+                )
+                self.append_a_records_checkbutton.grid(
+                    row=10, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_append_field.grid(row=10, column=2)
+                self.force_txt_file_ext_checkbutton.grid(
+                    row=11, column=0, sticky=tkinter.W, padx=3
+                )
+                self.invoice_date_offset_spinbox_label.grid(
+                    row=12, column=0, sticky=tkinter.W, padx=3
+                )
+                self.invoice_date_offset_spinbox.grid(
+                    row=12, column=2, sticky=tkinter.W, padx=3
+                )
+                self.invoice_date_custom_format_checkbutton.grid(
+                    row=13, column=0, sticky=tkinter.W, padx=3
+                )
+                self.invoice_date_custom_format_field.grid(
+                    row=13, column=2, sticky=tkinter.W, padx=3
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=14, column=0, sticky=tkinter.W, padx=3
+                )
+                self.override_upc_checkbutton.grid(
+                    row=15, column=0, sticky=tkinter.W, padx=3
+                )
+                self.override_upc_level_optionmenu.grid(
+                    row=15, column=1, sticky=tkinter.W, padx=3
+                )
+                self.override_upc_category_filter_entry.grid(
+                    row=15, column=2, sticky=tkinter.W, padx=3
+                )
+                self.split_prepaid_sales_tax_crec.grid(
+                    row=16, column=0, sticky=tkinter.W, padx=3
+                )
+
+        if self.foldersnameinput["process_edi"] == "True":
+            self.ediconvert_options.set("Convert EDI")
+            make_ediconvert_options("Convert EDI")
+        elif self.foldersnameinput["tweak_edi"] is True:
+            self.ediconvert_options.set("Tweak EDI")
+            make_ediconvert_options("Tweak EDI")
+        else:
+            self.ediconvert_options.set("Do Nothing")
+            make_ediconvert_options("Do Nothing")
+
+        self.edi_options_menu = tkinter.ttk.OptionMenu(
+            self.ediframe,
+            self.ediconvert_options,
+            self.ediconvert_options.get(),
+            "Do Nothing",
+            "Convert EDI",
+            "Tweak EDI",
+            command=reset_ediconvert_options,
+        )
+
+        def config_from_others():
+            def recurse_set_default(parent):
+                for child in parent.winfo_children():
+                    try:
+                        child.configure(state=tkinter.NORMAL)
+                    except Exception:
+                        pass
+                    recurse_set_default(child)
+
+            recurse_set_default(master)
+            settings_table = database_obj_instance.folders_table.find_one(
+                alias=self.otherslistbox.get(tkinter.ACTIVE)
+            )
+            set_dialog_variables(settings_table, True)
+            set_header_state()
+            set_send_options_fields_state()
+
+        self.copyconfigbutton.configure(command=config_from_others)
+
+        set_header_state()
+        set_send_options_fields_state()
+
+        self.force_edi_check_checkbutton.grid(
+            row=1, column=0, columnspan=2, sticky=tkinter.W
+        )
+        self.edi_options_menu.grid(row=5)
+        self.active_checkbutton_object.pack(fill=tkinter.X)
+        self.copy_backend_checkbutton.grid(row=3, column=0, sticky=tkinter.W)
+        self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=tkinter.W)
+        self.email_backend_checkbutton.grid(row=5, column=0, sticky=tkinter.W)
+        if self.foldersnameinput["folder_name"] != "template":
+            self.folder_alias_frame.grid(row=6, column=0, columnspan=2)
+        self.copy_backend_folder_selection_button.grid(
+            row=4, column=0, columnspan=2
+        )
+        self.ftp_server_field.grid(row=7, column=1)
+        self.ftp_port_field.grid(row=8, column=1)
+        self.ftp_folder_field.grid(row=9, column=1)
+        self.ftp_username_field.grid(row=10, column=1)
+        self.ftp_password_field.grid(row=11, column=1)
+        self.email_recepient_field.grid(row=14, column=1)
+        self.email_sender_subject_field.grid(row=18, column=1)
+        self.otherslistbox.pack(side=tkinter.LEFT, fill=tkinter.Y)
+        self.otherslistboxscrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self.copyconfigbutton.pack()
+
+        self.aliaslist = []
+        for entry in database_obj_instance.folders_table.all():
+            self.aliaslist.append(entry["alias"])
+        self.aliaslist.sort()
+        for alias in self.aliaslist:
+            self.otherslistbox.insert(tkinter.END, alias)
+        self.otherslistbox.config(width=0, height=10)
+
+        self.header_frame_frame.pack(fill=tkinter.X)
+        self.bodyframe.pack()
+
+        self.othersframe.pack(side=tkinter.LEFT, fill=tkinter.Y)
+        self.otherslistboxframe.pack(side=tkinter.LEFT, fill=tkinter.Y)
+        self.separatorv0.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
+        self.folderframe.pack(side=tkinter.LEFT, anchor="n")
+        self.separatorv1.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
+        self.prefsframe.pack(side=tkinter.LEFT, anchor="n")
+        self.separatorv2.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
+        self.ediframe.pack(side=tkinter.LEFT, anchor="n")
+
+        return self.active_checkbutton_object  # initial focus
+
+    def ok(self, event=None):
+        if not self.validate():
+            self.initial_focus.focus_set()  # put focus back
+            return
+
+        self.withdraw()
+        self.update_idletasks()
+
+        self.apply(self.foldersnameinput)
+
+        self.cancel()
+
+    def apply(self, apply_to_folder):
+        doingstuffoverlay.make_overlay(self, "Applying Changes...")
+        global copy_to_directory
+        global destination_directory_is_altered
+        apply_to_folder["folder_is_active"] = str(self.active_checkbutton.get())
+        if self.foldersnameinput["folder_name"] != "template":
+            if str(self.folder_alias_field.get()) == "":
+                apply_to_folder["alias"] = os.path.basename(
+                    self.foldersnameinput["folder_name"]
+                )
+            else:
+                apply_to_folder["alias"] = str(self.folder_alias_field.get())
+        apply_to_folder["copy_to_directory"] = copy_to_directory
+        apply_to_folder[
+            "process_backend_copy"
+        ] = self.process_backend_copy_check.get()
+        apply_to_folder[
+            "process_backend_ftp"
+        ] = self.process_backend_ftp_check.get()
+        apply_to_folder[
+            "process_backend_email"
+        ] = self.process_backend_email_check.get()
+        apply_to_folder["ftp_server"] = str(self.ftp_server_field.get())
+        apply_to_folder["ftp_port"] = int(self.ftp_port_field.get())
+        apply_to_folder["ftp_folder"] = str(self.ftp_folder_field.get())
+        apply_to_folder["ftp_username"] = str(self.ftp_username_field.get())
+        apply_to_folder["ftp_password"] = str(self.ftp_password_field.get())
+        apply_to_folder["email_to"] = str(self.email_recepient_field.get())
+        apply_to_folder["email_subject_line"] = str(
+            self.email_sender_subject_field.get()
+        )
+        apply_to_folder["process_edi"] = str(self.process_edi.get())
+        apply_to_folder["convert_to_format"] = str(self.convert_formats_var.get())
+        apply_to_folder["calculate_upc_check_digit"] = str(self.upc_var_check.get())
+        apply_to_folder["include_a_records"] = str(self.a_rec_var_check.get())
+        apply_to_folder["include_c_records"] = str(self.c_rec_var_check.get())
+        apply_to_folder["include_headers"] = str(self.headers_check.get())
+        apply_to_folder["filter_ampersand"] = str(self.ampersand_check.get())
+        apply_to_folder["force_edi_validation"] = self.force_edi_check_var.get()
+        apply_to_folder["tweak_edi"] = self.tweak_edi.get()
+        apply_to_folder["split_edi"] = self.split_edi.get()
+        apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
+        apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
+        apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
+        apply_to_folder["rename_file"] = self.rename_file_field.get()
+        apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
+        apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())
+        apply_to_folder["a_record_padding_length"] = int(
+            self.a_record_padding_length.get()
+        )
+        apply_to_folder["append_a_records"] = str(self.append_arec_check.get())
+        apply_to_folder["a_record_append_text"] = str(
+            self.a_record_append_field.get()
+        )
+        apply_to_folder["force_txt_file_ext"] = str(
+            self.force_txt_file_ext_check.get()
+        )
+        apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
+        apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
+        apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
+        apply_to_folder["override_upc_level"] = self.override_upc_level.get()
+        apply_to_folder["override_upc_category_filter"] = self.override_upc_category_filter_entry.get()
+        apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
+        apply_to_folder[
+            "include_item_description"
+        ] = self.include_item_description.get()
+        apply_to_folder[
+            "simple_csv_sort_order"
+        ] = self.simple_csv_column_sorter.get()
+        apply_to_folder[
+            "invoice_date_custom_format"
+        ] = self.invoice_date_custom_format.get()
+        apply_to_folder[
+            "invoice_date_custom_format_string"
+        ] = self.invoice_date_custom_format_field.get()
+        apply_to_folder[
+            "split_prepaid_sales_tax_crec"
+        ] = self.split_sales_tax_prepaid_var.get()
+        apply_to_folder[
+            "estore_store_number"
+        ] = self.estore_store_number_field.get()
+        apply_to_folder["estore_Vendor_OId"] = self.estore_Vendor_OId_field.get()
+        apply_to_folder[
+            "estore_vendor_NameVendorOID"
+        ] = self.estore_vendor_namevendoroid_field.get()
+        apply_to_folder['fintech_division_id'] = self.fintech_divisionid_field.get()
+
+        if self.foldersnameinput["folder_name"] != "template":
+            update_folder_alias(apply_to_folder)
+        else:
+            update_reporting(apply_to_folder)
+        set_main_button_states()
+        doingstuffoverlay.destroy_overlay()
+
+    def validate(self):
+        error_string_constructor_list = []
+        errors = False
+
+        doingstuffoverlay.make_overlay(self, "Testing Changes...")
+        backend_count = 0
+        if self.process_backend_ftp_check.get() is True:
+            backend_count += 1
+
+            ftp_errors = False
+
+            if self.ftp_server_field.get() == "":
+                error_string_constructor_list.append(
+                    "FTP Server Field Is Required\r\n"
+                )
+                errors = True
+                ftp_errors = True
+
+            if self.ftp_port_field.get() == "":
+                error_string_constructor_list.append(
+                    "FTP Port Field Is Required\r\n"
+                )
+                errors = True
+                ftp_errors = True
+
+            if self.ftp_folder_field.get() == "":
+                error_string_constructor_list.append(
+                    "FTP Folder Field Is Required\r\n"
+                )
+                errors = True
+                ftp_errors = True
+            else:
+                if self.ftp_folder_field.get()[-1] != "/":
+                    error_string_constructor_list.append(
+                        "FTP Folder Path Needs To End In /\r\n"
+                    )
+                    errors = True
+                    ftp_errors = True
+
+            if self.ftp_username_field.get() == "":
+                error_string_constructor_list.append(
+                    "FTP Username Field Is Required\r\n"
+                )
+                errors = True
+                ftp_errors = True
+
+            if self.ftp_password_field.get() == "":
+                error_string_constructor_list.append(
+                    "FTP Password Field Is Required\r\n"
+                )
+                errors = True
+                ftp_errors = True
+
+            try:
+                _ = int(self.ftp_port_field.get())
+            except ValueError:
+                error_string_constructor_list.append(
+                    "FTP Port Field Needs To Be A Number\r\n"
+                )
+                errors = True
+                ftp_errors = True
+
+            if not ftp_errors:
+                ftp = ftplib.FTP()
+
+                try:
+                    ftp.connect(
+                        str(self.ftp_server_field.get()),
+                        int(self.ftp_port_field.get()),
+                    )
+                    try:
+                        ftp.login(
+                            self.ftp_username_field.get(),
+                            self.ftp_password_field.get(),
+                        )
+                        try:
+                            ftp.cwd(self.ftp_folder_field.get())
+                        except Exception as ftp_error:
+                            print("cwd")
+                            print(ftp_error)
+                            error_string_constructor_list.append(
+                                "FTP Folder Field Incorrect"
+                            )
+                            errors = True
+                    except Exception as ftp_error:
+                        print("username/password")
+                        print(ftp_error)
+                        error_string_constructor_list.append(
+                            "FTP Username or Password Incorrect"
+                        )
+                        errors = True
+                    ftp.close()
+                except Exception as ftp_error:
+                    print("server/port")
+                    print(ftp_error)
+                    error_string_constructor_list.append(
+                        "FTP Server or Port Field Incorrect"
+                    )
+                    errors = True
+
+        if self.process_backend_email_check.get() is True:
+            backend_count += 1
+
+            if self.email_recepient_field.get() == "":
+                error_string_constructor_list.append(
+                    "Email Destination Address Field Is Required"
+                )
+                errors = True
+            else:
+                email_recepients = str(self.email_recepient_field.get()).split(", ")
+                for email_recepient in email_recepients:
+                    if (validate_email(str(email_recepient))) is False:
+                        error_string_constructor_list.append(
+                            "Invalid Email Destination Address"
+                        )
+                        errors = True
+
+        if self.process_backend_copy_check.get() is True:
+            backend_count += 1
+
+            if copy_to_directory is None or copy_to_directory == "":
+                error_string_constructor_list.append(
+                    "Copy Backend Destination Is currently Unset,"
+                    " Please Select One"
+                )
+                errors = True
+
+        if backend_count == 0 and self.active_checkbutton.get() == "True":
+            error_string_constructor_list.append("No Backend Is Selected")
+            errors = True
+        print(self.tweak_edi.get())
+
+        if (
+            str(self.pad_arec_check.get()) != "True"
+            and self.convert_formats_var.get() == "ScannerWare"
+            and self.tweak_edi.get() is False
+        ):
+            error_string_constructor_list.append(
+                '"A" Record Padding Needs To Be Enabled For ScannerWare Backend'
+            )
+            errors = True
+
+        if (
+            len(str(self.a_record_padding_field.get()))
+            > self.a_record_padding_length.get()
+            and str(self.pad_arec_check.get()) == "True"
+        ):
+            if self.convert_formats_var.get() not in ["ScannerWare"]:
+                error_string_constructor_list.append(
+                    f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters'
+                )
+                errors = True
+
+        if (
+            len(str(self.a_record_padding_field.get())) != 6
+            and str(self.pad_arec_check.get()) == "True"
+        ):
+            error_string_constructor_list.append(
+                '"A" Record Padding Needs To Be Six Characters'
+            )
+            errors = True
+
+        if int(self.invoice_date_offset.get()) not in list(range(-14, 15)):
+            error_string_constructor_list.append(
+                "Invoice date offset not in valid range"
+            )
+            errors = True
+
+        if (
+            self.prepend_file_dates.get() is True
+            and self.split_edi.get() is False
+        ):
+            error_string_constructor_list.append(
+                "Edi needs to be split for prepending dates"
+            )
+            errors = True
+
+        if (
+            not self.split_edi.get()
+            and self.convert_formats_var.get() == "jolley_custom"
+            and self.tweak_edi.get() is False
+        ):
+            error_string_constructor_list.append(
+                "EDI needs to be split for jolley_custom backend"
+            )
+            errors = True
+        if self.override_upc_bool.get() is True:
+            if self.override_upc_category_filter_entry.get() == "":
+                error_string_constructor_list.append(
+                    "Override UPC Category Filter Is Required"
+                )
+                errors = True
+            for category in self.override_upc_category_filter_entry.get().split(","):
+                try:
+                    int(category)
+                    if int(category) not in list(range(1, 100)):
+                        error_string_constructor_list.append(
+                            "Override UPC Category Filter Is Invalid"
+                        )
+                        errors = True
+                except ValueError:
+                    if category != "ALL":
+                        error_string_constructor_list.append(
+                            "Override UPC Category Filter Is Invalid"
+                        )
+                        errors = True
+        if self.convert_formats_var.get() == "fintech":
+            try:
+                _ = int(self.fintech_divisionid_field.get())
+            except ValueError:
+                error_string_constructor_list.append(
+                    "fintech divisionid needs to be a number"
+                )
+                errors = True
+        if self.foldersnameinput["folder_name"] != "template":
+            if str(self.folder_alias_field.get()) != self.foldersnameinput["alias"]:
+                proposed_folder = database_obj_instance.folders_table.find_one(
+                    alias=str(self.folder_alias_field.get())
+                )
+                if proposed_folder is not None:
+                    error_string_constructor_list.append(
+                        "Folder Alias Already In Use"
+                    )
+                    errors = True
+
+            if len(self.folder_alias_field.get()) > 50:
+                error_string_constructor_list.append("Alias Too Long")
+                errors = True
+        if errors is True:
+            doingstuffoverlay.destroy_overlay()
+            error_string = "\r\n".join(
+                error_string_constructor_list
+            )  # combine error messages into single string
+            showerror(
+                parent=self, message=error_string
+            )  # display generated error in dialog box
+            return False
+
+        doingstuffoverlay.destroy_overlay()
+        return 1
+
+
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
@@ -730,1861 +2588,6 @@ if __name__ == "__main__":
             return ",".join(
                 [self.entries_listbox.get(i) for i in range(len(self.entries_list))]
             )
-
-    class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
-        def body(self, master):
-            self.settings = database_obj_instance.settings.find_one(id=1)
-            self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
-            self.logs_directory = self.foldersnameinput["logs_directory"]
-            self.title("Edit Settings")
-            self.enable_email_checkbutton_variable = tkinter.BooleanVar(master)
-            self.enable_interval_backup_variable = tkinter.BooleanVar(master)
-            self.enable_reporting_checkbutton_variable = tkinter.StringVar(master)
-            self.enable_report_printing_checkbutton_variable = tkinter.StringVar(master)
-            self.report_edi_validator_warnings_checkbutton_variable = (
-                tkinter.BooleanVar(master)
-            )
-            self.odbc_drivers_var = tkinter.StringVar(master)
-
-            as400_db_connection_frame = tkinter.ttk.Frame(master=master)
-            report_sending_options_frame = tkinter.ttk.Frame(master)
-            email_options_frame = tkinter.ttk.Frame(master)
-            interval_backups_frame = tkinter.ttk.Frame(master)
-
-            # Label(master, text='Test').grid(row=0, column=0)
-            as400_db_connection_frame.grid(
-                row=0, column=0, sticky=(tkinter.W, tkinter.E), columnspan=2
-            )
-
-            tkinter.ttk.Label(as400_db_connection_frame, text="ODBC Driver:").grid(
-                row=1, column=0, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Address:").grid(
-                row=2, column=0, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Username:").grid(
-                row=3, column=0, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(as400_db_connection_frame, text="AS400 Password:").grid(
-                row=4, column=0, sticky=tkinter.E
-            )
-
-            tkinter.ttk.Label(email_options_frame, text="Email Address:").grid(
-                row=1, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(email_options_frame, text="Email Username:").grid(
-                row=2, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(email_options_frame, text="Email Password:").grid(
-                row=3, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(email_options_frame, text="Email SMTP Server:").grid(
-                row=4, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(email_options_frame, text="Email SMTP Port").grid(
-                row=5, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(
-                report_sending_options_frame, text="Email Destination:"
-            ).grid(row=7, sticky=tkinter.E)
-
-            def reporting_options_fields_state_set():
-                if self.enable_reporting_checkbutton_variable.get() == "False":
-                    state = tkinter.DISABLED
-                else:
-                    state = tkinter.NORMAL
-                for child in report_sending_options_frame.winfo_children():
-                    child.configure(state=state)
-
-            def email_options_fields_state_set():
-                if self.enable_email_checkbutton_variable.get() is False:
-                    self.enable_reporting_checkbutton_variable.set("False")
-                    state = tkinter.DISABLED
-                else:
-                    state = tkinter.NORMAL
-                for child in email_options_frame.winfo_children():
-                    child.configure(state=state)
-                reporting_options_fields_state_set()
-                self.run_reporting_checkbutton.configure(state=state)
-
-            def interval_backup_options_set():
-                if self.enable_interval_backup_variable.get():
-                    self.interval_backup_spinbox.configure(state=tkinter.NORMAL)
-                    self.interval_backup_interval_label.configure(state=tkinter.NORMAL)
-                else:
-                    self.interval_backup_spinbox.configure(state=tkinter.DISABLED)
-                    self.interval_backup_interval_label.configure(
-                        state=tkinter.DISABLED
-                    )
-
-            self.enable_email_checkbutton = tkinter.ttk.Checkbutton(
-                master,
-                variable=self.enable_email_checkbutton_variable,
-                onvalue=True,
-                offvalue=False,
-                command=email_options_fields_state_set,
-                text="Enable Email",
-            )
-            self.run_reporting_checkbutton = tkinter.ttk.Checkbutton(
-                master,
-                variable=self.enable_reporting_checkbutton_variable,
-                onvalue="True",
-                offvalue="False",
-                command=reporting_options_fields_state_set,
-                text="Enable Report Sending",
-            )
-            self.report_edi_validator_warnings_checkbutton = tkinter.ttk.Checkbutton(
-                master,
-                variable=self.report_edi_validator_warnings_checkbutton_variable,
-                onvalue=True,
-                offvalue=False,
-                text="Report EDI Validator Warnings",
-            )
-            self.enable_interval_backup_checkbutton = tkinter.ttk.Checkbutton(
-                interval_backups_frame,
-                variable=self.enable_interval_backup_variable,
-                onvalue=True,
-                offvalue=False,
-                command=interval_backup_options_set,
-                text="Enable interval backup",
-            )
-            self.interval_backup_interval_label = tkinter.ttk.Label(
-                interval_backups_frame, text="Backup interval: "
-            )
-            self.interval_backup_spinbox = tkinter.ttk.Spinbox(
-                interval_backups_frame, from_=1, to=5000, width=4, justify=tkinter.RIGHT
-            )
-            self.odbc_driver_selector_menu = tkinter.ttk.OptionMenu(
-                as400_db_connection_frame,
-                self.odbc_drivers_var,
-                self.settings["odbc_driver"],
-                *[i for i in pyodbc.drivers()],
-            )
-
-            self.as400_address_field = tkinter.ttk.Entry(
-                as400_db_connection_frame, width=40
-            )
-            self.as400_username_field = tkinter.ttk.Entry(
-                as400_db_connection_frame, width=40
-            )
-            self.as400_password_field = tkinter.ttk.Entry(
-                as400_db_connection_frame, width=40
-            )
-            self.email_address_field = tkinter.ttk.Entry(email_options_frame, width=40)
-            self.email_username_field = tkinter.ttk.Entry(email_options_frame, width=40)
-            self.email_password_field = tkinter.ttk.Entry(
-                email_options_frame, show="*", width=40
-            )
-            self.email_smtp_server_field = tkinter.ttk.Entry(
-                email_options_frame, width=40
-            )
-            self.smtp_port_field = tkinter.ttk.Entry(email_options_frame, width=40)
-            self.report_email_destination_field = tkinter.ttk.Entry(
-                report_sending_options_frame, width=40
-            )
-            self.log_printing_fallback_checkbutton = tkinter.ttk.Checkbutton(
-                report_sending_options_frame,
-                variable=self.enable_report_printing_checkbutton_variable,
-                onvalue="True",
-                offvalue="False",
-                text="Enable Report Printing Fallback:",
-            )
-            rclick_as400_address_field = tk_extra_widgets.RightClickMenu(
-                self.as400_address_field
-            )
-            rclick_as400_username_field = tk_extra_widgets.RightClickMenu(
-                self.as400_username_field
-            )
-            rclick_as400_password_field = tk_extra_widgets.RightClickMenu(
-                self.as400_password_field
-            )
-            rclick_report_email_address_field = tk_extra_widgets.RightClickMenu(
-                self.email_address_field
-            )
-            rclick_report_email_username_field = tk_extra_widgets.RightClickMenu(
-                self.email_username_field
-            )
-            rclick_report_email_smtp_server_field = tk_extra_widgets.RightClickMenu(
-                self.email_smtp_server_field
-            )
-            rclick_reporting_smtp_port_field = tk_extra_widgets.RightClickMenu(
-                self.smtp_port_field
-            )
-            rclick_report_email_destination_field = tk_extra_widgets.RightClickMenu(
-                self.report_email_destination_field
-            )
-            self.as400_address_field.bind("<3>", rclick_as400_address_field)
-            self.as400_username_field.bind("<3>", rclick_as400_username_field)
-            self.as400_password_field.bind("<3>", rclick_as400_password_field)
-            self.email_address_field.bind("<3>", rclick_report_email_address_field)
-            self.email_username_field.bind("<3>", rclick_report_email_username_field)
-            self.email_smtp_server_field.bind(
-                "<3>", rclick_report_email_smtp_server_field
-            )
-            self.smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
-            self.report_email_destination_field.bind(
-                "<3>", rclick_report_email_destination_field
-            )
-            self.select_log_folder_button = tkinter.ttk.Button(
-                master,
-                text="Select Log Folder...",
-                command=lambda: select_log_directory(),
-            )
-
-            def select_log_directory():
-                try:
-                    if os.path.exists(self.logs_directory):
-                        initial_directory = self.logs_directory
-                    else:
-                        initial_directory = os.getcwd()
-                except Exception as folder_select_error:
-                    print(folder_select_error)
-                    initial_directory = os.getcwd()
-                logs_directory_edit_proposed = str(
-                    askdirectory(parent=master, initialdir=initial_directory)
-                )
-                if len(logs_directory_edit_proposed) > 0:
-                    self.logs_directory = logs_directory_edit_proposed
-
-            self.enable_email_checkbutton_variable.set(self.settings["enable_email"])
-            self.enable_reporting_checkbutton_variable.set(
-                self.foldersnameinput["enable_reporting"]
-            )
-            self.as400_address_field.insert(0, self.settings["as400_address"])
-            self.as400_username_field.insert(0, self.settings["as400_username"])
-            self.as400_password_field.insert(0, self.settings["as400_password"])
-            self.email_address_field.insert(0, self.settings["email_address"])
-            self.email_username_field.insert(0, self.settings["email_username"])
-            self.email_password_field.insert(0, self.settings["email_password"])
-            self.email_smtp_server_field.insert(0, self.settings["email_smtp_server"])
-            self.smtp_port_field.insert(0, self.settings["smtp_port"])
-            self.report_email_destination_field.insert(
-                0, self.foldersnameinput["report_email_destination"]
-            )
-            self.enable_interval_backup_variable.set(
-                self.settings["enable_interval_backups"]
-            )
-            self.enable_report_printing_checkbutton_variable.set(
-                self.foldersnameinput["report_printing_fallback"]
-            )
-            self.report_edi_validator_warnings_checkbutton_variable.set(
-                self.foldersnameinput["report_edi_errors"]
-            )
-            self.interval_backup_spinbox.delete(0, "end")
-            self.interval_backup_spinbox.insert(
-                0, self.settings["backup_counter_maximum"]
-            )
-
-            email_options_fields_state_set()
-            reporting_options_fields_state_set()
-
-            self.enable_email_checkbutton.grid(row=1, columnspan=3, sticky=tkinter.W)
-            email_options_frame.grid(row=2, columnspan=3)
-            report_sending_options_frame.grid(row=5, columnspan=3)
-            interval_backups_frame.grid(
-                row=9, column=0, columnspan=3, sticky=tkinter.W + tkinter.E
-            )
-            interval_backups_frame.columnconfigure(0, weight=1)
-            self.run_reporting_checkbutton.grid(
-                row=3, column=0, padx=2, pady=2, sticky=tkinter.W
-            )
-            self.report_edi_validator_warnings_checkbutton.grid(
-                row=4, column=0, padx=2, pady=2, sticky=tkinter.W
-            )
-            self.odbc_driver_selector_menu.grid(row=1, column=1)
-            self.as400_address_field.grid(row=2, column=1, padx=2, pady=2)
-            self.as400_username_field.grid(row=3, column=1, padx=2, pady=2)
-            self.as400_password_field.grid(row=4, column=1, padx=2, pady=2)
-            self.email_address_field.grid(row=1, column=1, padx=2, pady=2)
-            self.email_username_field.grid(row=2, column=1, padx=2, pady=2)
-            self.email_password_field.grid(row=3, column=1, padx=2, pady=2)
-            self.email_smtp_server_field.grid(row=4, column=1, padx=2, pady=2)
-            self.smtp_port_field.grid(row=5, column=1, padx=2, pady=2)
-            self.report_email_destination_field.grid(row=7, column=1, padx=2, pady=2)
-            self.select_log_folder_button.grid(
-                row=3, column=1, padx=2, pady=2, sticky=tkinter.E, rowspan=2
-            )
-            self.log_printing_fallback_checkbutton.grid(
-                row=8, column=1, padx=2, pady=2, sticky=tkinter.W
-            )
-            self.enable_interval_backup_checkbutton.grid(
-                row=0, column=0, sticky=tkinter.W, padx=2, pady=2
-            )
-            self.interval_backup_interval_label.grid(
-                row=0, column=1, sticky=tkinter.E, padx=2, pady=2
-            )
-            self.interval_backup_interval_label.columnconfigure(0, weight=1)
-            self.interval_backup_spinbox.grid(
-                row=0, column=2, sticky=tkinter.E, padx=2, pady=2
-            )
-
-            return self.email_address_field  # initial focus
-
-        def validate(self):
-            doingstuffoverlay.make_overlay(self, "Testing Changes...")
-            error_list = []
-            errors = False
-
-            if self.enable_email_checkbutton_variable.get():
-                if self.email_address_field.get() == "":
-                    error_list.append("Email Address Is A Required Field\r")
-                    errors = True
-                else:
-                    if (validate_email(str(self.email_address_field.get()))) is False:
-                        error_list.append("Invalid Email Origin Address\r")
-                        errors = True
-
-                try:
-                    server = smtplib.SMTP(
-                        str(self.email_smtp_server_field.get()),
-                        str(self.smtp_port_field.get()),
-                    )
-                    server.ehlo()
-                    server.starttls()
-                    if (
-                        self.email_username_field.get() != ""
-                        and self.email_password_field.get() != ""
-                    ):
-                        server.login(
-                            str(self.email_username_field.get()),
-                            str(self.email_password_field.get()),
-                        )
-                    server.quit()
-                except Exception as email_test_login_result_string:
-                    print(email_test_login_result_string)
-                    error_list.append(
-                        "Test Login Failed With Error\r"
-                        + str(email_test_login_result_string)
-                    )
-                    errors = True
-
-                if (
-                    self.email_username_field.get() == ""
-                    and self.email_password_field.get() != ""
-                ):
-                    error_list.append("Email Username Required If Password Is Set\r")
-                    errors = True
-
-                if (
-                    self.email_password_field.get() == ""
-                    and self.email_username_field.get() != ""
-                ):
-                    error_list.append(
-                        "Email Username Without Password Is Not Supported\r"
-                    )
-                    errors = True
-
-                if self.email_smtp_server_field.get() == "":
-                    error_list.append("SMTP Server Address Is A Required Field\r")
-                    errors = True
-
-                if self.smtp_port_field.get() == "":
-                    error_list.append("SMTP Port Is A Required Field\r")
-                    errors = True
-
-            if self.enable_reporting_checkbutton_variable.get() == "True":
-                if self.report_email_destination_field.get() == "":
-                    error_list.append(
-                        "Reporting Email Destination Is A Required Field\r"
-                    )
-                    errors = True
-                else:
-                    email_recipients = str(
-                        self.report_email_destination_field.get()
-                    ).split(", ")
-                    for email_recipient in email_recipients:
-                        print(email_recipient)
-                        if (validate_email(str(email_recipient))) is False:
-                            error_list.append("Invalid Email Destination Address\r\n")
-                            errors = True
-
-            if self.enable_interval_backup_variable.get():
-                try:
-                    backup_interval = int(self.interval_backup_spinbox.get())
-                    if backup_interval < 1 or backup_interval > 5000:
-                        raise ValueError
-                except ValueError:
-                    error_list.append(
-                        "Backup Interval Needs To Be A Number Between 1 and 5000"
-                    )
-                    errors = True
-
-            if errors is True:
-                error_report = "".join(
-                    error_list
-                )  # combine error messages into single string
-                showerror(
-                    parent=self, message=error_report
-                )  # display generated error string in error dialog
-                doingstuffoverlay.destroy_overlay()
-                return False
-            doingstuffoverlay.destroy_overlay()
-
-            if not self.enable_email_checkbutton_variable.get():
-                number_of_disabled_email_backends = (
-                    database_obj_instance.folders_table.count(
-                        process_backend_email=True
-                    )
-                )
-                number_of_disabled_folders = database_obj_instance.folders_table.count(
-                    process_backend_email=True,
-                    process_backend_ftp=False,
-                    process_backend_copy=False,
-                    folder_is_active="True",
-                )
-                if number_of_disabled_folders != 0:
-                    if not askokcancel(
-                        message="This will disable the email backend in "
-                        + str(number_of_disabled_email_backends)
-                        + " folders.\nAs a result, "
-                        + str(number_of_disabled_folders)
-                        + " folders will be disabled"
-                    ):
-                        return False
-            return 1
-
-        def ok(self, event=None):
-            if not self.validate:
-                self.initial_focus.focus_set()  # put focus back
-                return
-
-            self.withdraw()
-            self.update_idletasks()
-
-            self.apply(self.foldersnameinput)
-            self.cancel()
-
-        def apply(self, folders_name_apply):
-            doingstuffoverlay.make_overlay(root, "Applying Changes...")
-            root.update()
-            folders_name_apply["enable_reporting"] = str(
-                self.enable_reporting_checkbutton_variable.get()
-            )
-            folders_name_apply["logs_directory"] = self.logs_directory
-            self.settings["odbc_driver"] = self.odbc_drivers_var.get()
-            self.settings["as400_username"] = self.as400_username_field.get()
-            self.settings["as400_password"] = self.as400_password_field.get()
-            self.settings["as400_address"] = self.as400_address_field.get()
-            self.settings["enable_email"] = self.enable_email_checkbutton_variable.get()
-            self.settings["email_address"] = str(self.email_address_field.get())
-            self.settings["email_username"] = str(self.email_username_field.get())
-            self.settings["email_password"] = str(self.email_password_field.get())
-            self.settings["email_smtp_server"] = str(self.email_smtp_server_field.get())
-            self.settings["smtp_port"] = str(self.smtp_port_field.get())
-            self.settings[
-                "enable_interval_backups"
-            ] = self.enable_interval_backup_variable.get()
-            self.settings["backup_counter_maximum"] = int(
-                self.interval_backup_spinbox.get()
-            )
-            folders_name_apply["report_email_destination"] = str(
-                self.report_email_destination_field.get()
-            )
-            folders_name_apply[
-                "report_edi_errors"
-            ] = self.report_edi_validator_warnings_checkbutton_variable.get()
-            if not self.enable_email_checkbutton_variable.get():
-                for (
-                    email_backend_to_disable
-                ) in database_obj_instance.folders_table.find(
-                    process_backend_email=True
-                ):
-                    email_backend_to_disable["process_backend_email"] = False
-                    database_obj_instance.folders_table.update(
-                        email_backend_to_disable, ["id"]
-                    )
-                for folder_to_disable in database_obj_instance.folders_table.find(
-                    process_backend_email=False,
-                    process_backend_ftp=False,
-                    process_backend_copy=False,
-                    folder_is_active="True",
-                ):
-                    folder_to_disable["folder_is_active"] = "False"
-                    database_obj_instance.folders_table.update(
-                        folder_to_disable, ["id"]
-                    )
-                folders_name_apply["folder_is_active"] = "False"
-                folders_name_apply["process_backend_email"] = False
-
-            database_obj_instance.settings.update(self.settings, ["id"])
-            update_reporting(folders_name_apply)
-            doingstuffoverlay.destroy_overlay()
-            refresh_users_list()
-
-    class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
-        def body(self, master):
-            self.settings = database_obj_instance.settings.find_one(id=1)
-            self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
-            global copy_to_directory
-            copy_to_directory = self.foldersnameinput["copy_to_directory"]
-            self.convert_formats_var = tkinter.StringVar(master)
-            self.title("Folder Settings")
-            self.bodyframe = tkinter.ttk.Frame(master)
-            self.othersframe = tkinter.ttk.Frame(self.bodyframe)
-            self.folderframe = tkinter.ttk.Frame(self.bodyframe)
-            self.prefsframe = tkinter.ttk.Frame(self.bodyframe)
-            self.ediframe = tkinter.ttk.Frame(self.bodyframe)
-            self.convert_options_frame = tkinter.ttk.Frame(self.ediframe)
-            self.separatorv0 = tkinter.ttk.Separator(
-                self.bodyframe, orient=tkinter.VERTICAL
-            )
-            self.separatorv1 = tkinter.ttk.Separator(
-                self.bodyframe, orient=tkinter.VERTICAL
-            )
-            self.separatorv2 = tkinter.ttk.Separator(
-                self.bodyframe, orient=tkinter.VERTICAL
-            )
-            self.backendvariable = tkinter.StringVar(master)
-            self.active_checkbutton = tkinter.StringVar(master)
-            self.split_edi = tkinter.BooleanVar(master)
-            self.split_edi_send_credits = tkinter.BooleanVar(master)
-            self.split_edi_send_invoices = tkinter.BooleanVar(master)
-            self.prepend_file_dates = tkinter.BooleanVar(master)
-            self.ediconvert_options = tkinter.StringVar(master)
-            self.process_edi = tkinter.StringVar(master)
-            self.upc_var_check = tkinter.StringVar(
-                master
-            )  # define  "UPC calculation" checkbox state variable
-            self.a_rec_var_check = tkinter.StringVar(
-                master
-            )  # define "A record checkbox state variable
-            self.c_rec_var_check = tkinter.StringVar(
-                master
-            )  # define "C record" checkbox state variable
-            self.headers_check = tkinter.StringVar(
-                master
-            )  # define "Column Headers" checkbox state variable
-            self.ampersand_check = tkinter.StringVar(
-                master
-            )  # define "Filter Ampersand" checkbox state variable
-            self.tweak_edi = tkinter.BooleanVar(master)
-            self.pad_arec_check = tkinter.StringVar(master)
-            self.a_record_padding_length = tkinter.IntVar(master)
-            self.append_arec_check = tkinter.StringVar(master)
-            self.force_txt_file_ext_check = tkinter.StringVar(master)
-            self.process_backend_copy_check = tkinter.BooleanVar(master)
-            self.process_backend_ftp_check = tkinter.BooleanVar(master)
-            self.process_backend_email_check = tkinter.BooleanVar(master)
-            self.force_edi_check_var = tkinter.BooleanVar(master)
-            self.header_frame_frame = tkinter.ttk.Frame(master)
-            self.invoice_date_offset = tkinter.IntVar(master)
-            self.invoice_date_custom_format_string = tkinter.StringVar(master)
-            self.invoice_date_custom_format = tkinter.BooleanVar(master)
-            self.edi_each_uom_tweak = tkinter.BooleanVar(master)
-            self.include_item_numbers = tkinter.BooleanVar(master)
-            self.include_item_description = tkinter.BooleanVar(master)
-            self.split_sales_tax_prepaid_var = tkinter.BooleanVar(master)
-            self.override_upc_bool = tkinter.BooleanVar(master)
-            self.override_upc_level = tkinter.IntVar(master)
-            self.override_upc_category_filter = tkinter.StringVar(master)
-            self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
-            self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
-            self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(
-                master=self.otherslistboxframe, orient=tkinter.VERTICAL
-            )
-            self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
-            self.otherslistbox.config(yscrollcommand=self.otherslistboxscrollbar.set)
-            self.copyconfigbutton = tkinter.ttk.Button(
-                master=self.othersframe, text="Copy Config"
-            )
-            tkinter.ttk.Label(self.folderframe, text="Backends:").grid(
-                row=2, sticky=tkinter.W
-            )
-            tkinter.ttk.Label(self.prefsframe, text="Copy Backend Settings:").grid(
-                row=3, columnspan=2, pady=3
-            )
-            tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
-                row=5, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
-            )
-            tkinter.ttk.Label(self.prefsframe, text="Ftp Backend Settings:").grid(
-                row=6, columnspan=2, pady=3
-            )
-            tkinter.ttk.Label(self.prefsframe, text="FTP Server:").grid(
-                row=7, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.prefsframe, text="FTP Port:").grid(
-                row=8, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.prefsframe, text="FTP Folder:").grid(
-                row=9, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.prefsframe, text="FTP Username:").grid(
-                row=10, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.prefsframe, text="FTP Password:").grid(
-                row=11, sticky=tkinter.E
-            )
-            tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
-                row=12, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
-            )
-            tkinter.ttk.Label(self.prefsframe, text="Email Backend Settings:").grid(
-                row=13, columnspan=2, pady=3
-            )
-            tkinter.ttk.Label(self.prefsframe, text="Recipient Address:").grid(
-                row=14, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.prefsframe, text="Email Subject:").grid(
-                row=18, sticky=tkinter.E
-            )
-            tkinter.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
-                row=0, column=0, columnspan=2, pady=3
-            )
-            tkinter.ttk.Label(self.ediframe, text="Rename File:").grid(
-                row=4, column=0, sticky=tkinter.W
-            )
-            tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
-                row=6, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
-            )
-            self.convert_options_frame.grid(
-                column=0, row=7, columnspan=2, sticky=tkinter.W
-            )
-            self.convert_to_selector_frame = tkinter.ttk.Frame(
-                self.convert_options_frame
-            )
-            self.convert_to_selector_label = tkinter.ttk.Label(
-                self.convert_to_selector_frame, text="Convert To: "
-            )
-
-            def make_convert_to_options(_=None):
-                for frameentry in [
-                    self.upc_variable_process_checkbutton,
-                    self.a_record_checkbutton,
-                    self.c_record_checkbutton,
-                    self.headers_checkbutton,
-                    self.ampersand_checkbutton,
-                    self.pad_a_records_checkbutton,
-                    self.a_record_padding_frame,
-                    self.a_record_padding_field,
-                    self.pad_a_records_length_optionmenu,
-                    self.append_a_records_checkbutton,
-                    self.a_record_append_field,
-                    self.override_upc_checkbutton,
-                    self.override_upc_level_optionmenu,
-                    self.override_upc_category_filter_entry,
-                    self.each_uom_edi_tweak_checkbutton,
-                    self.include_item_numbers_checkbutton,
-                    self.include_item_description_checkbutton,
-                    self.simple_csv_column_sorter.containerframe,
-                    self.a_record_padding_field,
-                    self.estore_store_number_label,
-                    self.estore_store_number_field,
-                    self.estore_Vendor_OId_label,
-                    self.estore_Vendor_OId_field,
-                    self.estore_vendor_namevendoroid_label,
-                    self.estore_vendor_namevendoroid_field,
-                    self.fintech_divisionid_field,
-                    self.fintech_divisionid_label
-                ]:
-                    frameentry.grid_forget()
-                if self.convert_formats_var.get() == "csv":
-                    self.upc_variable_process_checkbutton.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_checkbutton.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.c_record_checkbutton.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.headers_checkbutton.grid(
-                        row=6, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.ampersand_checkbutton.grid(
-                        row=7, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.pad_a_records_checkbutton.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.a_record_padding_frame.grid(
-                        row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
-                    self.override_upc_checkbutton.grid(
-                        row=10, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.override_upc_level_optionmenu.grid(
-                        row=10, column=1, sticky=tkinter.W
-                    )
-                    self.override_upc_category_filter_entry.grid(
-                        row=10, column=2, sticky=tkinter.W
-                    )
-                    self.each_uom_edi_tweak_checkbutton.grid(
-                        row=11, column=0, sticky=tkinter.W, padx=3
-                    )
-                if self.convert_formats_var.get() == "ScannerWare":
-                    self.pad_a_records_checkbutton.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.a_record_padding_field.grid(row=2, column=2)
-                    self.a_record_padding_frame.grid(
-                        row=2, column=0, columnspan=2, sticky=tkinter.W, padx=3
-                    )
-                    self.append_a_records_checkbutton.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_append_field.grid(row=3, column=2)
-                if self.convert_formats_var.get() == "simplified_csv":
-                    self.headers_checkbutton.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.include_item_numbers_checkbutton.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.include_item_description_checkbutton.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.each_uom_edi_tweak_checkbutton.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.simple_csv_column_sorter.containerframe.grid(
-                        row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2
-                    )
-                if self.convert_formats_var.get() == "Estore eInvoice":
-                    self.estore_store_number_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_store_number_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_Vendor_OId_label.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_Vendor_OId_field.grid(
-                        row=3, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_label.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_field.grid(
-                        row=4, column=1, sticky=tkinter.E, padx=3
-                    )
-                if self.convert_formats_var.get() == "Estore eInvoice Generic":
-                    self.estore_store_number_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_store_number_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_Vendor_OId_label.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_Vendor_OId_field.grid(
-                        row=3, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_label.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_field.grid(
-                        row=4, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_c_record_oid_label.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_c_record_oid_field.grid(
-                        row=5, column=1, sticky=tkinter.E, padx=3
-                    )
-                if self.convert_formats_var.get() == 'fintech':
-                    self.fintech_divisionid_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.fintech_divisionid_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
-
-            self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
-                self.convert_to_selector_frame,
-                self.convert_formats_var,
-                self.foldersnameinput["convert_to_format"],
-                "csv",
-                "ScannerWare",
-                "scansheet-type-a",
-                "jolley_custom",
-                "stewarts_custom",
-                "simplified_csv",
-                "Estore eInvoice",
-                "Estore eInvoice Generic",
-                "YellowDog CSV",
-                "fintech",
-                command=make_convert_to_options,
-            )
-
-            def show_folder_path():
-                showinfo(
-                    parent=master,
-                    title="Folder Path",
-                    message=self.foldersnameinput["folder_name"],
-                )
-
-            def select_copy_to_directory():
-                global copy_to_directory
-                try:
-                    if os.path.exists(copy_to_directory):
-                        initial_directory = copy_to_directory
-                    else:
-                        initial_directory = os.getcwd()
-                except Exception as select_copy_directory_error:
-                    print(select_copy_directory_error)
-                    initial_directory = os.getcwd()
-                proposed_copy_to_directory = str(
-                    askdirectory(parent=self.prefsframe, initialdir=initial_directory)
-                )
-                if os.path.isdir(proposed_copy_to_directory):
-                    copy_to_directory = proposed_copy_to_directory
-
-            def set_send_options_fields_state():
-                if not self.settings["enable_email"]:
-                    self.email_backend_checkbutton.configure(state=tkinter.DISABLED)
-                if (
-                    self.process_backend_copy_check.get() is False
-                    and self.process_backend_ftp_check.get() is False
-                    and self.process_backend_email_check.get() is False
-                ):
-                    self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
-                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.DISABLED)
-                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.DISABLED)
-                    self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
-                    self.rename_file_field.configure(state=tkinter.DISABLED)
-                    self.edi_options_menu.configure(state=tkinter.DISABLED)
-                    for child in self.convert_options_frame.winfo_children():
-                        try:
-                            child.configure(state=tkinter.DISABLED)
-                        except tkinter.TclError:
-                            pass
-                    for child in self.convert_to_selector_frame.winfo_children():
-                        try:
-                            child.configure(state=tkinter.DISABLED)
-                        except tkinter.TclError:
-                            pass
-                else:
-                    self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
-                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.NORMAL)
-                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.NORMAL)
-                    self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
-                    self.rename_file_field.configure(state=tkinter.NORMAL)
-                    self.edi_options_menu.configure(state=tkinter.NORMAL)
-                    for child in self.convert_options_frame.winfo_children():
-                        try:
-                            child.configure(state=tkinter.NORMAL)
-                        except tkinter.TclError:
-                            pass
-                    for child in self.convert_to_selector_frame.winfo_children():
-                        try:
-                            child.configure(state=tkinter.NORMAL)
-                        except tkinter.TclError:
-                            pass
-                if self.process_backend_copy_check.get() is False:
-                    copy_state = tkinter.DISABLED
-                else:
-                    copy_state = tkinter.NORMAL
-                if (
-                    self.process_backend_email_check.get() is False
-                    or self.settings["enable_email"] is False
-                ):
-                    email_state = tkinter.DISABLED
-                else:
-                    email_state = tkinter.NORMAL
-                if self.process_backend_ftp_check.get() is False:
-                    ftp_state = tkinter.DISABLED
-                else:
-                    ftp_state = tkinter.NORMAL
-                self.copy_backend_folder_selection_button.configure(state=copy_state)
-                self.email_recepient_field.configure(state=email_state)
-                self.email_sender_subject_field.configure(state=email_state)
-                self.ftp_server_field.configure(state=ftp_state)
-                self.ftp_port_field.configure(state=ftp_state)
-                self.ftp_folder_field.configure(state=ftp_state)
-                self.ftp_username_field.configure(state=ftp_state)
-                self.ftp_password_field.configure(state=ftp_state)
-
-            def set_header_state():
-                if self.active_checkbutton.get() == "False":
-                    self.active_checkbutton_object.configure(
-                        text="Folder Is Disabled", activebackground="green"
-                    )
-                    self.copy_backend_checkbutton.configure(state=tkinter.DISABLED)
-                    self.ftp_backend_checkbutton.configure(state=tkinter.DISABLED)
-                    self.email_backend_checkbutton.configure(state=tkinter.DISABLED)
-                else:
-                    self.active_checkbutton_object.configure(
-                        text="Folder Is Enabled", activebackground="red"
-                    )
-                    self.copy_backend_checkbutton.configure(state=tkinter.NORMAL)
-                    self.ftp_backend_checkbutton.configure(state=tkinter.NORMAL)
-                    if self.settings["enable_email"]:
-                        self.email_backend_checkbutton.configure(state=tkinter.NORMAL)
-
-            self.active_checkbutton_object = tkinter.Checkbutton(
-                self.header_frame_frame,
-                text="Active",
-                variable=self.active_checkbutton,
-                onvalue="True",
-                offvalue="False",
-                command=set_header_state,
-                indicatoron=tkinter.FALSE,
-                selectcolor="green",
-                background="red",
-            )
-            self.copy_backend_checkbutton = tkinter.ttk.Checkbutton(
-                self.folderframe,
-                text="Copy Backend",
-                variable=self.process_backend_copy_check,
-                onvalue=True,
-                offvalue=False,
-                command=set_send_options_fields_state,
-            )
-            self.ftp_backend_checkbutton = tkinter.ttk.Checkbutton(
-                self.folderframe,
-                text="FTP Backend",
-                variable=self.process_backend_ftp_check,
-                onvalue=True,
-                offvalue=False,
-                command=set_send_options_fields_state,
-            )
-            self.email_backend_checkbutton = tkinter.ttk.Checkbutton(
-                self.folderframe,
-                text="Email Backend",
-                variable=self.process_backend_email_check,
-                onvalue=True,
-                offvalue=False,
-                command=set_send_options_fields_state,
-            )
-            if self.foldersnameinput["folder_name"] != "template":
-                self.folder_alias_frame = tkinter.ttk.Frame(self.folderframe)
-                tkinter.ttk.Label(self.folder_alias_frame, text="Folder Alias:").grid(
-                    row=0, sticky=tkinter.W
-                )
-                self.folder_alias_field = tkinter.ttk.Entry(
-                    self.folder_alias_frame, width=30
-                )
-                rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
-                    self.folder_alias_field
-                )
-                self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
-                self.folder_alias_field.grid(row=0, column=1)
-                tkinter.ttk.Button(
-                    master=self.folder_alias_frame,
-                    text="Show Folder Path",
-                    command=show_folder_path,
-                ).grid(row=1, columnspan=2, sticky=tkinter.W, pady=5)
-            self.copy_backend_folder_selection_button = tkinter.ttk.Button(
-                self.prefsframe,
-                text="Select Copy Backend Destination Folder...",
-                command=lambda: select_copy_to_directory(),
-            )
-            self.ftp_server_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(self.ftp_server_field)
-            self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
-            self.ftp_port_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
-            self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
-            self.ftp_folder_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(self.ftp_folder_field)
-            self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
-            self.ftp_username_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
-                self.ftp_username_field
-            )
-            self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
-            self.ftp_password_field = tkinter.ttk.Entry(
-                self.prefsframe, show="*", width=30
-            )
-            self.email_recepient_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_email_recepient_field = tk_extra_widgets.RightClickMenu(
-                self.email_recepient_field
-            )
-            self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
-            self.email_sender_subject_field = tkinter.ttk.Entry(
-                self.prefsframe, width=30
-            )
-            rclick_email_sender_subject_field = tk_extra_widgets.RightClickMenu(
-                self.email_sender_subject_field
-            )
-            self.email_sender_subject_field.bind(
-                "<3>", rclick_email_sender_subject_field
-            )
-            self.invoice_date_custom_format_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            rclick_invoice_date_custom_format_field = tk_extra_widgets.RightClickMenu(
-                self.invoice_date_custom_format_field
-            )
-            self.invoice_date_custom_format_field.bind(
-                "<3>", rclick_invoice_date_custom_format_field
-            )
-
-            self.force_edi_check_checkbutton = tkinter.ttk.Checkbutton(
-                self.ediframe,
-                variable=self.force_edi_check_var,
-                text="Force EDI Validation",
-                onvalue=True,
-                offvalue=False,
-            )
-
-            self.split_edi_frame = tkinter.ttk.Frame(self.ediframe)
-
-            self.split_edi_checkbutton = tkinter.ttk.Checkbutton(
-                self.split_edi_frame,
-                variable=self.split_edi,
-                text="Split EDI",
-                onvalue=True,
-                offvalue=False,
-            )
-            self.split_edi_send_invoices_checkbutton = tkinter.ttk.Checkbutton(
-                self.split_edi_frame,
-                variable=self.split_edi_send_invoices,
-                text="Split EDI Send Invoices",
-                onvalue=True,
-                offvalue=False,
-            )
-            self.split_edi_send_credits_checkbutton = tkinter.ttk.Checkbutton(
-                self.split_edi_frame,
-                variable=self.split_edi_send_credits,
-                text="Split EDI Send Credits",
-                onvalue=True,
-                offvalue=False,
-            )
-            self.prepend_file_dates_checkbutton = tkinter.ttk.Checkbutton(
-                self.ediframe,
-                variable=self.prepend_file_dates,
-                text="Prepend dates",
-                onvalue=True,
-                offvalue=False,
-            )
-            self.process_edi_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.process_edi,
-                text="Process EDI",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.upc_variable_process_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.upc_var_check,
-                text="Calculate UPC Check Digit",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.a_record_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.a_rec_var_check,
-                text="Include " + "A " + "Records",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.c_record_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.c_rec_var_check,
-                text="Include " + "C " + "Records",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.headers_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.headers_check,
-                text="Include Headings",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.ampersand_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.ampersand_check,
-                text="Filter Ampersand:",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.tweak_edi_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.tweak_edi,
-                text="Apply Edi Tweaks",
-                onvalue=True,
-                offvalue=False,
-            )
-
-            self.rename_file_field = tkinter.ttk.Entry(
-                self.ediframe, width=10
-            )
-
-
-            self.a_record_padding_frame = tkinter.ttk.Frame(self.convert_options_frame)
-
-            self.pad_a_records_checkbutton = tkinter.ttk.Checkbutton(
-                self.a_record_padding_frame,
-                variable=self.pad_arec_check,
-                text='Pad "A" Records',
-                onvalue="True",
-                offvalue="False",
-            )
-
-            self.pad_a_records_length_optionmenu = tkinter.ttk.OptionMenu(
-                self.a_record_padding_frame,
-                self.a_record_padding_length,
-                self.a_record_padding_length.get(),
-                6,
-                30,
-            )
-
-            self.a_record_padding_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-
-            self.append_a_records_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.append_arec_check,
-                text='Append to "A" Records (6 Characters)\n(Series2K)',
-                onvalue="True",
-                offvalue="False",
-            )
-            self.a_record_append_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-
-            self.invoice_date_custom_format_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.invoice_date_custom_format,
-                text="Custom Invoice Date Format",
-                onvalue=True,
-                offvalue=False,
-            )
-
-            self.force_txt_file_ext_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.force_txt_file_ext_check,
-                text="Force .txt file extension",
-                onvalue="True",
-                offvalue="False",
-            )
-            self.invoice_date_offset_spinbox_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Invoice Offset (Days)"
-            )
-            self.invoice_date_offset_spinbox = tkinter.ttk.Spinbox(
-                self.convert_options_frame,
-                textvariable=self.invoice_date_offset,
-                from_=-14,
-                to=14,
-                width=3,
-            )
-            self.each_uom_edi_tweak_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.edi_each_uom_tweak,
-                text="Each UOM",
-            )
-            self.override_upc_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.override_upc_bool,
-                text="Override UPC",
-            )
-            self.override_upc_level_optionmenu = tkinter.ttk.OptionMenu(
-                self.convert_options_frame, 
-                self.override_upc_level,
-                self.override_upc_level.get(),
-                *range(1, 5)
-            )
-            self.override_upc_category_filter_entry = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            self.override_upc_category_filter_tooltip = tk_extra_widgets.CreateToolTip(
-                self.override_upc_category_filter_entry,
-                "Enter 'ALL' or a comma separated list of numbers")
-
-            self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.split_sales_tax_prepaid_var,
-                text="Split Sales Tax 'C' Records",
-            )
-
-            self.include_item_numbers_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.include_item_numbers,
-                text="Include Item Numbers",
-            )
-
-            self.include_item_description_checkbutton = tkinter.ttk.Checkbutton(
-                self.convert_options_frame,
-                variable=self.include_item_description,
-                text="Include Item Description",
-            )
-            self.simple_csv_column_sorter = columnSorterWidget(
-                self.convert_options_frame
-            )
-            self.estore_store_number_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Estore Store Number"
-            )
-            self.estore_Vendor_OId_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Estore Vendor OId"
-            )
-            self.estore_vendor_namevendoroid_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Estore Vendor Name OId"
-            )
-            self.estore_store_number_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            self.estore_Vendor_OId_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            self.estore_vendor_namevendoroid_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            self.estore_c_record_oid_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Estore C Record OId"
-            )
-            self.estore_c_record_oid_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-            self.fintech_divisionid_label = tkinter.ttk.Label(
-                self.convert_options_frame, text="Fintech Division_id"
-            )
-            self.fintech_divisionid_field = tkinter.ttk.Entry(
-                self.convert_options_frame, width=10
-            )
-
-            def set_dialog_variables(config_dict, copied):
-                if copied:
-                    for child in self.bodyframe.winfo_children():
-                        try:
-                            child.configure(state=tkinter.NORMAL)
-                        except Exception:
-                            pass
-                self.active_checkbutton.set(config_dict["folder_is_active"])
-                if config_dict["folder_name"] != "template" and not copied:
-                    self.folder_alias_field.insert(0, config_dict["alias"])
-                self.process_backend_copy_check.set(config_dict["process_backend_copy"])
-                self.process_backend_ftp_check.set(config_dict["process_backend_ftp"])
-                self.process_backend_email_check.set(
-                    config_dict["process_backend_email"]
-                )
-
-                self.ftp_server_field.delete(0, tkinter.END)
-                self.ftp_port_field.delete(0, tkinter.END)
-                self.ftp_folder_field.delete(0, tkinter.END)
-                self.ftp_username_field.delete(0, tkinter.END)
-                self.ftp_password_field.delete(0, tkinter.END)
-                self.email_recepient_field.delete(0, tkinter.END)
-                self.email_sender_subject_field.delete(0, tkinter.END)
-
-                self.ftp_server_field.insert(0, config_dict["ftp_server"])
-                self.ftp_port_field.insert(0, config_dict["ftp_port"])
-                self.ftp_folder_field.insert(0, config_dict["ftp_folder"])
-                self.ftp_username_field.insert(0, config_dict["ftp_username"])
-                self.ftp_password_field.insert(0, config_dict["ftp_password"])
-                self.email_recepient_field.insert(0, config_dict["email_to"])
-                self.email_sender_subject_field.insert(
-                    0, config_dict["email_subject_line"]
-                )
-
-                self.force_edi_check_var.set(config_dict["force_edi_validation"])
-                self.process_edi.set(config_dict["process_edi"])
-                self.upc_var_check.set(config_dict["calculate_upc_check_digit"])
-                self.a_rec_var_check.set(config_dict["include_a_records"])
-                self.c_rec_var_check.set(config_dict["include_c_records"])
-                self.headers_check.set(config_dict["include_headers"])
-                self.ampersand_check.set(config_dict["filter_ampersand"])
-                self.pad_arec_check.set(config_dict["pad_a_records"])
-                self.tweak_edi.set(config_dict["tweak_edi"])
-                self.split_edi.set(config_dict["split_edi"])
-                self.split_edi_send_credits.set(config_dict["split_edi_include_credits"])
-                self.split_edi_send_invoices.set(config_dict["split_edi_include_invoices"])
-                self.prepend_file_dates.set(config_dict["prepend_date_files"])
-                self.rename_file_field.delete(0, tkinter.END)
-                self.rename_file_field.insert(0, config_dict["rename_file"])
-                self.a_record_padding_field.delete(0, tkinter.END)
-                self.a_record_padding_field.insert(0, config_dict["a_record_padding"])
-                self.a_record_padding_length.set(config_dict["a_record_padding_length"])
-                self.append_arec_check.set(config_dict["append_a_records"])
-                self.a_record_append_field.delete(0, tkinter.END)
-                self.a_record_append_field.insert(
-                    0, config_dict["a_record_append_text"]
-                )
-                self.force_txt_file_ext_check.set(config_dict["force_txt_file_ext"])
-                self.invoice_date_offset.set(config_dict["invoice_date_offset"])
-                self.invoice_date_custom_format.set(
-                    config_dict["invoice_date_custom_format"]
-                )
-                self.invoice_date_custom_format_field.delete(0, tkinter.END)
-                self.invoice_date_custom_format_field.insert(
-                    0, config_dict["invoice_date_custom_format_string"]
-                )
-                self.edi_each_uom_tweak.set(config_dict["retail_uom"])
-                self.override_upc_bool.set(config_dict["override_upc_bool"]),
-                self.override_upc_level.set(config_dict["override_upc_level"]),
-                self.override_upc_category_filter_entry.delete(0, tkinter.END)
-                self.override_upc_category_filter_entry.insert(
-                    0, config_dict["override_upc_category_filter"]
-                )
-                self.include_item_numbers.set(config_dict["include_item_numbers"])
-                self.include_item_description.set(
-                    config_dict["include_item_description"]
-                )
-                self.simple_csv_column_sorter.set_columnstring(
-                    config_dict["simple_csv_sort_order"]
-                )
-                self.split_sales_tax_prepaid_var.set(
-                    config_dict["split_prepaid_sales_tax_crec"]
-                )
-                self.estore_store_number_field.delete(0, tkinter.END)
-                self.estore_store_number_field.insert(
-                    0, config_dict["estore_store_number"]
-                )
-                self.estore_Vendor_OId_field.delete(0, tkinter.END)
-                self.estore_Vendor_OId_field.insert(0, config_dict["estore_Vendor_OId"])
-                self.estore_vendor_namevendoroid_field.delete(0, tkinter.END)
-                self.estore_vendor_namevendoroid_field.insert(
-                    0, config_dict["estore_vendor_NameVendorOID"]
-                )
-                self.estore_c_record_oid_field.delete(0, tkinter.END)
-                self.estore_c_record_oid_field.insert(
-                    0, config_dict["estore_c_record_OID"]
-                )
-                self.fintech_divisionid_field.delete(0, tkinter.END)
-                self.fintech_divisionid_field.insert(
-                    0, config_dict["fintech_division_id"]
-                )
-
-                if copied:
-                    self.convert_formats_var.set(config_dict["convert_to_format"])
-                    if config_dict["process_edi"] == "True":
-                        self.ediconvert_options.set("Convert EDI")
-                        reset_ediconvert_options("Convert EDI")
-                    elif config_dict["tweak_edi"] is True:
-                        self.ediconvert_options.set("Tweak EDI")
-                        reset_ediconvert_options("Tweak EDI")
-                    else:
-                        self.ediconvert_options.set("Do Nothing")
-                        reset_ediconvert_options("Do Nothing")
-
-            set_dialog_variables(self.foldersnameinput, False)
-
-            def reset_ediconvert_options(argument):
-                for child in self.convert_options_frame.winfo_children():
-                    child.grid_forget()
-                make_ediconvert_options(argument)
-
-            self.split_edi_frame.grid(
-                row=2, column=0, columnspan=2, sticky=tkinter.W)
-            self.split_edi_checkbutton.grid(
-                row=0, column=0, columnspan=2, sticky=tkinter.W
-            )
-            self.split_edi_send_invoices_checkbutton.grid(
-                row=1, column=0, columnspan=2, sticky=tkinter.W
-            )
-            self.split_edi_send_credits_checkbutton.grid(
-                row=2, column=0, columnspan=2, sticky=tkinter.W
-            )
-            self.prepend_file_dates_checkbutton.grid(
-                row=3, column=0, columnspan=2, sticky=tkinter.W
-            )
-            self.rename_file_field.grid(
-                row=4, column=1, sticky=tkinter.E
-            )
-
-            def make_ediconvert_options(argument):
-                if argument == "Do Nothing":
-                    self.tweak_edi.set(False)
-                    self.process_edi.set("False")
-                    tkinter.ttk.Label(
-                        self.convert_options_frame, text="Send As Is"
-                    ).grid()
-                if argument == "Convert EDI":
-                    self.process_edi.set("True")
-                    self.tweak_edi.set(False)
-                    self.convert_to_selector_frame.grid(row=0, column=0, columnspan=2)
-                    self.convert_to_selector_label.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.convert_to_selector_menu.grid(
-                        row=0, column=1, sticky=tkinter.W
-                    )
-                    make_convert_to_options()
-                if argument == "Tweak EDI":
-                    self.tweak_edi.set(True)
-                    self.process_edi.set("False")
-                    self.upc_variable_process_checkbutton.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_padding_frame.grid(
-                        row=9,
-                        column=0,
-                        columnspan=2,
-                        sticky=tkinter.W + tkinter.E,
-                        padx=3,
-                    )
-                    self.pad_a_records_checkbutton.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.pad_a_records_length_optionmenu.grid(
-                        row=0, column=1, sticky=tkinter.E
-                    )
-                    self.a_record_padding_field.grid(
-                        row=9, column=2, sticky=tkinter.W, padx=3
-                    )
-                    self.append_a_records_checkbutton.grid(
-                        row=10, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_append_field.grid(row=10, column=2)
-                    self.force_txt_file_ext_checkbutton.grid(
-                        row=11, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.invoice_date_offset_spinbox_label.grid(
-                        row=12, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.invoice_date_offset_spinbox.grid(
-                        row=12, column=2, sticky=tkinter.W, padx=3
-                    )
-                    self.invoice_date_custom_format_checkbutton.grid(
-                        row=13, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.invoice_date_custom_format_field.grid(
-                        row=13, column=2, sticky=tkinter.W, padx=3
-                    )
-                    self.each_uom_edi_tweak_checkbutton.grid(
-                        row=14, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.override_upc_checkbutton.grid(
-                        row=15, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.override_upc_level_optionmenu.grid(
-                        row=15, column=1, sticky=tkinter.W, padx=3
-                    )
-                    self.override_upc_category_filter_entry.grid(
-                        row=15, column=2, sticky=tkinter.W, padx=3
-                    )
-                    self.split_prepaid_sales_tax_crec.grid(
-                        row=16, column=0, sticky=tkinter.W, padx=3
-                    )
-
-            if self.foldersnameinput["process_edi"] == "True":
-                self.ediconvert_options.set("Convert EDI")
-                make_ediconvert_options("Convert EDI")
-            elif self.foldersnameinput["tweak_edi"] is True:
-                self.ediconvert_options.set("Tweak EDI")
-                make_ediconvert_options("Tweak EDI")
-            else:
-                self.ediconvert_options.set("Do Nothing")
-                make_ediconvert_options("Do Nothing")
-
-            self.edi_options_menu = tkinter.ttk.OptionMenu(
-                self.ediframe,
-                self.ediconvert_options,
-                self.ediconvert_options.get(),
-                "Do Nothing",
-                "Convert EDI",
-                "Tweak EDI",
-                command=reset_ediconvert_options,
-            )
-
-            def config_from_others():
-                def recurse_set_default(parent):
-                    for child in parent.winfo_children():
-                        try:
-                            child.configure(state=tkinter.NORMAL)
-                        except Exception:
-                            pass
-                        recurse_set_default(child)
-
-                recurse_set_default(master)
-                settings_table = database_obj_instance.folders_table.find_one(
-                    alias=self.otherslistbox.get(tkinter.ACTIVE)
-                )
-                set_dialog_variables(settings_table, True)
-                set_header_state()
-                set_send_options_fields_state()
-
-            self.copyconfigbutton.configure(command=config_from_others)
-
-            set_header_state()
-            set_send_options_fields_state()
-
-            self.force_edi_check_checkbutton.grid(
-                row=1, column=0, columnspan=2, sticky=tkinter.W
-            )
-            self.edi_options_menu.grid(row=5)
-            self.active_checkbutton_object.pack(fill=tkinter.X)
-            self.copy_backend_checkbutton.grid(row=3, column=0, sticky=tkinter.W)
-            self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=tkinter.W)
-            self.email_backend_checkbutton.grid(row=5, column=0, sticky=tkinter.W)
-            if self.foldersnameinput["folder_name"] != "template":
-                self.folder_alias_frame.grid(row=6, column=0, columnspan=2)
-            self.copy_backend_folder_selection_button.grid(
-                row=4, column=0, columnspan=2
-            )
-            self.ftp_server_field.grid(row=7, column=1)
-            self.ftp_port_field.grid(row=8, column=1)
-            self.ftp_folder_field.grid(row=9, column=1)
-            self.ftp_username_field.grid(row=10, column=1)
-            self.ftp_password_field.grid(row=11, column=1)
-            self.email_recepient_field.grid(row=14, column=1)
-            self.email_sender_subject_field.grid(row=18, column=1)
-            self.otherslistbox.pack(side=tkinter.LEFT, fill=tkinter.Y)
-            self.otherslistboxscrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
-            self.copyconfigbutton.pack()
-
-            self.aliaslist = []
-            for entry in database_obj_instance.folders_table.all():
-                self.aliaslist.append(entry["alias"])
-            self.aliaslist.sort()
-            for alias in self.aliaslist:
-                self.otherslistbox.insert(tkinter.END, alias)
-            self.otherslistbox.config(width=0, height=10)
-
-            self.header_frame_frame.pack(fill=tkinter.X)
-            self.bodyframe.pack()
-
-            self.othersframe.pack(side=tkinter.LEFT, fill=tkinter.Y)
-            self.otherslistboxframe.pack(side=tkinter.LEFT, fill=tkinter.Y)
-            self.separatorv0.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
-            self.folderframe.pack(side=tkinter.LEFT, anchor="n")
-            self.separatorv1.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
-            self.prefsframe.pack(side=tkinter.LEFT, anchor="n")
-            self.separatorv2.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=2)
-            self.ediframe.pack(side=tkinter.LEFT, anchor="n")
-
-            return self.active_checkbutton_object  # initial focus
-
-        def ok(self, event=None):
-            if not self.validate():
-                self.initial_focus.focus_set()  # put focus back
-                return
-
-            self.withdraw()
-            self.update_idletasks()
-
-            self.apply(self.foldersnameinput)
-
-            self.cancel()
-
-        def apply(self, apply_to_folder):
-            doingstuffoverlay.make_overlay(self, "Applying Changes...")
-            global copy_to_directory
-            global destination_directory_is_altered
-            apply_to_folder["folder_is_active"] = str(self.active_checkbutton.get())
-            if self.foldersnameinput["folder_name"] != "template":
-                if str(self.folder_alias_field.get()) == "":
-                    apply_to_folder["alias"] = os.path.basename(
-                        self.foldersnameinput["folder_name"]
-                    )
-                else:
-                    apply_to_folder["alias"] = str(self.folder_alias_field.get())
-            apply_to_folder["copy_to_directory"] = copy_to_directory
-            apply_to_folder[
-                "process_backend_copy"
-            ] = self.process_backend_copy_check.get()
-            apply_to_folder[
-                "process_backend_ftp"
-            ] = self.process_backend_ftp_check.get()
-            apply_to_folder[
-                "process_backend_email"
-            ] = self.process_backend_email_check.get()
-            apply_to_folder["ftp_server"] = str(self.ftp_server_field.get())
-            apply_to_folder["ftp_port"] = int(self.ftp_port_field.get())
-            apply_to_folder["ftp_folder"] = str(self.ftp_folder_field.get())
-            apply_to_folder["ftp_username"] = str(self.ftp_username_field.get())
-            apply_to_folder["ftp_password"] = str(self.ftp_password_field.get())
-            apply_to_folder["email_to"] = str(self.email_recepient_field.get())
-            apply_to_folder["email_subject_line"] = str(
-                self.email_sender_subject_field.get()
-            )
-            apply_to_folder["process_edi"] = str(self.process_edi.get())
-            apply_to_folder["convert_to_format"] = str(self.convert_formats_var.get())
-            apply_to_folder["calculate_upc_check_digit"] = str(self.upc_var_check.get())
-            apply_to_folder["include_a_records"] = str(self.a_rec_var_check.get())
-            apply_to_folder["include_c_records"] = str(self.c_rec_var_check.get())
-            apply_to_folder["include_headers"] = str(self.headers_check.get())
-            apply_to_folder["filter_ampersand"] = str(self.ampersand_check.get())
-            apply_to_folder["force_edi_validation"] = self.force_edi_check_var.get()
-            apply_to_folder["tweak_edi"] = self.tweak_edi.get()
-            apply_to_folder["split_edi"] = self.split_edi.get()
-            apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
-            apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
-            apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
-            apply_to_folder["rename_file"] = self.rename_file_field.get()
-            apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
-            apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())
-            apply_to_folder["a_record_padding_length"] = int(
-                self.a_record_padding_length.get()
-            )
-            apply_to_folder["append_a_records"] = str(self.append_arec_check.get())
-            apply_to_folder["a_record_append_text"] = str(
-                self.a_record_append_field.get()
-            )
-            apply_to_folder["force_txt_file_ext"] = str(
-                self.force_txt_file_ext_check.get()
-            )
-            apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
-            apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
-            apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
-            apply_to_folder["override_upc_level"] = self.override_upc_level.get()
-            apply_to_folder["override_upc_category_filter"] = self.override_upc_category_filter_entry.get()
-            apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
-            apply_to_folder[
-                "include_item_description"
-            ] = self.include_item_description.get()
-            apply_to_folder[
-                "simple_csv_sort_order"
-            ] = self.simple_csv_column_sorter.get()
-            apply_to_folder[
-                "invoice_date_custom_format"
-            ] = self.invoice_date_custom_format.get()
-            apply_to_folder[
-                "invoice_date_custom_format_string"
-            ] = self.invoice_date_custom_format_field.get()
-            apply_to_folder[
-                "split_prepaid_sales_tax_crec"
-            ] = self.split_sales_tax_prepaid_var.get()
-            apply_to_folder[
-                "estore_store_number"
-            ] = self.estore_store_number_field.get()
-            apply_to_folder["estore_Vendor_OId"] = self.estore_Vendor_OId_field.get()
-            apply_to_folder[
-                "estore_vendor_NameVendorOID"
-            ] = self.estore_vendor_namevendoroid_field.get()
-            apply_to_folder['fintech_division_id'] = self.fintech_divisionid_field.get()
-
-            if self.foldersnameinput["folder_name"] != "template":
-                update_folder_alias(apply_to_folder)
-            else:
-                update_reporting(apply_to_folder)
-            set_main_button_states()
-            doingstuffoverlay.destroy_overlay()
-
-        def validate(self):
-            error_string_constructor_list = []
-            errors = False
-
-            doingstuffoverlay.make_overlay(self, "Testing Changes...")
-            backend_count = 0
-            if self.process_backend_ftp_check.get() is True:
-                backend_count += 1
-
-                ftp_errors = False
-
-                if self.ftp_server_field.get() == "":
-                    error_string_constructor_list.append(
-                        "FTP Server Field Is Required\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-
-                if self.ftp_port_field.get() == "":
-                    error_string_constructor_list.append(
-                        "FTP Port Field Is Required\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-
-                if self.ftp_folder_field.get() == "":
-                    error_string_constructor_list.append(
-                        "FTP Folder Field Is Required\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-                else:
-                    if self.ftp_folder_field.get()[-1] != "/":
-                        error_string_constructor_list.append(
-                            "FTP Folder Path Needs To End In /\r\n"
-                        )
-                        errors = True
-                        ftp_errors = True
-
-                if self.ftp_username_field.get() == "":
-                    error_string_constructor_list.append(
-                        "FTP Username Field Is Required\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-
-                if self.ftp_password_field.get() == "":
-                    error_string_constructor_list.append(
-                        "FTP Password Field Is Required\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-
-                try:
-                    _ = int(self.ftp_port_field.get())
-                except ValueError:
-                    error_string_constructor_list.append(
-                        "FTP Port Field Needs To Be A Number\r\n"
-                    )
-                    errors = True
-                    ftp_errors = True
-
-                if not ftp_errors:
-                    ftp = ftplib.FTP()
-
-                    try:
-                        ftp.connect(
-                            str(self.ftp_server_field.get()),
-                            int(self.ftp_port_field.get()),
-                        )
-                        try:
-                            ftp.login(
-                                self.ftp_username_field.get(),
-                                self.ftp_password_field.get(),
-                            )
-                            try:
-                                ftp.cwd(self.ftp_folder_field.get())
-                            except Exception as ftp_error:
-                                print("cwd")
-                                print(ftp_error)
-                                error_string_constructor_list.append(
-                                    "FTP Folder Field Incorrect"
-                                )
-                                errors = True
-                        except Exception as ftp_error:
-                            print("username/password")
-                            print(ftp_error)
-                            error_string_constructor_list.append(
-                                "FTP Username or Password Incorrect"
-                            )
-                            errors = True
-                        ftp.close()
-                    except Exception as ftp_error:
-                        print("server/port")
-                        print(ftp_error)
-                        error_string_constructor_list.append(
-                            "FTP Server or Port Field Incorrect"
-                        )
-                        errors = True
-
-            if self.process_backend_email_check.get() is True:
-                backend_count += 1
-
-                if self.email_recepient_field.get() == "":
-                    error_string_constructor_list.append(
-                        "Email Destination Address Field Is Required"
-                    )
-                    errors = True
-                else:
-                    email_recepients = str(self.email_recepient_field.get()).split(", ")
-                    for email_recepient in email_recepients:
-                        if (validate_email(str(email_recepient))) is False:
-                            error_string_constructor_list.append(
-                                "Invalid Email Destination Address"
-                            )
-                            errors = True
-
-            if self.process_backend_copy_check.get() is True:
-                backend_count += 1
-
-                if copy_to_directory is None or copy_to_directory == "":
-                    error_string_constructor_list.append(
-                        "Copy Backend Destination Is currently Unset,"
-                        " Please Select One"
-                    )
-                    errors = True
-
-            if backend_count == 0 and self.active_checkbutton.get() == "True":
-                error_string_constructor_list.append("No Backend Is Selected")
-                errors = True
-            print(self.tweak_edi.get())
-
-            if (
-                str(self.pad_arec_check.get()) != "True"
-                and self.convert_formats_var.get() == "ScannerWare"
-                and self.tweak_edi.get() is False
-            ):
-                error_string_constructor_list.append(
-                    '"A" Record Padding Needs To Be Enabled For ScannerWare Backend'
-                )
-                errors = True
-
-            if (
-                len(str(self.a_record_padding_field.get()))
-                > self.a_record_padding_length.get()
-                and str(self.pad_arec_check.get()) == "True"
-            ):
-                if self.convert_formats_var.get() not in ["ScannerWare"]:
-                    error_string_constructor_list.append(
-                        f'"A" Record Padding Needs To Be At Most {str(self.a_record_padding_length.get())} Characters'
-                    )
-                    errors = True
-
-            if (
-                len(str(self.a_record_padding_field.get())) != 6
-                and str(self.pad_arec_check.get()) == "True"
-            ):
-                error_string_constructor_list.append(
-                    '"A" Record Padding Needs To Be Six Characters'
-                )
-                errors = True
-
-            if int(self.invoice_date_offset.get()) not in list(range(-14, 15)):
-                error_string_constructor_list.append(
-                    "Invoice date offset not in valid range"
-                )
-                errors = True
-
-            if (
-                self.prepend_file_dates.get() is True
-                and self.split_edi.get() is False
-            ):
-                error_string_constructor_list.append(
-                    "Edi needs to be split for prepending dates"
-                )
-                errors = True
-
-            if (
-                not self.split_edi.get()
-                and self.convert_formats_var.get() == "jolley_custom"
-                and self.tweak_edi.get() is False
-            ):
-                error_string_constructor_list.append(
-                    "EDI needs to be split for jolley_custom backend"
-                )
-                errors = True
-            if self.override_upc_bool.get() is True:
-                if self.override_upc_category_filter_entry.get() == "":
-                    error_string_constructor_list.append(
-                        "Override UPC Category Filter Is Required"
-                    )
-                    errors = True
-                for category in self.override_upc_category_filter_entry.get().split(","):
-                    try:
-                        int(category)
-                        if int(category) not in list(range(1, 100)):
-                            error_string_constructor_list.append(
-                                "Override UPC Category Filter Is Invalid"
-                            )
-                            errors = True
-                    except ValueError:
-                        if category != "ALL":
-                            error_string_constructor_list.append(
-                                "Override UPC Category Filter Is Invalid"
-                            )
-                            errors = True
-            if self.convert_formats_var.get() == "fintech":
-                try:
-                    _ = int(self.fintech_divisionid_field.get())
-                except ValueError:
-                    error_string_constructor_list.append(
-                        "fintech divisionid needs to be a number"
-                    )
-                    errors = True
-            if self.foldersnameinput["folder_name"] != "template":
-                if str(self.folder_alias_field.get()) != self.foldersnameinput["alias"]:
-                    proposed_folder = database_obj_instance.folders_table.find_one(
-                        alias=str(self.folder_alias_field.get())
-                    )
-                    if proposed_folder is not None:
-                        error_string_constructor_list.append(
-                            "Folder Alias Already In Use"
-                        )
-                        errors = True
-
-                if len(self.folder_alias_field.get()) > 50:
-                    error_string_constructor_list.append("Alias Too Long")
-                    errors = True
-            if errors is True:
-                doingstuffoverlay.destroy_overlay()
-                error_string = "\r\n".join(
-                    error_string_constructor_list
-                )  # combine error messages into single string
-                showerror(
-                    parent=self, message=error_string
-                )  # display generated error in dialog box
-                return False
-
-            doingstuffoverlay.destroy_overlay()
-            return 1
 
     def update_reporting(changes):
         # push new settings into table
