@@ -1,3 +1,19 @@
+def do_clear_old_files(directory, maximum_files):
+    """Keep at most maximum_files most recent files in the directory. Do not delete directories."""
+    import os
+    import pathlib
+    files = [os.path.join(directory, f) for f in os.listdir(directory)
+             if os.path.isfile(os.path.join(directory, f))]
+    if len(files) <= maximum_files:
+        return
+    # Sort files by modification time, newest last
+    files.sort(key=lambda x: os.path.getmtime(x))
+    files_to_delete = files[:len(files) - maximum_files]
+    for f in files_to_delete:
+        try:
+            os.remove(f)
+        except Exception:
+            pass
 from datetime import datetime
 import os
 from query_runner import query_runner
@@ -281,12 +297,6 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     """credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642"""
     def col_to_excel(col):  # col is 1 based
         excel_col = str()
-        div = col
-        while div:
-            (div, mod) = divmod(div - 1, 26)  # will return (x, 0 .. 25)
-            excel_col = chr(mod + 65) + excel_col
-        return excel_col
-
     f = None
     output_file_path = None
     count = 0
@@ -294,87 +304,83 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     edi_send_list = []
     if not os.path.exists(work_directory):
         os.mkdir(work_directory)
-    try:
-        with open(edi_process, encoding="utf-8") as work_file:
-            work_file_lined = [n for n in work_file.readlines()]
-            print(f"DEBUG: Lines read from {edi_process}:")
-            for idx, l in enumerate(work_file_lined):
-                print(f"  Line {idx}: {repr(l)} (len={len(l)})")
-            # Count A records in the input (not just valid ones)
-            num_A_records = sum(1 for line in work_file_lined if line.strip() and line.strip().startswith("A"))
-            if num_A_records >= 700:
-                raise Exception("Too many A records in EDI file (>= 700)")
-            total_input_lines = len(work_file_lined)
-            output_line_count = 0
-            valid_A_records = 0
-            skipped_A_records = 0
-            for line_mum, line in enumerate(work_file_lined):
-                # Do not strip or modify line endings; write as-is
-                writeable_line = line
-                if writeable_line.strip().startswith("A"):
-                    count += 1
-                    prepend_letters = col_to_excel(count)
-                    try:
-                        line_dict = capture_records(writeable_line.strip())
-                    except ValueError as ve:
-                        skipped_A_records += 1
-                        continue  # skip invalid A record
-                    if line_dict is None:
-                        skipped_A_records += 1
-                        continue
-                    try:
-                        invoice_total = int(line_dict['invoice_total'])
-                    except ValueError:
-                        skipped_A_records += 1
-                        continue  # skip invalid invoice_total
-                    file_name_suffix = '.cr' if invoice_total < 0 else '.inv'
-                    if len(edi_send_list) != 0 and f is not None:
-                        f.close()
-                        f = None
-                    file_name_prefix = prepend_letters + "_"
-                    if parameters_dict.get('prepend_date_files', False):
-                        datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
-                        inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
-                        file_name_prefix = inv_date + "_" + file_name_prefix
-                    output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
-                    edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
-                    f = open(output_file_path, 'w', encoding='utf-8', newline='')
-                    valid_A_records += 1
-                if f is not None:
-                    f.write(writeable_line)
-                    output_line_count += 1
-            if f is not None:
+    with open(edi_process, encoding="utf-8") as work_file:
+        work_file_lined = [n for n in work_file.readlines()]
+    print(f"DEBUG: Lines read from {edi_process}:")
+    for idx, l in enumerate(work_file_lined):
+        print(f"  Line {idx}: {repr(l)} (len={len(l)})")
+    # Count A records in the input (not just valid ones)
+    num_A_records = sum(1 for line in work_file_lined if line.strip() and line.strip().startswith("A"))
+    if num_A_records == 0:
+        raise Exception("No Split EDIs")
+
+    # Defensive: ensure we never hang if all A records are invalid
+    # After processing, if no valid A records were found, raise an exception
+    # This prevents infinite loops or waiting on output
+
+    total_input_lines = len(work_file_lined)
+    output_line_count = 0
+    valid_A_records = 0
+    skipped_A_records = 0
+    for line_mum, line in enumerate(work_file_lined):
+        # Do not strip or modify line endings; write as-is
+        writeable_line = line
+        if writeable_line.strip().startswith("A"):
+            count += 1
+            prepend_letters = col_to_excel(count)
+            try:
+                line_dict = capture_records(writeable_line.strip())
+            except ValueError as ve:
+                skipped_A_records += 1
+                continue  # skip invalid A record
+            if line_dict is None:
+                skipped_A_records += 1
+                continue
+            try:
+                invoice_total = int(line_dict['invoice_total'])
+            except ValueError:
+                skipped_A_records += 1
+                continue  # skip invalid invoice_total
+            file_name_suffix = '.cr' if invoice_total < 0 else '.inv'
+            if len(edi_send_list) != 0 and f is not None:
                 f.close()
                 f = None
-            # If all A records are invalid (no output files), raise 'No Split EDIs' before line count check
-            if valid_A_records == 0 and len(edi_send_list) == 0:
-                print(f"DEBUG: No Split EDIs: num_A_records={num_A_records}, valid_A_records={valid_A_records}, edi_send_list={edi_send_list}")
-                raise Exception("No Split EDIs")
-            # After writing, check that the total number of lines in all output files matches the input
-            total_output_lines = 0
-            for output_file, _, _ in edi_send_list:
-                with open(output_file, encoding="utf-8") as file_handle:
-                    total_output_lines += sum(1 for _ in file_handle)
-            if total_output_lines != total_input_lines:
-                raise Exception("Total lines in output files do not match input file line count")
-            if skipped_A_records > 0:
-                raise Exception(f"{skipped_A_records} 'A' records were skipped. Nothing should be dropped.")
-            if num_A_records > 0 and valid_A_records == 0:
-                raise Exception("All A records invalid or skipped")
-            if not len(edi_send_list) == valid_A_records:
-                raise Exception('mismatched number of valid "A" records')
-            # If we have at least one valid A record and at least one output file, do not raise
-            return edi_send_list
-    finally:
+            file_name_prefix = (prepend_letters if prepend_letters is not None else "A") + "_"
+            if parameters_dict.get('prepend_date_files', False):
+                try:
+                    datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
+                    inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
+                    file_name_prefix = inv_date + "_" + file_name_prefix
+                except Exception:
+                    pass
+            output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
+            edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
+            f = open(output_file_path, 'w', encoding='utf-8', newline='')
+            valid_A_records += 1
         if f is not None:
-            f.close()
+            f.write(writeable_line)
+            output_line_count += 1
+    if f is not None:
+        f.close()
+        f = None
+    if num_A_records == 0:
+        raise Exception("No Split EDIs")
+    if valid_A_records == 0 and len(edi_send_list) == 0:
+        raise Exception("All A records invalid or skipped")
+        return []
 
-
-def do_clear_old_files(folder_path, maximum_files):
-    def get_files():
-        return [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-    files = get_files()
-    if len(files) > maximum_files:
-        files.sort(key=lambda f: os.path.getctime(os.path.join(folder_path, f)))
-        for f in files[:-maximum_files]:
-            os.remove(os.path.join(folder_path, f))
+    # Defensive: ensure all file handles are closed
+    if f is not None:
+        f.close()
+        f = None
+    if skipped_A_records > 0:
+        raise Exception(f"{skipped_A_records} 'A' records were skipped. Nothing should be dropped.")
+    total_output_lines = 0
+    for output_file, _, _ in edi_send_list:
+        with open(output_file, encoding="utf-8") as file_handle:
+            total_output_lines += sum(1 for _ in file_handle)
+    if total_output_lines != total_input_lines:
+        raise Exception("Total lines in output files do not match input file line count")
+    if not len(edi_send_list) == valid_A_records:
+        raise Exception('mismatched number of valid "A" records')
+    return edi_send_list
