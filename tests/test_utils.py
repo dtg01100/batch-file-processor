@@ -1,3 +1,51 @@
+@timeout(5)
+def test_do_split_edi_all_invalid_A_records():
+    import tempfile
+    import os
+    # All A records are invalid (wrong length)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            for _ in range(3):
+                f.write("A123\n")  # Too short to be valid
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception) as excinfo:
+            utils.do_split_edi(edi_file, tmp_dir, params)
+        assert "All A records invalid" in str(excinfo.value) or "No Split EDIs" in str(excinfo.value)
+
+@timeout(10)
+def test_do_split_edi_many_valid_A_records():
+    import tempfile
+    import os
+    # Stress test: 100 valid A records
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + str(invoice_total).rjust(11)
+        assert len(record) == 34
+        return record + "\n"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            for i in range(100):
+                f.write(make_a_record(i))
+        params = {"prepend_date_files": False}
+        result = utils.do_split_edi(edi_file, tmp_dir, params)
+        assert len(result) == 100
+        for file_path, _, _ in result:
+            assert os.path.exists(file_path)
+
+@timeout(5)
+def test_do_split_edi_no_A_records():
+    import tempfile
+    import os
+    # No A records at all
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write("B1234567890\nC9876543210\n")
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception) as excinfo:
+            utils.do_split_edi(edi_file, tmp_dir, params)
+        assert "No Split EDIs" in str(excinfo.value)
 import os
 import tempfile
 import os
