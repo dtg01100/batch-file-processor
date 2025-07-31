@@ -79,17 +79,26 @@ def report_edi_issues(input_file):
     has_minor_errors = False
     validator_open_attempts = 1
     input_file_handle = None
+    last_error = None
     while input_file_handle is None:
         try:
             input_file_handle = open(input_file)
         except Exception as error:
+            last_error = error
             if validator_open_attempts >= 5:
+                print(f"error opening file for read {error}")
+                break
+            else:
+                print(f"retrying open {input_file}")
                 time.sleep(validator_open_attempts * validator_open_attempts)
                 validator_open_attempts += 1
-                print(f"retrying open {input_file}")
-            else:
-                print(f"error opening file for read {error}")
-                raise
+    if input_file_handle is None:
+        # Always propagate the last file open exception, fallback to FileNotFoundError
+        print(f"DEBUG: Raising file open error for {input_file}, last_error={last_error}")
+        if last_error is not None:
+            raise last_error
+        else:
+            raise FileNotFoundError(f"Could not open file: {input_file}")
 
     # input_file_handle = open(input_file)
     check_pass, check_line_number = check(input_file)

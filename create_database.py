@@ -5,6 +5,9 @@ import sqlalchemy
 
 
 def do(database_version, database_path, config_folder, running_platform):  # create database file with default settings
+    parent_dir = os.path.dirname(database_path)
+    if parent_dir and not os.path.exists(parent_dir):
+        raise FileNotFoundError(f"Parent directory does not exist: {parent_dir}")
     database_connection = dataset.connect('sqlite:///' + database_path)  # connect to database
 
     version = database_connection['version']

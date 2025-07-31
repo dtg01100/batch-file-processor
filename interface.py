@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
+import os
+import platform
+import appdirs
 import argparse
 import copy
 import datetime
 import ftplib
 import hashlib
 import multiprocessing
-import os
-import platform
 import re
 import smtplib
 import time
@@ -19,7 +20,6 @@ from operator import itemgetter
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import askokcancel, askyesno, showerror, showinfo
 
-import appdirs
 import dataset # type: ignore
 import pyodbc # type: ignore
 import thefuzz.process # type: ignore
@@ -28,6 +28,13 @@ import backup_increment
 import batch_log_sender
 import utils
 import create_database
+
+# Define these at module level for testability
+APPNAME = "Batch File Sender"
+VERSION = "(Git Branch: Master)"
+DATABASE_VERSION = "32"
+running_platform = platform.system()
+config_folder = appdirs.user_data_dir(APPNAME)
 import database_import
 import dialog
 import dispatch

@@ -22,6 +22,10 @@ def test_check_invalid_upc(tmp_path):
     assert result is False
 
 def test_report_edi_issues_file_open_error(monkeypatch):
-    # Simulate file open error
-    with pytest.raises(Exception):
+    # Simulate file open error and patch time.sleep to avoid delay
+    monkeypatch.setattr('time.sleep', lambda x: None)
+    print("About to call report_edi_issues with nonexistent file...")
+    # Patch open to always raise FileNotFoundError
+    monkeypatch.setattr("builtins.open", lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError("mocked error")))
+    with pytest.raises(FileNotFoundError):
         mtc_edi_validator.report_edi_issues("/nonexistent/file.edi")

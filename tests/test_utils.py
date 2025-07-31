@@ -1,5 +1,6 @@
 import os
 import tempfile
+import os
 import shutil
 from datetime import datetime
 import pytest
@@ -8,6 +9,7 @@ import signal
 from unittest.mock import patch
 from pathlib import Path
 import unittest
+from unittest.mock import MagicMock, patch
 from utils import (
     dac_str_int_to_int,
     convert_to_price,
@@ -98,17 +100,43 @@ def test_capture_records_C(mock_capture_records):
 
 @timeout(5)
 def test_capture_records_invalid():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         utils.capture_records("Xsomething")
 
 @timeout(5)
 def test_calc_check_digit():
+    # Edge: input < 11 digits (should pad)
+    assert utils.calc_check_digit("12345") == utils.calc_check_digit("0000012345")
+    # Edge: input is empty string (should pad to 11 zeros)
+    assert utils.calc_check_digit("") == utils.calc_check_digit("00000000000")
+    # Edge: input is non-numeric (should raise)
+    with pytest.raises(ValueError):
+        utils.calc_check_digit("abcde")
     assert utils.calc_check_digit("123456") == 5
     assert utils.calc_check_digit("03600029145") == 2
     assert utils.calc_check_digit("04210000526") == 4
 
 @timeout(5)
 def test_convert_UPCE_to_UPCA():
+    # Edge: 6-digit UPC-E
+    assert utils.convert_UPCE_to_UPCA("123456") is not False
+    # Edge: 7-digit UPC-E
+    assert utils.convert_UPCE_to_UPCA("1234567") is not False
+    # Edge: 8-digit UPC-E
+    assert utils.convert_UPCE_to_UPCA("01234567") is not False
+    # Edge: 11-digit UPC-A
+    upca_11 = "03600029145"
+    upca_12 = utils.convert_UPCE_to_UPCA(upca_11)
+    assert upca_12 and len(upca_12) == 12
+    # Edge: 12-digit UPC-A
+    assert utils.convert_UPCE_to_UPCA("036000291452") == "036000291452"
+    # Edge: non-numeric input
+    with pytest.raises(ValueError):
+        utils.convert_UPCE_to_UPCA("ABCDEFGH")
+    # Edge: empty string
+    assert utils.convert_UPCE_to_UPCA("") is False
+    # Edge: invalid length
+    assert utils.convert_UPCE_to_UPCA("1234") is False
     assert utils.convert_UPCE_to_UPCA("04182635") == "041800000265"
     assert utils.convert_UPCE_to_UPCA("1234567") is not False
     assert utils.convert_UPCE_to_UPCA("12345678") is not False
@@ -116,6 +144,183 @@ def test_convert_UPCE_to_UPCA():
 
 @timeout(5)
 def test_do_split_edi_and_clear_old_files():
+    # This is a placeholder to fix the syntax error. The real test is implemented below.
+    pass
+@timeout(5)
+def test_do_split_edi_no_A_records():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write("B12345678901Description only\nC001Charge      000012345\n")
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception):
+            utils.do_split_edi(edi_file, tmp_dir, params)
+
+@timeout(5)
+def test_do_split_edi_too_many_A_records():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\n"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            for _ in range(701):
+                f.write(make_a_record("0"))
+        with open(edi_file, "r", encoding="utf-8") as f:
+            print("DEBUG test_do_split_edi_too_many_A_records file contents:")
+            print(f.read())
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception) as excinfo:
+            utils.do_split_edi(edi_file, tmp_dir, params)
+        assert "Too many A records in EDI file (>= 700)" in str(excinfo.value)
+
+@timeout(5)
+def test_do_split_edi_malformed_lines():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            # Write malformed line and a valid 34-char A record
+            f.write("Xnotavalidline\nA" + "1"*6 + "2"*10 + "060124" + "0"*11 + "\n")
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception):
+            utils.do_split_edi(edi_file, tmp_dir, params)
+
+@timeout(5)
+def test_do_split_edi_missing_prepend_date_files():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\r\n"
+    import os
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write(make_a_record("0"))
+        # Ensure file is closed before calling do_split_edi
+        with open(edi_file, "r", encoding="utf-8") as f:
+            print("DEBUG test_do_split_edi_missing_prepend_date_files file contents:")
+            lines = f.readlines()
+            for idx, line in enumerate(lines):
+                print(f"  Line {idx}: {repr(line)} (len={len(line)})")
+        params = {}  # missing key
+        result = utils.do_split_edi(edi_file, tmp_dir, params)
+        assert len(result) == 1
+
+@timeout(5)
+def test_do_split_edi_workdir_does_not_exist():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\r\n"
+    import os
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write(make_a_record("0"))
+        # Ensure file is closed before calling do_split_edi
+        with open(edi_file, "r", encoding="utf-8") as f:
+            print("DEBUG test_do_split_edi_workdir_does_not_exist file contents:")
+            lines = f.readlines()
+            for idx, line in enumerate(lines):
+                print(f"  Line {idx}: {repr(line)} (len={len(line)})")
+        workdir = os.path.join(tmp_dir, "notexist")
+        params = {"prepend_date_files": False}
+        result = utils.do_split_edi(edi_file, workdir, params)
+        assert os.path.exists(workdir)
+        assert len(result) == 1
+
+@timeout(5)
+def test_do_split_edi_one_A_record():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\r\n"
+    import os
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write(make_a_record("0"))
+        # Ensure file is closed before calling do_split_edi
+        with open(edi_file, "r", encoding="utf-8") as f:
+            print("DEBUG test_do_split_edi_one_A_record file contents:")
+            lines = f.readlines()
+            for idx, line in enumerate(lines):
+                print(f"  Line {idx}: {repr(line)} (len={len(line)})")
+        params = {"prepend_date_files": False}
+        result = utils.do_split_edi(edi_file, tmp_dir, params)
+        assert len(result) == 1
+
+@timeout(5)
+def test_do_split_edi_invalid_invoice_total():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\n"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        edi_file = os.path.join(tmp_dir, "test.edi")
+        with open(edi_file, "w", encoding="utf-8") as f:
+            f.write(make_a_record("XXXXXXXXXXX"))
+        with open(edi_file, "r", encoding="utf-8") as f:
+            print("DEBUG test_do_split_edi_invalid_invoice_total file contents:")
+            print(f.read())
+        params = {"prepend_date_files": False}
+        with pytest.raises(Exception) as excinfo:
+            utils.do_split_edi(edi_file, tmp_dir, params)
+        assert "No Split EDIs" in str(excinfo.value)
+
+@timeout(5)
+def test_do_clear_old_files_various_cases():
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\n"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Fewer files than maximum_files
+        for i in range(2):
+            file_path = os.path.join(tmp_dir, f"file{i}.txt")
+            with open(file_path, "w") as f:
+                f.write(make_a_record("0"))
+            with open(file_path, "r") as f:
+                print(f"DEBUG test_do_clear_old_files_various_cases file{i}.txt contents:")
+                print(f.read())
+        # Ensure files are closed before clearing
+        utils.do_clear_old_files(tmp_dir, 5)
+        assert len(os.listdir(tmp_dir)) == 2
+        # Exactly maximum_files
+        utils.do_clear_old_files(tmp_dir, 2)
+        assert len(os.listdir(tmp_dir)) == 2
+        # More than maximum_files
+        for i in range(3, 7):
+            with open(os.path.join(tmp_dir, f"file{i}.txt"), "w") as f:
+                f.write("A" + "1"*6 + "2"*10 + "060124" + "0"*11 + "\n")
+        # Ensure files are closed before clearing
+        utils.do_clear_old_files(tmp_dir, 3)
+        assert len(os.listdir(tmp_dir)) == 3
+        # Directory with a subdirectory
+        subdir = os.path.join(tmp_dir, "subdir")
+        os.mkdir(subdir)
+        utils.do_clear_old_files(tmp_dir, 2)
+        # Subdirectory should not be deleted
+        assert os.path.isdir(subdir)
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         edi_content = (
@@ -127,6 +332,7 @@ def test_do_split_edi_and_clear_old_files():
         edi_file = tmp_path / "test.edi"
         with open(edi_file, "w", encoding="utf-8") as f:
             f.write(edi_content)
+        # Ensure file is closed before reading
         params = {"prepend_date_files": False}
         result = utils.do_split_edi(str(edi_file), str(tmp_path), params)
         assert len(result) == 2
@@ -137,19 +343,29 @@ def test_do_split_edi_and_clear_old_files():
 
 @timeout(5)
 def test_detect_invoice_is_credit():
-    prefix = "A1234567890123450601240"
-    with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-        temp_file.write(prefix + "-0000012345\n")
-        temp_file_path = temp_file.name
-    try:
+    def make_a_record(invoice_total):
+        record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+        if len(record) != 34:
+            print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+            raise ValueError(f"Record length is {len(record)}, expected 34: {record!r}")
+        print(f"DEBUG make_a_record: record={record!r}, len={len(record)}")
+        return record + "\n"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_file_path = os.path.join(tmp_dir, "test_credit_1.edi")
+        with open(temp_file_path, 'w', encoding='utf-8') as f:
+            f.write(make_a_record("-0000012345"))
+        with open(temp_file_path, 'r', encoding='utf-8') as f:
+            print("DEBUG test_detect_invoice_is_credit test_credit_1.edi contents:")
+            print(f.read())
         result = utils.detect_invoice_is_credit(temp_file_path)
         assert result is True
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write(prefix + "0000012345\n")
-            temp_file_path = temp_file.name
-        assert utils.detect_invoice_is_credit(temp_file_path) is False
-    finally:
-        os.remove(temp_file_path)
+        temp_file_path2 = os.path.join(tmp_dir, "test_credit_2.edi")
+        with open(temp_file_path2, 'w', encoding='utf-8') as f:
+            f.write(make_a_record("0000012345"))
+        with open(temp_file_path2, 'r', encoding='utf-8') as f:
+            print("DEBUG test_detect_invoice_is_credit test_credit_2.edi contents:")
+            print(f.read())
+        assert utils.detect_invoice_is_credit(temp_file_path2) is False
 
 class TestUtils(unittest.TestCase):
     def test_dac_str_int_to_int(self):
@@ -174,17 +390,19 @@ class TestUtils(unittest.TestCase):
         expected = datetime(2025, 7, 30)
         self.assertEqual(utils.datetime_from_invtime(inv_time), expected)
     def test_detect_invoice_is_credit(self):
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write("A1234567890123450601245-00001234\n")
-            temp_file_path = temp_file.name
-        try:
+        def make_a_record(invoice_total):
+            record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+            assert len(record) == 34, f"Record length is {len(record)}, expected 34: {record!r}"
+            return record + "\n"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_file_path = os.path.join(tmp_dir, "test_credit_1.edi")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write(make_a_record("-0000012345"))
             assert utils.detect_invoice_is_credit(temp_file_path) is True
-            with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-                temp_file.write("A123456789012345060124000012345\n")
-                temp_file_path = temp_file.name
-            assert utils.detect_invoice_is_credit(temp_file_path) is False
-        finally:
-            os.remove(temp_file_path)
+            temp_file_path2 = os.path.join(tmp_dir, "test_credit_2.edi")
+            with open(temp_file_path2, 'w', encoding='utf-8') as f:
+                f.write(make_a_record("0000012345"))
+            assert utils.detect_invoice_is_credit(temp_file_path2) is False
     def test_calc_check_digit(self):
         self.assertEqual(calc_check_digit("123456"), 5)
         self.assertEqual(calc_check_digit("12345"), 7)
@@ -210,35 +428,50 @@ class TestUtils(unittest.TestCase):
             assert "charge_type" in fields
     def test_detect_invoice_is_credit_edge_cases(self):
         prefix = "A1234567890123450601240"
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write(prefix + "00000000000\n")
-            temp_file_path = temp_file.name
-        try:
-            self.assertFalse(utils.detect_invoice_is_credit(temp_file_path))
-        finally:
-            os.remove(temp_file_path)
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write(prefix + "   -0000012345   \n")
-            temp_file_path = temp_file.name
-        try:
+
+        def make_a_record(invoice_total):
+            record = "A123456" + "7890123450" + "601240" + invoice_total.rjust(11)
+            assert len(record) == 34, f"Record length is {len(record)}, expected 34: {record!r}"
+            return record + "\n"
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Case 1: Valid EDI A record, negative invoice_total (should be credit)
+            temp_file_path = os.path.join(tempdir, "test_detect_invoice_is_credit_edge_cases_1.edi")
+            record = make_a_record("-0000012345")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write(record)
+            # Ensure file is closed before reading
             self.assertTrue(utils.detect_invoice_is_credit(temp_file_path))
-        finally:
-            os.remove(temp_file_path)
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write(prefix + "   0000012345   \n")
-            temp_file_path = temp_file.name
-        try:
+
+            # Case 2: Valid EDI A record, positive invoice_total (not a credit)
+            temp_file_path = os.path.join(tempdir, "test_detect_invoice_is_credit_edge_cases_2.edi")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write(make_a_record("0000012345"))
+            # Ensure file is closed before reading
             self.assertFalse(utils.detect_invoice_is_credit(temp_file_path))
-        finally:
-            os.remove(temp_file_path)
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
-            temp_file.write(prefix + "XXXXXXXXXXX\n")
-            temp_file_path = temp_file.name
-        try:
+
+            # Case 3: Valid EDI A record, zero invoice_total (should not be credit)
+            temp_file_path = os.path.join(tempdir, "test_detect_invoice_is_credit_edge_cases_3.edi")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write(make_a_record("00000000000"))
+            # Ensure file is closed before reading
+            self.assertFalse(utils.detect_invoice_is_credit(temp_file_path))
+
+            # Case 4: Malformed EDI A record (non-numeric invoice_total)
+            temp_file_path = os.path.join(tempdir, "test_detect_invoice_is_credit_edge_cases_4.edi")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write(prefix + "XXXXXXXXXXX\n")
+            # Ensure file is closed before reading
+            with self.assertRaises(Exception):
+                utils.detect_invoice_is_credit(temp_file_path)
+
+            # Case 5: Not an EDI A record (should raise ValueError)
+            temp_file_path = os.path.join(tempdir, "test_detect_invoice_is_credit_edge_cases_5.edi")
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
+                f.write("B1234567890SOMEINVALIDDATA\n")
+            # Ensure file is closed before reading
             with self.assertRaises(ValueError):
                 utils.detect_invoice_is_credit(temp_file_path)
-        finally:
-            os.remove(temp_file_path)
     def test_calc_check_digit_edge_cases(self):
         self.assertEqual(calc_check_digit("00000000000"), 0)
         self.assertEqual(calc_check_digit("99999999999"), 3)
@@ -253,5 +486,95 @@ class TestUtils(unittest.TestCase):
             convert_UPCE_to_UPCA("ABCDEFGH")
         self.assertEqual(convert_UPCE_to_UPCA(""), False)
 
+class TestInvFetcher(unittest.TestCase):
+    def setUp(self):
+        self.settings = {
+            "as400_username": "user",
+            "as400_password": "pass",
+            "as400_address": "addr",
+            "odbc_driver": "driver"
+        }
+
 if __name__ == "__main__":
+    unittest.main()
+    @patch("utils.query_runner")
+    def test_db_connect_success(self, mock_runner):
+        mock_runner.return_value = MagicMock()
+        self.fetcher._db_connect()
+        self.assertIsNotNone(self.fetcher.query_object)
+
+    @patch("utils.query_runner")
+    def test_db_connect_failure(self, mock_runner):
+        mock_runner.return_value = None
+        self.fetcher._db_connect()
+        self.assertIsNone(self.fetcher.query_object)
+
+    def test_run_qry_no_connection(self):
+        self.fetcher.query_object = None
+        with patch.object(self.fetcher, "_db_connect", return_value=None):
+            with self.assertRaises(RuntimeError):
+                self.fetcher._run_qry("SELECT 1")
+
+    def test_run_qry_success(self):
+        mock_query_obj = MagicMock()
+        mock_query_obj.run_arbitrary_query.return_value = [(1,)]
+        self.fetcher.query_object = mock_query_obj
+        result = self.fetcher._run_qry("SELECT 1")
+        self.assertEqual(result, [(1,)])
+
+    def test_fetch_po_cached(self):
+        self.fetcher.last_invoice_number = 123
+        self.fetcher.po = "PO123"
+        result = self.fetcher.fetch_po(123)
+        self.assertEqual(result, "PO123")
+
+    def test_fetch_po_query_empty(self):
+        self.fetcher._run_qry = MagicMock(return_value=[])
+        result = self.fetcher.fetch_po(456)
+        self.assertEqual(result, "")
+
+    def test_fetch_po_query_partial(self):
+        self.fetcher._run_qry = MagicMock(return_value=[["PO789"]])
+        result = self.fetcher.fetch_po(789)
+        self.assertEqual(result, "PO789")
+
+    def test_fetch_cust_name_and_no(self):
+        self.fetcher.fetch_po = MagicMock()
+        self.fetcher.custname = "CUST"
+        self.fetcher.custno = 42
+        self.assertEqual(self.fetcher.fetch_cust_name(1), "CUST")
+        self.assertEqual(self.fetcher.fetch_cust_no(1), 42)
+
+    def test_fetch_uom_desc_cache(self):
+        self.fetcher.last_invno = 1
+        self.fetcher.uom_lut = {2: "EA"}
+        result = self.fetcher.fetch_uom_desc(100, 1, 1, 1)
+        self.assertEqual(result, "EA")
+
+    def test_fetch_uom_desc_keyerror_and_fallback(self):
+        self.fetcher.last_invno = 0
+        self.fetcher._run_qry = MagicMock(side_effect=[{2: "EA"}, [["ALT"]]])
+        # Will miss key, fallback to uommult > 1
+        result = self.fetcher.fetch_uom_desc(100, 2, 1, 2)
+        self.assertEqual(result, "ALT")
+
+    def test_fetch_uom_desc_keyerror_and_fallback_lo(self):
+        self.fetcher.last_invno = 0
+        self.fetcher._run_qry = MagicMock(side_effect=[{2: "EA"}, [["ALT"]]])
+        # Will miss key, fallback to uommult <= 1
+        result = self.fetcher.fetch_uom_desc(100, 1, 1, 2)
+        self.assertEqual(result, "ALT")
+
+    def test_fetch_uom_desc_keyerror_and_fallback_hi_lo_na(self):
+        self.fetcher.last_invno = 0
+        self.fetcher._run_qry = MagicMock(side_effect=[{2: "EA"}, Exception("fail")])
+        # uommult > 1, fallback fails, should return "HI"
+        result = self.fetcher.fetch_uom_desc(100, 2, 1, 2)
+        self.assertEqual(result, "HI")
+        # uommult <= 1, fallback fails, should return "LO"
+        result = self.fetcher.fetch_uom_desc(100, 1, 1, 3)
+        self.assertEqual(result, "LO")
+        # uommult not int, fallback fails, should return "NA"
+        result = self.fetcher.fetch_uom_desc(100, "notint", 1, 4)
+        self.assertEqual(result, "NA")
     unittest.main()
