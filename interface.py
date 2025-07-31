@@ -29,12 +29,76 @@ import batch_log_sender
 import utils
 import create_database
 
-# Define these at module level for testability
+
+# --- Testability helpers ---
+def _get_platform_system():
+    return platform.system()
+
+def _get_user_data_dir(appname):
+    return appdirs.user_data_dir(appname)
+
+def _now():
+    return datetime.datetime.now()
+
+def _os_path_exists(path):
+    return os.path.exists(path)
+
+def _os_getcwd():
+    return os.getcwd()
+
+def _open_file(*args, **kwargs):
+    return open(*args, **kwargs)
+
+def _showerror(*args, **kwargs):
+    return showerror(*args, **kwargs)
+
+def _askokcancel(*args, **kwargs):
+    return askokcancel(*args, **kwargs)
+
+def _askdirectory(*args, **kwargs):
+    return askdirectory(*args, **kwargs)
+
+def _smtplib_SMTP(*args, **kwargs):
+    return smtplib.SMTP(*args, **kwargs)
+
+def _tk_Tk():
+    return tkinter.Tk()
+
+def _ttk_Label(*args, **kwargs):
+    return tkinter.ttk.Label(*args, **kwargs)
+
+def _ttk_Checkbutton(*args, **kwargs):
+    return tkinter.ttk.Checkbutton(*args, **kwargs)
+
+def _ttk_Entry(*args, **kwargs):
+    return tkinter.ttk.Entry(*args, **kwargs)
+
+def _ttk_Spinbox(*args, **kwargs):
+    return tkinter.ttk.Spinbox(*args, **kwargs)
+
+def _ttk_Button(*args, **kwargs):
+    return tkinter.ttk.Button(*args, **kwargs)
+
+def _ttk_Frame(*args, **kwargs):
+    return tkinter.ttk.Frame(*args, **kwargs)
+
+def _ttk_OptionMenu(*args, **kwargs):
+    return tkinter.ttk.OptionMenu(*args, **kwargs)
+
+def _ttk_Separator(*args, **kwargs):
+    return tkinter.ttk.Separator(*args, **kwargs)
+
+def _ttk_Scrollbar(*args, **kwargs):
+    return tkinter.ttk.Scrollbar(*args, **kwargs)
+
+def _Listbox(*args, **kwargs):
+    return tkinter.Listbox(*args, **kwargs)
+
 APPNAME = "Batch File Sender"
 VERSION = "(Git Branch: Master)"
 DATABASE_VERSION = "32"
-running_platform = platform.system()
-config_folder = appdirs.user_data_dir(APPNAME)
+running_platform = _get_platform_system()
+config_folder = _get_user_data_dir(APPNAME)
 import database_import
 import dialog
 import dispatch
@@ -46,42 +110,67 @@ import resend_interface
 
 
 class DatabaseObj:
-    def __init__(self, inclass_database_path):
-        if not os.path.isfile(
-            inclass_database_path
-        ):  # if the database file is missing
+
+    def __init__(
+        self,
+        inclass_database_path,
+        os_path_exists=_os_path_exists,
+        tk_Tk=_tk_Tk,
+        ttk_Label=_ttk_Label,
+        open_file=_open_file,
+        now=_now,
+        showerror=_showerror,
+        askokcancel=_askokcancel,
+        askdirectory=_askdirectory,
+        smtplib_SMTP=_smtplib_SMTP,
+        running_platform=running_platform,
+        config_folder=config_folder,
+        database_version=DATABASE_VERSION,
+        version=VERSION,
+    ):
+        self._os_path_exists = os_path_exists
+        self._tk_Tk = tk_Tk
+        self._ttk_Label = ttk_Label
+        self._open_file = open_file
+        self._now = now
+        self._showerror = showerror
+        self._askokcancel = askokcancel
+        self._askdirectory = askdirectory
+        self._smtplib_SMTP = smtplib_SMTP
+        self._running_platform = running_platform
+        self._config_folder = config_folder
+        self._database_version = database_version
+        self._version = version
+
+        if not self._os_path_exists(inclass_database_path):  # if the database file is missing
             try:
                 print("creating initial database file...")
-                creating_database_popup = tkinter.Tk()
-                tkinter.ttk.Label(
+                creating_database_popup = self._tk_Tk()
+                self._ttk_Label(
                     creating_database_popup,
                     text="Creating initial database file...",
                 ).pack()
                 creating_database_popup.update()
                 create_database.do(
-                    DATABASE_VERSION,
+                    self._database_version,
                     inclass_database_path,
-                    config_folder,
-                    running_platform,
+                    self._config_folder,
+                    self._running_platform,
                 )  # make a new one
                 print("done")
                 creating_database_popup.destroy()
-            except (
-                Exception
-            ) as error:  # if that doesn't work for some reason, log and quit
+            except Exception as error:  # if that doesn't work for some reason, log and quit
                 try:
                     print(str(error))
-                    with open(
+                    with self._open_file(
                         "critical_error.log", "a", encoding="utf-8"
                     ) as critical_log:
-                        critical_log.write("program version is " + VERSION)
+                        critical_log.write("program version is " + self._version)
                         critical_log.write(
-                            str(datetime.datetime.now()) + str(error) + "\r\n"
+                            str(self._now()) + str(error) + "\r\n"
                         )
                     raise SystemExit from error
-                except (
-                    Exception
-                ) as big_error:  # if logging doesn't work, at least complain
+                except Exception as big_error:  # if logging doesn't work, at least complain
                     print(
                         "error writing critical error log for error: "
                         + str(error)
@@ -96,22 +185,18 @@ class DatabaseObj:
                 "sqlite:///" + inclass_database_path
             )  # connect to database
             self.session_database = dataset.connect("sqlite:///")
-        except (
-            Exception
-        ) as connect_error:  # if that doesn't work for some reason, log and quit
+        except Exception as connect_error:  # if that doesn't work for some reason, log and quit
             try:
                 print(str(connect_error))
-                with open(
+                with self._open_file(
                     "critical_error.log", "a", encoding="utf-8"
                 ) as connect_critical_log:
-                    connect_critical_log.write("program version is " + VERSION)
+                    connect_critical_log.write("program version is " + self._version)
                     connect_critical_log.write(
-                        str(datetime.datetime.now()) + str(connect_error) + "\r\n"
+                        str(self._now()) + str(connect_error) + "\r\n"
                     )
                 raise SystemExit from connect_error
-            except (
-                Exception
-            ) as connect_big_error:  # if logging doesn't work, at least complain
+            except Exception as connect_big_error:  # if logging doesn't work, at least complain
                 print(
                     "error writing critical error log for error: "
                     + str(connect_error)
@@ -124,22 +209,22 @@ class DatabaseObj:
         # open table required for database check in database
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
-        if int(db_version_dict["version"]) < int(DATABASE_VERSION):
+        if int(db_version_dict["version"]) < int(self._database_version):
             print("updating database file")
-            updating_database_popup = tkinter.Tk()
-            tkinter.ttk.Label(
+            updating_database_popup = self._tk_Tk()
+            self._ttk_Label(
                 updating_database_popup, text="Updating database file..."
             ).pack()
             updating_database_popup.update()
             backup_increment.do_backup(inclass_database_path)
             folders_database_migrator.upgrade_database(
-                self.database_connection, config_folder, running_platform
+                self.database_connection, self._config_folder, self._running_platform
             )
             updating_database_popup.destroy()
             print("done")
-        if int(db_version_dict["version"]) > int(DATABASE_VERSION):
-            tkinter.Tk().withdraw()
-            showerror(
+        if int(db_version_dict["version"]) > int(self._database_version):
+            self._tk_Tk().withdraw()
+            self._showerror(
                 "Error",
                 "Program version too old for database version,\r\n please install a more recent release.",
             )
@@ -147,13 +232,13 @@ class DatabaseObj:
 
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
-        if db_version_dict["os"] != running_platform:
-            tkinter.Tk().withdraw()
-            showerror(
+        if db_version_dict["os"] != self._running_platform:
+            self._tk_Tk().withdraw()
+            self._showerror(
                 "Error",
                 "The operating system detected is: "
                 + '"'
-                + running_platform
+                + self._running_platform
                 + '",'
                 + " this does not match the configuration creator, which is stored as: "
                 + '"'
@@ -176,28 +261,25 @@ class DatabaseObj:
         self.processed_files = self.database_connection["processed_files"]
         self.settings = self.database_connection["settings"]
 
-    def reload(self):
+
+    def reload(self, database_path):
         try:  # try to connect to database
             self.database_connection = dataset.connect(
                 "sqlite:///" + database_path
             )  # connect to database
             self.session_database = dataset.connect("sqlite:///")
-        except (
-            Exception
-        ) as connect_error:  # if that doesn't work for some reason, log and quit
+        except Exception as connect_error:  # if that doesn't work for some reason, log and quit
             try:
                 print(str(connect_error))
-                with open(
+                with self._open_file(
                     "critical_error.log", "a", encoding="utf-8"
                 ) as connect_critical_log:
-                    connect_critical_log.write("program version is " + VERSION)
+                    connect_critical_log.write("program version is " + self._version)
                     connect_critical_log.write(
-                        str(datetime.datetime.now()) + str(connect_error) + "\r\n"
+                        str(self._now()) + str(connect_error) + "\r\n"
                     )
                 raise SystemExit from connect_error
-            except (
-                Exception
-            ) as connect_big_error:  # if logging doesn't work, at least complain
+            except Exception as connect_big_error:  # if logging doesn't work, at least complain
                 print(
                     "error writing critical error log for error: "
                     + str(connect_error)
@@ -223,11 +305,48 @@ class DatabaseObj:
 
 
 class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
-    def __init__(self, *args, **kwargs):
+
+    def __init__(
+        self,
+        *args,
+        tk_Tk=_tk_Tk,
+        ttk_Label=_ttk_Label,
+        ttk_Checkbutton=_ttk_Checkbutton,
+        ttk_Entry=_ttk_Entry,
+        ttk_Spinbox=_ttk_Spinbox,
+        ttk_Button=_ttk_Button,
+        ttk_Frame=_ttk_Frame,
+        ttk_OptionMenu=_ttk_OptionMenu,
+        ttk_Separator=_ttk_Separator,
+        ttk_Scrollbar=_ttk_Scrollbar,
+        Listbox=_Listbox,
+        askdirectory=_askdirectory,
+        showerror=_showerror,
+        askokcancel=_askokcancel,
+        smtplib_SMTP=_smtplib_SMTP,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
-        self.tk = tkinter.Tk()  # Initialize the tk attribute
+        self.tk_Tk = tk_Tk
+        self.ttk_Label = ttk_Label
+        self.ttk_Checkbutton = ttk_Checkbutton
+        self.ttk_Entry = ttk_Entry
+        self.ttk_Spinbox = ttk_Spinbox
+        self.ttk_Button = ttk_Button
+        self.ttk_Frame = ttk_Frame
+        self.ttk_OptionMenu = ttk_OptionMenu
+        self.ttk_Separator = ttk_Separator
+        self.ttk_Scrollbar = ttk_Scrollbar
+        self.Listbox = Listbox
+        self.askdirectory = askdirectory
+        self.showerror = showerror
+        self.askokcancel = askokcancel
+        self.smtplib_SMTP = smtplib_SMTP
+        self.tk = self.tk_Tk()  # Initialize the tk attribute
 
     def body(self, master):
+        if database_obj_instance is None:
+            raise RuntimeError("database_obj_instance is not set")
         self.settings = database_obj_instance.settings.find_one(id=1)
         self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
         self.logs_directory = self.foldersnameinput["logs_directory"]
@@ -516,6 +635,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         return self.email_address_field  # initial focus
 
     def validate(self):
+        if database_obj_instance is None:
+            raise RuntimeError("database_obj_instance is not set")
         doingstuffoverlay.make_overlay(self, "Testing Changes...")
         error_list = []
         errors = False
@@ -650,6 +771,8 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         self.cancel()
 
     def apply(self, folders_name_apply):
+        if database_obj_instance is None:
+            raise RuntimeError("database_obj_instance is not set")
         doingstuffoverlay.make_overlay(root, "Applying Changes...")
         root.update()
         folders_name_apply["enable_reporting"] = str(
@@ -707,26 +830,47 @@ class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuratio
         refresh_users_list()
 
 class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
-    def body(self, master):
+    def body(
+        self,
+        master,
+        tk_Tk=_tk_Tk,
+        ttk_Label=_ttk_Label,
+        ttk_Checkbutton=_ttk_Checkbutton,
+        ttk_Entry=_ttk_Entry,
+        ttk_Spinbox=_ttk_Spinbox,
+        ttk_Button=_ttk_Button,
+        ttk_Frame=_ttk_Frame,
+        ttk_OptionMenu=_ttk_OptionMenu,
+        ttk_Separator=_ttk_Separator,
+        ttk_Scrollbar=_ttk_Scrollbar,
+        Listbox=_Listbox,
+        askdirectory=_askdirectory,
+        showerror=_showerror,
+        askokcancel=_askokcancel,
+        smtplib_SMTP=_smtplib_SMTP,
+        **kwargs
+    ):
+        if database_obj_instance is None:
+            raise RuntimeError("database_obj_instance is not set")
         self.settings = database_obj_instance.settings.find_one(id=1)
         self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
         global copy_to_directory
         copy_to_directory = self.foldersnameinput["copy_to_directory"]
         self.convert_formats_var = tkinter.StringVar(master)
         self.title("Folder Settings")
-        self.bodyframe = tkinter.ttk.Frame(master)
-        self.othersframe = tkinter.ttk.Frame(self.bodyframe)
-        self.folderframe = tkinter.ttk.Frame(self.bodyframe)
-        self.prefsframe = tkinter.ttk.Frame(self.bodyframe)
-        self.ediframe = tkinter.ttk.Frame(self.bodyframe)
-        self.convert_options_frame = tkinter.ttk.Frame(self.ediframe)
-        self.separatorv0 = tkinter.ttk.Separator(
+        self.bodyframe = ttk_Frame(master)
+        self.othersframe = ttk_Frame(self.bodyframe)
+        self.folderframe = ttk_Frame(self.bodyframe)
+        self.prefsframe = ttk_Frame(self.bodyframe)
+        self.ediframe = ttk_Frame(self.bodyframe)
+        self.convert_options_frame = ttk_Frame(self.ediframe)
+        self.separatorv0 = ttk_Separator(
             self.bodyframe, orient=tkinter.VERTICAL
         )
-        self.separatorv1 = tkinter.ttk.Separator(
+        self.separatorv1 = ttk_Separator(
             self.bodyframe, orient=tkinter.VERTICAL
         )
-        self.separatorv2 = tkinter.ttk.Separator(
+        self.separatorv2 = ttk_Separator(
             self.bodyframe, orient=tkinter.VERTICAL
         )
         self.backendvariable = tkinter.StringVar(master)
@@ -737,21 +881,11 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.prepend_file_dates = tkinter.BooleanVar(master)
         self.ediconvert_options = tkinter.StringVar(master)
         self.process_edi = tkinter.StringVar(master)
-        self.upc_var_check = tkinter.StringVar(
-            master
-        )  # define  "UPC calculation" checkbox state variable
-        self.a_rec_var_check = tkinter.StringVar(
-            master
-        )  # define "A record checkbox state variable
-        self.c_rec_var_check = tkinter.StringVar(
-            master
-        )  # define "C record" checkbox state variable
-        self.headers_check = tkinter.StringVar(
-            master
-        )  # define "Column Headers" checkbox state variable
-        self.ampersand_check = tkinter.StringVar(
-            master
-        )  # define "Filter Ampersand" checkbox state variable
+        self.upc_var_check = tkinter.StringVar(master)
+        self.a_rec_var_check = tkinter.StringVar(master)
+        self.c_rec_var_check = tkinter.StringVar(master)
+        self.headers_check = tkinter.StringVar(master)
+        self.ampersand_check = tkinter.StringVar(master)
         self.tweak_edi = tkinter.BooleanVar(master)
         self.pad_arec_check = tkinter.StringVar(master)
         self.a_record_padding_length = tkinter.IntVar(master)
@@ -761,7 +895,7 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.process_backend_ftp_check = tkinter.BooleanVar(master)
         self.process_backend_email_check = tkinter.BooleanVar(master)
         self.force_edi_check_var = tkinter.BooleanVar(master)
-        self.header_frame_frame = tkinter.ttk.Frame(master)
+        self.header_frame_frame = ttk_Frame(master)
         self.invoice_date_offset = tkinter.IntVar(master)
         self.invoice_date_custom_format_string = tkinter.StringVar(master)
         self.invoice_date_custom_format = tkinter.BooleanVar(master)
@@ -772,71 +906,71 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
         self.override_upc_bool = tkinter.BooleanVar(master)
         self.override_upc_level = tkinter.IntVar(master)
         self.override_upc_category_filter = tkinter.StringVar(master)
-        self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
-        self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
-        self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(
+        self.otherslistboxframe = ttk_Frame(master=self.othersframe)
+        self.otherslistbox = Listbox(master=self.otherslistboxframe)
+        self.otherslistboxscrollbar = ttk_Scrollbar(
             master=self.otherslistboxframe, orient=tkinter.VERTICAL
         )
         self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
         self.otherslistbox.config(yscrollcommand=self.otherslistboxscrollbar.set)
-        self.copyconfigbutton = tkinter.ttk.Button(
+        self.copyconfigbutton = ttk_Button(
             master=self.othersframe, text="Copy Config"
         )
-        tkinter.ttk.Label(self.folderframe, text="Backends:").grid(
+        ttk_Label(self.folderframe, text="Backends:").grid(
             row=2, sticky=tkinter.W
         )
-        tkinter.ttk.Label(self.prefsframe, text="Copy Backend Settings:").grid(
+        ttk_Label(self.prefsframe, text="Copy Backend Settings:").grid(
             row=3, columnspan=2, pady=3
         )
-        tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
+        ttk_Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
             row=5, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
         )
-        tkinter.ttk.Label(self.prefsframe, text="Ftp Backend Settings:").grid(
+        ttk_Label(self.prefsframe, text="Ftp Backend Settings:").grid(
             row=6, columnspan=2, pady=3
         )
-        tkinter.ttk.Label(self.prefsframe, text="FTP Server:").grid(
+        ttk_Label(self.prefsframe, text="FTP Server:").grid(
             row=7, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.prefsframe, text="FTP Port:").grid(
+        ttk_Label(self.prefsframe, text="FTP Port:").grid(
             row=8, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.prefsframe, text="FTP Folder:").grid(
+        ttk_Label(self.prefsframe, text="FTP Folder:").grid(
             row=9, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.prefsframe, text="FTP Username:").grid(
+        ttk_Label(self.prefsframe, text="FTP Username:").grid(
             row=10, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.prefsframe, text="FTP Password:").grid(
+        ttk_Label(self.prefsframe, text="FTP Password:").grid(
             row=11, sticky=tkinter.E
         )
-        tkinter.ttk.Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
+        ttk_Separator(self.prefsframe, orient=tkinter.HORIZONTAL).grid(
             row=12, columnspan=2, sticky=tkinter.E + tkinter.W, pady=2
         )
-        tkinter.ttk.Label(self.prefsframe, text="Email Backend Settings:").grid(
+        ttk_Label(self.prefsframe, text="Email Backend Settings:").grid(
             row=13, columnspan=2, pady=3
         )
-        tkinter.ttk.Label(self.prefsframe, text="Recipient Address:").grid(
+        ttk_Label(self.prefsframe, text="Recipient Address:").grid(
             row=14, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.prefsframe, text="Email Subject:").grid(
+        ttk_Label(self.prefsframe, text="Email Subject:").grid(
             row=18, sticky=tkinter.E
         )
-        tkinter.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
+        ttk_Label(self.ediframe, text="EDI Convert Settings:").grid(
             row=0, column=0, columnspan=2, pady=3
         )
-        tkinter.ttk.Label(self.ediframe, text="Rename File:").grid(
+        ttk_Label(self.ediframe, text="Rename File:").grid(
             row=4, column=0, sticky=tkinter.W
         )
-        tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
+        ttk_Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
             row=6, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
         )
         self.convert_options_frame.grid(
             column=0, row=7, columnspan=2, sticky=tkinter.W
         )
-        self.convert_to_selector_frame = tkinter.ttk.Frame(
+        self.convert_to_selector_frame = ttk_Frame(
             self.convert_options_frame
         )
-        self.convert_to_selector_label = tkinter.ttk.Label(
+        self.convert_to_selector_label = ttk_Label(
             self.convert_to_selector_frame, text="Convert To: "
         )
 
@@ -2108,6 +2242,9 @@ if __name__ == "__main__":
         pass
 
 
+
+database_obj_instance = None
+if __name__ == "__main__":
     database_obj_instance = DatabaseObj(database_path)
 
     launch_options = argparse.ArgumentParser()
@@ -2240,12 +2377,13 @@ if __name__ == "__main__":
             refresh_users_list()
         os.chdir(starting_directory)
 
-    def validate_email(email):
-        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-        if re.fullmatch(regex, email):
-            return True
-        else:
-            return False
+
+def validate_email(email):
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+    if re.fullmatch(regex, email):
+        return True
+    else:
+        return False
 
     def edit_folder_selector(folder_to_be_edited):
         # feed EditDialog class the dict for the selected folder from the folders list buttons
@@ -2603,9 +2741,12 @@ if __name__ == "__main__":
                 [self.entries_listbox.get(i) for i in range(len(self.entries_list))]
             )
 
-    def update_reporting(changes):
-        # push new settings into table
-        database_obj_instance.oversight_and_defaults.update(changes, ["id"])
+
+def update_reporting(changes):
+    # push new settings into table
+    if database_obj_instance is None:
+        raise RuntimeError("database_obj_instance is not set")
+    database_obj_instance.oversight_and_defaults.update(changes, ["id"])
 
     def update_folder_alias(
         folder_edit,
@@ -2613,13 +2754,14 @@ if __name__ == "__main__":
         database_obj_instance.folders_table.update(folder_edit, ["id"])
         refresh_users_list()
 
-    def refresh_users_list():
-        users_list_frame.destroy()  # destroy old users list
-        make_users_list()  # create new users list
-        users_list_frame.pack(
-            side=tkinter.RIGHT, fill=tkinter.BOTH, expand=1
-        )  # repack new users list
-        set_main_button_states()
+
+def refresh_users_list():
+    users_list_frame.destroy()  # destroy old users list
+    make_users_list()  # create new users list
+    users_list_frame.pack(
+        side=tkinter.RIGHT, fill=tkinter.BOTH, expand=1
+    )  # repack new users list
+    set_main_button_states()
 
     def delete_folder_entry(folder_to_be_removed):
         # delete specified folder configuration and it's queued emails and obe queue
