@@ -19,5 +19,5 @@ def do_backup(input_file):
     backup_path = os.path.join(backup_folder_path,
                                os.path.basename(input_file) + '.bak' + "-" + str(time.ctime()).replace(":", "-"))
     shutil.copy(input_file, backup_path)
-    utils.do_clear_old_files(os.path.dirname(backup_path), 50)
+    utils.do_clear_old_files(backup_folder_path, 50)
     return backup_path

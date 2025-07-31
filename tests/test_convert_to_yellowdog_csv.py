@@ -3,7 +3,6 @@ import csv
 import pytest
 from unittest.mock import MagicMock, patch
 import convert_to_yellowdog_csv
-
 @pytest.fixture
 def mock_utils(monkeypatch):
     import datetime

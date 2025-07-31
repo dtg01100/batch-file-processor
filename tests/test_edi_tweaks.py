@@ -4,7 +4,6 @@ import pytest
 import edi_tweaks
 import sys
 from unittest.mock import MagicMock, patch
-
 # Patch utils and query_runner dependencies
 
 @pytest.fixture

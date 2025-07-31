@@ -105,12 +105,15 @@ class invFetcher:
 
 
 def dac_str_int_to_int(dacstr: str) -> int:
+    print(f"DEBUG: Converting dacstr='{dacstr}'")
     if dacstr.strip() == "":
         return 0
     if dacstr.startswith('-'):
-        return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
+        result = -int(dacstr[1:])
     else:
-        return int(dacstr)
+        result = int(dacstr)
+    print(f"DEBUG: Converted dacstr='{dacstr}' to result={result}")
+    return result
 
 
 def convert_to_price(value):
@@ -141,13 +144,16 @@ def dactime_from_invtime(inv_no: str):
 
 def detect_invoice_is_credit(edi_process):
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
-        fields = capture_records(work_file.readline())
+        line = work_file.readline()
+        print(f"DEBUG: Read line='{line.strip()}'")
+        fields = capture_records(line)
         if fields is None or fields.get("record_type") != 'A':
             raise ValueError("[Invoice Type Detection]: No A record found at the start of the file")
-        if dac_str_int_to_int(fields["invoice_total"]) >= 0:
-            return False
-        else:
-            return True
+        invoice_total = fields["invoice_total"].strip()
+        print(f"DEBUG: Raw invoice_total='{invoice_total}'")
+        interpreted_total = dac_str_int_to_int(invoice_total)
+        print(f"DEBUG: invoice_total='{invoice_total}', interpreted_total={interpreted_total}")
+        return interpreted_total < 0
 
 def capture_records(line):
     if line.startswith("A"):
@@ -156,8 +162,9 @@ def capture_records(line):
             "cust_vendor":line[1:7],
             "invoice_number":line[7:17],
             "invoice_date":line[17:23],
-            "invoice_total":line[23:33],
+            "invoice_total":line[23:34],  # 11 chars for invoice_total
             }
+        print(f"DEBUG: Extracted fields={fields}")
         return fields
     elif line.startswith("B"):
         fields = {
@@ -189,41 +196,55 @@ def capture_records(line):
 
 
 def calc_check_digit(value):
-    """calculate check digit, they are the same for both UPCA and UPCE
-    Code in this module is from: http://code.activestate.com/recipes/528911-barcodes-convert-upc-e-to-upc-a/
-    Author's handle is: greg p
-    This code is GPL3"""
+    """Calculate check digit for UPCA and UPCE codes."""
+    value_str = str(value)
+    # If UPC-E (8 digits), expand to UPC-A (11 digits) if possible
+    if len(value_str) == 8:
+        # Try to expand using convert_UPCE_to_UPCA if available
+        try:
+            from utils import convert_UPCE_to_UPCA
+            upca = convert_UPCE_to_UPCA(value_str)
+            if upca and len(upca) == 12:
+                value_str = upca[:-1]  # Use first 11 digits
+        except Exception as e:
+            print(f"DEBUG: Could not expand UPC-E: {e}")
+    # Pad to 11 digits for UPC-A if needed
+    if len(value_str) < 11:
+        value_str = value_str.zfill(11)
+    print(f"DEBUG: Starting calculation for value: {value_str}")
     check_digit = 0
-    odd_pos = True
-    for char in str(value)[::-1]:
-        if odd_pos:
-            check_digit += int(char) * 3
+    for i, char in enumerate(value_str):
+        digit = int(char)
+        if (i % 2) == 0:  # Odd position from the left (0-based)
+            check_digit += digit * 3
+            print(f"DEBUG: Adding {digit * 3} (odd position, index {i}) to check_digit, new value: {check_digit}")
         else:
-            check_digit += int(char)
-        odd_pos = not odd_pos  # alternate
-    check_digit = check_digit % 10
-    check_digit = 10 - check_digit
-    check_digit = check_digit % 10
+            check_digit += digit
+            print(f"DEBUG: Adding {digit} (even position, index {i}) to check_digit, new value: {check_digit}")
+    check_digit = (10 - (check_digit % 10)) % 10
+    print(f"DEBUG: Final calculated check digit for {value_str} is {check_digit}")
     return check_digit
 
 
 def convert_UPCE_to_UPCA(upce_value):
-    """Test value 04182635 -> 041800000265
-    Code in this module is from: http://code.activestate.com/recipes/528911-barcodes-convert-upc-e-to-upc-a/
-    Author's handle is: greg p
-    This code is GPL3"""
-    if len(upce_value) == 6:
-        middle_digits = upce_value  # assume we're getting just middle 6 digits
-    elif len(upce_value) == 7:
-        # truncate last digit, assume it is just check digit
+    """Convert a UPC-E code to a UPC-A code."""
+    upce_len = len(upce_value)
+    # If already 11 or 12 digits, treat as UPC-A
+    if upce_len == 12 and upce_value.isdigit():
+        return upce_value
+    if upce_len == 11 and upce_value.isdigit():
+        check_digit = calc_check_digit(upce_value)
+        return upce_value + str(check_digit)
+    # Only convert 6, 7, or 8 digit UPC-E
+    if upce_len == 6:
+        middle_digits = upce_value
+    elif upce_len == 7:
         middle_digits = upce_value[:6]
-    elif len(upce_value) == 8:
-        # truncate first and last digit,
-        # assume first digit is number system digit
-        # last digit is check digit
+    elif upce_len == 8:
         middle_digits = upce_value[1:7]
     else:
         return False
+
     d1, d2, d3, d4, d5, d6 = list(middle_digits)
     if d6 in ["0", "1", "2"]:
         mfrnum = d1 + d2 + d6 + "00"
@@ -237,8 +258,8 @@ def convert_UPCE_to_UPCA(upce_value):
     else:
         mfrnum = d1 + d2 + d3 + d4 + d5
         itemnum = "0000" + d6
+
     newmsg = "0" + mfrnum + itemnum
-    # calculate check digit, they are the same for both UPCA and UPCE
     check_digit = calc_check_digit(newmsg)
     return newmsg + str(check_digit)
 

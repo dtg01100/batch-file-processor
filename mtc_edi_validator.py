@@ -28,23 +28,38 @@ def check(input_file):
         file_to_test.seek(0)
         for line in file_to_test:
             line_number += 1
-            if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
+            # Check for minimum length for each record type
+            if len(line.strip()) < 2:
                 file_to_test.close()
                 return False, line_number
-            else:
-                try:
-                    if line[0] == "B":
-                        if len(line) != 77 and len(line) != 71:
-                            file_to_test.close()
-                            return False, line_number
-                        _ = int(line[1:12])
-                        if len(line) == 71 and line[51:67] != "                ":
-                            file_to_test.close()
-                            return False, line_number
-                except ValueError:
-                    if not line[1:12] == "           ":
+            if line[0] not in ("A", "B", "C", "\x1a"):
+                file_to_test.close()
+                return False, line_number
+            # For A records, expect at least 31 chars (example, adjust as needed)
+            if line[0] == "A" and len(line.strip()) < 31:
+                file_to_test.close()
+                return False, line_number
+            # For B records, expect at least 40 chars (example, adjust as needed)
+            if line[0] == "B" and len(line.strip()) < 40:
+                file_to_test.close()
+                return False, line_number
+            # For C records, expect at least 20 chars (example, adjust as needed)
+            if line[0] == "C" and len(line.strip()) < 20:
+                file_to_test.close()
+                return False, line_number
+            try:
+                if line[0] == "B":
+                    if len(line) != 77 and len(line) != 71:
                         file_to_test.close()
                         return False, line_number
+                    _ = int(line[1:12])
+                    if len(line) == 71 and line[51:67] != "                ":
+                        file_to_test.close()
+                        return False, line_number
+            except ValueError:
+                if not line[1:12] == "           ":
+                    file_to_test.close()
+                    return False, line_number
 
         file_to_test.close()
         return True, line_number

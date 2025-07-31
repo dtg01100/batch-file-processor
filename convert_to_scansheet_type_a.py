@@ -14,24 +14,25 @@ import utils
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
+def adjust_column_width(adjust_worksheet):
+    print(
+        "Adjusting column width for {} worksheet".format(adjust_worksheet.title)
+    )
+    for col in adjust_worksheet.columns:
+        max_length = 0
+        column = col[0].column_letter  # Get the column name
+        for cell in col:
+            try:  # Necessary to avoid error on empty cells
+                if len(str(cell.value)) > max_length:
+                    # Convert cell contents to str, cannot get len of int
+                    max_length = len(str(cell.value))
+            except Exception as resize_error:
+                print(resize_error)
+        adjusted_width = (max_length + 2) * 1.2
+        adjust_worksheet.column_dimensions[column].width = adjusted_width
 
-    def adjust_column_width(adjust_worksheet):
-        print(
-            "Adjusting column width for {} worksheet".format(adjust_worksheet.title)
-        )
-        for col in adjust_worksheet.columns:
-            max_length = 0
-            column = col[0].column_letter  # Get the column name
-            for cell in col:
-                try:  # Necessary to avoid error on empty cells
-                    if len(str(cell.value)) > max_length:
-                        # Convert cell contents to str, cannot get len of int
-                        max_length = len(str(cell.value))
-                except Exception as resize_error:
-                    print(resize_error)
-            adjusted_width = (max_length + 2) * 1.2
-            adjust_worksheet.column_dimensions[column].width = adjusted_width
+
+def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines

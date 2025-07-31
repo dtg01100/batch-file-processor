@@ -4,7 +4,6 @@ import tempfile
 import pytest
 from unittest import mock
 import convert_to_csv
-
 @pytest.fixture
 def sample_parameters():
     return {

@@ -38,7 +38,188 @@ import tk_extra_widgets
 import resend_interface
 
 
+class DatabaseObj:
+    def __init__(self, inclass_database_path):
+        if not os.path.isfile(
+            inclass_database_path
+        ):  # if the database file is missing
+            try:
+                print("creating initial database file...")
+                creating_database_popup = tkinter.Tk()
+                tkinter.ttk.Label(
+                    creating_database_popup,
+                    text="Creating initial database file...",
+                ).pack()
+                creating_database_popup.update()
+                create_database.do(
+                    DATABASE_VERSION,
+                    inclass_database_path,
+                    config_folder,
+                    running_platform,
+                )  # make a new one
+                print("done")
+                creating_database_popup.destroy()
+            except (
+                Exception
+            ) as error:  # if that doesn't work for some reason, log and quit
+                try:
+                    print(str(error))
+                    with open(
+                        "critical_error.log", "a", encoding="utf-8"
+                    ) as critical_log:
+                        critical_log.write("program version is " + VERSION)
+                        critical_log.write(
+                            str(datetime.datetime.now()) + str(error) + "\r\n"
+                        )
+                    raise SystemExit from error
+                except (
+                    Exception
+                ) as big_error:  # if logging doesn't work, at least complain
+                    print(
+                        "error writing critical error log for error: "
+                        + str(error)
+                        + "\n"
+                        + "operation failed with error: "
+                        + str(big_error)
+                    )
+                    raise SystemExit from big_error
+
+        try:  # try to connect to database
+            self.database_connection = dataset.connect(
+                "sqlite:///" + inclass_database_path
+            )  # connect to database
+            self.session_database = dataset.connect("sqlite:///")
+        except (
+            Exception
+        ) as connect_error:  # if that doesn't work for some reason, log and quit
+            try:
+                print(str(connect_error))
+                with open(
+                    "critical_error.log", "a", encoding="utf-8"
+                ) as connect_critical_log:
+                    connect_critical_log.write("program version is " + VERSION)
+                    connect_critical_log.write(
+                        str(datetime.datetime.now()) + str(connect_error) + "\r\n"
+                    )
+                raise SystemExit from connect_error
+            except (
+                Exception
+            ) as connect_big_error:  # if logging doesn't work, at least complain
+                print(
+                    "error writing critical error log for error: "
+                    + str(connect_error)
+                    + "\n"
+                    + "operation failed with error: "
+                    + str(connect_big_error)
+                )
+                raise SystemExit from connect_big_error
+
+        # open table required for database check in database
+        db_version = self.database_connection["version"]
+        db_version_dict = db_version.find_one(id=1)
+        if int(db_version_dict["version"]) < int(DATABASE_VERSION):
+            print("updating database file")
+            updating_database_popup = tkinter.Tk()
+            tkinter.ttk.Label(
+                updating_database_popup, text="Updating database file..."
+            ).pack()
+            updating_database_popup.update()
+            backup_increment.do_backup(inclass_database_path)
+            folders_database_migrator.upgrade_database(
+                self.database_connection, config_folder, running_platform
+            )
+            updating_database_popup.destroy()
+            print("done")
+        if int(db_version_dict["version"]) > int(DATABASE_VERSION):
+            tkinter.Tk().withdraw()
+            showerror(
+                "Error",
+                "Program version too old for database version,\r\n please install a more recent release.",
+            )
+            raise SystemExit
+
+        db_version = self.database_connection["version"]
+        db_version_dict = db_version.find_one(id=1)
+        if db_version_dict["os"] != running_platform:
+            tkinter.Tk().withdraw()
+            showerror(
+                "Error",
+                "The operating system detected is: "
+                + '"'
+                + running_platform
+                + '",'
+                + " this does not match the configuration creator, which is stored as: "
+                + '"'
+                + db_version_dict["os"]
+                + '".'
+                + "\r\n"
+                "Folder paths are not portable between operating systems. Exiting",
+            )
+            raise SystemExit
+
+        self.folders_table = self.database_connection["folders"]
+        self.emails_table = self.database_connection["emails_to_send"]
+        self.emails_table_batch = self.database_connection[
+            "working_batch_emails_to_send"
+        ]
+        self.sent_emails_removal_queue = self.database_connection[
+            "sent_emails_removal_queue"
+        ]
+        self.oversight_and_defaults = self.database_connection["administrative"]
+        self.processed_files = self.database_connection["processed_files"]
+        self.settings = self.database_connection["settings"]
+
+    def reload(self):
+        try:  # try to connect to database
+            self.database_connection = dataset.connect(
+                "sqlite:///" + database_path
+            )  # connect to database
+            self.session_database = dataset.connect("sqlite:///")
+        except (
+            Exception
+        ) as connect_error:  # if that doesn't work for some reason, log and quit
+            try:
+                print(str(connect_error))
+                with open(
+                    "critical_error.log", "a", encoding="utf-8"
+                ) as connect_critical_log:
+                    connect_critical_log.write("program version is " + VERSION)
+                    connect_critical_log.write(
+                        str(datetime.datetime.now()) + str(connect_error) + "\r\n"
+                    )
+                raise SystemExit from connect_error
+            except (
+                Exception
+            ) as connect_big_error:  # if logging doesn't work, at least complain
+                print(
+                    "error writing critical error log for error: "
+                    + str(connect_error)
+                    + "\n"
+                    + "operation failed with error: "
+                    + str(connect_big_error)
+                )
+                raise SystemExit from connect_big_error
+        self.folders_table = self.database_connection["folders"]
+        self.emails_table = self.database_connection["emails_to_send"]
+        self.emails_table_batch = self.database_connection[
+            "working_batch_emails_to_send"
+        ]
+        self.sent_emails_removal_queue = self.database_connection[
+            "sent_emails_removal_queue"
+        ]
+        self.oversight_and_defaults = self.database_connection["administrative"]
+        self.processed_files = self.database_connection["processed_files"]
+        self.settings = self.database_connection["settings"]
+
+    def close(self):
+        self.database_connection.close()
+
+
 class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tk = tkinter.Tk()  # Initialize the tk attribute
+
     def body(self, master):
         self.settings = database_obj_instance.settings.find_one(id=1)
         self.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
@@ -1649,8 +1830,9 @@ class EditDialog(dialog.Dialog):  # modal dialog for folder configuration.
             update_folder_alias(apply_to_folder)
         else:
             update_reporting(apply_to_folder)
-        set_main_button_states()
         doingstuffoverlay.destroy_overlay()
+        set_main_button_states()
+        refresh_users_list()
 
     def validate(self):
         error_string_constructor_list = []
@@ -1918,181 +2100,6 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    class DatabaseObj:
-        def __init__(self, inclass_database_path):
-            if not os.path.isfile(
-                inclass_database_path
-            ):  # if the database file is missing
-                try:
-                    print("creating initial database file...")
-                    creating_database_popup = tkinter.Tk()
-                    tkinter.ttk.Label(
-                        creating_database_popup,
-                        text="Creating initial database file...",
-                    ).pack()
-                    creating_database_popup.update()
-                    create_database.do(
-                        DATABASE_VERSION,
-                        inclass_database_path,
-                        config_folder,
-                        running_platform,
-                    )  # make a new one
-                    print("done")
-                    creating_database_popup.destroy()
-                except (
-                    Exception
-                ) as error:  # if that doesn't work for some reason, log and quit
-                    try:
-                        print(str(error))
-                        with open(
-                            "critical_error.log", "a", encoding="utf-8"
-                        ) as critical_log:
-                            critical_log.write("program version is " + VERSION)
-                            critical_log.write(
-                                str(datetime.datetime.now()) + str(error) + "\r\n"
-                            )
-                        raise SystemExit from error
-                    except (
-                        Exception
-                    ) as big_error:  # if logging doesn't work, at least complain
-                        print(
-                            "error writing critical error log for error: "
-                            + str(error)
-                            + "\n"
-                            + "operation failed with error: "
-                            + str(big_error)
-                        )
-                        raise SystemExit from big_error
-
-            try:  # try to connect to database
-                self.database_connection = dataset.connect(
-                    "sqlite:///" + inclass_database_path
-                )  # connect to database
-                self.session_database = dataset.connect("sqlite:///")
-            except (
-                Exception
-            ) as connect_error:  # if that doesn't work for some reason, log and quit
-                try:
-                    print(str(connect_error))
-                    with open(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + VERSION)
-                        connect_critical_log.write(
-                            str(datetime.datetime.now()) + str(connect_error) + "\r\n"
-                        )
-                    raise SystemExit from connect_error
-                except (
-                    Exception
-                ) as connect_big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(connect_error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(connect_big_error)
-                    )
-                    raise SystemExit from connect_big_error
-
-            # open table required for database check in database
-            db_version = self.database_connection["version"]
-            db_version_dict = db_version.find_one(id=1)
-            if int(db_version_dict["version"]) < int(DATABASE_VERSION):
-                print("updating database file")
-                updating_database_popup = tkinter.Tk()
-                tkinter.ttk.Label(
-                    updating_database_popup, text="Updating database file..."
-                ).pack()
-                updating_database_popup.update()
-                backup_increment.do_backup(inclass_database_path)
-                folders_database_migrator.upgrade_database(
-                    self.database_connection, config_folder, running_platform
-                )
-                updating_database_popup.destroy()
-                print("done")
-            if int(db_version_dict["version"]) > int(DATABASE_VERSION):
-                tkinter.Tk().withdraw()
-                showerror(
-                    "Error",
-                    "Program version too old for database version,\r\n please install a more recent release.",
-                )
-                raise SystemExit
-
-            db_version = self.database_connection["version"]
-            db_version_dict = db_version.find_one(id=1)
-            if db_version_dict["os"] != running_platform:
-                tkinter.Tk().withdraw()
-                showerror(
-                    "Error",
-                    "The operating system detected is: "
-                    + '"'
-                    + running_platform
-                    + '",'
-                    + " this does not match the configuration creator, which is stored as: "
-                    + '"'
-                    + db_version_dict["os"]
-                    + '".'
-                    + "\r\n"
-                    "Folder paths are not portable between operating systems. Exiting",
-                )
-                raise SystemExit
-
-            self.folders_table = self.database_connection["folders"]
-            self.emails_table = self.database_connection["emails_to_send"]
-            self.emails_table_batch = self.database_connection[
-                "working_batch_emails_to_send"
-            ]
-            self.sent_emails_removal_queue = self.database_connection[
-                "sent_emails_removal_queue"
-            ]
-            self.oversight_and_defaults = self.database_connection["administrative"]
-            self.processed_files = self.database_connection["processed_files"]
-            self.settings = self.database_connection["settings"]
-
-        def reload(self):
-            try:  # try to connect to database
-                self.database_connection = dataset.connect(
-                    "sqlite:///" + database_path
-                )  # connect to database
-                self.session_database = dataset.connect("sqlite:///")
-            except (
-                Exception
-            ) as connect_error:  # if that doesn't work for some reason, log and quit
-                try:
-                    print(str(connect_error))
-                    with open(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + VERSION)
-                        connect_critical_log.write(
-                            str(datetime.datetime.now()) + str(connect_error) + "\r\n"
-                        )
-                    raise SystemExit from connect_error
-                except (
-                    Exception
-                ) as connect_big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(connect_error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(connect_big_error)
-                    )
-                    raise SystemExit from connect_big_error
-            self.folders_table = self.database_connection["folders"]
-            self.emails_table = self.database_connection["emails_to_send"]
-            self.emails_table_batch = self.database_connection[
-                "working_batch_emails_to_send"
-            ]
-            self.sent_emails_removal_queue = self.database_connection[
-                "sent_emails_removal_queue"
-            ]
-            self.oversight_and_defaults = self.database_connection["administrative"]
-            self.processed_files = self.database_connection["processed_files"]
-            self.settings = self.database_connection["settings"]
-
-        def close(self):
-            self.database_connection.close()
 
     database_obj_instance = DatabaseObj(database_path)
 

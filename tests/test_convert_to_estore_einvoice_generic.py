@@ -5,7 +5,6 @@ from unittest import mock
 from decimal import Decimal
 import pytest
 import convert_to_estore_einvoice_generic as cte
-
 @pytest.fixture
 def settings_dict():
     return {

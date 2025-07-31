@@ -3,7 +3,6 @@ import tempfile
 import pytest
 from unittest import mock
 import convert_to_scansheet_type_a as ctsa
-
 @pytest.fixture
 def fake_settings_dict():
     return {

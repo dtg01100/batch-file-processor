@@ -3,7 +3,6 @@ import pytest
 import tempfile
 import hashlib
 from dispatch import generate_match_lists, generate_file_hash
-
 def test_generate_match_lists_basic():
     folder_temp_processed_files_list = [
         {'file_name': 'file1.txt', 'file_checksum': 'abc123', 'resend_flag': False},

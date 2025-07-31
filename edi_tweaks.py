@@ -151,23 +151,24 @@ def edi_tweak(
                 print(f"error opening file for read {error}")
                 raise
     # work_file = open(edi_process)  # open input file
-    work_file_lined = [n for n in work_file.readlines()]  # make list of lines
+    work_file_lined = [n.rstrip('\r\n') for n in work_file.readlines() if n.strip()]  # skip empty lines, strip all newlines
     if force_txt_file_ext == "True":
         output_filename = output_filename + ".txt"
 
     write_attempt_counter = 1
     file_opened = False
+
     while not file_opened:
         try:
-            with open(output_filename, "w", newline='\r\n') as f:  # open work file, overwriting old file
+            with open(output_filename, "w", newline='') as f:
                 file_opened = True
 
                 crec_appender = cRecGenerator(settings_dict)
                 po_fetcher = poFetcher(settings_dict)
 
-                for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
+                for line_num, line in enumerate(work_file_lined):
                     input_edi_dict = utils.capture_records(line)
-                    writeable_line = line.strip('\n')  # remove trailing newline character
+                    writeable_line = line  # already stripped of newlines
                     if writeable_line.startswith("A") and input_edi_dict is not None:
                         a_rec_edi_dict = input_edi_dict
                         crec_appender.set_invoice_number(int(a_rec_edi_dict['invoice_number']))
@@ -175,10 +176,7 @@ def edi_tweak(
                             invoice_date_string = a_rec_edi_dict["invoice_date"]
                             if not invoice_date_string == "000000":
                                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
-                                print(invoice_date_offset)
-                                offset_invoice_date = invoice_date + timedelta(
-                                    days=invoice_date_offset
-                                )
+                                offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
                                 a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
                         if invoice_date_custom_format:
                             invoice_date_string = a_rec_edi_dict["invoice_date"]
@@ -204,10 +202,9 @@ def edi_tweak(
                                 a_rec_line_builder.append(temp_append_arec_text)
                             else:
                                 a_rec_line_builder.append(append_arec_text)
-                        a_rec_line_builder.append('\n')
                         writeable_line = "".join(a_rec_line_builder)
-                        f.write(writeable_line)
-                    if writeable_line.startswith("B"):
+                        f.write(writeable_line + "\n")
+                    elif writeable_line.startswith("B"):
                         if not input_edi_dict:
                             print(f"line {line_num} is not a valid B record, skipping")
                             raise ValueError(f"line {line_num} is not a valid B record, skipping")
@@ -306,12 +303,12 @@ def edi_tweak(
                             b_rec_edi_dict["price_multi_pack"],
                             b_rec_edi_dict["parent_item_number"]
                         ))
-                        f.write(writeable_line)
-                    if writeable_line.startswith("C"):
+                        f.write(writeable_line + "\n")
+                    elif writeable_line.startswith("C"):
                         if split_prepaid_sales_tax_crec and crec_appender.unappended_records and writeable_line.startswith("CTABSales Tax"):
                             crec_appender.fetch_splitted_sales_tax_totals(f)
                         else:
-                            f.write(writeable_line)
+                            f.write(writeable_line + "\n")
         except Exception as error:
             if write_attempt_counter >= 5:
                 time.sleep(write_attempt_counter*write_attempt_counter)
@@ -320,4 +317,5 @@ def edi_tweak(
             else:
                 print(f"error opening file for write {error}")
                 raise
+    return output_filename
     return output_filename

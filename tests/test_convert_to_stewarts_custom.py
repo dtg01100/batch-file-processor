@@ -3,7 +3,6 @@ import csv
 import tempfile
 import pytest
 import convert_to_stewarts_custom
-
 @pytest.fixture
 def mock_utils(monkeypatch):
     class DummyUtils:

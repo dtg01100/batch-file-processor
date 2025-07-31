@@ -2,7 +2,6 @@ import os
 import tempfile
 import pytest
 import convert_to_scannerware
-
 # Patch utils.capture_records for controlled input parsing
 class DummyUtils:
     @staticmethod
