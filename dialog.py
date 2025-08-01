@@ -1,11 +1,11 @@
-from tkinter import *
-from tkinter.ttk import *
+
+import tkinter as tk
+from tkinter import ttk
 
 
-class Dialog(Toplevel):
+class Dialog(tk.Toplevel):
     def __init__(self, parent, foldersnameinput, title=None):
-
-        Toplevel.__init__(self, parent)
+        tk.Toplevel.__init__(self, parent)
         self.transient(parent)
 
         if title:
@@ -17,7 +17,7 @@ class Dialog(Toplevel):
 
         self.result = None
 
-        body = Frame(self)
+        body = tk.Frame(self)
         self.initial_focus = self.body(body)
         body.pack(padx=5, pady=5)
 
@@ -50,12 +50,12 @@ class Dialog(Toplevel):
         # add standard button box. override if you don't want the
         # standard buttons
 
-        box = Frame(self)
+        box = tk.Frame(self)
 
-        w = Button(box, text="OK", width=10, command=self.ok, default=ACTIVE)
-        w.pack(side=LEFT, padx=5, pady=5)
-        w = Button(box, text="Cancel", width=10, command=self.cancel)
-        w.pack(side=LEFT, padx=5, pady=5)
+        w = tk.Button(box, text="OK", width=10, command=self.ok, default=tk.ACTIVE)
+        w.pack(side=tk.LEFT, padx=5, pady=5)
+        w = tk.Button(box, text="Cancel", width=10, command=self.cancel)
+        w.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)

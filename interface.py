@@ -1,3 +1,4 @@
+print("TOP OF FILE REACHED")
 #!/usr/bin/env python3
 import os
 import platform
@@ -128,6 +129,7 @@ class DatabaseObj:
         database_version=DATABASE_VERSION,
         version=VERSION,
     ):
+        print("DatabaseObj.__init__ starting")
         self._os_path_exists = os_path_exists
         self._tk_Tk = tk_Tk
         self._ttk_Label = ttk_Label
@@ -160,25 +162,18 @@ class DatabaseObj:
                 print("done")
                 creating_database_popup.destroy()
             except Exception as error:  # if that doesn't work for some reason, log and quit
-                try:
-                    print(str(error))
-                    with self._open_file(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as critical_log:
-                        critical_log.write("program version is " + self._version)
-                        critical_log.write(
-                            str(self._now()) + str(error) + "\r\n"
-                        )
-                    raise SystemExit from error
-                except Exception as big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(big_error)
+                print(str(error))
+                with self._open_file(
+                    "critical_error.log", "a", encoding="utf-8"
+                ) as critical_log:
+                    critical_log.write("program version is " + self._version)
+                    critical_log.write(
+                        str(self._now()) + str(error) + "\r\n"
                     )
-                    raise SystemExit from big_error
+            print("Exiting: SystemExit from error in DatabaseObj init (create_database)")
+            print("EXIT POINT: SystemExit (create_database)")
+            raise SystemExit from error
+
 
         try:  # try to connect to database
             self.database_connection = dataset.connect(
@@ -195,8 +190,11 @@ class DatabaseObj:
                     connect_critical_log.write(
                         str(self._now()) + str(connect_error) + "\r\n"
                     )
+                print("Exiting: SystemExit from connect_error in DatabaseObj init (connect)")
+                print("EXIT POINT: SystemExit (connect_error)")
                 raise SystemExit from connect_error
             except Exception as connect_big_error:  # if logging doesn't work, at least complain
+                print("Database file missing, creating new database...")
                 print(
                     "error writing critical error log for error: "
                     + str(connect_error)
@@ -204,14 +202,19 @@ class DatabaseObj:
                     + "operation failed with error: "
                     + str(connect_big_error)
                 )
+                print("Exiting: SystemExit from connect_big_error in DatabaseObj init (connect)")
+                print("EXIT POINT: SystemExit (connect_big_error)")
                 raise SystemExit from connect_big_error
 
         # open table required for database check in database
+                print("Exception during database creation:", error)
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
+        updating_popup_created = False
         if int(db_version_dict["version"]) < int(self._database_version):
             print("updating database file")
             updating_database_popup = self._tk_Tk()
+            updating_popup_created = True
             self._ttk_Label(
                 updating_database_popup, text="Updating database file..."
             ).pack()
@@ -221,49 +224,62 @@ class DatabaseObj:
                 self.database_connection, self._config_folder, self._running_platform
             )
             updating_database_popup.destroy()
-            print("done")
+        else:
+            folders_database_migrator.upgrade_database(
+                self.database_connection, self._config_folder, self._running_platform
+            )
         if int(db_version_dict["version"]) > int(self._database_version):
             self._tk_Tk().withdraw()
             self._showerror(
                 "Error",
-                "Program version too old for database version,\r\n please install a more recent release.",
+                "Program version too old for database version,\r\n please install a more recent release."
             )
+            print("Exiting: SystemExit, program version too new for code")
+            print("EXIT POINT: SystemExit (program version too new for code)")
             raise SystemExit
 
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
+        print(f"DEBUG: db_version_dict['os'] = {db_version_dict['os']}")
+        print(f"DEBUG: self._running_platform = {self._running_platform}")
         if db_version_dict["os"] != self._running_platform:
+            print("OS mismatch detected, about to exit.")
             self._tk_Tk().withdraw()
             self._showerror(
                 "Error",
                 "The operating system detected is: "
-                + '"'
-                + self._running_platform
-                + '",'
+                + '"' + self._running_platform + '",' 
                 + " this does not match the configuration creator, which is stored as: "
-                + '"'
-                + db_version_dict["os"]
-                + '".'
-                + "\r\n"
-                "Folder paths are not portable between operating systems. Exiting",
+                + '"' + db_version_dict["os"] + '".'
+                + "\r\nFolder paths are not portable between operating systems. Exiting",
             )
+            print("Exiting: SystemExit, OS mismatch")
+            print("EXIT POINT: SystemExit (OS mismatch)")
             raise SystemExit
 
+        print("DEBUG: Assigning folders_table...")
         self.folders_table = self.database_connection["folders"]
+        print("DEBUG: Assigned folders_table.")
         self.emails_table = self.database_connection["emails_to_send"]
-        self.emails_table_batch = self.database_connection[
-            "working_batch_emails_to_send"
-        ]
-        self.sent_emails_removal_queue = self.database_connection[
-            "sent_emails_removal_queue"
-        ]
+        print("DEBUG: Assigned emails_table.")
+        self.emails_table_batch = self.database_connection["working_batch_emails_to_send"]
+        print("DEBUG: Assigned emails_table_batch.")
+        self.sent_emails_removal_queue = self.database_connection["sent_emails_removal_queue"]
+        print("DEBUG: Assigned sent_emails_removal_queue.")
         self.oversight_and_defaults = self.database_connection["administrative"]
+        print("DEBUG: Assigned oversight_and_defaults.")
         self.processed_files = self.database_connection["processed_files"]
+        print("DEBUG: Assigned processed_files.")
         self.settings = self.database_connection["settings"]
+        print("DEBUG: Assigned settings.")
 
-
+        print("Checking database OS match...")
+        print("DEBUG: About to set up tables and settings.")
+        print("DEBUG: End of DatabaseObj.__init__ reached.")
     def reload(self, database_path):
         try:  # try to connect to database
+            print("Database version is newer than expected, exiting...")
+            print("Database OS mismatch detected, exiting...")
             self.database_connection = dataset.connect(
                 "sqlite:///" + database_path
             )  # connect to database
@@ -2243,14 +2259,31 @@ if __name__ == "__main__":
 
 
 
+def validate_email(email):
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+    if re.fullmatch(regex, email):
+        return True
+    else:
+        return False
+
 database_obj_instance = None
 if __name__ == "__main__":
-    database_obj_instance = DatabaseObj(database_path)
+    try:
+        database_obj_instance = DatabaseObj(database_path)
+        print("DatabaseObj instantiated successfully.")
 
-    launch_options = argparse.ArgumentParser()
-    logs_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
-    errors_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
-    folder_filter = ""
+        launch_options = argparse.ArgumentParser()
+        logs_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
+        errors_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
+        folder_filter = ""
+    except Exception as main_error:
+        print(f"Exception in main block: {main_error}")
+        import traceback
+        traceback.print_exc()
+        with open("critical_error.log", "a", encoding="utf-8") as critical_log:
+            critical_log.write("Exception in main block: " + str(main_error) + "\n")
+        print("Exiting: SystemExit from error in main block")
+        raise SystemExit from main_error
 
     def check_logs_directory():
         try:
@@ -2378,12 +2411,7 @@ if __name__ == "__main__":
         os.chdir(starting_directory)
 
 
-def validate_email(email):
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-    if re.fullmatch(regex, email):
-        return True
-    else:
-        return False
+
 
     def edit_folder_selector(folder_to_be_edited):
         # feed EditDialog class the dict for the selected folder from the folders list buttons
@@ -2742,11 +2770,11 @@ def validate_email(email):
             )
 
 
-def update_reporting(changes):
-    # push new settings into table
-    if database_obj_instance is None:
-        raise RuntimeError("database_obj_instance is not set")
-    database_obj_instance.oversight_and_defaults.update(changes, ["id"])
+    def update_reporting(changes):
+        # push new settings into table
+        if database_obj_instance is None:
+            raise RuntimeError("database_obj_instance is not set")
+        database_obj_instance.oversight_and_defaults.update(changes, ["id"])
 
     def update_folder_alias(
         folder_edit,
@@ -2755,13 +2783,13 @@ def update_reporting(changes):
         refresh_users_list()
 
 
-def refresh_users_list():
-    users_list_frame.destroy()  # destroy old users list
-    make_users_list()  # create new users list
-    users_list_frame.pack(
-        side=tkinter.RIGHT, fill=tkinter.BOTH, expand=1
-    )  # repack new users list
-    set_main_button_states()
+    def refresh_users_list():
+        users_list_frame.destroy()  # destroy old users list
+        make_users_list()  # create new users list
+        users_list_frame.pack(
+            side=tkinter.RIGHT, fill=tkinter.BOTH, expand=1
+        )  # repack new users list
+        set_main_button_states()
 
     def delete_folder_entry(folder_to_be_removed):
         # delete specified folder configuration and it's queued emails and obe queue
@@ -3691,7 +3719,12 @@ def refresh_users_list():
 
     set_main_button_states()
 
-    # pack main window widgets
+
+    print("START OF MAIN BLOCK")
+    print("Instantiating DatabaseObj...")
+    # ...existing code for DatabaseObj instantiation...
+    print("DatabaseObj instantiated successfully.")
+    print("Packing main window widgets...")
     open_folder_button.pack(side=tkinter.TOP, fill=tkinter.X, pady=2, padx=2)
     open_multiple_folder_button.pack(side=tkinter.TOP, fill=tkinter.X, pady=2, padx=2)
     default_settings.pack(side=tkinter.TOP, fill=tkinter.X, pady=2, padx=2)
@@ -3710,14 +3743,17 @@ def refresh_users_list():
     options_frame.pack(side=tkinter.LEFT, anchor="n", fill=tkinter.Y)
     options_frame_divider.pack(side=tkinter.LEFT, fill=tkinter.Y)
 
+    print("Finished packing main window widgets.")
+    print("Setting parameters for root window...")
     # set parameters for root window
-
     # set window minimum size to prevent user making it ugly
     root.update()  # update window geometry
     # don't allow window to be resized smaller than current dimensions
     root.minsize(root.winfo_width(), root.winfo_height())
     root.resizable(width=tkinter.FALSE, height=tkinter.TRUE)
+    print("Finished setting parameters for root window.")
 
+    print("Entering mainloop...")
     root.mainloop()
-
+    print("Exited mainloop.")
     database_obj_instance.close()
