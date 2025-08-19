@@ -25,6 +25,14 @@ import datetime
 import batch_log_sender  # used by export step (kept for parity)
 import utils  # for do_clear_old_files used in export_processed_report
 
+# Centralized logging for the package
+import logging
+from business_logic.logging import setup_logging as _setup_logging
+
+# Ensure logging is configured when module is imported by tests/CLI
+_setup_logging()
+logger = logging.getLogger("batch_file_processor")
+
 def validate_email(email: str) -> bool:
     """Return True if the given email string looks like an email address.
 

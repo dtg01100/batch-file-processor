@@ -19,6 +19,14 @@ import sqlalchemy
 import backup_increment
 import folders_database_migrator
 
+# Centralized logging
+import logging
+from business_logic.logging import setup_logging as _setup_logging
+
+# Ensure logging is configured for this module
+_setup_logging()
+logger = logging.getLogger("batch_file_processor")
+
 # Module-level connection object
 _conn: Optional[Any] = None
 
@@ -49,6 +57,7 @@ def init_db(db_path: str) -> None:
         version_table = _conn["version"]
         version_row = version_table.find_one(id=1)
     except Exception:
+        logger.exception("Unable to read version row from database")
         version_row = None
 
     if version_row is None:
@@ -129,7 +138,7 @@ def init_db(db_path: str) -> None:
             _conn.query('DELETE FROM "folders"')
         except Exception:
             # If SQL dialect/permissions differ, ignore to be robust
-            pass
+            logger.exception("Failed to clear folders table after inserting template row")
 
         settings_table = _conn["settings"]
         settings_table.insert(
@@ -162,14 +171,14 @@ def init_db(db_path: str) -> None:
             processed_files.create_column("folder_id", sqlalchemy.types.Integer)
         except Exception:
             # Be tolerant of databases that auto-create columns or older dataset versions
-            pass
+            logger.exception("Failed to create processed_files columns (may be OK on some backends)")
     else:
         # Existing DB: attempt to run migrations to ensure schema is up to date.
         try:
             folders_database_migrator.upgrade_database(_conn, None, platform.system())
         except Exception:
             # Keep init robust — callers may handle errors further up
-            pass
+            logger.exception("Database migration failed during init_db")
 
 
 def get_connection() -> Any:
@@ -222,7 +231,7 @@ def import_records(source: str, /, **kwargs) -> int:
                 folders_database_migrator.upgrade_database(new_db, None, "Null")
     except Exception:
         # Continue even if version checking fails
-        pass
+        logger.exception("Version check/upgrade failed during import_records")
 
     new_folders_table = new_db["folders"]
     old_folders_table = original_db["folders"]
@@ -248,7 +257,7 @@ def import_records(source: str, /, **kwargs) -> int:
                     # samefile might fail on different platforms or missing paths
                     continue
         except Exception:
-            pass
+            logger.exception("Error while testing line for match in import_records")
         return line_match, new_db_line
 
     for line in new_folders_table.find(folder_is_active="True"):
@@ -290,7 +299,7 @@ def import_records(source: str, /, **kwargs) -> int:
                 old_folders_table.insert(line)
         except Exception:
             # Keep tolerant: mirror previous behavior
-            pass
+            logger.exception("Error importing a folder line: %s", line)
 
         processed += 1
         if progress_callback:
@@ -303,7 +312,7 @@ def import_records(source: str, /, **kwargs) -> int:
     try:
         new_db.close()
     except Exception:
-        pass
+        logger.exception("Failed to close temporary new_db connection")
 
     return processed
 
@@ -331,5 +340,5 @@ def close() -> None:
             if engine is not None:
                 engine.dispose()
         except Exception:
-            pass
+            logger.exception("Failed to dispose engine while closing database connection")
     _conn = None

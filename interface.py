@@ -43,9 +43,17 @@ if __name__ == "__main__":
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
     DATABASE_VERSION = "32"
-    print(APPNAME + " Version " + VERSION)
+
+    # Configure centralized logging early in __main__
+    import logging
+    from business_logic.logging import setup_logging
+
+    setup_logging()
+    logger = logging.getLogger("batch_file_processor")
+
+    logger.info("%s Version %s", APPNAME, VERSION)
     running_platform = platform.system()
-    print("Running on " + running_platform)
+    logger.info("Running on %s", running_platform)
     root = tkinter.Tk()  # create root window
     root.title(APPNAME + " " + VERSION)
     options_frame = tkinter.ttk.Frame(root)  # initialize left frame
@@ -86,7 +94,7 @@ if __name__ == "__main__":
                     Exception
                 ) as error:  # if that doesn't work for some reason, log and quit
                     try:
-                        print(str(error))
+                        logger.exception("Failed creating initial database file")
                         with open(
                             "critical_error.log", "a", encoding="utf-8"
                         ) as critical_log:
@@ -98,12 +106,8 @@ if __name__ == "__main__":
                     except (
                         Exception
                     ) as big_error:  # if logging doesn't work, at least complain
-                        print(
-                            "error writing critical error log for error: "
-                            + str(error)
-                            + "\n"
-                            + "operation failed with error: "
-                            + str(big_error)
+                        logger.exception(
+                            "Error writing critical error log for error: %s", error
                         )
                         raise SystemExit from big_error
 
@@ -116,7 +120,7 @@ if __name__ == "__main__":
                 Exception
             ) as connect_error:  # if that doesn't work for some reason, log and quit
                 try:
-                    print(str(connect_error))
+                    logger.exception("Database connection failure")
                     with open(
                         "critical_error.log", "a", encoding="utf-8"
                     ) as connect_critical_log:
@@ -128,12 +132,8 @@ if __name__ == "__main__":
                 except (
                     Exception
                 ) as connect_big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(connect_error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(connect_big_error)
+                    logger.exception(
+                        "Error writing critical error log for connect error: %s", connect_error
                     )
                     raise SystemExit from connect_big_error
 
@@ -2710,12 +2710,7 @@ if __name__ == "__main__":
             except Exception as dispatch_error:
                 os.chdir(original_folder)
                 # if processing folders runs into a serious error, report and log
-                print(
-                    "Run failed, check your configuration \r\nError from dispatch module is: \r\n"
-                    + str(dispatch_error)
-                    + "\r\n"
-                )
-                traceback.print_exc()
+                logger.exception("Run failed, check your configuration. Error from dispatch module:")
                 run_log.write(
                     (
                         "Run failed, check your configuration \r\nError from dispatch module is: \r\n"
@@ -2723,7 +2718,8 @@ if __name__ == "__main__":
                         + "\r\n"
                     ).encode()
                 )
-                run_log.write(traceback.print_exc())
+                # include formatted traceback in run log
+                run_log.write(traceback.format_exc().encode())
         if reporting["enable_reporting"] == "True":
             try:
                 database_obj_instance.sent_emails_removal_queue.delete()
@@ -2913,7 +2909,7 @@ if __name__ == "__main__":
                 root.update()
                 process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
-                print(str(automatic_process_error))
+                logger.exception("Automatic processing failed")
                 with open(
                     "critical_error.log", "a", encoding="utf-8"
                 ) as automatic_process_critical_log:
