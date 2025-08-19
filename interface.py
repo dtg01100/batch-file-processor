@@ -36,6 +36,7 @@ import folders_database_migrator
 import print_run_log
 import tk_extra_widgets
 import resend_interface
+from business_logic import interface_logic
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
@@ -244,59 +245,15 @@ if __name__ == "__main__":
     folder_filter = ""
 
     def check_logs_directory():
-        try:
-            # check to see if log directory is writable
-            with open(
-                os.path.join(logs_directory["logs_directory"], "test_log_file"),
-                "w",
-                encoding="utf-8",
-            ) as test_log_file:
-                test_log_file.write("teststring")
-            os.remove(os.path.join(logs_directory["logs_directory"], "test_log_file"))
-            return True
-        except IOError as log_directory_error:
-            print(str(log_directory_error))
-            return False
+        return interface_logic.check_logs_directory(logs_directory)
 
     def add_folder(folder_path):
         """Adds a folder to the database, using the default settings from the template."""
-        SKIP_LIST = ["folder_name",
-                    "alias",
-                    "id",
-                    "logs_directory",
-                    "errors_folder",
-                    'enable_reporting',
-                    'report_printing_fallback',
-                    'single_add_folder_prior',
-                    'batch_add_folder_prior',
-                    'export_processed_folder_prior',
-                    'report_edi_errors',
-                    ]
-        template = database_obj_instance.oversight_and_defaults.find_one(id=1)
-        template_settings = {k: v for k, v in template.items() if k not in SKIP_LIST}
-
-        folder_name = os.path.basename(folder_path)
-        counter = 1
-        while database_obj_instance.folders_table.find_one(alias=folder_name):
-            folder_name = os.path.basename(folder_path) + f" {counter}"
-            counter += 1
-
-        template_settings["folder_name"] = folder_path
-        template_settings["alias"] = folder_name
-        database_obj_instance.folders_table.insert(
-            {**template_settings}
-        )
+        return interface_logic.add_folder(database_obj_instance, folder_path)
 
 
     def check_folder_exists(check_folder):
-        folder_list = database_obj_instance.folders_table.all()
-        for possible_folder in folder_list:
-            possible_folder_string = possible_folder["folder_name"]
-            if os.path.normpath(possible_folder_string) == os.path.normpath(
-                check_folder
-            ):
-                return {"truefalse": True, "matched_folder": possible_folder}
-        return {"truefalse": False, "matched_folder": None}
+        return interface_logic.check_folder_exists(database_obj_instance, check_folder)
 
     def select_folder():
         prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
@@ -369,11 +326,7 @@ if __name__ == "__main__":
         os.chdir(starting_directory)
 
     def validate_email(email):
-        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-        if re.fullmatch(regex, email):
-            return True
-        else:
-            return False
+        return interface_logic.validate_email(email)
 
     def edit_folder_selector(folder_to_be_edited):
         # feed EditDialog class the dict for the selected folder from the folders list buttons
@@ -3275,49 +3228,7 @@ if __name__ == "__main__":
             maintenance_popup.bind("<Escape>", destroy_maintenance_popup)
 
     def export_processed_report(folder_id, output_folder):
-
-        def avoid_duplicate_export_file(file_name, file_extension):
-            """Returns a file path that does not already exist.
-
-            If the proposed file path exists, appends a number to the file name
-            until an available file path is found.
-            """
-            print(f"Checking if {file_name + file_extension} exists")
-            if not os.path.exists(file_name + file_extension):
-                print(f"{file_name + file_extension} does not exist")
-                return file_name + file_extension
-            else:
-                print(f"{file_name + file_extension} exists")
-                i = 1
-                while True:
-                    potential_file_path = file_name + " (" + str(i) + ")" + file_extension
-                    print(f"Checking if {potential_file_path} exists")
-                    if not os.path.exists(potential_file_path):
-                        print(f"{potential_file_path} does not exist")
-                        return potential_file_path
-                    i += 1
-                    print(f"{potential_file_path} exists")
-
-        folder_alias = database_obj_instance.folders_table.find_one(id=folder_id)['alias']
-
-        export_file_path = avoid_duplicate_export_file(
-            os.path.join(output_folder, folder_alias + " processed report"), ".csv"
-        )
-        print(f"Export file path will be: {export_file_path}")
-        with open(export_file_path, "w", encoding="utf-8") as processed_log:
-            processed_log.write(
-                "File,Date,Copy Destination,FTP Destination,Email Destination\n"
-            )
-            for line in database_obj_instance.processed_files.find(folder_id=folder_id):
-                processed_log.write(
-                    f"{line['file_name']},"
-                    f"{line['sent_date_time'].strftime('%Y-%m-%d %H:%M:%S')},"
-                    f"{line['copy_destination']},"
-                    f"{line['ftp_destination']},"
-                    f"{line['email_destination']}"
-                    "\n"
-                )
-            print(f"Wrote {len(list(database_obj_instance.processed_files.find(folder_id=folder_id)))} lines to {export_file_path}")
+        return interface_logic.export_processed_report(database_obj_instance, folder_id, output_folder)
 
     def processed_files_popup():
         def close_processed_files_popup(_=None):
