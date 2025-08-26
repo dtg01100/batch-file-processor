@@ -1,0 +1,60 @@
+Tue Aug 26 13:48:00 2025    profiler_outputs/profile_processor.prof
+
+         1042 function calls (1031 primitive calls) in 0.002 seconds
+
+   Ordered by: cumulative time
+   List reduced from 136 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      4/2    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap>:1165(_find_and_load)
+      4/2    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap>:1120(_find_and_load_unlocked)
+      4/3    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:666(_load_unlocked)
+      3/2    0.000    0.000    0.001    0.001 <frozen importlib._bootstrap_external>:934(exec_module)
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.11/importlib/__init__.py:108(import_module)
+      2/1    0.000    0.000    0.001    0.001 <frozen importlib._bootstrap>:1192(_gcd_import)
+      9/6    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:233(_call_with_frames_removed)
+        3    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1007(get_code)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:1054(_find_spec)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1499(find_spec)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1467(_get_spec)
+      3/2    0.000    0.000    0.001    0.000 {built-in method builtins.exec}
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.11/importlib/__init__.py:1(<module>)
+       10    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1607(find_spec)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1151(_cache_bytecode)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1156(set_data)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:185(_write_atomic)
+       29    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:140(_path_stat)
+       29    0.000    0.000    0.000    0.000 {built-in method posix.stat}
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:727(_compile_bytecode)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1127(get_data)
+        2    0.000    0.000    0.000    0.000 {built-in method marshal.loads}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:566(module_from_spec)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:493(_init_module_attrs)
+       60    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:126(_path_join)
+        1    0.000    0.000    0.000    0.000 {built-in method posix.open}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.11/warnings.py:1(<module>)
+       14    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:150(_path_is_mode_type)
+        4    0.000    0.000    0.000    0.000 {built-in method io.open_code}
+       11    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:159(_path_isfile)
+       13    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1424(_path_importer_cache)
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:437(cache_from_source)
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:392(cached)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:567(_get_cached)
+       60    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:128(<listcomp>)
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.__build_class__}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:169(__enter__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1411(_path_hooks)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:999(source_to_code)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1658(_fill_cache)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1602(_get_spec)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:132(_path_split)
+        1    0.000    0.000    0.000    0.000 {built-in method posix.replace}
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.compile}
+        1    0.000    0.000    0.000    0.000 {built-in method posix.listdir}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:179(_get_module_lock)
+        3    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+       27    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:173(__exit__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:740(_code_to_timestamp_pyc)
+
+

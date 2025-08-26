@@ -1,0 +1,5 @@
+run 1: returncode=0 elapsed_seconds=1.1804
+run 2: returncode=0 elapsed_seconds=1.2081
+run 3: returncode=0 elapsed_seconds=1.1888
+run 4: returncode=0 elapsed_seconds=1.2579
+run 5: returncode=0 elapsed_seconds=1.2062

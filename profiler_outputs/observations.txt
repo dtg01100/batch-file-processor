@@ -1,0 +1,86 @@
+Commands used:
+mkdir -p profiler_outputs
+python - <<PY (profile import) ...
+python - <<PY (profile pytest) ...
+python - <<PY (wall-clock runs x5) ...
+
+Detected potential IO/network occurrences from pstats summaries:
+-- profiler_outputs/profile_db_top50_cumulative.txt: ...1    0.307 /home/vscode/.local/lib/python3.11/site-packages/_pytest/assertion/rewrite.py:146(exec_module)
+-- profiler_outputs/profile_db_top50_cumulative.txt: ...1    0.000    0.000    0.627    0.627 /usr/local/lib/python3.11/site-packages/dataset/__init__.py:1(<module>)
+-- profiler_outputs/profile_db_top50_cumulative.txt: ...1    0.000    0.000    0.622    0.622 /usr/local/lib/python3.11/site-packages/dataset/database.py:1(<module>)
+-- profiler_outputs/profile_db_top50_calls.txt: ...2161    0.001    0.000    0.001    0.000 {built-in method _thread.get_ident}
+-- profiler_outputs/profile_db_top50_calls.txt: ...1690    0.001    0.000    0.001    0.000 {method '__exit__' of '_thread.lock' objects}
+-- profiler_outputs/profile_db_top50_calls.txt: ...6    0.000    0.009    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/engine/cursor.py:452(_colnames_from_description)
+-- profiler_outputs/profile_db_top50_calls.txt: ...3    0.000    0.012    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/engine/cursor.py:609(_merge_cols_by_none)
+-- profiler_outputs/profile_processor_top50_cumulative.txt: ...1    0.000    0.000    0.000    0.000 {built-in method posix.open}
+-- profiler_outputs/profile_processor_top50_cumulative.txt: ...4    0.000    0.000    0.000    0.000 {built-in method io.open_code}
+-- profiler_outputs/profile_processor_top50_cumulative.txt: ...3    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+-- profiler_outputs/profile_processor_top50_cumulative.txt: ...0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:185(_write_atomic)
+-- profiler_outputs/profile_processor_top50_calls.txt: ...4    0.000    0.000    0.000    0.000 {built-in method io.open_code}
+-- profiler_outputs/profile_processor_top50_calls.txt: ...8    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.lock' objects}
+-- profiler_outputs/profile_processor_top50_calls.txt: ...8    0.000    0.000    0.000    0.000 {built-in method _thread.allocate_lock}
+-- profiler_outputs/profile_processor_top50_calls.txt: ...8    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+
+Top lines (first 30 lines) from cumulative summaries:
+--- profiler_outputs/profile_db_top50_cumulative.txt
+Tue Aug 26 13:48:02 2025    profiler_outputs/profile_db.prof
+
+         516375 function calls (507683 primitive calls) in 1.783 seconds
+
+   Ordered by: cumulative time
+   List reduced from 4412 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.787    1.787 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:139(main)
+   366/69    0.001    0.000    1.693    0.025 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_manager.py:111(_hookexec)
+   366/69    0.004    0.000    1.693    0.025 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_callers.py:76(_multicall)
+    207/2    0.002    0.000    1.687    0.843 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_hooks.py:497(__call__)
+        1    0.000    0.000    1.309    1.309 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:335(pytest_cmdline_main)
+        1    0.000    0.000    1.309    1.309 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:276(wrap_session)
+        1    0.000    0.000    1.107    1.107 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:339(_main)
+      7/4    0.000    0.000    1.099    0.275 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:323(from_call)
+   343/20    0.004    0.000    1.042    0.052 <frozen importlib._bootstrap>:1165(_find_and_load)
+   343/20    0.004    0.000    1.041    0.052 <frozen importlib._bootstrap>:1120(_find_and_load_unlocked)
+   336/21    0.005    0.000    1.033    0.049 <frozen importlib._bootstrap>:666(_load_unlocked)
+   310/18    0.002    0.000    1.017    0.056 <frozen importlib._bootstrap_external>:934(exec_module)
+   808/45    0.001    0.000    1.015    0.023 <frozen importlib._bootstrap>:233(_call_with_frames_removed)
+   674/24    0.051    0.000    0.994    0.041 {built-in method builtins.exec}
+        2    0.000    0.000    0.925    0.462 /usr/local/lib/python3.11/importlib/__init__.py:108(import_module)
+      3/2    0.000    0.000    0.925    0.462 <frozen importlib._bootstrap>:1192(_gcd_import)
+      5/3    0.000    0.000    0.921    0.307 /home/vscode/.local/lib/python3.11/site-packages/_pytest/assertion/rewrite.py:146(exec_module)
+   152/38    0.001    0.000    0.757    0.020 {built-in method builtins.__import__}
+        1    0.000    0.000    0.700    0.700 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:352(pytest_collection)
+        1    0.000    0.000    0.700    0.700 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:748(perform_collect)
+      4/1    0.000    0.000    0.698    0.698 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:564(collect_one_node)
+      4/1    0.000    0.000    0.697    0.697 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:371(pytest_make_collect_report)
+--- profiler_outputs/profile_processor_top50_cumulative.txt
+Tue Aug 26 13:48:00 2025    profiler_outputs/profile_processor.prof
+
+         1042 function calls (1031 primitive calls) in 0.002 seconds
+
+   Ordered by: cumulative time
+   List reduced from 136 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      4/2    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap>:1165(_find_and_load)
+      4/2    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap>:1120(_find_and_load_unlocked)
+      4/3    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:666(_load_unlocked)
+      3/2    0.000    0.000    0.001    0.001 <frozen importlib._bootstrap_external>:934(exec_module)
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.11/importlib/__init__.py:108(import_module)
+      2/1    0.000    0.000    0.001    0.001 <frozen importlib._bootstrap>:1192(_gcd_import)
+      9/6    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:233(_call_with_frames_removed)
+        3    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1007(get_code)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:1054(_find_spec)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1499(find_spec)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1467(_get_spec)
+      3/2    0.000    0.000    0.001    0.000 {built-in method builtins.exec}
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.11/importlib/__init__.py:1(<module>)
+       10    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1607(find_spec)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1151(_cache_bytecode)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1156(set_data)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:185(_write_atomic)
+       29    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:140(_path_stat)
+       29    0.000    0.000    0.000    0.000 {built-in method posix.stat}
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:727(_compile_bytecode)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1127(get_data)
+        2    0.000    0.000    0.000    0.000 {built-in method marshal.loads}

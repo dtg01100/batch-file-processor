@@ -1,0 +1,60 @@
+Tue Aug 26 13:48:02 2025    profiler_outputs/profile_db.prof
+
+         516375 function calls (507683 primitive calls) in 1.783 seconds
+
+   Ordered by: cumulative time
+   List reduced from 4412 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.787    1.787 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:139(main)
+   366/69    0.001    0.000    1.693    0.025 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_manager.py:111(_hookexec)
+   366/69    0.004    0.000    1.693    0.025 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_callers.py:76(_multicall)
+    207/2    0.002    0.000    1.687    0.843 /home/vscode/.local/lib/python3.11/site-packages/pluggy/_hooks.py:497(__call__)
+        1    0.000    0.000    1.309    1.309 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:335(pytest_cmdline_main)
+        1    0.000    0.000    1.309    1.309 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:276(wrap_session)
+        1    0.000    0.000    1.107    1.107 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:339(_main)
+      7/4    0.000    0.000    1.099    0.275 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:323(from_call)
+   343/20    0.004    0.000    1.042    0.052 <frozen importlib._bootstrap>:1165(_find_and_load)
+   343/20    0.004    0.000    1.041    0.052 <frozen importlib._bootstrap>:1120(_find_and_load_unlocked)
+   336/21    0.005    0.000    1.033    0.049 <frozen importlib._bootstrap>:666(_load_unlocked)
+   310/18    0.002    0.000    1.017    0.056 <frozen importlib._bootstrap_external>:934(exec_module)
+   808/45    0.001    0.000    1.015    0.023 <frozen importlib._bootstrap>:233(_call_with_frames_removed)
+   674/24    0.051    0.000    0.994    0.041 {built-in method builtins.exec}
+        2    0.000    0.000    0.925    0.462 /usr/local/lib/python3.11/importlib/__init__.py:108(import_module)
+      3/2    0.000    0.000    0.925    0.462 <frozen importlib._bootstrap>:1192(_gcd_import)
+      5/3    0.000    0.000    0.921    0.307 /home/vscode/.local/lib/python3.11/site-packages/_pytest/assertion/rewrite.py:146(exec_module)
+   152/38    0.001    0.000    0.757    0.020 {built-in method builtins.__import__}
+        1    0.000    0.000    0.700    0.700 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:352(pytest_collection)
+        1    0.000    0.000    0.700    0.700 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:748(perform_collect)
+      4/1    0.000    0.000    0.698    0.698 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:564(collect_one_node)
+      4/1    0.000    0.000    0.697    0.697 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:371(pytest_make_collect_report)
+      4/1    0.000    0.000    0.697    0.697 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:372(collect)
+        2    0.000    0.000    0.697    0.349 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:843(collect)
+   748/62    0.002    0.000    0.696    0.011 <frozen importlib._bootstrap>:1207(_handle_fromlist)
+        3    0.000    0.000    0.696    0.232 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:830(_collect_one_node)
+        1    0.000    0.000    0.648    0.648 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:553(collect)
+    19/17    0.000    0.000    0.647    0.038 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:275(obj)
+        1    0.000    0.000    0.647    0.647 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:559(_register_setup_module_fixture)
+        1    0.000    0.000    0.647    0.647 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:550(_getobj)
+        1    0.000    0.000    0.647    0.647 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:491(importtestmodule)
+        1    0.000    0.000    0.647    0.647 /home/vscode/.local/lib/python3.11/site-packages/_pytest/pathlib.py:489(import_path)
+        1    0.000    0.000    0.645    0.645 /workspaces/batch_file_processor/tests/test_db.py:1(<module>)
+        1    0.000    0.000    0.643    0.643 /workspaces/batch_file_processor/business_logic/db.py:1(<module>)
+        1    0.000    0.000    0.627    0.627 /usr/local/lib/python3.11/site-packages/dataset/__init__.py:1(<module>)
+        1    0.000    0.000    0.622    0.622 /usr/local/lib/python3.11/site-packages/dataset/database.py:1(<module>)
+        1    0.000    0.000    0.477    0.477 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:319(_prepareconfig)
+        1    0.000    0.000    0.404    0.404 /home/vscode/.local/lib/python3.11/site-packages/_pytest/main.py:356(pytest_runtestloop)
+        1    0.000    0.000    0.403    0.403 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000    0.403    0.403 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:122(runtestprotocol)
+        3    0.000    0.000    0.403    0.134 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:230(call_and_report)
+        3    0.000    0.000    0.402    0.134 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:246(<lambda>)
+        1    0.000    0.000    0.396    0.396 /home/vscode/.local/lib/python3.11/site-packages/_pytest/runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    0.396    0.396 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:1669(runtest)
+        1    0.000    0.000    0.396    0.396 /home/vscode/.local/lib/python3.11/site-packages/_pytest/python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    0.396    0.396 /workspaces/batch_file_processor/tests/test_db.py:6(test_init_and_get_connection)
+      310    0.007    0.000    0.390    0.001 <frozen importlib._bootstrap_external>:1007(get_code)
+        1    0.000    0.000    0.389    0.389 /workspaces/batch_file_processor/business_logic/db.py:34(init_db)
+        1    0.000    0.000    0.377    0.377 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:1142(pytest_cmdline_parse)
+        1    0.000    0.000    0.377    0.377 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:1519(parse)
+
+

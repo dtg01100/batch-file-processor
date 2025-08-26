@@ -10,6 +10,7 @@ Public API:
 - close() -> None
 """
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from contextlib import contextmanager
 import os
 import platform
 
@@ -18,6 +19,32 @@ import sqlalchemy
 
 import backup_increment
 import folders_database_migrator
+
+
+# Batch size for transactional operations
+BATCH_SIZE = 100
+
+
+@contextmanager
+def transaction(conn: Any) -> Any:
+    """Context manager for transactional database operations.
+    
+    Yields a cursor and commits once on success, rolls back on exception.
+    Safe for SQLite and preserves existing connection semantics.
+    
+    Args:
+        conn: Database connection object
+        
+    Yields:
+        Database cursor for executing operations
+    """
+    cur = conn.cursor()
+    try:
+        yield cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
 
 # Centralized logging
 import logging
@@ -260,6 +287,10 @@ def import_records(source: str, /, **kwargs) -> int:
             logger.exception("Error while testing line for match in import_records")
         return line_match, new_db_line
 
+    # Batch processing for better performance
+    batch_updates = []
+    batch_inserts = []
+    
     for line in new_folders_table.find(folder_is_active="True"):
         try:
             line_match, matching_row = _test_line_for_match(line)
@@ -292,11 +323,25 @@ def import_records(source: str, /, **kwargs) -> int:
                             id=line["id"],
                         )
                     )
-                old_folders_table.update(update_db_line, ["id"])
+                batch_updates.append(update_db_line)
             else:
                 if "id" in line:
                     del line["id"]
-                old_folders_table.insert(line)
+                batch_inserts.append(line)
+            
+            # Process batches to reduce commit frequency
+            if len(batch_updates) >= BATCH_SIZE:
+                with transaction(original_db) as cur:
+                    for update_line in batch_updates:
+                        old_folders_table.update(update_line, ["id"])
+                batch_updates = []
+                
+            if len(batch_inserts) >= BATCH_SIZE:
+                with transaction(original_db) as cur:
+                    for insert_line in batch_inserts:
+                        old_folders_table.insert(insert_line)
+                batch_inserts = []
+                
         except Exception:
             # Keep tolerant: mirror previous behavior
             logger.exception("Error importing a folder line: %s", line)
@@ -307,6 +352,17 @@ def import_records(source: str, /, **kwargs) -> int:
                 progress_callback(processed)
             except Exception:
                 pass
+    
+    # Process remaining items in batches
+    if batch_updates:
+        with transaction(original_db) as cur:
+            for update_line in batch_updates:
+                old_folders_table.update(update_line, ["id"])
+                
+    if batch_inserts:
+        with transaction(original_db) as cur:
+            for insert_line in batch_inserts:
+                old_folders_table.insert(insert_line)
 
     # Close temporary connection to incoming DB
     try:

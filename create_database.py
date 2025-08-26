@@ -8,6 +8,7 @@ def do(database_version, database_path, config_folder, running_platform):
     """
     import os
     import sqlalchemy
+    import logging
     from business_logic import db as bl_db
 
     # Initialize (create/open) database via centralized module
@@ -59,6 +60,38 @@ def do(database_version, database_path, config_folder, running_platform):
                 )
             )
     except Exception:
+        pass
+
+    # Create indexes for better query performance (SQLite-safe)
+    try:
+        conn = bl_db.get_connection()
+        
+        # Check if we're using SQLite
+        db_url = getattr(conn, 'url', '')
+        is_sqlite = 'sqlite' in db_url.lower()
+        
+        if is_sqlite:
+            # Create indexes for commonly queried columns
+            indexes_to_create = [
+                ("idx_processed_files_file_name", "processed_files", "file_name"),
+                ("idx_processed_files_folder_id", "processed_files", "folder_id"),
+                ("idx_processed_files_status", "processed_files", "status"),
+                ("idx_folders_folder_name", "folders", "folder_name"),
+                ("idx_folders_folder_is_active", "folders", "folder_is_active"),
+                ("idx_administrative_id", "administrative", "id"),
+                ("idx_settings_id", "settings", "id"),
+            ]
+            
+            for index_name, table_name, column_name in indexes_to_create:
+                try:
+                    # Use IF NOT EXISTS for SQLite safety
+                    conn.query(f'CREATE INDEX IF NOT EXISTS "{index_name}" ON "{table_name}" ("{column_name}")')
+                except Exception as e:
+                    logger = logging.getLogger("batch_file_processor")
+                    logger.debug(f"Could not create index {index_name}: {e}")
+                    # Continue with other indexes even if one fails
+    except Exception:
+        # Index creation is optional - don't fail the entire process
         pass
 
     # Ensure processed_files has expected columns

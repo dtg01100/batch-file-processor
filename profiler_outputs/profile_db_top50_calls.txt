@@ -1,0 +1,60 @@
+Tue Aug 26 13:48:02 2025    profiler_outputs/profile_db.prof
+
+         516375 function calls (507683 primitive calls) in 1.783 seconds
+
+   Ordered by: call count
+   List reduced from 4412 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    38159    0.012    0.000    0.012    0.000 {built-in method builtins.isinstance}
+    33360    0.006    0.000    0.006    0.000 {method 'append' of 'list' objects}
+    17794    0.014    0.000    0.015    0.000 {built-in method builtins.getattr}
+17335/16563    0.005    0.000    0.005    0.000 {built-in method builtins.len}
+    11088    0.004    0.000    0.004    0.000 {method 'startswith' of 'str' objects}
+     8193    0.003    0.000    0.004    0.000 {method 'get' of 'dict' objects}
+     6626    0.005    0.000    0.006    0.000 {built-in method builtins.hasattr}
+     6526    0.001    0.000    0.001    0.000 {method 'pop' of 'dict' objects}
+     5874    0.001    0.000    0.001    0.000 {method 'rstrip' of 'str' objects}
+5710/5705    0.005    0.000    0.009    0.000 {method 'join' of 'str' objects}
+5708/5677    0.008    0.000    0.009    0.000 {built-in method __new__ of type object at 0x7f1a7939eb00}
+     5572    0.001    0.000    0.002    0.000 {built-in method posix.fspath}
+     4878    0.005    0.000    0.005    0.000 /usr/local/lib/python3.11/re/_parser.py:240(__next)
+     4861    0.002    0.000    0.003    0.000 {built-in method builtins.setattr}
+     4480    0.006    0.000    0.007    0.000 /usr/local/lib/python3.11/re/_parser.py:168(__getitem__)
+     4427    0.002    0.000    0.002    0.000 {built-in method sys.intern}
+     4424    0.006    0.000    0.006    0.000 {method 'match' of 're.Pattern' objects}
+     4136    0.003    0.000    0.007    0.000 /usr/local/lib/python3.11/re/_parser.py:261(get)
+     3985    0.004    0.000    0.004    0.000 /usr/local/lib/python3.11/pathlib.py:239(splitroot)
+     3365    0.002    0.000    0.003    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/util/compat.py:402(formatargandannotation)
+     3329    0.003    0.000    0.003    0.000 {method 'update' of 'dict' objects}
+     3243    0.002    0.000    0.002    0.000 {method 'rpartition' of 'str' objects}
+     3159    0.001    0.000    0.001    0.000 {method 'strip' of 'str' objects}
+     2776    0.001    0.000    0.001    0.000 {built-in method _imp.acquire_lock}
+     2776    0.001    0.000    0.001    0.000 {built-in method _imp.release_lock}
+     2758    0.003    0.000    0.003    0.000 <frozen importlib._bootstrap>:244(_verbose_message)
+     2564    0.004    0.000    0.012    0.000 <frozen importlib._bootstrap_external>:126(_path_join)
+     2564    0.005    0.000    0.006    0.000 <frozen importlib._bootstrap_external>:128(<listcomp>)
+     2547    0.001    0.000    0.001    0.000 {method 'endswith' of 'str' objects}
+2493/2482    0.004    0.000    0.016    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:1110(__get__)
+     2393    0.001    0.000    0.001    0.000 {method 'setdefault' of 'dict' objects}
+     2312    0.003    0.000    0.003    0.000 /usr/local/lib/python3.11/weakref.py:414(__getitem__)
+     2235    0.001    0.000    0.001    0.000 {built-in method builtins.callable}
+     2206    0.001    0.000    0.001    0.000 {method 'get' of 'sqlalchemy.cimmutabledict.immutabledict' objects}
+     2161    0.001    0.000    0.001    0.000 {built-in method _thread.get_ident}
+     2137    0.006    0.000    0.007    0.000 /home/vscode/.local/lib/python3.11/site-packages/_pytest/compat.py:224(safe_getattr)
+     2137    0.002    0.000    0.002    0.000 {method 'split' of 'str' objects}
+     2119    0.002    0.000    0.003    0.000 <frozen importlib._bootstrap>:405(parent)
+     2101    0.002    0.000    0.006    0.000 /home/vscode/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:453(parse_hookimpl_opts)
+     1984    0.006    0.000    0.009    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/engine/cursor.py:452(_colnames_from_description)
+     1984    0.003    0.000    0.012    0.000 /usr/local/lib/python3.11/site-packages/sqlalchemy/engine/cursor.py:609(_merge_cols_by_none)
+     1978    0.000    0.000    0.000    0.000 {method 'reverse' of 'list' objects}
+     1805    0.001    0.000    0.001    0.000 {method 'rfind' of 'str' objects}
+     1791    0.020    0.000    0.027    0.000 /usr/local/lib/python3.11/pathlib.py:56(parse_parts)
+     1791    0.009    0.000    0.038    0.000 /usr/local/lib/python3.11/pathlib.py:484(_parse_args)
+     1738    0.001    0.000    0.002    0.000 /usr/local/lib/python3.11/typing.py:1266(_is_dunder)
+     1726    0.002    0.000    0.003    0.000 /usr/local/lib/python3.11/pathlib.py:622(name)
+     1723    0.047    0.000    0.049    0.000 {built-in method posix.stat}
+     1691    0.001    0.000    0.001    0.000 <frozen posixpath>:52(normcase)
+     1690    0.001    0.000    0.001    0.000 {method '__exit__' of '_thread.lock' objects}
+
+
