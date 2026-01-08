@@ -1,7 +1,28 @@
 version: "3.8"
 
 services:
-  # Frontend service only for testing
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: batch-processor-backend
+    volumes:
+      - ./backend:/app/backend
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./errors:/app/errors
+      - batch_processor_db:/app/database
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_PATH=/app/database/batch_processor.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ENV=development
+      - LOG_LEVEL=INFO
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend service
   frontend:
     build:
       context: .
@@ -15,3 +36,8 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend
+
+volumes:
+  batch_processor_db:
