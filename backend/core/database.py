@@ -29,11 +29,11 @@ def get_database() -> dataset.Database:
     global _db, _engine
 
     if _db is None:
-        # Create engine
-        _engine = create_engine(DATABASE_URL)
+        # Create database connection using URL string
+        _db = dataset.Database(DATABASE_URL)
 
-        # Create database connection
-        _db = dataset.Database(_engine)
+        # Create engine separately for SQLAlchemy operations
+        _engine = create_engine(DATABASE_URL)
 
         # Initialize tables if they don't exist
         initialize_database()

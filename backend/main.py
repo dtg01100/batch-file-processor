@@ -3,7 +3,7 @@ FastAPI backend main application
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, FastAPI
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
@@ -16,6 +16,25 @@ except ImportError as e:
     print(f"Import error (expected in Docker): {e}")
     print("This is expected - will work when running in Docker")
     raise
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
+    # Startup
+    print("Starting up...")
+    # Initialize database
+    db = get_database()
+    print(f"Database initialized: {db.engine.url}")
+    # Start scheduler
+    scheduler.start()
+    print("Scheduler started")
+    yield
+    # Shutdown
+    print("Shutting down...")
+    scheduler.shutdown()
+    print("Scheduler shutdown complete")
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -66,24 +85,6 @@ async def root():
 
         return FileResponse(str(index_path))
     return {"message": "Batch File Processor API", "docs": "/docs"}
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan context manager for startup and shutdown events"""
-    # Startup
-    print("Starting up...")
-    # Initialize database
-    db = get_database()
-    print(f"Database initialized: {db.engine.url}")
-    # Start scheduler
-    scheduler.start()
-    print("Scheduler started")
-    yield
-    # Shutdown
-    print("Shutting down...")
-    scheduler.shutdown()
-    print("Scheduler shutdown complete")
 
 
 # Run with: uvicorn backend.main:app --reload
