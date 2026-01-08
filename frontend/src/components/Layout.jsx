@@ -4,7 +4,8 @@ import {
    LayoutFolder,
    LayoutClock,
    LayoutSettings,
-   LayoutList
+   LayoutList,
+   LayoutTune
 } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -16,7 +17,8 @@ export default function Layout({ children }) {
     { path: '/jobs', icon: LayoutClock, label: 'Jobs' },
     { path: '/logs', icon: LayoutSettings, label: 'Logs' },
     { path: '/import', icon: LayoutSettings, label: 'Import' },
-    { path: '/settings', icon: LayoutSettings, label: 'Settings' },
+    { path: '/settings', icon: LayoutTune, label: 'Settings' },
+    { path: '/settings/dynamic', icon: LayoutTune, label: 'GUI Settings' },
     { path: '/output-profiles', icon: LayoutList, label: 'Output Profiles' },
   ]
 

@@ -5,6 +5,7 @@ import Jobs from './pages/Jobs'
 import Logs from './pages/Logs'
 import Import from './pages/Import'
 import Settings from './pages/Settings'
+import DynamicSettings from './pages/DynamicSettings'
 import OutputProfiles from './pages/OutputProfiles'
 import Layout from './components/Layout'
 import './App.css'
@@ -22,6 +23,7 @@ function App() {
           <Route path="/logs" element={<Logs />} />
           <Route path="/import" element={<Import />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/dynamic" element={<DynamicSettings />} />
           <Route path="/output-profiles" element={<OutputProfiles />} />
         </Routes>
       </Layout>
