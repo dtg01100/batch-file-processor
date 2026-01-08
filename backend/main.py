@@ -56,8 +56,11 @@ async def health_check():
 
 
 # Include routers
-# from backend.api import folders, settings, jobs, runs, import_db
-# app.include_router(folders.router, prefix="/api/folders", tags=["folders"])
+from backend.api import folders, test_connection
+
+app.include_router(folders.router, prefix="/api/folders", tags=["folders"])
+app.include_router(test_connection.router, prefix="/api", tags=["test"])
+# from backend.api import settings, jobs, runs, import_db
 # app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 # app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 # app.include_router(runs.router, prefix="/api/runs", tags=["runs"])
