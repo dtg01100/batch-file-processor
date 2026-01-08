@@ -122,9 +122,43 @@ def execute_folder_job(folder_id: int, folder: dict):
             "folder_name": folder["folder_name"],
             "alias": folder["alias"],
             "folder_is_active": folder.get("folder_is_active", "False"),
-            # Output format conversion settings
-            "process_edi": folder.get("process_edi", "False"),
-            "convert_to_format": folder.get("convert_to_format", "csv"),
+        }
+
+        # Check if job has an output profile
+        output_profile_id = folder.get("output_profile_id")
+        if output_profile_id:
+            # Load output profile settings
+            output_profiles_table = db["output_profiles"]
+            output_profile = output_profiles_table.find_one(id=output_profile_id)
+
+            if output_profile:
+                logger.info(f"Using output profile: {output_profile['alias']}")
+
+                # Set output format from profile
+                parameters_dict["convert_to_format"] = output_profile.get(
+                    "output_format", "csv"
+                )
+
+                # Apply EDI tweaks if present
+                if output_profile.get("edi_tweaks"):
+                    try:
+                        edi_tweaks = json.loads(output_profile["edi_tweaks"])
+                        parameters_dict["tweak_edi"] = edi_tweaks
+                    except Exception as e:
+                        logger.warning(f"Failed to parse EDI tweaks: {e}")
+
+                # Apply custom settings if present
+                if output_profile.get("custom_settings"):
+                    try:
+                        custom_settings = json.loads(output_profile["custom_settings"])
+                        parameters_dict.update(custom_settings)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse custom settings: {e}")
+            else:
+                logger.warning(f"Output profile {output_profile_id} not found")
+        else:
+            # Use folder settings for output format
+            parameters_dict["convert_to_format"] = folder.get("convert_to_format", "csv")
             "calculate_upc_check_digit": folder.get(
                 "calculate_upc_check_digit", "False"
             ),
