@@ -70,6 +70,44 @@ def initialize_database():
         # Columns may already exist
         pass
 
+    # Create output_profiles table
+    if "output_profiles" not in db.tables:
+        db.create_table(
+            "output_profiles",
+            {
+                "id": db.types.integer(),
+                "name": db.types.string(100),
+                "alias": db.types.string(100, unique=True),
+                "description": db.types.string(500),
+                "output_format": db.types.string(
+                    50
+                ),  # csv, edi, estore-einvoice, fintech, scannerware, scansheet-type-a, simplified-csv, stewart-custom, yellowdog-csv
+                "edi_tweaks": db.types.string(1000),  # JSON string of EDI tweaks
+                "custom_settings": db.types.string(
+                    2000
+                ),  # JSON string of custom settings
+                "is_default": db.types.boolean(),  # Mark one profile as default
+                "created_at": db.types.datetime,
+                "updated_at": db.types.datetime,
+            },
+            pk="id",
+        )
+
+        # Create default profile
+        db["output_profiles"].insert(
+            {
+                "name": "Standard CSV Output",
+                "alias": "standard-csv",
+                "description": "Default CSV output format",
+                "output_format": "csv",
+                "edi_tweaks": "{}",
+                "custom_settings": "{}",
+                "is_default": True,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+            }
+        )
+
     # Create settings table if it doesn't exist
     if "settings" not in db.tables:
         db["settings"].insert(

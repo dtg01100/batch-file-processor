@@ -62,13 +62,23 @@ async def health_check():
 
 # Include routers
 try:
-    from backend.api import folders, settings, jobs, runs, test_connection
+    from backend.api import (
+        folders,
+        settings,
+        jobs,
+        runs,
+        test_connection,
+        output_profiles,
+    )
 
     app.include_router(folders.router, prefix="/api/folders", tags=["folders"])
     app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
     app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
     app.include_router(runs.router, prefix="/api/runs", tags=["runs"])
     app.include_router(test_connection.router, prefix="/api", tags=["test"])
+    app.include_router(
+        output_profiles.router, prefix="/api/output-profiles", tags=["output-profiles"]
+    )
     # from backend.api import import_db
     # app.include_router(import_db.router, prefix="/api/import", tags=["import"])
 except ImportError as e:
