@@ -12,6 +12,7 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./errors:/app/errors
+      - ./drivers:/app/drivers
       - batch_processor_db:/app/database
       - /app/backend/node_modules
       - /app/frontend/node_modules
@@ -23,7 +24,7 @@ services:
       - ENV=development
       - LOG_LEVEL=INFO
       - PYTHONPATH=/app
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    command: "uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
 
   # Frontend service
   frontend:

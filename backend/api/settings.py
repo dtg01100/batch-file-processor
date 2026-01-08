@@ -1,17 +1,22 @@
-"""
-Settings API endpoints
-"""
+"""Settings API endpoints with JAR file upload support"""
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
 import logging
+import os
+import time
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, File, UploadFile, HTTPException
+from pydantic import BaseModel
 
 from backend.core.database import get_database
-from backend.core.encryption import encrypt_password, decrypt_password
+from backend.core.encryption import encrypt_password
+
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+
+# No prefix here - included as /api/settings in main.py
+router = APIRouter(tags=["settings"])
 
 
 class SettingsUpdate(BaseModel):
@@ -50,15 +55,19 @@ class SettingsUpdate(BaseModel):
 
 @router.get("/")
 def get_settings():
-    """Get all global settings"""
+    """
+    Get current settings
+
+    Returns settings dict with passwords masked
+    """
     db = get_database()
     settings_table = db["settings"]
-
     settings = settings_table.find_one(id=1)
+
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
-    # Decrypt sensitive fields
+    # Mask sensitive fields
     result = dict(settings)
     if result.get("email_password"):
         result["email_password"] = "***"
@@ -71,21 +80,16 @@ def get_settings():
 
 
 @router.put("/")
-def update_settings(settings: SettingsUpdate):
-    """Update global settings"""
+async def update_settings(settings: SettingsUpdate):
+    """
+    Update settings
+
+    Accepts partial settings update and saves to database
+    """
     db = get_database()
     settings_table = db["settings"]
 
-    # Check if settings exist
-    existing = settings_table.find_one(id=1)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Settings not found")
-
-    # Build update dict with only non-None values
-    update_dict = {}
-    for key, value in settings.dict().items():
-        if value is not None:
-            update_dict[key] = value
+    update_dict = settings.dict(exclude_unset=True)
 
     # Encrypt passwords
     if "email_password" in update_dict:
@@ -99,5 +103,131 @@ def update_settings(settings: SettingsUpdate):
     update_dict["id"] = 1
     settings_table.update(update_dict, ["id"])
 
-    logger.info("Settings updated")
-    return {**dict(existing), **update_dict}
+    logger.info("Settings updated successfully")
+    return {"message": "Settings updated successfully"}
+
+
+@router.post("/upload-jar")
+async def upload_jar_file(file: UploadFile = File(...)):
+    """
+    Upload JDBC driver JAR file
+
+    Accepts .jar files and stores them in /app/drivers/ directory
+    Returns path to uploaded file
+
+    Args:
+        file: JAR file to upload
+
+    Returns:
+        JSON with file path and name
+
+    Raises:
+        HTTPException: If file is invalid
+    """
+    # Validate file extension
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    if not file.filename.lower().endswith(".jar"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only JAR files are allowed (.jar extension required)",
+        )
+
+    # Create drivers directory if it doesn't exist
+    drivers_dir = Path("/app/drivers")
+    drivers_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate safe filename
+    filename = file.filename
+    # Remove path traversal attempts
+    filename = os.path.basename(filename)
+
+    file_path = drivers_dir / filename
+
+    # Check if file already exists
+    if file_path.exists():
+        # Append timestamp to avoid overwriting
+        name, ext = os.path.splitext(filename)
+        filename = f"{name}_{int(time.time())}{ext}"
+        file_path = drivers_dir / filename
+
+    # Save file
+    try:
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+    except Exception as e:
+        logger.error(f"Failed to save JAR file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+    file_size = len(contents)
+    logger.info(f"JAR file uploaded successfully: {filename} ({file_size} bytes)")
+
+    return {
+        "filename": filename,
+        "path": f"/app/drivers/{filename}",
+        "size": file_size,
+    }
+
+
+@router.get("/jars")
+def list_jar_files():
+    """
+    List all uploaded JDBC driver JAR files
+
+    Returns list of available JAR files in /app/drivers/
+    """
+    drivers_dir = Path("/app/drivers")
+
+    if not drivers_dir.exists():
+        return {"jars": []}
+
+    jar_files = []
+    for file in drivers_dir.glob("*.jar"):
+        stat = file.stat()
+        jar_files.append(
+            {
+                "name": file.name,
+                "path": str(file),
+                "size": stat.st_size,
+                "modified": stat.st_mtime,
+            }
+        )
+
+    return {"jars": jar_files}
+
+
+@router.delete("/jars/{filename}")
+def delete_jar_file(filename: str):
+    """
+    Delete a JDBC driver JAR file
+
+    Args:
+        filename: Name of JAR file to delete
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If file not found or deletion fails
+    """
+    # Security: Remove path traversal attempts
+    filename = os.path.basename(filename)
+
+    drivers_dir = Path("/app/drivers")
+    file_path = drivers_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="JAR file not found")
+
+    if not file_path.is_file():
+        raise HTTPException(status_code=400, detail="Not a valid file")
+
+    try:
+        file_path.unlink()
+        logger.info(f"JAR file deleted: {filename}")
+        return {"message": f"JAR file {filename} deleted successfully"}
+    except Exception as e:
+        logger.error(f"Failed to delete JAR file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")

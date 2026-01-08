@@ -26,6 +26,17 @@ export const foldersApi = {
 export const settingsApi = {
   get: () => api.get('/api/settings/'),
   update: (data) => api.put('/api/settings/', data),
+  uploadJar: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/api/settings/upload-jar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  listJars: () => api.get('/api/settings/jars'),
+  deleteJar: (filename) => api.delete(`/api/settings/jars/${filename}`),
 }
 
 // Jobs API

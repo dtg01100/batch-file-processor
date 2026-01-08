@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../services/api";
+import { settingsApi } from "../services/api";
 
 function Settings() {
   const [settings, setSettings] = useState({
@@ -31,14 +31,19 @@ function Settings() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  const [jarFiles, setJarFiles] = useState([]);
+  const [uploadingJar, setUploadingJar] = useState(false);
+  const [selectedJarFile, setSelectedJarFile] = useState(null);
+
   useEffect(() => {
     loadSettings();
+    loadJarFiles();
   }, []);
 
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await api.get("/api/settings/");
+      const data = await settingsApi.get();
       setSettings(data);
       setMessage({ type: "success", text: "Settings loaded successfully" });
     } catch (error) {
@@ -49,11 +54,20 @@ function Settings() {
     }
   };
 
+  const loadJarFiles = async () => {
+    try {
+      const response = await settingsApi.listJars();
+      setJarFiles(response.jars || []);
+    } catch (error) {
+      console.error("Failed to load JAR files:", error);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.put("/api/settings/", settings);
+      await settingsApi.update(settings);
       setMessage({ type: "success", text: "Settings saved successfully" });
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -69,6 +83,79 @@ function Settings() {
       ...settings,
       [name]: type === "checkbox" ? checked : value,
     });
+  };
+
+  const handleJarFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file extension
+      if (!file.name.toLowerCase().endsWith(".jar")) {
+        setMessage({ type: "error", text: "Only JAR files are allowed" });
+        return;
+      }
+      setSelectedJarFile(file);
+      setMessage({ type: "", text: "" });
+    }
+  };
+
+  const handleJarUpload = async (e) => {
+    e.preventDefault();
+    if (!selectedJarFile) {
+      setMessage({ type: "error", text: "Please select a JAR file to upload" });
+      return;
+    }
+
+    setUploadingJar(true);
+    try {
+      const response = await settingsApi.uploadJar(selectedJarFile);
+      setMessage({
+        type: "success",
+        text: `JAR file "${response.filename}" uploaded successfully`,
+      });
+      setSelectedJarFile(null);
+      loadJarFiles(); // Refresh list
+      // Reset file input
+      e.target.reset();
+    } catch (error) {
+      console.error("Failed to upload JAR file:", error);
+      setMessage({ type: "error", text: "Failed to upload JAR file" });
+    } finally {
+      setUploadingJar(false);
+    }
+  };
+
+  const handleJarDelete = async (filename) => {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+      return;
+    }
+
+    try {
+      await settingsApi.deleteJar(filename);
+      setMessage({
+        type: "success",
+        text: `JAR file "${filename}" deleted successfully`,
+      });
+      loadJarFiles(); // Refresh list
+
+      // If deleted file was selected, clear selection
+      if (settings.jdbc_jar_path && settings.jdbc_jar_path.includes(filename)) {
+        setSettings({ ...settings, jdbc_jar_path: "" });
+      }
+    } catch (error) {
+      console.error("Failed to delete JAR file:", error);
+      setMessage({ type: "error", text: "Failed to delete JAR file" });
+    }
+  };
+
+  const handleJarSelect = (jarPath) => {
+    setSettings({ ...settings, jdbc_jar_path: jarPath });
+    setMessage({ type: "success", text: "JAR file selected" });
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
 
   return (
@@ -109,6 +196,95 @@ function Settings() {
               <div className="subsection jdbc-section">
                 <h3>JDBC Configuration</h3>
 
+                {/* JAR File Upload */}
+                <div className="jar-upload-section">
+                  <h4>JDBC Driver JAR Files</h4>
+
+                  {/* Upload Form */}
+                  <form onSubmit={handleJarUpload} className="jar-upload-form">
+                    <div className="form-group">
+                      <label htmlFor="jar_file">Upload JAR File</label>
+                      <input
+                        type="file"
+                        id="jar_file"
+                        name="jar_file"
+                        accept=".jar"
+                        onChange={handleJarFileChange}
+                        required
+                      />
+                      <small>
+                        Select the JDBC driver JAR file for your database (e.g.,
+                        jt400.jar for AS400)
+                      </small>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={uploadingJar || !selectedJarFile}
+                      className="btn btn-primary"
+                    >
+                      {uploadingJar ? "Uploading..." : "Upload JAR"}
+                    </button>
+                  </form>
+
+                  {/* JAR Files List */}
+                  {jarFiles.length > 0 && (
+                    <div className="jar-files-list">
+                      <h5>Available JAR Files:</h5>
+                      <ul>
+                        {jarFiles.map((jar) => (
+                          <li key={jar.name}>
+                            <div className="jar-file-info">
+                              <span className="jar-name">{jar.name}</span>
+                              <span className="jar-size">
+                                ({formatFileSize(jar.size)})
+                              </span>
+                              <span className="jar-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => handleJarSelect(jar.path)}
+                                  disabled={
+                                    settings.jdbc_jar_path === jar.path
+                                  }
+                                  className="btn btn-sm btn-secondary"
+                                >
+                                  {settings.jdbc_jar_path === jar.path
+                                    ? "Selected"
+                                    : "Select"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleJarDelete(jar.name)}
+                                  className="btn btn-sm btn-danger"
+                                >
+                                  Delete
+                                </button>
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {jarFiles.length === 0 && (
+                    <div className="no-jar-files">
+                      <p>No JAR files uploaded yet.</p>
+                      <p>
+                        Upload a JDBC driver JAR file above to get started.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Selected JAR Display */}
+                  {settings.jdbc_jar_path && (
+                    <div className="selected-jar">
+                      <strong>Selected JAR:</strong>{" "}
+                      {settings.jdbc_jar_path.split("/").pop()}
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-group">
                   <label htmlFor="jdbc_url">JDBC Connection URL</label>
                   <input
@@ -139,7 +315,7 @@ function Settings() {
                     required
                   />
                   <small>
-                    Full Java class name of the JDBC driver. Common examples:
+                    Full Java class name of JDBC driver. Common examples:
                     <br />
                     <strong>AS400/DB2:</strong> com.ibm.as400.access.AS400JDBCDriver
                     <br />
@@ -151,7 +327,7 @@ function Settings() {
 
                 <div className="form-group">
                   <label htmlFor="jdbc_jar_path">
-                    JDBC Driver JAR Path (Optional)
+                    JDBC Driver JAR Path
                   </label>
                   <input
                     type="text"
@@ -159,11 +335,12 @@ function Settings() {
                     name="jdbc_jar_path"
                     value={settings.jdbc_jar_path}
                     onChange={handleChange}
-                    placeholder="/path/to/driver.jar"
+                    placeholder="/app/drivers/driver.jar"
+                    readOnly
                   />
                   <small>
-                    Absolute path to JDBC driver JAR file. Optional if driver is in
-                    JVM classpath.
+                    Path automatically set when you select a JAR file from the list
+                    above.
                   </small>
                 </div>
 
