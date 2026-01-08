@@ -7,6 +7,7 @@ import Import from './pages/Import'
 import Layout from './components/Layout'
 import './App.css'
 import './Layout.css'
+import './pages.css'
 
 function App() {
   return (
