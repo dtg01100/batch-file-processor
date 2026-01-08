@@ -1,0 +1,6 @@
+# Minimal requirements for initial testing
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+dataset==1.6.2
+python-multipart==0.0.6
+pydantic==2.5.0
