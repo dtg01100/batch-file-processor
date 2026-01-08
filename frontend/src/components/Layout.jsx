@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  LayoutFolder, 
-  LayoutClock, 
-  LayoutSettings 
+import {
+   LayoutDashboard,
+   LayoutFolder,
+   LayoutClock,
+   LayoutSettings
 } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -15,6 +15,7 @@ export default function Layout({ children }) {
     { path: '/jobs', icon: LayoutClock, label: 'Jobs' },
     { path: '/logs', icon: LayoutSettings, label: 'Logs' },
     { path: '/import', icon: LayoutSettings, label: 'Import' },
+    { path: '/settings', icon: LayoutSettings, label: 'Settings' },
   ]
 
   return (

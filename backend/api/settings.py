@@ -17,18 +17,35 @@ router = APIRouter()
 class SettingsUpdate(BaseModel):
     """Settings update model"""
 
+    # Connection method
+    connection_method: Optional[str] = None  # "jdbc" or "odbc"
+
+    # Email settings
     enable_email: Optional[bool] = None
     email_address: Optional[str] = None
     email_username: Optional[str] = None
     email_password: Optional[str] = None
     email_smtp_server: Optional[str] = None
     smtp_port: Optional[int] = None
+
+    # Backup settings
     enable_interval_backups: Optional[bool] = None
     backup_counter_maximum: Optional[int] = None
+
+    # ODBC settings (legacy)
     odbc_driver: Optional[str] = None
     as400_address: Optional[str] = None
     as400_username: Optional[str] = None
     as400_password: Optional[str] = None
+
+    # JDBC settings (preferred)
+    jdbc_url: Optional[str] = None
+    jdbc_driver_class: Optional[str] = (
+        None  # e.g., "com.ibm.as400.access.AS400JDBCDriver"
+    )
+    jdbc_jar_path: Optional[str] = None  # Path to JDBC driver JAR
+    jdbc_username: Optional[str] = None
+    jdbc_password: Optional[str] = None
 
 
 @router.get("/")
@@ -47,6 +64,8 @@ def get_settings():
         result["email_password"] = "***"
     if result.get("as400_password"):
         result["as400_password"] = "***"
+    if result.get("jdbc_password"):
+        result["jdbc_password"] = "***"
 
     return result
 
@@ -73,8 +92,11 @@ def update_settings(settings: SettingsUpdate):
         update_dict["email_password"] = encrypt_password(update_dict["email_password"])
     if "as400_password" in update_dict:
         update_dict["as400_password"] = encrypt_password(update_dict["as400_password"])
+    if "jdbc_password" in update_dict:
+        update_dict["jdbc_password"] = encrypt_password(update_dict["jdbc_password"])
 
-    # Update settings
+    # Update settings (include id for matching)
+    update_dict["id"] = 1
     settings_table.update(update_dict, ["id"])
 
     logger.info("Settings updated")

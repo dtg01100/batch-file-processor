@@ -83,10 +83,19 @@ def initialize_database():
                 "backup_counter": 0,
                 "backup_counter_maximum": 200,
                 "enable_interval_backups": True,
+                # Connection method
+                "connection_method": "odbc",  # Default to ODBC for compatibility
+                # ODBC settings (legacy)
                 "odbc_driver": "Select ODBC Driver...",
                 "as400_address": "",
                 "as400_username": "",
                 "as400_password": "",
+                # JDBC settings (preferred)
+                "jdbc_url": "",
+                "jdbc_driver_class": "",
+                "jdbc_jar_path": "",
+                "jdbc_username": "",
+                "jdbc_password": "",
                 "encryption_key": "",  # For password encryption
             }
         )

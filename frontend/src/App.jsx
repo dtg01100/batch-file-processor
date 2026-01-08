@@ -4,6 +4,7 @@ import Folders from './pages/Folders'
 import Jobs from './pages/Jobs'
 import Logs from './pages/Logs'
 import Import from './pages/Import'
+import Settings from './pages/Settings'
 import Layout from './components/Layout'
 import './App.css'
 import './Layout.css'
@@ -19,6 +20,7 @@ function App() {
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/import" element={<Import />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>
     </Router>
