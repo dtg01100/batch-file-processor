@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { foldersApi, jobsApi } from '../services/api'
+import { foldersApi, jobsApi, outputProfilesApi } from '../services/api'
 
 
 export default function Jobs() {
@@ -141,7 +141,7 @@ export default function Jobs() {
             <div className="form-grid">
               <div className="form-section">
                 <h3>Basic Settings</h3>
-                
+
                 <div className="form-group">
                   <label>Folder</label>
                   <select
@@ -159,6 +159,45 @@ export default function Jobs() {
                     ))}
                   </select>
                 </div>
+
+                <div className="form-group checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      defaultChecked={editingJob.enabled !== false}
+                      onChange={(e) => setEditingJob({
+                        ...editingJob,
+                        enabled: e.target.checked,
+                      })}
+                    />
+                    <span>Enabled</span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label>Output Profile</label>
+                  <select
+                    value={editingJob.output_profile_id || ''}
+                    onChange={(e) => setEditingJob({
+                      ...editingJob,
+                      output_profile_id: parseInt(e.target.value) || null,
+                    })}
+                  >
+                    <option value="">Use Default Profile</option>
+                    {folders.map(folder => {
+                      // Find all output profiles
+                      const profiles = outputProfiles || [];
+                      return profiles.map(profile => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.alias || profile.name}
+                          {profile.is_default && ' (Default)'}
+                        </option>
+                      ));
+                    })}
+                  </select>
+                  <small>Select a saved output configuration or use default</small>
+                </div>
+              </div>
 
                 <div className="form-group">
                   <label>
