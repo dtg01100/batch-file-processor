@@ -69,6 +69,8 @@ try:
         runs,
         test_connection,
         output_profiles,
+        pipelines,
+        triggers,
     )
 
     app.include_router(folders.router, prefix="/api/folders", tags=["folders"])
@@ -79,6 +81,8 @@ try:
     app.include_router(
         output_profiles.router, prefix="/api/output-profiles", tags=["output-profiles"]
     )
+    app.include_router(pipelines.router, prefix="/api/pipelines", tags=["pipelines"])
+    app.include_router(triggers.router, prefix="/api/triggers", tags=["triggers"])
     # from backend.api import import_db
     # app.include_router(import_db.router, prefix="/api/import", tags=["import"])
 except ImportError as e:

@@ -38,35 +38,7 @@ composer = SettingsComposer(registry)
 def initialize_settings_registry():
     """Initialize the settings registry with all known settings"""
 
-    # Database settings
-    registry.register(
-        SettingDefinition(
-            key="connection_method",
-            category=SettingCategory.DATABASE,
-            setting_type=SettingType.STRING,
-            default="jdbc",
-            description="Database connection method",
-            validation=[
-                ValidationRule(
-                    type="enum",
-                    value=["jdbc", "odbc"],
-                    message="Must be 'jdbc' or 'odbc'",
-                )
-            ],
-            ui=UIHint(
-                input_type="select",
-                label="Connection Method",
-                options=[
-                    {"value": "jdbc", "label": "JDBC (Preferred)"},
-                    {"value": "odbc", "label": "ODBC (Legacy)"},
-                ],
-                order=10,
-            ),
-            order=10,
-        )
-    )
-
-    # JDBC settings
+    # JDBC settings (optional)
     registry.register(
         SettingDefinition(
             key="jdbc_url",
@@ -142,67 +114,6 @@ def initialize_settings_registry():
             description="Database password for JDBC connection",
             ui=UIHint(input_type="password", label="Database Password", order=60),
             order=60,
-            sensitive=True,
-        )
-    )
-
-    # ODBC settings (legacy)
-    registry.register(
-        SettingDefinition(
-            key="odbc_driver",
-            category=SettingCategory.DATABASE,
-            setting_type=SettingType.STRING,
-            default="",
-            description="ODBC driver name",
-            ui=UIHint(
-                input_type="text",
-                label="ODBC Driver",
-                placeholder="Select ODBC Driver...",
-                order=70,
-            ),
-            order=70,
-        )
-    )
-
-    registry.register(
-        SettingDefinition(
-            key="as400_address",
-            category=SettingCategory.DATABASE,
-            setting_type=SettingType.STRING,
-            default="",
-            description="AS400 system address",
-            ui=UIHint(
-                input_type="text",
-                label="AS400 Address",
-                placeholder="hostname or IP",
-                order=80,
-            ),
-            order=80,
-        )
-    )
-
-    registry.register(
-        SettingDefinition(
-            key="as400_username",
-            category=SettingCategory.DATABASE,
-            setting_type=SettingType.STRING,
-            default="",
-            description="AS400 username",
-            ui=UIHint(input_type="text", label="AS400 Username", order=90),
-            order=90,
-            sensitive=True,
-        )
-    )
-
-    registry.register(
-        SettingDefinition(
-            key="as400_password",
-            category=SettingCategory.DATABASE,
-            setting_type=SettingType.PASSWORD,
-            default="",
-            description="AS400 password",
-            ui=UIHint(input_type="password", label="AS400 Password", order=100),
-            order=100,
             sensitive=True,
         )
     )

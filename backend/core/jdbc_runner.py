@@ -43,12 +43,12 @@ class JDBCQueryRunner:
             Exception: If connection fails
         """
         try:
-            import jpype  # Required for JayDeBeApi
+            import jpype
             import JayDeBeApi
         except ImportError as e:
             raise ImportError(
-                "JayDeBeApi or jpype not installed. "
-                "Install with: pip install JayDeBeApi jpype1"
+                "JDBC dependencies not installed. "
+                "Install with: pip install -r requirements-optional.txt"
             ) from e
 
         self.jdbc_url = jdbc_url

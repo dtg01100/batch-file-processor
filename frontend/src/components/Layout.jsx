@@ -5,7 +5,8 @@ import {
    LayoutClock,
    LayoutSettings,
    LayoutList,
-   LayoutTune
+   LayoutTune,
+   LayoutGraph
 } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -20,6 +21,7 @@ export default function Layout({ children }) {
     { path: '/settings', icon: LayoutTune, label: 'Settings' },
     { path: '/settings/dynamic', icon: LayoutTune, label: 'GUI Settings' },
     { path: '/output-profiles', icon: LayoutList, label: 'Output Profiles' },
+    { path: '/pipeline', icon: LayoutGraph, label: 'Pipeline Editor' },
   ]
 
   return (

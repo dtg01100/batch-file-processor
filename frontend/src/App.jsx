@@ -7,6 +7,7 @@ import Import from './pages/Import'
 import Settings from './pages/Settings'
 import DynamicSettings from './pages/DynamicSettings'
 import OutputProfiles from './pages/OutputProfiles'
+import PipelineGraph from './pages/PipelineGraph'
 import Layout from './components/Layout'
 import './App.css'
 import './Layout.css'
@@ -25,6 +26,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/dynamic" element={<DynamicSettings />} />
           <Route path="/output-profiles" element={<OutputProfiles />} />
+          <Route path="/pipeline" element={<PipelineGraph />} />
         </Routes>
       </Layout>
     </Router>

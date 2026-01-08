@@ -1,0 +1,88 @@
+{
+  "name": "EDI to Scannerware (Fixed-Width)",
+  "description": "Converts EDI files to Scannerware fixed-width TXT format. Mimics convert_to_scannerware.py behavior.",
+  "backend_mimics": ["convert_to_scannerware.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "EDI Input",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi" }
+      }
+    },
+    {
+      "id": "query_1",
+      "type": "query",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Parse EDI",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Parse EDI for Scannerware conversion\nrecords = input.split('\\n')\na_rec = [r for r in records if r.startswith('A')][0] if [r for r in records if r.startswith('A')] else ''\nb_recs = [r for r in records if r.startswith('B')]\noutput = {\n    'vendor_id': a_rec[1:7] if a_rec else '000000',\n    'invoice_num': a_rec[7:17].strip() if a_rec else '',\n    'invoice_date_raw': a_rec[17:25] if a_rec else '',\n    'b_records': b_recs\n}"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "label": "Pad A-Record",
+        "transformations": "[\n  { \"field\": \"vendor_padded\", \"expression\": \"vendor_id.ljust(6, '0')\", \"alias\": \"vendor_id_padded\" },\n  { \"field\": \"invoice_short\", \"expression\": \"invoice_num[-7:]\", \"alias\": \"invoice_last7\" },\n  { \"field\": \"invoice_date_formatted\", \"expression\": \"invoice_date_raw\", \"alias\": \"invoice_date\" }\n]"
+      }
+    },
+    {
+      "id": "transform_2",
+      "type": "transform",
+      "position": { "x": 700, "y": 200 },
+      "data": {
+        "label": "Format B-Records Fixed-Width",
+        "transformations": "[\n  { \"field\": \"b_fixed\", \"expression\": \"f'{b[0:1]}{b[1:10].replace(chr(0), \\\" \\\").ljust(9)}{b[10:22].ljust(12)}{b[22:32].ljust(10)}{b[32:72].ljust(40)}{b[72:78].ljust(6)}{b[78:80].ljust(2)}{b[80:91].ljust(11)}{b[91:94].ljust(3)}'\", \"alias\": \"b_record_fixed\" }\n]"
+      }
+    },
+    {
+      "id": "transform_3",
+      "type": "transform",
+      "position": { "x": 900, "y": 200 },
+      "data": {
+        "label": "Date Offset Adjustment",
+        "transformations": "[\n  { \"field\": \"adjusted_date\", \"expression\": \"add_days(invoice_date, 0)\", \"alias\": \"final_invoice_date\" }\n]"
+      }
+    },
+    {
+      "id": "text_1",
+      "type": "text",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "label": "Concatenate Output",
+        "operation": "concatenate"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1300, "y": 200 },
+      "data": {
+        "label": "Write Fixed-Width TXT",
+        "protocol": "local",
+        "config": { "path": "/data/output/scannerware", "naming": "{{original}}.txt" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "query_1" },
+    { "source": "query_1", "target": "transform_1" },
+    { "source": "transform_1", "target": "transform_2" },
+    { "source": "transform_2", "target": "transform_3" },
+    { "source": "transform_3", "target": "text_1" },
+    { "source": "text_1", "target": "output_1" }
+  ],
+  "settings": {
+    "a_record_padding": "VENDOR",
+    "append_a_records": true,
+    "a_record_append_text": "PADDING",
+    "invoice_date_offset": 0
+  }
+}

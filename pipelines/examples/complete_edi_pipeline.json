@@ -1,0 +1,157 @@
+{
+  "name": "Complete EDI Processing Pipeline",
+  "description": "Full end-to-end pipeline: Validate → Split → Tweak → Convert → Deliver. Mimics dispatch.py orchestration.",
+  "backend_mimics": ["dispatch.py", "edi_tweaks.py", "convert_to_csv.py"],
+  "nodes": [
+    {
+      "id": "trigger_1",
+      "type": "trigger",
+      "position": { "x": 50, "y": 100 },
+      "data": {
+        "label": "Watch Folder",
+        "triggerType": "event",
+        "config": { "watchPath": "/data/incoming/edi", "onCreate": true }
+      }
+    },
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 200, "y": 100 },
+      "data": {
+        "label": "New EDI Files",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi", "filePattern": "*.edi, *.txt" }
+      }
+    },
+    {
+      "id": "query_1",
+      "type": "query",
+      "position": { "x": 350, "y": 100 },
+      "data": {
+        "label": "Generate Checksum",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Calculate MD5 hash for deduplication\nimport hashlib\noutput = {\n    'file_hash': hashlib.md5(input).hexdigest(),\n    'filename': filename\n}"
+      }
+    },
+    {
+      "id": "lookup_1",
+      "type": "lookupTable",
+      "position": { "x": 500, "y": 100 },
+      "data": {
+        "label": "Check Processed Files",
+        "lookupTable": "[]",
+        "joinKey": "file_hash"
+      }
+    },
+    {
+      "id": "router_1",
+      "type": "router",
+      "position": { "x": 650, "y": 100 },
+      "data": {
+        "label": "Skip Already Processed",
+        "conditions": "[{ \"field\": \"lookup.found\", \"operator\": \"is_null\" }]",
+        "logic": "AND"
+      }
+    },
+    {
+      "id": "validate_1",
+      "type": "validate",
+      "position": { "x": 800, "y": 50 },
+      "data": {
+        "label": "Validate EDI Format",
+        "rules": "[\n  { \"field\": \"first_char\", \"type\": \"pattern\", \"pattern\": \"^A$\", \"message\": \"Must start with A record\" }\n]"
+      }
+    },
+    {
+      "id": "query_2",
+      "type": "query",
+      "position": { "x": 950, "y": 50 },
+      "data": {
+        "label": "Check Resend Flag",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Check if file should be resent\nis_resend = 'RESEND' in filename.upper()\noutput = {'is_resend': is_resend}"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 1100, "y": 50 },
+      "data": {
+        "label": "Apply EDI Tweaks",
+        "transformations": "[\n  { \"field\": \"a_padded\", \"expression\": \"a_record.ljust(100, 'X')\", \"alias\": \"A_Record\" },\n  { \"field\": \"upc_fixed\", \"expression\": \"calc_check_digit(upc)\", \"alias\": \"UPC_Corrected\" }\n]"
+      }
+    },
+    {
+      "id": "union_1",
+      "type": "union",
+      "position": { "x": 1250, "y": 50 },
+      "data": {
+        "label": "Process All"
+      }
+    },
+    {
+      "id": "transform_2",
+      "type": "transform",
+      "position": { "x": 1400, "y": 50 },
+      "data": {
+        "label": "Convert to CSV",
+        "transformations": "[\n  { \"field\": \"upc\", \"expression\": \"b[10:22]\", \"alias\": \"UPC\" },\n  { \"field\": \"description\", \"expression\": \"b[32:72].replace('&', 'AND')\", \"alias\": \"Description\" }\n]"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1550, "y": 50 },
+      "data": {
+        "label": "Write Output",
+        "protocol": "local",
+        "config": { "path": "/data/output/csv" }
+      }
+    },
+    {
+      "id": "output_2",
+      "type": "output",
+      "position": { "x": 1550, "y": 150 },
+      "data": {
+        "label": "Email Report",
+        "protocol": "email",
+        "config": {
+          "path": "",
+          "to": "team@example.com",
+          "subject": "EDI Processing Complete - %datetime%"
+        }
+      }
+    },
+    {
+      "id": "cache_1",
+      "type": "cache",
+      "position": { "x": 1700, "y": 100 },
+      "data": {
+        "label": "Record Processed",
+        "ttl": 86400
+      }
+    }
+  ],
+  "edges": [
+    { "source": "trigger_1", "target": "input_1" },
+    { "source": "input_1", "target": "query_1" },
+    { "source": "query_1", "target": "lookup_1" },
+    { "source": "lookup_1", "target": "router_1" },
+    { "source": "router_1", "target": "validate_1", "sourceHandle": "true" },
+    { "source": "router_1", "target": "cache_1", "sourceHandle": "false" },
+    { "source": "validate_1", "target": "query_2" },
+    { "source": "query_2", "target": "transform_1" },
+    { "source": "transform_1", "target": "union_1" },
+    { "source": "union_1", "target": "transform_2" },
+    { "source": "transform_2", "target": "output_1" },
+    { "source": "transform_2", "target": "output_2" },
+    { "source": "output_1", "target": "cache_1" }
+  ],
+  "settings": {
+    "calculate_upc_check_digit": true,
+    "filter_ampersand": true,
+    "include_headers": true
+  }
+}

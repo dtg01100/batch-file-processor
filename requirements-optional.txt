@@ -1,0 +1,6 @@
+# Optional database dependencies
+
+# JDBC support (for database queries) - Optional
+# Install with: pip install -r requirements-optional.txt
+JayDeBeApi==1.2.0
+jpype1==1.4.1

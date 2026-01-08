@@ -1,0 +1,84 @@
+{
+  "name": "EDI File Delivery Pipeline",
+  "description": "Complete pipeline with copy, FTP, and email delivery. Mimics copy_backend.py, ftp_backend.py, and email_backend.py behavior.",
+  "backend_mimics": ["copy_backend.py", "ftp_backend.py", "email_backend.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "Processed Files",
+        "protocol": "local",
+        "config": { "path": "/data/output/processed" }
+      }
+    },
+    {
+      "id": "router_1",
+      "type": "router",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Route by Format",
+        "conditions": "[{ \"field\": \"filename\", \"operator\": \"contains\", \"value\": \".csv\" }]",
+        "logic": "AND"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 500, "y": 100 },
+      "data": {
+        "label": "Copy to Directory",
+        "protocol": "local",
+        "config": { "path": "/data/delivery/local" }
+      }
+    },
+    {
+      "id": "output_2",
+      "type": "output",
+      "position": { "x": 500, "y": 300 },
+      "data": {
+        "label": "FTP Upload",
+        "protocol": "ftp",
+        "config": {
+          "path": "/outbound",
+          "host": "ftp.example.com",
+          "username": "ftp_user",
+          "password": "ftp_pass",
+          "port": 21
+        }
+      }
+    },
+    {
+      "id": "output_3",
+      "type": "output",
+      "position": { "x": 500, "y": 500 },
+      "data": {
+        "label": "Email Attachment",
+        "protocol": "email",
+        "config": {
+          "path": "",
+          "to": "team@example.com",
+          "subject": "Data export - %datetime%"
+        }
+      }
+    },
+    {
+      "id": "trigger_1",
+      "type": "trigger",
+      "position": { "x": 50, "y": 50 },
+      "data": {
+        "label": "Daily Delivery",
+        "triggerType": "schedule",
+        "config": { "cron": "0 8 * * *" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "router_1" },
+    { "source": "router_1", "target": "output_1", "sourceHandle": "true" },
+    { "source": "router_1", "target": "output_2", "sourceHandle": "false" },
+    { "source": "router_1", "target": "output_3", "sourceHandle": "false" }
+  ],
+  "settings": {}
+}

@@ -3,7 +3,6 @@ import { settingsApi } from "../services/api";
 
 function Settings() {
   const [settings, setSettings] = useState({
-    connection_method: "jdbc", // Default to JDBC
     // Email settings
     enable_email: false,
     email_address: "",
@@ -14,12 +13,7 @@ function Settings() {
     // Backup settings
     enable_interval_backups: true,
     backup_counter_maximum: 200,
-    // ODBC settings (legacy)
-    odbc_driver: "",
-    as400_address: "",
-    as400_username: "",
-    as400_password: "",
-    // JDBC settings (preferred)
+    // JDBC settings (optional)
     jdbc_url: "",
     jdbc_driver_class: "com.ibm.as400.access.AS400JDBCDriver",
     jdbc_jar_path: "",
@@ -170,31 +164,13 @@ function Settings() {
         <div className="loading">Loading settings...</div>
       ) : (
         <form onSubmit={handleSave} className="settings-form">
-          {/* Connection Method */}
+          {/* JDBC Configuration */}
           <section className="settings-section">
-            <h2>Database Connection</h2>
-
-            <div className="form-group">
-              <label htmlFor="connection_method">Connection Method</label>
-              <select
-                id="connection_method"
-                name="connection_method"
-                value={settings.connection_method}
-                onChange={handleChange}
-              >
-                <option value="jdbc">JDBC (Preferred)</option>
-                <option value="odbc">ODBC (Legacy)</option>
-              </select>
-              <small>
-                JDBC is recommended for better licensing flexibility and wider driver
-                support.
-              </small>
-            </div>
-
-            {/* JDBC Configuration */}
-            {settings.connection_method === "jdbc" && (
-              <div className="subsection jdbc-section">
-                <h3>JDBC Configuration</h3>
+            <h2>Database Connection (Optional JDBC)</h2>
+            <small>
+              JDBC support is optional. Configure database access only if needed.
+              Install JDBC dependencies with: pip install -r requirements-optional.txt
+            </small>
 
                 {/* JAR File Upload */}
                 <div className="jar-upload-section">
@@ -352,7 +328,6 @@ function Settings() {
                     name="jdbc_username"
                     value={settings.jdbc_username}
                     onChange={handleChange}
-                    required={settings.connection_method === "jdbc"}
                   />
                 </div>
 
@@ -366,76 +341,9 @@ function Settings() {
                     name="jdbc_password"
                     value={settings.jdbc_password}
                     onChange={handleChange}
-                    required={settings.connection_method === "jdbc"}
                   />
                 </div>
               </div>
-            )}
-
-            {/* ODBC Configuration */}
-            {settings.connection_method === "odbc" && (
-              <div className="subsection odbc-section">
-                <h3>ODBC Configuration (Legacy)</h3>
-                <small className="warning">
-                  ODBC is being deprecated. Please migrate to JDBC when possible.
-                </small>
-
-                <div className="form-group">
-                  <label htmlFor="odbc_driver">ODBC Driver</label>
-                  <input
-                    type="text"
-                    id="odbc_driver"
-                    name="odbc_driver"
-                    value={settings.odbc_driver}
-                    onChange={handleChange}
-                    placeholder="Select ODBC Driver..."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="as400_address">
-                    AS400 Address
-                  </label>
-                  <input
-                    type="text"
-                    id="as400_address"
-                    name="as400_address"
-                    value={settings.as400_address}
-                    onChange={handleChange}
-                    placeholder="hostname"
-                    required={settings.connection_method === "odbc"}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="as400_username">
-                    AS400 Username
-                  </label>
-                  <input
-                    type="text"
-                    id="as400_username"
-                    name="as400_username"
-                    value={settings.as400_username}
-                    onChange={handleChange}
-                    required={settings.connection_method === "odbc"}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="as400_password">
-                    AS400 Password
-                  </label>
-                  <input
-                    type="password"
-                    id="as400_password"
-                    name="as400_password"
-                    value={settings.as400_password}
-                    onChange={handleChange}
-                    required={settings.connection_method === "odbc"}
-                  />
-                </div>
-              </div>
-            )}
           </section>
 
           {/* Email Settings */}

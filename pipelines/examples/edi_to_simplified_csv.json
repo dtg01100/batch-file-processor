@@ -1,0 +1,86 @@
+{
+  "name": "EDI Simplification Pipeline",
+  "description": "Converts EDI to simplified CSV with customizable columns. Mimics convert_to_simplified_csv.py behavior.",
+  "backend_mimics": ["convert_to_simplified_csv.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "EDI Input",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi" }
+      }
+    },
+    {
+      "id": "filter_1",
+      "type": "filter",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Keep B-Records Only",
+        "conditions": "[{ \"field\": \"line[0]\", \"operator\": \"equals\", "value\": \"B\" }]",
+        "logic": "AND"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "label": "Extract Simple Fields",
+        "transformations": "[\n  { \"field\": \"upc\", \"expression\": \"line[10:22].strip()\", \"alias\": \"UPC\" },\n  { \"field\": \"item_num\", \"expression\": \"line[22:32].strip()\", \"alias\": \"ItemNumber\" },\n  { \"field\": \"description\", \"expression\": \"line[32:72].strip()\", \"alias\": \"Description\" },\n  { \"field\": \"qty\", \"expression\": \"int(line[72:78]) * int(line[78:80])\", \"alias\": \"Quantity\" },\n  { \"field\": \"price\", \"expression\": \"float(line[80:91]) / 100\", \"alias\": \"UnitPrice\" }\n]"
+      }
+    },
+    {
+      "id": "remapper_1",
+      "type": "remapper",
+      "position": { "x": 700, "y": 200 },
+      "data": {
+        "label": "Custom Column Order",
+        "mappings": "[\n  { \"source\": \"UPC\", \"target\": \"UPC\", \"transform\": \"none\" },\n  { \"source\": \"Description\", \"target\": \"ProductName\", \"transform\": \"none\" },\n  { \"source\": \"Quantity\", \"target\": \"Qty\", \"transform\": \"number\" },\n  { \"source\": \"UnitPrice\", \"target\": \"Price\", \"transform\": \"number\" }\n]",
+        "dropOthers": true
+      }
+    },
+    {
+      "id": "sort_1",
+      "type": "sort",
+      "position": { "x": 900, "y": 200 },
+      "data": {
+        "label": "Sort by UPC",
+        "sortFields": "[{ \"field\": \"UPC\", \"direction\": \"asc\" }]"
+      }
+    },
+    {
+      "id": "profile_1",
+      "type": "profile",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "label": "Simple CSV Profile",
+        "format": "csv"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1300, "y": 200 },
+      "data": {
+        "label": "Write Simplified CSV",
+        "protocol": "local",
+        "config": { "path": "/data/output/simplified", "naming": "simplified_{{date}}.csv" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "filter_1" },
+    { "source": "filter_1", "target": "transform_1" },
+    { "source": "transform_1", "target": "remapper_1" },
+    { "source": "remapper_1", "target": "sort_1" },
+    { "source": "sort_1", "target": "profile_1" },
+    { "source": "profile_1", "target": "output_1" }
+  ],
+  "settings": {
+    "include_headers": true,
+    "simple_csv_sort_order": "UPC,Description,Quantity,UnitPrice"
+  }
+}

@@ -5,6 +5,7 @@ Database connection and initialization
 import os
 from typing import Optional
 from contextlib import contextmanager
+import datetime
 
 import dataset
 from sqlalchemy import create_engine
@@ -103,8 +104,8 @@ def initialize_database():
                 "edi_tweaks": "{}",
                 "custom_settings": "{}",
                 "is_default": True,
-                "created_at": datetime.now(),
-                "updated_at": datetime.now(),
+                "created_at": datetime.datetime.now(),
+                "updated_at": datetime.datetime.now(),
             }
         )
 
@@ -121,14 +122,7 @@ def initialize_database():
                 "backup_counter": 0,
                 "backup_counter_maximum": 200,
                 "enable_interval_backups": True,
-                # Connection method
-                "connection_method": "odbc",  # Default to ODBC for compatibility
-                # ODBC settings (legacy)
-                "odbc_driver": "Select ODBC Driver...",
-                "as400_address": "",
-                "as400_username": "",
-                "as400_password": "",
-                # JDBC settings (preferred)
+                # JDBC settings (optional)
                 "jdbc_url": "",
                 "jdbc_driver_class": "",
                 "jdbc_jar_path": "",
@@ -161,6 +155,25 @@ def initialize_database():
         db["runs"].create_column("files_processed", db.types.integer)
         db["runs"].create_column("files_failed", db.types.integer)
         db["runs"].create_column("error_message", db.types.text)
+
+    # Create pipelines table for graph editor
+    if "pipelines" not in db.tables:
+        db["pipelines"].create_column("name", db.types.string(200))
+        db["pipelines"].create_column("description", db.types.text)
+        db["pipelines"].create_column("nodes", db.types.text)  # JSON
+        db["pipelines"].create_column("edges", db.types.text)  # JSON
+        db["pipelines"].create_column("is_template", db.types.boolean)
+        db["pipelines"].create_column("created_at", db.types.datetime)
+        db["pipelines"].create_column("updated_at", db.types.datetime)
+
+    # Create global_triggers table
+    if "global_triggers" not in db.tables:
+        db["global_triggers"].create_column("name", db.types.string(200))
+        db["global_triggers"].create_column("cron", db.types.string(100))
+        db["global_triggers"].create_column("enabled", db.types.boolean)
+        db["global_triggers"].create_column("pipeline_ids", db.types.text)  # JSON array
+        db["global_triggers"].create_column("created_at", db.types.datetime)
+        db["global_triggers"].create_column("updated_at", db.types.datetime)
 
     print(f"Database initialized: {DATABASE_PATH}")
 

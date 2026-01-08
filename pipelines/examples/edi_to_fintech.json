@@ -1,0 +1,95 @@
+{
+  "name": "EDI to Fintech Format",
+  "description": "Converts EDI files to Fintech division-based invoicing CSV. Mimics convert_to_fintech.py behavior.",
+  "backend_mimics": ["convert_to_fintech.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "EDI Input",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi" }
+      }
+    },
+    {
+      "id": "query_1",
+      "type": "query",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Parse EDI",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Parse EDI into structured data\nrecords = input.split('\\n')\na_rec = [r for r in records if r.startswith('A')][0]\nb_recs = [r for r in records if r.startswith('B')]\nc_recs = [r for r in records if r.startswith('C')]\noutput = {\n    'invoice_number': a_rec[7:17].strip(),\n    'invoice_date': a_rec[17:25].strip(),\n    'division_id': a_rec[25:30].strip(),\n    'total_amount': float(a_rec[64:75]) / 100 if len(a_rec) > 75 else 0,\n    'b_records': b_recs,\n    'c_records': c_recs\n}"
+      }
+    },
+    {
+      "id": "lookup_1",
+      "type": "lookupTable",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "label": "Customer Lookup",
+        "lookupTable": "[]",
+        "joinKey": "division_id"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 700, "y": 200 },
+      "data": {
+        "label": "Process Line Items",
+        "transformations": "[\n  { \"field\": \"upc\", \"expression\": \"b[10:22].strip()\", \"alias\": \"upc\" },\n  { \"field\": \"pack_size\", \"expression\": \"int(b[78:80])\", \"alias\": \"pack_size\" },\n  { \"field\": \"unit_price\", \"expression\": \"float(b[80:91]) / 100\", \"alias\": \"unit_price\" },\n  { \"field\": \"quantity\", \"expression\": \"int(b[72:78])\", \"alias\": \"quantity\" },\n  { \"field\": \"line_total\", \"expression\": \"quantity * unit_price * pack_size\", \"alias\": \"line_total\" },\n  { \"field\": \"uom_desc\", \"expression\": \"'CS' if b[91:94] == 'CA' else 'EA'\", \"alias\": \"uom_description\" }\n]"
+      }
+    },
+    {
+      "id": "union_1",
+      "type": "union",
+      "position": { "x": 900, "y": 200 },
+      "data": {
+        "label": "Combine Line Items and Charges"
+      }
+    },
+    {
+      "id": "transform_2",
+      "type": "transform",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "label": "Format for Fintech",
+        "transformations": "[\n  { \"field\": \"fintech_division\", \"expression\": \"division_id\", \"alias\": \"DivisionID\" },\n  { \"field\": \"customer_number\", \"expression\": \"lookup.customer_number or 'UNKNOWN'\", \"alias\": \"CustomerNumber\" },\n  { \"field\": \"invoice_num\", \"expression\": \"invoice_number\", \"alias\": \"InvoiceNumber\" },\n  { \"field\": \"upc_code\", \"expression\": \"upc\", \"alias\": \"UPCCode\" },\n  { \"field\": \"pack_config\", \"expression\": \"f'{pack_size}pk'\", \"alias\": \"PackConfiguration\" },\n  { \"field\": \"unit_cost\", \"expression\": \"unit_price\", \"alias\": \"UnitCost\" },\n  { \"field\": \"total_cost\", \"expression\": \"line_total\", \"alias\": \"TotalCost\" },\n  { \"field\": \"uom_desc\", \"expression\": \"uom_description\", \"alias\": \"UOMDescription\" }\n]"
+      }
+    },
+    {
+      "id": "profile_1",
+      "type": "profile",
+      "position": { "x": 1300, "y": 200 },
+      "data": {
+        "label": "Fintech CSV Profile",
+        "format": "csv"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1500, "y": 200 },
+      "data": {
+        "label": "Write Fintech CSV",
+        "protocol": "local",
+        "config": { "path": "/data/output/fintech", "naming": "fintech_{{date}}.csv" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "query_1" },
+    { "source": "query_1", "target": "lookup_1" },
+    { "source": "lookup_1", "target": "transform_1" },
+    { "source": "transform_1", "target": "union_1" },
+    { "source": "union_1", "target": "transform_2" },
+    { "source": "transform_2", "target": "profile_1" },
+    { "source": "profile_1", "target": "output_1" }
+  ],
+  "settings": {
+    "fintech_division_id": "DIV001"
+  }
+}

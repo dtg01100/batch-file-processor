@@ -1,0 +1,121 @@
+{
+  "name": "EDI Validation Pipeline",
+  "description": "Validates EDI file format and content. Mimics mtc_edi_validator.py behavior.",
+  "backend_mimics": ["mtc_edi_validator.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "EDI Input",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi" }
+      }
+    },
+    {
+      "id": "query_1",
+      "type": "query",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Parse Records",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Check EDI structure\nlines = input.split('\\n')\na_recs = [l for l in lines if l.startswith('A')]\nb_recs = [l for l in lines if l.startswith('B')]\nc_recs = [l for l in lines if l.startswith('C')]\noutput = {\n    'a_count': len(a_recs),\n    'b_count': len(b_recs),\n    'c_count': len(c_recs),\n    'first_char': lines[0][0] if lines else '',\n    'is_valid_start': lines[0].startswith('A') if lines else False\n}"
+      }
+    },
+    {
+      "id": "validate_1",
+      "type": "validate",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "label": "Validate EDI Structure",
+        "rules": "[\n  { \"field\": \"first_char\", \"type\": \"pattern\", \"pattern\": \"^A$\", \"message\": \"File must start with A record\" },\n  { \"field\": \"a_count\", \"type\": \"required\", \"message\": \"At least one A record required\" }\n]",
+        "errorHandling": "skip"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 700, "y": 200 },
+      "data": {
+        "label": "Validate B-Records",
+        "transformations": "[\n  { \"field\": \"b_valid\", \"expression\": \"len(b) in [71, 77] for b in b_recs\", \"alias\": \"BRecordLengthValid\" },\n  { \"field\": \"upc_format\", \"expression\": \"b[10:22].isdigit() or b[10:22] == '' for b in b_recs\", \"alias\": \"UPCFormatValid\" }\n]"
+      }
+    },
+    {
+      "id": "filter_1",
+      "type": "filter",
+      "position": { "x": 900, "y": 200 },
+      "data": {
+        "label": "Flag Truncated UPCs",
+        "conditions": "[{ \"field\": \"b[10:22]\", \"operator\": \"starts_with\", \"value\": \"00000000\" }]",
+        "logic": "OR"
+      }
+    },
+    {
+      "id": "filter_2",
+      "type": "filter",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "label": "Flag Suppressed UPCs",
+        "conditions": "[{ \"field\": \"b[10:22]\", \"operator\": \"equals\", \"value\": \"000000\" }]",
+        "logic": "OR"
+      }
+    },
+    {
+      "id": "filter_3",
+      "type": "filter",
+      "position": { "x": 1300, "y": 200 },
+      "data": {
+        "label": "Flag Missing Pricing",
+        "conditions": "[{ \"field\": \"b[80:91]\", \"operator\": \"equals\", \"value\": \"00000000000\" }]",
+        "logic": "OR"
+      }
+    },
+    {
+      "id": "router_1",
+      "type": "router",
+      "position": { "x": 1500, "y": 200 },
+      "data": {
+        "label": "Route Validation Results",
+        "conditions": "[{ \"field\": \"error_count\", \"operator\": \"equals\", \"value\": \"0\" }]",
+        "logic": "AND"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1700, "y": 100 },
+      "data": {
+        "label": "Valid Files",
+        "protocol": "local",
+        "config": { "path": "/data/validated/valid" }
+      }
+    },
+    {
+      "id": "output_2",
+      "type": "output",
+      "position": { "x": 1700, "y": 300 },
+      "data": {
+        "label": "Invalid Files",
+        "protocol": "local",
+        "config": { "path": "/data/validated/errors" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "query_1" },
+    { "source": "query_1", "target": "validate_1" },
+    { "source": "validate_1", "target": "transform_1" },
+    { "source": "transform_1", "target": "filter_1" },
+    { "source": "filter_1", "target": "filter_2" },
+    { "source": "filter_2", "target": "filter_3" },
+    { "source": "filter_3", "target": "router_1" },
+    { "source": "router_1", "target": "output_1", "sourceHandle": "true" },
+    { "source": "router_1", "target": "output_2", "sourceHandle": "false" }
+  ],
+  "settings": {
+    "force_edi_validation": true
+  }
+}

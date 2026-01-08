@@ -1,0 +1,112 @@
+{
+  "name": "EDI to Standard CSV",
+  "description": "Converts EDI 856 files to standard CSV format with detailed product and pricing information. Mimics convert_to_csv.py behavior.",
+  "backend_mimics": ["convert_to_csv.py"],
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "folderSource",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "EDI Input",
+        "protocol": "local",
+        "config": { "path": "/data/incoming/edi" },
+        "filePattern": "*.edi, *.txt"
+      }
+    },
+    {
+      "id": "query_1",
+      "type": "query",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "label": "Parse EDI Records",
+        "queryType": "python",
+        "mode": "transform",
+        "query": "# Parse EDI file into A, B, C records\nrecords = input.split('\\n')\na_records = [r for r in records if r.startswith('A')]\nb_records = [r for r in records if r.startswith('B')]\nc_records = [r for r in records if r.startswith('C')]\noutput = {\n    'a_records': a_records,\n    'b_records': b_records,\n    'c_records': c_records,\n    'filename': filename\n}"
+      }
+    },
+    {
+      "id": "transform_1",
+      "type": "transform",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "label": "Parse B-Records",
+        "transformations": "[\n  { \"field\": \"upc\", \"expression\": \"b_record[10:22].strip()\", \"alias\": \"upc\" },\n  { \"field\": \"item_number\", \"expression\": \"b_record[22:32].strip()\", \"alias\": \"item_number\" },\n  { \"field\": \"description\", \"expression\": \"b_record[32:72].replace('&', 'AND').strip()\", \"alias\": \"description\" },\n  { \"field\": \"quantity\", \"expression\": \"int(b_record[72:78]) * int(b_record[78:80])\", \"alias\": \"quantity\" },\n  { \"field\": \"unit_price\", \"expression\": \"float(b_record[80:91]) / 100\", \"alias\": \"unit_price\" },\n  { \"field\": \"uom\", \"expression\": \"b_record[91:94]\", \"alias\": \"uom\" }\n]"
+      }
+    },
+    {
+      "id": "transform_2",
+      "type": "transform",
+      "position": { "x": 700, "y": 200 },
+      "data": {
+        "label": "Calculate UPC Check Digit",
+        "transformations": "[\n  { \"field\": \"upc_checked\", \"expression\": \"calc_check_digit(upc)\", \"alias\": \"upc_with_check\" }\n]"
+      }
+    },
+    {
+      "id": "lookup_1",
+      "type": "lookupTable",
+      "position": { "x": 900, "y": 200 },
+      "data": {
+        "label": "UPC Override Lookup",
+        "lookupTable": "[{ \"item\": \"ITEM001\", \"upc_pack\": \"012345678901\", \"upc_case\": \"012345678902\" }]",
+        "joinKey": "item_number"
+      }
+    },
+    {
+      "id": "filter_1",
+      "type": "filter",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "label": "Filter Ampersands",
+        "conditions": "[{ \"field\": \"description\", \"operator\": \"contains\", \"value\": \"&\" }]",
+        "logic": "OR"
+      }
+    },
+    {
+      "id": "remapper_1",
+      "type": "remapper",
+      "position": { "x": 1300, "y": 200 },
+      "data": {
+        "label": "Map to CSV Fields",
+        "mappings": "[\n  { \"source\": \"upc_with_check\", \"target\": \"UPC\", \"transform\": \"none\" },\n  { \"source\": \"item_number\", \"target\": \"ItemNumber\", \"transform\": \"none\" },\n  { \"source\": \"description\", \"target\": \"Description\", \"transform\": \"none\" },\n  { \"source\": \"quantity\", \"target\": \"Quantity\", \"transform\": \"none\" },\n  { \"source\": \"unit_price\", \"target\": \"UnitPrice\", \"transform\": \"number\" },\n  { \"source\": \"uom\", \"target\": \"UOM\", \"transform\": \"none\" }\n]",
+        "dropOthers": true
+      }
+    },
+    {
+      "id": "profile_1",
+      "type": "profile",
+      "position": { "x": 1500, "y": 200 },
+      "data": {
+        "label": "CSV Profile",
+        "format": "csv"
+      }
+    },
+    {
+      "id": "output_1",
+      "type": "output",
+      "position": { "x": 1700, "y": 200 },
+      "data": {
+        "label": "Write CSV",
+        "protocol": "local",
+        "config": { "path": "/data/output/csv", "naming": "{{timestamp}}_{{original}}" }
+      }
+    }
+  ],
+  "edges": [
+    { "source": "input_1", "target": "query_1" },
+    { "source": "query_1", "target": "transform_1" },
+    { "source": "transform_1", "target": "transform_2" },
+    { "source": "transform_2", "target": "lookup_1" },
+    { "source": "lookup_1", "target": "filter_1" },
+    { "source": "filter_1", "target": "remapper_1" },
+    { "source": "remapper_1", "target": "profile_1" },
+    { "source": "profile_1", "target": "output_1" }
+  ],
+  "settings": {
+    "calculate_upc_check_digit": true,
+    "include_a_records": true,
+    "include_c_records": true,
+    "filter_ampersand": true
+  }
+}
