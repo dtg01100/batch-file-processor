@@ -25,7 +25,14 @@ export const foldersApi = {
 // Settings API
 export const settingsApi = {
   get: () => api.get('/api/settings/'),
+  getSchema: () => api.get('/api/settings/schema'),
+  getUiConfig: () => api.get('/api/settings/ui-config'),
+  getCategories: () => api.get('/api/settings/categories'),
+  getRegistry: () => api.get('/api/settings/registry'),
   update: (data) => api.put('/api/settings/', data),
+  bulkUpdate: (settings) => api.post('/api/settings/bulk-update', { settings }),
+  reset: (key) => api.post(`/api/settings/${key}/reset`),
+  validate: (key, value) => api.get(`/api/settings/${key}/validate?value=${encodeURIComponent(value)}`),
   uploadJar: (file) => {
     const formData = new FormData();
     formData.append('file', file);
