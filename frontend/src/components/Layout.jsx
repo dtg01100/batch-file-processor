@@ -3,7 +3,8 @@ import {
    LayoutDashboard,
    LayoutFolder,
    LayoutClock,
-   LayoutSettings
+   LayoutSettings,
+   LayoutList
 } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -16,6 +17,7 @@ export default function Layout({ children }) {
     { path: '/logs', icon: LayoutSettings, label: 'Logs' },
     { path: '/import', icon: LayoutSettings, label: 'Import' },
     { path: '/settings', icon: LayoutSettings, label: 'Settings' },
+    { path: '/output-profiles', icon: LayoutList, label: 'Output Profiles' },
   ]
 
   return (
