@@ -31,7 +31,7 @@ import convert_to_yellowdog_csv
 logger = logging.getLogger(__name__)
 
 
-def execute_folder_job(folder_id: int, folder_alias: str):
+def execute_folder_job(folder_id: int, folder: dict):
     """
     Execute a job for a specific folder
 
@@ -40,7 +40,7 @@ def execute_folder_job(folder_id: int, folder_alias: str):
 
     Args:
         folder_id: Folder database ID
-        folder_alias: Folder alias for logging
+        folder: Folder dictionary with all configuration
     """
     db = get_database()
     folders_table = db["folders"]
@@ -48,11 +48,8 @@ def execute_folder_job(folder_id: int, folder_alias: str):
     runs_table = db["runs"]
     settings_table = db["settings"]
 
-    # Get folder configuration
-    folder = folders_table.find_one(id=folder_id)
-    if not folder:
-        logger.error(f"Folder not found: {folder_id}")
-        return False
+    # Get folder alias for logging
+    folder_alias = folder.get("alias", f"folder_{folder_id}")
 
     # Create run record
     run_id = runs_table.insert(
@@ -110,6 +107,7 @@ def execute_folder_job(folder_id: int, folder_alias: str):
             logger.error(f"Failed to create file system: {e}")
             runs_table.update(
                 {
+                    "id": run_id,
                     "status": "failed",
                     "error_message": f"Failed to connect to file system: {str(e)}",
                     "completed_at": datetime.now(),
@@ -401,6 +399,7 @@ def process_single_file(
         # Update run record
         runs_table.update(
             {
+                "id": run_id,
                 "status": "completed",
                 "completed_at": datetime.now(),
                 "files_processed": 1,
@@ -414,10 +413,10 @@ def process_single_file(
         logger.error(f"Failed to process file: {e}")
         runs_table.update(
             {
+                "id": run_id,
                 "status": "failed",
+                "error_message": f"Failed to process file: {str(e)}",
                 "completed_at": datetime.now(),
-                "files_failed": 1,
-                "error_message": str(e),
             },
             ["id"],
         )

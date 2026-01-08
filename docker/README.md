@@ -18,6 +18,111 @@ A modern web interface for batch file processing with built-in scheduling and re
 - Docker
 - Docker Compose
 
+### Known Issues & Solutions
+
+#### Dependency Issues
+
+**Issue**: SQLAlchemy version conflicts with dataset package
+**Solution**: Use SQLAlchemy 1.4.52 (dataset requires 1.3+ but SQLAlchemy 2.0+ incompatible)
+```bash
+# requirements.txt must have:
+sqlalchemy==1.4.52  # NOT 2.0.x
+dataset==1.6.2
+```
+
+**Issue**: Missing PIL (Pillow) for image processing
+**Solution**: Add Pillow to requirements.txt
+```bash
+# requirements.txt:
+Pillow==10.1.0
+```
+
+**Issue**: pyodbc requires unixODBC libraries
+**Solution**: Install both runtime and headers in Dockerfile
+```dockerfile
+RUN apt-get update && apt-get install -y \
+    unixodbc \
+    unixodbc-dev
+```
+
+#### GUI Overlay (Tkinter) Issue
+
+**Issue**: Original code imports tkinter via doingstuffoverlay.py
+**Solution**: Make GUI overlay optional for Docker environments
+```python
+# In dispatch.py:
+try:
+    import doingstuffoverlay
+    GUI_AVAILABLE = True
+except ImportError:
+    GUI_AVAILABLE = False  # OK for Docker/headless
+```
+
+#### PIL Import Error
+
+**Issue**: `convert_to_scansheet_type_a.py` imports ImageOps incorrectly
+**Solution**: Import from PIL module
+```python
+# Correct:
+from PIL import Image as pil_Image
+from PIL import ImageOps as pil_ImageOps
+```
+
+#### Python Bytecode Cache
+
+**Issue**: Code changes not reflected due to cached .pyc files
+**Solution**: Clear cache when debugging
+```bash
+docker exec <container> find /app -name "*.pyc" -delete
+docker exec <container> find /app -type d -name __pycache__ -exec rm -rf {} +
+docker-compose restart backend
+```
+
+#### Project Root Mount
+
+**Issue**: Original docker-compose.yml only mounted backend/ and tests/
+**Solution**: Mount entire project root to access conversion modules
+```yaml
+volumes:
+  - .:/app  # Mount entire project root
+  # ... other volumes
+```
+
+#### Dataset Update Syntax
+
+**Issue**: `dataset.Database.update()` requires id field in update dict
+**Solution**: Include matching criteria in update dictionary
+```python
+# Wrong:
+folders_table.update({"schedule": job.cron_expression, "enabled": job.enabled}, ["id"])
+
+# Correct:
+folders_table.update({
+    "id": job.folder_id,  # Include for matching!
+    "schedule": job.cron_expression,
+    "enabled": job.enabled
+}, ["id"])
+```
+
+#### Job Executor Issues
+
+**Issue**: `execute_folder_job()` function signature mismatch
+**Solution**: Fix function parameters and unbound variables
+```python
+# Wrong:
+def execute_folder_job(folder_id: int, folder_alias: str):  # Only 2 args
+
+# Correct:
+def execute_folder_job(folder_id: int, folder: dict):  # Accept full folder dict
+```
+
+**Note**: As of this writing, job_executor.py has critical bugs that need fixing before production use:
+- Multiple `runs_table.update()` calls missing `id` field
+- Unbound variables due to incorrect try/except block placement
+- Function parameter mismatch causing runtime errors
+
+### Testing Checklist
+
 ### Quick Start
 
 ```bash

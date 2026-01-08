@@ -3,23 +3,22 @@ import os
 import tempfile
 
 import barcode
-import ImageOps as pil_ImageOps
+from PIL import Image as pil_Image
+from PIL import ImageOps as pil_ImageOps
 import openpyxl
 import openpyxl.utils
 from barcode.writer import ImageWriter
 from openpyxl.drawing.image import Image as OpenPyXlImage
-from PIL import Image as pil_Image
 
 import utils
 from query_runner import query_runner
 
 
-def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
-
+def edi_convert(
+    edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+):
     def adjust_column_width(adjust_worksheet):
-        print(
-            "Adjusting column width for {} worksheet".format(adjust_worksheet.title)
-        )
+        print("Adjusting column width for {} worksheet".format(adjust_worksheet.title))
         for col in adjust_worksheet.columns:
             max_length = 0
             column = col[0].column_letter  # Get the column name
@@ -37,7 +36,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
         invoice_list = []
 
-        for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
+        for line_num, line in enumerate(
+            work_file_lined
+        ):  # iterate over work file contents
             input_edi_dict = utils.capture_records(line)
             try:
                 if input_edi_dict["record_type"] == "A":
@@ -60,7 +61,6 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
     invoice_row_counter = 0
 
     for invoice in invoice_list:
-
         result = query_object.run_arbitrary_query(f"""SELECT buj4cd AS "UPC",
             bubacd AS "Item",
             bufbtx AS "Description",
@@ -86,26 +86,26 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             rows_for_export.append(trow)
             print(trow)
 
-        output_worksheet.append(['', invoice])
+        output_worksheet.append(["", invoice])
         invoice_row_counter += 1
         invoice_rows.append(invoice_row_counter)
         for items_list_entry in rows_for_export:
             output_worksheet.append(items_list_entry)
             invoice_row_counter += 1
         adjust_column_width(output_worksheet)
-        output_spreadsheet_name = output_filename + '.xlsx'
+        output_spreadsheet_name = output_filename + ".xlsx"
         output_spreadsheet.save(output_spreadsheet_name)
 
     def generate_barcode(input_string, tempdir):
         ean = barcode.get_barcode_class("UPCA")
         # select output image size via dpi. internally, pybarcode renders as svg, then renders that as a png file.
         # dpi is the conversion from svg image size in mm, to what the image writer thinks is inches.
-        options={
-            'dpi': 130,
-            'module_height': 5.0,
-            'text_distance': 2,
-            'font_size': 6,
-            'quiet_zone': 2
+        options = {
+            "dpi": 130,
+            "module_height": 5.0,
+            "text_distance": 2,
+            "font_size": 6,
+            "quiet_zone": 2,
         }
         # ean.default_writer_options['dpi'] = int(130)
         # # module height is the barcode bar height in mm
@@ -118,8 +118,12 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         # ean.default_writer_options['quiet_zone'] = 2
         # save barcode image with generated filename
         print("generating barcode image")
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as initial_temp_file:
-            ean(input_string, writer=ImageWriter()).write(initial_temp_file, options=options)
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as initial_temp_file:
+            ean(input_string, writer=ImageWriter()).write(
+                initial_temp_file, options=options
+            )
             filename = initial_temp_file.name
         print(filename)
         print("success, barcode image path is: " + filename)
@@ -127,26 +131,31 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
         barcode_image = pil_Image.open(str(filename))  # open image as pil object
         print("success")
         print("adding barcode and saving")
-        img_save = pil_ImageOps.expand(barcode_image, border=0,
-                                        fill='white')  # add border around image
+        img_save = pil_ImageOps.expand(
+            barcode_image, border=0, fill="white"
+        )  # add border around image
         width, height = img_save.size  # get image size of barcode with border
         # write out image to file
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as final_barcode_path:
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as final_barcode_path:
             img_save.save(final_barcode_path.name)
             print("success, final barcode path is: " + final_barcode_path.name)
         return final_barcode_path.name, width, height
 
     def interpret_barcode_string(upc_barcode_string):
-        if not upc_barcode_string == '':
+        if not upc_barcode_string == "":
             try:
-                _ = int(upc_barcode_string)  # check that "upc_barcode_string" can be cast to int
+                _ = int(
+                    upc_barcode_string
+                )  # check that "upc_barcode_string" can be cast to int
             except ValueError:
                 raise ValueError("Input contents are not an integer")
             # select barcode type, specify barcode, and select image writer to save as png
             if len(upc_barcode_string) < 10:
-                upc_barcode_string = upc_barcode_string.rjust(11, '0')
+                upc_barcode_string = upc_barcode_string.rjust(11, "0")
             if len(upc_barcode_string) <= 11:
-                upc_barcode_string = upc_barcode_string.ljust(12, '0')
+                upc_barcode_string = upc_barcode_string.ljust(12, "0")
             else:
                 raise ValueError("Input contents are more than 11 characters")
         else:
@@ -161,31 +170,47 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             count = 0
             save_counter = 0
 
-            for _ in output_worksheet.iter_rows():  # iterate over all rows in current worksheet
+            for _ in (
+                output_worksheet.iter_rows()
+            ):  # iterate over all rows in current worksheet
                 try:
                     count += 1
                     if count not in invoice_rows:
                         # get code from column selected in input_colum_spinbox, on current row,
                         # add a zeroes to the end if option is selected to make seven or 12 digits
                         print("getting cell contents on line number " + str(count))
-                        upc_barcode_string = str(output_worksheet["B" + str(count)].value)
+                        upc_barcode_string = str(
+                            output_worksheet["B" + str(count)].value
+                        )
                         print("cell contents are: " + upc_barcode_string)
                         print(upc_barcode_string[-12:][:-1])
-                        upc_barcode_string = interpret_barcode_string(upc_barcode_string[-12:][:-1])
+                        upc_barcode_string = interpret_barcode_string(
+                            upc_barcode_string[-12:][:-1]
+                        )
                         print(upc_barcode_string)
-                        generated_barcode_path, width, height = generate_barcode(upc_barcode_string, tempdir)
+                        generated_barcode_path, width, height = generate_barcode(
+                            upc_barcode_string, tempdir
+                        )
                         # resize cell to size of image
-                        output_worksheet.column_dimensions['A'].width = int(math.ceil(float(width) * .15))
-                        output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
+                        output_worksheet.column_dimensions["A"].width = int(
+                            math.ceil(float(width) * 0.15)
+                        )
+                        output_worksheet.row_dimensions[count].height = int(
+                            math.ceil(float(height) * 0.75)
+                        )
 
                         # open image with as openpyxl image object
-                        print("opening " + generated_barcode_path + " to insert into output spreadsheet")
+                        print(
+                            "opening "
+                            + generated_barcode_path
+                            + " to insert into output spreadsheet"
+                        )
                         img = OpenPyXlImage(generated_barcode_path)
                         print("success")
                         # attach image to cell
                         print("adding image to cell")
                         # add image to cell
-                        output_worksheet.add_image(img, anchor='A' + str(count))
+                        output_worksheet.add_image(img, anchor="A" + str(count))
                         save_counter += 1
                         print("success")
                 except Exception as barcode_error:

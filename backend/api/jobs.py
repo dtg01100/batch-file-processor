@@ -109,9 +109,10 @@ def create_job(job: JobCreate):
     if not validate_cron_expression(job.cron_expression):
         raise HTTPException(status_code=400, detail="Invalid cron expression")
 
-    # Update folder with schedule and enabled status
+    # Update folder with schedule and enabled status (include id for matching)
     folders_table.update(
-        {"schedule": job.cron_expression, "enabled": job.enabled}, ["id"]
+        {"id": job.folder_id, "schedule": job.cron_expression, "enabled": job.enabled},
+        ["id"],
     )
 
     # Add job to scheduler if enabled
@@ -230,9 +231,7 @@ def run_job(folder_id: int, background_tasks: BackgroundTasks):
     # Execute job in background
     from backend.schedulers.job_executor import execute_folder_job
 
-    background_tasks.add_task(
-        execute_folder_job, folder_id, folder["alias"], connection_params, folder
-    )
+    background_tasks.add_task(execute_folder_job, folder_id, folder)
 
     logger.info(f"Manually triggered job for folder {folder['alias']}")
     return {"message": "Job started", "folder_alias": folder["alias"]}

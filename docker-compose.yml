@@ -8,11 +8,13 @@ services:
       dockerfile: docker/Dockerfile.backend
     container_name: batch-processor-backend
     volumes:
-      - ./backend:/app/backend
+      - .:/app
       - ./data:/app/data
       - ./logs:/app/logs
       - ./errors:/app/errors
       - batch_processor_db:/app/database
+      - /app/backend/node_modules
+      - /app/frontend/node_modules
     ports:
       - "8000:8000"
     environment:
@@ -20,6 +22,7 @@ services:
       - SECRET_KEY=dev-secret-key-change-in-production
       - ENV=development
       - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Frontend service

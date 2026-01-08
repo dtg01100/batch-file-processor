@@ -53,7 +53,9 @@ class EncryptionManager:
             salt=b"batch_file_processor_salt",  # In production, use random salt
             iterations=100000,
         )
-        return kdf.derive(password.encode())
+        key = kdf.derive(password.encode())
+        # Return base64-encoded key for Fernet
+        return base64.urlsafe_b64encode(key)
 
     def _generate_key(self) -> bytes:
         """Generate a random encryption key"""
@@ -71,7 +73,8 @@ class EncryptionManager:
         """
         try:
             encrypted_bytes = self.cipher.encrypt(plaintext.encode())
-            return base64.urlsafe_b64encode(encrypted_bytes).decode()
+            # Fernet already returns base64-encoded bytes
+            return encrypted_bytes.decode()
         except Exception as e:
             logger.error(f"Encryption failed: {e}")
             raise Exception(f"Encryption failed: {e}")
@@ -87,7 +90,8 @@ class EncryptionManager:
             Decrypted plaintext string
         """
         try:
-            encrypted_bytes = base64.urlsafe_b64decode(encrypted.encode())
+            # Fernet expects base64-encoded bytes, not raw bytes
+            encrypted_bytes = encrypted.encode()
             decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
             return decrypted_bytes.decode()
         except Exception as e:
