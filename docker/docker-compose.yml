@@ -12,7 +12,6 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./errors:/app/errors
-      - ./tests:/app/tests
     ports:
       - "8000:8000"
     environment:
@@ -20,7 +19,7 @@ services:
       - SECRET_KEY=dev-secret-key-change-in-production
       - ENV=development
       - LOG_LEVEL=DEBUG
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.main:app --host 0.0.0.0 --reload
 
   # Frontend service (development)
   frontend:
@@ -42,26 +41,22 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
-    container_name: batch-processor-test
+      container_name: batch-processor-test
     volumes:
       - ./backend:/app/backend
       - ./tests:/app/tests
-      - ./data:/app/data
     environment:
       - DATABASE_PATH=/app/data/test.db
       - SECRET_KEY=test-secret-key
       - ENV=test
-      - LOG_LEVEL=DEBUG
-    command: python -m pytest /app/tests -v --cov=/app/backend --cov-report=html --cov-report=term
-    profiles:
-      - test
+    command: python -m pytest /app/tests -v --cov=/app/coverage --cov-report=html --cov-report=term
 
-  # Production service
+  # Production service (for deployment)
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile.production
-    container_name: batch-processor-app
+      container_name: batch-processor-app
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -80,8 +75,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    profiles:
-      - production
 
 volumes:
   node_modules:
