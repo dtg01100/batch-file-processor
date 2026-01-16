@@ -10,7 +10,6 @@ from pathlib import Path
 
 # These imports will work when installed in Docker
 try:
-    from backend.core.database import get_database
     from backend.core.scheduler import scheduler
 except ImportError as e:
     print(f"Import error (expected in Docker): {e}")
@@ -24,8 +23,10 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting up...")
     # Initialize database
-    db = get_database()
-    print(f"Database initialized: {db.engine.url}")
+    from backend.core.database import initialize_database, get_engine
+    initialize_database()
+    engine = get_engine()
+    print(f"Database initialized: {engine.url}")
     # Start scheduler
     scheduler.start()
     print("Scheduler started")
@@ -45,9 +46,14 @@ app = FastAPI(
 )
 
 # Mount static files (React build)
-frontend_dist = Path("/app/frontend/dist")
+# Try local path first, then Docker path
+frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+if not frontend_dist.exists():
+    frontend_dist = Path("/app/frontend/dist")
+
 if frontend_dist.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_dist)), name="static")
+    print(f"Serving frontend from: {frontend_dist}")
 
 
 # Health check endpoint
@@ -71,6 +77,7 @@ try:
         output_profiles,
         pipelines,
         triggers,
+        legacy_import,
     )
 
     app.include_router(folders.router, prefix="/api/folders", tags=["folders"])
@@ -83,6 +90,7 @@ try:
     )
     app.include_router(pipelines.router, prefix="/api/pipelines", tags=["pipelines"])
     app.include_router(triggers.router, prefix="/api/triggers", tags=["triggers"])
+    app.include_router(legacy_import.router, prefix="/api/legacy-import", tags=["legacy-import"])
     # from backend.api import import_db
     # app.include_router(import_db.router, prefix="/api/import", tags=["import"])
 except ImportError as e:

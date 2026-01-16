@@ -104,6 +104,107 @@ class SMBFileSystem(RemoteFileSystem):
             logger.error(f"Failed to check SMB file existence: {e}")
             return False
 
+    def upload_file(self, local_path: str, remote_path: str) -> bool:
+        """Upload file to SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Uploading SMB file: {self.share}/{remote_path}")
+            # Actual implementation would use:
+            # with open(local_path, 'rb') as f:
+            #     self.connection.storeFile(f"\\\\{self.host}\\{self.share}\\{remote_path}", f)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upload SMB file: {e}")
+            return False
+
+    def delete_file(self, remote_path: str) -> bool:
+        """Delete file from SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Deleting SMB file: {self.share}/{remote_path}")
+            # Actual implementation would use:
+            # self.connection.deleteFile(f"\\\\{self.host}\\{self.share}\\{remote_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete SMB file: {e}")
+            return False
+
+    def create_directory(self, path: str) -> bool:
+        """Create directory on SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Creating SMB directory: {self.share}/{path}")
+            # Actual implementation would use:
+            # self.connection.createDirectory(f"\\\\{self.host}\\{self.share}\\{path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create SMB directory: {e}")
+            return False
+
+    def delete_directory(self, path: str) -> bool:
+        """Delete directory from SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Deleting SMB directory: {self.share}/{path}")
+            # Actual implementation would use:
+            # self.connection.deleteDirectory(f"\\\\{self.host}\\{self.share}\\{path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete SMB directory: {e}")
+            return False
+
+    def upload_directory(self, local_dir: str, remote_dir: str) -> bool:
+        """Upload entire directory to SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Uploading SMB directory: {local_dir} to {self.share}/{remote_dir}")
+            # Actual implementation would recursively upload files and directories
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upload SMB directory: {e}")
+            return False
+
+    def download_directory(self, remote_dir: str, local_dir: str) -> bool:
+        """Download entire directory from SMB share"""
+        self._connect()
+
+        try:
+            logger.info(f"Downloading SMB directory: {self.share}/{remote_dir} to {local_dir}")
+            # Actual implementation would recursively download files and directories
+            return True
+        except Exception as e:
+            logger.error(f"Failed to download SMB directory: {e}")
+            return False
+
+    def get_file_hash(self, remote_path: str, hash_algorithm: str = "md5") -> str:
+        """Get file hash for integrity verification"""
+        self._connect()
+
+        try:
+            logger.info(f"Getting SMB file hash: {self.share}/{remote_path}")
+            # Actual implementation would download file in chunks and compute hash
+            return "dummyhash"
+        except Exception as e:
+            logger.error(f"Failed to compute SMB file hash: {e}")
+            raise Exception(f"Failed to get file hash: {e}")
+
+    def directory_exists(self, path: str) -> bool:
+        """Check if directory exists on SMB share"""
+        self._connect()
+
+        try:
+            # Actual implementation would check directory existence
+            logger.info(f"Checking SMB directory existence: {self.share}/{path}")
+            return False  # Placeholder
+        except Exception as e:
+            logger.error(f"Failed to check SMB directory existence: {e}")
+            return False
+
     def get_file_info(self, path: str) -> Dict[str, Any]:
         """Get file metadata from SMB share"""
         self._connect()

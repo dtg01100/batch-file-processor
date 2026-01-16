@@ -8,7 +8,9 @@ import Settings from './pages/Settings'
 import DynamicSettings from './pages/DynamicSettings'
 import OutputProfiles from './pages/OutputProfiles'
 import PipelineGraph from './pages/PipelineGraph'
+import LegacyImport from './pages/LegacyImport'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import './App.css'
 import './Layout.css'
 import './pages.css'
@@ -16,19 +18,22 @@ import './pages.css'
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/folders" element={<Folders />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/logs" element={<Logs />} />
-          <Route path="/import" element={<Import />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/dynamic" element={<DynamicSettings />} />
-          <Route path="/output-profiles" element={<OutputProfiles />} />
-          <Route path="/pipeline" element={<PipelineGraph />} />
-        </Routes>
-      </Layout>
+      <ErrorBoundary>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/folders" element={<Folders />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/logs" element={<Logs />} />
+            <Route path="/import" element={<Import />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/dynamic" element={<DynamicSettings />} />
+            <Route path="/output-profiles" element={<OutputProfiles />} />
+            <Route path="/pipeline" element={<PipelineGraph />} />
+            <Route path="/legacy-import" element={<LegacyImport />} />
+          </Routes>
+        </Layout>
+      </ErrorBoundary>
     </Router>
   )
 }

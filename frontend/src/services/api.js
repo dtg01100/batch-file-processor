@@ -46,18 +46,6 @@ export const settingsApi = {
   deleteJar: (filename) => api.delete(`/api/settings/jars/${filename}`),
 }
 
-// Output Profiles API
-export const outputProfilesApi = {
-  list: () => api.get('/api/output-profiles/'),
-  get: (id) => api.get(`/api/output-profiles/${id}`),
-  create: (data) => api.post('/api/output-profiles/', data),
-  update: (id, data) => api.put(`/api/output-profiles/${id}`, data),
-  delete: (id) => api.delete(`/api/output-profiles/${id}`),
-  setDefault: (id) => api.post(`/api/output-profiles/${id}/set-default`),
-  getDefault: () => api.get('/api/output-profiles/default'),
-  getFormats: () => api.get('/api/output-profiles/formats'),
-}
-
 // Jobs API
 export const jobsApi = {
   list: () => api.get('/api/jobs/'),
@@ -67,18 +55,6 @@ export const jobsApi = {
   delete: (id) => api.delete(`/api/jobs/${id}`),
   run: (id) => api.post(`/api/jobs/${id}/run`),
   toggle: (id) => api.post(`/api/jobs/${id}/toggle`),
-}
-
-// Output Profiles API
-export const outputProfilesApi = {
-  list: () => api.get('/api/output-profiles/'),
-  get: (id) => api.get(`/api/output-profiles/${id}`),
-  create: (data) => api.post('/api/output-profiles/', data),
-  update: (id, data) => api.put(`/api/output-profiles/${id}`, data),
-  delete: (id) => api.delete(`/api/output-profiles/${id}`),
-  setDefault: (id) => api.post(`/api/output-profiles/${id}/set-default`),
-  getDefault: () => api.get('/api/output-profiles/default'),
-  getFormats: () => api.get('/api/output-profiles/formats'),
 }
 
 // Runs API

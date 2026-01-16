@@ -59,7 +59,7 @@ def create_file_system(
             username=params["username"],
             password=params["password"],
             port=params.get("port", 22),
-            private_key_path=params.get("private_key_path"),
+            private_key_path=params.get("private_key_path", ""),
         )
 
     elif connection_type == "ftp":

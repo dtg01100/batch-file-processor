@@ -8,6 +8,9 @@ from typing import List, Dict, Any
 from pathlib import Path
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteFileSystem(ABC):
@@ -44,6 +47,101 @@ class RemoteFileSystem(ABC):
         pass
 
     @abstractmethod
+    def upload_file(self, local_path: str, remote_path: str) -> bool:
+        """
+        Upload a file from local to remote
+
+        Args:
+            local_path: Local file path
+            remote_path: Remote destination path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def delete_file(self, remote_path: str) -> bool:
+        """
+        Delete a remote file
+
+        Args:
+            remote_path: Remote file path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def create_directory(self, path: str) -> bool:
+        """
+        Create a remote directory
+
+        Args:
+            path: Remote directory path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def delete_directory(self, path: str) -> bool:
+        """
+        Delete a remote directory
+
+        Args:
+            path: Remote directory path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def upload_directory(self, local_dir: str, remote_dir: str) -> bool:
+        """
+        Upload an entire directory to remote system
+
+        Args:
+            local_dir: Local directory path
+            remote_dir: Remote destination path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def download_directory(self, remote_dir: str, local_dir: str) -> bool:
+        """
+        Download an entire directory from remote system
+
+        Args:
+            remote_dir: Remote directory path
+            local_dir: Local destination path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def get_file_hash(self, remote_path: str, hash_algorithm: str = "md5") -> str:
+        """
+        Get file hash for integrity verification
+
+        Args:
+            remote_path: Remote file path
+            hash_algorithm: Hash algorithm (md5, sha1, sha256, etc.)
+
+        Returns:
+            File hash string
+        """
+        pass
+
+    @abstractmethod
     def file_exists(self, path: str) -> bool:
         """
         Check if a file exists remotely
@@ -53,6 +151,19 @@ class RemoteFileSystem(ABC):
 
         Returns:
             True if file exists, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def directory_exists(self, path: str) -> bool:
+        """
+        Check if a directory exists remotely
+
+        Args:
+            path: Remote directory path
+
+        Returns:
+            True if directory exists, False otherwise
         """
         pass
 

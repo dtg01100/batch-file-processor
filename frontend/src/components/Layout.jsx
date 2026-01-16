@@ -22,6 +22,7 @@ export default function Layout({ children }) {
     { path: '/settings/dynamic', icon: LayoutTune, label: 'GUI Settings' },
     { path: '/output-profiles', icon: LayoutList, label: 'Output Profiles' },
     { path: '/pipeline', icon: LayoutGraph, label: 'Pipeline Editor' },
+    { path: '/legacy-import', icon: LayoutTune, label: 'Import Legacy DB' },
   ]
 
   return (

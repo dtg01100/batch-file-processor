@@ -1,194 +1,215 @@
 """
-Database connection and initialization
+Database connection and initialization using SQLAlchemy ORM
 """
 
 import os
 from typing import Optional
 from contextlib import contextmanager
-import datetime
+from datetime import datetime
 
-import dataset
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 
 # Get database path from environment variable
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "/app/data/folders.db")
 
-
 # Database connection URL
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
-
-# Global database connection
-_db: Optional[dataset.Database] = None
+# SQLAlchemy setup
+Base = declarative_base()
 _engine = None
+_session_maker = None
 
 
-def get_database() -> dataset.Database:
-    """Get or create database connection"""
-    global _db, _engine
+# ============================================================================
+# Database Models
+# ============================================================================
 
-    if _db is None:
-        # Create database connection using URL string
-        _db = dataset.Database(DATABASE_URL)
+class Folder(Base):
+    """Folder configuration"""
+    __tablename__ = "folders"
 
-        # Create engine separately for SQLAlchemy operations
-        _engine = create_engine(DATABASE_URL)
+    id = Column(Integer, primary_key=True)
+    folder_name = Column(String(255), nullable=False)
+    alias = Column(String(255))
+    folder_is_active = Column(Boolean, default=False)
+    connection_type = Column(String(50), default="local")
+    connection_params = Column(String(1000), default="{}")
+    schedule = Column(String(100))
+    enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-        # Initialize tables if they don't exist
-        initialize_database()
 
-    return _db
+class OutputProfile(Base):
+    """Output format profile"""
+    __tablename__ = "output_profiles"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    alias = Column(String(100), unique=True)
+    description = Column(String(500))
+    output_format = Column(String(50))
+    edi_tweaks = Column(String(1000), default="{}")
+    custom_settings = Column(String(2000), default="{}")
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Settings(Base):
+    """Application settings"""
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True)
+    enable_email = Column(Boolean, default=False)
+    email_address = Column(String(255))
+    email_username = Column(String(255))
+    email_password = Column(String(255))
+    email_smtp_server = Column(String(255), default="smtp.gmail.com")
+    smtp_port = Column(Integer, default=587)
+    backup_counter = Column(Integer, default=0)
+    backup_counter_maximum = Column(Integer, default=200)
+    enable_interval_backups = Column(Boolean, default=True)
+    jdbc_url = Column(String(500))
+    jdbc_driver_class = Column(String(255))
+    jdbc_jar_path = Column(String(500))
+    jdbc_username = Column(String(255))
+    jdbc_password = Column(String(255))
+    encryption_key = Column(String(255))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class ProcessedFile(Base):
+    """Processed file record"""
+    __tablename__ = "processed_files"
+
+    id = Column(Integer, primary_key=True)
+    file_name = Column(String(500))
+    file_checksum = Column(String(100))
+    copy_destination = Column(String(500))
+    ftp_destination = Column(String(500))
+    email_destination = Column(String(500))
+    resend_flag = Column(Boolean, default=False)
+    folder_id = Column(Integer)
+    sent_date_time = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Run(Base):
+    """Job execution record"""
+    __tablename__ = "runs"
+
+    id = Column(Integer, primary_key=True)
+    folder_id = Column(Integer)
+    folder_alias = Column(String(200))
+    started_at = Column(DateTime, default=datetime.now)
+    completed_at = Column(DateTime)
+    status = Column(String(50))  # running, completed, failed
+    files_processed = Column(Integer, default=0)
+    files_failed = Column(Integer, default=0)
+    error_message = Column(Text)
+
+
+class Pipeline(Base):
+    """Pipeline definition"""
+    __tablename__ = "pipelines"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200))
+    description = Column(Text)
+    nodes = Column(Text)  # JSON
+    edges = Column(Text)  # JSON
+    is_template = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class GlobalTrigger(Base):
+    """Global cron trigger"""
+    __tablename__ = "global_triggers"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200))
+    cron = Column(String(100))
+    enabled = Column(Boolean, default=False)
+    pipeline_ids = Column(Text)  # JSON array
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+# ============================================================================
+# Database Functions
+# ============================================================================
+
+def get_engine():
+    """Get or create SQLAlchemy engine"""
+    global _engine
+    if _engine is None:
+        _engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    return _engine
+
+
+def get_session_maker():
+    """Get or create session maker"""
+    global _session_maker
+    if _session_maker is None:
+        _session_maker = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _session_maker
+
+
+def get_database() -> Session:
+    """Get database session"""
+    SessionLocal = get_session_maker()
+    return SessionLocal()
 
 
 def initialize_database():
-    """Initialize database tables with schema"""
-    db = get_database()
-
-    # Create folders table with extended schema for web interface
-    if "folders" not in db.tables:
-        db["folders"].insert(
-            {
-                "folder_name": "template",
-                "alias": "",
-                "folder_is_active": "False",
-                "connection_type": "local",
-                "connection_params": "{}",
-                "schedule": "",
-                "enabled": "False",
-            }
-        )
-        db.query('DELETE FROM "folders"')
-
-    # Ensure new columns exist for web interface
+    """Initialize database tables"""
+    engine = get_engine()
+    
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Create default records if they don't exist
+    SessionLocal = get_session_maker()
+    session = SessionLocal()
+    
     try:
-        db["folders"].create_column("connection_type", db.types.string(50))
-        db["folders"].create_column("connection_params", db.types.string(1000))
-        db["folders"].create_column("schedule", db.types.string(100))
-        db["folders"].create_column("enabled", db.types.boolean)
-    except Exception:
-        # Columns may already exist
-        pass
-
-    # Create output_profiles table
-    if "output_profiles" not in db.tables:
-        db.create_table(
-            "output_profiles",
-            {
-                "id": db.types.integer(),
-                "name": db.types.string(100),
-                "alias": db.types.string(100, unique=True),
-                "description": db.types.string(500),
-                "output_format": db.types.string(
-                    50
-                ),  # csv, edi, estore-einvoice, fintech, scannerware, scansheet-type-a, simplified-csv, stewart-custom, yellowdog-csv
-                "edi_tweaks": db.types.string(1000),  # JSON string of EDI tweaks
-                "custom_settings": db.types.string(
-                    2000
-                ),  # JSON string of custom settings
-                "is_default": db.types.boolean(),  # Mark one profile as default
-                "created_at": db.types.datetime,
-                "updated_at": db.types.datetime,
-            },
-            pk="id",
-        )
-
-        # Create default profile
-        db["output_profiles"].insert(
-            {
-                "name": "Standard CSV Output",
-                "alias": "standard-csv",
-                "description": "Default CSV output format",
-                "output_format": "csv",
-                "edi_tweaks": "{}",
-                "custom_settings": "{}",
-                "is_default": True,
-                "created_at": datetime.datetime.now(),
-                "updated_at": datetime.datetime.now(),
-            }
-        )
-
-    # Create settings table if it doesn't exist
-    if "settings" not in db.tables:
-        db["settings"].insert(
-            {
-                "enable_email": False,
-                "email_address": "",
-                "email_username": "",
-                "email_password": "",
-                "email_smtp_server": "smtp.gmail.com",
-                "smtp_port": 587,
-                "backup_counter": 0,
-                "backup_counter_maximum": 200,
-                "enable_interval_backups": True,
-                # JDBC settings (optional)
-                "jdbc_url": "",
-                "jdbc_driver_class": "",
-                "jdbc_jar_path": "",
-                "jdbc_username": "",
-                "jdbc_password": "",
-                "encryption_key": "",  # For password encryption
-            }
-        )
-
-    # Ensure processed_files table exists
-    if "processed_files" not in db.tables:
-        db["processed_files"].create_column("file_name", db.types.string(500))
-        db["processed_files"].create_column("file_checksum", db.types.string(100))
-        db["processed_files"].create_column("copy_destination", db.types.string(500))
-        db["processed_files"].create_column("ftp_destination", db.types.string(500))
-        db["processed_files"].create_column("email_destination", db.types.string(500))
-        db["processed_files"].create_column("resend_flag", db.types.boolean)
-        db["processed_files"].create_column("folder_id", db.types.integer)
-        db["processed_files"].create_column("sent_date_time", db.types.datetime)
-
-    # Create runs table for job history
-    if "runs" not in db.tables:
-        db["runs"].create_column("folder_id", db.types.integer)
-        db["runs"].create_column("folder_alias", db.types.string(200))
-        db["runs"].create_column("started_at", db.types.datetime)
-        db["runs"].create_column("completed_at", db.types.datetime)
-        db["runs"].create_column(
-            "status", db.types.string(50)
-        )  # running, completed, failed
-        db["runs"].create_column("files_processed", db.types.integer)
-        db["runs"].create_column("files_failed", db.types.integer)
-        db["runs"].create_column("error_message", db.types.text)
-
-    # Create pipelines table for graph editor
-    if "pipelines" not in db.tables:
-        db["pipelines"].create_column("name", db.types.string(200))
-        db["pipelines"].create_column("description", db.types.text)
-        db["pipelines"].create_column("nodes", db.types.text)  # JSON
-        db["pipelines"].create_column("edges", db.types.text)  # JSON
-        db["pipelines"].create_column("is_template", db.types.boolean)
-        db["pipelines"].create_column("created_at", db.types.datetime)
-        db["pipelines"].create_column("updated_at", db.types.datetime)
-
-    # Create global_triggers table
-    if "global_triggers" not in db.tables:
-        db["global_triggers"].create_column("name", db.types.string(200))
-        db["global_triggers"].create_column("cron", db.types.string(100))
-        db["global_triggers"].create_column("enabled", db.types.boolean)
-        db["global_triggers"].create_column("pipeline_ids", db.types.text)  # JSON array
-        db["global_triggers"].create_column("created_at", db.types.datetime)
-        db["global_triggers"].create_column("updated_at", db.types.datetime)
-
-    print(f"Database initialized: {DATABASE_PATH}")
-
-
-def get_engine():
-    """Get SQLAlchemy engine"""
-    get_database()
-    return _engine
+        # Create default output profile if none exists
+        if session.query(OutputProfile).count() == 0:
+            default_profile = OutputProfile(
+                name="Standard CSV Output",
+                alias="standard-csv",
+                description="Default CSV output format",
+                output_format="csv",
+                edi_tweaks="{}",
+                custom_settings="{}",
+                is_default=True,
+            )
+            session.add(default_profile)
+        
+        # Create default settings if none exist
+        if session.query(Settings).count() == 0:
+            default_settings = Settings()
+            session.add(default_settings)
+        
+        session.commit()
+        print(f"Database initialized: {DATABASE_PATH}")
+    except Exception as e:
+        session.rollback()
+        print(f"Error initializing database: {e}")
+    finally:
+        session.close()
 
 
 @contextmanager
 def session_scope():
     """Provide a transactional scope around a series of operations"""
-    Session = sessionmaker(bind=get_engine())
-    session = Session()
+    session = get_database()
     try:
         yield session
         session.commit()
