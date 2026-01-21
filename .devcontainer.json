@@ -16,25 +16,27 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "",
+	// Use 'postStartCommand' to run commands every time the container starts.
+	// "postStartCommand": "sudo chown -R vscode:vscode /home/vscode",
 	
 	// Configure tool-specific properties.
 	// "customizations": {},
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
-	"initializeCommand": "xhost +",
+	// "remoteUser": "root",
+	"initializeCommand": "xhost + || true",
 	"runArgs": [
-		"-e", "DISPLAY=:0",
-		"-v", "${localWorkspaceFolder}/containerhome:/home/vscode"
+		"-e", "DISPLAY=:0"
 		],
+	"remoteUser": "vscode",
 	//   "containerUser": "vscode",
 	  "updateRemoteUserUID": true,
 	  "containerEnv": {
 		"HOME": "/home/vscode"
 	},
 	"mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        "source=batch-file-processor-home,target=/home/vscode,type=volume"
       ],
 	"customizations": {
 		"vscode": {
