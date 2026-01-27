@@ -1,17 +1,16 @@
 import shutil
 
-# this is a testing module for local file copies
-# note: process_parameters is a dict from a row in the database, passed into this module
+from send_base import BaseSendBackend, create_send_wrapper
 
 
-def do(process_parameters, settings_dict, filename):
-    file_pass = False
-    counter = 0
-    while not file_pass:
-        try:
-            shutil.copy(filename, process_parameters['copy_to_directory'])
-            file_pass = True
-        except IOError:
-            if counter == 10:
-                raise
-            counter += 1
+class CopySendBackend(BaseSendBackend):
+    """
+    Copy send backend implementation.
+    Copies files to a local directory (for testing purposes).
+    """
+    
+    def _send(self):
+        shutil.copy(self.filename, self.process_parameters['copy_to_directory'])
+
+
+do = create_send_wrapper(CopySendBackend)
