@@ -76,7 +76,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
         work_file_lined = list(work_file.readlines())  # make list of lines
         output_filename = os.path.join(
             os.path.dirname(output_filename_initial),
-            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
+            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv'
         )
         with open(
             output_filename, "w", newline="", encoding="utf-8"
@@ -117,12 +117,16 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             invoice_index += 1
                             invoice_accum.clear()
                         if not input_edi_dict["invoice_date"] == "000000":
-                            invoice_date = datetime.strptime(
-                                input_edi_dict["invoice_date"], "%m%d%y"
-                            )
-                            write_invoice_date = datetime.strftime(
-                                invoice_date, "%Y%m%d"
-                            )
+                            try:
+                                invoice_date = datetime.strptime(
+                                    input_edi_dict["invoice_date"], "%m%d%y"
+                                )
+                                write_invoice_date = datetime.strftime(
+                                    invoice_date, "%Y%m%d"
+                                )
+                            except ValueError:
+                                print("cannot parse invoice_date")
+                                write_invoice_date = "00000000"
                         else:
                             write_invoice_date = "00000000"
                         row_dict = {
@@ -140,6 +144,12 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
                         except KeyError:
                             print("cannot find each upc")
+                            upc_entry = input_edi_dict["upc_number"]
+                        except ValueError:
+                            print("cannot parse vendor_item as int")
+                            upc_entry = input_edi_dict["upc_number"]
+                        except Exception:
+                            print("error getting upc")
                             upc_entry = input_edi_dict["upc_number"]
                         row_dict = {
                             "Record Type": "D",
