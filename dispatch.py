@@ -36,14 +36,15 @@ def generate_match_lists(folder_temp_processed_files_list):
 
 def generate_file_hash(source_file_struct):
     source_file_path, index_number, temp_processed_files_list, \
-       folder_hash_dict, folder_name_dict, resend_flag_set = source_file_struct
+        folder_hash_dict, folder_name_dict, resend_flag_set = source_file_struct
 
     file_name = os.path.abspath(source_file_path)
     generated_file_checksum = None
     checksum_attempt = 1
     while generated_file_checksum is None:
         try:
-            generated_file_checksum = hashlib.md5(open(file_name, 'rb').read()).hexdigest()
+            with open(file_name, 'rb') as f:
+                generated_file_checksum = hashlib.md5(f.read()).hexdigest()
         except Exception as error:
             if checksum_attempt <= 5:
                 time.sleep(checksum_attempt*checksum_attempt)
@@ -193,24 +194,32 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                     folder_name_dict_list.append(folder_name_dict)
                     resend_flag_set_list.append(resend_flag_set)
 
-                folder_hash_dict = []
-                folder_name_dict = []
-                resend_flag_set = []
+                folder_hash_dict = {}
+                folder_name_dict = {}
+                resend_flag_set = set()
 
-                list(map(folder_hash_dict.extend, folder_hash_dict_list))
-                list(map(folder_name_dict.extend, folder_name_dict_list))
-                list(map(resend_flag_set.extend, resend_flag_set_list))
+                for sublist in folder_hash_dict_list:
+                    for key, value in sublist:
+                        folder_hash_dict[key] = value
+                
+                for sublist in folder_name_dict_list:
+                    for key, value in sublist:
+                        folder_name_dict[key] = value
+                
+                for sublist in resend_flag_set_list:
+                    for item in sublist:
+                        resend_flag_set.add(item)
 
-                folder_hash_dict = dict(folder_hash_dict)
-                folder_name_dict = dict(folder_name_dict)
-                resend_flag_set = set(resend_flag_set)
-
-                hash_files_struct = zip(hash_files,
-                                        [number for number in range(len(hash_files) + 1)],
-                                        [folder_temp_processed_files_list] * (len(hash_files) + 1),
-                                        [folder_hash_dict] * (len(hash_files) + 1),
-                                        [folder_name_dict] * (len(hash_files) + 1),
-                                        [resend_flag_set] * (len(hash_files) + 1))
+                hash_files_struct = []
+                for i, file_path in enumerate(hash_files):
+                    hash_files_struct.append((
+                        file_path,
+                        i,
+                        folder_temp_processed_files_list,
+                        folder_hash_dict,
+                        folder_name_dict,
+                        resend_flag_set
+                    ))
 
                 thread_file_hashes = []
                 ahead_filtered_files = []
@@ -252,7 +261,7 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
             cleaned_alias_string = re.sub('[^a-zA-Z0-9 ]', '', parameters_dict['alias'])
             # add iso8601 date/time stamp to send_filename, but filter : for - due to send_filename constraints
             folder_error_log_name_constructor = \
-                cleaned_alias_string + " errors." + str(time.ctime()).replace(":", "-") + ".txt"
+                cleaned_alias_string + " errors." + datetime.datetime.now().isoformat().replace(":", "-") + ".txt"
             folder_error_log_name_full_path = os.path.join(errors_folder['errors_folder'],
                                                            os.path.basename(parameters_dict['folder_name']),
                                                            folder_error_log_name_constructor)
@@ -536,12 +545,11 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                   parameters_dict['alias'])
             error_counter += 1
     if global_edi_validator_error_status is True:
-        validator_log_name_constructor = "Validator Log " + str(time.ctime()).replace(":", "-") + ".txt"
+        validator_log_name_constructor = "Validator Log " + datetime.datetime.now().isoformat().replace(":", "-") + ".txt"
         validator_log_path = os.path.join(run_log_directory, validator_log_name_constructor)
-        validator_log_file = open(validator_log_path, 'wb')
-        validator_log_file.write(edi_validator_errors.getvalue().encode())
+        with open(validator_log_path, 'wb') as validator_log_file:
+            validator_log_file.write(edi_validator_errors.getvalue().encode())
         edi_validator_errors.close()
-        validator_log_file.close()
         if reporting['enable_reporting'] == "True":
             emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
