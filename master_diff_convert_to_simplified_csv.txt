@@ -1,0 +1,35 @@
+diff --git a/convert_to_simplified_csv.py b/convert_to_simplified_csv.py
+index 6192925..7f00e49 100644
+--- a/convert_to_simplified_csv.py
++++ b/convert_to_simplified_csv.py
+@@ -120,13 +120,23 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                                 except Exception as error:
+                                     print(error)
+ 
+-                        row_dict = dict(
+-                            upc_number=input_edi_dict["upc_number"],
+-                            qty_of_units=qty_to_int(input_edi_dict["qty_of_units"]),
+-                            unit_cost=convert_to_price(input_edi_dict["unit_cost"]),
+-                            description=input_edi_dict["description"],
+-                            vendor_item=int(input_edi_dict["vendor_item"].strip()),
+-                        )
++                        try:
++                            row_dict = dict(
++                                upc_number=input_edi_dict["upc_number"],
++                                qty_of_units=qty_to_int(input_edi_dict["qty_of_units"]),
++                                unit_cost=convert_to_price(input_edi_dict["unit_cost"]),
++                                description=input_edi_dict["description"],
++                                vendor_item=int(input_edi_dict["vendor_item"].strip()),
++                            )
++                        except ValueError:
++                            print("cannot parse vendor_item as int")
++                            row_dict = dict(
++                                upc_number=input_edi_dict["upc_number"],
++                                qty_of_units=qty_to_int(input_edi_dict["qty_of_units"]),
++                                unit_cost=convert_to_price(input_edi_dict["unit_cost"]),
++                                description=input_edi_dict["description"],
++                                vendor_item=0,
++                            )
+ 
+                         add_row(row_dict)
+ 

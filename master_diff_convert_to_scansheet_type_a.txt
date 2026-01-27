@@ -1,0 +1,45 @@
+diff --git a/convert_to_scansheet_type_a.py b/convert_to_scansheet_type_a.py
+index 64783ef..b69a473 100644
+--- a/convert_to_scansheet_type_a.py
++++ b/convert_to_scansheet_type_a.py
+@@ -39,11 +39,12 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+ 
+         for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
+             input_edi_dict = utils.capture_records(line)
+-            try:
+-                if input_edi_dict["record_type"] == "A":
+-                    invoice_list.append(input_edi_dict["invoice_number"][-7:])
+-            except TypeError:
+-                pass
++            if input_edi_dict is not None:
++                try:
++                    if input_edi_dict["record_type"] == "A":
++                        invoice_list.append(input_edi_dict["invoice_number"][-7:])
++                except TypeError:
++                    pass
+     print(invoice_list)
+ 
+     query_object = query_runner(
+@@ -55,6 +56,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+ 
+     output_spreadsheet = openpyxl.Workbook()
+     output_worksheet = output_spreadsheet.worksheets[0]
++    output_spreadsheet_name = output_filename + '.xlsx'
+ 
+     invoice_rows = []
+     invoice_row_counter = 0
+@@ -93,8 +95,6 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+             output_worksheet.append(items_list_entry)
+             invoice_row_counter += 1
+         adjust_column_width(output_worksheet)
+-        output_spreadsheet_name = output_filename + '.xlsx'
+-        output_spreadsheet.save(output_spreadsheet_name)
+ 
+     def generate_barcode(input_string, tempdir):
+         ean = barcode.get_barcode_class("UPCA")
+@@ -202,4 +202,4 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+             print("success")
+ 
+     do_process_workbook()
+-    return output_filename + ".xlsx"
++    return output_spreadsheet_name

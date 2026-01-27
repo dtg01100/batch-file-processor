@@ -1,0 +1,106 @@
+diff --git a/convert_to_stewarts_custom.py b/convert_to_stewarts_custom.py
+index 876430a..5417016 100644
+--- a/convert_to_stewarts_custom.py
++++ b/convert_to_stewarts_custom.py
+@@ -49,7 +49,10 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+ 
+             # build header
+ 
+-            header_a_record = utils.capture_records(work_file_lined[0])
++            if len(work_file_lined) > 0:
++                header_a_record = utils.capture_records(work_file_lined[0])
++            else:
++                header_a_record = None
+ 
+             header_fields = query_object.run_arbitrary_query(
+                 f"""
+@@ -93,7 +96,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                 ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
+             LEFT outer JOIN dacdata.dsadrep dsadrep_corp
+                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
+-        WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
++        WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0") if header_a_record else "0"}
+             """
+             )
+ 
+@@ -128,7 +131,10 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+             ]
+ 
+             if len(header_fields) == 0:
+-                raise CustomerLookupError(f"Cannot Find Order {header_a_record['invoice_number']} In History.")
++                if header_a_record:
++                    raise CustomerLookupError(f"Cannot Find Order {header_a_record['invoice_number']} In History.")
++                else:
++                    raise CustomerLookupError("Cannot Find Order - No header record")
+             header_fields_dict = dict(zip(header_fields_list, header_fields[0]))
+ 
+             csv_file.writerow(["Invoice Details"])
+@@ -140,7 +146,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                 [
+                     prettify_dates(header_fields_dict["Invoice_Date"]),
+                     header_fields_dict["Terms_Code"],
+-                    header_a_record["invoice_number"],
++                    header_a_record["invoice_number"] if header_a_record else "0",
+                     prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration'], -1),
+                 ]
+             )
+@@ -174,25 +180,29 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+ 
+             uom_lookup_list = query_object.run_arbitrary_query(f"""
+             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
+-            where odhst.buhhnb = {header_a_record['invoice_number']}
++            where odhst.buhhnb = {header_a_record['invoice_number'] if header_a_record else "0"}
+             """)
+ 
+             def get_uom(item_number, packsize):
+                 stage_1_list = []
+                 stage_2_list = []
+-                for entry in uom_lookup_list:
+-                    if int(entry[0]) == int(item_number):
+-                        stage_1_list.append(entry)
+-                for entry in stage_1_list:
+-                    try:
+-                        if int(entry[1]) == int(packsize):
+-                            stage_2_list.append(entry)
+-                    except:
+-                        stage_2_list.append(entry)
+-                        break
+                 try:
+-                    retval = stage_2_list[0][2]
+-                except IndexError:
++                    for entry in uom_lookup_list:
++                        if int(entry[0]) == int(item_number):
++                            stage_1_list.append(entry)
++                    for entry in stage_1_list:
++                        try:
++                            if int(entry[1]) == int(packsize):
++                                stage_2_list.append(entry)
++                        except:
++                            stage_2_list.append(entry)
++                            break
++                    try:
++                        retval = stage_2_list[0][2]
++                    except IndexError:
++                        retval = '?'
++                except (ValueError, IndexError) as e:
++                    print(f"Error in get_uom: {e}")
+                     retval = '?'
+                 return(retval)
+ 
+@@ -239,7 +249,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                     if input_edi_dict['record_type'] == 'B':
+                         total_price, qtyint = convert_to_item_total(input_edi_dict['unit_cost'], input_edi_dict['qty_of_units'])
+                         csv_file.writerow([
+-                            header_a_record["invoice_number"],
++                            header_a_record["invoice_number"] if header_a_record else "0",
+                             header_fields_dict["Customer_Store_Number"],
+                             input_edi_dict['vendor_item'],
+                             input_edi_dict['description'],
+@@ -258,5 +268,6 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                             "$"+str(convert_to_price(input_edi_dict['amount'])),
+                             "$"+str(convert_to_price(input_edi_dict['amount']))
+                         ])
+-            csv_file.writerow(["","","","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
++            if header_a_record:
++                csv_file.writerow(["","","","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
+     return(output_filename + ".csv")

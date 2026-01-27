@@ -1,0 +1,52 @@
+diff --git a/convert_to_estore_einvoice.py b/convert_to_estore_einvoice.py
+index 9581878..9e6831d 100644
+--- a/convert_to_estore_einvoice.py
++++ b/convert_to_estore_einvoice.py
+@@ -74,10 +74,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
+ 
+     with open(edi_process, encoding="utf-8") as work_file:  # open input file
+         work_file_lined = list(work_file.readlines())  # make list of lines
+-        output_filename = os.path.join(
+-            os.path.dirname(output_filename_initial),
+-            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
+-        )
++        output_filename = output_filename_initial + '.csv'
+         with open(
+             output_filename, "w", newline="", encoding="utf-8"
+         ) as f:  # open work file, overwriting old file
+@@ -117,12 +114,16 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
+                             invoice_index += 1
+                             invoice_accum.clear()
+                         if not input_edi_dict["invoice_date"] == "000000":
+-                            invoice_date = datetime.strptime(
+-                                input_edi_dict["invoice_date"], "%m%d%y"
+-                            )
+-                            write_invoice_date = datetime.strftime(
+-                                invoice_date, "%Y%m%d"
+-                            )
++                            try:
++                                invoice_date = datetime.strptime(
++                                    input_edi_dict["invoice_date"], "%m%d%y"
++                                )
++                                write_invoice_date = datetime.strftime(
++                                    invoice_date, "%Y%m%d"
++                                )
++                            except ValueError:
++                                print("cannot parse invoice_date")
++                                write_invoice_date = "00000000"
+                         else:
+                             write_invoice_date = "00000000"
+                         row_dict = {
+@@ -141,6 +142,12 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
+                         except KeyError:
+                             print("cannot find each upc")
+                             upc_entry = input_edi_dict["upc_number"]
++                        except ValueError:
++                            print("cannot parse vendor_item as int")
++                            upc_entry = input_edi_dict["upc_number"]
++                        except Exception:
++                            print("error getting upc")
++                            upc_entry = input_edi_dict["upc_number"]
+                         row_dict = {
+                             "Record Type": "D",
+                             "Detail Type": "I",

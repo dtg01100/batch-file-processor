@@ -1,0 +1,71 @@
+diff --git a/convert_to_fintech.py b/convert_to_fintech.py
+index 80eae40..2df3fdd 100644
+--- a/convert_to_fintech.py
++++ b/convert_to_fintech.py
+@@ -44,32 +44,40 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+                     if input_edi_dict['record_type'] == "A":
+                         arec_header = input_edi_dict
+                     if input_edi_dict['record_type'] == "B":
+-                        csv_file.writerow([
+-                            fintech_division_id,
+-                            int(arec_header['invoice_number']),
+-                            utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
+-                            inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
+-                            int(input_edi_dict['qty_of_units']),
+-                            uomdesc(int(input_edi_dict['unit_multiplier'])),
+-                            input_edi_dict['vendor_item'],
+-                            upc_lut[int(input_edi_dict['vendor_item'])][1],
+-                            upc_lut[int(input_edi_dict['vendor_item'])][2],
+-                            input_edi_dict['description'],
+-                            utils.convert_to_price(input_edi_dict['unit_cost'])
+-                        ])
++                        try:
++                            csv_file.writerow([
++                                fintech_division_id,
++                                int(arec_header['invoice_number']),
++                                utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
++                                inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
++                                int(input_edi_dict['qty_of_units']),
++                                uomdesc(int(input_edi_dict['unit_multiplier'])),
++                                input_edi_dict['vendor_item'],
++                                upc_lut.get(int(input_edi_dict['vendor_item']), ["", "", ""])[1],
++                                upc_lut.get(int(input_edi_dict['vendor_item']), ["", "", ""])[2],
++                                input_edi_dict['description'],
++                                utils.convert_to_price(input_edi_dict['unit_cost'])
++                            ])
++                        except (ValueError, KeyError) as e:
++                            print(f"Error processing B record: {e}")
++                            continue
+                     if input_edi_dict['record_type'] == "C":
+-                        csv_file.writerow([
+-                            fintech_division_id,
+-                            int(arec_header['invoice_number']),
+-                            utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
+-                            inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
+-                            1,
+-                            "EA",
+-                            0,
+-                            "",
+-                            "",
+-                            input_edi_dict['description'],
+-                            utils.convert_to_price(input_edi_dict['amount'])
+-                        ])
++                        try:
++                            csv_file.writerow([
++                                fintech_division_id,
++                                int(arec_header['invoice_number']),
++                                utils.datetime_from_invtime(arec_header['invoice_date']).strftime("%m/%d/%Y"),
++                                inv_fetcher.fetch_cust_no(int(arec_header['invoice_number'])),
++                                1,
++                                "EA",
++                                0,
++                                "",
++                                "",
++                                input_edi_dict['description'],
++                                utils.convert_to_price(input_edi_dict['amount'])
++                            ])
++                        except (ValueError, KeyError) as e:
++                            print(f"Error processing C record: {e}")
++                            continue
+ 
+         return output_filename + ".csv"

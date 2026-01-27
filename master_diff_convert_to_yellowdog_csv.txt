@@ -1,0 +1,89 @@
+diff --git a/convert_to_yellowdog_csv.py b/convert_to_yellowdog_csv.py
+index 2f68993..3ff2403 100644
+--- a/convert_to_yellowdog_csv.py
++++ b/convert_to_yellowdog_csv.py
+@@ -47,45 +47,52 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
+             self.brec_lines.reverse()
+             self.crec_lines.reverse()
+             try:
+-                self.invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line['invoice_date']), "%Y%m%d")
++                self.invoice_date = datetime.strftime(utils.datetime_from_invtime(self.arec_line.get('invoice_date', '000000')), "%Y%m%d")
+             except ValueError:
+                 self.invoice_date = "N/A"
+-            self.invoice_total = utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total'])))
++            self.invoice_total = utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line.get('invoice_total', '000000'))))
+             lineno = 0
++            # Try to convert invoice_number to int, use 0 if it fails
++            try:
++                invoice_number_int = int(self.arec_line.get('invoice_number', '0'))
++            except ValueError:
++                invoice_number_int = 0
+             while len(self.brec_lines) > 0:
+                 curline = self.brec_lines.pop()
+-                self.output_csv_writer.writerow(
+-                    [
+-                        self.invoice_total,
+-                        curline["description"],
+-                        curline['vendor_item'],
+-                        utils.convert_to_price(curline['unit_cost']),
+-                        utils.dac_str_int_to_int(curline['qty_of_units']),
+-                        self.inv_fetcher.fetch_uom_desc(curline['vendor_item'], curline['unit_multiplier'], lineno, int(self.arec_line['invoice_number'])),
+-                        self.invoice_date,
+-                        self.arec_line['invoice_number'],
+-                        self.inv_fetcher.fetch_cust_name(self.arec_line['invoice_number']),
+-                        self.inv_fetcher.fetch_po(self.arec_line['invoice_number']),
+-                        curline['upc_number']
+-                    ]
+-                )
+-                lineno += 1
++                if curline is not None:
++                    self.output_csv_writer.writerow(
++                        [
++                            self.invoice_total,
++                            curline.get("description", ""),
++                            curline.get('vendor_item', ''),
++                            utils.convert_to_price(curline.get('unit_cost', '000000')),
++                            utils.dac_str_int_to_int(curline.get('qty_of_units', '0')),
++                            self.inv_fetcher.fetch_uom_desc(curline.get('vendor_item', ''), curline.get('unit_multiplier', '1'), lineno, invoice_number_int),
++                            self.invoice_date,
++                            self.arec_line.get('invoice_number', '0'),
++                            self.inv_fetcher.fetch_cust_name(self.arec_line.get('invoice_number', '0')),
++                            self.inv_fetcher.fetch_po(self.arec_line.get('invoice_number', '0')),
++                            curline.get('upc_number', '')
++                        ]
++                    )
++                    lineno += 1
+             while len(self.crec_lines) > 0:
+                 curline = self.crec_lines.pop()
+-                self.output_csv_writer.writerow(
+-                    [
+-                        utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))),
+-                        curline["description"],
+-                        9999999,
+-                        utils.convert_to_price(curline['amount']),
+-                        1,
+-                        '',
+-                        self.invoice_date,
+-                        self.arec_line['invoice_number'],
+-                        self.inv_fetcher.fetch_cust_name(self.arec_line['invoice_number']),
+-                        ""
+-                    ]
+-                )
++                if curline is not None:
++                    self.output_csv_writer.writerow(
++                        [
++                            utils.convert_to_price(str(utils.dac_str_int_to_int(self.arec_line.get('invoice_total', '0')))),
++                            curline.get("description", ""),
++                            9999999,
++                            utils.convert_to_price(curline.get('amount', '000000')),
++                            1,
++                            '',
++                            self.invoice_date,
++                            self.arec_line.get('invoice_number', '0'),
++                            self.inv_fetcher.fetch_cust_name(self.arec_line.get('invoice_number', '0')),
++                            ""
++                        ]
++                    )
+ 
+         def add_line(self, new_line):
+             if new_line is not None:
