@@ -31,6 +31,11 @@ class invFetcher:
         if invoice_number == self.last_invoice_number:
             return self.po
         else:
+            # Try to convert invoice_number to int, use 0 if it fails
+            try:
+                invoice_number_int = int(invoice_number)
+            except ValueError:
+                invoice_number_int = 0
             qry_ret = self._run_qry(
                 f"""
                 SELECT
@@ -41,7 +46,7 @@ class invFetcher:
                 FROM
             dacdata.ohhst ohhst
                 WHERE
-            ohhst.BTHHNB = {str(int(invoice_number))}
+            ohhst.BTHHNB = {str(invoice_number_int)}
             """
             )
             self.last_invoice_number = invoice_number
@@ -64,6 +69,11 @@ class invFetcher:
     def fetch_uom_desc(self, itemno, uommult, lineno, invno):
         if invno != self.last_invno:
             self.uom_lut = {0: "N/A"}
+            # Try to convert invno to int, use 0 if it fails
+            try:
+                invno_int = int(invno)
+            except ValueError:
+                invno_int = 0
             qry = f"""
                 SELECT
                     BUHUNB,
@@ -73,7 +83,7 @@ class invFetcher:
                 FROM
                     dacdata.odhst odhst
                 WHERE
-                    odhst.BUHHNB = {str(int(invno))}
+                    odhst.BUHHNB = {str(invno_int)}
             """
             qry_ret = self._run_qry(qry)
             self.uom_lut = dict(qry_ret)
@@ -82,14 +92,19 @@ class invFetcher:
             return self.uom_lut[lineno + 1]
         except KeyError as error:
             try:
+                # Try to convert itemno to int, use 0 if it fails
+                try:
+                    itemno_int = int(itemno)
+                except ValueError:
+                    itemno_int = 0
                 if int(uommult) > 1:
                     qry = f"""select dsanrep.ANB9TX
                             from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {str(int(itemno))}"""
+                            where dsanrep.ANBACD = {str(itemno_int)}"""
                 else:
                     qry = f"""select dsanrep.ANB8TX
                             from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {str(int(itemno))}"""
+                            where dsanrep.ANBACD = {str(itemno_int)}"""
                 uomqry_ret = self._run_qry(qry)
                 return uomqry_ret[0][0]
             except Exception as error:
@@ -105,10 +120,13 @@ class invFetcher:
 def dac_str_int_to_int(dacstr: str) -> int:
     if dacstr.strip() == "":
         return 0
-    if dacstr.startswith('-'):
-        return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
-    else:
-        return int(dacstr)
+    try:
+        if dacstr.startswith('-'):
+            return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
+        else:
+            return int(dacstr)
+    except ValueError:
+        return 0
 
 
 def convert_to_price(value):
