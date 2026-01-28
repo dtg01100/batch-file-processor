@@ -16,25 +16,25 @@ Example Usage:
     class MyConverter(CSVConverter):
         def process_record_a(self, record: dict) -> None:
             self.write_row([record['invoice_number'], record['invoice_date']])
-        
+
         def process_record_b(self, record: dict) -> None:
             self.write_row([record['upc_number'], record['qty_of_units']])
-        
+
         def process_record_c(self, record: dict) -> None:
             pass  # C records not needed
-    
+
     # For DB-enabled converters:
     class MyDBConverter(DBEnabledConverter):
         def initialize_output(self) -> None:
             super().initialize_output()
             self.connect_db()
             # Additional DB setup
-        
+
         def process_record_a(self, record: dict) -> None:
             # Use self.query_object to fetch data
             result = self.query_object.run_arbitrary_query("SELECT ...")
             self.write_row([...])
-    
+
     # Backward-compatible wrapper function:
     def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
         converter = MyConverter(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup)
@@ -48,14 +48,21 @@ import os
 
 import utils
 from query_runner import query_runner
+from plugin_config import PluginConfigMixin
 
 
-class BaseConverter(ABC):
+class BaseConverter(ABC, PluginConfigMixin):
     """Abstract base class for EDI file converters.
-    
+
     This class defines the template method pattern for converting EDI files.
     Subclasses must implement the abstract methods for record processing.
-    
+
+    Subclasses should define:
+        PLUGIN_ID: Unique identifier for this converter plugin.
+        PLUGIN_NAME: Display name shown in UI.
+        PLUGIN_DESCRIPTION: Brief description of the converter.
+        CONFIG_FIELDS: List of configuration fields (see PluginConfigMixin).
+
     Attributes:
         edi_process: Path to the input EDI file.
         output_filename: Base path for the output file (without extension).
@@ -75,7 +82,7 @@ class BaseConverter(ABC):
         upc_lookup: dict,
     ) -> None:
         """Initialize the converter with input parameters.
-        
+
         Args:
             edi_process: Path to the input EDI file.
             output_filename: Base path for the output file (without extension).
@@ -96,11 +103,11 @@ class BaseConverter(ABC):
     @abstractmethod
     def initialize_output(self) -> None:
         """Initialize the output file/resource.
-        
+
         This method is called once before processing begins.
         Subclasses should open files, create database connections,
         write headers, etc.
-        
+
         Example:
             def initialize_output(self) -> None:
                 self.output_file = open(self.output_filename + '.csv', 'w')
@@ -112,16 +119,16 @@ class BaseConverter(ABC):
     @abstractmethod
     def process_record_a(self, record: dict) -> None:
         """Process an A record (invoice header).
-        
+
         A records contain invoice-level information such as:
         - cust_vendor: Customer/vendor code
         - invoice_number: Invoice identifier
         - invoice_date: Invoice date (MMDDYY format)
         - invoice_total: Total invoice amount (DAC format)
-        
+
         Args:
             record: Dictionary containing parsed A record fields.
-        
+
         Example:
             def process_record_a(self, record: dict) -> None:
                 self.current_invoice = record['invoice_number']
@@ -136,7 +143,7 @@ class BaseConverter(ABC):
     @abstractmethod
     def process_record_b(self, record: dict) -> None:
         """Process a B record (line item).
-        
+
         B records contain item-level information such as:
         - upc_number: UPC code
         - description: Item description
@@ -148,10 +155,10 @@ class BaseConverter(ABC):
         - suggested_retail_price: Suggested retail price
         - price_multi_pack: Price multi-pack
         - parent_item_number: Parent item number (for shippers)
-        
+
         Args:
             record: Dictionary containing parsed B record fields.
-        
+
         Example:
             def process_record_b(self, record: dict) -> None:
                 upc = self.process_upc(record['upc_number'])
@@ -164,15 +171,15 @@ class BaseConverter(ABC):
     @abstractmethod
     def process_record_c(self, record: dict) -> None:
         """Process a C record (charge/adjustment).
-        
+
         C records contain charge/adjustment information such as:
         - charge_type: Type of charge
         - description: Charge description
         - amount: Charge amount (DAC format)
-        
+
         Args:
             record: Dictionary containing parsed C record fields.
-        
+
         Example:
             def process_record_c(self, record: dict) -> None:
                 amount = self.convert_to_price(record['amount'])
@@ -187,13 +194,13 @@ class BaseConverter(ABC):
     @abstractmethod
     def finalize_output(self) -> str:
         """Finalize the output and return the output filename.
-        
+
         This method is called once after all records have been processed.
         Subclasses should close files, write footers, commit transactions, etc.
-        
+
         Returns:
             The path to the generated output file.
-        
+
         Example:
             def finalize_output(self) -> str:
                 self.output_file.close()
@@ -203,17 +210,17 @@ class BaseConverter(ABC):
 
     def convert(self) -> str:
         """Execute the conversion process.
-        
+
         This is the main orchestration method that:
         1. Reads the input EDI file
         2. Initializes the output
         3. Iterates through all records
         4. Dispatches to appropriate record processors
         5. Finalizes the output
-        
+
         Returns:
             The path to the generated output file.
-        
+
         Raises:
             FileNotFoundError: If the input EDI file does not exist.
             Exception: If any error occurs during processing.
@@ -230,7 +237,7 @@ class BaseConverter(ABC):
             record = utils.capture_records(line)
             if record is not None:
                 record_type = record.get("record_type")
-                
+
                 if record_type == "A":
                     self.current_a_record = record
                     self.process_record_a(record)
@@ -245,16 +252,16 @@ class BaseConverter(ABC):
     @staticmethod
     def convert_to_price(value: str) -> str:
         """Convert DAC price format to decimal string.
-        
+
         DAC price format stores values as integers with 2 implied decimal places.
         Example: "00012345" -> "123.45", "00000099" -> "0.99"
-        
+
         Args:
             value: Price string in DAC format (6+ characters).
-        
+
         Returns:
             Price as a formatted decimal string.
-        
+
         Example:
             >>> BaseConverter.convert_to_price("00012345")
             '123.45'
@@ -272,16 +279,16 @@ class BaseConverter(ABC):
     @staticmethod
     def qty_to_int(qty: str) -> int:
         """Convert quantity string to integer, handling negative values.
-        
+
         DAC format uses a special negative representation where negative
         values are indicated by specific formatting.
-        
+
         Args:
             qty: Quantity string from EDI record.
-        
+
         Returns:
             Quantity as an integer (negative if indicated).
-        
+
         Example:
             >>> BaseConverter.qty_to_int("0010")
             10
@@ -304,21 +311,21 @@ class BaseConverter(ABC):
     @staticmethod
     def process_upc(upc_string: str, calc_check_digit: bool = True) -> str:
         """Process UPC string, adding check digit or converting UPCE to UPCA.
-        
+
         Handles various UPC formats:
         - 12 digits: Already UPCA, return as-is
         - 11 digits: Add check digit
         - 8 digits: Convert UPCE to UPCA
         - Empty/invalid: Return empty string
-        
+
         Args:
             upc_string: Raw UPC string from EDI record.
             calc_check_digit: Whether to calculate and append check digit
                 for 11-digit UPCs. Defaults to True.
-        
+
         Returns:
             Processed 12-digit UPCA string, or empty if invalid.
-        
+
         Example:
             >>> BaseConverter.process_upc("12345678901")  # 11-digit
             '123456789012'  # with check digit
@@ -326,13 +333,13 @@ class BaseConverter(ABC):
             '041800000265'
         """
         upc_string = upc_string.strip()
-        
+
         # Check if valid numeric
         try:
             _ = int(upc_string)
         except ValueError:
             return ""
-        
+
         if len(upc_string) == 12:
             return upc_string
         elif len(upc_string) == 11 and calc_check_digit:
@@ -346,24 +353,24 @@ class BaseConverter(ABC):
 
 class CSVConverter(BaseConverter):
     """Intermediate class for CSV output converters.
-    
+
     This class handles CSV file management including opening, writing,
     and closing CSV files. It uses the excel dialect with CRLF line
     terminators by default.
-    
+
     Attributes:
         csv_file: The csv.writer instance.
         output_file: The file handle for the output file.
         csv_dialect: CSV dialect to use (default: 'excel').
         lineterminator: Line terminator string (default: '\r\n').
         quoting: CSV quoting mode (default: csv.QUOTE_ALL).
-    
+
     Example:
         class MyCSVConverter(CSVConverter):
             def initialize_output(self) -> None:
                 super().initialize_output()
                 self.write_header(['Column1', 'Column2'])
-            
+
             def process_record_a(self, record: dict) -> None:
                 self.write_row([record['invoice_number']])
     """
@@ -377,7 +384,7 @@ class CSVConverter(BaseConverter):
         upc_lookup: dict,
     ) -> None:
         """Initialize the CSV converter.
-        
+
         Args:
             edi_process: Path to the input EDI file.
             output_filename: Base path for the output file (without extension).
@@ -385,7 +392,9 @@ class CSVConverter(BaseConverter):
             parameters_dict: Dictionary containing conversion parameters.
             upc_lookup: Dictionary for UPC code lookups.
         """
-        super().__init__(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup)
+        super().__init__(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+        )
         self.csv_file: Any = None
         self.output_file: Optional[TextIO] = None
         self.csv_dialect: str = "excel"
@@ -394,10 +403,10 @@ class CSVConverter(BaseConverter):
 
     def initialize_output(self) -> None:
         """Initialize the CSV output file.
-        
+
         Opens the output file and creates the csv.writer instance.
         The output filename will have '.csv' appended.
-        
+
         Override this method to customize CSV dialect or write headers.
         Call super().initialize_output() first when overriding.
         """
@@ -412,33 +421,37 @@ class CSVConverter(BaseConverter):
 
     def write_header(self, headers: list[str]) -> None:
         """Write a header row to the CSV file.
-        
+
         Args:
             headers: List of column header strings.
-        
+
         Raises:
             RuntimeError: If initialize_output() has not been called.
         """
         if self.csv_file is None:
-            raise RuntimeError("CSV file not initialized. Call initialize_output() first.")
+            raise RuntimeError(
+                "CSV file not initialized. Call initialize_output() first."
+            )
         self.csv_file.writerow(headers)
 
     def write_row(self, row: list[Any]) -> None:
         """Write a data row to the CSV file.
-        
+
         Args:
             row: List of values to write. Values will be converted to strings.
-        
+
         Raises:
             RuntimeError: If initialize_output() has not been called.
         """
         if self.csv_file is None:
-            raise RuntimeError("CSV file not initialized. Call initialize_output() first.")
+            raise RuntimeError(
+                "CSV file not initialized. Call initialize_output() first."
+            )
         self.csv_file.writerow(row)
 
     def finalize_output(self) -> str:
         """Close the CSV output file and return the filename.
-        
+
         Returns:
             The path to the generated CSV file.
         """
@@ -449,15 +462,15 @@ class CSVConverter(BaseConverter):
 
 class DBEnabledConverter(CSVConverter):
     """Intermediate class for converters that need database access.
-    
+
     This class extends CSVConverter with database connectivity using
     the query_runner module. It provides lazy database connection
     initialization.
-    
+
     Attributes:
         query_object: The query_runner instance (initialized on first use).
         _db_connected: Flag indicating if database connection is established.
-    
+
     Example:
         class MyDBConverter(DBEnabledConverter):
             def process_record_a(self, record: dict) -> None:
@@ -477,7 +490,7 @@ class DBEnabledConverter(CSVConverter):
         upc_lookup: dict,
     ) -> None:
         """Initialize the DB-enabled converter.
-        
+
         Args:
             edi_process: Path to the input EDI file.
             output_filename: Base path for the output file (without extension).
@@ -486,23 +499,25 @@ class DBEnabledConverter(CSVConverter):
             parameters_dict: Dictionary containing conversion parameters.
             upc_lookup: Dictionary for UPC code lookups.
         """
-        super().__init__(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup)
+        super().__init__(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+        )
         self.query_object: Optional[query_runner] = None
         self._db_connected: bool = False
 
     def connect_db(self) -> None:
         """Establish database connection if not already connected.
-        
+
         This method implements lazy connection initialization. It is safe
         to call multiple times; subsequent calls will be no-ops if already
         connected.
-        
+
         The connection uses credentials from settings_dict:
         - as400_username: Database username
         - as400_password: Database password
         - as400_address: Database host address
         - odbc_driver: ODBC driver string
-        
+
         Raises:
             KeyError: If required database settings are missing.
             Exception: If database connection fails.
@@ -518,16 +533,16 @@ class DBEnabledConverter(CSVConverter):
 
     def run_query(self, query_string: str) -> list:
         """Execute a database query.
-        
+
         This is a convenience method that ensures the database is connected
         before executing the query.
-        
+
         Args:
             query_string: SQL query to execute.
-        
+
         Returns:
             List of query results (rows).
-        
+
         Raises:
             RuntimeError: If database connection cannot be established.
         """
@@ -541,41 +556,45 @@ class DBEnabledConverter(CSVConverter):
 # This can be used in individual converter modules to maintain compatibility
 def create_edi_convert_wrapper(converter_class):
     """Create a backward-compatible edi_convert function from a converter class.
-    
+
     Args:
         converter_class: A class inheriting from BaseConverter.
-    
+
     Returns:
         A function with the signature edi_convert(edi_process, output_filename,
         settings_dict, parameters_dict, upc_lookup) that instantiates and runs
         the converter.
-    
+
     Example:
         # In convert_to_csv.py:
         from convert_base import CSVConverter, create_edi_convert_wrapper
-        
+
         class CSVToCSVConverter(CSVConverter):
             def initialize_output(self) -> None:
                 super().initialize_output()
                 if self.parameters_dict.get('include_headers') != 'False':
                     self.write_header(['UPC', 'Qty', 'Cost'])
-            
+
             def process_record_a(self, record: dict) -> None:
                 if self.parameters_dict.get('include_a_records') != 'False':
                     self.write_row([...])
-            
+
             def process_record_b(self, record: dict) -> None:
                 self.write_row([...])
-            
+
             def process_record_c(self, record: dict) -> None:
                 if self.parameters_dict.get('include_c_records') != 'False':
                     self.write_row([...])
-        
+
         edi_convert = create_edi_convert_wrapper(CSVToCSVConverter)
     """
-    def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
+
+    def edi_convert(
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+    ):
         converter = converter_class(
             edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
         )
         return converter.convert()
+
     return edi_convert

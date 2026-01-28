@@ -11,20 +11,54 @@ from convert_base import CSVConverter, create_edi_convert_wrapper
 class EstoreEinvoiceConverter(CSVConverter):
     """Converter for eStore eInvoice CSV format with shipper mode support."""
 
+    PLUGIN_ID = "estore_einvoice"
+    PLUGIN_NAME = "Estore eInvoice"
+    PLUGIN_DESCRIPTION = (
+        "eStore eInvoice format with dynamic filename and shipper mode support"
+    )
+
+    CONFIG_FIELDS = [
+        {
+            "key": "estore_store_number",
+            "label": "Store Number",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter store number",
+            "help": "The store number for eStore eInvoice",
+        },
+        {
+            "key": "estore_Vendor_OId",
+            "label": "Vendor OId",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter vendor OId",
+            "help": "The vendor OId for eStore eInvoice",
+        },
+        {
+            "key": "estore_vendor_NameVendorOID",
+            "label": "Vendor Name/OID for Filename",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter vendor name",
+            "help": "Vendor name/OID used in output filename",
+        },
+    ]
+
     def initialize_output(self) -> None:
-        """Initialize output file with dynamic filename and CSV writer"""
         timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-        self.vendor_name = self.parameters_dict['estore_vendor_NameVendorOID']
+        self.vendor_name = self.get_config_value("estore_vendor_NameVendorOID", "")
         self.output_filename = os.path.join(
             os.path.dirname(self.output_filename),
-            f'eInv{self.vendor_name}.{timestamp}.csv'
+            f"eInv{self.vendor_name}.{timestamp}.csv",
         )
         self.output_file = open(self.output_filename, "w", newline="", encoding="utf-8")
         self.csv_file = csv.writer(
             self.output_file, dialect="excel", lineterminator="\r\n"
         )
 
-        # Initialize processing state
         self.row_dict_list: List[dict] = []
         self.shipper_mode = False
         self.shipper_parent_item = False
@@ -35,10 +69,17 @@ class EstoreEinvoiceConverter(CSVConverter):
 
     def process_record_a(self, record: dict) -> None:
         """Process A record - flush previous invoice and start new one"""
-        self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-            self.leave_shipper_mode(
-                self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-            )
+        (
+            self.shipper_mode,
+            self.row_dict_list,
+            self.shipper_line_number,
+            self.shipper_accum,
+        ) = self.leave_shipper_mode(
+            self.shipper_mode,
+            self.row_dict_list,
+            self.shipper_line_number,
+            self.shipper_accum,
+        )
 
         if len(self.invoice_accum) > 0:
             trailer_row = {
@@ -61,8 +102,8 @@ class EstoreEinvoiceConverter(CSVConverter):
 
         row_dict = {
             "Record Type": "H",
-            "Store Number": self.parameters_dict['estore_store_number'],
-            "Vendor OId": self.parameters_dict['estore_Vendor_OId'],
+            "Store Number": self.get_config_value("estore_store_number", ""),
+            "Vendor OId": self.get_config_value("estore_Vendor_OId", ""),
             "Invoice Number": record["invoice_number"],
             "Purchase Order": "",
             "Invoice Date": write_invoice_date,
@@ -104,10 +145,17 @@ class EstoreEinvoiceConverter(CSVConverter):
         }
 
         if record["parent_item_number"] == record["vendor_item"]:
-            self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-                self.leave_shipper_mode(
-                    self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-                )
+            (
+                self.shipper_mode,
+                self.row_dict_list,
+                self.shipper_line_number,
+                self.shipper_accum,
+            ) = self.leave_shipper_mode(
+                self.shipper_mode,
+                self.row_dict_list,
+                self.shipper_line_number,
+                self.shipper_accum,
+            )
             print("enter shipper mode")
             self.shipper_mode = True
             self.shipper_parent_item = True
@@ -126,10 +174,17 @@ class EstoreEinvoiceConverter(CSVConverter):
                     )
             else:
                 try:
-                    self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-                        self.leave_shipper_mode(
-                            self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-                        )
+                    (
+                        self.shipper_mode,
+                        self.row_dict_list,
+                        self.shipper_line_number,
+                        self.shipper_accum,
+                    ) = self.leave_shipper_mode(
+                        self.shipper_mode,
+                        self.row_dict_list,
+                        self.shipper_line_number,
+                        self.shipper_accum,
+                    )
                 except Exception as error:
                     print(error)
 
@@ -199,11 +254,18 @@ class EstoreEinvoiceConverter(CSVConverter):
         return shipper_mode, row_dict_list, shipper_line_number, shipper_accum
 
     def flush_write_queue(
-        self, rowlist: List[dict], invoice_total, shipper_line_number, shipper_accum, shipper_mode
+        self,
+        rowlist: List[dict],
+        invoice_total,
+        shipper_line_number,
+        shipper_accum,
+        shipper_mode,
     ):
         """Flush all buffered data to CSV file"""
-        shipper_mode, rowlist, shipper_line_number, shipper_accum = self.leave_shipper_mode(
-            shipper_mode, rowlist, shipper_line_number, shipper_accum
+        shipper_mode, rowlist, shipper_line_number, shipper_accum = (
+            self.leave_shipper_mode(
+                shipper_mode, rowlist, shipper_line_number, shipper_accum
+            )
         )
         for row in rowlist:
             self.add_row(row)

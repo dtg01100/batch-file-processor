@@ -1,6 +1,14 @@
 from datetime import datetime
 import os
-from query_runner import query_runner
+
+try:
+    from query_runner import query_runner
+
+    HAS_QUERY_RUNNER = True
+except (ImportError, RuntimeError):
+    HAS_QUERY_RUNNER = False
+    query_runner = None
+
 
 class invFetcher:
     def __init__(self, settings_dict):
@@ -61,7 +69,7 @@ class invFetcher:
     def fetch_cust_name(self, invoice_number):
         self.fetch_po(invoice_number)
         return self.custname
-    
+
     def fetch_cust_no(self, invoice_number):
         self.fetch_po(invoice_number)
         return self.custno
@@ -121,7 +129,7 @@ def dac_str_int_to_int(dacstr: str) -> int:
     if dacstr.strip() == "":
         return 0
     try:
-        if dacstr.startswith('-'):
+        if dacstr.startswith("-"):
             return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
         else:
             return int(dacstr)
@@ -130,7 +138,11 @@ def dac_str_int_to_int(dacstr: str) -> int:
 
 
 def convert_to_price(value):
-    return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
+    return (
+        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
+        + "."
+        + value[-2:]
+    )
 
 
 def dactime_from_datetime(date_time: datetime) -> str:
@@ -155,48 +167,52 @@ def dactime_from_invtime(inv_no: str):
     dactime = dactime_from_datetime(datetime_obj)
     return dactime
 
+
 def detect_invoice_is_credit(edi_process):
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         fields = capture_records(work_file.readline())
-        if fields["record_type"] != 'A':
-            raise ValueError("[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen")
+        if fields["record_type"] != "A":
+            raise ValueError(
+                "[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen"
+            )
         if dac_str_int_to_int(fields["invoice_total"]) >= 0:
             return False
         else:
             return True
 
+
 def capture_records(line):
     if line.startswith("A"):
         fields = {
-            "record_type":line[0],
-            "cust_vendor":line[1:7],
-            "invoice_number":line[7:17],
-            "invoice_date":line[17:23],
-            "invoice_total":line[23:33],
-            }
+            "record_type": line[0],
+            "cust_vendor": line[1:7],
+            "invoice_number": line[7:17],
+            "invoice_date": line[17:23],
+            "invoice_total": line[23:33],
+        }
         return fields
     elif line.startswith("B"):
         fields = {
-            "record_type":line[0],
-            "upc_number":line[1:12],
-            "description":line[12:37],
-            "vendor_item":line[37:43],
-            "unit_cost":line[43:49],
-            "combo_code":line[49:51],
-            "unit_multiplier":line[51:57],
-            "qty_of_units":line[57:62],
-            "suggested_retail_price":line[62:67],
+            "record_type": line[0],
+            "upc_number": line[1:12],
+            "description": line[12:37],
+            "vendor_item": line[37:43],
+            "unit_cost": line[43:49],
+            "combo_code": line[49:51],
+            "unit_multiplier": line[51:57],
+            "qty_of_units": line[57:62],
+            "suggested_retail_price": line[62:67],
             "price_multi_pack": line[67:70],
             "parent_item_number": line[70:76],
-            }
+        }
         return fields
     elif line.startswith("C"):
         fields = {
-            "record_type":line[0],
-            "charge_type":line[1:4],
-            "description":line[4:29],
-            "amount":line[29:38],
-            }
+            "record_type": line[0],
+            "charge_type": line[1:4],
+            "description": line[4:29],
+            "amount": line[29:38],
+        }
         return fields
     elif line.startswith(""):
         return None
@@ -261,6 +277,7 @@ def convert_UPCE_to_UPCA(upce_value):
 
 def do_split_edi(edi_process, work_directory, parameters_dict):
     """credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642"""
+
     def col_to_excel(col):  # col is 1 based
         excel_col = str()
         div = col
@@ -285,27 +302,36 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
             list_of_first_characters.append(line[0])
         if list_of_first_characters.count("A") > 700:
             return edi_send_list
-        for line_mum, line in enumerate(work_file_lined):  # iterate over work file contents
+        for line_mum, line in enumerate(
+            work_file_lined
+        ):  # iterate over work file contents
             writeable_line = line
             if writeable_line.startswith("A"):
                 count += 1
                 prepend_letters = col_to_excel(count)
                 line_dict = capture_records(writeable_line)
-                if int(line_dict['invoice_total']) < 0:
-                    file_name_suffix = '.cr'
+                if int(line_dict["invoice_total"]) < 0:
+                    file_name_suffix = ".cr"
                 else:
-                    file_name_suffix = '.inv'
+                    file_name_suffix = ".inv"
                 if len(edi_send_list) != 0:
                     f.close()
                 file_name_prefix = prepend_letters + "_"
-                if parameters_dict['prepend_date_files']:
-                    datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
+                if parameters_dict["prepend_date_files"]:
+                    datetime_from_arec = datetime.strptime(
+                        line_dict["invoice_date"], "%m%d%y"
+                    )
                     inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
                     file_name_prefix = inv_date + "_" + file_name_prefix
-                output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
-                edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
-                f = open(output_file_path, 'wb')
-            f.write(writeable_line.replace('\n', "\r\n").encode())
+                output_file_path = os.path.join(
+                    work_directory,
+                    file_name_prefix + os.path.basename(edi_process) + file_name_suffix,
+                )
+                edi_send_list.append(
+                    (output_file_path, file_name_prefix, file_name_suffix)
+                )
+                f = open(output_file_path, "wb")
+            f.write(writeable_line.replace("\n", "\r\n").encode())
             write_counter += 1
         f.close()  # close output file
         # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
@@ -327,5 +353,12 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
 
 def do_clear_old_files(folder_path, maximum_files):
     while len(os.listdir(folder_path)) > maximum_files:
-        os.remove(os.path.join(folder_path, min(os.listdir(folder_path),
-                                                key=lambda f: os.path.getctime("{}/{}".format(folder_path, f)))))
+        os.remove(
+            os.path.join(
+                folder_path,
+                min(
+                    os.listdir(folder_path),
+                    key=lambda f: os.path.getctime("{}/{}".format(folder_path, f)),
+                ),
+            )
+        )

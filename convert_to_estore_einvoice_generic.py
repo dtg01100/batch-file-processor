@@ -12,8 +12,51 @@ from convert_base import CSVConverter, create_edi_convert_wrapper
 class EstoreEinvoiceGenericConverter(CSVConverter):
     """Converter for generic eStore eInvoice CSV format with headers and C record support."""
 
+    PLUGIN_ID = "estore_einvoice_generic"
+    PLUGIN_NAME = "Estore eInvoice Generic"
+    PLUGIN_DESCRIPTION = "Generic eStore eInvoice format with database lookups for PO numbers and C record support"
+
+    CONFIG_FIELDS = [
+        {
+            "key": "estore_store_number",
+            "label": "Store Number",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter store number",
+            "help": "The store number for eStore eInvoice",
+        },
+        {
+            "key": "estore_Vendor_OId",
+            "label": "Vendor OId",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter vendor OId",
+            "help": "The vendor OId for eStore eInvoice",
+        },
+        {
+            "key": "estore_c_record_OID",
+            "label": "C Record OId",
+            "type": "string",
+            "default": "",
+            "placeholder": "Enter C record OId",
+            "help": "OId to use for C record (charge/allowance) items",
+        },
+        {
+            "key": "estore_vendor_NameVendorOID",
+            "label": "Vendor Name/OID for Filename",
+            "type": "string",
+            "default": "",
+            "required": True,
+            "placeholder": "Enter vendor name",
+            "help": "Vendor name/OID used in output filename",
+        },
+    ]
+
     class invFetcher:
         """Internal helper class for fetching invoice-related data from database."""
+
         def __init__(self, settings_dict):
             self.query_object = None
             self.settings = settings_dict
@@ -109,10 +152,10 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
     def initialize_output(self) -> None:
         """Initialize output file with dynamic filename and CSV writer"""
         timestamp = datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")
-        self.vendor_name = self.parameters_dict['estore_vendor_NameVendorOID']
+        self.vendor_name = self.get_config_value("estore_vendor_NameVendorOID", "")
         self.output_filename = os.path.join(
             os.path.dirname(self.output_filename),
-            f'eInv{self.vendor_name}.{timestamp}.csv'
+            f"eInv{self.vendor_name}.{timestamp}.csv",
         )
         self.output_file = open(self.output_filename, "w", newline="", encoding="utf-8")
         self.csv_file = csv.writer(
@@ -158,10 +201,17 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
 
     def process_record_a(self, record: dict) -> None:
         """Process A record - flush previous invoice and start new one"""
-        self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-            self.leave_shipper_mode(
-                self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-            )
+        (
+            self.shipper_mode,
+            self.row_dict_list,
+            self.shipper_line_number,
+            self.shipper_accum,
+        ) = self.leave_shipper_mode(
+            self.shipper_mode,
+            self.row_dict_list,
+            self.shipper_line_number,
+            self.shipper_accum,
+        )
 
         if len(self.invoice_accum) > 0:
             self.invoice_index += 1
@@ -178,14 +228,14 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
             write_invoice_date = "00000000"
 
         self.row_dict_header = {
-            "Store Number": self.parameters_dict['estore_store_number'],
-            "Vendor OId": self.parameters_dict['estore_Vendor_OId'],
+            "Store Number": self.get_config_value("estore_store_number", ""),
+            "Vendor OId": self.get_config_value("estore_Vendor_OId", ""),
             "Invoice Number": record["invoice_number"],
-            "Purchase Order": self.inv_fetcher.fetch_po(record['invoice_number']),
+            "Purchase Order": self.inv_fetcher.fetch_po(record["invoice_number"]),
             "Invoice Date": write_invoice_date,
             "Total Invoice Cost": utils.convert_to_price(
-                str(utils.dac_str_int_to_int(record['invoice_total']))
-            )
+                str(utils.dac_str_int_to_int(record["invoice_total"]))
+            ),
         }
 
         self.invoice_index += 1
@@ -222,10 +272,17 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
         }
 
         if record["parent_item_number"] == record["vendor_item"]:
-            self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-                self.leave_shipper_mode(
-                    self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-                )
+            (
+                self.shipper_mode,
+                self.row_dict_list,
+                self.shipper_line_number,
+                self.shipper_accum,
+            ) = self.leave_shipper_mode(
+                self.shipper_mode,
+                self.row_dict_list,
+                self.shipper_line_number,
+                self.shipper_accum,
+            )
             print("enter shipper mode")
             self.shipper_mode = True
             self.shipper_parent_item = True
@@ -244,10 +301,17 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
                     )
             else:
                 try:
-                    self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum = \
-                        self.leave_shipper_mode(
-                            self.shipper_mode, self.row_dict_list, self.shipper_line_number, self.shipper_accum
-                        )
+                    (
+                        self.shipper_mode,
+                        self.row_dict_list,
+                        self.shipper_line_number,
+                        self.shipper_accum,
+                    ) = self.leave_shipper_mode(
+                        self.shipper_mode,
+                        self.row_dict_list,
+                        self.shipper_line_number,
+                        self.shipper_accum,
+                    )
                 except Exception as error:
                     print(error)
 
@@ -259,7 +323,7 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
         """Process C record - handle charge/adjustment records"""
         row_dict = {
             "Detail Type": "S",
-            "Subcategory OId": self.parameters_dict["estore_c_record_OID"],
+            "Subcategory OId": self.get_config_value("estore_c_record_OID", ""),
             "Vendor Item": "",
             "Vendor Pack": 1,
             "Item Description": record["description"].strip(),
@@ -335,11 +399,18 @@ class EstoreEinvoiceGenericConverter(CSVConverter):
         return shipper_mode, row_dict_list, shipper_line_number, shipper_accum
 
     def flush_write_queue(
-        self, rowlist: List[dict], invoice_total, shipper_line_number, shipper_accum, shipper_mode
+        self,
+        rowlist: List[dict],
+        invoice_total,
+        shipper_line_number,
+        shipper_accum,
+        shipper_mode,
     ):
         """Flush all buffered data to CSV file"""
-        shipper_mode, rowlist, shipper_line_number, shipper_accum = self.leave_shipper_mode(
-            shipper_mode, rowlist, shipper_line_number, shipper_accum
+        shipper_mode, rowlist, shipper_line_number, shipper_accum = (
+            self.leave_shipper_mode(
+                shipper_mode, rowlist, shipper_line_number, shipper_accum
+            )
         )
         for row in rowlist:
             self.add_row(row)

@@ -3,12 +3,12 @@ import os
 import tempfile
 
 import barcode
-import ImageOps as pil_ImageOps
 import openpyxl
 import openpyxl.utils
 from barcode.writer import ImageWriter
 from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
+from PIL import ImageOps as pil_ImageOps
 
 import utils
 from convert_base import BaseConverter, create_edi_convert_wrapper
@@ -17,6 +17,14 @@ from query_runner import query_runner
 
 class ScansheetTypeAConverter(BaseConverter):
     """Converter for generating Scansheet Type A Excel files with embedded barcodes."""
+
+    PLUGIN_ID = "scansheet_type_a"
+    PLUGIN_NAME = "Scansheet Type A"
+    PLUGIN_DESCRIPTION = (
+        "Converter for generating Scansheet Type A Excel files with embedded barcodes"
+    )
+
+    CONFIG_FIELDS = []
 
     def initialize_output(self) -> None:
         """Initialize Excel workbook and extract invoice list from EDI file."""
@@ -29,7 +37,9 @@ class ScansheetTypeAConverter(BaseConverter):
                 if input_edi_dict is not None:
                     try:
                         if input_edi_dict["record_type"] == "A":
-                            self.invoice_list.append(input_edi_dict["invoice_number"][-7:])
+                            self.invoice_list.append(
+                                input_edi_dict["invoice_number"][-7:]
+                            )
                     except TypeError:
                         pass
         print(self.invoice_list)
@@ -82,7 +92,7 @@ class ScansheetTypeAConverter(BaseConverter):
                 rows_for_export.append(trow)
                 print(trow)
 
-            self.output_worksheet.append(['', invoice])
+            self.output_worksheet.append(["", invoice])
             self.invoice_row_counter += 1
             self.invoice_rows.append(self.invoice_row_counter)
             for items_list_entry in rows_for_export:
@@ -126,23 +136,29 @@ class ScansheetTypeAConverter(BaseConverter):
         """Generate UPC-A barcode image with specified dimensions"""
         ean = barcode.get_barcode_class("UPCA")
         options = {
-            'dpi': 130,
-            'module_height': 5.0,
-            'text_distance': 2,
-            'font_size': 6,
-            'quiet_zone': 2
+            "dpi": 130,
+            "module_height": 5.0,
+            "text_distance": 2,
+            "font_size": 6,
+            "quiet_zone": 2,
         }
 
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as initial_temp_file:
-            ean(input_string, writer=ImageWriter()).write(initial_temp_file, options=options)
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as initial_temp_file:
+            ean(input_string, writer=ImageWriter()).write(
+                initial_temp_file, options=options
+            )
             filename = initial_temp_file.name
         print(f"success, barcode image path is: {filename}")
 
         barcode_image = pil_Image.open(str(filename))
-        img_save = pil_ImageOps.expand(barcode_image, border=0, fill='white')
+        img_save = pil_ImageOps.expand(barcode_image, border=0, fill="white")
         width, height = img_save.size
 
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as final_barcode_path:
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as final_barcode_path:
             img_save.save(final_barcode_path.name)
             print(f"success, final barcode path is: {final_barcode_path.name}")
 
@@ -150,16 +166,16 @@ class ScansheetTypeAConverter(BaseConverter):
 
     def interpret_barcode_string(self, upc_barcode_string):
         """Convert input string to valid UPC-A format"""
-        if not upc_barcode_string == '':
+        if not upc_barcode_string == "":
             try:
                 _ = int(upc_barcode_string)
             except ValueError:
                 raise ValueError("Input contents are not an integer")
 
             if len(upc_barcode_string) < 10:
-                upc_barcode_string = upc_barcode_string.rjust(11, '0')
+                upc_barcode_string = upc_barcode_string.rjust(11, "0")
             if len(upc_barcode_string) <= 11:
-                upc_barcode_string = upc_barcode_string.ljust(12, '0')
+                upc_barcode_string = upc_barcode_string.ljust(12, "0")
             else:
                 raise ValueError("Input contents are more than 11 characters")
         else:
@@ -178,18 +194,28 @@ class ScansheetTypeAConverter(BaseConverter):
                 try:
                     count += 1
                     if count not in self.invoice_rows:
-                        upc_barcode_string = str(self.output_worksheet["B" + str(count)].value)
+                        upc_barcode_string = str(
+                            self.output_worksheet["B" + str(count)].value
+                        )
                         print(f"cell contents are: {upc_barcode_string}")
                         print(upc_barcode_string[-12:][:-1])
-                        upc_barcode_string = self.interpret_barcode_string(upc_barcode_string[-12:][:-1])
+                        upc_barcode_string = self.interpret_barcode_string(
+                            upc_barcode_string[-12:][:-1]
+                        )
                         print(upc_barcode_string)
-                        generated_barcode_path, width, height = self.generate_barcode(upc_barcode_string, tempdir)
+                        generated_barcode_path, width, height = self.generate_barcode(
+                            upc_barcode_string, tempdir
+                        )
 
-                        self.output_worksheet.column_dimensions['A'].width = int(math.ceil(float(width) * .15))
-                        self.output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
+                        self.output_worksheet.column_dimensions["A"].width = int(
+                            math.ceil(float(width) * 0.15)
+                        )
+                        self.output_worksheet.row_dimensions[count].height = int(
+                            math.ceil(float(height) * 0.75)
+                        )
 
                         img = OpenPyXlImage(generated_barcode_path)
-                        self.output_worksheet.add_image(img, anchor='A' + str(count))
+                        self.output_worksheet.add_image(img, anchor="A" + str(count))
                         save_counter += 1
                         print("success")
                 except Exception as barcode_error:

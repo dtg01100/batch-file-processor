@@ -9,6 +9,14 @@ from convert_base import CSVConverter, create_edi_convert_wrapper
 class YellowdogConverter(CSVConverter):
     """Converter for Yellowdog CSV format with deferred writing and DB lookups."""
 
+    PLUGIN_ID = "yellowdog_csv"
+    PLUGIN_NAME = "Yellowdog CSV"
+    PLUGIN_DESCRIPTION = (
+        "Converter for Yellowdog CSV format with deferred writing and database lookups"
+    )
+
+    CONFIG_FIELDS = []
+
     def initialize_output(self) -> None:
         """Initialize Yellowdog writer with CSV file and headers."""
         super().initialize_output()
@@ -33,6 +41,7 @@ class YellowdogConverter(CSVConverter):
 
     class YDogWriter:
         """Internal helper class for deferred writing of Yellowdog CSV records"""
+
         def __init__(self, csv_writer, settings_dict) -> None:
             self.inv_fetcher = utils.invFetcher(settings_dict)
             self.arec_line: Dict = {}
@@ -65,17 +74,23 @@ class YellowdogConverter(CSVConverter):
             self.crec_lines.reverse()
             try:
                 self.invoice_date = datetime.strftime(
-                    utils.datetime_from_invtime(self.arec_line.get('invoice_date', '000000')),
-                    "%Y%m%d"
+                    utils.datetime_from_invtime(
+                        self.arec_line.get("invoice_date", "000000")
+                    ),
+                    "%Y%m%d",
                 )
             except ValueError:
                 self.invoice_date = "N/A"
             self.invoice_total = utils.convert_to_price(
-                str(utils.dac_str_int_to_int(self.arec_line.get('invoice_total', '000000')))
+                str(
+                    utils.dac_str_int_to_int(
+                        self.arec_line.get("invoice_total", "000000")
+                    )
+                )
             )
             lineno = 0
             try:
-                invoice_number_int = int(self.arec_line.get('invoice_number', '0'))
+                invoice_number_int = int(self.arec_line.get("invoice_number", "0"))
             except ValueError:
                 invoice_number_int = 0
 
@@ -86,20 +101,24 @@ class YellowdogConverter(CSVConverter):
                         [
                             self.invoice_total,
                             curline.get("description", ""),
-                            curline.get('vendor_item', ''),
-                            utils.convert_to_price(curline.get('unit_cost', '000000')),
-                            utils.dac_str_int_to_int(curline.get('qty_of_units', '0')),
+                            curline.get("vendor_item", ""),
+                            utils.convert_to_price(curline.get("unit_cost", "000000")),
+                            utils.dac_str_int_to_int(curline.get("qty_of_units", "0")),
                             self.inv_fetcher.fetch_uom_desc(
-                                curline.get('vendor_item', ''),
-                                curline.get('unit_multiplier', '1'),
+                                curline.get("vendor_item", ""),
+                                curline.get("unit_multiplier", "1"),
                                 lineno,
-                                invoice_number_int
+                                invoice_number_int,
                             ),
                             self.invoice_date,
-                            self.arec_line.get('invoice_number', '0'),
-                            self.inv_fetcher.fetch_cust_name(self.arec_line.get('invoice_number', '0')),
-                            self.inv_fetcher.fetch_po(self.arec_line.get('invoice_number', '0')),
-                            curline.get('upc_number', '')
+                            self.arec_line.get("invoice_number", "0"),
+                            self.inv_fetcher.fetch_cust_name(
+                                self.arec_line.get("invoice_number", "0")
+                            ),
+                            self.inv_fetcher.fetch_po(
+                                self.arec_line.get("invoice_number", "0")
+                            ),
+                            curline.get("upc_number", ""),
                         ]
                     )
                     lineno += 1
@@ -110,17 +129,23 @@ class YellowdogConverter(CSVConverter):
                     self.output_csv_writer.writerow(
                         [
                             utils.convert_to_price(
-                                str(utils.dac_str_int_to_int(self.arec_line.get('invoice_total', '0')))
+                                str(
+                                    utils.dac_str_int_to_int(
+                                        self.arec_line.get("invoice_total", "0")
+                                    )
+                                )
                             ),
                             curline.get("description", ""),
                             9999999,
-                            utils.convert_to_price(curline.get('amount', '000000')),
+                            utils.convert_to_price(curline.get("amount", "000000")),
                             1,
-                            '',
+                            "",
                             self.invoice_date,
-                            self.arec_line.get('invoice_number', '0'),
-                            self.inv_fetcher.fetch_cust_name(self.arec_line.get('invoice_number', '0')),
-                            ""
+                            self.arec_line.get("invoice_number", "0"),
+                            self.inv_fetcher.fetch_cust_name(
+                                self.arec_line.get("invoice_number", "0")
+                            ),
+                            "",
                         ]
                     )
 

@@ -1,0 +1,9 @@
+[project]
+name = "batch-file-processor"
+version = "1.0.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "PyQt6>=6.7.0,<6.10",
+    "pytest>=8.0.0",
+    "pytest-qt>=4.4.0",
+]
