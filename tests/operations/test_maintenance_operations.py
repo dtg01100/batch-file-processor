@@ -2,13 +2,13 @@
 Tests for MaintenanceOperations
 """
 
-import pytest
-import sys
-import os
-import hashlib
 import datetime
-from unittest.mock import Mock, MagicMock, patch, mock_open
+import os
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock, Mock, mock_open, patch
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -283,3 +283,191 @@ class TestMaintenanceOperationsCounts:
 
         assert count == 3
         mock_db_manager.processed_files.count.assert_called_once_with(resend_flag=True)
+
+
+class TestMaintenanceOperationsEdgeCases:
+    """Edge case tests for MaintenanceOperations."""
+
+    def test_mark_all_as_processed_folder_not_found(self, mock_db_manager):
+        """Test mark_all_as_processed when folder not found."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.find_one.return_value = None
+
+        with patch("os.chdir"), patch("os.getcwd", return_value="/test"):
+            ops = MaintenanceOperations(mock_db_manager)
+            count = ops.mark_all_as_processed(folder_id=999)
+
+        assert count == 0
+
+    def test_mark_all_as_processed_no_folders_active(self, mock_db_manager):
+        """Test mark_all_as_processed when no active folders."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.find.return_value = []
+
+        with patch("os.chdir"), patch("os.getcwd", return_value="/test"):
+            ops = MaintenanceOperations(mock_db_manager)
+            count = ops.mark_all_as_processed()
+
+        assert count == 0
+
+    def test_remove_inactive_folders_empty(self, mock_db_manager):
+        """Test remove_inactive_folders when no inactive folders."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.find.return_value = []
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.remove_inactive_folders()
+
+        assert count == 0
+        mock_db_manager.folders_table.delete.assert_not_called()
+
+    def test_set_all_active_no_change(self, mock_db_manager):
+        """Test set_all_active when all folders already active."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.count.side_effect = [5, 5]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.set_all_active()
+
+        assert count == 0
+
+    def test_set_all_inactive_no_change(self, mock_db_manager):
+        """Test set_all_inactive when all folders already inactive."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.count.side_effect = [5, 5]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.set_all_inactive()
+
+        assert count == 0
+
+    def test_clear_resend_flags_none_to_clear(self, mock_db_manager):
+        """Test clear_resend_flags when no flags set."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.processed_files.count.side_effect = [0, 0]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.clear_resend_flags()
+
+        assert count == 0
+
+    def test_clear_emails_queue_empty(self, mock_db_manager):
+        """Test clear_emails_queue when queue is empty."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.emails_table.count.return_value = 0
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.clear_emails_queue()
+
+        assert count == 0
+        mock_db_manager.emails_table.delete.assert_called_once()
+
+
+class TestMaintenanceOperationsResend:
+    """Tests for resend functionality."""
+
+    def test_resend_failed_files_none_failed(self, mock_db_manager):
+        """Test resend_failed_files when no failed files."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.processed_files.find.return_value = []
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.resend_failed_files()
+
+        assert count == 0
+
+    def test_resend_failed_files_multiple(self, mock_db_manager):
+        """Test resend_failed_files with multiple failed files."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.processed_files.find.return_value = [
+            {"id": 1, "file_name": "file1.txt"},
+            {"id": 2, "file_name": "file2.txt"},
+            {"id": 3, "file_name": "file3.txt"},
+        ]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.resend_failed_files()
+
+        assert count == 3
+        assert mock_db_manager.processed_files.update.call_count == 3
+
+
+class TestMaintenanceOperationsClearProcessedFiles:
+    """Tests for clear_processed_files functionality."""
+
+    def test_clear_processed_files_with_days(self, mock_db_manager):
+        """Test clear_processed_files with days parameter."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        old_date = datetime.datetime.now() - datetime.timedelta(days=10)
+        new_date = datetime.datetime.now() - datetime.timedelta(days=1)
+
+        mock_db_manager.processed_files.all.return_value = [
+            {"id": 1, "sent_date_time": old_date},
+            {"id": 2, "sent_date_time": old_date},
+            {"id": 3, "sent_date_time": new_date},
+        ]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.clear_processed_files(days=7)
+
+        assert count == 2
+        mock_db_manager.processed_files.delete.assert_any_call(id=1)
+        mock_db_manager.processed_files.delete.assert_any_call(id=2)
+
+    def test_clear_processed_files_all_records(self, mock_db_manager):
+        """Test clear_processed_files with no days (clear all)."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.processed_files.count.return_value = 50
+
+        ops = MaintenanceOperations(mock_db_manager)
+        count = ops.clear_processed_files()
+
+        assert count == 50
+        mock_db_manager.processed_files.delete.assert_called_once()
+
+
+class TestMaintenanceOperationsIntegrationStyle:
+    """Integration-style tests for MaintenanceOperations."""
+
+    def test_multiple_operations_sequence(self, mock_db_manager):
+        """Test running multiple operations in sequence."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.folders_table.count.side_effect = [
+            5,
+            10,  # set_all_active: 5 active, 10 after
+            0,
+            5,  # set_all_inactive: 0 inactive, 5 after
+        ]
+
+        ops = MaintenanceOperations(mock_db_manager)
+        activated = ops.set_all_active()
+        deactivated = ops.set_all_inactive()
+
+        assert activated == 5
+        assert deactivated == 5
+
+    def test_clear_operations_sequence(self, mock_db_manager):
+        """Test clear operations in sequence."""
+        from interface.operations.maintenance import MaintenanceOperations
+
+        mock_db_manager.processed_files.count.side_effect = [10, 0]
+        mock_db_manager.emails_table.count.return_value = 5
+
+        ops = MaintenanceOperations(mock_db_manager)
+        flags_cleared = ops.clear_resend_flags()
+        emails_cleared = ops.clear_emails_queue()
+
+        assert flags_cleared == 10
+        assert emails_cleared == 5

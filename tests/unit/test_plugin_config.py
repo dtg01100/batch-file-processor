@@ -404,5 +404,63 @@ class TestPluginConfigMixin(unittest.TestCase):
         assert len(errors) == 0
 
 
+class TestActualPlugins(unittest.TestCase):
+    """Test actual plugin implementations."""
+
+    def test_csv_converter_has_config(self):
+        """CSV converter has proper config."""
+        from convert_to_csv import CsvConverter
+
+        self.assertEqual(CsvConverter.PLUGIN_ID, "csv")
+        self.assertGreater(len(CsvConverter.CONFIG_FIELDS), 0)
+
+        fields = CsvConverter.get_config_fields()
+        field_keys = [f.key for f in fields]
+        self.assertIn("include_headers", field_keys)
+        self.assertIn("calculate_upc_check_digit", field_keys)
+
+    def test_fintech_converter_has_config(self):
+        """Fintech converter has proper config."""
+        from convert_to_fintech import FintechConverter
+
+        self.assertEqual(FintechConverter.PLUGIN_ID, "fintech")
+        self.assertGreater(len(FintechConverter.CONFIG_FIELDS), 0)
+
+        fields = FintechConverter.get_config_fields()
+        self.assertEqual(fields[0].key, "fintech_division_id")
+        self.assertTrue(fields[0].required)
+
+    def test_copy_backend_has_config(self):
+        """Copy backend has proper config."""
+        from copy_backend import CopySendBackend
+
+        self.assertEqual(CopySendBackend.PLUGIN_ID, "copy")
+        self.assertGreater(len(CopySendBackend.CONFIG_FIELDS), 0)
+
+        fields = CopySendBackend.get_config_fields()
+        self.assertEqual(fields[0].key, "copy_to_directory")
+
+    def test_ftp_backend_has_config(self):
+        """FTP backend has proper config."""
+        from ftp_backend import FTPSendBackend
+
+        self.assertEqual(FTPSendBackend.PLUGIN_ID, "ftp")
+        fields = FTPSendBackend.get_config_fields()
+        field_keys = [f.key for f in fields]
+        self.assertIn("ftp_server", field_keys)
+        self.assertIn("ftp_port", field_keys)
+        self.assertIn("ftp_username", field_keys)
+
+    def test_email_backend_has_config(self):
+        """Email backend has proper config."""
+        from email_backend import EmailSendBackend
+
+        self.assertEqual(EmailSendBackend.PLUGIN_ID, "email")
+        fields = EmailSendBackend.get_config_fields()
+        field_keys = [f.key for f in fields]
+        self.assertIn("email_to", field_keys)
+        self.assertIn("email_subject_line", field_keys)
+
+
 if __name__ == "__main__":
     unittest.main()
