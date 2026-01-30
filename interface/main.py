@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 # Add project root to sys.path so we can import interface modules
 project_root = Path(__file__).resolve().parent.parent
@@ -80,8 +80,11 @@ def setup_database(db_manager) -> None:
     """
     from interface.ui.app import Application
 
-    app = Application.instance()
-    if app:
+    instance = Application.instance()
+    if instance is not None and isinstance(instance, Application):
+        # Cast required because QApplication.instance() returns QCoreApplication | None
+        # and isinstance check doesn't narrow to our Application subclass properly
+        app = cast(Application, instance)
         app.database_manager = db_manager
 
 
@@ -102,20 +105,37 @@ def run_automatic_mode(db_manager, args, version: str) -> int:
     return 0
 
 
-def run_gui_mode(db_manager, version: str, running_platform: str) -> None:
+def run_gui_mode(
+    config_folder: str,
+    database_path: str,
+    args: argparse.Namespace,
+    version: str,
+    running_platform: str,
+) -> None:
     """Run the application in GUI mode.
 
     Args:
-        db_manager: Database manager instance.
+        config_folder: Configuration directory path.
+        database_path: Path to the database file.
+        args: Parsed command-line arguments.
         version: Application version string.
         running_platform: Current operating system platform.
     """
-    # Get database path and command-line args
-    config_folder, database_path = get_database_path()
-    args = parse_arguments()
-
-    # Create and configure application
+    # Create and configure application FIRST
+    # QSqlDatabase requires QCoreApplication to exist
     app = create_application(sys.argv)
+
+    # Import database manager here to avoid circular imports
+    from interface.database.database_manager import DatabaseManager
+
+    # Initialize database AFTER QApplication exists
+    db_manager = DatabaseManager(
+        database_path=database_path,
+        config_folder=config_folder,
+        platform=running_platform,
+        app_version=version,
+        database_version=DATABASE_VERSION,
+    )
 
     # Set database manager
     setup_database(db_manager)
@@ -139,7 +159,12 @@ def run_gui_mode(db_manager, version: str, running_platform: str) -> None:
     main_window.show()
 
     # Run application event loop
-    sys.exit(app.exec())
+    exit_code = app.exec()
+
+    # Cleanup
+    db_manager.close()
+
+    sys.exit(exit_code)
 
 
 def main() -> Optional[int]:
@@ -148,42 +173,33 @@ def main() -> Optional[int]:
     Returns:
         Exit code (0 for success, None for normal exit).
     """
-    # Support for frozen executables (e.g., PyInstaller)
     multiprocessing.freeze_support()
 
     print(f"{APPNAME} Version {VERSION}")
     running_platform = platform.system()
     print(f"Running on {running_platform}")
 
-    # Parse command-line arguments
     args = parse_arguments()
 
-    # Setup database path
     config_folder, database_path = get_database_path()
     ensure_config_directory(config_folder)
 
-    # Import database manager here to avoid circular imports
-    from interface.database.database_manager import DatabaseManager
-
-    # Initialize database
-    db_manager = DatabaseManager(
-        database_path=database_path,
-        config_folder=config_folder,
-        platform=running_platform,
-        app_version=VERSION,
-        database_version=DATABASE_VERSION,
-    )
-
-    # Run in automatic mode if requested
     if args.automatic:
+        # Automatic mode: no Qt GUI, create DatabaseManager directly
+        from interface.database.database_manager import DatabaseManager
+
+        db_manager = DatabaseManager(
+            database_path=database_path,
+            config_folder=config_folder,
+            platform=running_platform,
+            app_version=VERSION,
+            database_version=DATABASE_VERSION,
+        )
         exit_code = run_automatic_mode(db_manager, args, VERSION)
         return exit_code
 
-    # Run in GUI mode
-    run_gui_mode(db_manager, VERSION, running_platform)
-
-    # Cleanup
-    db_manager.close()
+    # GUI mode: QApplication must exist before DatabaseManager (QSqlDatabase requirement)
+    run_gui_mode(config_folder, database_path, args, VERSION, running_platform)
 
     return None
 

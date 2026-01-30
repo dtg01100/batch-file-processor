@@ -107,10 +107,15 @@ class ApplicationController:
     def _handle_add_folder(self) -> None:
         """Handle add folder request."""
         # Get prior folder from settings
-        prior_folder = self._db_manager.oversight_and_defaults.find_one(id=1)
-        initial_dir = prior_folder.get(
-            "single_add_folder_prior", os.path.expanduser("~")
-        )
+        if self._db_manager.oversight_and_defaults is None:
+            initial_dir = os.path.expanduser("~")
+        else:
+            prior_folder = self._db_manager.oversight_and_defaults.find_one(id=1)
+            initial_dir = (
+                prior_folder.get("single_add_folder_prior", os.path.expanduser("~"))
+                if prior_folder
+                else os.path.expanduser("~")
+            )
 
         if not os.path.exists(initial_dir):
             initial_dir = os.path.expanduser("~")
@@ -124,9 +129,10 @@ class ApplicationController:
             return
 
         # Update prior folder setting
-        self._db_manager.oversight_and_defaults.update(
-            {"id": 1, "single_add_folder_prior": folder_path}, ["id"]
-        )
+        if self._db_manager.oversight_and_defaults is not None:
+            self._db_manager.oversight_and_defaults.update(
+                {"id": 1, "single_add_folder_prior": folder_path}, ["id"]
+            )
 
         # Check if folder already exists
         existing = self._folder_ops.check_folder_exists(folder_path)
@@ -165,10 +171,15 @@ class ApplicationController:
     def _handle_batch_add_folders(self) -> None:
         """Handle batch add folders request."""
         # Get prior folder from settings
-        prior_folder = self._db_manager.oversight_and_defaults.find_one(id=1)
-        initial_dir = prior_folder.get(
-            "batch_add_folder_prior", os.path.expanduser("~")
-        )
+        if self._db_manager.oversight_and_defaults is None:
+            initial_dir = os.path.expanduser("~")
+        else:
+            prior_folder = self._db_manager.oversight_and_defaults.find_one(id=1)
+            initial_dir = (
+                prior_folder.get("batch_add_folder_prior", os.path.expanduser("~"))
+                if prior_folder
+                else os.path.expanduser("~")
+            )
 
         if not os.path.exists(initial_dir):
             initial_dir = os.path.expanduser("~")
@@ -182,9 +193,10 @@ class ApplicationController:
             return
 
         # Update prior folder setting
-        self._db_manager.oversight_and_defaults.update(
-            {"id": 1, "batch_add_folder_prior": parent_folder}, ["id"]
-        )
+        if self._db_manager.oversight_and_defaults is not None:
+            self._db_manager.oversight_and_defaults.update(
+                {"id": 1, "batch_add_folder_prior": parent_folder}, ["id"]
+            )
 
         # Get subdirectories
         folders_to_add = [
@@ -257,7 +269,9 @@ class ApplicationController:
         """Handle edit settings request."""
         from interface.ui.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        settings = self._db_manager.oversight_and_defaults.find_one(id=1)
+        settings = None
+        if self._db_manager.oversight_and_defaults is not None:
+            settings = self._db_manager.oversight_and_defaults.find_one(id=1)
         dialog = EditSettingsDialog(
             parent=self._main_window, oversight=settings, db_manager=self._db_manager
         )
@@ -293,6 +307,9 @@ class ApplicationController:
 
     def _handle_send_single(self, folder_id: int) -> None:
         """Handle send single folder request."""
+        if self._db_manager.session_database is None:
+            return
+
         # Create temporary session database with single folder
         try:
             single_table = self._db_manager.session_database["single_table"]

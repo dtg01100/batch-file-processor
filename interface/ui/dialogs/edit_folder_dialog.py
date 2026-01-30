@@ -65,9 +65,9 @@ class EditFolderDialog(QDialog):
 
     def __init__(
         self,
-        parent: QWidget = None,
+        parent: Optional[QWidget] = None,
         folder_data: Optional[Dict[str, Any]] = None,
-        db_manager: "DatabaseManager" = None,
+        db_manager: Optional["DatabaseManager"] = None,
         settings: Optional[Dict[str, Any]] = None,
     ):
         """

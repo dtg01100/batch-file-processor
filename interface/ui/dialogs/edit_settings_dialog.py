@@ -43,10 +43,10 @@ class EditSettingsDialog(QDialog):
 
     def __init__(
         self,
-        parent: QWidget = None,
+        parent: Optional[QWidget] = None,
         settings: Optional[Dict[str, Any]] = None,
         oversight: Optional[Dict[str, Any]] = None,
-        db_manager: "DatabaseManager" = None,
+        db_manager: Optional["DatabaseManager"] = None,
     ):
         """
         Initialize the edit settings dialog.
@@ -324,9 +324,12 @@ class EditSettingsDialog(QDialog):
 
         # Save to database
         if self.db_manager:
-            if self.settings.get("id"):
+            if self.settings.get("id") and self.db_manager.settings is not None:
                 self.db_manager.settings.update(self.settings, ["id"])
-            if self.oversight.get("id"):
+            if (
+                self.oversight.get("id")
+                and self.db_manager.oversight_and_defaults is not None
+            ):
                 self.db_manager.oversight_and_defaults.update(self.oversight, ["id"])
 
     def get_settings(self) -> Dict[str, Any]:

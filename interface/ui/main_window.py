@@ -33,8 +33,8 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         db_manager: "DatabaseManager",
-        app: "Application" = None,
-        parent: QWidget = None,
+        app: Optional["Application"] = None,
+        parent: Optional[QWidget] = None,
     ):
         """
         Initialize the main window.
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         return self._db_manager
 
     @property
-    def app(self) -> "Application":
+    def app(self) -> Optional["Application"]:
         """Get the application instance."""
         return self._app
 
@@ -151,7 +151,9 @@ class MainWindow(QMainWindow):
 
 
 def create_main_window(
-    db_manager: "DatabaseManager", app: "Application" = None, parent: QWidget = None
+    db_manager: "DatabaseManager",
+    app: Optional["Application"] = None,
+    parent: Optional[QWidget] = None,
 ) -> MainWindow:
     """
     Create the main window.

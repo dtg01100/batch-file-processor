@@ -51,7 +51,7 @@ class FolderListWidget(QWidget):
     def __init__(
         self,
         db_manager: "DatabaseManager",
-        parent: QWidget = None,
+        parent: Optional[QWidget] = None,
         on_edit_folder: Optional[Callable[[int], None]] = None,
         on_toggle_active: Optional[Callable[[int], None]] = None,
         on_delete_folder: Optional[Callable[[int], None]] = None,
@@ -155,12 +155,15 @@ class FolderListWidget(QWidget):
         # Set initial splitter sizes
         splitter.setSizes([400, 400])
 
-    def _load_folders(self) -> tuple:
+    def _load_folders(self) -> tuple[List[Dict], List[Dict], List[Dict]]:
         """Load folders from database.
 
         Returns:
             Tuple of (all_folders, active_folders, inactive_folders).
         """
+        if self._db_manager.folders_table is None:
+            return [], [], []
+
         all_folders = list(self._db_manager.folders_table.find(order_by="alias"))
         active_folders = []
         inactive_folders = []
@@ -224,8 +227,7 @@ class FolderListWidget(QWidget):
             # Sort by score (descending)
             fuzzy_results.sort(key=itemgetter(1), reverse=True)
 
-            # Get matching aliases
-            matching_aliases = [alias for alias, _ in fuzzy_results]
+            matching_aliases = [result[0] for result in fuzzy_results]
 
             def filter_by_alias(folders: List[Dict], aliases: List[str]) -> List[Dict]:
                 """Filter folders by alias list."""
@@ -344,7 +346,9 @@ class FolderListWidget(QWidget):
 
     def _on_delete_folder_clicked(self, folder_id: int) -> None:
         """Handle delete folder button click."""
-        # Find folder alias
+        if self._db_manager.folders_table is None:
+            return
+
         folder = self._db_manager.folders_table.find_one(id=folder_id)
         if folder:
             alias = folder.get("alias", "Unknown")

@@ -144,6 +144,12 @@ class Table:
         if not query.exec():
             raise RuntimeError(f"Delete failed: {query.lastError().text()}")
 
+    def drop(self) -> None:
+        """Drop the table from the database."""
+        query = QSqlQuery(self.db)
+        if not query.exec(f'DROP TABLE IF EXISTS "{self.table_name}"'):
+            raise RuntimeError(f"Drop table failed: {query.lastError().text()}")
+
     def count(self, **kwargs) -> int:
         """Count rows matching conditions."""
         where_clause, where_values = self._dict_to_where(**kwargs)

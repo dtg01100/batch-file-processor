@@ -53,24 +53,34 @@ class PluginUIGenerator:
 
         elif field.type == "integer":
             widget = QSpinBox(parent)
-            widget.setValue(field.default if isinstance(field.default, int) else 0)
-            if field.min_value is not None:
-                widget.setMinimum(int(field.min_value))
-            if field.max_value is not None:
-                widget.setMaximum(int(field.max_value))
+            default_val = field.default if isinstance(field.default, int) else 0
+            min_val = int(field.min_value) if field.min_value is not None else 0
+            max_val = (
+                int(field.max_value)
+                if field.max_value is not None
+                else max(99, default_val)
+            )
+            widget.setMinimum(min_val)
+            widget.setMaximum(max_val)
+            widget.setValue(default_val)
             if field.help:
                 widget.setToolTip(field.help)
             return widget, lambda: widget.value()
 
         elif field.type == "float":
             widget = QDoubleSpinBox(parent)
-            widget.setValue(
+            default_val = (
                 field.default if isinstance(field.default, (int, float)) else 0.0
             )
-            if field.min_value is not None:
-                widget.setMinimum(float(field.min_value))
-            if field.max_value is not None:
-                widget.setMaximum(float(field.max_value))
+            min_val = float(field.min_value) if field.min_value is not None else 0.0
+            max_val = (
+                float(field.max_value)
+                if field.max_value is not None
+                else max(99.0, default_val)
+            )
+            widget.setMinimum(min_val)
+            widget.setMaximum(max_val)
+            widget.setValue(default_val)
             if field.help:
                 widget.setToolTip(field.help)
             return widget, lambda: widget.value()
