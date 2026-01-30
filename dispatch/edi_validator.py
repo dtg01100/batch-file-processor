@@ -40,18 +40,22 @@ class EDIValidator:
                 mtc_edi_validator.report_edi_issues(input_file, parser)
             )
 
+            # Get the error message before potentially closing the output
+            error_message_content = edi_validator_output.getvalue()
+
             if minor_edi_errors or (
                 edi_validator_error_status and True
             ):  # reporting['report_edi_errors']
                 self.errors.write("\r\nErrors for " + file_name + ":\r\n")
-                self.errors.write(edi_validator_output.getvalue())
-                edi_validator_output.close()
+                self.errors.write(error_message_content)
                 self.has_errors = True
+
+            edi_validator_output.close()
 
             return ValidationResult(
                 has_errors=edi_validator_error_status,
-                error_message=edi_validator_output.getvalue()
-                if edi_validator_error_status
+                error_message=error_message_content
+                if edi_validator_error_status or minor_edi_errors
                 else "",
                 has_minor_errors=minor_edi_errors,
             )
