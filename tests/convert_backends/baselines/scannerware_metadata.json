@@ -1,0 +1,284 @@
+{
+  "baselines": {
+    "basic_edi_99914b93": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.181769",
+      "source": "master"
+    },
+    "complex_edi_99914b93": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.182638",
+      "source": "master"
+    },
+    "edge_cases_edi_99914b93": {
+      "edi_file": "edge_cases_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.183873",
+      "source": "master"
+    },
+    "empty_edi_99914b93": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.185512",
+      "source": "master"
+    },
+    "fintech_edi_99914b93": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.186862",
+      "source": "master"
+    },
+    "malformed_edi_99914b93": {
+      "edi_file": "malformed_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.188351",
+      "source": "master"
+    },
+    "basic_edi_96b7ebb2": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.189823",
+      "source": "master"
+    },
+    "complex_edi_96b7ebb2": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.192198",
+      "source": "master"
+    },
+    "edge_cases_edi_96b7ebb2": {
+      "edi_file": "edge_cases_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.193932",
+      "source": "master"
+    },
+    "empty_edi_96b7ebb2": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.195482",
+      "source": "master"
+    },
+    "fintech_edi_96b7ebb2": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.198693",
+      "source": "master"
+    },
+    "malformed_edi_96b7ebb2": {
+      "edi_file": "malformed_edi.txt",
+      "settings_name": "with_padding",
+      "settings": {
+        "pad_a_records": "True",
+        "a_record_padding": "999999"
+      },
+      "settings_hash": "96b7ebb2",
+      "captured_at": "2026-01-29T14:31:31.201130",
+      "source": "master"
+    },
+    "basic_edi_b5db8475": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.202895",
+      "source": "master"
+    },
+    "complex_edi_b5db8475": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.204751",
+      "source": "master"
+    },
+    "edge_cases_edi_b5db8475": {
+      "edi_file": "edge_cases_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.206673",
+      "source": "master"
+    },
+    "empty_edi_b5db8475": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.210114",
+      "source": "master"
+    },
+    "fintech_edi_b5db8475": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.214438",
+      "source": "master"
+    },
+    "malformed_edi_b5db8475": {
+      "edi_file": "malformed_edi.txt",
+      "settings_name": "with_append",
+      "settings": {
+        "append_a_records": "True",
+        "a_record_append_text": "TEST"
+      },
+      "settings_hash": "b5db8475",
+      "captured_at": "2026-01-29T14:31:31.217738",
+      "source": "master"
+    },
+    "basic_edi_cdeb5c34": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_date_offset",
+      "settings": {
+        "invoice_date_offset": 5
+      },
+      "settings_hash": "cdeb5c34",
+      "captured_at": "2026-01-29T14:31:31.226596",
+      "source": "master"
+    },
+    "empty_edi_cdeb5c34": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_date_offset",
+      "settings": {
+        "invoice_date_offset": 5
+      },
+      "settings_hash": "cdeb5c34",
+      "captured_at": "2026-01-29T14:31:31.232433",
+      "source": "master"
+    },
+    "fintech_edi_cdeb5c34": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_date_offset",
+      "settings": {
+        "invoice_date_offset": 5
+      },
+      "settings_hash": "cdeb5c34",
+      "captured_at": "2026-01-29T14:31:31.236666",
+      "source": "master"
+    },
+    "malformed_edi_cdeb5c34": {
+      "edi_file": "malformed_edi.txt",
+      "settings_name": "with_date_offset",
+      "settings": {
+        "invoice_date_offset": 5
+      },
+      "settings_hash": "cdeb5c34",
+      "captured_at": "2026-01-29T14:31:31.242265",
+      "source": "master"
+    },
+    "basic_edi_4a1915e8": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.245817",
+      "source": "master"
+    },
+    "complex_edi_4a1915e8": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.250096",
+      "source": "master"
+    },
+    "edge_cases_edi_4a1915e8": {
+      "edi_file": "edge_cases_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.255465",
+      "source": "master"
+    },
+    "empty_edi_4a1915e8": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.258003",
+      "source": "master"
+    },
+    "fintech_edi_4a1915e8": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.260750",
+      "source": "master"
+    },
+    "malformed_edi_4a1915e8": {
+      "edi_file": "malformed_edi.txt",
+      "settings_name": "force_txt_ext",
+      "settings": {
+        "force_txt_file_ext": "True"
+      },
+      "settings_hash": "4a1915e8",
+      "captured_at": "2026-01-29T14:31:31.262855",
+      "source": "master"
+    }
+  }
+}

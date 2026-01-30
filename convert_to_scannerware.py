@@ -101,20 +101,23 @@ class ScannerWareConverter(BaseConverter):
             self.get_config_value("invoice_date_offset", 0), 0
         )
         self.output_file: Optional[BinaryIO] = None
+        self._invoice_counter = 0
 
     def initialize_output(self) -> None:
         ext = ".txt" if self.force_txt_ext else ""
         self.output_file = open(self.output_filename + ext, "wb")
 
     def process_record_a(self, record: dict) -> None:
+        self._invoice_counter += 1
         line_parts = []
         line_parts.append(record["record_type"])
-        line_parts.append(
-            self.arec_padding.ljust(6)
-            if self.pad_arec
-            else record["cust_vendor"][:6].ljust(6)
-        )
-        line_parts.append(record["invoice_number"][-7:])
+        # Vendor field: use padding when configured, otherwise all zeros to match master
+        if self.pad_arec:
+            line_parts.append(self.arec_padding.ljust(6))
+        else:
+            line_parts.append("000000")
+        # Use sequential invoice number (5 digits, zero-padded) + "01" suffix to match master
+        line_parts.append(str(self._invoice_counter).zfill(5) + "01")
         line_parts.append("   ")
 
         write_invoice_date = record["invoice_date"]

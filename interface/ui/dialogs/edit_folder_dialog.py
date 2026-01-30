@@ -373,14 +373,28 @@ class EditFolderDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        # Process EDI checkbox
         self._process_edi_check = QCheckBox("Process EDI")
         self._process_edi_check.setChecked(
             self.folder_data.get("process_edi", "False") == "True"
         )
         layout.addWidget(self._process_edi_check)
 
-        # Format selector
+        edi_format_layout = QHBoxLayout()
+        edi_format_layout.addWidget(QLabel("EDI Format:"))
+        self._edi_format_combo = QComboBox()
+        try:
+            from edi_format_parser import EDIFormatParser
+
+            available_formats = EDIFormatParser.list_available_formats()
+            self._edi_format_combo.addItems(available_formats)
+        except Exception:
+            self._edi_format_combo.addItems(["default"])
+        self._edi_format_combo.setCurrentText(
+            self.folder_data.get("edi_format", "default")
+        )
+        edi_format_layout.addWidget(self._edi_format_combo)
+        layout.addLayout(edi_format_layout)
+
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Convert To:"))
         self._format_combo = QComboBox()
@@ -698,6 +712,7 @@ class EditFolderDialog(QDialog):
         # EDI settings
         result["force_edi_validation"] = self._force_edi_check.isChecked()
         result["process_edi"] = str(self._process_edi_check.isChecked())
+        result["edi_format"] = self._edi_format_combo.currentText()
         result["tweak_edi"] = self._tweak_edi_check.isChecked()
         result["split_edi"] = self._split_edi_check.isChecked()
         result["split_edi_include_invoices"] = self._split_invoices_check.isChecked()

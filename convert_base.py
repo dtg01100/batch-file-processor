@@ -49,6 +49,7 @@ import os
 import utils
 from query_runner import query_runner
 from plugin_config import PluginConfigMixin
+from edi_format_parser import EDIFormatParser
 
 
 class BaseConverter(ABC, PluginConfigMixin):
@@ -99,6 +100,12 @@ class BaseConverter(ABC, PluginConfigMixin):
         self.upc_lookup = upc_lookup
         self.lines: list[str] = []
         self.current_a_record: Optional[dict] = None
+
+        format_id = parameters_dict.get("edi_format", "default")
+        try:
+            self.edi_parser = EDIFormatParser.load_format(format_id)
+        except Exception:
+            self.edi_parser = None
 
     @abstractmethod
     def initialize_output(self) -> None:
@@ -234,7 +241,7 @@ class BaseConverter(ABC, PluginConfigMixin):
 
         # Process each line
         for line in self.lines:
-            record = utils.capture_records(line)
+            record = utils.capture_records(line, self.edi_parser)
             if record is not None:
                 record_type = record.get("record_type")
 

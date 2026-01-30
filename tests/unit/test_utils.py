@@ -11,7 +11,9 @@ import sys
 from datetime import datetime
 
 # Add parent directory to path so we can import utils
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import utils
 

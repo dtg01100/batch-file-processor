@@ -28,12 +28,11 @@ class ScansheetTypeAConverter(BaseConverter):
 
     def initialize_output(self) -> None:
         """Initialize Excel workbook and extract invoice list from EDI file."""
-        # First pass: Extract all invoice numbers from EDI file
         self.invoice_list = []
         with open(self.edi_process, encoding="utf-8") as work_file:
             work_file_lined = [n for n in work_file.readlines()]
             for line_num, line in enumerate(work_file_lined):
-                input_edi_dict = utils.capture_records(line)
+                input_edi_dict = utils.capture_records(line, self.edi_parser)
                 if input_edi_dict is not None:
                     try:
                         if input_edi_dict["record_type"] == "A":

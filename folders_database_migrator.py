@@ -870,3 +870,27 @@ def upgrade_database(
         update_version = dict(id=1, version="38", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("37", "38")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if db_version_dict["version"] == "38":
+        # Add edi_format field to both folders and administrative tables
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'edi_format' TEXT")
+        database_connection.query('UPDATE "folders" SET "edi_format" = "default"')
+
+        database_connection.query(
+            "ALTER TABLE 'administrative' ADD COLUMN 'edi_format' TEXT"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "edi_format" = "default"'
+        )
+
+        update_version = dict(id=1, version="39", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("38", "39")

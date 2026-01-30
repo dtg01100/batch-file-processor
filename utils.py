@@ -181,7 +181,31 @@ def detect_invoice_is_credit(edi_process):
             return True
 
 
-def capture_records(line):
+_default_parser = None
+
+
+def _get_default_parser():
+    global _default_parser
+    if _default_parser is None:
+        try:
+            from edi_format_parser import EDIFormatParser
+
+            _default_parser = EDIFormatParser.get_default_parser()
+        except Exception:
+            _default_parser = False
+    return _default_parser if _default_parser is not False else None
+
+
+def capture_records(line, parser=None):
+    if parser is None:
+        parser = _get_default_parser()
+
+    if parser is not None:
+        result = parser.parse_line(line)
+        if result is None and line and not line.startswith(""):
+            raise Exception("Not An EDI")
+        return result
+
     if line.startswith("A"):
         fields = {
             "record_type": line[0],
@@ -214,7 +238,7 @@ def capture_records(line):
             "amount": line[29:38],
         }
         return fields
-    elif line.startswith(""):
+    elif line.startswith(""):
         return None
     else:
         raise Exception("Not An EDI")
@@ -362,3 +386,197 @@ def do_clear_old_files(folder_path, maximum_files):
                 ),
             )
         )
+
+
+class cRecGenerator:
+    """Class for generating split C records for prepaid/non-prepaid sales tax.
+
+    This class queries the database to split sales tax totals into prepaid and
+    non-prepaid amounts, then writes them as separate C records.
+    """
+
+    def __init__(self, settings_dict):
+        """Initialize the C record generator.
+
+        Args:
+            settings_dict: Dictionary containing database connection settings.
+                Must include: as400_username, as400_password, as400_address, odbc_driver
+        """
+        self.query_object = None
+        self._invoice_number = "0"
+        self.unappended_records = False
+        self.settings = settings_dict
+
+    def _db_connect(self):
+        """Establish database connection."""
+        self.query_object = query_runner(
+            self.settings["as400_username"],
+            self.settings["as400_password"],
+            self.settings["as400_address"],
+            f"{self.settings['odbc_driver']}",
+        )
+
+    def set_invoice_number(self, invoice_number):
+        """Set the current invoice number and mark records as unappended.
+
+        Args:
+            invoice_number: The invoice number to query for sales tax data.
+        """
+        self._invoice_number = invoice_number
+        self.unappended_records = True
+
+    def fetch_splitted_sales_tax_totals(self, write_func):
+        """Fetch and write split sales tax totals as C records.
+
+        Queries the database for prepaid and non-prepaid sales tax amounts
+        for the current invoice number, then writes them as separate C records.
+
+        Args:
+            write_func: A callable that accepts a string to write (e.g., file.write).
+        """
+        if self.query_object is None:
+            self._db_connect()
+
+        qry_ret = self.query_object.run_arbitrary_query(
+            f"""
+            SELECT
+                sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
+                sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
+            FROM
+                dacdata.odhst odhst
+            WHERE
+                odhst.BUHHNB = {self._invoice_number}
+            """
+        )
+
+        qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]
+
+        def _write_line(typestr: str, amount: int, wprocfile):
+            descstr = typestr.ljust(25, " ")
+            if amount < 0:
+                amount_builder = amount - (amount * 2)
+            else:
+                amount_builder = amount
+
+            amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
+            if amount < 0:
+                temp_amount_list = list(amountstr)
+                temp_amount_list[0] = "-"
+                amountstr = "".join(temp_amount_list)
+            linebuilder = f"CTAB{descstr}{amountstr}\n"
+            wprocfile(linebuilder)
+
+        if qry_ret_prepaid != 0 and qry_ret_prepaid is not None:
+            _write_line("Prepaid Sales Tax", qry_ret_prepaid, write_func)
+        if qry_ret_non_prepaid != 0 and qry_ret_non_prepaid is not None:
+            _write_line("Sales Tax", qry_ret_non_prepaid, write_func)
+
+        self.unappended_records = False
+
+
+def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
+    """Apply retail UOM transformation to a B record.
+
+    Transforms B record from case-level to each-level retail UOM.
+    Modifies record in place: unit_cost, qty_of_units, upc_number, unit_multiplier.
+
+    Args:
+        record: The B record dictionary to transform in place.
+        upc_lookup: Dictionary mapping vendor item numbers to UPC data.
+            Expected format: {vendor_item: [category, each_upc, ...]}
+
+    Returns:
+        True if transformation was applied, False otherwise.
+    """
+    from decimal import Decimal
+
+    # Validate record fields can be parsed
+    try:
+        item_number = int(record["vendor_item"].strip())
+        float(record["unit_cost"].strip())
+        test_unit_multiplier = int(record["unit_multiplier"].strip())
+        if test_unit_multiplier == 0:
+            raise ValueError("unit_multiplier cannot be zero")
+        int(record["qty_of_units"].strip())
+    except Exception:
+        print("cannot parse b record field, skipping")
+        return False
+
+    # Get the each-level UPC from lookup
+    try:
+        each_upc_string = upc_lookup[item_number][1][:11].ljust(11)
+    except (KeyError, IndexError):
+        each_upc_string = "           "
+
+    # Apply the transformation
+    try:
+        record["unit_cost"] = (
+            str(
+                Decimal(
+                    (Decimal(record["unit_cost"].strip()) / 100)
+                    / Decimal(record["unit_multiplier"].strip())
+                ).quantize(Decimal(".01"))
+            )
+            .replace(".", "")[-6:]
+            .rjust(6, "0")
+        )
+        record["qty_of_units"] = str(
+            int(record["unit_multiplier"].strip()) * int(record["qty_of_units"].strip())
+        ).rjust(5, "0")
+        record["upc_number"] = each_upc_string
+        record["unit_multiplier"] = "000001"
+        return True
+    except Exception as error:
+        print(error)
+        return False
+
+
+def apply_upc_override(
+    record: dict,
+    upc_lookup: dict,
+    override_level: int = 1,
+    category_filter: str = "ALL",
+) -> bool:
+    """Override UPC from lookup table based on vendor_item.
+
+    Modifies record in place: upc_number.
+
+    Args:
+        record: The B record dictionary to modify in place.
+        upc_lookup: Dictionary mapping vendor item numbers to UPC data.
+            Expected format: {vendor_item: [category, upc_level_1, upc_level_2, ...]}
+        override_level: Which UPC level to use from lookup table (default: 1).
+        category_filter: Comma-separated list of categories to filter by,
+            or "ALL" to apply to all categories (default: "ALL").
+
+    Returns:
+        True if override was applied, False otherwise.
+    """
+    try:
+        if not upc_lookup:
+            return False
+
+        vendor_item_int = int(record["vendor_item"].strip())
+
+        if vendor_item_int not in upc_lookup:
+            record["upc_number"] = ""
+            return False
+
+        do_updateupc = False
+        if category_filter == "ALL":
+            do_updateupc = True
+        else:
+            # Check if item's category is in the filter list
+            item_category = upc_lookup[vendor_item_int][0]
+            if item_category in category_filter.split(","):
+                do_updateupc = True
+
+        if do_updateupc:
+            record["upc_number"] = upc_lookup[vendor_item_int][override_level]
+            return True
+        else:
+            return False
+
+    except (KeyError, ValueError, IndexError):
+        record["upc_number"] = ""
+        return False

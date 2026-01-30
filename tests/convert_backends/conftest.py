@@ -56,6 +56,24 @@ def edi_fintech(data_dir):
     return str(data_dir / "fintech_edi.txt")
 
 
+@pytest.fixture
+def edi_combo_items(data_dir):
+    """Path to EDI file with combo/parent-child item relationships."""
+    return str(data_dir / "combo_items_edi.txt")
+
+
+@pytest.fixture
+def edi_zero_values(data_dir):
+    """Path to EDI file with zero values for all numeric fields."""
+    return str(data_dir / "zero_values_edi.txt")
+
+
+@pytest.fixture
+def edi_large_invoice(data_dir):
+    """Path to EDI file with many line items (10 items)."""
+    return str(data_dir / "large_invoice_edi.txt")
+
+
 # ============================================================================
 # REAL CORPUS FIXTURES - Access to alledi/ corpus (165K+ production EDI files)
 # ============================================================================
@@ -455,4 +473,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "convert_integration: mark test as integration test for converters"
+    )
+    config.addinivalue_line(
+        "markers", "parity: mark test as parity verification test against master baselines"
     )

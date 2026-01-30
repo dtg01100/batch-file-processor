@@ -5,6 +5,27 @@ import utils
 from convert_base import CSVConverter, create_edi_convert_wrapper
 
 
+def _convert_to_price_master(value: str) -> str:
+    """Convert DAC price format to decimal string (master version).
+
+    This matches the original utils.convert_to_price behavior that produces
+    format like "0." instead of "0.00" for zero values.
+
+    Args:
+        value: Price string in DAC format (6+ characters).
+
+    Returns:
+        Price as a formatted decimal string.
+    """
+    if not value or len(value) < 2:
+        return "0."
+    dollars = value[:-2].lstrip("0")
+    if dollars == "":
+        dollars = "0"
+    cents = value[-2:]
+    return f"{dollars}.{cents}"
+
+
 class CsvConverter(CSVConverter):
     """Converter for standard CSV output format.
 
@@ -176,78 +197,41 @@ class CsvConverter(CSVConverter):
     def _apply_retail_uom(self, record: dict) -> bool:
         """Apply retail UOM transformation to a B record.
 
+        Uses shared utility function to transform case-level data to
+        each-level retail UOM.
+
         Args:
             record: The B record dictionary to transform in place.
 
         Returns:
             True if transformation was successful, False otherwise.
         """
-        try:
-            item_number = int(record["vendor_item"].strip())
-            float(record["unit_cost"].strip())
-            test_unit_multiplier = int(record["unit_multiplier"].strip())
-            if test_unit_multiplier == 0:
-                raise ValueError
-            int(record["qty_of_units"].strip())
-        except Exception:
-            print("cannot parse b record field, skipping")
-            return False
-
-        try:
-            each_upc_string = self.upc_lookup[item_number][1][:11].ljust(11)
-        except KeyError:
-            each_upc_string = "           "
-
-        try:
-            record["unit_cost"] = (
-                str(
-                    Decimal(
-                        (Decimal(record["unit_cost"].strip()) / 100)
-                        / Decimal(record["unit_multiplier"].strip())
-                    ).quantize(Decimal(".01"))
-                )
-                .replace(".", "")[-6:]
-                .rjust(6, "0")
-            )
-            record["qty_of_units"] = str(
-                int(record["unit_multiplier"].strip())
-                * int(record["qty_of_units"].strip())
-            ).rjust(5, "0")
-            record["upc_number"] = each_upc_string
-            record["unit_multiplier"] = "000001"
-            return True
-        except Exception as error:
-            print(error)
-            return False
+        return utils.apply_retail_uom_transform(record, self.upc_lookup)
 
     def _apply_upc_override(self, record: dict) -> None:
         """Apply UPC override from lookup table if configured.
 
+        Uses shared utility function to override UPC based on vendor_item
+        lookup and category filtering.
+
         Args:
             record: The B record dictionary to modify in place.
         """
-        try:
-            vendor_item_int = int(record["vendor_item"].strip())
-            if vendor_item_int in self.upc_lookup:
-                do_updateupc = False
-                if self.override_upc_category_filter == "ALL":
-                    do_updateupc = True
-                else:
-                    if self.upc_lookup[vendor_item_int][
-                        0
-                    ] in self.override_upc_category_filter.split(","):
-                        do_updateupc = True
-                if do_updateupc:
-                    record["upc_number"] = self.upc_lookup[vendor_item_int][
-                        self.override_upc_level
-                    ]
-            else:
-                record["upc_number"] = ""
-        except (KeyError, ValueError):
-            record["upc_number"] = ""
+        utils.apply_upc_override(
+            record,
+            self.upc_lookup,
+            self.override_upc_level,
+            self.override_upc_category_filter,
+        )
 
     def _process_upc_for_csv(self, upc_string: str) -> tuple[str, bool]:
         """Process UPC string for CSV output.
+
+        Uses base class process_upc method to handle various UPC formats:
+        - 12 digits: Already UPCA, return as-is
+        - 11 digits: Add check digit (if calc_check_digit=True)
+        - 8 digits: Convert UPCE to UPCA
+        - Empty/invalid: Return empty string
 
         Args:
             upc_string: The raw UPC string from the record.
@@ -255,25 +239,8 @@ class CsvConverter(CSVConverter):
         Returns:
             Tuple of (processed_upc, is_blank).
         """
-        blank_upc = False
-        result_upc = ""
-
-        try:
-            _ = int(upc_string.rstrip())
-        except ValueError:
-            blank_upc = True
-
-        if not blank_upc:
-            proposed_upc = upc_string.strip()
-            if len(str(proposed_upc)) == 12:
-                result_upc = str(proposed_upc)
-            elif len(str(proposed_upc)) == 11:
-                result_upc = str(proposed_upc) + str(
-                    utils.calc_check_digit(proposed_upc)
-                )
-            elif len(str(proposed_upc)) == 8:
-                result_upc = str(utils.convert_UPCE_to_UPCA(proposed_upc))
-
+        result_upc = self.process_upc(upc_string, calc_check_digit=True)
+        blank_upc = result_upc == ""
         return result_upc, blank_upc
 
     def process_record_a(self, record: dict) -> None:
@@ -297,25 +264,30 @@ class CsvConverter(CSVConverter):
 
     def process_record_b(self, record: dict) -> None:
         if self.retail_uom:
-            if not self._apply_retail_uom(record):
+            if not utils.apply_retail_uom_transform(record, self.upc_lookup):
                 return
 
-        if self.override_upc:
-            self._apply_upc_override(record)
+        # Apply UPC override/lookup (master does this regardless of override_upc flag)
+        utils.apply_upc_override(
+            record,
+            self.upc_lookup,
+            self.override_upc_level,
+            self.override_upc_category_filter,
+        )
 
-        upc_string, blank_upc = self._process_upc_for_csv(record["upc_number"])
+        upc_string = self.process_upc(record["upc_number"], calc_check_digit=True)
+        blank_upc = upc_string == ""
 
-        if self.calc_upc and not blank_upc:
-            upc_in_csv = "\t" + upc_string
-        else:
-            upc_in_csv = record["upc_number"]
+        # Match master logic exactly
+        upc_in_csv = "\t" + upc_string if self.calc_upc and not blank_upc else record["upc_number"]
 
         quantity_shipped_in_csv = record["qty_of_units"].lstrip("0")
         if quantity_shipped_in_csv == "":
             quantity_shipped_in_csv = record["qty_of_units"]
 
-        cost_in_csv = self.convert_to_price(record["unit_cost"])
-        suggested_retail_in_csv = self.convert_to_price(
+        # Use master price conversion format (e.g., "0." not "0.00")
+        cost_in_csv = _convert_to_price_master(record["unit_cost"])
+        suggested_retail_in_csv = _convert_to_price_master(
             record["suggested_retail_price"]
         )
 

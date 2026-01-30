@@ -1,0 +1,155 @@
+{
+  "format_id": "example_custom",
+  "format_name": "Example Custom EDI Format",
+  "format_version": "1.0",
+  "description": "This is an example demonstrating how to create a custom EDI format. Copy and modify this file to create your own format definition.",
+  "encoding": "utf-8",
+  "record_types": {
+    "H": {
+      "name": "Header Record",
+      "description": "Invoice header containing customer and invoice information",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "H"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier - always 'H' for header"
+        },
+        {
+          "name": "customer_code",
+          "position": 1,
+          "length": 8,
+          "type": "string",
+          "description": "Customer account code"
+        },
+        {
+          "name": "invoice_number",
+          "position": 9,
+          "length": 12,
+          "type": "string",
+          "description": "Invoice number"
+        },
+        {
+          "name": "invoice_date",
+          "position": 21,
+          "length": 8,
+          "type": "string",
+          "description": "Invoice date in YYYYMMDD format"
+        },
+        {
+          "name": "total_amount",
+          "position": 29,
+          "length": 12,
+          "type": "string",
+          "description": "Total invoice amount in cents (e.g., 100050 = $1000.50)"
+        }
+      ],
+      "total_length": 41
+    },
+    "D": {
+      "name": "Detail Line",
+      "description": "Line item detail with product and pricing information",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "D"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier - always 'D' for detail"
+        },
+        {
+          "name": "line_number",
+          "position": 1,
+          "length": 4,
+          "type": "string",
+          "description": "Line number within invoice"
+        },
+        {
+          "name": "product_code",
+          "position": 5,
+          "length": 15,
+          "type": "string",
+          "description": "Product SKU or code"
+        },
+        {
+          "name": "quantity",
+          "position": 20,
+          "length": 8,
+          "type": "string",
+          "description": "Quantity ordered"
+        },
+        {
+          "name": "unit_price",
+          "position": 28,
+          "length": 10,
+          "type": "string",
+          "description": "Unit price in cents"
+        },
+        {
+          "name": "line_total",
+          "position": 38,
+          "length": 12,
+          "type": "string",
+          "description": "Line total amount in cents"
+        }
+      ],
+      "total_length": 50
+    },
+    "T": {
+      "name": "Trailer Record",
+      "description": "Trailer record with summary totals and counts",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "T"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier - always 'T' for trailer"
+        },
+        {
+          "name": "total_amount",
+          "position": 1,
+          "length": 12,
+          "type": "string",
+          "description": "Total invoice amount (should match header)"
+        },
+        {
+          "name": "line_count",
+          "position": 13,
+          "length": 6,
+          "type": "string",
+          "description": "Number of detail lines in invoice"
+        },
+        {
+          "name": "record_count",
+          "position": 19,
+          "length": 6,
+          "type": "string",
+          "description": "Total number of records including H, D, and T"
+        }
+      ],
+      "total_length": 25
+    }
+  },
+  "validation_rules": {
+    "file_must_start_with": "H",
+    "allowed_record_types": ["H", "D", "T"],
+    "record_order": "H record, followed by zero or more D records, ending with T record"
+  }
+}

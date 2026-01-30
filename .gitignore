@@ -85,3 +85,7 @@ ibm-iaccess-1.1.0.28-1.0.amd64.deb
 
 # Production EDI corpus - cannot add to repo, used locally for testing
 alledi/
+
+# Documentation from vendor
+DAC Implementation of MTC Eletronic Invoice.pdf
+

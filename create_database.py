@@ -93,6 +93,7 @@ def do(database_version, database_path, config_folder, running_platform):
         "override_upc_category_filter": "ALL",
         "fintech_division_id": 0,
         "plugin_config": None,
+        "edi_format": "default",
         "created_at": datetime.datetime.now().isoformat(),
         "updated_at": datetime.datetime.now().isoformat(),
     }

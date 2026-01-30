@@ -1,0 +1,196 @@
+{
+  "baselines": {
+    "basic_edi_99914b93": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.270489",
+      "source": "master"
+    },
+    "complex_edi_99914b93": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.271968",
+      "source": "master"
+    },
+    "empty_edi_99914b93": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.273622",
+      "source": "master"
+    },
+    "fintech_edi_99914b93": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "default",
+      "settings": {},
+      "settings_hash": "99914b93",
+      "captured_at": "2026-01-29T14:31:31.274833",
+      "source": "master"
+    },
+    "basic_edi_967003a8": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_headers",
+      "settings": {
+        "include_headers": "True"
+      },
+      "settings_hash": "967003a8",
+      "captured_at": "2026-01-29T14:31:31.276514",
+      "source": "master"
+    },
+    "complex_edi_967003a8": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "with_headers",
+      "settings": {
+        "include_headers": "True"
+      },
+      "settings_hash": "967003a8",
+      "captured_at": "2026-01-29T14:31:31.277689",
+      "source": "master"
+    },
+    "empty_edi_967003a8": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_headers",
+      "settings": {
+        "include_headers": "True"
+      },
+      "settings_hash": "967003a8",
+      "captured_at": "2026-01-29T14:31:31.279464",
+      "source": "master"
+    },
+    "fintech_edi_967003a8": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_headers",
+      "settings": {
+        "include_headers": "True"
+      },
+      "settings_hash": "967003a8",
+      "captured_at": "2026-01-29T14:31:31.281188",
+      "source": "master"
+    },
+    "basic_edi_7a75af72": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_item_numbers",
+      "settings": {
+        "include_item_numbers": "True"
+      },
+      "settings_hash": "7a75af72",
+      "captured_at": "2026-01-29T14:31:31.284920",
+      "source": "master"
+    },
+    "complex_edi_7a75af72": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "with_item_numbers",
+      "settings": {
+        "include_item_numbers": "True"
+      },
+      "settings_hash": "7a75af72",
+      "captured_at": "2026-01-29T14:31:31.286363",
+      "source": "master"
+    },
+    "empty_edi_7a75af72": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_item_numbers",
+      "settings": {
+        "include_item_numbers": "True"
+      },
+      "settings_hash": "7a75af72",
+      "captured_at": "2026-01-29T14:31:31.288527",
+      "source": "master"
+    },
+    "fintech_edi_7a75af72": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_item_numbers",
+      "settings": {
+        "include_item_numbers": "True"
+      },
+      "settings_hash": "7a75af72",
+      "captured_at": "2026-01-29T14:31:31.290027",
+      "source": "master"
+    },
+    "basic_edi_fcf176b7": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "with_description",
+      "settings": {
+        "include_item_description": "True"
+      },
+      "settings_hash": "fcf176b7",
+      "captured_at": "2026-01-29T14:31:31.292258",
+      "source": "master"
+    },
+    "complex_edi_fcf176b7": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "with_description",
+      "settings": {
+        "include_item_description": "True"
+      },
+      "settings_hash": "fcf176b7",
+      "captured_at": "2026-01-29T14:31:31.293760",
+      "source": "master"
+    },
+    "empty_edi_fcf176b7": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "with_description",
+      "settings": {
+        "include_item_description": "True"
+      },
+      "settings_hash": "fcf176b7",
+      "captured_at": "2026-01-29T14:31:31.295807",
+      "source": "master"
+    },
+    "fintech_edi_fcf176b7": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "with_description",
+      "settings": {
+        "include_item_description": "True"
+      },
+      "settings_hash": "fcf176b7",
+      "captured_at": "2026-01-29T14:31:31.299496",
+      "source": "master"
+    },
+    "basic_edi_6daa6a32": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "retail_uom",
+      "settings": {
+        "retail_uom": true
+      },
+      "settings_hash": "6daa6a32",
+      "captured_at": "2026-01-29T14:31:31.302461",
+      "source": "master"
+    },
+    "complex_edi_6daa6a32": {
+      "edi_file": "complex_edi.txt",
+      "settings_name": "retail_uom",
+      "settings": {
+        "retail_uom": true
+      },
+      "settings_hash": "6daa6a32",
+      "captured_at": "2026-01-29T14:31:31.304785",
+      "source": "master"
+    },
+    "empty_edi_6daa6a32": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "retail_uom",
+      "settings": {
+        "retail_uom": true
+      },
+      "settings_hash": "6daa6a32",
+      "captured_at": "2026-01-29T14:31:31.307401",
+      "source": "master"
+    },
+    "fintech_edi_6daa6a32": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "retail_uom",
+      "settings": {
+        "retail_uom": true
+      },
+      "settings_hash": "6daa6a32",
+      "captured_at": "2026-01-29T14:31:31.309670",
+      "source": "master"
+    }
+  }
+}

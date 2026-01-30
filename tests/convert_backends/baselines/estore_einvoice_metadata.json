@@ -1,0 +1,40 @@
+{
+  "baselines": {
+    "basic_edi_7e3c2297": {
+      "edi_file": "basic_edi.txt",
+      "settings_name": "default",
+      "settings": {
+        "estore_store_number": "12345",
+        "estore_Vendor_OId": "67890",
+        "estore_vendor_NameVendorOID": "TestVendor"
+      },
+      "settings_hash": "7e3c2297",
+      "captured_at": "2026-01-29T14:31:31.315505",
+      "source": "master"
+    },
+    "empty_edi_7e3c2297": {
+      "edi_file": "empty_edi.txt",
+      "settings_name": "default",
+      "settings": {
+        "estore_store_number": "12345",
+        "estore_Vendor_OId": "67890",
+        "estore_vendor_NameVendorOID": "TestVendor"
+      },
+      "settings_hash": "7e3c2297",
+      "captured_at": "2026-01-29T14:31:31.323186",
+      "source": "master"
+    },
+    "fintech_edi_7e3c2297": {
+      "edi_file": "fintech_edi.txt",
+      "settings_name": "default",
+      "settings": {
+        "estore_store_number": "12345",
+        "estore_Vendor_OId": "67890",
+        "estore_vendor_NameVendorOID": "TestVendor"
+      },
+      "settings_hash": "7e3c2297",
+      "captured_at": "2026-01-29T14:31:31.324564",
+      "source": "master"
+    }
+  }
+}
