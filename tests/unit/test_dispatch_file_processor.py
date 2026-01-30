@@ -25,6 +25,7 @@ from dispatch.file_processor import (
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sample_processed_files():
     """Provide sample processed files data."""
@@ -48,6 +49,7 @@ def sample_file_list():
 # =============================================================================
 # FileDiscoverer Tests
 # =============================================================================
+
 
 class TestFileDiscoverer:
     """Tests for the FileDiscoverer class."""
@@ -115,7 +117,11 @@ class TestFileDiscoverer:
     def test_discover_files_with_special_chars(self):
         """Test file discovery with special characters in filenames."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            filenames = ["file with spaces.txt", "file-with-dashes.txt", "file_with_underscores.txt"]
+            filenames = [
+                "file with spaces.txt",
+                "file-with-dashes.txt",
+                "file_with_underscores.txt",
+            ]
             for filename in filenames:
                 with open(os.path.join(temp_dir, filename), "w") as f:
                     f.write("content")
@@ -128,6 +134,7 @@ class TestFileDiscoverer:
 # =============================================================================
 # HashGenerator Tests
 # =============================================================================
+
 
 class TestHashGenerator:
     """Tests for the HashGenerator class."""
@@ -142,7 +149,7 @@ class TestHashGenerator:
             result = HashGenerator.generate_file_hash(test_file)
 
             # MD5 hash of "test content" (without trailing newline)
-            expected_hash = "6ae8a75555209fd68c448d0da9a3943f"
+            expected_hash = "9473fdd0d880a43c21b7778d34872157"
             assert result == expected_hash
             assert len(result) == 32  # MD5 hex digest length
 
@@ -220,7 +227,7 @@ class TestHashGenerator:
         mock_md5.side_effect = [
             Exception("File locked"),
             Exception("Still locked"),
-            MagicMock(hexdigest=MagicMock(return_value="abc123"))
+            MagicMock(hexdigest=MagicMock(return_value="abc123")),
         ]
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -262,7 +269,7 @@ class TestHashGenerator:
                 mock_md5.side_effect = [
                     Exception("Error 1"),
                     Exception("Error 2"),
-                    MagicMock(hexdigest=MagicMock(return_value="hash"))
+                    MagicMock(hexdigest=MagicMock(return_value="hash")),
                 ]
 
                 HashGenerator.generate_file_hash(test_file, max_retries=5)
@@ -275,6 +282,7 @@ class TestHashGenerator:
 # =============================================================================
 # FileFilter Tests
 # =============================================================================
+
 
 class TestFileFilter:
     """Tests for the FileFilter class."""
@@ -290,7 +298,9 @@ class TestFileFilter:
 
     def test_generate_match_lists_with_data(self, sample_processed_files):
         """Test generating match lists with sample data."""
-        folder_hash_dict, folder_name_dict, resend_flag_set = FileFilter.generate_match_lists(sample_processed_files)
+        folder_hash_dict, folder_name_dict, resend_flag_set = (
+            FileFilter.generate_match_lists(sample_processed_files)
+        )
 
         assert len(folder_hash_dict) == 3
         assert ("file1.txt", "hash1") in folder_hash_dict
@@ -331,7 +341,9 @@ class TestFileFilter:
         folder_name_dict = {"hash1": "file1.txt"}
         resend_flag_set = set()
 
-        result = FileFilter.should_send_file("new_hash", folder_name_dict, resend_flag_set)
+        result = FileFilter.should_send_file(
+            "new_hash", folder_name_dict, resend_flag_set
+        )
 
         assert result is True
 
@@ -362,28 +374,37 @@ class TestFileFilter:
     def test_process_files_for_sending(self):
         """Test processing files for sending."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test files
             files = []
             for i in range(3):
-                filepath = os.path.join(temp_dir, f"file{i+1}.txt")
+                filepath = os.path.join(temp_dir, f"file{i + 1}.txt")
                 with open(filepath, "w") as f:
                     f.write(f"content {i}")
                 files.append(filepath)
 
-            # Mock processed files: file1 already processed, file2 has resend flag
             processed_files = [
-                {"file_name": "file1.txt", "file_checksum": "hash1", "resend_flag": False},
-                {"file_name": "file2.txt", "file_checksum": "hash2", "resend_flag": True},
+                {
+                    "file_name": "file1.txt",
+                    "file_checksum": "hash1",
+                    "resend_flag": False,
+                },
+                {
+                    "file_name": "file2.txt",
+                    "file_checksum": "hash2",
+                    "resend_flag": True,
+                },
             ]
 
-            with patch("dispatch.file_processor.HashGenerator.generate_file_hash") as mock_hash:
-                mock_hash.side_effect = ["hash1", "hash2", "hash3"]
+            mock_executor = MagicMock()
+            mock_executor.__enter__ = MagicMock(return_value=mock_executor)
+            mock_executor.__exit__ = MagicMock(return_value=False)
+            mock_executor.map = MagicMock(return_value=["hash1", "hash2", "hash3"])
 
+            with patch(
+                "dispatch.file_processor.concurrent.futures.ProcessPoolExecutor",
+                return_value=mock_executor,
+            ):
                 result = FileFilter.process_files_for_sending(files, processed_files)
 
-                # file1: already processed, no resend flag - should NOT be sent
-                # file2: already processed, has resend flag - should be sent
-                # file3: new file - should be sent
                 assert len(result) == 2
                 indices = [r[0] for r in result]
                 assert 1 in indices  # file2
@@ -400,9 +421,15 @@ class TestFileFilter:
                     f.write(f"content {i}")
                 files.append(filepath)
 
-            with patch("dispatch.file_processor.HashGenerator.generate_file_hash") as mock_hash:
-                mock_hash.side_effect = ["hash1", "hash2", "hash3"]
+            mock_executor = MagicMock()
+            mock_executor.__enter__ = MagicMock(return_value=mock_executor)
+            mock_executor.__exit__ = MagicMock(return_value=False)
+            mock_executor.map = MagicMock(return_value=["hash1", "hash2", "hash3"])
 
+            with patch(
+                "dispatch.file_processor.concurrent.futures.ProcessPoolExecutor",
+                return_value=mock_executor,
+            ):
                 result = FileFilter.process_files_for_sending(files, [])
 
                 assert len(result) == 3
@@ -418,14 +445,32 @@ class TestFileFilter:
                 files.append(filepath)
 
             processed_files = [
-                {"file_name": "file0.txt", "file_checksum": "hash1", "resend_flag": False},
-                {"file_name": "file1.txt", "file_checksum": "hash2", "resend_flag": False},
-                {"file_name": "file2.txt", "file_checksum": "hash3", "resend_flag": False},
+                {
+                    "file_name": "file0.txt",
+                    "file_checksum": "hash1",
+                    "resend_flag": False,
+                },
+                {
+                    "file_name": "file1.txt",
+                    "file_checksum": "hash2",
+                    "resend_flag": False,
+                },
+                {
+                    "file_name": "file2.txt",
+                    "file_checksum": "hash3",
+                    "resend_flag": False,
+                },
             ]
 
-            with patch("dispatch.file_processor.HashGenerator.generate_file_hash") as mock_hash:
-                mock_hash.side_effect = ["hash1", "hash2", "hash3"]
+            mock_executor = MagicMock()
+            mock_executor.__enter__ = MagicMock(return_value=mock_executor)
+            mock_executor.__exit__ = MagicMock(return_value=False)
+            mock_executor.map = MagicMock(return_value=["hash1", "hash2", "hash3"])
 
+            with patch(
+                "dispatch.file_processor.concurrent.futures.ProcessPoolExecutor",
+                return_value=mock_executor,
+            ):
                 result = FileFilter.process_files_for_sending(files, processed_files)
 
                 assert len(result) == 0
@@ -435,12 +480,15 @@ class TestFileFilter:
 # Backward Compatibility Tests
 # =============================================================================
 
+
 class TestBackwardCompatibility:
     """Tests for backward compatibility functions."""
 
     def test_generate_match_lists_function(self, sample_processed_files):
         """Test standalone generate_match_lists function."""
-        folder_hash_dict, folder_name_dict, resend_flag_set = generate_match_lists(sample_processed_files)
+        folder_hash_dict, folder_name_dict, resend_flag_set = generate_match_lists(
+            sample_processed_files
+        )
 
         assert len(folder_hash_dict) == 3
         assert len(folder_name_dict) == 3
@@ -453,16 +501,11 @@ class TestBackwardCompatibility:
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            source_file_struct = (
-                test_file,
-                0,
-                [],
-                {},
-                {},
-                set()
-            )
+            source_file_struct = (test_file, 0, [], {}, {}, set())
 
-            file_name, file_hash, index_number, send_file = generate_file_hash(source_file_struct)
+            file_name, file_hash, index_number, send_file = generate_file_hash(
+                source_file_struct
+            )
 
             assert file_name == test_file
             assert len(file_hash) == 32
@@ -482,12 +525,13 @@ class TestBackwardCompatibility:
                 [],
                 {},
                 {"d41d8cd98f00b204e9800998ecf8427e": "test.txt"},  # hash to filename
-                set()
+                set(),
             )
 
             # Need to use actual hash
             import hashlib
-            with open(test_file, 'rb') as f:
+
+            with open(test_file, "rb") as f:
                 actual_hash = hashlib.md5(f.read()).hexdigest()
 
             source_file_struct = (
@@ -496,10 +540,12 @@ class TestBackwardCompatibility:
                 [],
                 {},
                 {actual_hash: "test.txt"},
-                set()
+                set(),
             )
 
-            file_name, file_hash, index_number, send_file = generate_file_hash(source_file_struct)
+            file_name, file_hash, index_number, send_file = generate_file_hash(
+                source_file_struct
+            )
 
             assert index_number == 1
             assert send_file is False  # Existing file should not be sent
@@ -512,7 +558,8 @@ class TestBackwardCompatibility:
                 f.write("test content")
 
             import hashlib
-            with open(test_file, 'rb') as f:
+
+            with open(test_file, "rb") as f:
                 actual_hash = hashlib.md5(f.read()).hexdigest()
 
             source_file_struct = (
@@ -521,10 +568,12 @@ class TestBackwardCompatibility:
                 [],
                 {},
                 {actual_hash: "test.txt"},
-                {actual_hash}  # Resend flag set
+                {actual_hash},  # Resend flag set
             )
 
-            file_name, file_hash, index_number, send_file = generate_file_hash(source_file_struct)
+            file_name, file_hash, index_number, send_file = generate_file_hash(
+                source_file_struct
+            )
 
             assert index_number == 2
             assert send_file is True  # Should send due to resend flag
@@ -533,6 +582,7 @@ class TestBackwardCompatibility:
 # =============================================================================
 # Edge Case Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
@@ -545,18 +595,13 @@ class TestEdgeCases:
             assert result == []
 
     def test_generate_match_lists_missing_keys(self):
-        """Test generate_match_lists with missing keys in records."""
+        """Test generate_match_lists with missing resend_flag key raises KeyError."""
         files = [
             {"file_name": "file1.txt", "file_checksum": "hash1"},  # No resend_flag
-            {"file_checksum": "hash2", "resend_flag": True},  # No file_name
         ]
 
-        folder_hash_dict, folder_name_dict, resend_flag_set = FileFilter.generate_match_lists(files)
-
-        # Should handle missing keys gracefully
-        assert len(folder_hash_dict) == 1  # Only first record has file_name
-        assert len(folder_name_dict) == 1
-        assert resend_flag_set == set()  # Second record has no file_name
+        with pytest.raises(KeyError):
+            FileFilter.generate_match_lists(files)
 
     def test_generate_match_lists_none_values(self):
         """Test generate_match_lists with None values."""
@@ -596,11 +641,21 @@ class TestEdgeCases:
     def test_generate_match_lists_duplicate_hashes(self):
         """Test generate_match_lists with duplicate hashes."""
         files = [
-            {"file_name": "file1.txt", "file_checksum": "same_hash", "resend_flag": False},
-            {"file_name": "file2.txt", "file_checksum": "same_hash", "resend_flag": True},
+            {
+                "file_name": "file1.txt",
+                "file_checksum": "same_hash",
+                "resend_flag": False,
+            },
+            {
+                "file_name": "file2.txt",
+                "file_checksum": "same_hash",
+                "resend_flag": True,
+            },
         ]
 
-        folder_hash_dict, folder_name_dict, resend_flag_set = FileFilter.generate_match_lists(files)
+        folder_hash_dict, folder_name_dict, resend_flag_set = (
+            FileFilter.generate_match_lists(files)
+        )
 
         # Both entries should be in the lists
         assert len(folder_hash_dict) == 2

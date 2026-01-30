@@ -23,6 +23,7 @@ from dispatch.send_manager import (
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sample_parameters_dict():
     """Provide sample parameters dictionary for testing."""
@@ -85,6 +86,7 @@ def send_manager():
 # BackendFactory Tests
 # =============================================================================
 
+
 class TestBackendFactory:
     """Tests for the BackendFactory class."""
 
@@ -146,6 +148,7 @@ class TestBackendFactory:
 # SendResult Tests
 # =============================================================================
 
+
 class TestSendResult:
     """Tests for the SendResult dataclass."""
 
@@ -156,7 +159,7 @@ class TestSendResult:
             backend_name="Copy Backend",
             destination="/output/path",
             error_message="",
-            details={"bytes_sent": 1024}
+            details={"bytes_sent": 1024},
         )
 
         assert result.success is True
@@ -172,7 +175,7 @@ class TestSendResult:
             backend_name="FTP Backend",
             destination="ftp.example.com",
             error_message="Connection timeout",
-            details=None
+            details=None,
         )
 
         assert result.success is False
@@ -184,9 +187,7 @@ class TestSendResult:
     def test_initialization_default_details(self):
         """Test SendResult with default details."""
         result = SendResult(
-            success=True,
-            backend_name="Email Backend",
-            destination="test@example.com"
+            success=True, backend_name="Email Backend", destination="test@example.com"
         )
 
         assert result.details == {}
@@ -194,9 +195,7 @@ class TestSendResult:
     def test_initialization_minimal(self):
         """Test SendResult with minimal parameters."""
         result = SendResult(
-            success=True,
-            backend_name="Copy Backend",
-            destination="/output"
+            success=True, backend_name="Copy Backend", destination="/output"
         )
 
         assert result.success is True
@@ -208,6 +207,7 @@ class TestSendResult:
 # SendManager Tests
 # =============================================================================
 
+
 class TestSendManager:
     """Tests for the SendManager class."""
 
@@ -215,24 +215,30 @@ class TestSendManager:
         """Test SendManager initialization."""
         assert send_manager.results == []
         assert SendManager.BACKEND_CONFIG == {
-            'copy': ('copy_backend', 'copy_to_directory', 'Copy Backend'),
-            'ftp': ('ftp_backend', 'ftp_server', 'FTP Backend'),
-            'email': ('email_backend', 'email_to', 'Email Backend')
+            "copy": ("copy_backend", "copy_to_directory", "Copy Backend"),
+            "ftp": ("ftp_backend", "ftp_server", "FTP Backend"),
+            "email": ("email_backend", "email_to", "Email Backend"),
         }
 
-    def test_send_file_single_backend(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_single_backend(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test sending file through single backend."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do = MagicMock()
                 mock_get_backend.return_value = mock_backend
 
-                results = send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 assert len(results) == 1
                 assert results[0].success is True
@@ -240,54 +246,72 @@ class TestSendManager:
                 assert results[0].destination == "/output/copy"
                 mock_backend.do.assert_called_once()
 
-    def test_send_file_multiple_backends(self, send_manager, sample_parameters_dict, sample_settings):
+    def test_send_file_multiple_backends(
+        self, send_manager, sample_parameters_dict, sample_settings
+    ):
         """Test sending file through multiple backends."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do = MagicMock()
                 mock_get_backend.return_value = mock_backend
 
-                results = send_manager.send_file(test_file, sample_parameters_dict, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict, sample_settings
+                )
 
                 assert len(results) == 3  # copy, ftp, email
                 assert all(r.success for r in results)
                 assert mock_backend.do.call_count == 3
 
-    def test_send_file_no_backends_enabled(self, send_manager, sample_parameters_dict_no_backends, sample_settings):
+    def test_send_file_no_backends_enabled(
+        self, send_manager, sample_parameters_dict_no_backends, sample_settings
+    ):
         """Test sending file with no backends enabled."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            results = send_manager.send_file(test_file, sample_parameters_dict_no_backends, sample_settings)
+            results = send_manager.send_file(
+                test_file, sample_parameters_dict_no_backends, sample_settings
+            )
 
             assert len(results) == 0
 
-    def test_send_file_backend_failure(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_backend_failure(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test handling of backend failure."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do.side_effect = Exception("Backend error")
                 mock_get_backend.return_value = mock_backend
 
-                results = send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 assert len(results) == 1
                 assert results[0].success is False
                 assert "Backend error" in results[0].error_message
 
-    def test_send_file_partial_failure(self, send_manager, sample_parameters_dict, sample_settings):
+    def test_send_file_partial_failure(
+        self, send_manager, sample_parameters_dict, sample_settings
+    ):
         """Test handling of partial backend failures."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
@@ -295,18 +319,23 @@ class TestSendManager:
                 f.write("test content")
 
             call_count = 0
+
             def side_effect(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1
                 if call_count == 2:  # Second backend fails
                     raise Exception("FTP error")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do.side_effect = side_effect
                 mock_get_backend.return_value = mock_backend
 
-                results = send_manager.send_file(test_file, sample_parameters_dict, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict, sample_settings
+                )
 
                 assert len(results) == 3
                 assert results[0].success is True  # copy succeeds
@@ -314,17 +343,23 @@ class TestSendManager:
                 assert results[2].success is True  # email succeeds
                 assert "FTP error" in results[1].error_message
 
-    def test_send_file_missing_backend_module(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_missing_backend_module(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test handling of missing backend module."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_get_backend.side_effect = ImportError("Module not found")
 
-                results = send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 assert len(results) == 1
                 assert results[0].success is False
@@ -381,39 +416,55 @@ class TestSendManager:
         """Test getting error messages with empty results."""
         assert SendManager.get_error_messages([]) == []
 
-    def test_send_file_prints_messages(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_prints_messages(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test that send_file prints appropriate messages."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend, \
-                 patch("builtins.print") as mock_print:
+            with (
+                patch(
+                    "dispatch.send_manager.BackendFactory.get_backend"
+                ) as mock_get_backend,
+                patch("builtins.print") as mock_print,
+            ):
                 mock_backend = MagicMock()
                 mock_get_backend.return_value = mock_backend
 
-                send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 # Should print sending message
                 mock_print.assert_called_once()
                 assert "sending" in mock_print.call_args[0][0].lower()
                 assert test_file in mock_print.call_args[0][0]
 
-    def test_send_file_error_prints_message(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_error_prints_message(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test that send_file prints error messages."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend, \
-                 patch("builtins.print") as mock_print:
+            with (
+                patch(
+                    "dispatch.send_manager.BackendFactory.get_backend"
+                ) as mock_get_backend,
+                patch("builtins.print") as mock_print,
+            ):
                 mock_backend = MagicMock()
                 mock_backend.do.side_effect = Exception("Backend failure")
                 mock_get_backend.return_value = mock_backend
 
-                send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 # Should print error message
                 assert mock_print.call_count == 2  # Sending message + error
@@ -422,6 +473,7 @@ class TestSendManager:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestSendManagerIntegration:
     """Integration tests for send manager workflows."""
@@ -435,12 +487,16 @@ class TestSendManagerIntegration:
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do = MagicMock()
                 mock_get_backend.return_value = mock_backend
 
-                results = manager.send_file(test_file, sample_parameters_dict, sample_settings)
+                results = manager.send_file(
+                    test_file, sample_parameters_dict, sample_settings
+                )
 
                 # Verify results
                 assert len(results) == 3
@@ -467,6 +523,7 @@ class TestSendManagerIntegration:
                 f.write("test content")
 
             call_count = 0
+
             def side_effect(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1
@@ -474,7 +531,9 @@ class TestSendManagerIntegration:
                     return  # copy succeeds
                 raise Exception("FTP connection failed")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do.side_effect = side_effect
                 mock_get_backend.return_value = mock_backend
@@ -492,74 +551,101 @@ class TestSendManagerIntegration:
 # Edge Case Tests
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
-    def test_send_file_nonexistent_file(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_nonexistent_file(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test sending non-existent file."""
-        with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+        with patch(
+            "dispatch.send_manager.BackendFactory.get_backend"
+        ) as mock_get_backend:
             mock_backend = MagicMock()
             mock_backend.do = MagicMock()
             mock_get_backend.return_value = mock_backend
 
-            results = send_manager.send_file("/nonexistent/file.txt", sample_parameters_dict_single_backend, sample_settings)
+            results = send_manager.send_file(
+                "/nonexistent/file.txt",
+                sample_parameters_dict_single_backend,
+                sample_settings,
+            )
 
             # Backend is called regardless of file existence (backend handles file access)
             assert len(results) == 1
             mock_backend.do.assert_called_once()
 
-    def test_send_file_empty_file(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_empty_file(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test sending empty file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = os.path.join(temp_dir, "empty.txt")
             with open(test_file, "w") as f:
                 pass  # Create empty file
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do = MagicMock()
                 mock_get_backend.return_value = mock_backend
 
-                results = send_manager.send_file(test_file, sample_parameters_dict_single_backend, sample_settings)
+                results = send_manager.send_file(
+                    test_file, sample_parameters_dict_single_backend, sample_settings
+                )
 
                 assert len(results) == 1
                 assert results[0].success is True
 
-    def test_send_file_very_long_path(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_very_long_path(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test sending file with very long path."""
         long_path = "/very" + "/long" * 50 + "/path.txt"
 
-        with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+        with patch(
+            "dispatch.send_manager.BackendFactory.get_backend"
+        ) as mock_get_backend:
             mock_backend = MagicMock()
             mock_backend.do = MagicMock()
             mock_get_backend.return_value = mock_backend
 
-            results = send_manager.send_file(long_path, sample_parameters_dict_single_backend, sample_settings)
+            results = send_manager.send_file(
+                long_path, sample_parameters_dict_single_backend, sample_settings
+            )
 
             assert len(results) == 1
 
-    def test_send_file_unicode_path(self, send_manager, sample_parameters_dict_single_backend, sample_settings):
+    def test_send_file_unicode_path(
+        self, send_manager, sample_parameters_dict_single_backend, sample_settings
+    ):
         """Test sending file with unicode path."""
         unicode_path = "/path/to/fichier_avec_accents_éèà.txt"
 
-        with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+        with patch(
+            "dispatch.send_manager.BackendFactory.get_backend"
+        ) as mock_get_backend:
             mock_backend = MagicMock()
             mock_backend.do = MagicMock()
             mock_get_backend.return_value = mock_backend
 
-            results = send_manager.send_file(unicode_path, sample_parameters_dict_single_backend, sample_settings)
+            results = send_manager.send_file(
+                unicode_path, sample_parameters_dict_single_backend, sample_settings
+            )
 
             assert len(results) == 1
 
     def test_backend_config_immutability(self, send_manager):
         """Test that BACKEND_CONFIG class attribute is properly defined."""
         # Verify BACKEND_CONFIG is a class attribute
-        assert hasattr(SendManager, 'BACKEND_CONFIG')
+        assert hasattr(SendManager, "BACKEND_CONFIG")
 
         # Verify structure
-        assert 'copy' in SendManager.BACKEND_CONFIG
-        assert 'ftp' in SendManager.BACKEND_CONFIG
-        assert 'email' in SendManager.BACKEND_CONFIG
+        assert "copy" in SendManager.BACKEND_CONFIG
+        assert "ftp" in SendManager.BACKEND_CONFIG
+        assert "email" in SendManager.BACKEND_CONFIG
 
         # Verify each entry has expected structure
         for backend_type, config in SendManager.BACKEND_CONFIG.items():
@@ -574,14 +660,14 @@ class TestEdgeCases:
             "bytes_sent": 1024,
             "transfer_time": 5.3,
             "checksum": "abc123",
-            "metadata": {"key": "value", "nested": {"data": True}}
+            "metadata": {"key": "value", "nested": {"data": True}},
         }
 
         result = SendResult(
             success=True,
             backend_name="Test Backend",
             destination="/test",
-            details=complex_details
+            details=complex_details,
         )
 
         assert result.details == complex_details
@@ -599,11 +685,15 @@ class TestEdgeCases:
         valid_results = [r for r in results if r is not None]
         assert SendManager.has_successful_sends(valid_results) is True
 
-    def test_send_file_unknown_destination_in_error(self, send_manager, sample_settings):
+    def test_send_file_unknown_destination_in_error(
+        self, send_manager, sample_settings
+    ):
         """Test that error message includes unknown destination when setting is missing."""
         parameters = {
             "process_backend_copy": True,
-            # Missing copy_to_directory
+            # Missing copy_to_directory - should result in "Unknown" destination
+            "process_backend_ftp": False,
+            "process_backend_email": False,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -611,7 +701,9 @@ class TestEdgeCases:
             with open(test_file, "w") as f:
                 f.write("test content")
 
-            with patch("dispatch.send_manager.BackendFactory.get_backend") as mock_get_backend:
+            with patch(
+                "dispatch.send_manager.BackendFactory.get_backend"
+            ) as mock_get_backend:
                 mock_backend = MagicMock()
                 mock_backend.do.side_effect = Exception("Send failed")
                 mock_get_backend.return_value = mock_backend

@@ -30,8 +30,8 @@ def get_qapplication():
 
 
 # All supported migration versions (5 is oldest, current is newest)
-ALL_VERSIONS = list(range(5, 39))  # 5, 6, 7, ..., 38
-CURRENT_VERSION = "38"
+ALL_VERSIONS = list(range(5, 40))  # 5, 6, 7, ..., 39
+CURRENT_VERSION = "39"
 
 
 class DatabaseConnectionManager:

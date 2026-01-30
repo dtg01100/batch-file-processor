@@ -64,7 +64,7 @@ class TestDispatchHelperFunctions(unittest.TestCase):
 
         self.assertEqual(resend_flag_set, set())
 
-    @patch("dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_generate_file_hash_success(self, mock_md5):
         """Test generate_file_hash with valid file and successful hash calculation"""
         mock_md5.return_value.hexdigest.return_value = "test_hash"
@@ -94,7 +94,7 @@ class TestDispatchHelperFunctions(unittest.TestCase):
         finally:
             os.unlink(test_file.name)
 
-    @patch("dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_generate_file_hash_resend_flag(self, mock_md5):
         """Test generate_file_hash with resend flag set"""
         mock_md5.return_value.hexdigest.return_value = "test_hash"
@@ -121,7 +121,7 @@ class TestDispatchHelperFunctions(unittest.TestCase):
         finally:
             os.unlink(test_file.name)
 
-    @patch("dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_generate_file_hash_new_file(self, mock_md5):
         """Test generate_file_hash with new file (not in processed list)"""
         mock_md5.return_value.hexdigest.return_value = "new_hash"
@@ -141,8 +141,8 @@ class TestDispatchHelperFunctions(unittest.TestCase):
         finally:
             os.unlink(test_file.name)
 
-    @patch("dispatch.hashlib.md5")
-    @patch("dispatch.time.sleep")
+    @patch("dispatch.file_processor.hashlib.md5")
+    @patch("dispatch.file_processor.time.sleep")
     def test_generate_file_hash_retry_logic(self, mock_sleep, mock_md5):
         """Test generate_file_hash retry logic on file access failure"""
         mock_md5.side_effect = [
@@ -167,8 +167,8 @@ class TestDispatchHelperFunctions(unittest.TestCase):
         finally:
             os.unlink(test_file.name)
 
-    @patch("dispatch.hashlib.md5")
-    @patch("dispatch.time.sleep")
+    @patch("dispatch.file_processor.hashlib.md5")
+    @patch("dispatch.file_processor.time.sleep")
     def test_generate_file_hash_retry_exceeded(self, mock_sleep, mock_md5):
         """Test generate_file_hash raises exception when retry limit exceeded"""
         mock_md5.side_effect = Exception("File access error")
@@ -201,10 +201,10 @@ class TestDispatchProcessFunction(unittest.TestCase):
         os.remove(self.test_file)
         os.rmdir(self.temp_dir)
 
-    @patch("dispatch.query_runner")
-    @patch("dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("dispatch.threading.Thread")
-    @patch("dispatch.concurrent.futures.ThreadPoolExecutor")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
+    @patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor")
     def test_process_with_no_files(
         self,
         mock_thread_executor,
@@ -272,11 +272,11 @@ class TestDispatchProcessFunction(unittest.TestCase):
         self.assertFalse(has_errors)
         self.assertIn("processed", run_summary)
 
-    @patch("dispatch.query_runner")
-    @patch("dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("dispatch.threading.Thread")
-    @patch("dispatch.concurrent.futures.ThreadPoolExecutor")
-    @patch("dispatch.os.path.isdir")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
+    @patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor")
+    @patch("dispatch.file_processor.os.path.isdir")
     def test_process_missing_folder(
         self,
         mock_isdir,
@@ -355,9 +355,9 @@ class TestDispatchProcessFunction(unittest.TestCase):
         self.assertIn("errors", run_summary)
         run_log.write.assert_called()
 
-    @patch("dispatch.query_runner")
-    @patch("dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("dispatch.threading.Thread")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
     def test_process_no_new_files_simple(
         self, mock_thread, mock_process_executor, mock_query_runner
     ):

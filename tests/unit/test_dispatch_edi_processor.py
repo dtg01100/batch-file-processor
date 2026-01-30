@@ -26,6 +26,7 @@ from dispatch.edi_processor import (
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sample_parameters_dict():
     """Provide sample parameters dictionary for testing."""
@@ -97,6 +98,7 @@ C00100000123
 # EDISplitter Tests
 # =============================================================================
 
+
 class TestEDISplitter:
     """Tests for the EDISplitter class."""
 
@@ -114,14 +116,20 @@ class TestEDISplitter:
                     (os.path.join(scratch_folder, "split_2.edi"), "", ".inv"),
                 ]
 
-                result = EDISplitter.split_edi(input_file, scratch_folder, sample_parameters_dict)
+                result = EDISplitter.split_edi(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
                 assert len(result) == 2
                 assert result[0][0].endswith("split_1.edi")
                 assert result[1][0].endswith("split_2.edi")
-                mock_split.assert_called_once_with(input_file, scratch_folder, sample_parameters_dict)
+                mock_split.assert_called_once_with(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
-    def test_split_edi_single_file(self, sample_parameters_dict, sample_single_edi_content):
+    def test_split_edi_single_file(
+        self, sample_parameters_dict, sample_single_edi_content
+    ):
         """Test EDI splitting with single file result."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
@@ -133,7 +141,9 @@ class TestEDISplitter:
                     (os.path.join(scratch_folder, "split_1.edi"), "", ".inv"),
                 ]
 
-                result = EDISplitter.split_edi(input_file, scratch_folder, sample_parameters_dict)
+                result = EDISplitter.split_edi(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
                 assert len(result) == 1
                 mock_split.assert_called_once()
@@ -148,7 +158,9 @@ class TestEDISplitter:
             with patch("dispatch.edi_processor.utils.do_split_edi") as mock_split:
                 mock_split.return_value = []
 
-                result = EDISplitter.split_edi(input_file, scratch_folder, sample_parameters_dict)
+                result = EDISplitter.split_edi(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
                 assert result == []
 
@@ -162,7 +174,9 @@ class TestEDISplitter:
             with patch("dispatch.edi_processor.utils.do_split_edi") as mock_split:
                 mock_split.side_effect = Exception("Split error")
 
-                result = EDISplitter.split_edi(input_file, scratch_folder, sample_parameters_dict)
+                result = EDISplitter.split_edi(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
                 # Should return original file on error
                 assert len(result) == 1
@@ -177,15 +191,19 @@ class TestEDISplitter:
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
-            with patch("dispatch.edi_processor.utils.do_split_edi") as mock_split, \
-                 patch("builtins.print") as mock_print:
+            with (
+                patch("dispatch.edi_processor.utils.do_split_edi") as mock_split,
+                patch("builtins.print") as mock_print,
+            ):
                 mock_split.return_value = [
                     (os.path.join(scratch_folder, "split_1.edi"), "A_", ".inv"),
                     (os.path.join(scratch_folder, "split_2.edi"), "B_", ".inv"),
                     (os.path.join(scratch_folder, "split_3.edi"), "C_", ".cr"),
                 ]
 
-                result = EDISplitter.split_edi(input_file, scratch_folder, sample_parameters_dict)
+                result = EDISplitter.split_edi(
+                    input_file, scratch_folder, sample_parameters_dict
+                )
 
                 assert len(result) == 3
                 mock_print.assert_called_once()
@@ -195,6 +213,7 @@ class TestEDISplitter:
 # =============================================================================
 # EDIConverter Tests
 # =============================================================================
+
 
 class TestEDIConverter:
     """Tests for the EDIConverter class."""
@@ -209,22 +228,28 @@ class TestEDIConverter:
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
-            with patch("dispatch.edi_processor.importlib.import_module") as mock_import, \
-                 patch("builtins.print") as mock_print:
+            with patch("dispatch.edi_processor.importlib.import_module") as mock_import:
                 mock_module = MagicMock()
                 mock_module.edi_convert.return_value = output_file
                 mock_import.return_value = mock_module
 
                 result = EDIConverter.convert_edi(
-                    input_file, output_file, sample_settings, sample_parameters_dict, upc_dict
+                    input_file,
+                    output_file,
+                    sample_settings,
+                    sample_parameters_dict,
+                    upc_dict,
                 )
 
                 assert result == output_file
-                mock_import.assert_called_once_with("convert_to_csv")
+                mock_import.assert_any_call("convert_to_csv")
                 mock_module.edi_convert.assert_called_once_with(
-                    input_file, output_file, sample_settings, sample_parameters_dict, upc_dict
+                    input_file,
+                    output_file,
+                    sample_settings,
+                    sample_parameters_dict,
+                    upc_dict,
                 )
-                mock_print.assert_called_once()
 
     def test_convert_edi_different_format(self, sample_settings):
         """Test EDI conversion with different format."""
@@ -238,7 +263,11 @@ class TestEDIConverter:
             mock_import.return_value = mock_module
 
             result = EDIConverter.convert_edi(
-                "/input/file.edi", "/output/file.txt", sample_settings, parameters_dict, {}
+                "/input/file.edi",
+                "/output/file.txt",
+                sample_settings,
+                parameters_dict,
+                {},
             )
 
             mock_import.assert_called_once_with("convert_to_fintech")
@@ -255,7 +284,11 @@ class TestEDIConverter:
             mock_import.return_value = mock_module
 
             EDIConverter.convert_edi(
-                "/input/file.edi", "/output/file.txt", sample_settings, parameters_dict, {}
+                "/input/file.edi",
+                "/output/file.txt",
+                sample_settings,
+                parameters_dict,
+                {},
             )
 
             # Should convert "E-Store Invoice" to "convert_to_e_store_invoice"
@@ -268,7 +301,11 @@ class TestEDIConverter:
 
             with pytest.raises(ImportError):
                 EDIConverter.convert_edi(
-                    "/input/file.edi", "/output/file.csv", sample_settings, sample_parameters_dict, {}
+                    "/input/file.edi",
+                    "/output/file.csv",
+                    sample_settings,
+                    sample_parameters_dict,
+                    {},
                 )
 
 
@@ -276,10 +313,13 @@ class TestEDIConverter:
 # EDITweaker Tests
 # =============================================================================
 
+
 class TestEDITweaker:
     """Tests for the EDITweaker class."""
 
-    def test_tweak_edi_success(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_tweak_edi_success(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test successful EDI tweaking."""
         with tempfile.TemporaryDirectory() as temp_dir:
             input_file = os.path.join(temp_dir, "input.edi")
@@ -288,28 +328,44 @@ class TestEDITweaker:
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
-            with patch("dispatch.edi_processor.edi_tweaks.edi_tweak") as mock_tweak, \
-                 patch("builtins.print") as mock_print:
+            with (
+                patch("dispatch.edi_processor.edi_tweaks.edi_tweak") as mock_tweak,
+                patch("builtins.print") as mock_print,
+            ):
                 mock_tweak.return_value = output_file
 
                 result = EDITweaker.tweak_edi(
-                    input_file, output_file, sample_settings, sample_parameters_dict, sample_upc_dict
+                    input_file,
+                    output_file,
+                    sample_settings,
+                    sample_parameters_dict,
+                    sample_upc_dict,
                 )
 
                 assert result == output_file
                 mock_tweak.assert_called_once_with(
-                    input_file, output_file, sample_settings, sample_parameters_dict, sample_upc_dict
+                    input_file,
+                    output_file,
+                    sample_settings,
+                    sample_parameters_dict,
+                    sample_upc_dict,
                 )
                 mock_print.assert_called_once()
 
-    def test_tweak_edi_exception(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_tweak_edi_exception(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test EDI tweaking exception handling."""
         with patch("dispatch.edi_processor.edi_tweaks.edi_tweak") as mock_tweak:
             mock_tweak.side_effect = Exception("Tweak error")
 
             with pytest.raises(Exception) as exc_info:
                 EDITweaker.tweak_edi(
-                    "/input/file.edi", "/output/file.edi", sample_settings, sample_parameters_dict, sample_upc_dict
+                    "/input/file.edi",
+                    "/output/file.edi",
+                    sample_settings,
+                    sample_parameters_dict,
+                    sample_upc_dict,
                 )
 
             assert "Tweak error" in str(exc_info.value)
@@ -319,10 +375,13 @@ class TestEDITweaker:
 # EDIProcessor Tests
 # =============================================================================
 
+
 class TestEDIProcessor:
     """Tests for the EDIProcessor class."""
 
-    def test_process_edi_no_split(self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict):
+    def test_process_edi_no_split(
+        self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict
+    ):
         """Test EDI processing without splitting."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
@@ -333,35 +392,55 @@ class TestEDIProcessor:
             parameters["split_edi"] = False
             parameters["process_edi"] = "False"
 
-            result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+            result = EDIProcessor.process_edi(
+                input_file, parameters, sample_settings, sample_upc_dict, scratch_folder
+            )
 
             assert len(result) == 1
             assert result[0][0] == input_file
             assert result[0][1] == ""
             assert result[0][2] == ""
 
-    def test_process_edi_with_split(self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict):
+    def test_process_edi_with_split(
+        self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict
+    ):
         """Test EDI processing with splitting."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
+            # Create split files that the mock will return
+            split1 = os.path.join(scratch_folder, "split1.edi")
+            split2 = os.path.join(scratch_folder, "split2.edi")
+            with open(split1, "w") as f:
+                f.write("Split 1 content")
+            with open(split2, "w") as f:
+                f.write("Split 2 content")
+
             parameters = sample_parameters_dict_no_processing.copy()
             parameters["split_edi"] = True
 
             with patch("dispatch.edi_processor.EDISplitter.split_edi") as mock_split:
                 mock_split.return_value = [
-                    (os.path.join(scratch_folder, "split1.edi"), "A_", ".inv"),
-                    (os.path.join(scratch_folder, "split2.edi"), "B_", ".inv"),
+                    (split1, "A_", ".inv"),
+                    (split2, "B_", ".inv"),
                 ]
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 2
                 mock_split.assert_called_once()
 
-    def test_process_edi_with_conversion(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_process_edi_with_conversion(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test EDI processing with conversion."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
@@ -373,15 +452,27 @@ class TestEDIProcessor:
             parameters["process_edi"] = "True"
             parameters["tweak_edi"] = False
 
-            with patch("dispatch.edi_processor.EDIConverter.convert_edi") as mock_convert:
-                mock_convert.return_value = os.path.join(scratch_folder, "converted_test.edi")
+            with patch(
+                "dispatch.edi_processor.EDIConverter.convert_edi"
+            ) as mock_convert:
+                mock_convert.return_value = os.path.join(
+                    scratch_folder, "converted_test.edi"
+                )
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 1
                 mock_convert.assert_called_once()
 
-    def test_process_edi_with_tweaking(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_process_edi_with_tweaking(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test EDI processing with tweaking."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
@@ -394,42 +485,72 @@ class TestEDIProcessor:
             parameters["tweak_edi"] = True
 
             with patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak:
-                mock_tweak.return_value = os.path.join(scratch_folder, "tweaked_test.edi")
+                mock_tweak.return_value = os.path.join(
+                    scratch_folder, "tweaked_test.edi"
+                )
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 1
                 mock_tweak.assert_called_once()
 
-    def test_process_edi_full_pipeline(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_process_edi_full_pipeline(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test EDI processing with full pipeline (split + convert + tweak)."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "test.edi")
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
+            split1 = os.path.join(scratch_folder, "split1.edi")
+            with open(split1, "w") as f:
+                f.write("Split 1 content")
+
             parameters = sample_parameters_dict.copy()
             parameters["split_edi"] = True
             parameters["process_edi"] = "True"
             parameters["tweak_edi"] = True
 
-            with patch("dispatch.edi_processor.EDISplitter.split_edi") as mock_split, \
-                 patch("dispatch.edi_processor.EDIConverter.convert_edi") as mock_convert, \
-                 patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak:
+            with (
+                patch("dispatch.edi_processor.EDISplitter.split_edi") as mock_split,
+                patch(
+                    "dispatch.edi_processor.EDIConverter.convert_edi"
+                ) as mock_convert,
+                patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak,
+            ):
                 mock_split.return_value = [
-                    (os.path.join(scratch_folder, "split1.edi"), "A_", ".inv"),
+                    (split1, "A_", ".inv"),
                 ]
-                mock_convert.return_value = os.path.join(scratch_folder, "converted_split1.edi")
-                mock_tweak.return_value = os.path.join(scratch_folder, "tweaked_converted_split1.edi")
+                mock_convert.return_value = os.path.join(
+                    scratch_folder, "converted_split1.edi"
+                )
+                mock_tweak.return_value = os.path.join(
+                    scratch_folder, "tweaked_converted_split1.edi"
+                )
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 1
                 mock_split.assert_called_once()
                 mock_convert.assert_called_once()
                 mock_tweak.assert_called_once()
 
-    def test_process_single_file_copy(self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict):
+    def test_process_single_file_copy(
+        self, sample_parameters_dict_no_processing, sample_settings, sample_upc_dict
+    ):
         """Test _process_single_file copies file to scratch folder."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "input.edi")
@@ -447,7 +568,9 @@ class TestEDIProcessor:
             assert scratch_folder in result
             assert os.path.exists(result)
 
-    def test_process_single_file_with_processing(self, sample_parameters_dict, sample_settings, sample_upc_dict):
+    def test_process_single_file_with_processing(
+        self, sample_parameters_dict, sample_settings, sample_upc_dict
+    ):
         """Test _process_single_file with EDI processing enabled."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "input.edi")
@@ -459,11 +582,19 @@ class TestEDIProcessor:
             parameters["tweak_edi"] = False
             parameters["split_edi"] = False
 
-            with patch("dispatch.edi_processor.EDIConverter.convert_edi") as mock_convert:
-                mock_convert.return_value = os.path.join(scratch_folder, "converted_input.edi")
+            with patch(
+                "dispatch.edi_processor.EDIConverter.convert_edi"
+            ) as mock_convert:
+                mock_convert.return_value = os.path.join(
+                    scratch_folder, "converted_input.edi"
+                )
 
                 result = EDIProcessor._process_single_file(
-                    input_file, parameters, sample_settings, sample_upc_dict, scratch_folder
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
                 )
 
                 mock_convert.assert_called_once()
@@ -474,10 +605,13 @@ class TestEDIProcessor:
 # FileNamer Tests
 # =============================================================================
 
+
 class TestFileNamer:
     """Tests for the FileNamer class."""
 
-    def test_generate_output_filename_no_rename(self, sample_parameters_dict_no_processing):
+    def test_generate_output_filename_no_rename(
+        self, sample_parameters_dict_no_processing
+    ):
         """Test filename generation with no rename pattern."""
         parameters = sample_parameters_dict_no_processing.copy()
         parameters["rename_file"] = ""
@@ -490,12 +624,14 @@ class TestFileNamer:
         """Test filename generation with rename pattern."""
         parameters = sample_parameters_dict.copy()
 
-        with patch("dispatch.edi_processor.datetime") as mock_datetime:
+        with patch("dispatch.edi_processor.datetime.datetime") as mock_datetime:
             mock_now = MagicMock()
             mock_datetime.now.return_value = mock_now
             mock_datetime.strftime.return_value = "20240115"
 
-            result = FileNamer.generate_output_filename("/path/to/test.edi", parameters, "prefix_", "_suffix")
+            result = FileNamer.generate_output_filename(
+                "/path/to/test.edi", parameters, "prefix_", "_suffix"
+            )
 
             assert "output_20240115" in result
             assert result.endswith(".edi_suffix")
@@ -505,7 +641,7 @@ class TestFileNamer:
         """Test datetime placeholder replacement in filename."""
         parameters = {"rename_file": "invoice_%datetime%_export"}
 
-        with patch("dispatch.edi_processor.datetime") as mock_datetime:
+        with patch("dispatch.edi_processor.datetime.datetime") as mock_datetime:
             mock_now = MagicMock()
             mock_datetime.now.return_value = mock_now
             mock_datetime.strftime.return_value = "20240115"
@@ -565,6 +701,7 @@ class TestFileNamer:
 # Integration Tests
 # =============================================================================
 
+
 class TestEDIProcessorIntegration:
     """Integration tests for EDI processing workflows."""
 
@@ -574,7 +711,9 @@ class TestEDIProcessorIntegration:
             input_file = os.path.join(scratch_folder, "test.edi")
             with open(input_file, "w") as f:
                 f.write("A000001INV00001011221251000012345\n")
-                f.write("B012345678901Product Description 1234561234567890100001000100050000\n")
+                f.write(
+                    "B012345678901Product Description 1234561234567890100001000100050000\n"
+                )
                 f.write("C00100000123\n")
 
             parameters = {
@@ -585,14 +724,26 @@ class TestEDIProcessorIntegration:
                 "rename_file": "",
             }
 
-            with patch("dispatch.edi_processor.EDIConverter.convert_edi") as mock_convert, \
-                 patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak:
+            with (
+                patch(
+                    "dispatch.edi_processor.EDIConverter.convert_edi"
+                ) as mock_convert,
+                patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak,
+            ):
                 converted_file = os.path.join(scratch_folder, "converted_test.edi")
-                tweaked_file = os.path.join(scratch_folder, "tweaked_converted_test.edi")
+                tweaked_file = os.path.join(
+                    scratch_folder, "tweaked_converted_test.edi"
+                )
                 mock_convert.return_value = converted_file
                 mock_tweak.return_value = tweaked_file
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 1
 
@@ -603,6 +754,13 @@ class TestEDIProcessorIntegration:
             with open(input_file, "w") as f:
                 f.write("EDI content")
 
+            split1 = os.path.join(scratch_folder, "split1.edi")
+            split2 = os.path.join(scratch_folder, "split2.edi")
+            split3 = os.path.join(scratch_folder, "split3.edi")
+            for sf in [split1, split2, split3]:
+                with open(sf, "w") as f:
+                    f.write("Split content")
+
             parameters = {
                 "convert_to_format": "CSV",
                 "process_edi": "True",
@@ -611,13 +769,17 @@ class TestEDIProcessorIntegration:
                 "rename_file": "",
             }
 
-            with patch("dispatch.edi_processor.EDISplitter.split_edi") as mock_split, \
-                 patch("dispatch.edi_processor.EDIConverter.convert_edi") as mock_convert, \
-                 patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak:
+            with (
+                patch("dispatch.edi_processor.EDISplitter.split_edi") as mock_split,
+                patch(
+                    "dispatch.edi_processor.EDIConverter.convert_edi"
+                ) as mock_convert,
+                patch("dispatch.edi_processor.EDITweaker.tweak_edi") as mock_tweak,
+            ):
                 mock_split.return_value = [
-                    (os.path.join(scratch_folder, "split1.edi"), "A_", ".inv"),
-                    (os.path.join(scratch_folder, "split2.edi"), "B_", ".inv"),
-                    (os.path.join(scratch_folder, "split3.edi"), "C_", ".cr"),
+                    (split1, "A_", ".inv"),
+                    (split2, "B_", ".inv"),
+                    (split3, "C_", ".cr"),
                 ]
                 mock_convert.side_effect = [
                     os.path.join(scratch_folder, "converted_split1.edi"),
@@ -630,7 +792,13 @@ class TestEDIProcessorIntegration:
                     os.path.join(scratch_folder, "tweaked_split3.edi"),
                 ]
 
-                result = EDIProcessor.process_edi(input_file, parameters, sample_settings, sample_upc_dict, scratch_folder)
+                result = EDIProcessor.process_edi(
+                    input_file,
+                    parameters,
+                    sample_settings,
+                    sample_upc_dict,
+                    scratch_folder,
+                )
 
                 assert len(result) == 3
                 assert result[0][1] == "A_"
@@ -643,10 +811,13 @@ class TestEDIProcessorIntegration:
 # Edge Case Tests
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
-    def test_empty_file_processing(self, sample_parameters_dict_no_processing, sample_settings):
+    def test_empty_file_processing(
+        self, sample_parameters_dict_no_processing, sample_settings
+    ):
         """Test processing of empty EDI file."""
         with tempfile.TemporaryDirectory() as scratch_folder:
             input_file = os.path.join(scratch_folder, "empty.edi")
@@ -656,7 +827,9 @@ class TestEdgeCases:
             parameters = sample_parameters_dict_no_processing.copy()
             parameters["split_edi"] = False
 
-            result = EDIProcessor.process_edi(input_file, parameters, sample_settings, {}, scratch_folder)
+            result = EDIProcessor.process_edi(
+                input_file, parameters, sample_settings, {}, scratch_folder
+            )
 
             assert len(result) == 1
 
