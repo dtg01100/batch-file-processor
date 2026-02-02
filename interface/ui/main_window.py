@@ -1,12 +1,22 @@
 """
 Main window module for PyQt6 interface.
 
-This module contains the main application window setup.
+This module contains the main application window setup with
+left sidebar layout for buttons and right content area for folder lists.
 """
 
 from typing import TYPE_CHECKING, Optional, Dict, Any
 
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QFrame, QLabel
+from PyQt6.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QSplitter,
+    QFrame,
+    QLabel,
+    QSizePolicy,
+)
 from PyQt6.QtCore import pyqtSignal as Signal, Qt
 
 if TYPE_CHECKING:
@@ -21,10 +31,11 @@ class MainWindow(QMainWindow):
     process_directories_requested = Signal()
     add_folder_requested = Signal()
     batch_add_folders_requested = Signal()
+    set_defaults_requested = Signal()
     edit_settings_requested = Signal()
     maintenance_requested = Signal()
     processed_files_requested = Signal()
-    exit_requested = Signal()
+    enable_resend_requested = Signal()
     edit_folder_requested = Signal(int)  # folder_id
     toggle_active_requested = Signal(int)  # folder_id
     delete_folder_requested = Signal(int)  # folder_id
@@ -54,33 +65,54 @@ class MainWindow(QMainWindow):
         self._connect_signals()
 
     def _setup_ui(self) -> None:
-        """Setup the main window UI components."""
+        """Setup the main window UI components with left sidebar layout."""
         try:
             self.setWindowTitle("Batch File Processor")
             self.setMinimumSize(900, 600)
 
-            # Central widget with vertical layout
+            # Central widget with horizontal layout (sidebar + content)
             central_widget = QWidget()
             self.setCentralWidget(central_widget)
-            layout = QVBoxLayout(central_widget)
+            layout = QHBoxLayout(central_widget)
             layout.setContentsMargins(5, 5, 5, 5)
             layout.setSpacing(5)
 
-            # Button panel at top
+            # Left sidebar frame
+            sidebar_frame = QFrame()
+            sidebar_frame.setFrameShape(QFrame.Shape.StyledPanel)
+            sidebar_frame.setSizePolicy(
+                QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+            )
+            sidebar_frame.setMinimumWidth(160)
+            sidebar_frame.setMaximumWidth(180)
+            sidebar_layout = QVBoxLayout(sidebar_frame)
+            sidebar_layout.setContentsMargins(5, 5, 5, 5)
+            sidebar_layout.setSpacing(3)
+
+            # Button panel in sidebar
             from interface.ui.widgets.button_panel import ButtonPanel
 
             self._button_panel = ButtonPanel()
-            layout.addWidget(self._button_panel)
+            sidebar_layout.addWidget(self._button_panel)
 
-            # Add separator
+            # Add sidebar to main layout
+            layout.addWidget(sidebar_frame)
+
+            # Vertical separator line
             separator = QFrame()
-            separator.setFrameShape(QFrame.Shape.HLine)
+            separator.setFrameShape(QFrame.Shape.VLine)
             separator.setFrameShadow(QFrame.Shadow.Sunken)
             layout.addWidget(separator)
 
+            # Right content area with folder list
+            content_widget = QWidget()
+            content_layout = QVBoxLayout(content_widget)
+            content_layout.setContentsMargins(5, 5, 5, 5)
+            content_layout.setSpacing(5)
+
             # Splitter for folder lists (active/inactive split view)
             self._folder_splitter = QSplitter(Qt.Orientation.Horizontal)
-            layout.addWidget(self._folder_splitter, stretch=1)
+            content_layout.addWidget(self._folder_splitter, stretch=1)
 
             # Folder list widget
             from interface.ui.widgets.folder_list import FolderListWidget
@@ -92,12 +124,16 @@ class MainWindow(QMainWindow):
 
             # Set initial splitter sizes
             self._folder_splitter.setSizes([400, 400])
+
+            # Add content widget to main layout
+            layout.addWidget(content_widget, stretch=1)
+
         except Exception as e:
             print(f"Error setting up main window UI: {str(e)}")
             # Create a basic UI to allow the app to continue running
             central_widget = QWidget()
             self.setCentralWidget(central_widget)
-            layout = QVBoxLayout(central_widget)
+            layout = QHBoxLayout(central_widget)
             error_label = QLabel("Error initializing UI components")
             layout.addWidget(error_label)
 
@@ -111,6 +147,9 @@ class MainWindow(QMainWindow):
         self._button_panel.batch_add_clicked.connect(
             self.batch_add_folders_requested.emit
         )
+        self._button_panel.set_defaults_clicked.connect(
+            self.set_defaults_requested.emit
+        )
         self._button_panel.edit_settings_clicked.connect(
             self.edit_settings_requested.emit
         )
@@ -118,7 +157,9 @@ class MainWindow(QMainWindow):
         self._button_panel.processed_files_clicked.connect(
             self.processed_files_requested.emit
         )
-        self._button_panel.exit_clicked.connect(self.exit_requested.emit)
+        self._button_panel.enable_resend_clicked.connect(
+            self.enable_resend_requested.emit
+        )
 
         # Connect folder list signals
         self._folder_list.folder_edit_requested.connect(self.edit_folder_requested.emit)

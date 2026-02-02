@@ -320,3 +320,20 @@ class MaintenanceOperations:
         if self.db_manager.processed_files is None:
             return 0
         return self.db_manager.processed_files.count(resend_flag=True)
+
+    def enable_resend_for_all(self) -> int:
+        """Mark all processed files for resend by setting resend flag.
+
+        Returns:
+            Number of files marked for resend
+        """
+        if (
+            self.db_manager.processed_files is None
+            or self.db_manager.database_connection is None
+        ):
+            return 0
+        count = self.db_manager.processed_files.count()
+        self.db_manager.database_connection.query(
+            "update processed_files set resend_flag=1 where resend_flag=0"
+        )
+        return count

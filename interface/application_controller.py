@@ -79,12 +79,17 @@ class ApplicationController:
         self._main_window.batch_add_folders_requested.connect(
             self._handle_batch_add_folders
         )
+        self._main_window.set_defaults_requested.connect(
+            self._handle_set_defaults
+        )
         self._main_window.edit_settings_requested.connect(self._handle_edit_settings)
         self._main_window.maintenance_requested.connect(self._handle_maintenance)
         self._main_window.processed_files_requested.connect(
             self._handle_processed_files
         )
-        self._main_window.exit_requested.connect(self._handle_exit)
+        self._main_window.enable_resend_requested.connect(
+            self._handle_enable_resend
+        )
 
         # Folder operation signals
         self._main_window.edit_folder_requested.connect(self._handle_edit_folder)
@@ -424,6 +429,37 @@ class ApplicationController:
             parent=self._main_window, db_manager=self._db_manager
         )
         dialog.exec()
+
+    def _handle_set_defaults(self) -> None:
+        """Handle set defaults request."""
+        # Reuse the edit settings dialog for setting defaults
+        self._handle_edit_settings()
+
+    def _handle_enable_resend(self) -> None:
+        """Handle enable resend request."""
+        # Toggle resend mode for processed files
+        reply = QMessageBox.question(
+            self._main_window,
+            "Enable Resend",
+            "This will mark all processed files as needing to be resent.\n"
+            "Do you want to continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Mark all processed files for resend
+        count = self._maintenance_ops.enable_resend_for_all()
+
+        QMessageBox.information(
+            self._main_window,
+            "Resend Enabled",
+            f"{count} files marked for resend.",
+        )
+
+        # Refresh folder list
+        self._main_window.refresh_folder_list()
 
     def _handle_exit(self) -> None:
         """Handle exit request."""
