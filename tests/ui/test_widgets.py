@@ -56,9 +56,13 @@ class TestButtonPanelSignals:
         """Test ButtonPanel has processed_files_clicked signal."""
         assert hasattr(button_panel_class, "processed_files_clicked")
 
-    def test_has_exit_signal(self, button_panel_class):
-        """Test ButtonPanel has exit_clicked signal."""
-        assert hasattr(button_panel_class, "exit_clicked")
+    def test_has_set_defaults_signal(self, button_panel_class):
+        """Test ButtonPanel has set_defaults_clicked signal."""
+        assert hasattr(button_panel_class, "set_defaults_clicked")
+
+    def test_has_enable_resend_signal(self, button_panel_class):
+        """Test ButtonPanel has enable_resend_clicked signal."""
+        assert hasattr(button_panel_class, "enable_resend_clicked")
 
 
 class TestButtonPanelMethods:

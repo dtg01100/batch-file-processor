@@ -31,14 +31,15 @@ class TestButtonPanelQt:
         panel = ButtonPanel()
         qtbot.addWidget(panel)
 
-        # Check buttons exist
+        # Check buttons exist (new layout with Set Defaults and Enable Resend)
         assert hasattr(panel, "_add_folder_btn")
         assert hasattr(panel, "_batch_add_btn")
-        assert hasattr(panel, "_settings_btn")
+        assert hasattr(panel, "_set_defaults_btn")
         assert hasattr(panel, "_process_btn")
-        assert hasattr(panel, "_maintenance_btn")
         assert hasattr(panel, "_processed_files_btn")
-        assert hasattr(panel, "_exit_btn")
+        assert hasattr(panel, "_maintenance_btn")
+        assert hasattr(panel, "_settings_btn")
+        assert hasattr(panel, "_enable_resend_btn")
 
     def test_button_panel_signals_emit(self, qtbot):
         """Test ButtonPanel signals can be connected and emit."""
@@ -185,14 +186,15 @@ class TestMainWindowQt:
         window = MainWindow(db_manager=mock_db_manager, app=qapp)
         qtbot.addWidget(window)
 
-        # Check signals exist
+        # Check signals exist (new layout with set_defaults and enable_resend, no exit)
         assert hasattr(window, "process_directories_requested")
         assert hasattr(window, "add_folder_requested")
         assert hasattr(window, "batch_add_folders_requested")
+        assert hasattr(window, "set_defaults_requested")
         assert hasattr(window, "edit_settings_requested")
         assert hasattr(window, "maintenance_requested")
         assert hasattr(window, "processed_files_requested")
-        assert hasattr(window, "exit_requested")
+        assert hasattr(window, "enable_resend_requested")
         assert hasattr(window, "edit_folder_requested")
         assert hasattr(window, "toggle_active_requested")
         assert hasattr(window, "delete_folder_requested")

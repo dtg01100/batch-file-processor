@@ -42,14 +42,15 @@ def mock_main_window():
     window._button_panel = Mock()
     window.refresh_folder_list = Mock()
 
-    # Mock signals
+    # Mock signals (new layout with set_defaults and enable_resend, no exit)
     window.process_directories_requested = Mock()
     window.add_folder_requested = Mock()
     window.batch_add_folders_requested = Mock()
+    window.set_defaults_requested = Mock()
     window.edit_settings_requested = Mock()
     window.maintenance_requested = Mock()
     window.processed_files_requested = Mock()
-    window.exit_requested = Mock()
+    window.enable_resend_requested = Mock()
     window.edit_folder_requested = Mock()
     window.toggle_active_requested = Mock()
     window.delete_folder_requested = Mock()
@@ -126,15 +127,16 @@ class TestApplicationControllerInit:
 
             controller = ApplicationController(**controller_deps)
 
-            # Verify signals were connected
+            # Verify signals were connected (new layout with set_defaults and enable_resend, no exit)
             window = controller_deps["main_window"]
             window.process_directories_requested.connect.assert_called_once()
             window.add_folder_requested.connect.assert_called_once()
             window.batch_add_folders_requested.connect.assert_called_once()
+            window.set_defaults_requested.connect.assert_called_once()
             window.edit_settings_requested.connect.assert_called_once()
             window.maintenance_requested.connect.assert_called_once()
             window.processed_files_requested.connect.assert_called_once()
-            window.exit_requested.connect.assert_called_once()
+            window.enable_resend_requested.connect.assert_called_once()
             window.edit_folder_requested.connect.assert_called_once()
             window.toggle_active_requested.connect.assert_called_once()
             window.delete_folder_requested.connect.assert_called_once()
