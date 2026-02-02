@@ -289,13 +289,10 @@ class EDIFormatParser:
             length = field_def["length"]
 
             # Extract substring (handle lines that might be shorter than expected)
+            # Don't pad with spaces - return what's available, matching original
+            # utils.capture_records() behavior
             end_pos = position + length
-            if end_pos <= len(line):
-                value = line[position:end_pos]
-            else:
-                # Line is shorter than expected, pad with spaces
-                available = line[position:] if position < len(line) else ""
-                value = available.ljust(length)
+            value = line[position:end_pos]
 
             result[field_name] = value
 
