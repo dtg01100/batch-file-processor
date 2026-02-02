@@ -10,61 +10,49 @@ When adding a new migration version:
 """
 
 import os
-import tempfile
-from PyQt6.QtSql import QSqlDatabase, QSqlQuery
-from PyQt6.QtWidgets import QApplication
+import sqlite3
 import sys
+import tempfile
+from contextlib import contextmanager
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from core.database import DatabaseConnection
+
+ALL_VERSIONS = list(range(5, 41))
+CURRENT_VERSION = "40"
 
 
-_qapp_instance = None
-
-
-def get_qapplication():
-    """Get or create QApplication instance for Qt operations."""
-    global _qapp_instance
-    if _qapp_instance is None:
-        _qapp_instance = QApplication.instance()
-        if _qapp_instance is None:
-            _qapp_instance = QApplication(sys.argv)
-    return _qapp_instance
-
-
-# All supported migration versions (5 is oldest, current is newest)
-ALL_VERSIONS = list(range(5, 40))  # 5, 6, 7, ..., 39
-CURRENT_VERSION = "39"
+@contextmanager
+def sqlite_connection(db_path: str):
+    """Context manager for sqlite3 connections with foreign keys enabled."""
+    connection = sqlite3.connect(db_path)
+    connection.execute("PRAGMA foreign_keys = ON")
+    try:
+        yield connection
+    finally:
+        connection.close()
 
 
 class DatabaseConnectionManager:
-    """Context manager for safe QSqlDatabase connections."""
+    """Context manager providing DatabaseConnection wrapper over sqlite3."""
 
     def __init__(self, db_path: str, connection_name: str = ""):
-        get_qapplication()
         self.db_path = db_path
-        self.connection_name = (
-            connection_name if connection_name else f"conn_{id(self)}"
-        )
-        self.db = None
+        self.connection_name = connection_name
+        self._connection = None
+        self._db_connection = None
 
-    def __enter__(self):
-        if QSqlDatabase.contains(self.connection_name):
-            QSqlDatabase.removeDatabase(self.connection_name)
-
-        self.db = QSqlDatabase.addDatabase("QSQLITE", self.connection_name)
-        self.db.setDatabaseName(self.db_path)
-
-        if not self.db.open():
-            raise RuntimeError(f"Failed to open database: {self.db.lastError().text()}")
-
-        query = QSqlQuery(self.db)
-        query.exec("PRAGMA foreign_keys = ON")
-
-        return self.db
+    def __enter__(self) -> DatabaseConnection:
+        self._connection = sqlite3.connect(self.db_path)
+        self._connection.execute("PRAGMA foreign_keys = ON")
+        self._db_connection = DatabaseConnection(self._connection)
+        return self._db_connection
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.db and self.db.isOpen():
-            self.db.close()
-        if QSqlDatabase.contains(self.connection_name):
-            QSqlDatabase.removeDatabase(self.connection_name)
+        if self._connection:
+            self._connection.close()
 
 
 def create_baseline_v5_schema(db_path: str) -> None:
@@ -73,25 +61,17 @@ def create_baseline_v5_schema(db_path: str) -> None:
     This is the oldest supported version. All newer versions are created
     by applying migrations to this baseline.
     """
-    with DatabaseConnectionManager(db_path, "create_v5") as db:
-        query = QSqlQuery(db)
+    with sqlite_connection(db_path) as conn:
+        cursor = conn.cursor()
 
-        # Version table
-        if not query.exec(
+        cursor.execute(
             "CREATE TABLE version (id INTEGER PRIMARY KEY, version TEXT, os TEXT)"
-        ):
-            raise RuntimeError(
-                f"Failed to create version table: {query.lastError().text()}"
-            )
+        )
+        cursor.execute(
+            "INSERT INTO version (version, os) VALUES (?, ?)", ("5", "Linux")
+        )
 
-        query.prepare("INSERT INTO version (version, os) VALUES (?, ?)")
-        query.addBindValue("5")
-        query.addBindValue("Linux")
-        if not query.exec():
-            raise RuntimeError(f"Failed to insert version: {query.lastError().text()}")
-
-        # Folders table (minimal v5 schema)
-        if not query.exec("""
+        cursor.execute("""
             CREATE TABLE folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 folder_is_active TEXT,
@@ -106,13 +86,9 @@ def create_baseline_v5_schema(db_path: str) -> None:
                 pad_a_records TEXT,
                 a_record_padding TEXT
             )
-        """):
-            raise RuntimeError(
-                f"Failed to create folders table: {query.lastError().text()}"
-            )
+        """)
 
-        # Administrative table
-        if not query.exec("""
+        cursor.execute("""
             CREATE TABLE administrative (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 folder_is_active TEXT,
@@ -120,47 +96,27 @@ def create_baseline_v5_schema(db_path: str) -> None:
                 alias TEXT,
                 process_edi TEXT
             )
-        """):
-            raise RuntimeError(
-                f"Failed to create administrative table: {query.lastError().text()}"
-            )
+        """)
 
-        # Insert default admin record
-        query.prepare(
-            "INSERT INTO administrative (folder_is_active, folder_name, alias, process_edi) VALUES (?, ?, ?, ?)"
+        cursor.execute(
+            "INSERT INTO administrative (folder_is_active, folder_name, alias, process_edi) VALUES (?, ?, ?, ?)",
+            ("False", "template", "", "False"),
         )
-        query.addBindValue("False")
-        query.addBindValue("template")
-        query.addBindValue("")
-        query.addBindValue("False")
-        if not query.exec():
-            raise RuntimeError(
-                f"Failed to insert admin record: {query.lastError().text()}"
-            )
 
-        # Processed files table
-        if not query.exec("""
+        cursor.execute("""
             CREATE TABLE processed_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_name TEXT,
                 file_checksum TEXT,
                 folder_id INTEGER
             )
-        """):
-            raise RuntimeError(
-                f"Failed to create processed_files table: {query.lastError().text()}"
-            )
+        """)
 
-        # Emails table
-        if not query.exec(
+        cursor.execute(
             "CREATE TABLE emails_to_send (id INTEGER PRIMARY KEY AUTOINCREMENT, log TEXT)"
-        ):
-            raise RuntimeError(
-                f"Failed to create emails_to_send table: {query.lastError().text()}"
-            )
+        )
 
-        # Settings table
-        if not query.exec("""
+        cursor.execute("""
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 enable_email INTEGER,
@@ -170,10 +126,9 @@ def create_baseline_v5_schema(db_path: str) -> None:
                 email_smtp_server TEXT,
                 smtp_port INTEGER
             )
-        """):
-            raise RuntimeError(
-                f"Failed to create settings table: {query.lastError().text()}"
-            )
+        """)
+
+        conn.commit()
 
 
 def migrate_to_version(db_path: str, target_version: int) -> None:
@@ -181,31 +136,22 @@ def migrate_to_version(db_path: str, target_version: int) -> None:
 
     Args:
         db_path: Path to database file (should start at v5)
-        target_version: Version to migrate to (6-32)
+        target_version: Version to migrate to (6-39)
     """
     if target_version < 5 or target_version > int(CURRENT_VERSION):
         raise ValueError(f"Invalid target version: {target_version}")
 
     if target_version == 5:
-        return  # Already at v5
+        return
 
-    # Import here to avoid circular dependencies
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-    from interface.database.database_manager import DatabaseConnection
     import folders_database_migrator
 
-    # Apply migrations incrementally until we reach target version
-    with DatabaseConnectionManager(db_path, f"migrate_to_{target_version}") as db:
-        db_conn = DatabaseConnection(db)
-
-        # Keep migrating until we reach target or current
+    with DatabaseConnectionManager(db_path, f"migrate_to_{target_version}") as db_conn:
         while True:
             version_table = db_conn["version"]
             version_dict = version_table.find_one(id=1)
+            if version_dict is None:
+                raise RuntimeError("Version record not found")
             current = int(version_dict["version"])
 
             if current >= target_version:
@@ -214,7 +160,6 @@ def migrate_to_version(db_path: str, target_version: int) -> None:
             if current >= int(CURRENT_VERSION):
                 break
 
-            # Run migrations up to target version
             folders_database_migrator.upgrade_database(
                 db_conn, None, "Linux", target_version
             )
@@ -227,7 +172,7 @@ def generate_database_at_version(version: int, db_path: str = "") -> str:
     using the actual migration code. This ensures we're testing real migrations.
 
     Args:
-        version: Schema version to generate (5-32)
+        version: Schema version to generate (5-39)
         db_path: Optional path for database file. If empty, creates temp file.
 
     Returns:
@@ -242,12 +187,10 @@ def generate_database_at_version(version: int, db_path: str = "") -> str:
     if not db_path:
         fd, db_path = tempfile.mkstemp(suffix=".db", prefix=f"test_v{version}_")
         os.close(fd)
-        os.unlink(db_path)  # Remove the empty file, will be created by baseline
+        os.unlink(db_path)
 
-    # Create v5 baseline
     create_baseline_v5_schema(db_path)
 
-    # Migrate to target version if needed
     if version > 5:
         migrate_to_version(db_path, version)
 
@@ -261,18 +204,14 @@ def get_database_version(db_path: str) -> str:
         db_path: Path to database file
 
     Returns:
-        Version string (e.g., "5", "32")
+        Version string (e.g., "5", "39")
     """
-    with DatabaseConnectionManager(db_path, "get_version") as db:
-        query = QSqlQuery(db)
-
-        if not query.exec("SELECT version FROM version WHERE id=1"):
-            raise RuntimeError(f"Failed to query version: {query.lastError().text()}")
-
-        if not query.next():
+    with sqlite_connection(db_path) as conn:
+        cursor = conn.execute("SELECT version FROM version WHERE id=1")
+        row = cursor.fetchone()
+        if not row:
             raise RuntimeError("No version record found")
-
-        return str(query.value(0))
+        return str(row[0])
 
 
 def verify_database_structure(db_path: str) -> dict:
@@ -281,27 +220,19 @@ def verify_database_structure(db_path: str) -> dict:
     Returns:
         Dict with 'version', 'tables', 'columns' keys
     """
-    with DatabaseConnectionManager(db_path, "verify_structure") as db:
-        query = QSqlQuery(db)
+    with sqlite_connection(db_path) as conn:
+        cursor = conn.execute("SELECT version FROM version WHERE id=1")
+        row = cursor.fetchone()
+        version = str(row[0])
 
-        # Get version
-        query.exec("SELECT version FROM version WHERE id=1")
-        query.next()
-        version = str(query.value(0))
+        cursor = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        )
+        tables = [row[0] for row in cursor.fetchall()]
 
-        # Get tables
-        query.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-        tables = []
-        while query.next():
-            tables.append(query.value(0))
-
-        # Get columns for each table
         columns = {}
         for table in tables:
-            query.exec(f"PRAGMA table_info({table})")
-            table_cols = []
-            while query.next():
-                table_cols.append(query.value(1))  # Column name
-            columns[table] = table_cols
+            cursor = conn.execute(f"PRAGMA table_info({table})")
+            columns[table] = [row[1] for row in cursor.fetchall()]
 
         return {"version": version, "tables": tables, "columns": columns}

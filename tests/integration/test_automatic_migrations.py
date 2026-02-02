@@ -21,7 +21,6 @@ from tests.integration.database_schema_versions import (
     DatabaseConnectionManager,
 )
 from interface.database.database_manager import DatabaseManager
-from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 
 
 class TestAutomaticMigration:
@@ -57,14 +56,13 @@ class TestAutomaticMigration:
         assert get_database_version(db_path) == "32"
 
         with DatabaseConnectionManager(db_path, "insert_test_data") as db:
-            query = QSqlQuery(db)
-            query.prepare(
-                "INSERT INTO folders (folder_is_active, folder_name, alias) VALUES (?, ?, ?)"
+            db["folders"].insert(
+                {
+                    "folder_is_active": "True",
+                    "folder_name": "/test/auto/migration",
+                    "alias": "AutoMigrationTest",
+                }
             )
-            query.addBindValue("True")
-            query.addBindValue("/test/auto/migration")
-            query.addBindValue("AutoMigrationTest")
-            assert query.exec(), f"Failed to insert: {query.lastError().text()}"
 
         db_manager = DatabaseManager(
             database_path=db_path,
@@ -77,14 +75,10 @@ class TestAutomaticMigration:
         assert get_database_version(db_path) == "38"
 
         with DatabaseConnectionManager(db_path, "verify_migration") as db:
-            query = QSqlQuery(db)
-            query.exec(
-                "SELECT folder_name, alias FROM folders WHERE alias='AutoMigrationTest'"
-            )
-
-            assert query.next(), "Test data lost during migration"
-            assert query.value(0) == "/test/auto/migration"
-            assert query.value(1) == "AutoMigrationTest"
+            result = db["folders"].find_one(alias="AutoMigrationTest")
+            assert result is not None, "Test data lost during migration"
+            assert result["folder_name"] == "/test/auto/migration"
+            assert result["alias"] == "AutoMigrationTest"
 
         db_manager.close()
 
@@ -134,31 +128,28 @@ class TestAutomaticMigration:
         )
 
         with DatabaseConnectionManager(db_path, "verify_features") as db:
-            query = QSqlQuery(db)
+            conn = db.raw_connection
 
-            query.exec("PRAGMA table_info(folders)")
-            columns = []
-            while query.next():
-                columns.append(query.value(1))
+            # Check folders table columns
+            cursor = conn.execute("PRAGMA table_info(folders)")
+            columns = [row[1] for row in cursor.fetchall()]
 
             assert "plugin_config" in columns, "v33: plugin_config column missing"
             assert "created_at" in columns, "v34: created_at column missing"
             assert "updated_at" in columns, "v34: updated_at column missing"
 
-            query.exec("PRAGMA table_info(processed_files)")
-            pf_columns = []
-            while query.next():
-                pf_columns.append(query.value(1))
+            # Check processed_files table columns
+            cursor = conn.execute("PRAGMA table_info(processed_files)")
+            pf_columns = [row[1] for row in cursor.fetchall()]
 
             assert "filename" in pf_columns, "v35: filename column missing"
             assert "status" in pf_columns, "v35: status column missing"
             assert "original_path" in pf_columns, "v35: original_path column missing"
             assert "processed_at" in pf_columns, "v34: processed_at column missing"
 
-            query.exec("SELECT name FROM sqlite_master WHERE type='index'")
-            indexes = []
-            while query.next():
-                indexes.append(query.value(0))
+            # Check indexes
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            indexes = [row[0] for row in cursor.fetchall()]
 
             assert "idx_folders_active" in indexes, "v36: idx_folders_active missing"
             assert "idx_folders_alias" in indexes, "v36: idx_folders_alias missing"
@@ -166,15 +157,14 @@ class TestAutomaticMigration:
                 "v36: idx_processed_files_folder missing"
             )
 
-            query.exec("PRAGMA foreign_keys")
-            query.next()
-            fk_enabled = query.value(0)
+            # Check foreign keys enabled
+            cursor = conn.execute("PRAGMA foreign_keys")
+            fk_enabled = cursor.fetchone()[0]
             assert fk_enabled == 1, "v37: Foreign keys should be enabled"
 
-            query.exec("PRAGMA table_info(version)")
-            version_columns = []
-            while query.next():
-                version_columns.append(query.value(1))
+            # Check version table columns
+            cursor = conn.execute("PRAGMA table_info(version)")
+            version_columns = [row[1] for row in cursor.fetchall()]
 
             assert "notes" in version_columns, (
                 "v38: notes column missing from version table"
@@ -205,31 +195,24 @@ class TestAutomaticMigration:
         db_path = generate_database_at_version(32, temp_db_path)
 
         with DatabaseConnectionManager(db_path, "insert_complex_data") as db:
-            query = QSqlQuery(db)
+            conn = db.raw_connection
 
-            query.prepare(
-                "INSERT INTO folders (folder_is_active, folder_name, alias) VALUES (?, ?, ?)"
+            cursor = conn.execute(
+                "INSERT INTO folders (folder_is_active, folder_name, alias) VALUES (?, ?, ?)",
+                ("True", "/folder1", "Folder1"),
             )
-            query.addBindValue("True")
-            query.addBindValue("/folder1")
-            query.addBindValue("Folder1")
-            query.exec()
-            folder_id = query.lastInsertId()
+            folder_id = cursor.lastrowid
 
-            query.prepare(
-                "INSERT INTO processed_files (file_name, file_checksum, folder_id) VALUES (?, ?, ?)"
+            conn.execute(
+                "INSERT INTO processed_files (file_name, file_checksum, folder_id) VALUES (?, ?, ?)",
+                ("test_file.txt", "abc123", folder_id),
             )
-            query.addBindValue("test_file.txt")
-            query.addBindValue("abc123")
-            query.addBindValue(folder_id)
-            query.exec()
 
-            query.prepare(
-                "INSERT INTO settings (enable_email, email_address) VALUES (?, ?)"
+            conn.execute(
+                "INSERT INTO settings (enable_email, email_address) VALUES (?, ?)",
+                (1, "test@example.com"),
             )
-            query.addBindValue(1)
-            query.addBindValue("test@example.com")
-            query.exec()
+            conn.commit()
 
         db_manager = DatabaseManager(
             database_path=db_path,
@@ -240,23 +223,13 @@ class TestAutomaticMigration:
         )
 
         with DatabaseConnectionManager(db_path, "verify_complex_data") as db:
-            query = QSqlQuery(db)
-
-            query.exec("SELECT COUNT(*) FROM folders WHERE alias='Folder1'")
-            query.next()
-            assert query.value(0) == 1, "Folder data lost"
-
-            query.exec(
-                "SELECT COUNT(*) FROM processed_files WHERE file_name='test_file.txt'"
+            assert db["folders"].count(alias="Folder1") == 1, "Folder data lost"
+            assert db["processed_files"].count(file_name="test_file.txt") == 1, (
+                "Processed file data lost"
             )
-            query.next()
-            assert query.value(0) == 1, "Processed file data lost"
-
-            query.exec(
-                "SELECT COUNT(*) FROM settings WHERE email_address='test@example.com'"
+            assert db["settings"].count(email_address="test@example.com") == 1, (
+                "Settings data lost"
             )
-            query.next()
-            assert query.value(0) == 1, "Settings data lost"
 
         db_manager.close()
 
@@ -331,8 +304,7 @@ class TestMigrationErrorHandling:
         db_path = generate_database_at_version(32, temp_db_path)
 
         with DatabaseConnectionManager(db_path, "change_os") as db:
-            query = QSqlQuery(db)
-            query.exec("UPDATE version SET os='Windows' WHERE id=1")
+            db["version"].update({"id": 1, "os": "Windows"}, ["id"])
 
         with pytest.raises(SystemExit):
             DatabaseManager(

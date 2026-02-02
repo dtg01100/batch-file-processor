@@ -4,8 +4,9 @@ This migration consolidates individual plugin parameter columns into a single
 JSON column for flexible plugin configuration storage.
 """
 
-from PyQt6.QtSql import QSqlDatabase, QSqlQuery
 import json
+import sqlite3
+from typing import Union
 
 
 def migrate_folder_row_to_json(row_dict: dict) -> dict:
@@ -105,55 +106,51 @@ def migrate_folder_row_to_json(row_dict: dict) -> dict:
     }
 
 
-def apply_migration(db: QSqlDatabase) -> bool:
+def apply_migration(db: Union[sqlite3.Connection, "DatabaseConnection"]) -> bool:
     """Apply the plugin_config migration to the database.
 
     Args:
-        db: Open QSqlDatabase instance
+        db: Open sqlite3 connection or DatabaseConnection wrapper
 
     Returns:
         True if migration successful, False otherwise
     """
-    query = QSqlQuery(db)
+    connection = db.raw_connection if hasattr(db, "raw_connection") else db
+    cursor = connection.cursor()
 
-    query.exec("ALTER TABLE folders ADD COLUMN plugin_config TEXT")
+    cursor.execute("ALTER TABLE folders ADD COLUMN plugin_config TEXT")
 
-    query.exec("SELECT * FROM folders")
+    cursor.execute("SELECT * FROM folders")
+    columns = [description[0] for description in cursor.description]
     rows_to_update = []
 
-    while query.next():
-        row_id = query.value("id")
-        row_dict = {}
-        record = query.record()
-        for i in range(record.count()):
-            field_name = record.fieldName(i)
-            row_dict[field_name] = query.value(field_name)
-
+    for row in cursor.fetchall():
+        row_dict = dict(zip(columns, row))
+        row_id = row_dict["id"]
         plugin_configs = migrate_folder_row_to_json(row_dict)
-        rows_to_update.append((row_id, json.dumps(plugin_configs)))
+        rows_to_update.append((json.dumps(plugin_configs), row_id))
 
-    update_query = QSqlQuery(db)
-    update_query.prepare("UPDATE folders SET plugin_config = ? WHERE id = ?")
-
-    for row_id, config_json in rows_to_update:
-        update_query.addBindValue(config_json)
-        update_query.addBindValue(row_id)
-        if not update_query.exec():
-            print(f"Failed to update row {row_id}: {update_query.lastError().text()}")
+    for config_json, row_id in rows_to_update:
+        try:
+            cursor.execute(
+                "UPDATE folders SET plugin_config = ? WHERE id = ?",
+                (config_json, row_id),
+            )
+        except sqlite3.Error as e:
+            print(f"Failed to update row {row_id}: {e}")
             return False
 
+    connection.commit()
     return True
 
 
-def rollback_migration(db: QSqlDatabase) -> bool:
+def rollback_migration(db: Union[sqlite3.Connection, "DatabaseConnection"]) -> bool:
     """Rollback the plugin_config migration.
 
     Args:
-        db: Open QSqlDatabase instance
+        db: Open sqlite3 connection or DatabaseConnection wrapper
 
     Returns:
         True if rollback successful, False otherwise
     """
-    query = QSqlQuery(db)
-
     return True

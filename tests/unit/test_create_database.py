@@ -2,7 +2,6 @@
 Unit tests for create_database module.
 
 Tests database schema creation including tables, indexes, and initial data.
-Note: Requires PyQt6 to be installed and working SQLite driver.
 """
 
 import os
@@ -11,7 +10,7 @@ import shutil
 import sqlite3
 import pytest
 
-# Skip all tests if create_database imports fail (Qt SQL driver issues)
+# Skip all tests if create_database imports fail
 try:
     import create_database
 
@@ -19,19 +18,9 @@ try:
 except Exception:
     CREATE_DB_AVAILABLE = False
 
-# Additional check: Can we actually use Qt SQL without segfault?
-QT_SQL_WORKS = False
-if CREATE_DB_AVAILABLE:
-    try:
-        from PyQt6.QtSql import QSqlDatabase
-
-        QT_SQL_WORKS = True
-    except Exception:
-        pass
-
 pytestmark = pytest.mark.skipif(
-    not (CREATE_DB_AVAILABLE and QT_SQL_WORKS),
-    reason="create_database or Qt SQL driver not available",
+    not CREATE_DB_AVAILABLE,
+    reason="create_database not available",
 )
 
 

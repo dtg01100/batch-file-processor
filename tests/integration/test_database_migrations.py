@@ -27,7 +27,6 @@ from tests.integration.database_schema_versions import (
     CURRENT_VERSION,
     DatabaseConnectionManager,
 )
-from interface.database.database_manager import DatabaseConnection
 import folders_database_migrator
 
 
@@ -51,25 +50,22 @@ class TestDatabaseMigrations:
     def test_migrate_from_version_to_current(self, start_version, temp_db_path):
         """Test migration from EVERY supported version to current.
 
-        This runs once for each version 5-32, ensuring complete coverage.
+        This runs once for each version 5-39, ensuring complete coverage.
         """
         if start_version == int(CURRENT_VERSION):
             pytest.skip(f"Version {start_version} is already current")
 
-        # Generate database at the starting version
         db_path = generate_database_at_version(start_version, temp_db_path)
 
-        # Verify it's at the correct starting version
         assert get_database_version(db_path) == str(start_version), (
             f"Generated database should be at version {start_version}"
         )
 
-        # Run the migration
-        with DatabaseConnectionManager(db_path, f"test_mig_v{start_version}") as db:
-            db_conn = DatabaseConnection(db)
+        with DatabaseConnectionManager(
+            db_path, f"test_mig_v{start_version}"
+        ) as db_conn:
             folders_database_migrator.upgrade_database(db_conn, None, "Linux")
 
-        # Verify it reached the current version
         final_version = get_database_version(db_path)
         assert final_version == CURRENT_VERSION, (
             f"Migration from v{start_version} should reach v{CURRENT_VERSION}, got v{final_version}"
@@ -88,49 +84,31 @@ class TestDatabaseMigrations:
         assert "administrative" in structure["tables"]
         assert "processed_files" in structure["tables"]
 
-        # Verify version table has required columns
         assert "version" in structure["columns"]["version"]
         assert "os" in structure["columns"]["version"]
 
     def test_data_preservation_during_full_migration(self, temp_db_path):
         """Test that data survives migration from oldest to newest version."""
-        # Start with oldest version
         db_path = generate_database_at_version(5, temp_db_path)
 
-        # Insert test data
-        with DatabaseConnectionManager(db_path, "insert_data") as db:
-            from PyQt6.QtSql import QSqlQuery
-
-            query = QSqlQuery(db)
-            query.prepare(
-                "INSERT INTO folders (folder_is_active, folder_name, alias, process_edi) "
-                "VALUES (?, ?, ?, ?)"
-            )
-            query.addBindValue("True")
-            query.addBindValue("/test/migration/folder")
-            query.addBindValue("MigrationTest")
-            query.addBindValue("False")
-            assert query.exec(), (
-                f"Failed to insert test data: {query.lastError().text()}"
+        with DatabaseConnectionManager(db_path, "insert_data") as db_conn:
+            db_conn["folders"].insert(
+                {
+                    "folder_is_active": "True",
+                    "folder_name": "/test/migration/folder",
+                    "alias": "MigrationTest",
+                    "process_edi": "False",
+                }
             )
 
-        # Migrate to current
-        with DatabaseConnectionManager(db_path, "migrate_full") as db:
-            db_conn = DatabaseConnection(db)
+        with DatabaseConnectionManager(db_path, "migrate_full") as db_conn:
             folders_database_migrator.upgrade_database(db_conn, None, "Linux")
 
-        # Verify data is still there
-        with DatabaseConnectionManager(db_path, "verify_data") as db:
-            from PyQt6.QtSql import QSqlQuery
-
-            query = QSqlQuery(db)
-            query.exec(
-                "SELECT folder_name, alias FROM folders WHERE alias='MigrationTest'"
-            )
-
-            assert query.next(), "Test data lost during migration"
-            assert query.value(0) == "/test/migration/folder"
-            assert query.value(1) == "MigrationTest"
+        with DatabaseConnectionManager(db_path, "verify_data") as db_conn:
+            folder = db_conn["folders"].find_one(alias="MigrationTest")
+            assert folder is not None, "Test data lost during migration"
+            assert folder["folder_name"] == "/test/migration/folder"
+            assert folder["alias"] == "MigrationTest"
 
     def test_all_versions_increment_sequentially(self):
         """Verify ALL_VERSIONS contains all numbers from 5 to current with no gaps."""
@@ -147,9 +125,7 @@ class TestDatabaseMigrations:
         version_before = get_database_version(db_path)
         assert version_before == CURRENT_VERSION
 
-        # Run migration again
-        with DatabaseConnectionManager(db_path, "idempotent_test") as db:
-            db_conn = DatabaseConnection(db)
+        with DatabaseConnectionManager(db_path, "idempotent_test") as db_conn:
             folders_database_migrator.upgrade_database(db_conn, None, "Linux")
 
         version_after = get_database_version(db_path)
@@ -157,12 +133,10 @@ class TestDatabaseMigrations:
 
     def test_intermediate_migrations_work(self, temp_db_path):
         """Test migrating through intermediate versions (not just oldest->newest)."""
-        # Test v10 -> current
         db_path = generate_database_at_version(10, temp_db_path)
         assert get_database_version(db_path) == "10"
 
-        with DatabaseConnectionManager(db_path, "intermediate_mig") as db:
-            db_conn = DatabaseConnection(db)
+        with DatabaseConnectionManager(db_path, "intermediate_mig") as db_conn:
             folders_database_migrator.upgrade_database(db_conn, None, "Linux")
 
         assert get_database_version(db_path) == CURRENT_VERSION
@@ -241,18 +215,13 @@ class TestMigrationPathCoverage:
         This ensures every individual migration in folders_database_migrator.py
         is executed and tested.
         """
-        # Generate database at version N
         db_path = generate_database_at_version(version, temp_db_path)
         assert get_database_version(db_path) == str(version)
 
-        # Migrate ONE step forward
         with DatabaseConnectionManager(
             db_path, f"step_v{version}_to_{version + 1}"
-        ) as db:
-            db_conn = DatabaseConnection(db)
-            # This will migrate from version -> version+1
+        ) as db_conn:
             folders_database_migrator.upgrade_database(db_conn, None, "Linux")
 
-        # Should now be at either version+1 or higher (if migrator does multiple steps)
         final_version = int(get_database_version(db_path))
         assert final_version > version, f"Migration from v{version} didn't progress"

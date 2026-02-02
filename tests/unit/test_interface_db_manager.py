@@ -1,62 +1,50 @@
 """
-Comprehensive unit tests for the interface database manager module.
+Unit tests for sqlite3-based database manager implementation.
 
-These tests cover the DatabaseManager, DatabaseConnection, and Table classes
-with extensive mocking of Qt SQL dependencies.
+Covers Table, DatabaseConnection, and DatabaseManager using real sqlite3
+in-memory databases with no Qt dependencies.
 """
 
-import datetime
-import os
-import sys
-from io import StringIO
-from unittest.mock import MagicMock, Mock, patch, call, mock_open
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+from typing import Iterator
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-# Import the module under test
 from interface.database.database_manager import (
-    DatabaseManager,
     DatabaseConnection,
+    DatabaseManager,
     Table,
 )
 
 
-# =============================================================================
-# Fixtures
-# =============================================================================
-
-@pytest.fixture
-def mock_qsqldatabase():
-    """Create a mock QSqlDatabase."""
-    db = MagicMock()
-    db.isOpen.return_value = True
-    db.open.return_value = True
-    db.close.return_value = None
-    db.setDatabaseName.return_value = None
-    db.lastError.return_value = MagicMock(text=MagicMock(return_value="Mock error"))
-    return db
+def _create_in_memory_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(":memory:")
+    connection.execute("PRAGMA foreign_keys = ON")
+    return connection
 
 
-@pytest.fixture
-def mock_qsqlquery():
-    """Create a mock QSqlQuery."""
-    query = MagicMock()
-    query.exec.return_value = True
-    query.prepare.return_value = None
-    query.addBindValue.return_value = None
-    query.next.return_value = False
-    query.value.return_value = "test_value"
-    query.record.return_value = MagicMock()
-    query.lastError.return_value = MagicMock(text=MagicMock(return_value="Mock query error"))
-    return query
+def _create_versioned_connection(version: str, os_name: str) -> DatabaseConnection:
+    connection = _create_in_memory_connection()
+    connection.execute(
+        "CREATE TABLE version (id INTEGER PRIMARY KEY, version TEXT, os TEXT)"
+    )
+    connection.execute(
+        "INSERT INTO version (id, version, os) VALUES (1, ?, ?)",
+        (version, os_name),
+    )
+    connection.commit()
+    return DatabaseConnection(connection)
 
 
 @pytest.fixture
-def sample_database_config():
-    """Provide sample database configuration."""
+def sample_database_config(tmp_path: Path) -> dict[str, str]:
     return {
-        "database_path": "/test/db.sqlite",
-        "config_folder": "/test/config",
+        "database_path": str(tmp_path / "db.sqlite"),
+        "config_folder": str(tmp_path / "config"),
         "platform": "linux",
         "app_version": "1.0.0",
         "database_version": "2",
@@ -64,611 +52,333 @@ def sample_database_config():
 
 
 @pytest.fixture
-def sample_table_data():
-    """Provide sample table data."""
-    return [
-        {"id": 1, "name": "Test 1", "value": 100},
-        {"id": 2, "name": "Test 2", "value": 200},
-        {"id": 3, "name": "Test 3", "value": 300},
-    ]
+def sqlite_connection() -> Iterator[sqlite3.Connection]:
+    connection = _create_in_memory_connection()
+    connection.execute(
+        "CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT, active INTEGER, value INTEGER)"
+    )
+    yield connection
+    connection.close()
 
 
-# =============================================================================
-# Table Class Tests
-# =============================================================================
+@pytest.fixture
+def empty_table(sqlite_connection: sqlite3.Connection) -> Table:
+    return Table(sqlite_connection, "test_table")
+
+
+@pytest.fixture
+def populated_table(empty_table: Table) -> Table:
+    empty_table.insert_many(
+        [
+            {"id": 1, "name": "Test 1", "active": 1, "value": 100},
+            {"id": 2, "name": "Test 2", "active": 0, "value": 200},
+            {"id": 3, "name": "Test 3", "active": 1, "value": 300},
+        ]
+    )
+    return empty_table
+
 
 class TestTable:
-    """Tests for the Table class."""
+    def test_initialization(self, sqlite_connection: sqlite3.Connection) -> None:
+        table = Table(sqlite_connection, "test_table")
 
-    def test_initialization(self, mock_qsqldatabase):
-        """Test Table initializes with correct database and table name."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        assert table.db is mock_qsqldatabase
-        assert table.table_name == "test_table"
+        assert table._table_name == "test_table"
+        assert table._connection is sqlite_connection
 
-    def test_dict_to_where_empty(self, mock_qsqldatabase):
-        """Test _dict_to_where with empty kwargs."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        where_clause, values = table._dict_to_where()
-        
+    def test_dict_to_where_empty(self, empty_table: Table) -> None:
+        where_clause, values = empty_table._dict_to_where()
+
         assert where_clause == ""
         assert values == []
 
-    def test_dict_to_where_single_condition(self, mock_qsqldatabase):
-        """Test _dict_to_where with single condition."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        where_clause, values = table._dict_to_where(id=1)
-        
-        assert where_clause == ' WHERE "id" = ?'
-        assert values == [1]
+    def test_dict_to_where_multiple_conditions(self, empty_table: Table) -> None:
+        where_clause, values = empty_table._dict_to_where(
+            id=1, name="test", active=True
+        )
 
-    def test_dict_to_where_multiple_conditions(self, mock_qsqldatabase):
-        """Test _dict_to_where with multiple conditions."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        where_clause, values = table._dict_to_where(id=1, name="test", active=True)
-        
-        assert ' WHERE ' in where_clause
         assert '"id" = ?' in where_clause
         assert '"name" = ?' in where_clause
         assert '"active" = ?' in where_clause
-        assert 1 in values
-        assert "test" in values
-        assert True in values
+        assert values == [1, "test", True]
 
-    def test_dict_to_set(self, mock_qsqldatabase):
-        """Test _dict_to_set conversion."""
-        table = Table(mock_qsqldatabase, "test_table")
-        data = {"id": 1, "name": "test", "value": 100}
-        
-        columns, placeholders, values = table._dict_to_set(data)
-        
-        assert '"id"' in columns
-        assert '"name"' in columns
-        assert '"value"' in columns
+    def test_dict_to_set(self, empty_table: Table) -> None:
+        columns, placeholders, values = empty_table._dict_to_set(
+            {"id": 1, "name": "test", "value": 100}
+        )
+
+        assert columns == '"id", "name", "value"'
         assert placeholders == "?, ?, ?"
         assert values == [1, "test", 100]
 
-    def test_find_all(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test find() returns all rows."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        # Mock query execution
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.side_effect = [True, True, False]
-        
-        # Mock record
-        mock_record = MagicMock()
-        mock_record.count.return_value = 2
-        mock_record.fieldName.side_effect = ["id", "name"]
-        mock_qsqlquery.record.return_value = mock_record
-        mock_qsqlquery.value.side_effect = [1, "test1", 2, "test2"]
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = table.find()
-        
-        assert len(results) == 2
+    def test_find_all(self, populated_table: Table) -> None:
+        results = populated_table.find()
+
+        assert len(results) == 3
         assert results[0]["id"] == 1
-        assert results[0]["name"] == "test1"
-        assert results[1]["id"] == 2
-        assert results[1]["name"] == "test2"
+        assert results[1]["name"] == "Test 2"
 
-    def test_find_with_conditions(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test find() with WHERE conditions."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = table.find(id=1, active=True)
-        
-        mock_qsqlquery.prepare.assert_called_once()
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert 'WHERE' in call_args
-        assert '"id" = ?' in call_args
-        assert '"active" = ?' in call_args
+    def test_find_with_conditions(self, populated_table: Table) -> None:
+        results = populated_table.find(active=1)
 
-    def test_find_with_order_by(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test find() with ORDER BY clause."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = table.find(order_by="name")
-        
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert 'ORDER BY "name"' in call_args
+        assert {row["id"] for row in results} == {1, 3}
 
-    def test_find_one_returns_single_row(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test find_one() returns single row."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.side_effect = [True, False]
-        
-        mock_record = MagicMock()
-        mock_record.count.return_value = 2
-        mock_record.fieldName.side_effect = ["id", "name"]
-        mock_qsqlquery.record.return_value = mock_record
-        mock_qsqlquery.value.side_effect = [1, "test1"]
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            result = table.find_one(id=1)
-        
-        assert result["id"] == 1
-        assert result["name"] == "test1"
+    def test_find_with_order_by(self, populated_table: Table) -> None:
+        results = populated_table.find(order_by="value")
 
-    def test_find_one_returns_none(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test find_one() returns None when no match."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            result = table.find_one(id=999)
-        
-        assert result is None
+        assert [row["value"] for row in results] == [100, 200, 300]
 
-    def test_all_delegates_to_find(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test all() delegates to find()."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = table.all()
-        
-        assert isinstance(results, list)
+    def test_find_one_returns_single_row(self, populated_table: Table) -> None:
+        result = populated_table.find_one(id=2)
 
-    def test_insert(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test insert() creates new row."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        data = {"id": 1, "name": "test", "value": 100}
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.insert(data)
-        
-        mock_qsqlquery.prepare.assert_called_once()
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert "INSERT INTO" in call_args
-        assert "test_table" in call_args
-        assert mock_qsqlquery.addBindValue.call_count == 3
+        assert result == {
+            "id": 2,
+            "name": "Test 2",
+            "active": 0,
+            "value": 200,
+        }
 
-    def test_insert_many(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test insert_many() inserts multiple rows."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        records = [
-            {"id": 1, "name": "test1"},
-            {"id": 2, "name": "test2"},
-        ]
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.insert_many(records)
-        
-        assert mock_qsqlquery.exec.call_count == 2
+    def test_find_one_returns_none(self, populated_table: Table) -> None:
+        assert populated_table.find_one(id=999) is None
 
-    def test_update(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test update() modifies rows."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        data = {"id": 1, "name": "updated", "value": 200}
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.update(data, ["id"])
-        
-        mock_qsqlquery.prepare.assert_called_once()
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert "UPDATE" in call_args
-        assert "SET" in call_args
-        assert "WHERE" in call_args
+    def test_all_delegates_to_find(self, populated_table: Table) -> None:
+        results = populated_table.all()
 
-    def test_update_no_set_values(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test update() with no non-key values does nothing."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        data = {"id": 1}  # Only key, no values to set
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.update(data, ["id"])
-        
-        mock_qsqlquery.prepare.assert_not_called()
+        assert len(results) == 3
 
-    def test_delete_with_conditions(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test delete() with conditions."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.delete(id=1)
-        
-        mock_qsqlquery.prepare.assert_called_once()
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert "DELETE FROM" in call_args
-        assert "WHERE" in call_args
+    def test_insert(self, empty_table: Table) -> None:
+        empty_table.insert({"id": 10, "name": "Inserted", "active": 1, "value": 999})
 
-    def test_delete_all(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test delete() without conditions deletes all rows."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.delete()
-        
-        mock_qsqlquery.exec.assert_called_once()
-        call_args = mock_qsqlquery.exec.call_args[0][0]
-        assert "DELETE FROM" in call_args
-        assert "WHERE" not in call_args
+        assert empty_table.count() == 1
+        result = empty_table.find_one(id=10)
+        assert result is not None
+        assert result["name"] == "Inserted"
 
-    def test_count(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test count() returns row count."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = True
-        mock_qsqlquery.value.return_value = 42
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            result = table.count()
-        
-        assert result == 42
-        mock_qsqlquery.prepare.assert_called_once()
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert "COUNT(*)" in call_args
+    def test_insert_many(self, empty_table: Table) -> None:
+        empty_table.insert_many(
+            [
+                {"id": 1, "name": "First", "active": 1, "value": 10},
+                {"id": 2, "name": "Second", "active": 0, "value": 20},
+            ]
+        )
 
-    def test_count_with_conditions(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test count() with WHERE conditions."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = True
-        mock_qsqlquery.value.return_value = 5
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            result = table.count(active=True)
-        
-        assert result == 5
-        call_args = mock_qsqlquery.prepare.call_args[0][0]
-        assert "WHERE" in call_args
+        assert empty_table.count() == 2
 
-    def test_distinct(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test distinct() returns unique values."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.side_effect = [True, True, True, False]
-        mock_qsqlquery.value.side_effect = ["value1", "value2", "value3"]
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = table.distinct("category")
-        
-        assert results == ["value1", "value2", "value3"]
+    def test_update(self, populated_table: Table) -> None:
+        populated_table.update({"id": 1, "name": "Updated", "value": 101}, ["id"])
 
-    def test_create_column_string(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test create_column() with String type."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.create_column("new_col", str)
-        
-        call_args = mock_qsqlquery.exec.call_args[0][0]
-        assert "ALTER TABLE" in call_args
-        assert "ADD COLUMN" in call_args
-        assert "new_col" in call_args
+        result = populated_table.find_one(id=1)
+        assert result is not None
+        assert result["name"] == "Updated"
 
-    def test_create_column_integer(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test create_column() with Integer type."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.create_column("new_col", int)
-        
-        call_args = mock_qsqlquery.exec.call_args[0][0]
-        assert "INTEGER" in call_args
+    def test_update_no_set_values(self, populated_table: Table) -> None:
+        populated_table.update({"id": 1}, ["id"])
 
-    def test_iter(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test __iter__ allows iteration over table."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        mock_qsqlquery.next.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            results = list(table)
-        
-        assert isinstance(results, list)
+        result = populated_table.find_one(id=1)
+        assert result is not None
+        assert result["name"] == "Test 1"
 
+    def test_delete_with_conditions(self, populated_table: Table) -> None:
+        populated_table.delete(id=2)
 
-# =============================================================================
-# DatabaseConnection Tests
-# =============================================================================
+        assert populated_table.count() == 2
+        assert populated_table.find_one(id=2) is None
+
+    def test_delete_all(self, populated_table: Table) -> None:
+        populated_table.delete()
+
+        assert populated_table.count() == 0
+
+    def test_count_with_conditions(self, populated_table: Table) -> None:
+        assert populated_table.count(active=1) == 2
+
+    def test_distinct(self, populated_table: Table) -> None:
+        assert populated_table.distinct("active") == [1, 0]
+
+    def test_create_column_with_known_type(self) -> None:
+        connection = _create_in_memory_connection()
+        connection.execute("CREATE TABLE sample (id INTEGER PRIMARY KEY)")
+        table = Table(connection, "sample")
+
+        table.create_column("score", "Integer")
+
+        columns = connection.execute("PRAGMA table_info(sample)").fetchall()
+        column_types = {column[1]: column[2] for column in columns}
+        assert column_types["score"] == "INTEGER"
+        connection.close()
+
+    def test_create_column_with_unknown_type_defaults_to_text(self) -> None:
+        connection = _create_in_memory_connection()
+        connection.execute("CREATE TABLE sample (id INTEGER PRIMARY KEY)")
+        table = Table(connection, "sample")
+
+        table.create_column("metadata", list)
+
+        columns = connection.execute("PRAGMA table_info(sample)").fetchall()
+        column_types = {column[1]: column[2] for column in columns}
+        assert column_types["metadata"] == "TEXT"
+        connection.close()
+
+    def test_iter(self, populated_table: Table) -> None:
+        results = list(populated_table)
+
+        assert len(results) == 3
+
+    def test_drop(self) -> None:
+        connection = _create_in_memory_connection()
+        connection.execute("CREATE TABLE disposable (id INTEGER PRIMARY KEY)")
+        table = Table(connection, "disposable")
+
+        table.drop()
+
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='disposable'"
+        ).fetchall()
+        assert tables == []
+        connection.close()
+
 
 class TestDatabaseConnection:
-    """Tests for the DatabaseConnection class."""
+    def test_initialization(self, sqlite_connection: sqlite3.Connection) -> None:
+        conn = DatabaseConnection(sqlite_connection)
 
-    def test_initialization(self, mock_qsqldatabase):
-        """Test DatabaseConnection initializes with database."""
-        conn = DatabaseConnection(mock_qsqldatabase)
-        
-        assert conn.db is mock_qsqldatabase
+        assert conn.raw_connection is sqlite_connection
 
-    def test_getitem_returns_table(self, mock_qsqldatabase):
-        """Test __getitem__ returns Table instance."""
-        conn = DatabaseConnection(mock_qsqldatabase)
-        
+    def test_getitem_returns_table(self, sqlite_connection: sqlite3.Connection) -> None:
+        conn = DatabaseConnection(sqlite_connection)
+
         table = conn["test_table"]
-        
+
         assert isinstance(table, Table)
-        assert table.table_name == "test_table"
-        assert table.db is mock_qsqldatabase
+        assert table._table_name == "test_table"
+        assert table._connection is sqlite_connection
 
-    def test_query_execution(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test query() executes raw SQL."""
-        conn = DatabaseConnection(mock_qsqldatabase)
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            conn.query("SELECT * FROM test")
-        
-        mock_qsqlquery.exec.assert_called_once_with("SELECT * FROM test")
+    def test_query_execution(self) -> None:
+        connection = _create_in_memory_connection()
+        conn = DatabaseConnection(connection)
 
-    def test_close(self, mock_qsqldatabase):
-        """Test close() closes database connection."""
-        conn = DatabaseConnection(mock_qsqldatabase)
-        
+        conn.query("CREATE TABLE qtest (id INTEGER PRIMARY KEY)")
+
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='qtest'"
+        ).fetchall()
+        assert tables == [("qtest",)]
+        connection.close()
+
+    def test_close(self) -> None:
+        connection = _create_in_memory_connection()
+        conn = DatabaseConnection(connection)
+
         conn.close()
-        
-        mock_qsqldatabase.close.assert_called_once()
 
-    def test_create_table_stub(self, mock_qsqldatabase):
-        """Test create_table() is a stub for compatibility."""
-        conn = DatabaseConnection(mock_qsqldatabase)
-        
-        # Should not raise
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")
+
+    def test_create_table_stub(self, sqlite_connection: sqlite3.Connection) -> None:
+        conn = DatabaseConnection(sqlite_connection)
+
         conn.create_table("new_table")
 
 
-# =============================================================================
-# DatabaseManager Tests
-# =============================================================================
-
 class TestDatabaseManagerInitialization:
-    """Tests for DatabaseManager initialization."""
-
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.create_database")
-    @patch("interface.database.database_manager.folders_database_migrator")
-    @patch("interface.database.database_manager.backup_increment")
-    @patch("interface.database.database_manager.QSqlDatabase")
+    @patch("core.database.manager.os.path.isfile", return_value=False)
+    @patch("core.database.schema.create_database")
     def test_initialization_creates_database_if_not_exists(
-        self, mock_qsqldb_class, mock_backup, mock_migrator, mock_create_db, mock_isfile,
-        sample_database_config
-    ):
-        """Test DatabaseManager creates database if file doesn't exist."""
-        mock_isfile.return_value = False
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        mock_create_db.do.return_value = None
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            # Mock version table query
-            mock_version_table = MagicMock()
-            mock_version_table.find_one.return_value = {
-                "id": 1,
-                "version": "2",
-                "os": "linux"
-            }
-            
-            with patch.object(DatabaseManager, '_initialize_table_references'):
-                with patch.object(DatabaseManager, '_check_version_and_migrate'):
-                    db_manager = DatabaseManager(**sample_database_config)
-        
-        mock_create_db.do.assert_called_once()
+        self,
+        mock_create_db,
+        mock_isfile,
+        sample_database_config,
+    ) -> None:
+        db_connection = _create_versioned_connection("2", "linux")
+        session_connection = _create_versioned_connection("2", "linux")
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_initialization_connects_to_existing_database(
-        self, mock_qsqldb_class, mock_isfile, sample_database_config
-    ):
-        """Test DatabaseManager connects to existing database."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            with patch.object(DatabaseManager, '_initialize_table_references'):
-                with patch.object(DatabaseManager, '_check_version_and_migrate'):
-                    db_manager = DatabaseManager(**sample_database_config)
-        
-        mock_qsqldb_class.addDatabase.assert_called()
-
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_database_connection_failure(
-        self, mock_qsqldb_class, mock_isfile, sample_database_config
-    ):
-        """Test DatabaseManager handles database connection failure."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = False
-        mock_db.lastError.return_value = MagicMock(
-            text=MagicMock(return_value="Connection failed")
-        )
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with pytest.raises(SystemExit):
-            with patch("interface.database.database_manager.print"):
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
                 db_manager = DatabaseManager(**sample_database_config)
+
+        mock_create_db.assert_called_once()
+        assert db_manager.database_connection is db_connection
+        assert db_manager.session_database is session_connection
+
+    def test_connect_failure_raises_system_exit(self, sample_database_config) -> None:
+        with patch("core.database.manager.connect", side_effect=Exception("fail")):
+            with patch.object(DatabaseManager, "_log_connection_error") as mock_log:
+                with pytest.raises(SystemExit):
+                    DatabaseManager(**sample_database_config)
+
+        mock_log.assert_called_once()
 
 
 class TestDatabaseManagerVersionChecking:
-    """Tests for DatabaseManager version checking."""
+    def test_version_mismatch_triggers_migration(self, sample_database_config) -> None:
+        db_connection = _create_versioned_connection("1", "linux")
+        session_connection = _create_versioned_connection("1", "linux")
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    @patch("interface.database.database_manager.backup_increment")
-    @patch("interface.database.database_manager.folders_database_migrator")
-    def test_version_mismatch_triggers_migration(
-        self, mock_migrator, mock_backup, mock_qsqldb_class, mock_isfile,
-        sample_database_config
-    ):
-        """Test version mismatch triggers database migration."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            # Create db_manager and manually test version check
-            db_conn = MagicMock()
-            db_conn.query = MagicMock()
-            
-            # Setup version table mock - old version
-            version_table = MagicMock()
-            version_table.find_one.return_value = {
-                "id": 1,
-                "version": "1",  # Old version
-                "os": "linux"
-            }
-            db_conn.__getitem__ = MagicMock(return_value=version_table)
-            
-            with patch.object(DatabaseManager, '_connect_to_database'):
-                with patch("interface.database.database_manager.print"):
-                    db_manager = DatabaseManager(**sample_database_config)
-                    db_manager.database_connection = db_conn
-                    db_manager._check_version_and_migrate()
-        
-        mock_backup.do_backup.assert_called_once()
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
+                with patch(
+                    "core.database.manager.backup_increment.do_backup"
+                ) as mock_backup:
+                    with patch(
+                        "core.database.manager.folders_database_migrator.upgrade_database"
+                    ) as mock_migrator:
+                        DatabaseManager(**sample_database_config)
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_newer_database_version_exits(
-        self, mock_qsqldb_class, mock_isfile, sample_database_config
-    ):
-        """Test newer database version causes SystemExit."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            db_conn = MagicMock()
-            
-            # Setup version table mock - newer version
-            version_table = MagicMock()
-            version_table.find_one.return_value = {
-                "id": 1,
-                "version": "99",  # Newer than app version "2"
-                "os": "linux"
-            }
-            db_conn.__getitem__ = MagicMock(return_value=version_table)
-            
-            with patch.object(DatabaseManager, '_connect_to_database'):
+        mock_backup.assert_called_once_with(sample_database_config["database_path"])
+        mock_migrator.assert_called_once()
+
+    def test_newer_database_version_exits(self, sample_database_config) -> None:
+        db_connection = _create_versioned_connection("99", "linux")
+        session_connection = _create_versioned_connection("99", "linux")
+
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
                 with pytest.raises(SystemExit):
-                    with patch("interface.database.database_manager.print"):
-                        db_manager = DatabaseManager(**sample_database_config)
-                        db_manager.database_connection = db_conn
-                        db_manager._check_version_and_migrate()
+                    DatabaseManager(**sample_database_config)
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_os_mismatch_exits(
-        self, mock_qsqldb_class, mock_isfile, sample_database_config
-    ):
-        """Test OS mismatch causes SystemExit."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            db_conn = MagicMock()
-            
-            # Setup version table mock - different OS
-            version_table = MagicMock()
-            version_table.find_one.return_value = {
-                "id": 1,
-                "version": "2",
-                "os": "windows"  # Different from config "linux"
-            }
-            db_conn.__getitem__ = MagicMock(return_value=version_table)
-            
-            with patch.object(DatabaseManager, '_connect_to_database'):
+    def test_os_mismatch_exits(self, sample_database_config) -> None:
+        db_connection = _create_versioned_connection("2", "windows")
+        session_connection = _create_versioned_connection("2", "windows")
+
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
                 with pytest.raises(SystemExit):
-                    with patch("interface.database.database_manager.print"):
-                        db_manager = DatabaseManager(**sample_database_config)
-                        db_manager.database_connection = db_conn
-                        db_manager._check_version_and_migrate()
+                    DatabaseManager(**sample_database_config)
+
+    def test_version_record_missing_raises(self, sample_database_config) -> None:
+        connection = _create_in_memory_connection()
+        connection.execute(
+            "CREATE TABLE version (id INTEGER PRIMARY KEY, version TEXT, os TEXT)"
+        )
+        connection.commit()
+        db_connection = DatabaseConnection(connection)
+        session_connection = _create_versioned_connection("2", "linux")
+
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
+                with pytest.raises(RuntimeError):
+                    DatabaseManager(**sample_database_config)
 
 
 class TestDatabaseManagerTableReferences:
-    """Tests for DatabaseManager table reference initialization."""
+    def test_initialize_table_references(self) -> None:
+        db_conn = _create_versioned_connection("2", "linux")
 
-    def test_initialize_table_references(self):
-        """Test table references are initialized correctly."""
-        db_conn = MagicMock()
-        
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
             db_manager.database_connection = db_conn
-            db_manager._database_path = "/test/db.sqlite"
-            db_manager._config_folder = "/test/config"
-            db_manager._platform = "linux"
-            db_manager._app_version = "1.0.0"
-            db_manager._database_version = "2"
-            
-            db_manager.folders_table = None
-            db_manager.emails_table = None
-            db_manager.emails_table_batch = None
-            db_manager.sent_emails_removal_queue = None
-            db_manager.oversight_and_defaults = None
-            db_manager.processed_files = None
-            db_manager.settings = None
-            
+
             db_manager._initialize_table_references()
-        
+
         assert db_manager.folders_table is not None
         assert db_manager.emails_table is not None
         assert db_manager.emails_table_batch is not None
@@ -679,284 +389,101 @@ class TestDatabaseManagerTableReferences:
 
 
 class TestDatabaseManagerOperations:
-    """Tests for DatabaseManager operations."""
+    def test_reload_reconnects_database(self, sample_database_config) -> None:
+        db_connection = _create_versioned_connection("2", "linux")
+        session_connection = _create_versioned_connection("2", "linux")
 
-    def test_get_template_returns_first_record(self):
-        """Test get_template() returns first administrative record."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
-            
-            mock_table = MagicMock()
-            mock_table.all.return_value = [
-                {"id": 1, "setting": "value1"},
-                {"id": 2, "setting": "value2"},
-            ]
-            db_manager.oversight_and_defaults = mock_table
-            
-            result = db_manager.get_template()
-        
-        assert result["id"] == 1
-        assert result["setting"] == "value1"
-
-    def test_get_template_returns_none_when_empty(self):
-        """Test get_template() returns None when no records."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
-            db_manager = DatabaseManager.__new__(DatabaseManager)
-            
-            mock_table = MagicMock()
-            mock_table.all.return_value = []
-            db_manager.oversight_and_defaults = mock_table
-            
-            result = db_manager.get_template()
-        
-        assert result is None
-
-    def test_get_template_returns_none_when_no_table(self):
-        """Test get_template() returns None when table is None."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
-            db_manager = DatabaseManager.__new__(DatabaseManager)
-            db_manager.oversight_and_defaults = None
-            
-            result = db_manager.get_template()
-        
-        assert result is None
-
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_reload_reconnects_database(self, mock_qsqldb_class):
-        """Test reload() reconnects to database."""
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
-            db_manager = DatabaseManager.__new__(DatabaseManager)
-            db_manager._database_path = "/test/db.sqlite"
-            db_manager._app_version = "1.0.0"
+            db_manager._database_path = sample_database_config["database_path"]
+            db_manager._app_version = sample_database_config["app_version"]
             db_manager.database_connection = None
             db_manager.session_database = None
-            
-            with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-                mock_query = MagicMock()
-                mock_query.exec.return_value = True
-                mock_query_class.return_value = mock_query
-                
-                with patch.object(db_manager, '_initialize_table_references'):
-                    with patch("interface.database.database_manager.print"):
-                        db_manager.reload()
-        
-        assert db_manager.database_connection is not None
 
-    def test_close_closes_connection(self):
-        """Test close() closes database connection."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+            with patch("core.database.manager.connect", return_value=db_connection):
+                with patch(
+                    "core.database.manager.connect_memory",
+                    return_value=session_connection,
+                ):
+                    with patch.object(
+                        db_manager, "_initialize_table_references"
+                    ) as init_tables:
+                        db_manager.reload()
+
+        assert db_manager.database_connection is db_connection
+        assert db_manager.session_database is session_connection
+        init_tables.assert_called_once()
+
+    def test_close_closes_connections(self) -> None:
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
-            
-            mock_conn = MagicMock()
-            mock_conn.close = MagicMock()
-            db_manager.database_connection = mock_conn
-            
+            db_manager.database_connection = MagicMock()
+            db_manager.session_database = MagicMock()
+
             db_manager.close()
-        
-        mock_conn.close.assert_called_once()
+
+        db_manager.database_connection.close.assert_called_once()
+        db_manager.session_database.close.assert_called_once()
 
 
 class TestDatabaseManagerContextManager:
-    """Tests for DatabaseManager context manager."""
+    def test_context_manager_entry(self, sample_database_config) -> None:
+        db_connection = _create_versioned_connection("2", "linux")
+        session_connection = _create_versioned_connection("2", "linux")
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_context_manager_entry(self, mock_qsqldb_class, mock_isfile):
-        """Test context manager __enter__ returns self."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            with patch.object(DatabaseManager, '_initialize_table_references'):
-                with patch.object(DatabaseManager, '_check_version_and_migrate'):
-                    db_manager = DatabaseManager(
-                        database_path="/test/db.sqlite",
-                        config_folder="/test/config",
-                        platform="linux",
-                        app_version="1.0.0",
-                        database_version="2",
-                    )
-                    
-                    result = db_manager.__enter__()
-        
-        assert result is db_manager
+        with patch("core.database.manager.connect", return_value=db_connection):
+            with patch(
+                "core.database.manager.connect_memory", return_value=session_connection
+            ):
+                with patch("core.database.manager.os.path.isfile", return_value=True):
+                    db_manager = DatabaseManager(**sample_database_config)
 
-    @patch("interface.database.database_manager.os.path.isfile")
-    @patch("interface.database.database_manager.QSqlDatabase")
-    def test_context_manager_exit(self, mock_qsqldb_class, mock_isfile):
-        """Test context manager __exit__ closes connection."""
-        mock_isfile.return_value = True
-        mock_db = MagicMock()
-        mock_db.open.return_value = True
-        mock_qsqldb_class.addDatabase.return_value = mock_db
-        
-        with patch("interface.database.database_manager.QSqlQuery") as mock_query_class:
-            mock_query = MagicMock()
-            mock_query.exec.return_value = True
-            mock_query_class.return_value = mock_query
-            
-            with patch.object(DatabaseManager, '_initialize_table_references'):
-                with patch.object(DatabaseManager, '_check_version_and_migrate'):
-                    db_manager = DatabaseManager(
-                        database_path="/test/db.sqlite",
-                        config_folder="/test/config",
-                        platform="linux",
-                        app_version="1.0.0",
-                        database_version="2",
-                    )
-                    
-                    mock_conn = MagicMock()
-                    db_manager.database_connection = mock_conn
-                    
-                    db_manager.__exit__(None, None, None)
-        
-        mock_conn.close.assert_called_once()
+        assert db_manager.__enter__() is db_manager
+
+    def test_context_manager_exit(self) -> None:
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
+            db_manager = DatabaseManager.__new__(DatabaseManager)
+            db_manager.close = MagicMock()
+
+            db_manager.__exit__(None, None, None)
+
+        db_manager.close.assert_called_once()
 
 
 class TestDatabaseManagerErrorHandling:
-    """Tests for DatabaseManager error handling."""
-
-    def test_log_critical_error(self):
-        """Test _log_critical_error writes to log file."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+    def test_log_critical_error(self) -> None:
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
             db_manager._app_version = "1.0.0"
-            
+
             mock_file = mock_open()
             with patch("builtins.open", mock_file):
-                with patch("interface.database.database_manager.print"):
-                    error = Exception("Test error")
-                    db_manager._log_critical_error(error)
-        
+                with patch("core.database.manager.print"):
+                    db_manager._log_critical_error(Exception("Test error"))
+
         mock_file.assert_called_once_with("critical_error.log", "a", encoding="utf-8")
 
-    def test_log_connection_error(self):
-        """Test _log_connection_error writes to log file."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+    def test_log_connection_error(self) -> None:
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
             db_manager._app_version = "1.0.0"
-            
+
             mock_file = mock_open()
             with patch("builtins.open", mock_file):
-                with patch("interface.database.database_manager.print"):
-                    error = Exception("Connection error")
-                    db_manager._log_connection_error(error)
-        
+                with patch("core.database.manager.print"):
+                    db_manager._log_connection_error(Exception("Connection error"))
+
         mock_file.assert_called_once()
 
-    def test_log_critical_error_handles_write_failure(self):
-        """Test _log_critical_error handles write failure."""
-        with patch.object(DatabaseManager, '__init__', lambda x, **kwargs: None):
+    def test_log_critical_error_handles_write_failure(self) -> None:
+        with patch.object(DatabaseManager, "__init__", lambda x, **kwargs: None):
             db_manager = DatabaseManager.__new__(DatabaseManager)
             db_manager._app_version = "1.0.0"
-            
+
             with patch("builtins.open", side_effect=IOError("Write failed")):
-                with patch("interface.database.database_manager.print"):
-                    error = Exception("Test error")
+                with patch("core.database.manager.print"):
                     with pytest.raises(SystemExit):
-                        db_manager._log_critical_error(error)
-
-
-# =============================================================================
-# Edge Case Tests
-# =============================================================================
-
-class TestEdgeCases:
-    """Tests for edge cases and boundary conditions."""
-
-    def test_table_query_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles query execution error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.find()
-            
-            assert "Query failed" in str(exc_info.value)
-
-    def test_table_insert_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles insert error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.insert({"id": 1})
-            
-            assert "Insert failed" in str(exc_info.value)
-
-    def test_table_update_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles update error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.update({"id": 1, "name": "test"}, ["id"])
-            
-            assert "Update failed" in str(exc_info.value)
-
-    def test_table_delete_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles delete error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.delete(id=1)
-            
-            assert "Delete failed" in str(exc_info.value)
-
-    def test_table_count_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles count error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.count()
-            
-            assert "Count failed" in str(exc_info.value)
-
-    def test_table_distinct_error(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test Table handles distinct error."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = False
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            with pytest.raises(RuntimeError) as exc_info:
-                table.distinct("column")
-            
-            assert "Distinct query failed" in str(exc_info.value)
-
-    def test_create_column_with_unknown_type(self, mock_qsqldatabase, mock_qsqlquery):
-        """Test create_column defaults to TEXT for unknown types."""
-        table = Table(mock_qsqldatabase, "test_table")
-        
-        mock_qsqlquery.exec.return_value = True
-        
-        with patch("interface.database.database_manager.QSqlQuery", return_value=mock_qsqlquery):
-            table.create_column("new_col", list)  # Unknown type
-        
-        call_args = mock_qsqlquery.exec.call_args[0][0]
-        assert "TEXT" in call_args
+                        db_manager._log_critical_error(Exception("Test error"))
 
 
 if __name__ == "__main__":

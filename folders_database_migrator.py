@@ -714,11 +714,8 @@ def upgrade_database(
 
     if db_version_dict["version"] == "32":
         from migrations.add_plugin_config_column import apply_migration
-        from PyQt6.QtSql import QSqlDatabase
 
-        qt_db = QSqlDatabase.database()
-
-        if not apply_migration(qt_db):
+        if not apply_migration(database_connection):
             raise RuntimeError("Plugin config migration failed")
 
         update_version = dict(id=1, version="33", os=running_platform)
@@ -894,3 +891,78 @@ def upgrade_database(
         update_version = dict(id=1, version="39", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("38", "39")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if db_version_dict["version"] == "39":
+        # Check if 'id' column exists in folders table
+        cursor = database_connection.raw_connection.cursor()
+        cursor.execute("PRAGMA table_info(folders)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if "id" not in columns:
+            # SQLite doesn't support adding PRIMARY KEY via ALTER TABLE
+            # We need to recreate the table with the id column
+            
+            # Get current table info
+            cursor.execute("PRAGMA table_info(folders)")
+            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
+            
+            # Build column definitions
+            col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+            for col_name, col_type in old_columns:
+                col_defs.append(f'"{col_name}" {col_type}')
+            
+            columns_sql = ", ".join(col_defs)
+            
+            # Create new table with id column
+            cursor.execute(f"CREATE TABLE folders_new ({columns_sql})")
+            
+            # Copy data (excluding any old id if it existed but was null)
+            old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
+            cursor.execute(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
+            
+            # Drop old table and rename new one
+            cursor.execute("DROP TABLE folders")
+            cursor.execute("ALTER TABLE folders_new RENAME TO folders")
+            
+            database_connection.raw_connection.commit()
+        
+        # Also ensure administrative table has id column (for consistency)
+        cursor.execute("PRAGMA table_info(administrative)")
+        admin_columns = [row[1] for row in cursor.fetchall()]
+        
+        if "id" not in admin_columns:
+            # Get current table info
+            cursor.execute("PRAGMA table_info(administrative)")
+            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
+            
+            # Build column definitions
+            col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+            for col_name, col_type in old_columns:
+                col_defs.append(f'"{col_name}" {col_type}')
+            
+            columns_sql = ", ".join(col_defs)
+            
+            # Create new table with id column
+            cursor.execute(f"CREATE TABLE administrative_new ({columns_sql})")
+            
+            # Copy data
+            old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
+            cursor.execute(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
+            
+            # Drop old table and rename new one
+            cursor.execute("DROP TABLE administrative")
+            cursor.execute("ALTER TABLE administrative_new RENAME TO administrative")
+            
+            database_connection.raw_connection.commit()
+
+        update_version = dict(id=1, version="40", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("39", "40")
