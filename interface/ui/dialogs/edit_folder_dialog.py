@@ -4,18 +4,23 @@ Edit folder dialog module for PyQt6 interface.
 This module contains the EditFolderDialog implementation.
 A tabbed dialog that handles folder configuration with support for:
 - General settings (alias, active state, backends)
-- Copy backend settings
-- FTP backend settings
-- Email backend settings
+- Dynamic send backend settings (discovered from *_backend.py plugins)
 - EDI processing settings
 - Conversion format settings
+
+**Lifecycle Pattern (BaseDialog):**
+1. __init__ — initialize and setup UI
+2. _setup_ui() — build widget hierarchy
+3. _set_dialog_values() — load folder_data into UI
+4. User interacts with widgets
+5. OK clicked → validate() → apply() → close dialog
+6. Cancel clicked → discard changes, close dialog
 """
 
 import os
-from typing import TYPE_CHECKING, Dict, Any, Optional
+from typing import TYPE_CHECKING, Dict, Any, Optional, Callable, Tuple
 
 from PyQt6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QHBoxLayout,
     QGridLayout,
@@ -25,29 +30,30 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QCheckBox,
-    QSpinBox,
     QComboBox,
-    QDialogButtonBox,
     QGroupBox,
-    QFileDialog,
     QMessageBox,
     QStackedWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal as Signal
+from PyQt6.QtCore import Qt
 
 if TYPE_CHECKING:
     from interface.database.database_manager import DatabaseManager
 
-from interface.utils.qt_validators import (
-    PORT_VALIDATOR,
-    EMAIL_VALIDATOR,
-    FTP_HOST_VALIDATOR,
-)
-from interface.utils.validation_feedback import add_validation_to_fields
+from interface.ui.base_dialog import BaseDialog
+from interface.ui.plugin_ui_generator import PluginUIGenerator
+from plugin_config import PluginRegistry
 
 
-class EditFolderDialog(QDialog):
-    """Tabbed dialog for editing folder configuration."""
+class EditFolderDialog(BaseDialog):
+    """Tabbed dialog for editing folder configuration.
+    
+    Implements BaseDialog lifecycle:
+    - _setup_ui() builds tabs and widgets
+    - _set_dialog_values() loads folder_data into UI
+    - validate() checks backend and plugin config validity
+    - apply() writes UI state back to self.data
+    """
 
     # Conversion format options
     CONVERT_FORMATS = [
@@ -79,73 +85,62 @@ class EditFolderDialog(QDialog):
             db_manager: Database manager instance.
             settings: Global settings dictionary.
         """
-        super().__init__(parent)
+        title = "Edit Folder" if folder_data else "Add Folder"
+        super().__init__(parent, title=title, data=folder_data or {})
 
-        self.folder_data = folder_data or {}
         self.db_manager = db_manager
         self.settings = settings or {}
-        self._result: Optional[Dict[str, Any]] = None
 
-        self.setWindowTitle("Edit Folder" if folder_data else "Add Folder")
-        self.setModal(True)
+        PluginRegistry.discover_plugins()
+        self._send_plugins = PluginRegistry.list_send_plugins()
+        self._backend_checks: Dict[str, QCheckBox] = {}
+        self._backend_tabs: Dict[str, QWidget] = {}
+        self._backend_value_getters: Dict[str, Dict[str, Callable]] = {}
+
         self.resize(700, 500)
-
-        self._setup_ui()
-        self._set_dialog_values()
-        self._setup_validation_feedback()
-
-    def _setup_validation_feedback(self) -> None:
-        add_validation_to_fields(
-            self._ftp_server_field,
-            self._ftp_port_field,
-            self._email_recipient_field,
-            self._email_cc_field,
-        )
 
     def _setup_ui(self) -> None:
         """Setup the dialog UI."""
-        layout = QVBoxLayout(self)
-
-        # Tab widget
         self._tabs = QTabWidget()
-        layout.addWidget(self._tabs)
+        self._layout.addWidget(self._tabs)
 
-        # Create tabs
         self._general_tab = self._build_general_tab()
-        self._copy_tab = self._build_copy_backend_tab()
-        self._ftp_tab = self._build_ftp_backend_tab()
-        self._email_tab = self._build_email_backend_tab()
         self._edi_tab = self._build_edi_tab()
         self._convert_tab = self._build_convert_format_tab()
 
         self._tabs.addTab(self._general_tab, "General")
-        self._tabs.addTab(self._copy_tab, "Copy Backend")
-        self._tabs.addTab(self._ftp_tab, "FTP Backend")
-        self._tabs.addTab(self._email_tab, "Email Backend")
+
+        for plugin_id, plugin_name, _ in self._send_plugins:
+            plugin_class = PluginRegistry.get_send_plugin(plugin_id)
+            if plugin_class:
+                fields = plugin_class.get_config_fields()
+                tab_widget, value_getters = (
+                    PluginUIGenerator.create_plugin_config_widget(
+                        fields, parent=None, current_values=self.folder_data
+                    )
+                )
+                self._backend_tabs[plugin_id] = tab_widget
+                self._backend_value_getters[plugin_id] = value_getters
+                self._tabs.addTab(tab_widget, f"{plugin_name}")
+
         self._tabs.addTab(self._edi_tab, "EDI Processing")
         self._tabs.addTab(self._convert_tab, "Conversion Format")
 
-        # Button box
-        self._button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._button_box.accepted.connect(self._on_ok)
-        self._button_box.rejected.connect(self.reject)
-        layout.addWidget(self._button_box)
+        self._on_backend_state_change()
 
     def _build_general_tab(self) -> QWidget:
         """Build the general settings tab."""
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        # Active state
         self._active_check = QCheckBox("Active")
-        self._active_check.setChecked(
-            str(self.folder_data.get("folder_is_active", "True")) == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        is_active = self.data.get("folder_is_active", True)
+        if isinstance(is_active, str):
+            is_active = is_active == "True"
+        self._active_check.setChecked(is_active)
         layout.addWidget(self._active_check)
 
-        # Folder alias
         alias_group = QGroupBox("Folder Alias")
         alias_layout = QVBoxLayout(alias_group)
 
@@ -159,149 +154,20 @@ class EditFolderDialog(QDialog):
 
         layout.addWidget(alias_group)
 
-        # Backend selection
         backend_group = QGroupBox("Backends")
         backend_layout = QVBoxLayout(backend_group)
 
-        self._copy_backend_check = QCheckBox("Copy Backend")
-        self._copy_backend_check.setChecked(
-            self.folder_data.get("process_backend_copy", False)
-        )
-        self._copy_backend_check.toggled.connect(self._on_backend_state_change)
-        backend_layout.addWidget(self._copy_backend_check)
-
-        self._ftp_backend_check = QCheckBox("FTP Backend")
-        self._ftp_backend_check.setChecked(
-            self.folder_data.get("process_backend_ftp", False)
-        )
-        self._ftp_backend_check.toggled.connect(self._on_backend_state_change)
-        backend_layout.addWidget(self._ftp_backend_check)
-
-        self._email_backend_check = QCheckBox("Email Backend")
-        self._email_backend_check.setChecked(
-            self.folder_data.get("process_backend_email", False)
-        )
-        self._email_backend_check.toggled.connect(self._on_backend_state_change)
-        backend_layout.addWidget(self._email_backend_check)
+        for plugin_id, plugin_name, _ in self._send_plugins:
+            check = QCheckBox(plugin_name)
+            check.setChecked(
+                self.data.get(f"process_backend_{plugin_id}", False)
+            )
+            check.toggled.connect(self._on_backend_state_change)
+            backend_layout.addWidget(check)
+            self._backend_checks[plugin_id] = check
 
         layout.addWidget(backend_group)
 
-        layout.addStretch(1)
-        return tab
-
-    def _build_copy_backend_tab(self) -> QWidget:
-        """Build the Copy backend tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        group = QGroupBox("Copy Backend Settings")
-        group_layout = QGridLayout(group)
-
-        row = 0
-        group_layout.addWidget(QLabel("Destination Folder:"), row, 0)
-
-        self._copy_directory_field = QLineEdit()
-        self._copy_directory_field.setText(
-            self.folder_data.get("copy_to_directory", "")
-        )
-        group_layout.addWidget(self._copy_directory_field, row, 1)
-
-        row += 1
-        browse_btn = QPushButton("Select...")
-        browse_btn.clicked.connect(self._select_copy_directory)
-        group_layout.addWidget(
-            browse_btn, row, 1, alignment=Qt.AlignmentFlag.AlignRight
-        )
-
-        layout.addWidget(group)
-        layout.addStretch(1)
-        return tab
-
-    def _build_ftp_backend_tab(self) -> QWidget:
-        """Build the FTP backend tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        group = QGroupBox("FTP Backend Settings")
-        group_layout = QGridLayout(group)
-
-        row = 0
-        group_layout.addWidget(QLabel("FTP Server:"), row, 0)
-        self._ftp_server_field = QLineEdit()
-        self._ftp_server_field.setValidator(FTP_HOST_VALIDATOR)
-        self._ftp_server_field.setPlaceholderText("example.com or 192.168.1.1")
-        self._ftp_server_field.setText(self.folder_data.get("ftp_server", ""))
-        group_layout.addWidget(self._ftp_server_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("FTP Port:"), row, 0)
-        self._ftp_port_field = QLineEdit()
-        self._ftp_port_field.setValidator(PORT_VALIDATOR)
-        self._ftp_port_field.setPlaceholderText("1-65535")
-        self._ftp_port_field.setText(str(self.folder_data.get("ftp_port", 21)))
-        group_layout.addWidget(self._ftp_port_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("FTP Folder:"), row, 0)
-        self._ftp_folder_field = QLineEdit()
-        self._ftp_folder_field.setText(self.folder_data.get("ftp_folder", ""))
-        group_layout.addWidget(self._ftp_folder_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("Username:"), row, 0)
-        self._ftp_username_field = QLineEdit()
-        self._ftp_username_field.setText(self.folder_data.get("ftp_username", ""))
-        group_layout.addWidget(self._ftp_username_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("Password:"), row, 0)
-        self._ftp_password_field = QLineEdit()
-        self._ftp_password_field.setEchoMode(QLineEdit.EchoMode.Password)
-        self._ftp_password_field.setText(self.folder_data.get("ftp_password", ""))
-        group_layout.addWidget(self._ftp_password_field, row, 1)
-
-        row += 1
-        self._ftp_passive_check = QCheckBox("Passive Mode")
-        self._ftp_passive_check.setChecked(self.folder_data.get("ftp_passive", True))
-        group_layout.addWidget(self._ftp_passive_check, row, 0, 1, 2)
-
-        layout.addWidget(group)
-        layout.addStretch(1)
-        return tab
-
-    def _build_email_backend_tab(self) -> QWidget:
-        """Build the Email backend tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        group = QGroupBox("Email Backend Settings")
-        group_layout = QGridLayout(group)
-
-        row = 0
-        group_layout.addWidget(QLabel("Email Recipient:"), row, 0)
-        self._email_recipient_field = QLineEdit()
-        self._email_recipient_field.setValidator(EMAIL_VALIDATOR)
-        self._email_recipient_field.setPlaceholderText("user@example.com")
-        self._email_recipient_field.setText(self.folder_data.get("email_to", ""))
-        group_layout.addWidget(self._email_recipient_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("Email CC:"), row, 0)
-        self._email_cc_field = QLineEdit()
-        self._email_cc_field.setValidator(EMAIL_VALIDATOR)
-        self._email_cc_field.setPlaceholderText("user@example.com (optional)")
-        self._email_cc_field.setText(self.folder_data.get("email_cc", ""))
-        group_layout.addWidget(self._email_cc_field, row, 1)
-
-        row += 1
-        group_layout.addWidget(QLabel("Email Subject:"), row, 0)
-        self._email_subject_field = QLineEdit()
-        self._email_subject_field.setText(
-            self.folder_data.get("email_subject_line", "")
-        )
-        group_layout.addWidget(self._email_subject_field, row, 1)
-
-        layout.addWidget(group)
         layout.addStretch(1)
         return tab
 
@@ -313,31 +179,31 @@ class EditFolderDialog(QDialog):
         # EDI options
         self._force_edi_check = QCheckBox("Force EDI Validation")
         self._force_edi_check.setChecked(
-            self.folder_data.get("force_edi_validation", False)
+            self.data.get("force_edi_validation", False)
         )
         layout.addWidget(self._force_edi_check)
 
         # Split EDI
         self._split_edi_check = QCheckBox("Split EDI Documents")
-        self._split_edi_check.setChecked(self.folder_data.get("split_edi", False))
+        self._split_edi_check.setChecked(self.data.get("split_edi", False))
         layout.addWidget(self._split_edi_check)
 
         self._split_invoices_check = QCheckBox("Include Invoices in Split")
         self._split_invoices_check.setChecked(
-            self.folder_data.get("split_edi_include_invoices", False)
+            self.data.get("split_edi_include_invoices", False)
         )
         layout.addWidget(self._split_invoices_check)
 
         self._split_credits_check = QCheckBox("Include Credits in Split")
         self._split_credits_check.setChecked(
-            self.folder_data.get("split_edi_include_credits", False)
+            self.data.get("split_edi_include_credits", False)
         )
         layout.addWidget(self._split_credits_check)
 
         # Prepend dates
         self._prepend_dates_check = QCheckBox("Prepend Dates to Files")
         self._prepend_dates_check.setChecked(
-            self.folder_data.get("prepend_date_files", False)
+            self.data.get("prepend_date_files", False)
         )
         layout.addWidget(self._prepend_dates_check)
 
@@ -345,7 +211,7 @@ class EditFolderDialog(QDialog):
         rename_layout = QHBoxLayout()
         rename_layout.addWidget(QLabel("Rename File:"))
         self._rename_field = QLineEdit()
-        self._rename_field.setText(self.folder_data.get("rename_file", ""))
+        self._rename_field.setText(self.data.get("rename_file", ""))
         rename_layout.addWidget(self._rename_field)
         layout.addLayout(rename_layout)
 
@@ -354,11 +220,15 @@ class EditFolderDialog(QDialog):
         edi_options_layout.addWidget(QLabel("EDI Options:"))
         self._edi_options_combo = QComboBox()
         self._edi_options_combo.addItems(["Do Nothing", "Convert EDI", "Tweak EDI"])
+        # Handle both native bool and legacy string "True"/"False"
+        process_edi = self.data.get("process_edi", False)
+        if isinstance(process_edi, str):
+            process_edi = process_edi == "True"
         self._edi_options_combo.setCurrentText(
             "Convert EDI"
-            if self.folder_data.get("process_edi") == "True"
+            if process_edi
             else "Tweak EDI"
-            if self.folder_data.get("tweak_edi")
+            if self.data.get("tweak_edi")
             else "Do Nothing"
         )
         self._edi_options_combo.currentTextChanged.connect(self._on_edi_option_changed)
@@ -374,9 +244,11 @@ class EditFolderDialog(QDialog):
         layout = QVBoxLayout(tab)
 
         self._process_edi_check = QCheckBox("Process EDI")
-        self._process_edi_check.setChecked(
-            self.folder_data.get("process_edi", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        process_edi = self.data.get("process_edi", False)
+        if isinstance(process_edi, str):
+            process_edi = process_edi == "True"
+        self._process_edi_check.setChecked(process_edi)
         layout.addWidget(self._process_edi_check)
 
         edi_format_layout = QHBoxLayout()
@@ -390,7 +262,7 @@ class EditFolderDialog(QDialog):
         except Exception:
             self._edi_format_combo.addItems(["default"])
         self._edi_format_combo.setCurrentText(
-            self.folder_data.get("edi_format", "default")
+            self.data.get("edi_format", "default")
         )
         edi_format_layout.addWidget(self._edi_format_combo)
         layout.addLayout(edi_format_layout)
@@ -400,7 +272,7 @@ class EditFolderDialog(QDialog):
         self._format_combo = QComboBox()
         self._format_combo.addItems(self.CONVERT_FORMATS)
         self._format_combo.setCurrentText(
-            self.folder_data.get("convert_to_format", "csv")
+            self.data.get("convert_to_format", "csv")
         )
         self._format_combo.currentTextChanged.connect(self._on_format_changed)
         format_layout.addWidget(self._format_combo)
@@ -430,7 +302,7 @@ class EditFolderDialog(QDialog):
 
         # Apply EDI tweaks
         self._tweak_edi_check = QCheckBox("Apply EDI Tweaks")
-        self._tweak_edi_check.setChecked(self.folder_data.get("tweak_edi", False))
+        self._tweak_edi_check.setChecked(self.data.get("tweak_edi", False))
         layout.addWidget(self._tweak_edi_check)
 
         layout.addStretch(1)
@@ -442,27 +314,35 @@ class EditFolderDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         self._upc_check = QCheckBox("Calculate UPC Check Digit")
-        self._upc_check.setChecked(
-            self.folder_data.get("calculate_upc_check_digit", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        upc_check = self.data.get("calculate_upc_check_digit", False)
+        if isinstance(upc_check, str):
+            upc_check = upc_check == "True"
+        self._upc_check.setChecked(upc_check)
         layout.addWidget(self._upc_check)
 
         self._a_records_check = QCheckBox("Include A Records")
-        self._a_records_check.setChecked(
-            self.folder_data.get("include_a_records", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        a_records = self.data.get("include_a_records", False)
+        if isinstance(a_records, str):
+            a_records = a_records == "True"
+        self._a_records_check.setChecked(a_records)
         layout.addWidget(self._a_records_check)
 
         self._c_records_check = QCheckBox("Include C Records")
-        self._c_records_check.setChecked(
-            self.folder_data.get("include_c_records", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        c_records = self.data.get("include_c_records", False)
+        if isinstance(c_records, str):
+            c_records = c_records == "True"
+        self._c_records_check.setChecked(c_records)
         layout.addWidget(self._c_records_check)
 
         self._headers_check = QCheckBox("Include Headings")
-        self._headers_check.setChecked(
-            self.folder_data.get("include_headers", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        headers = self.data.get("include_headers", False)
+        if isinstance(headers, str):
+            headers = headers == "True"
+        self._headers_check.setChecked(headers)
         layout.addWidget(self._headers_check)
 
         return widget
@@ -473,9 +353,11 @@ class EditFolderDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         self._pad_a_records_check = QCheckBox('Pad "A" Records')
-        self._pad_a_records_check.setChecked(
-            self.folder_data.get("pad_a_records", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        pad_a = self.data.get("pad_a_records", False)
+        if isinstance(pad_a, str):
+            pad_a = pad_a == "True"
+        self._pad_a_records_check.setChecked(pad_a)
         layout.addWidget(self._pad_a_records_check)
 
         return widget
@@ -508,7 +390,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("Store Number:"), row, 0)
         self._estore_store_field = QLineEdit()
         self._estore_store_field.setText(
-            self.folder_data.get("estore_store_number", "")
+            str(self.folder_data.get("estore_store_number", ""))
         )
         layout.addWidget(self._estore_store_field, row, 1)
 
@@ -516,7 +398,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("Vendor OId:"), row, 0)
         self._estore_vendor_oid_field = QLineEdit()
         self._estore_vendor_oid_field.setText(
-            self.folder_data.get("estore_Vendor_OId", "")
+            str(self.folder_data.get("estore_Vendor_OId", ""))
         )
         layout.addWidget(self._estore_vendor_oid_field, row, 1)
 
@@ -531,7 +413,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("Store Number:"), row, 0)
         self._estore_generic_store_field = QLineEdit()
         self._estore_generic_store_field.setText(
-            self.folder_data.get("estore_store_number", "")
+            str(self.folder_data.get("estore_store_number", ""))
         )
         layout.addWidget(self._estore_generic_store_field, row, 1)
 
@@ -539,7 +421,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("Vendor OId:"), row, 0)
         self._estore_generic_vendor_oid_field = QLineEdit()
         self._estore_generic_vendor_oid_field.setText(
-            self.folder_data.get("estore_Vendor_OId", "")
+            str(self.folder_data.get("estore_Vendor_OId", ""))
         )
         layout.addWidget(self._estore_generic_vendor_oid_field, row, 1)
 
@@ -547,7 +429,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("C Record OId:"), row, 0)
         self._estore_generic_c_oid_field = QLineEdit()
         self._estore_generic_c_oid_field.setText(
-            self.folder_data.get("estore_c_record_OID", "")
+            str(self.folder_data.get("estore_c_record_OID", ""))
         )
         layout.addWidget(self._estore_generic_c_oid_field, row, 1)
 
@@ -561,7 +443,7 @@ class EditFolderDialog(QDialog):
         layout.addWidget(QLabel("Division ID:"))
         self._fintech_division_field = QLineEdit()
         self._fintech_division_field.setText(
-            self.folder_data.get("fintech_division_id", "")
+            str(self.folder_data.get("fintech_division_id", ""))
         )
         layout.addWidget(self._fintech_division_field)
 
@@ -575,32 +457,21 @@ class EditFolderDialog(QDialog):
         return widget
 
     def _set_dialog_values(self) -> None:
-        """Set initial dialog values from folder data."""
-        if self.folder_data:
-            self._alias_field.setText(self.folder_data.get("alias", ""))
+        """Load initial folder data into UI widgets (BaseDialog lifecycle hook)."""
+        if self.data:
+            self._alias_field.setText(self.data.get("alias", ""))
 
     def _show_folder_path(self) -> None:
         """Show the folder path in a message box."""
-        path = self.folder_data.get("folder_name", "")
+        path = self.data.get("folder_name", "")
         QMessageBox.information(self, "Folder Path", path)
 
-    def _select_copy_directory(self) -> None:
-        """Select the copy backend destination directory."""
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Copy Destination",
-            self._copy_directory_field.text() or os.path.expanduser("~"),
-            QFileDialog.Option.ShowDirsOnly,
-        )
-        if directory:
-            self._copy_directory_field.setText(directory)
-
     def _on_backend_state_change(self) -> None:
-        """Handle backend state changes."""
-        # Enable/disable tabs based on backend selection
-        self._copy_tab.setEnabled(self._copy_backend_check.isChecked())
-        self._ftp_tab.setEnabled(self._ftp_backend_check.isChecked())
-        self._email_tab.setEnabled(self._email_backend_check.isChecked())
+        """Handle backend state changes - enable/disable tabs based on selection."""
+        for plugin_id, tab in self._backend_tabs.items():
+            check = self._backend_checks.get(plugin_id)
+            if check and tab:
+                tab.setEnabled(check.isChecked())
 
     def _on_edi_option_changed(self, text: str) -> None:
         """Handle EDI option selection change."""
@@ -623,108 +494,82 @@ class EditFolderDialog(QDialog):
         index = format_index_map.get(text, 0)
         self._format_options_stack.setCurrentIndex(index)
 
-    def _validate(self) -> bool:
-        """Validate dialog input using Qt validators."""
+    def validate(self) -> Tuple[bool, str]:
+        """Validate dialog input using plugin validation.
+        
+        Returns:
+            (is_valid, error_message) tuple
+        """
         errors = []
 
-        # Check at least one backend is selected
-        backend_count = (
-            int(self._copy_backend_check.isChecked())
-            + int(self._ftp_backend_check.isChecked())
-            + int(self._email_backend_check.isChecked())
+        backend_count = sum(
+            1 for check in self._backend_checks.values() if check.isChecked()
         )
 
         if backend_count == 0 and self._active_check.isChecked():
             errors.append("No backend is selected")
 
-        # FTP validation - Qt validators handle format, we check required fields
-        if self._ftp_backend_check.isChecked():
-            if not self._ftp_server_field.text():
-                errors.append("FTP Server is required")
-            elif not self._ftp_server_field.hasAcceptableInput():
-                errors.append("FTP Server format is invalid")
-
-            if not self._ftp_port_field.text():
-                errors.append("FTP Port is required")
-            elif not self._ftp_port_field.hasAcceptableInput():
-                errors.append("FTP Port must be between 1 and 65535")
-
-        # Email validation - Qt validators handle format, we check required fields
-        if self._email_backend_check.isChecked():
-            if not self._email_recipient_field.text():
-                errors.append("Email recipient is required")
-            elif not self._email_recipient_field.hasAcceptableInput():
-                errors.append("Email recipient format is invalid")
-
-            # CC is optional, but if provided must be valid
-            if (
-                self._email_cc_field.text()
-                and not self._email_cc_field.hasAcceptableInput()
-            ):
-                errors.append("Email CC format is invalid")
+        for plugin_id, check in self._backend_checks.items():
+            if check.isChecked():
+                plugin_class = PluginRegistry.get_send_plugin(plugin_id)
+                if plugin_class:
+                    value_getters = self._backend_value_getters.get(plugin_id, {})
+                    config = PluginUIGenerator.get_config_values(value_getters)
+                    is_valid, plugin_errors = plugin_class.validate_config(config)
+                    errors.extend(plugin_errors)
 
         if errors:
-            QMessageBox.critical(self, "Validation Error", "\\n".join(errors))
-            return False
+            return (False, "\n".join(errors))
 
-        return True
+        return (True, "")
 
-    def _on_ok(self) -> None:
-        """Handle OK button click."""
-        if not self._validate():
-            return
-
-        self._result = self._apply()
-        self.accept()
-
-    def _apply(self) -> Dict[str, Any]:
-        """Apply dialog changes and return result."""
-        result = dict(self.folder_data)
-
-        result["folder_is_active"] = str(self._active_check.isChecked())
-        result["alias"] = self._alias_field.text() or os.path.basename(
-            self.folder_data.get("folder_name", "")
+    def apply(self) -> None:
+        """Write UI state back to self.data (BaseDialog lifecycle hook)."""
+        self.data["folder_is_active"] = self._active_check.isChecked()
+        self.data["alias"] = self._alias_field.text() or os.path.basename(
+            self.data.get("folder_name", "")
         )
 
-        # Backend settings
-        result["process_backend_copy"] = self._copy_backend_check.isChecked()
-        result["process_backend_ftp"] = self._ftp_backend_check.isChecked()
-        result["process_backend_email"] = self._email_backend_check.isChecked()
+        for plugin_id, check in self._backend_checks.items():
+            self.data[f"process_backend_{plugin_id}"] = check.isChecked()
 
-        # Copy backend
-        result["copy_to_directory"] = self._copy_directory_field.text()
+        for plugin_id, value_getters in self._backend_value_getters.items():
+            config = PluginUIGenerator.get_config_values(value_getters)
+            self.data.update(config)
 
-        # FTP backend
-        result["ftp_server"] = self._ftp_server_field.text()
-        result["ftp_port"] = (
-            int(self._ftp_port_field.text()) if self._ftp_port_field.text() else 21
-        )
-        result["ftp_folder"] = self._ftp_folder_field.text()
-        result["ftp_username"] = self._ftp_username_field.text()
-        result["ftp_password"] = self._ftp_password_field.text()
-        result["ftp_passive"] = self._ftp_passive_check.isChecked()
+        self.data["force_edi_validation"] = self._force_edi_check.isChecked()
+        self.data["process_edi"] = self._process_edi_check.isChecked()
+        self.data["edi_format"] = self._edi_format_combo.currentText()
+        self.data["tweak_edi"] = self._tweak_edi_check.isChecked()
+        self.data["split_edi"] = self._split_edi_check.isChecked()
+        self.data["split_edi_include_invoices"] = self._split_invoices_check.isChecked()
+        self.data["split_edi_include_credits"] = self._split_credits_check.isChecked()
+        self.data["prepend_date_files"] = self._prepend_dates_check.isChecked()
+        self.data["rename_file"] = self._rename_field.text()
 
-        # Email backend
-        result["email_to"] = self._email_recipient_field.text()
-        result["email_cc"] = self._email_cc_field.text()
-        result["email_subject_line"] = self._email_subject_field.text()
+        self.data["convert_to_format"] = self._format_combo.currentText()
 
-        # EDI settings
-        result["force_edi_validation"] = self._force_edi_check.isChecked()
-        result["process_edi"] = str(self._process_edi_check.isChecked())
-        result["edi_format"] = self._edi_format_combo.currentText()
-        result["tweak_edi"] = self._tweak_edi_check.isChecked()
-        result["split_edi"] = self._split_edi_check.isChecked()
-        result["split_edi_include_invoices"] = self._split_invoices_check.isChecked()
-        result["split_edi_include_credits"] = self._split_credits_check.isChecked()
-        result["prepend_date_files"] = self._prepend_dates_check.isChecked()
-        result["rename_file"] = self._rename_field.text()
+        # CSV options
+        self.data["calculate_upc_check_digit"] = self._upc_check.isChecked()
+        self.data["include_a_records"] = self._a_records_check.isChecked()
+        self.data["include_c_records"] = self._c_records_check.isChecked()
+        self.data["include_headers"] = self._headers_check.isChecked()
 
-        # Conversion format
-        result["convert_to_format"] = self._format_combo.currentText()
+        # ScannerWare options
+        self.data["pad_a_records"] = self._pad_a_records_check.isChecked()
 
-        return result
+        # Simplified CSV options
+        self.data["include_item_numbers"] = self._item_numbers_check.isChecked()
+        self.data["include_item_description"] = self._item_description_check.isChecked()
 
-    def get_result(self) -> Optional[Dict[str, Any]]:
-        """Get the dialog result."""
-        return self._result
+        # Estore options
+        self.data["estore_store_number"] = self._estore_store_field.text()
+        self.data["estore_Vendor_OId"] = self._estore_vendor_oid_field.text()
+
+        # Estore Generic options
+        self.data["estore_store_number"] = self._estore_generic_store_field.text()
+        self.data["estore_Vendor_OId"] = self._estore_generic_vendor_oid_field.text()
+        self.data["estore_c_record_OID"] = self._estore_generic_c_oid_field.text()
+
+        # Fintech options
+        self.data["fintech_division_id"] = self._fintech_division_field.text()

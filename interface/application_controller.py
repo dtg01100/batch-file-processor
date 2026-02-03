@@ -1,8 +1,7 @@
 """
 Application Controller for PyQt6 interface.
 
-This module wires together the UI components with the business logic operations,
-matching the functionality of the original tkinter interface.
+This module wires together the UI components with the business logic operations.
 """
 
 import os
@@ -25,8 +24,8 @@ class ApplicationController:
     """
     Application controller that wires UI to business logic.
 
-    This class connects the MainWindow signals to the appropriate operations,
-    matching the behavior of the original tkinter interface.
+    This class connects the MainWindow signals to the appropriate operations
+    for the PyQt6 interface.
     """
 
     def __init__(

@@ -145,7 +145,7 @@
         "override_upc_category_filter": "ALL"
       },
       "settings_hash": "f7e88ec2",
-      "captured_at": "2026-01-29T15:33:29.767427",
+      "captured_at": "2026-02-02T12:40:51.073918",
       "source": "current"
     },
     "empty_edi_6daa6a32": {
@@ -165,7 +165,7 @@
         "retail_uom": true
       },
       "settings_hash": "6daa6a32",
-      "captured_at": "2026-01-29T15:33:29.777630",
+      "captured_at": "2026-02-02T12:40:51.082327",
       "source": "current"
     },
     "empty_edi_4a1915e8": {

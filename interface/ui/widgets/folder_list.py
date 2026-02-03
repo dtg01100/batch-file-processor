@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QFileDialog,
     QSplitter,
+    QSizePolicy,
 )
 from PyQt6.QtCore import pyqtSignal as Signal, Qt, QSize
 
@@ -32,12 +33,12 @@ if TYPE_CHECKING:
 
 
 class FolderListWidget(QWidget):
-    """Widget for displaying and managing folder list with active/inactive split.
+    """Widget for displaying and managing folder list with inactive/active split.
 
-    This widget displays active and inactive folders with:
+    This widget displays inactive and active folders with:
     - Search/filter field with fuzzy matching
-    - Active folders list (left side)
-    - Inactive folders list (right side)
+    - Inactive folders list (left side)
+    - Active folders list (right side)
     - Buttons for each folder: Edit, Toggle Active, Delete, Send
     - Real-time filtering as user types
     """
@@ -115,24 +116,8 @@ class FolderListWidget(QWidget):
         self._count_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self._count_label)
 
-        # Split view for active/inactive
+        # Split view for inactive/active (inactive on left, active on right)
         splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        # Active folders section
-        active_frame = QFrame()
-        active_frame.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Sunken)
-        active_layout = QVBoxLayout(active_frame)
-        active_layout.setContentsMargins(5, 5, 5, 5)
-
-        active_label = QLabel("Active Folders")
-        active_label.setStyleSheet("font-weight: bold;")
-        active_layout.addWidget(active_label)
-
-        self._active_list = QListWidget()
-        self._active_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        active_layout.addWidget(self._active_list, stretch=1)
-
-        splitter.addWidget(active_frame)
 
         # Inactive folders section
         inactive_frame = QFrame()
@@ -146,9 +131,27 @@ class FolderListWidget(QWidget):
 
         self._inactive_list = QListWidget()
         self._inactive_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self._inactive_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         inactive_layout.addWidget(self._inactive_list, stretch=1)
 
         splitter.addWidget(inactive_frame)
+
+        # Active folders section
+        active_frame = QFrame()
+        active_frame.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Sunken)
+        active_layout = QVBoxLayout(active_frame)
+        active_layout.setContentsMargins(5, 5, 5, 5)
+
+        active_label = QLabel("Active Folders")
+        active_label.setStyleSheet("font-weight: bold;")
+        active_layout.addWidget(active_label)
+
+        self._active_list = QListWidget()
+        self._active_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self._active_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        active_layout.addWidget(self._active_list, stretch=1)
+
+        splitter.addWidget(active_frame)
 
         layout.addWidget(splitter, stretch=1)
 
@@ -162,9 +165,12 @@ class FolderListWidget(QWidget):
             Tuple of (all_folders, active_folders, inactive_folders).
         """
         if self._db_manager.folders_table is None:
+            print(f"[DEBUG] folders_table is None! DB path: {getattr(self._db_manager, '_database_path', 'unknown')}")
             return [], [], []
 
         all_folders = list(self._db_manager.folders_table.find(order_by="alias"))
+        print(f"[DEBUG] Loaded {len(all_folders)} folders from database")
+        
         active_folders = []
         inactive_folders = []
 
@@ -182,6 +188,7 @@ class FolderListWidget(QWidget):
             else:
                 inactive_folders.append(f)
 
+        print(f"[DEBUG] Active: {len(active_folders)}, Inactive: {len(inactive_folders)}")
         return all_folders, active_folders, inactive_folders
 
     def _filter_folders(
@@ -253,77 +260,105 @@ class FolderListWidget(QWidget):
             folder_data: Folder data dictionary.
             is_active: True if this is an active folder.
         """
-        item = QListWidgetItem(parent_list)
+        try:
+            print(f"[DEBUG] Creating item for folder: {folder_data.get('alias', 'Unknown')} (id={folder_data.get('id')}, active={is_active})")
+            
+            item = QListWidgetItem(parent_list)
 
-        # Create custom widget for item
-        from PyQt6.QtWidgets import QHBoxLayout, QFrame, QWidget
-
-        widget = QFrame()
-        layout = QHBoxLayout(widget)
-        layout.setContentsMargins(5, 2, 5, 2)
-        layout.setSpacing(5)
-
-        # Alias label (takes remaining space)
-        alias_label = QLabel(folder_data.get("alias", "Unknown"))
-        alias_label.setMinimumWidth(150)
-        layout.addWidget(alias_label, stretch=1)
-
-        if is_active:
+            # Create custom widget for item - vertical card layout with alias on top, buttons below
+            widget = QFrame()
+            widget.setFrameShape(QFrame.Shape.StyledPanel)
+            widget.setFrameShadow(QFrame.Shadow.Plain)
+            widget.setLineWidth(1)
+            widget.setStyleSheet("QFrame { border: 1px solid #888; border-radius: 4px; }")
+            # Constrain width to content, not list width
+            widget.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            
+            # Vertical layout: alias on top, buttons below
+            card_layout = QVBoxLayout(widget)
+            card_layout.setContentsMargins(4, 2, 4, 2)
+            card_layout.setSpacing(2)
+            
+            # Alias label on top - left-aligned
+            alias = folder_data.get("alias", "Unknown")
+            alias_label = QLabel(alias)
+            alias_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            alias_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            card_layout.addWidget(alias_label)
+            
+            # Buttons on bottom - left aligned
+            button_layout = QHBoxLayout()
+            button_layout.setContentsMargins(0, 0, 0, 0)
+            button_layout.setSpacing(2)
+            # No stretch factors - buttons left-aligned, not centered
+            
             # Get folder ID with fallback to prevent KeyError
             folder_id = folder_data.get("id")
             if folder_id is None:
                 # Skip creating this item if no ID is present
+                print(f"[DEBUG] Skipping item - no folder_id")
                 return
 
-            # Send button
-            send_btn = QPushButton("Send")
-            send_btn.setFixedWidth(60)
-            send_btn.clicked.connect(
-                lambda checked, fid=folder_id: self._on_send_folder_clicked(fid)
-            )
-            layout.addWidget(send_btn)
+            if is_active:
+                # Send button
+                send_button = QPushButton("Send")
+                send_button.setMaximumWidth(20)
+                send_button.setStyleSheet("QPushButton { padding: 1px 3px; margin: 0px; min-width: 0px; }")
+                send_button.clicked.connect(
+                    lambda checked, fid=folder_id: self._on_send_folder_clicked(fid)
+                )
+                button_layout.addWidget(send_button)
 
-            # Toggle button
-            toggle_btn = QPushButton("<-")
-            toggle_btn.setFixedWidth(40)
-            toggle_btn.clicked.connect(
-                lambda checked, fid=folder_id: self._on_toggle_active_clicked(fid)
-            )
-            layout.addWidget(toggle_btn)
+                # Toggle button
+                toggle_button = QPushButton("<-")
+                toggle_button.setMaximumWidth(16)
+                toggle_button.setStyleSheet("QPushButton { padding: 1px 3px; margin: 0px; min-width: 0px; }")
+                toggle_button.clicked.connect(
+                    lambda checked, fid=folder_id: self._on_toggle_active_clicked(fid)
+                )
+                button_layout.addWidget(toggle_button)
 
-            # Edit button
-            edit_btn = QPushButton("Edit...")
-            edit_btn.setFixedWidth(80)
-            edit_btn.clicked.connect(
-                lambda checked, fid=folder_id: self._on_edit_folder_clicked(fid)
-            )
-            layout.addWidget(edit_btn)
-        else:
-            # Get folder ID with fallback to prevent KeyError
-            folder_id = folder_data.get("id")
-            if folder_id is None:
-                # Skip creating this item if no ID is present
-                return
+                # Edit button
+                edit_button = QPushButton("Edit...")
+                edit_button.setMaximumWidth(24)
+                edit_button.setStyleSheet("QPushButton { padding: 1px 3px; margin: 0px; min-width: 0px; }")
+                edit_button.clicked.connect(
+                    lambda checked, fid=folder_id: self._on_edit_folder_clicked(fid)
+                )
+                button_layout.addWidget(edit_button)
+            else:
+                # Edit button
+                edit_button = QPushButton("Edit...")
+                edit_button.setMaximumWidth(24)
+                edit_button.setStyleSheet("QPushButton { padding: 1px 3px; margin: 0px; min-width: 0px; }")
+                edit_button.clicked.connect(
+                    lambda checked, fid=folder_id: self._on_edit_folder_clicked(fid)
+                )
+                button_layout.addWidget(edit_button)
 
-            # Edit button
-            edit_btn = QPushButton("Edit...")
-            edit_btn.setFixedWidth(80)
-            edit_btn.clicked.connect(
-                lambda checked, fid=folder_id: self._on_edit_folder_clicked(fid)
-            )
-            layout.addWidget(edit_btn)
-
-            # Delete button
-            delete_btn = QPushButton("Delete")
-            delete_btn.setFixedWidth(70)
-            delete_btn.clicked.connect(
-                lambda checked, fid=folder_id: self._on_delete_folder_clicked(fid)
-            )
-            layout.addWidget(delete_btn)
-
-        item.setSizeHint(widget.sizeHint())
-        parent_list.addItem(item)
-        parent_list.setItemWidget(item, widget)
+                # Delete button
+                delete_button = QPushButton("Delete")
+                delete_button.setMaximumWidth(28)
+                delete_button.setStyleSheet("QPushButton { padding: 1px 3px; margin: 0px; min-width: 0px; }")
+                delete_button.clicked.connect(
+                    lambda checked, fid=folder_id: self._on_delete_folder_clicked(fid)
+                )
+                button_layout.addWidget(delete_button)
+            
+            card_layout.addLayout(button_layout)
+            
+            # Force widget to calculate its content size
+            widget.adjustSize()
+            # Get the proper size hint (constrained width)
+            hint = widget.sizeHint()
+            # Set the size hint with proper width, not expanding to list width
+            item.setSizeHint(QSize(hint.width(), hint.height()))
+            parent_list.addItem(item)
+            parent_list.setItemWidget(item, widget)
+            print(f"[DEBUG] Item created successfully. List count now: {parent_list.count()}")
+        except Exception as e:
+            print(f"[DEBUG] Error creating folder item: {str(e)}")
+            raise
 
     def _on_filter_changed(self, query: str) -> None:
         """Handle filter field changes."""
@@ -383,18 +418,22 @@ class FolderListWidget(QWidget):
 
     def refresh(self) -> None:
         """Refresh the folder list."""
+        print(f"[DEBUG] refresh() called. filter_query='{self._filter_query}'")
         try:
             # Clear existing content
             self._active_list.clear()
             self._inactive_list.clear()
+            print(f"[DEBUG] Lists cleared. Active count: {self._active_list.count()}, Inactive count: {self._inactive_list.count()}")
 
             # Load folders
             all_folders, active_folders, inactive_folders = self._load_folders()
+            print(f"[DEBUG] Folders loaded. all={len(all_folders)}, active={len(active_folders)}, inactive={len(inactive_folders)}")
 
             # Filter folders
             filtered_all, filtered_active, filtered_inactive = self._filter_folders(
                 all_folders, active_folders, inactive_folders, self._filter_query
             )
+            print(f"[DEBUG] Folders filtered. filtered_active={len(filtered_active)}, filtered_inactive={len(filtered_inactive)}")
 
             # Update count label
             if len(filtered_all) != len(all_folders):
@@ -405,11 +444,15 @@ class FolderListWidget(QWidget):
                 self._count_label.setText(f"{len(all_folders)} folders")
 
             # Create folder items
+            print(f"[DEBUG] Creating {len(filtered_active)} active items...")
             for folder in filtered_active:
                 self._create_folder_item(self._active_list, folder, is_active=True)
 
+            print(f"[DEBUG] Creating {len(filtered_inactive)} inactive items...")
             for folder in filtered_inactive:
                 self._create_folder_item(self._inactive_list, folder, is_active=False)
+
+            print(f"[DEBUG] Final counts. Active: {self._active_list.count()}, Inactive: {self._inactive_list.count()}")
 
             # Show empty state if no folders
             if len(filtered_active) == 0:
@@ -419,6 +462,8 @@ class FolderListWidget(QWidget):
         except Exception as e:
             # Log the error and handle gracefully
             print(f"Error refreshing folder list: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # Still show empty state to prevent complete failure
             self._active_list.clear()
             self._inactive_list.clear()

@@ -192,3 +192,7 @@ def pytest_configure(config):
         "markers", "convert_integration: mark test as convert integration test"
     )
     config.addinivalue_line("markers", "qt: mark test as requiring PyQt6/Qt")
+    config.addinivalue_line(
+        "markers", "parity: mark test as parity verification test against baselines"
+    )
+    config.addinivalue_line("markers", "db: mark test as database-related test")

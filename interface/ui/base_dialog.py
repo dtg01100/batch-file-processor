@@ -2,22 +2,38 @@
 Base dialog module for PyQt6 interface.
 
 This module contains the base dialog class for all interface dialogs.
+Provides a unified lifecycle and API for all dialog subclasses.
 """
 
-from typing import Any, Dict, Optional
+from copy import deepcopy
+from typing import Any, Dict, Optional, Tuple
 
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QWidget, QMessageBox
 from PyQt6.QtCore import Qt, pyqtSignal as Signal
 
 
 class BaseDialog(QDialog):
     """Base dialog class for all interface dialogs.
 
-    This class provides common patterns for modal dialogs including:
-    - OK/Cancel button handling
-    - validate()/apply() pattern
-    - Modal dialog behavior
-    - Common dialog setup
+    Provides unified lifecycle and patterns for all modal dialogs:
+    
+    **Lifecycle:**
+    1. __init__(parent, title, data) — initialize and setup UI
+    2. _setup_ui() — build widget hierarchy (override)
+    3. _set_dialog_values() — populate UI from self.data (override)
+    4. User interacts with widgets
+    5. OK clicked → validate() → apply() → accept dialog
+    6. Cancel clicked → discard changes, close dialog
+    
+    **Implementation Guide:**
+    - Override _setup_ui() to build widgets (don't call super)
+    - Override _set_dialog_values() to load data into UI
+    - Override validate() to return (is_valid, error_message) tuple
+    - Override apply() to write UI values back to self.data
+    - Keep self.data synchronized with UI state when done
+
+    **Signals:**
+    - accepted_data: emitted with data dict when OK is pressed and validation passes
     """
 
     # Signals
@@ -35,7 +51,7 @@ class BaseDialog(QDialog):
         Args:
             parent: Parent window.
             title: Dialog title.
-            data: Optional data to initialize the dialog with.
+            data: Optional data dict to initialize dialog with.
         """
         super().__init__(parent)
 
@@ -43,110 +59,127 @@ class BaseDialog(QDialog):
         self.setModal(True)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowSystemMenuHint)
 
-        # Store initial data
-        self._data = data if data else {}
+        # Store data; keep original for potential reset
+        self.data = data if data else {}
+        self._original_data = deepcopy(self.data)
 
-        # Result of the dialog
+        # Result of the dialog (set when accepted)
         self._result: Optional[Dict[str, Any]] = None
 
-        # Create layout
+        # Create main layout
         self._layout = QVBoxLayout(self)
 
-        # Create body frame
-        self._body_frame = QWidget()
-        self._layout.addWidget(self._body_frame)
+        # Setup dialog UI and initial values
+        self._setup_ui()
+        self._set_dialog_values()
+        self._setup_buttons()
 
-        # Create button box
+    def _setup_ui(self) -> None:
+        """Setup dialog UI widgets.
+        
+        Override in subclasses to build widget hierarchy.
+        Do NOT call super() in override (this method is a hook).
+        Do NOT add widgets to self._layout here; add to self._body_layout.
+        
+        Example:
+            def _setup_ui(self):
+                self._body_layout = QVBoxLayout()
+                self._name_input = QLineEdit()
+                self._body_layout.addWidget(QLabel("Name:"))
+                self._body_layout.addWidget(self._name_input)
+                self._layout.addLayout(self._body_layout)
+        """
+        # Default: create empty body layout
+        # Subclasses can override to add custom widgets
+        if not hasattr(self, '_body_layout'):
+            self._body_layout = QVBoxLayout()
+            self._layout.addLayout(self._body_layout)
+
+    def _set_dialog_values(self) -> None:
+        """Load initial data into UI widgets.
+        
+        Override in subclasses to populate UI from self.data.
+        Called after _setup_ui() in __init__.
+        
+        Example:
+            def _set_dialog_values(self):
+                self._name_input.setText(self.data.get("name", ""))
+        """
+        pass
+
+    def _setup_buttons(self) -> None:
+        """Setup OK/Cancel buttons (internal; do not override)."""
         self._button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        self._button_box.accepted.connect(self._on_ok)
+        self._button_box.accepted.connect(self._on_ok_clicked)
         self._button_box.rejected.connect(self.reject)
         self._layout.addWidget(self._button_box)
 
-        # Create widgets
-        self._create_widgets()
-
-        # Setup layout
-        self._setup_layout()
-
-        # Set initial focus
-        self._set_initial_focus()
-
-    def _create_widgets(self) -> None:
-        """Create dialog widgets. Override in subclasses."""
-        pass
-
-    def _setup_layout(self) -> None:
-        """Setup dialog layout. Override in subclasses."""
-        pass
-
-    def _set_initial_focus(self) -> None:
-        """Set initial focus widget. Override in subclasses."""
-        pass
-
-    def _on_ok(self) -> None:
-        """Handle OK button press."""
-        if not self.validate():
+    def _on_ok_clicked(self) -> None:
+        """Handle OK button press (internal)."""
+        is_valid, error_msg = self.validate()
+        if not is_valid:
+            QMessageBox.warning(self, "Validation Error", error_msg)
             return
-
-        result = self.apply()
-        self._result = result
-        self.accepted_data.emit(result)
+        
+        self.apply()
+        self._result = deepcopy(self.data)
+        self.accepted_data.emit(self._result)
         self.accept()
 
-    def validate(self) -> bool:
-        """Validate the dialog input.
-
-        This method should be overridden in subclasses to perform
-        validation of the dialog's input.
-
+    def validate(self) -> Tuple[bool, str]:
+        """Validate dialog data before accepting.
+        
+        Override in subclasses to implement validation logic.
+        
         Returns:
-            True if input is valid, False otherwise.
+            Tuple of (is_valid, error_message).
+            is_valid=True and error_message="" means valid.
+            is_valid=False with non-empty error_message shows warning dialog.
+        
+        Example:
+            def validate(self):
+                name = self._name_input.text().strip()
+                if not name:
+                    return (False, "Name cannot be empty")
+                if len(name) < 3:
+                    return (False, "Name must be at least 3 characters")
+                return (True, "")
         """
-        return True
+        return (True, "")
 
-    def apply(self) -> Dict[str, Any]:
-        """Apply the dialog changes.
-
-        This method should be overridden in subclasses to apply
-        the dialog's changes to the data.
-
-        Returns:
-            Dictionary containing the applied changes.
+    def apply(self) -> None:
+        """Write UI state back to self.data.
+        
+        Override in subclasses to sync UI values to self.data.
+        Called after validate() succeeds and before dialog closes.
+        
+        Example:
+            def apply(self):
+                self.data["name"] = self._name_input.text()
+                self.data["active"] = self._active_checkbox.isChecked()
         """
-        return self._data.copy()
+        pass
 
     @property
     def data(self) -> Dict[str, Any]:
-        """Get the dialog data."""
-        return self._data
-
-    @data.setter
-    def data(self, value: Dict[str, Any]) -> None:
-        """Set the dialog data."""
-        self._data = value
+        """Get the dialog data dict."""
+        return self.data if hasattr(self, '_data_attr') else self.__dict__.get('data', {})
 
     def get_result(self) -> Optional[Dict[str, Any]]:
         """Get the dialog result.
 
         Returns:
-            The dialog result, or None if cancelled.
+            The dialog result (data dict if OK pressed), or None if cancelled.
         """
         return self._result
-
-    def show(self) -> None:
-        """Show the dialog modally.
-
-        Override to use show_modal() for result-returning behavior.
-        """
-        super().show()
 
     def show_modal(self) -> Optional[Dict[str, Any]]:
         """Show the dialog modally and wait for result.
 
         Returns:
-            The dialog result, or None if cancelled.
+            The dialog result (data dict if OK pressed), or None if cancelled.
         """
         if self.exec() == QDialog.DialogCode.Accepted:
             return self._result

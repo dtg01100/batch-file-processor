@@ -14,7 +14,7 @@ PyQt6 GUI application for processing EDI/batch files with pluggable converters a
 batch-file-processor/
 ├── interface/          # PyQt6 GUI (models, operations, UI, database)
 ├── dispatch/          # Core processing (coordinator, EDI processor, send manager, file processor)
-├── tests/             # 1346+ tests (unit, integration, operations, ui, convert_backends)
+├── tests/             # 1600+ tests (unit, integration, operations, ui, convert_backends)
 ├── migrations/        # DB migration helpers
 ├── convert_*.py       # Converter plugins (10 at root: csv, fintech, scannerware, etc.)
 ├── *_backend.py       # Send backends (3 at root: email, ftp, copy)
@@ -25,6 +25,29 @@ batch-file-processor/
 ```
 
 ## CRITICAL ANTI-PATTERNS
+
+**🚨 SPEC-FIRST DEVELOPMENT (MANDATORY)**  
+- ❌ DO NOT implement changes without a spec (except trivial bug fixes)
+- ✅ ALWAYS create a spec in `specs/` before implementing new features
+- ✅ Spec must be reviewed/approved before implementation begins
+- ✅ Use `specs/TEMPLATE.md` as the starting point for all specs
+- ✅ Reference the relevant docs in `docs/` for architectural alignment
+
+**Spec is required for:**
+- New features or capabilities
+- Changes to existing APIs or interfaces
+- Database schema changes (migrations)
+- New plugins (converters or backends)
+- UI changes that affect user workflows
+- Refactoring that changes module boundaries
+- Changes affecting multiple files/modules
+
+**Spec is NOT required for:**
+- Bug fixes with clear root cause
+- Documentation updates
+- Test additions/improvements
+- Code formatting/linting
+- Dependency updates (unless breaking changes)
 
 **Never commit when tests are failing**  
 - Run `./run_tests.sh` before commit
@@ -119,7 +142,7 @@ do = create_send_wrapper(MyBackend)
 
 ## TESTING
 
-**Test count**: 1346+ tests  
+**Test count**: 1600+ tests  
 **Organization**:
 - `tests/test_smoke.py` — utility smoke tests
 - `tests/test_app_smoke.py` — app startup (31 tests)
@@ -248,16 +271,16 @@ pip install -r requirements.txt
 ## MIGRATION RULES
 
 **Version storage**: Table `version`, column `version` (TEXT), id=1  
-**Current version**: 39  
-**Supported range**: v5–v39
+**Current version**: 40  
+**Supported range**: v5–v40
 
 **Adding migration**:
 1. Edit `folders_database_migrator.py`, add version block:
    ```python
-   if db_version_dict["version"] == "39":
+   if db_version_dict["version"] == "40":
        # Apply changes
-       db_version.update(dict(id=1, version="40", os=running_platform), ["id"])
-       _log_migration_step("39", "40")
+       db_version.update(dict(id=1, version="41", os=running_platform), ["id"])
+       _log_migration_step("40", "41")
    ```
 2. Update `create_database.py` if new columns should be in initial schema
 3. Update `tests/integration/database_schema_versions.py`: `ALL_VERSIONS`, `CURRENT_VERSION`
@@ -269,6 +292,23 @@ pip install -r requirements.txt
 - SystemExit if DB newer than app
 
 ## DOCUMENTATION
+
+**Design documents** (in `docs/`):
+- `ARCHITECTURE.md` — system overview, directory structure, key decisions
+- `PLUGIN_DESIGN.md` — converter and backend plugin patterns
+- `DATABASE_DESIGN.md` — schema, migrations, access patterns
+- `TESTING_DESIGN.md` — testing strategy, patterns, fixtures
+- `GUI_DESIGN.md` — UI architecture, signal propagation
+- `PROCESSING_DESIGN.md` — file processing pipeline
+- `VALIDATION_DESIGN.md` — EDI validation rules
+- `ERROR_HANDLING_DESIGN.md` — error handling patterns
+- `CONFIGURATION_DESIGN.md` — settings and configuration
+- `EDI_FORMAT_DESIGN.md` — EDI format specifications
+- `MIGRATION_DESIGN.md` — database migration strategy
+
+**Specs** (in `specs/`):
+- `TEMPLATE.md` — template for new feature specs
+- `*.md` — approved specs for features/changes
 
 **Test docs**:
 - `TEST_STATUS.md` — current test status, known issues
@@ -283,6 +323,34 @@ pip install -r requirements.txt
 - `ALLEDI_CORPUS_README.md` — corpus usage (never commit)
 - `PARITY_VERIFICATION.md` — converter output baseline testing
 - Many `*_SUMMARY.md`, `*_COMPLETE.md` files documenting past work
+
+## SPEC WORKFLOW
+
+**Creating a spec**:
+1. Copy `specs/TEMPLATE.md` to `specs/<feature-name>.md`
+2. Fill in all required sections
+3. Reference relevant design docs from `docs/`
+4. Include test plan with specific test cases
+5. Get spec reviewed/approved before implementing
+
+**Spec structure**:
+- **Summary**: What and why (1-2 sentences)
+- **Background**: Context and motivation
+- **Design**: Technical approach aligned with `docs/`
+- **Implementation Plan**: Phased steps with deliverables
+- **Testing Strategy**: Test cases, coverage expectations
+- **Risk Assessment**: Potential issues and mitigations
+- **Success Criteria**: Measurable completion criteria
+
+**During implementation**:
+- Reference the spec in commit messages: `feat: Add X (spec: feature-name)`
+- Update spec if design changes during implementation
+- Mark spec as IMPLEMENTED when complete
+
+**Spec lifecycle**:
+```
+DRAFT → REVIEW → APPROVED → IN_PROGRESS → IMPLEMENTED
+```
 
 ## NOTES
 

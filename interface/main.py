@@ -30,7 +30,7 @@ from interface.ui.main_window import create_main_window
 # Application constants
 APPNAME = "Batch File Sender"
 VERSION = "1.0.0"
-DATABASE_VERSION = "39"
+DATABASE_VERSION = "40"
 
 
 def parse_arguments() -> argparse.Namespace:

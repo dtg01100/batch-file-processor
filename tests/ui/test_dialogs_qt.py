@@ -47,6 +47,75 @@ class TestEditFolderDialogQt:
         # Dialog should be created without error
         assert dialog is not None
 
+    def test_edit_folder_dialog_estore_integer_values(self, qtbot, mock_db_manager):
+        """Test that estore fields with integer values don't cause TypeError."""
+        from interface.ui.dialogs.edit_folder_dialog import EditFolderDialog
+
+        folder_data = {
+            "id": 1,
+            "alias": "Test Folder",
+            "folder_name": "/test/folder",
+            "folder_is_active": "True",
+            "estore_store_number": 123,  # Integer that caused crash
+            "estore_Vendor_OId": 456,
+            "estore_c_record_OID": 789,
+            "fintech_division_id": 100,
+        }
+
+        # Should not raise TypeError
+        dialog = EditFolderDialog(
+            parent=None, folder_data=folder_data, db_manager=mock_db_manager
+        )
+        qtbot.addWidget(dialog)
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+        assert dialog.windowTitle() == "Edit Folder"
+
+    def test_edit_folder_dialog_estore_generic_integer_values(self, qtbot, mock_db_manager):
+        """Test that estore generic fields with integer values don't cause TypeError."""
+        from interface.ui.dialogs.edit_folder_dialog import EditFolderDialog
+
+        folder_data = {
+            "id": 1,
+            "alias": "Test Folder",
+            "folder_name": "/test/folder",
+            "folder_is_active": "True",
+            "estore_store_number": 999,  # Integer for estore generic
+            "estore_Vendor_OId": 888,
+            "estore_c_record_OID": 777,
+        }
+
+        # Should not raise TypeError
+        dialog = EditFolderDialog(
+            parent=None, folder_data=folder_data, db_manager=mock_db_manager
+        )
+        qtbot.addWidget(dialog)
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+
+    def test_edit_folder_dialog_fintech_integer_values(self, qtbot, mock_db_manager):
+        """Test that fintech division field with integer value doesn't cause TypeError."""
+        from interface.ui.dialogs.edit_folder_dialog import EditFolderDialog
+
+        folder_data = {
+            "id": 1,
+            "alias": "Test Folder",
+            "folder_name": "/test/folder",
+            "folder_is_active": "True",
+            "fintech_division_id": 42,  # Integer for fintech
+        }
+
+        # Should not raise TypeError
+        dialog = EditFolderDialog(
+            parent=None, folder_data=folder_data, db_manager=mock_db_manager
+        )
+        qtbot.addWidget(dialog)
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+
 
 @pytest.mark.qt
 class TestEditSettingsDialogQt:
