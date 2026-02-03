@@ -7,13 +7,20 @@ A tabbed dialog that handles global application settings including:
 - Email settings
 - Backup settings
 - Reporting options
+
+**Lifecycle Pattern (BaseDialog):**
+1. __init__ — initialize and setup UI
+2. _setup_ui() — build widget hierarchy
+3. _set_dialog_values() — load settings/oversight data into UI
+4. User interacts with widgets
+5. OK clicked → validate() → apply() → close dialog
+6. Cancel clicked → discard changes, close dialog
 """
 
-from typing import TYPE_CHECKING, Dict, Any, Optional
+from typing import TYPE_CHECKING, Dict, Any, Optional, Tuple
 import os
 
 from PyQt6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QGridLayout,
     QTabWidget,
@@ -24,7 +31,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QSpinBox,
     QComboBox,
-    QDialogButtonBox,
     QGroupBox,
     QFileDialog,
     QMessageBox,
@@ -34,12 +40,21 @@ from PyQt6.QtCore import Qt
 if TYPE_CHECKING:
     from interface.database.database_manager import DatabaseManager
 
+from interface.ui.base_dialog import BaseDialog
 from interface.utils.qt_validators import EMAIL_VALIDATOR
 from interface.utils.validation_feedback import add_validation_to_fields
+from utils import from_db_bool
 
 
-class EditSettingsDialog(QDialog):
-    """Tabbed dialog for editing global settings."""
+class EditSettingsDialog(BaseDialog):
+    """Tabbed dialog for editing global settings.
+    
+    Implements BaseDialog lifecycle:
+    - _setup_ui() builds tabs and widgets
+    - _set_dialog_values() loads settings/oversight data into UI
+    - validate() checks field validity
+    - apply() writes UI state back to self.data (settings + oversight)
+    """
 
     def __init__(
         self,
@@ -57,17 +72,22 @@ class EditSettingsDialog(QDialog):
             oversight: Oversight and defaults dictionary from database.
             db_manager: Database manager instance.
         """
-        super().__init__(parent)
+        # Combine settings and oversight into single data dict for BaseDialog
+        combined_data = {}
+        if settings:
+            combined_data.update({"_settings": settings})
+        if oversight:
+            combined_data.update({"_oversight": oversight})
+        
+        super().__init__(parent, title="Edit Settings", data=combined_data)
 
+        self.db_manager = db_manager
+        
+        # Store separate references for convenience
         self.settings = settings or {}
         self.oversight = oversight or {}
-        self.db_manager = db_manager
 
-        self.setWindowTitle("Edit Settings")
-        self.setModal(True)
         self.resize(600, 400)
-
-        self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Setup the dialog UI."""
@@ -219,9 +239,9 @@ class EditSettingsDialog(QDialog):
 
         row = 0
         self._enable_reporting_check = QCheckBox("Enable Report Sending")
-        self._enable_reporting_check.setChecked(
-            self.oversight.get("enable_reporting", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        enable_reporting = from_db_bool(self.oversight.get("enable_reporting", False))
+        self._enable_reporting_check.setChecked(enable_reporting)
         layout.addWidget(self._enable_reporting_check, row, 0, 1, 2)
 
         row += 1
@@ -243,12 +263,17 @@ class EditSettingsDialog(QDialog):
 
         row += 1
         self._printing_fallback_check = QCheckBox("Enable Report Printing Fallback")
-        self._printing_fallback_check.setChecked(
-            self.oversight.get("report_printing_fallback", "False") == "True"
-        )
+        # Handle both native bool and legacy string "True"/"False"
+        printing_fallback = from_db_bool(self.oversight.get("report_printing_fallback", False))
+        self._printing_fallback_check.setChecked(printing_fallback)
         layout.addWidget(self._printing_fallback_check, row, 0, 1, 2)
 
         return tab
+
+    def _set_dialog_values(self) -> None:
+        """Load initial settings/oversight data into UI widgets (BaseDialog lifecycle hook)."""
+        # Already loaded in _build_* methods via self.settings/self.oversight references
+        pass
 
     def _on_email_enabled_changed(self, enabled: bool) -> None:
         """Handle enable email checkbox change."""
@@ -269,7 +294,12 @@ class EditSettingsDialog(QDialog):
         if directory:
             self._logs_directory_field.setText(directory)
 
-    def _validate(self) -> bool:
+    def validate(self) -> Tuple[bool, str]:
+        """Validate dialog input (BaseDialog lifecycle hook).
+        
+        Returns:
+            (is_valid, error_message) tuple
+        """
         errors = []
 
         if self._enable_email_check.isChecked():
@@ -282,21 +312,12 @@ class EditSettingsDialog(QDialog):
                 errors.append("SMTP server is required when email is enabled")
 
         if errors:
-            QMessageBox.critical(self, "Validation Error", "\\n".join(errors))
-            return False
+            return (False, "\n".join(errors))
 
-        return True
+        return (True, "")
 
-    def _on_ok(self) -> None:
-        """Handle OK button click."""
-        if not self._validate():
-            return
-
-        self._apply()
-        self.accept()
-
-    def _apply(self) -> None:
-        """Apply dialog changes to settings."""
+    def apply(self) -> None:
+        """Write UI state back to settings/oversight (BaseDialog lifecycle hook)."""
         # Update settings
         self.settings["odbc_driver"] = self._odbc_driver_combo.currentText()
         self.settings["as400_address"] = self._as400_address_field.text()
@@ -311,16 +332,12 @@ class EditSettingsDialog(QDialog):
         self.settings["enable_interval_backups"] = self._enable_backup_check.isChecked()
         self.settings["backup_counter_maximum"] = self._backup_interval_spinbox.value()
 
-        # Update oversight
+        # Update oversight (use native bool, not string)
         self.oversight["logs_directory"] = self._logs_directory_field.text()
-        self.oversight["enable_reporting"] = str(
-            self._enable_reporting_check.isChecked()
-        )
+        self.oversight["enable_reporting"] = self._enable_reporting_check.isChecked()
         self.oversight["report_email_destination"] = self._report_email_field.text()
         self.oversight["report_edi_errors"] = self._report_warnings_check.isChecked()
-        self.oversight["report_printing_fallback"] = str(
-            self._printing_fallback_check.isChecked()
-        )
+        self.oversight["report_printing_fallback"] = self._printing_fallback_check.isChecked()
 
         # Save to database
         if self.db_manager:
@@ -331,6 +348,10 @@ class EditSettingsDialog(QDialog):
                 and self.db_manager.oversight_and_defaults is not None
             ):
                 self.db_manager.oversight_and_defaults.update(self.oversight, ["id"])
+
+        # Also update self.data for BaseDialog compatibility
+        self.data["_settings"] = self.settings
+        self.data["_oversight"] = self.oversight
 
     def get_settings(self) -> Dict[str, Any]:
         """Get the updated settings."""
