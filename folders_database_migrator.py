@@ -966,3 +966,91 @@ def upgrade_database(
         update_version = dict(id=1, version="40", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("39", "40")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    # Migration 40 → 41: Convert string booleans to native INTEGER (0/1)
+    # This migration normalizes boolean storage across all tables.
+    # String booleans ("True"/"False") are converted to INTEGER (1/0).
+    if db_version_dict["version"] == "40":
+        # List of boolean columns that need migration
+        # These columns may contain "True"/"False" strings and need to be converted to 0/1
+        boolean_columns = [
+            "folder_is_active",
+            "process_edi",
+            "calculate_upc_check_digit",
+            "include_a_records",
+            "include_c_records",
+            "include_headers",
+            "filter_ampersand",
+            "pad_a_records",
+            "invoice_date_custom_format",
+            "append_a_records",
+            "force_txt_file_ext",
+            "enable_reporting",
+            "report_printing_fallback",
+        ]
+
+        # Migrate folders table
+        for col in boolean_columns:
+            try:
+                database_connection.query(f"""
+                    UPDATE folders
+                    SET "{col}" = CASE
+                        WHEN "{col}" = 'True' THEN 1
+                        WHEN "{col}" = 'true' THEN 1
+                        WHEN "{col}" = '1' THEN 1
+                        WHEN "{col}" = 1 THEN 1
+                        WHEN "{col}" IS NULL THEN 0
+                        ELSE 0
+                    END
+                    WHERE "{col}" IN ('True', 'False', 'true', 'false', '0', '1')
+                       OR typeof("{col}") = 'text'
+                """)
+            except Exception as e:
+                # Column might not exist in this table; log and continue
+                _log_migration_step(f"skip-{col}", f"folders-{col}-{str(e)}")
+
+        # Migrate administrative table
+        for col in boolean_columns:
+            try:
+                database_connection.query(f"""
+                    UPDATE administrative
+                    SET "{col}" = CASE
+                        WHEN "{col}" = 'True' THEN 1
+                        WHEN "{col}" = 'true' THEN 1
+                        WHEN "{col}" = '1' THEN 1
+                        WHEN "{col}" = 1 THEN 1
+                        WHEN "{col}" IS NULL THEN 0
+                        ELSE 0
+                    END
+                    WHERE "{col}" IN ('True', 'False', 'true', 'false', '0', '1')
+                       OR typeof("{col}") = 'text'
+                """)
+            except Exception as e:
+                # Column might not exist in this table; log and continue
+                _log_migration_step(f"skip-{col}", f"admin-{col}-{str(e)}")
+
+        # Migrate oversight/administrative table reporting-related fields
+        oversight_bool_columns = ["enable_reporting", "report_printing_fallback"]
+        for col in oversight_bool_columns:
+            try:
+                database_connection.query(f"""
+                    UPDATE administrative
+                    SET "{col}" = CASE
+                        WHEN "{col}" = 'True' THEN 1
+                        WHEN "{col}" = 'true' THEN 1
+                        WHEN "{col}" = '1' THEN 1
+                        WHEN "{col}" = 1 THEN 1
+                        WHEN "{col}" IS NULL THEN 0
+                        ELSE 0
+                    END
+                """)
+            except Exception as e:
+                _log_migration_step(f"skip-oversight-{col}", str(e))
+
+        update_version = dict(id=1, version="41", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("40", "41")

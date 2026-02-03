@@ -20,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.database import DatabaseConnection
 
-ALL_VERSIONS = list(range(5, 41))
-CURRENT_VERSION = "40"
+ALL_VERSIONS = list(range(5, 42))  # Now includes version 41
+CURRENT_VERSION = "41"
 
 
 @contextmanager

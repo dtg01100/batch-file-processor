@@ -32,17 +32,17 @@ def create_database(
     )
 
     initial_db_dict = {
-        "folder_is_active": "False",
+        "folder_is_active": 1,  # Native boolean: 1=True, 0=False
         "copy_to_directory": None,
-        "process_edi": "False",
+        "process_edi": 0,  # Native boolean
         "convert_to_format": "csv",
-        "calculate_upc_check_digit": "False",
-        "include_a_records": "False",
-        "include_c_records": "False",
-        "include_headers": "False",
-        "filter_ampersand": "False",
+        "calculate_upc_check_digit": 0,  # Native boolean
+        "include_a_records": 0,  # Native boolean
+        "include_c_records": 0,  # Native boolean
+        "include_headers": 0,  # Native boolean
+        "filter_ampersand": 0,  # Native boolean
         "tweak_edi": False,
-        "pad_a_records": "False",
+        "pad_a_records": 0,  # Native boolean
         "a_record_padding": "",
         "a_record_padding_length": 6,
         "invoice_date_custom_format_string": "%Y%m%d",
@@ -61,8 +61,8 @@ def create_database(
         "email_to": "",
         "logs_directory": os.path.join(config_folder, "run_logs"),
         "errors_folder": os.path.join(config_folder, "errors"),
-        "enable_reporting": "False",
-        "report_printing_fallback": "False",
+        "enable_reporting": 0,  # Native boolean
+        "report_printing_fallback": 0,  # Native boolean
         "ftp_port": 21,
         "email_subject_line": "",
         "single_add_folder_prior": os.path.expanduser("~"),
@@ -73,9 +73,9 @@ def create_database(
         "split_edi_include_invoices": True,
         "split_edi_include_credits": True,
         "force_edi_validation": False,
-        "append_a_records": "False",
+        "append_a_records": 0,  # Native boolean
         "a_record_append_text": "",
-        "force_txt_file_ext": "False",
+        "force_txt_file_ext": 0,  # Native boolean
         "invoice_date_offset": 0,
         "retail_uom": False,
         "include_item_numbers": False,
