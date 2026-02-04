@@ -329,7 +329,9 @@ class TestEDITweaker:
                 f.write("EDI content")
 
             with (
-                patch("dispatch.edi_processor.edi_tweaks.edi_tweak") as mock_tweak,
+                patch(
+                    "dispatch.edi_processor.convert_to_edi_tweaks.edi_tweak"
+                ) as mock_tweak,
                 patch("builtins.print") as mock_print,
             ):
                 mock_tweak.return_value = output_file
@@ -356,7 +358,9 @@ class TestEDITweaker:
         self, sample_parameters_dict, sample_settings, sample_upc_dict
     ):
         """Test EDI tweaking exception handling."""
-        with patch("dispatch.edi_processor.edi_tweaks.edi_tweak") as mock_tweak:
+        with patch(
+            "dispatch.edi_processor.convert_to_edi_tweaks.edi_tweak"
+        ) as mock_tweak:
             mock_tweak.side_effect = Exception("Tweak error")
 
             with pytest.raises(Exception) as exc_info:

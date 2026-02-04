@@ -5,7 +5,7 @@ import shutil
 import re
 import datetime
 import utils
-import edi_tweaks
+import convert_to_edi_tweaks
 from typing import List, Tuple, Optional
 
 
@@ -98,7 +98,7 @@ class EDITweaker:
             Path to the tweaked file
         """
         print(f"Applying tweaks to {input_file}")
-        return edi_tweaks.edi_tweak(
+        return convert_to_edi_tweaks.edi_tweak(
             input_file, output_file, settings, parameters_dict, upc_dict
         )
 
