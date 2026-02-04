@@ -13,21 +13,22 @@ except ImportError:
 
 
 def check(input_file, parser=None):
-    if parser is None and HAS_FORMAT_PARSER:
+    if parser is None and HAS_FORMAT_PARSER and EDIFormatParser:
         try:
             parser = EDIFormatParser.get_default_parser()
         except Exception:
             pass
 
+    line_number = 0
+    file_to_test = None
+
     try:
-        line_number = 0
-        file_to_test = None
         validator_open_attempts = 1
         while file_to_test is None:
             try:
                 file_to_test = open(input_file)
             except Exception as error:
-                if validator_open_attempts >= 5:
+                if validator_open_attempts < 5:
                     time.sleep(validator_open_attempts * validator_open_attempts)
                     validator_open_attempts += 1
                     print(f"retrying open {input_file}")
@@ -58,6 +59,8 @@ def check(input_file, parser=None):
 
         for line in file_to_test:
             line_number += 1
+            if line[0] == "\x1a":
+                continue
             if line[0] not in allowed_types:
                 file_to_test.close()
                 return False, line_number
@@ -86,7 +89,7 @@ def check(input_file, parser=None):
 
 
 def report_edi_issues(input_file, parser=None):
-    if parser is None and HAS_FORMAT_PARSER:
+    if parser is None and HAS_FORMAT_PARSER and EDIFormatParser:
         try:
             parser = EDIFormatParser.get_default_parser()
         except Exception:
@@ -112,7 +115,7 @@ def report_edi_issues(input_file, parser=None):
         try:
             input_file_handle = open(input_file)
         except Exception as error:
-            if validator_open_attempts >= 5:
+            if validator_open_attempts < 5:
                 time.sleep(validator_open_attempts * validator_open_attempts)
                 validator_open_attempts += 1
                 print(f"retrying open {input_file}")

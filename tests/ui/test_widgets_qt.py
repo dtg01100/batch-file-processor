@@ -124,7 +124,15 @@ class TestFolderListWidgetQt:
         widget.refresh()
 
         # Should have items in lists
-        assert widget._active_list.count() > 0 or widget._inactive_list.count() > 0
+        active_count = (
+            widget._active_list.model().rowCount() if widget._active_list.model() else 0
+        )
+        inactive_count = (
+            widget._inactive_list.model().rowCount()
+            if widget._inactive_list.model()
+            else 0
+        )
+        assert active_count > 0 or inactive_count > 0
 
     def test_folder_list_set_filter(self, qtbot, mock_db_manager, sample_folders):
         """Test set_filter updates filter field."""

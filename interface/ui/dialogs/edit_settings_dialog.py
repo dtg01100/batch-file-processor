@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QFileDialog,
     QMessageBox,
+    QDialogButtonBox,
 )
 from PyQt6.QtCore import Qt
 
@@ -72,6 +73,11 @@ class EditSettingsDialog(BaseDialog):
             oversight: Oversight and defaults dictionary from database.
             db_manager: Database manager instance.
         """
+        # Store separate references for convenience first to avoid the initialization order issue
+        self.settings = settings or {}
+        self.oversight = oversight or {}
+        self.db_manager = db_manager
+        
         # Combine settings and oversight into single data dict for BaseDialog
         combined_data = {}
         if settings:
@@ -79,23 +85,22 @@ class EditSettingsDialog(BaseDialog):
         if oversight:
             combined_data.update({"_oversight": oversight})
         
+        # Call parent init which will call _setup_ui(), but we need _body_layout ready
         super().__init__(parent, title="Edit Settings", data=combined_data)
-
-        self.db_manager = db_manager
-        
-        # Store separate references for convenience
-        self.settings = settings or {}
-        self.oversight = oversight or {}
 
         self.resize(600, 400)
 
     def _setup_ui(self) -> None:
         """Setup the dialog UI."""
-        layout = QVBoxLayout(self)
-
+        # Create the body layout to hold our content
+        self._body_layout = QVBoxLayout()
+        
+        # Add body layout to the main layout
+        self._layout.addLayout(self._body_layout)
+        
         # Tab widget
         self._tabs = QTabWidget()
-        layout.addWidget(self._tabs)
+        self._body_layout.addWidget(self._tabs)
 
         # Create tabs
         self._as400_tab = self._build_as400_tab()
@@ -107,14 +112,6 @@ class EditSettingsDialog(BaseDialog):
         self._tabs.addTab(self._email_tab, "Email Settings")
         self._tabs.addTab(self._backup_tab, "Backup Settings")
         self._tabs.addTab(self._reporting_tab, "Reporting Options")
-
-        # Button box
-        self._button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._button_box.accepted.connect(self._on_ok)
-        self._button_box.rejected.connect(self.reject)
-        layout.addWidget(self._button_box)
 
     def _build_as400_tab(self) -> QWidget:
         """Build the AS400 connection settings tab."""

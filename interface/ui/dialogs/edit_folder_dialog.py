@@ -47,7 +47,7 @@ from plugin_config import PluginRegistry
 
 class EditFolderDialog(BaseDialog):
     """Tabbed dialog for editing folder configuration.
-    
+
     Implements BaseDialog lifecycle:
     - _setup_ui() builds tabs and widgets
     - _set_dialog_values() loads folder_data into UI
@@ -58,6 +58,7 @@ class EditFolderDialog(BaseDialog):
     # Conversion format options
     CONVERT_FORMATS = [
         "csv",
+        "EDI Tweaks",
         "ScannerWare",
         "scansheet-type-a",
         "jolley_custom",
@@ -86,16 +87,21 @@ class EditFolderDialog(BaseDialog):
             settings: Global settings dictionary.
         """
         title = "Edit Folder" if folder_data else "Add Folder"
-        super().__init__(parent, title=title, data=folder_data or {})
 
-        self.db_manager = db_manager
-        self.settings = settings or {}
+        # Store folder data before calling super().__init__() because BaseDialog._setup_ui() is called from super()
+        self.folder_data = folder_data or {}
 
+        # Discover plugins BEFORE calling super().__init__() because BaseDialog._setup_ui() is called from super()
         PluginRegistry.discover_plugins()
         self._send_plugins = PluginRegistry.list_send_plugins()
         self._backend_checks: Dict[str, QCheckBox] = {}
         self._backend_tabs: Dict[str, QWidget] = {}
         self._backend_value_getters: Dict[str, Dict[str, Callable]] = {}
+
+        super().__init__(parent, title=title, data=self.folder_data)
+
+        self.db_manager = db_manager
+        self.settings = settings or {}
 
         self.resize(700, 500)
 
@@ -159,9 +165,7 @@ class EditFolderDialog(BaseDialog):
 
         for plugin_id, plugin_name, _ in self._send_plugins:
             check = QCheckBox(plugin_name)
-            check.setChecked(
-                self.data.get(f"process_backend_{plugin_id}", False)
-            )
+            check.setChecked(self.data.get(f"process_backend_{plugin_id}", False))
             check.toggled.connect(self._on_backend_state_change)
             backend_layout.addWidget(check)
             self._backend_checks[plugin_id] = check
@@ -178,9 +182,7 @@ class EditFolderDialog(BaseDialog):
 
         # EDI options
         self._force_edi_check = QCheckBox("Force EDI Validation")
-        self._force_edi_check.setChecked(
-            self.data.get("force_edi_validation", False)
-        )
+        self._force_edi_check.setChecked(self.data.get("force_edi_validation", False))
         layout.addWidget(self._force_edi_check)
 
         # Split EDI
@@ -202,9 +204,7 @@ class EditFolderDialog(BaseDialog):
 
         # Prepend dates
         self._prepend_dates_check = QCheckBox("Prepend Dates to Files")
-        self._prepend_dates_check.setChecked(
-            self.data.get("prepend_date_files", False)
-        )
+        self._prepend_dates_check.setChecked(self.data.get("prepend_date_files", False))
         layout.addWidget(self._prepend_dates_check)
 
         # Rename file
@@ -261,9 +261,7 @@ class EditFolderDialog(BaseDialog):
             self._edi_format_combo.addItems(available_formats)
         except Exception:
             self._edi_format_combo.addItems(["default"])
-        self._edi_format_combo.setCurrentText(
-            self.data.get("edi_format", "default")
-        )
+        self._edi_format_combo.setCurrentText(self.data.get("edi_format", "default"))
         edi_format_layout.addWidget(self._edi_format_combo)
         layout.addLayout(edi_format_layout)
 
@@ -271,9 +269,7 @@ class EditFolderDialog(BaseDialog):
         format_layout.addWidget(QLabel("Convert To:"))
         self._format_combo = QComboBox()
         self._format_combo.addItems(self.CONVERT_FORMATS)
-        self._format_combo.setCurrentText(
-            self.data.get("convert_to_format", "csv")
-        )
+        self._format_combo.setCurrentText(self.data.get("convert_to_format", "csv"))
         self._format_combo.currentTextChanged.connect(self._on_format_changed)
         format_layout.addWidget(self._format_combo)
         layout.addLayout(format_layout)
@@ -281,6 +277,9 @@ class EditFolderDialog(BaseDialog):
         # Format-specific options
         self._format_options_stack = QStackedWidget()
         self._format_options_stack.addWidget(self._build_csv_options())
+        self._format_options_stack.addWidget(
+            self._build_edi_tweaks_options()
+        )  # EDI Tweaks
         self._format_options_stack.addWidget(self._build_scannerware_options())
         self._format_options_stack.addWidget(self._build_simplified_csv_options())
         self._format_options_stack.addWidget(self._build_estore_options())
@@ -449,6 +448,36 @@ class EditFolderDialog(BaseDialog):
 
         return widget
 
+    def _build_edi_tweaks_options(self) -> QWidget:
+        """Build EDI Tweaks format options."""
+        # Import here to avoid circular imports
+        from interface.ui.plugin_ui_generator import PluginUIGenerator
+        from plugin_config import PluginRegistry
+
+        # Get the EDI tweaks plugin
+        plugin_class = PluginRegistry.get_convert_plugin("edi_tweaks")
+        if plugin_class:
+            # Get the configuration fields for the plugin
+            config_fields = plugin_class.get_config_fields()
+            # Create widget with current values
+            current_values = {
+                k: v
+                for k, v in self.data.items()
+                if k in [field.key for field in config_fields]
+            }
+            widget, self._edi_tweaks_value_getters = (
+                PluginUIGenerator.create_plugin_config_widget(
+                    config_fields, parent=self, current_values=current_values
+                )
+            )
+            return widget
+        else:
+            # Fallback to default options if plugin not found
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(QLabel("EDI Tweaks plugin not found"))
+            return widget
+
     def _build_default_options(self) -> QWidget:
         """Build default/empty format options."""
         widget = QWidget()
@@ -481,22 +510,23 @@ class EditFolderDialog(BaseDialog):
         """Handle format selection change."""
         format_index_map = {
             "csv": 0,
-            "ScannerWare": 1,
-            "simplified_csv": 2,
-            "Estore eInvoice": 3,
-            "Estore eInvoice Generic": 4,
-            "fintech": 5,
-            "jolley_custom": 6,
-            "stewarts_custom": 7,
-            "scansheet-type-a": 8,
-            "YellowDog CSV": 9,
+            "EDI Tweaks": 1,
+            "ScannerWare": 2,
+            "simplified_csv": 3,
+            "Estore eInvoice": 4,
+            "Estore eInvoice Generic": 5,
+            "fintech": 6,
+            "jolley_custom": 7,
+            "stewarts_custom": 8,
+            "scansheet-type-a": 9,
+            "YellowDog CSV": 10,
         }
         index = format_index_map.get(text, 0)
         self._format_options_stack.setCurrentIndex(index)
 
     def validate(self) -> Tuple[bool, str]:
         """Validate dialog input using plugin validation.
-        
+
         Returns:
             (is_valid, error_message) tuple
         """
@@ -554,6 +584,15 @@ class EditFolderDialog(BaseDialog):
         self.data["include_a_records"] = self._a_records_check.isChecked()
         self.data["include_c_records"] = self._c_records_check.isChecked()
         self.data["include_headers"] = self._headers_check.isChecked()
+
+        # EDI Tweaks options - only save if the current format is EDI Tweaks
+        if self._format_combo.currentText() == "EDI Tweaks" and hasattr(
+            self, "_edi_tweaks_value_getters"
+        ):
+            edi_tweaks_config = PluginUIGenerator.get_config_values(
+                self._edi_tweaks_value_getters
+            )
+            self.data.update(edi_tweaks_config)
 
         # ScannerWare options
         self.data["pad_a_records"] = self._pad_a_records_check.isChecked()

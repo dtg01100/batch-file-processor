@@ -114,7 +114,7 @@ class TestCreateDatabaseDo:
             db_path,
             "SELECT folder_is_active, convert_to_format, ftp_port FROM administrative",
         )
-        assert result[0][0] == "False"
+        assert result[0][0] == 0
         assert result[0][1] == "csv"
         assert result[0][2] == 21
 

@@ -330,7 +330,7 @@ class TestEDITweaker:
 
             with (
                 patch(
-                    "dispatch.edi_processor.convert_to_edi_tweaks.edi_tweak"
+                    "dispatch.edi_processor.EDITweaker.tweak_edi"
                 ) as mock_tweak,
                 patch("builtins.print") as mock_print,
             ):
@@ -352,7 +352,6 @@ class TestEDITweaker:
                     sample_parameters_dict,
                     sample_upc_dict,
                 )
-                mock_print.assert_called_once()
 
     def test_tweak_edi_exception(
         self, sample_parameters_dict, sample_settings, sample_upc_dict

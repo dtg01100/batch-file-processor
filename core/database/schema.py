@@ -32,7 +32,7 @@ def create_database(
     )
 
     initial_db_dict = {
-        "folder_is_active": 1,  # Native boolean: 1=True, 0=False
+        "folder_is_active": 0,  # Native boolean: 1=True, 0=False (defaults to inactive)
         "copy_to_directory": None,
         "process_edi": 0,  # Native boolean
         "convert_to_format": "csv",

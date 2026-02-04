@@ -520,7 +520,7 @@ class DispatchCoordinator:
         if not os.path.exists(self.errors_folder["errors_folder"]):
             record_error.do(
                 self.run_log,
-                folder_error_log_name_full_path,
+                self.run_log,
                 "Base errors folder not found",
                 parameters_dict["folder_name"],
                 "Dispatch Error Logger",
@@ -531,7 +531,7 @@ class DispatchCoordinator:
         if not os.path.exists(folder_errors_dir):
             record_error.do(
                 self.run_log,
-                folder_error_log_name_full_path,
+                self.run_log,
                 "Error folder Not Found",
                 parameters_dict["folder_name"],
                 "Dispatch Error Logger",
@@ -541,7 +541,7 @@ class DispatchCoordinator:
             except IOError:
                 record_error.do(
                     self.run_log,
-                    folder_error_log_name_full_path,
+                    self.run_log,
                     "Error creating errors folder",
                     parameters_dict["folder_name"],
                     "Dispatch Error Logger",
@@ -556,6 +556,8 @@ class DispatchCoordinator:
                 f"Program Version = {self.version}\r\n\r\n".encode()
             )
             folder_errors_log_write.write(errors.encode())
+
+        return folder_error_log_name_full_path
 
     def _process_single_file(
         self,
@@ -613,16 +615,17 @@ class DispatchCoordinator:
                 validation_result = self.edi_validator.validate_file(
                     input_filename, process_original_filename, edi_parser
                 )
-                if validation_result.has_errors:
-                    valid_edi_file = False
-                    if validation_result.has_minor_errors:
-                        self.context.edi_validator_errors.write(
-                            f"\r\nErrors for {process_original_filename}:\r\n"
-                        )
-                        self.context.edi_validator_errors.write(
-                            validation_result.error_message
-                        )
-                        self.context.global_edi_validator_error_status = True
+                if validation_result.has_errors or validation_result.has_minor_errors:
+                    if validation_result.has_errors:
+                        valid_edi_file = False
+
+                    self.context.edi_validator_errors.write(
+                        f"\r\nErrors for {process_original_filename}:\r\n"
+                    )
+                    self.context.edi_validator_errors.write(
+                        validation_result.error_message
+                    )
+                    self.context.global_edi_validator_error_status = True
 
             # Process EDI
             split_edi_list = self._process_edi(
@@ -836,6 +839,7 @@ class DispatchCoordinator:
 
         for result in send_results:
             if not result.success:
+                errors = True
                 print(result.error_message)
                 process_files_log, process_files_error_log = record_error.do(
                     process_files_log,

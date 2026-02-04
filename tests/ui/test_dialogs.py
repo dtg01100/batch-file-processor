@@ -110,8 +110,8 @@ class TestBaseDialog:
         assert BaseDialog is not None
 
     def test_has_setup_ui_method(self):
-        """Test BaseDialog has _setup_layout method."""
+        """Test BaseDialog has _setup_ui method."""
         from interface.ui.base_dialog import BaseDialog
 
-        assert hasattr(BaseDialog, "_setup_layout")
-        assert hasattr(BaseDialog, "_create_widgets")
+        assert hasattr(BaseDialog, "_setup_ui")
+        assert callable(getattr(BaseDialog, "_setup_ui"))

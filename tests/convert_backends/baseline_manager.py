@@ -10,15 +10,15 @@ This module provides utilities for:
 
 Usage:
     from tests.convert_backends.baseline_manager import BaselineManager
-    
+
     manager = BaselineManager()
-    
+
     # Capture baselines for all plugins
     manager.capture_all_baselines()
-    
+
     # Compare current implementation against baselines
     results = manager.compare_all()
-    
+
     # Generate diff report
     report = manager.generate_diff_report(results)
 """
@@ -75,7 +75,7 @@ class BaselineManager:
         "yellowdog_csv": ("convert_to_yellowdog_csv", "YellowdogConverter"),
         "jolley_custom": ("convert_to_jolley_custom", "JolleyCustomConverter"),
         "stewarts_custom": ("convert_to_stewarts_custom", "StewartsCustomConverter"),
-        "edi_tweaks": ("edi_tweaks", "EDITweaksConverter"),
+        "edi_tweaks": ("convert_to_edi_tweaks", "EDITweaksConverter"),
     }
 
     # Test EDI files
@@ -313,7 +313,11 @@ class BaselineManager:
             SettingsCombination("default", {}),
             SettingsCombination(
                 "with_padding",
-                {"pad_a_records": "True", "a_record_padding": "XXXXXX", "a_record_padding_length": 6},
+                {
+                    "pad_a_records": "True",
+                    "a_record_padding": "XXXXXX",
+                    "a_record_padding_length": 6,
+                },
             ),
             SettingsCombination(
                 "with_append",
@@ -325,7 +329,10 @@ class BaselineManager:
             ),
             SettingsCombination(
                 "with_date_format",
-                {"invoice_date_custom_format": True, "invoice_date_custom_format_string": "%Y-%m-%d"},
+                {
+                    "invoice_date_custom_format": True,
+                    "invoice_date_custom_format_string": "%Y-%m-%d",
+                },
             ),
             SettingsCombination(
                 "with_upc_calc",
@@ -333,7 +340,11 @@ class BaselineManager:
             ),
             SettingsCombination(
                 "with_upc_override",
-                {"override_upc_bool": True, "override_upc_level": 1, "override_upc_category_filter": "ALL"},
+                {
+                    "override_upc_bool": True,
+                    "override_upc_level": 1,
+                    "override_upc_category_filter": "ALL",
+                },
             ),
             SettingsCombination(
                 "with_retail_uom",
@@ -382,12 +393,16 @@ class BaselineManager:
             self.project_root = Path(project_root)
 
         if baselines_dir is None:
-            self.baselines_dir = self.project_root / "tests" / "convert_backends" / "baselines"
+            self.baselines_dir = (
+                self.project_root / "tests" / "convert_backends" / "baselines"
+            )
         else:
             self.baselines_dir = Path(baselines_dir)
 
         if test_data_dir is None:
-            self.test_data_dir = self.project_root / "tests" / "convert_backends" / "data"
+            self.test_data_dir = (
+                self.project_root / "tests" / "convert_backends" / "data"
+            )
         else:
             self.test_data_dir = Path(test_data_dir)
 
@@ -527,7 +542,9 @@ class BaselineManager:
             Path to the saved baseline file
         """
         # Get full parameters with defaults
-        full_parameters = self._get_full_parameters(plugin_id, settings_combo.parameters)
+        full_parameters = self._get_full_parameters(
+            plugin_id, settings_combo.parameters
+        )
         settings_hash = self._compute_settings_hash(settings_combo.parameters)
         baseline_path = self._get_baseline_path(plugin_id, edi_file, settings_hash)
 
@@ -540,7 +557,9 @@ class BaselineManager:
         shutil.copy2(output_path, baseline_path)
 
         # Update metadata
-        self._update_metadata(plugin_id, edi_file, settings_combo, settings_hash, source)
+        self._update_metadata(
+            plugin_id, edi_file, settings_combo, settings_hash, source
+        )
 
         return baseline_path
 
@@ -620,7 +639,9 @@ class BaselineManager:
                         )
                         results[plugin_id].append(baseline_path)
                     except Exception as e:
-                        print(f"Error capturing baseline for {plugin_id}/{edi_file}: {e}")
+                        print(
+                            f"Error capturing baseline for {plugin_id}/{edi_file}: {e}"
+                        )
 
         return results
 
@@ -657,11 +678,11 @@ class BaselineManager:
 
         try:
             # Get full parameters with defaults
-            full_parameters = self._get_full_parameters(plugin_id, settings_combo.parameters)
-            # Generate current output
-            current_path = self._run_converter(
-                plugin_id, edi_file, full_parameters
+            full_parameters = self._get_full_parameters(
+                plugin_id, settings_combo.parameters
             )
+            # Generate current output
+            current_path = self._run_converter(plugin_id, edi_file, full_parameters)
 
             # Compare files
             differences = self._compare_files(baseline_path, current_path)
@@ -717,7 +738,9 @@ class BaselineManager:
             elif baseline_lines[i] != current_lines[i]:
                 # For CSV files, try to provide more detailed diff
                 if str(baseline_path).endswith(".csv"):
-                    diff = self._compare_csv_lines(baseline_lines[i], current_lines[i], i + 1)
+                    diff = self._compare_csv_lines(
+                        baseline_lines[i], current_lines[i], i + 1
+                    )
                     differences.extend(diff)
                 else:
                     # For EDI and other files, show line-level diff
@@ -729,7 +752,9 @@ class BaselineManager:
 
         return differences
 
-    def _compare_csv_lines(self, baseline_line: str, current_line: str, line_num: int) -> list[str]:
+    def _compare_csv_lines(
+        self, baseline_line: str, current_line: str, line_num: int
+    ) -> list[str]:
         """Compare two CSV lines and return detailed differences."""
         differences = []
 
@@ -742,9 +767,13 @@ class BaselineManager:
         max_cols = max(len(baseline_cols), len(current_cols))
         for i in range(max_cols):
             if i >= len(baseline_cols):
-                differences.append(f"Line {line_num}, Col {i + 1}: Extra column in current")
+                differences.append(
+                    f"Line {line_num}, Col {i + 1}: Extra column in current"
+                )
             elif i >= len(current_cols):
-                differences.append(f"Line {line_num}, Col {i + 1}: Missing column in current")
+                differences.append(
+                    f"Line {line_num}, Col {i + 1}: Missing column in current"
+                )
             elif baseline_cols[i] != current_cols[i]:
                 differences.append(
                     f"Line {line_num}, Col {i + 1}: Value differs\n"
@@ -812,54 +841,68 @@ class BaselineManager:
         failed = total - passed
         errors = sum(1 for r in results if r.error is not None)
 
-        lines.extend([
-            "SUMMARY",
-            "-" * 40,
-            f"Total comparisons: {total}",
-            f"Passed: {passed}",
-            f"Failed: {failed}",
-            f"Errors: {errors}",
-            "",
-        ])
+        lines.extend(
+            [
+                "SUMMARY",
+                "-" * 40,
+                f"Total comparisons: {total}",
+                f"Passed: {passed}",
+                f"Failed: {failed}",
+                f"Errors: {errors}",
+                "",
+            ]
+        )
 
         # Failed comparisons
         if failed > 0:
-            lines.extend([
-                "FAILED COMPARISONS",
-                "-" * 40,
-                "",
-            ])
+            lines.extend(
+                [
+                    "FAILED COMPARISONS",
+                    "-" * 40,
+                    "",
+                ]
+            )
 
             for result in results:
                 if not result.matches and result.error is None:
-                    lines.extend([
-                        f"Plugin: {result.plugin_id}",
-                        f"EDI File: {result.edi_file}",
-                        f"Settings Hash: {result.settings_hash}",
-                        f"Differences ({len(result.differences)}):",
-                    ])
-                    for diff in result.differences[:10]:  # Limit to first 10 differences
+                    lines.extend(
+                        [
+                            f"Plugin: {result.plugin_id}",
+                            f"EDI File: {result.edi_file}",
+                            f"Settings Hash: {result.settings_hash}",
+                            f"Differences ({len(result.differences)}):",
+                        ]
+                    )
+                    for diff in result.differences[
+                        :10
+                    ]:  # Limit to first 10 differences
                         lines.append(f"  - {diff}")
                     if len(result.differences) > 10:
-                        lines.append(f"  ... and {len(result.differences) - 10} more differences")
+                        lines.append(
+                            f"  ... and {len(result.differences) - 10} more differences"
+                        )
                     lines.append("")
 
         # Errors
         if errors > 0:
-            lines.extend([
-                "ERRORS",
-                "-" * 40,
-                "",
-            ])
+            lines.extend(
+                [
+                    "ERRORS",
+                    "-" * 40,
+                    "",
+                ]
+            )
 
             for result in results:
                 if result.error:
-                    lines.extend([
-                        f"Plugin: {result.plugin_id}",
-                        f"EDI File: {result.edi_file}",
-                        f"Error: {result.error}",
-                        "",
-                    ])
+                    lines.extend(
+                        [
+                            f"Plugin: {result.plugin_id}",
+                            f"EDI File: {result.edi_file}",
+                            f"Error: {result.error}",
+                            "",
+                        ]
+                    )
 
         report = "\n".join(lines)
 

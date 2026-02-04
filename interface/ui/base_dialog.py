@@ -60,8 +60,8 @@ class BaseDialog(QDialog):
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowSystemMenuHint)
 
         # Store data; keep original for potential reset
-        self.data = data if data else {}
-        self._original_data = deepcopy(self.data)
+        self._data = data if data else {}
+        self._original_data = deepcopy(self._data)
 
         # Result of the dialog (set when accepted)
         self._result: Optional[Dict[str, Any]] = None
@@ -165,7 +165,12 @@ class BaseDialog(QDialog):
     @property
     def data(self) -> Dict[str, Any]:
         """Get the dialog data dict."""
-        return self.data if hasattr(self, '_data_attr') else self.__dict__.get('data', {})
+        return self._data
+
+    @data.setter
+    def data(self, value: Dict[str, Any]) -> None:
+        """Set the dialog data dict."""
+        self._data = value
 
     def get_result(self) -> Optional[Dict[str, Any]]:
         """Get the dialog result.

@@ -122,8 +122,9 @@ class MainWindow(QMainWindow):
             )
             self._folder_splitter.addWidget(self._folder_list)
 
-            # Set initial splitter sizes
-            self._folder_splitter.setSizes([400, 400])
+            # Set splitter stretch factors for proportional sizing (instead of fixed sizes)
+            self._folder_splitter.setStretchFactor(0, 1)
+            self._folder_splitter.setStretchFactor(1, 1)
 
             # Add content widget to main layout
             layout.addWidget(content_widget, stretch=1)

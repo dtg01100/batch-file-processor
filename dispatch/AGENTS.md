@@ -25,7 +25,7 @@ dispatch/
 | EDI validation | `edi_validator.py` | ValidationResult with errors list |
 | EDI splitting | `edi_processor.py` | EDISplitter.split_edi() |
 | Format conversion | `edi_processor.py` | EDIConverter imports convert_to_* plugins |
-| Apply EDI tweaks | `edi_processor.py` | EDITweaker (calls edi_tweaks.py) |
+| Apply EDI tweaks | `edi_processor.py` | EDITweaker (calls convert_to_edi_tweaks.py) |
 | Send to backends | `send_manager.py` | SendManager.send_file(), BackendFactory |
 | Error recording | `error_handler.py` | ErrorLogger, ReportGenerator |
 | Processed files tracking | `db_manager.py` | ProcessedFilesTracker (DB operations) |

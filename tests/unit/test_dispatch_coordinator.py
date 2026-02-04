@@ -28,6 +28,7 @@ from dispatch.coordinator import (
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_database_connection():
     """Create a mock database connection."""
@@ -119,17 +120,7 @@ def sample_folder_config():
         "tweak_edi": False,
         "split_edi": False,
         "force_edi_validation": False,
-        "split_edi_include_credits": 1,
-        "split_edi_include_invoices": 1,
-        "convert_to_format": "CSV",
         "rename_file": "",
-        "process_backend_copy": False,
-        "process_backend_ftp": False,
-        "process_backend_email": False,
-        "copy_to_directory": "",
-        "ftp_server": "",
-        "ftp_folder": "",
-        "email_to": "",
     }
 
 
@@ -175,11 +166,12 @@ def coordinator(
     """Create a DispatchCoordinator instance with mocked dependencies."""
     reporting = {"enable_reporting": "False"}
 
-    with patch("dispatch.coordinator.DBManager") as mock_db_manager, \
-         patch("dispatch.coordinator.ErrorHandler") as mock_error_handler, \
-         patch("dispatch.coordinator.SendManager") as mock_send_manager, \
-         patch("dispatch.coordinator.EDIValidator") as mock_edi_validator:
-
+    with (
+        patch("dispatch.coordinator.DBManager") as mock_db_manager,
+        patch("dispatch.coordinator.ErrorHandler") as mock_error_handler,
+        patch("dispatch.coordinator.SendManager") as mock_send_manager,
+        patch("dispatch.coordinator.EDIValidator") as mock_edi_validator,
+    ):
         mock_db_manager_instance = MagicMock()
         mock_db_manager.return_value = mock_db_manager_instance
         mock_db_manager_instance.get_active_folders.return_value = []
@@ -207,6 +199,7 @@ def coordinator(
 # =============================================================================
 # ProcessingContext Tests
 # =============================================================================
+
 
 class TestProcessingContext:
     """Tests for the ProcessingContext class."""
@@ -259,6 +252,7 @@ class TestProcessingContext:
 # DispatchCoordinator Initialization Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorInitialization:
     """Tests for DispatchCoordinator initialization."""
 
@@ -310,11 +304,12 @@ class TestDispatchCoordinatorInitialization:
         reporting = {"enable_reporting": "False"}
         simple_output = MagicMock()
 
-        with patch("dispatch.coordinator.DBManager"), \
-             patch("dispatch.coordinator.ErrorHandler"), \
-             patch("dispatch.coordinator.SendManager"), \
-             patch("dispatch.coordinator.EDIValidator"):
-
+        with (
+            patch("dispatch.coordinator.DBManager"),
+            patch("dispatch.coordinator.ErrorHandler"),
+            patch("dispatch.coordinator.SendManager"),
+            patch("dispatch.coordinator.EDIValidator"),
+        ):
             coordinator = DispatchCoordinator(
                 database_connection=mock_database_connection,
                 folders_database=mock_folders_database,
@@ -337,6 +332,7 @@ class TestDispatchCoordinatorInitialization:
 # =============================================================================
 # DispatchCoordinator Overlay Update Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorOverlayUpdate:
     """Tests for the overlay update functionality."""
@@ -378,6 +374,7 @@ class TestDispatchCoordinatorOverlayUpdate:
 # DispatchCoordinator Load UPC Data Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorLoadUpcData:
     """Tests for _load_upc_data method."""
 
@@ -416,6 +413,7 @@ class TestDispatchCoordinatorLoadUpcData:
 # DispatchCoordinator Create Hash Thread Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorCreateHashThread:
     """Tests for _create_hash_thread method."""
 
@@ -436,10 +434,11 @@ class TestDispatchCoordinatorCreateHashThread:
 
         temp_processed_files = []
 
-        with patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer, \
-             patch("dispatch.coordinator.HashGenerator") as mock_hash_gen, \
-             patch("dispatch.coordinator.FileFilter") as mock_file_filter:
-
+        with (
+            patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer,
+            patch("dispatch.coordinator.HashGenerator") as mock_hash_gen,
+            patch("dispatch.coordinator.FileFilter") as mock_file_filter,
+        ):
             mock_discoverer.discover_files.return_value = ["/test/folder1/file1.txt"]
             mock_hash_gen.generate_file_hash.return_value = "hash123"
             mock_file_filter.generate_match_lists.return_value = ([], [], set())
@@ -448,9 +447,13 @@ class TestDispatchCoordinatorCreateHashThread:
             thread = coordinator._create_hash_thread(temp_processed_files)
 
             # Run the thread target directly
-            with patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor") as mock_executor:
+            with patch(
+                "dispatch.coordinator.concurrent.futures.ProcessPoolExecutor"
+            ) as mock_executor:
                 mock_executor_instance = MagicMock()
-                mock_executor.return_value.__enter__.return_value = mock_executor_instance
+                mock_executor.return_value.__enter__.return_value = (
+                    mock_executor_instance
+                )
                 mock_executor_instance.map.return_value = ["hash123"]
 
                 thread._target()
@@ -466,27 +469,37 @@ class TestDispatchCoordinatorCreateHashThread:
         ]
 
         temp_processed_files = [
-            {"folder_id": 2, "file_name": "file1.txt", "file_checksum": "hash1", "resend_flag": False}
+            {
+                "folder_id": 2,
+                "file_name": "file1.txt",
+                "file_checksum": "hash1",
+                "resend_flag": False,
+            }
         ]
 
-        with patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer, \
-             patch("dispatch.coordinator.HashGenerator") as mock_hash_gen, \
-             patch("dispatch.coordinator.FileFilter") as mock_file_filter:
-
+        with (
+            patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer,
+            patch("dispatch.coordinator.HashGenerator") as mock_hash_gen,
+            patch("dispatch.coordinator.FileFilter") as mock_file_filter,
+        ):
             mock_discoverer.discover_files.return_value = ["/test/folder1/file1.txt"]
             mock_hash_gen.generate_file_hash.return_value = "hash1"
             mock_file_filter.generate_match_lists.return_value = (
                 [("file1.txt", "hash1")],
                 [("hash1", "file1.txt")],
-                set()
+                set(),
             )
             mock_file_filter.should_send_file.return_value = True
 
             thread = coordinator._create_hash_thread(temp_processed_files)
 
-            with patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor") as mock_executor:
+            with patch(
+                "dispatch.coordinator.concurrent.futures.ProcessPoolExecutor"
+            ) as mock_executor:
                 mock_executor_instance = MagicMock()
-                mock_executor.return_value.__enter__.return_value = mock_executor_instance
+                mock_executor.return_value.__enter__.return_value = (
+                    mock_executor_instance
+                )
                 mock_executor_instance.map.return_value = ["hash1"]
 
                 thread._target()
@@ -499,17 +512,23 @@ class TestDispatchCoordinatorCreateHashThread:
 # DispatchCoordinator Process Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorProcess:
     """Tests for the main process() method."""
 
     def test_process_no_folders(self, coordinator):
         """Test process with no active folders."""
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=[]), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=0), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data") as mock_load_upc, \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread:
-
+        with (
+            patch.object(coordinator.db_manager, "get_active_folders", return_value=[]),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=0
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data") as mock_load_upc,
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
@@ -522,17 +541,22 @@ class TestDispatchCoordinatorProcess:
 
     def test_process_with_missing_folder(self, coordinator, mock_run_log):
         """Test process handles missing folder."""
-        folders = [
-            {"folder_name": "/nonexistent/folder", "alias": "Missing", "id": 1}
-        ]
+        folders = [{"folder_name": "/nonexistent/folder", "alias": "Missing", "id": 1}]
 
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=folders), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=1), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data"), \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread, \
-             patch("dispatch.coordinator.os.path.isdir", return_value=False):
-
+        with (
+            patch.object(
+                coordinator.db_manager, "get_active_folders", return_value=folders
+            ),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=1
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data"),
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+            patch("dispatch.coordinator.os.path.isdir", return_value=False),
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
@@ -544,26 +568,36 @@ class TestDispatchCoordinatorProcess:
 
     def test_process_folder_mismatch_raises_error(self, coordinator):
         """Test process raises error when folder names don't match."""
-        folders = [
-            {"folder_name": "/test/folder1", "alias": "Test1", "id": 1}
-        ]
+        folders = [{"folder_name": "/test/folder1", "alias": "Test1", "id": 1}]
 
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=folders), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=1), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data"), \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread, \
-             patch("dispatch.coordinator.os.path.isdir", return_value=True):
-
+        with (
+            patch.object(
+                coordinator.db_manager, "get_active_folders", return_value=folders
+            ),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=1
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data"),
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+            patch("dispatch.coordinator.os.path.isdir", return_value=True),
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
-            # Put mismatched folder name in queue
-            coordinator.context.hash_thread_return_queue.put({
-                "folder_name": "/different/folder",
-                "files": [],
-                "filtered_files": [],
-            })
+            # Define side effect to populate queue after reset()
+            def populate_queue():
+                coordinator.context.hash_thread_return_queue.put(
+                    {
+                        "folder_name": "/different/folder",
+                        "files": [],
+                        "filtered_files": [],
+                    }
+                )
+
+            mock_thread.start.side_effect = populate_queue
 
             with pytest.raises(ValueError) as exc_info:
                 coordinator.process()
@@ -572,30 +606,51 @@ class TestDispatchCoordinatorProcess:
 
     def test_process_with_edi_validation_errors(self, coordinator):
         """Test process handles EDI validation errors."""
-        folders = [
-            {"folder_name": "/test/folder1", "alias": "Test1", "id": 1}
-        ]
+        folders = [{"folder_name": "/test/folder1", "alias": "Test1", "id": 1}]
 
         coordinator.context.global_edi_validator_error_status = True
         coordinator.context.edi_validator_errors.write("Some EDI errors")
 
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=folders), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=1), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data"), \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread, \
-             patch.object(coordinator, "_process_folder", return_value=False), \
-             patch("dispatch.coordinator.os.path.isdir", return_value=True), \
-             patch.object(coordinator, "_write_validation_report", return_value="/path/to/report.txt"):
+        # Define side effect for _process_folder to set error status
+        def process_folder_side_effect(*args, **kwargs):
+            coordinator.context.global_edi_validator_error_status = True
+            return False
 
+        with (
+            patch.object(
+                coordinator.db_manager, "get_active_folders", return_value=folders
+            ),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=1
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data"),
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+            patch.object(
+                coordinator, "_process_folder", side_effect=process_folder_side_effect
+            ),
+            patch("dispatch.coordinator.os.path.isdir", return_value=True),
+            patch.object(
+                coordinator,
+                "_write_validation_report",
+                return_value="/path/to/report.txt",
+            ),
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
-            coordinator.context.hash_thread_return_queue.put({
-                "folder_name": "/test/folder1",
-                "files": [],
-                "filtered_files": [],
-            })
+            def populate_queue():
+                coordinator.context.hash_thread_return_queue.put(
+                    {
+                        "folder_name": "/test/folder1",
+                        "files": [],
+                        "filtered_files": [],
+                    }
+                )
+
+            mock_thread.start.side_effect = populate_queue
 
             has_errors, run_summary = coordinator.process()
 
@@ -603,26 +658,36 @@ class TestDispatchCoordinatorProcess:
 
     def test_process_successful_folder_processing(self, coordinator):
         """Test process with successful folder processing."""
-        folders = [
-            {"folder_name": "/test/folder1", "alias": "Test1", "id": 1}
-        ]
+        folders = [{"folder_name": "/test/folder1", "alias": "Test1", "id": 1}]
 
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=folders), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=1), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data"), \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread, \
-             patch.object(coordinator, "_process_folder", return_value=False), \
-             patch("dispatch.coordinator.os.path.isdir", return_value=True):
-
+        with (
+            patch.object(
+                coordinator.db_manager, "get_active_folders", return_value=folders
+            ),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=1
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data"),
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+            patch.object(coordinator, "_process_folder", return_value=False),
+            patch("dispatch.coordinator.os.path.isdir", return_value=True),
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
-            coordinator.context.hash_thread_return_queue.put({
-                "folder_name": "/test/folder1",
-                "files": ["/test/folder1/file1.txt"],
-                "filtered_files": [(0, "file1.txt", "hash123")],
-            })
+            def populate_queue():
+                coordinator.context.hash_thread_return_queue.put(
+                    {
+                        "folder_name": "/test/folder1",
+                        "files": ["/test/folder1/file1.txt"],
+                        "filtered_files": [(0, "file1.txt", "hash123")],
+                    }
+                )
+
+            mock_thread.start.side_effect = populate_queue
 
             has_errors, run_summary = coordinator.process()
 
@@ -634,6 +699,7 @@ class TestDispatchCoordinatorProcess:
 # DispatchCoordinator Process Folder Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorProcessFolder:
     """Tests for _process_folder method."""
 
@@ -643,7 +709,9 @@ class TestDispatchCoordinatorProcessFolder:
         files = []
         filtered_files = []
 
-        result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+        result = coordinator._process_folder(
+            parameters_dict, files, filtered_files, 1, 1
+        )
 
         assert result is False
         mock_run_log.write.assert_any_call("Checking for new files\r\n".encode())
@@ -655,7 +723,9 @@ class TestDispatchCoordinatorProcessFolder:
         files = ["/test/folder/file1.txt"]
         filtered_files = []
 
-        result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+        result = coordinator._process_folder(
+            parameters_dict, files, filtered_files, 1, 1
+        )
 
         assert result is False
         mock_run_log.write.assert_any_call("No new files in directory\r\n\r\n".encode())
@@ -679,22 +749,35 @@ class TestDispatchCoordinatorProcessFolder:
                 [],  # return_error_log
             )
 
-            with patch.object(coordinator.db_manager, "insert_processed_files") as mock_insert, \
-                 patch.object(coordinator.db_manager.tracker, "mark_as_processed") as mock_mark, \
-                 patch.object(coordinator.db_manager.tracker, "is_resend", return_value=False), \
-                 patch.object(coordinator.db_manager, "cleanup_old_records"), \
-                 patch.object(coordinator.db_manager, "update_folder_records"):
-
+            with (
+                patch.object(
+                    coordinator.db_manager, "insert_processed_files"
+                ) as mock_insert,
+                patch.object(
+                    coordinator.db_manager.tracker, "mark_as_processed"
+                ) as mock_mark,
+                patch.object(
+                    coordinator.db_manager.tracker, "is_resend", return_value=False
+                ),
+                patch.object(coordinator.db_manager, "cleanup_old_records"),
+                patch.object(coordinator.db_manager, "update_folder_records"),
+            ):
                 mock_mark.return_value = {"file_name": "file1.txt", "folder_id": 1}
 
-                with patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor") as mock_executor:
+                with patch(
+                    "dispatch.coordinator.concurrent.futures.ThreadPoolExecutor"
+                ) as mock_executor:
                     mock_executor_instance = MagicMock()
-                    mock_executor.return_value.__enter__.return_value = mock_executor_instance
+                    mock_executor.return_value.__enter__.return_value = (
+                        mock_executor_instance
+                    )
                     mock_executor_instance.map.return_value = [
                         (False, "/test/folder/file1.txt", "hash123", ["log entry"], [])
                     ]
 
-                    result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+                    result = coordinator._process_folder(
+                        parameters_dict, files, filtered_files, 1, 1
+                    )
 
         assert result is False
 
@@ -708,15 +791,25 @@ class TestDispatchCoordinatorProcessFolder:
         files = ["/test/folder/file1.txt"]
         filtered_files = [(0, "file1.txt", "hash123")]
 
-        with patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor") as mock_executor:
+        with patch(
+            "dispatch.coordinator.concurrent.futures.ThreadPoolExecutor"
+        ) as mock_executor:
             mock_executor_instance = MagicMock()
             mock_executor.return_value.__enter__.return_value = mock_executor_instance
             mock_executor_instance.map.return_value = [
-                (True, "/test/folder/file1.txt", "hash123", ["log entry"], ["error entry"])
+                (
+                    True,
+                    "/test/folder/file1.txt",
+                    "hash123",
+                    ["log entry"],
+                    ["error entry"],
+                )
             ]
 
             with patch.object(coordinator, "_write_folder_errors_report"):
-                result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+                result = coordinator._process_folder(
+                    parameters_dict, files, filtered_files, 1, 1
+                )
 
         assert result is True
 
@@ -731,15 +824,25 @@ class TestDispatchCoordinatorProcessFolder:
         files = ["/test/folder/file1.txt"]
         filtered_files = [(0, "file1.txt", "hash123")]
 
-        with patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor") as mock_executor:
+        with patch(
+            "dispatch.coordinator.concurrent.futures.ThreadPoolExecutor"
+        ) as mock_executor:
             mock_executor_instance = MagicMock()
             mock_executor.return_value.__enter__.return_value = mock_executor_instance
             mock_executor_instance.map.return_value = [
-                (True, "/test/folder/file1.txt", "hash123", ["log entry"], ["error entry"])
+                (
+                    True,
+                    "/test/folder/file1.txt",
+                    "hash123",
+                    ["log entry"],
+                    ["error entry"],
+                )
             ]
 
             with patch.object(coordinator, "_write_folder_errors_report"):
-                result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+                result = coordinator._process_folder(
+                    parameters_dict, files, filtered_files, 1, 1
+                )
 
                 assert coordinator.emails_table.insert.called
 
@@ -747,6 +850,7 @@ class TestDispatchCoordinatorProcessFolder:
 # =============================================================================
 # DispatchCoordinator Process Single File Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorProcessSingleFile:
     """Tests for _process_single_file method."""
@@ -763,12 +867,17 @@ class TestDispatchCoordinatorProcessSingleFile:
         filtered_files = [(0, "file1.txt", "hash123")]
         folder_errors_log = StringIO()
 
-        with patch.object(coordinator, "_process_edi") as mock_process_edi, \
-             patch.object(coordinator, "_send_file", return_value=False) as mock_send_file:
-
+        with (
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch.object(
+                coordinator, "_send_file", return_value=False
+            ) as mock_send_file,
+        ):
             mock_process_edi.return_value = [("/test/folder/file1.txt", "", "")]
 
-            result = coordinator._process_single_file(0, parameters_dict, filtered_files, folder_errors_log)
+            result = coordinator._process_single_file(
+                0, parameters_dict, filtered_files, folder_errors_log
+            )
 
             errors, original_filename, file_checksum, process_log, error_log = result
 
@@ -793,10 +902,15 @@ class TestDispatchCoordinatorProcessSingleFile:
         mock_validation_result.has_minor_errors = False
         mock_validation_result.error_message = ""
 
-        with patch.object(coordinator.edi_validator, "validate_file", return_value=mock_validation_result), \
-             patch.object(coordinator, "_process_edi") as mock_process_edi, \
-             patch.object(coordinator, "_send_file", return_value=False):
-
+        with (
+            patch.object(
+                coordinator.edi_validator,
+                "validate_file",
+                return_value=mock_validation_result,
+            ),
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch.object(coordinator, "_send_file", return_value=False),
+        ):
             mock_process_edi.return_value = [("/test/folder/file1.edi", "", "")]
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -807,7 +921,9 @@ class TestDispatchCoordinatorProcessSingleFile:
                 # Update parameters to use temp file
                 parameters_dict["folder_name"] = tmpdir
 
-                result = coordinator._process_single_file(0, parameters_dict, [(0, "file1.edi", "hash123")], folder_errors_log)
+                result = coordinator._process_single_file(
+                    0, parameters_dict, [(0, "file1.edi", "hash123")], folder_errors_log
+                )
 
             errors, _, _, _, _ = result
             assert errors is False
@@ -829,10 +945,15 @@ class TestDispatchCoordinatorProcessSingleFile:
         mock_validation_result.has_minor_errors = True
         mock_validation_result.error_message = "Minor EDI issues"
 
-        with patch.object(coordinator.edi_validator, "validate_file", return_value=mock_validation_result), \
-             patch.object(coordinator, "_process_edi") as mock_process_edi, \
-             patch.object(coordinator, "_send_file", return_value=False):
-
+        with (
+            patch.object(
+                coordinator.edi_validator,
+                "validate_file",
+                return_value=mock_validation_result,
+            ),
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch.object(coordinator, "_send_file", return_value=False),
+        ):
             mock_process_edi.return_value = [("/test/folder/file1.edi", "", "")]
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -842,7 +963,9 @@ class TestDispatchCoordinatorProcessSingleFile:
 
                 parameters_dict["folder_name"] = tmpdir
 
-                result = coordinator._process_single_file(0, parameters_dict, [(0, "file1.edi", "hash123")], folder_errors_log)
+                result = coordinator._process_single_file(
+                    0, parameters_dict, [(0, "file1.edi", "hash123")], folder_errors_log
+                )
 
             assert coordinator.context.global_edi_validator_error_status is True
 
@@ -858,9 +981,12 @@ class TestDispatchCoordinatorProcessSingleFile:
         filtered_files = [(0, "file1.txt", "hash123")]
         folder_errors_log = StringIO()
 
-        with patch.object(coordinator, "_process_edi") as mock_process_edi, \
-             patch.object(coordinator, "_send_file", return_value=True) as mock_send_file:
-
+        with (
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch.object(
+                coordinator, "_send_file", return_value=True
+            ) as mock_send_file,
+        ):
             mock_process_edi.return_value = [("/test/folder/file1.txt", "", "")]
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -870,7 +996,9 @@ class TestDispatchCoordinatorProcessSingleFile:
 
                 parameters_dict["folder_name"] = tmpdir
 
-                result = coordinator._process_single_file(0, parameters_dict, [(0, "file1.txt", "hash123")], folder_errors_log)
+                result = coordinator._process_single_file(
+                    0, parameters_dict, [(0, "file1.txt", "hash123")], folder_errors_log
+                )
 
             errors, _, _, _, _ = result
             assert errors is True
@@ -879,6 +1007,7 @@ class TestDispatchCoordinatorProcessSingleFile:
 # =============================================================================
 # DispatchCoordinator Process EDI Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorProcessEdi:
     """Tests for _process_edi method."""
@@ -896,7 +1025,7 @@ class TestDispatchCoordinatorProcessEdi:
                 True,
                 scratch_folder,
                 process_files_log,
-                process_files_error_log
+                process_files_error_log,
             )
 
         assert result == [("/test/file.edi", "", "")]
@@ -920,7 +1049,7 @@ class TestDispatchCoordinatorProcessEdi:
                     True,
                     scratch_folder,
                     process_files_log,
-                    process_files_error_log
+                    process_files_error_log,
                 )
 
             assert len(result) == 2
@@ -942,7 +1071,7 @@ class TestDispatchCoordinatorProcessEdi:
                     True,
                     scratch_folder,
                     process_files_log,
-                    process_files_error_log
+                    process_files_error_log,
                 )
 
             # Should fall back to original file
@@ -964,15 +1093,16 @@ class TestDispatchCoordinatorProcessEdi:
                     True,
                     scratch_folder,
                     process_files_log,
-                    process_files_error_log
+                    process_files_error_log,
                 )
 
-            assert "Cannot split edi file" in process_files_log
+            assert any("Cannot split edi file" in entry for entry in process_files_log)
 
 
 # =============================================================================
 # DispatchCoordinator Send File Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorSendFile:
     """Tests for _send_file method."""
@@ -996,9 +1126,10 @@ class TestDispatchCoordinatorSendFile:
             with open(test_file, "w") as f:
                 f.write("EDI content")
 
-            with patch("dispatch.coordinator.EDIConverter") as mock_converter, \
-                 patch.object(coordinator.send_manager, "send_file") as mock_send:
-
+            with (
+                patch("dispatch.coordinator.EDIConverter") as mock_converter,
+                patch.object(coordinator.send_manager, "send_file") as mock_send,
+            ):
                 mock_converter.convert_edi.return_value = test_file
                 mock_send.return_value = [MagicMock(success=True)]
 
@@ -1091,8 +1222,9 @@ class TestDispatchCoordinatorSendFile:
             assert result is True
 
     def test_send_file_skip_credit_invoice_split(self, coordinator):
-        """Test _send_file skips files based on split settings."""
+        """Test _process_single_file skips files based on split settings."""
         parameters_dict = {
+            "folder_name": "/test/folder",
             "process_edi": "False",
             "tweak_edi": False,
             "split_edi": True,
@@ -1100,39 +1232,40 @@ class TestDispatchCoordinatorSendFile:
             "split_edi_include_invoices": 1,
             "process_backend_copy": False,
             "rename_file": "",
+            "edi_format": "default",
         }
-        process_files_log = []
-        process_files_error_log = []
+        filtered_files = [(0, "test.edi", "hash")]
+        folder_errors_log = StringIO()
 
-        with tempfile.TemporaryDirectory() as scratch_folder:
-            test_file = os.path.join(scratch_folder, "test.edi")
-            with open(test_file, "w") as f:
-                f.write("EDI content")
+        with (
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch(
+                "dispatch.coordinator.utils.detect_invoice_is_credit", return_value=True
+            ),
+            patch.object(coordinator, "_send_file") as mock_send,
+            patch.object(coordinator.edi_validator, "validate_file") as mock_validate,
+        ):
+            mock_validate.return_value = MagicMock(
+                has_errors=False, has_minor_errors=False
+            )
+            mock_process_edi.return_value = [("/test/folder/credit.edi", "", "_credit")]
 
-            with patch("dispatch.coordinator.utils.detect_invoice_is_credit", return_value=True), \
-                 patch.object(coordinator.send_manager, "send_file") as mock_send:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                parameters_dict["folder_name"] = tmpdir
+                with open(os.path.join(tmpdir, "test.edi"), "w") as f:
+                    f.write("content")
 
-                mock_send.return_value = []
-
-                result = coordinator._send_file(
-                    test_file,
-                    parameters_dict,
-                    "",
-                    "_credit",
-                    process_files_log,
-                    process_files_error_log,
-                    test_file,
-                    True,
-                    scratch_folder,
+                coordinator._process_single_file(
+                    0, parameters_dict, filtered_files, folder_errors_log
                 )
 
-            # Should skip credit file
             assert mock_send.call_count == 0
 
 
 # =============================================================================
 # DispatchCoordinator Write Reports Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorWriteReports:
     """Tests for report writing methods."""
@@ -1142,7 +1275,9 @@ class TestDispatchCoordinatorWriteReports:
         coordinator.context.edi_validator_errors.write("Validation errors")
 
         with patch("dispatch.coordinator.datetime") as mock_datetime:
-            mock_datetime.datetime.now.return_value.isoformat.return_value = "2024-01-01T12:00:00"
+            mock_datetime.datetime.now.return_value.isoformat.return_value = (
+                "2024-01-01T12:00:00"
+            )
 
             result = coordinator._write_validation_report()
 
@@ -1159,9 +1294,13 @@ class TestDispatchCoordinatorWriteReports:
         }
 
         with patch("dispatch.coordinator.datetime") as mock_datetime:
-            mock_datetime.datetime.now.return_value.isoformat.return_value = "2024-01-01T12:00:00"
+            mock_datetime.datetime.now.return_value.isoformat.return_value = (
+                "2024-01-01T12:00:00"
+            )
 
-            result = coordinator._write_folder_errors_report(parameters_dict, "Error details")
+            result = coordinator._write_folder_errors_report(
+                parameters_dict, "Error details"
+            )
 
             assert os.path.exists(result)
             with open(result, "r") as f:
@@ -1169,7 +1308,9 @@ class TestDispatchCoordinatorWriteReports:
                 assert "Program Version = 1.0.0" in content
                 assert "Error details" in content
 
-    def test_write_folder_errors_report_creates_directories(self, coordinator, temp_dir):
+    def test_write_folder_errors_report_creates_directories(
+        self, coordinator, temp_dir
+    ):
         """Test _write_folder_errors_report creates necessary directories."""
         parameters_dict = {
             "alias": "Test Folder",
@@ -1180,9 +1321,13 @@ class TestDispatchCoordinatorWriteReports:
         coordinator.errors_folder["errors_folder"] = errors_subdir
 
         with patch("dispatch.coordinator.datetime") as mock_datetime:
-            mock_datetime.datetime.now.return_value.isoformat.return_value = "2024-01-01T12:00:00"
+            mock_datetime.datetime.now.return_value.isoformat.return_value = (
+                "2024-01-01T12:00:00"
+            )
 
-            result = coordinator._write_folder_errors_report(parameters_dict, "Error details")
+            result = coordinator._write_folder_errors_report(
+                parameters_dict, "Error details"
+            )
 
             assert os.path.exists(errors_subdir)
 
@@ -1190,6 +1335,7 @@ class TestDispatchCoordinatorWriteReports:
 # =============================================================================
 # Backward Compatibility Process Function Tests
 # =============================================================================
+
 
 class TestBackwardCompatibilityProcess:
     """Tests for the backward-compatible process function."""
@@ -1209,7 +1355,9 @@ class TestBackwardCompatibilityProcess:
             errors_folder = {"errors_folder": os.path.join(temp_dir, "errors")}
             reporting = {"enable_reporting": "False"}
 
-            with patch("dispatch.coordinator.DispatchCoordinator") as mock_coordinator_class:
+            with patch(
+                "dispatch.coordinator.DispatchCoordinator"
+            ) as mock_coordinator_class:
                 mock_coordinator = MagicMock()
                 mock_coordinator_class.return_value = mock_coordinator
                 mock_coordinator.process.return_value = (False, "0 processed, 0 errors")
@@ -1239,6 +1387,7 @@ class TestBackwardCompatibilityProcess:
 # Integration and Edge Case Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorEdgeCases:
     """Tests for edge cases and error conditions."""
 
@@ -1250,6 +1399,7 @@ class TestDispatchCoordinatorEdgeCases:
             "tweak_edi": False,
             "split_edi": False,
             "force_edi_validation": False,
+            "rename_file": "",
         }
         filtered_files = [(0, "missing.txt", "hash123")]
         folder_errors_log = StringIO()
@@ -1258,7 +1408,9 @@ class TestDispatchCoordinatorEdgeCases:
         with patch.object(coordinator, "_process_edi") as mock_process_edi:
             mock_process_edi.return_value = [("/nonexistent/missing.txt", "", "")]
 
-            result = coordinator._process_single_file(0, parameters_dict, filtered_files, folder_errors_log)
+            result = coordinator._process_single_file(
+                0, parameters_dict, filtered_files, folder_errors_log
+            )
 
             # Should complete without crashing
             assert result is not None
@@ -1290,25 +1442,25 @@ class TestDispatchCoordinatorEdgeCases:
 # Thread Safety Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorThreadSafety:
     """Tests for thread safety and concurrent operations."""
 
     def test_hash_thread_concurrent_access(self, coordinator):
         """Test hash thread handles concurrent access properly."""
         coordinator.context.parameters_dict_list = [
-            {"folder_name": f"/test/folder{i}", "old_id": i}
-            for i in range(3)
+            {"folder_name": f"/test/folder{i}", "old_id": i} for i in range(3)
         ]
 
         temp_processed_files = []
 
-        with patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer, \
-             patch("dispatch.coordinator.HashGenerator") as mock_hash_gen, \
-             patch("dispatch.coordinator.FileFilter") as mock_file_filter:
-
+        with (
+            patch("dispatch.coordinator.FileDiscoverer") as mock_discoverer,
+            patch("dispatch.coordinator.HashGenerator") as mock_hash_gen,
+            patch("dispatch.coordinator.FileFilter") as mock_file_filter,
+        ):
             mock_discoverer.discover_files.side_effect = [
-                [f"/test/folder{i}/file.txt"]
-                for i in range(3)
+                [f"/test/folder{i}/file.txt"] for i in range(3)
             ]
             mock_hash_gen.generate_file_hash.return_value = "hash"
             mock_file_filter.generate_match_lists.return_value = ([], [], set())
@@ -1316,12 +1468,14 @@ class TestDispatchCoordinatorThreadSafety:
 
             thread = coordinator._create_hash_thread(temp_processed_files)
 
-            with patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor") as mock_executor:
+            with patch(
+                "dispatch.coordinator.concurrent.futures.ProcessPoolExecutor"
+            ) as mock_executor:
                 mock_executor_instance = MagicMock()
-                mock_executor.return_value.__enter__.return_value = mock_executor_instance
-                mock_executor_instance.map.side_effect = [
-                    ["hash"] for _ in range(3)
-                ]
+                mock_executor.return_value.__enter__.return_value = (
+                    mock_executor_instance
+                )
+                mock_executor_instance.map.side_effect = [["hash"] for _ in range(3)]
 
                 thread._target()
 
@@ -1336,6 +1490,7 @@ class TestDispatchCoordinatorThreadSafety:
 # =============================================================================
 # File Naming and Path Handling Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorFileNaming:
     """Tests for file naming and path handling."""
@@ -1356,7 +1511,7 @@ class TestDispatchCoordinatorFileNaming:
                 True,
                 scratch_folder,
                 process_files_log,
-                process_files_error_log
+                process_files_error_log,
             )
 
         # File naming happens in _send_file, not _process_edi
@@ -1366,6 +1521,7 @@ class TestDispatchCoordinatorFileNaming:
 # =============================================================================
 # Configuration Variations Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorConfigurationVariations:
     """Tests for different configuration combinations."""
@@ -1401,16 +1557,27 @@ class TestDispatchCoordinatorConfigurationVariations:
 
             parameters_dict["folder_name"] = tmpdir
 
-            with patch.object(coordinator.edi_validator, "validate_file", return_value=mock_validation_result), \
-                 patch.object(coordinator, "_process_edi") as mock_process_edi, \
-                 patch.object(coordinator, "_send_file", return_value=False):
-
+            with (
+                patch.object(
+                    coordinator.edi_validator,
+                    "validate_file",
+                    return_value=mock_validation_result,
+                ),
+                patch.object(coordinator, "_process_edi") as mock_process_edi,
+                patch.object(coordinator, "_send_file", return_value=False),
+                patch(
+                    "dispatch.coordinator.utils.detect_invoice_is_credit",
+                    return_value=False,
+                ),
+            ):
                 mock_process_edi.return_value = [
                     (os.path.join(tmpdir, "split1.edi"), "", "_1"),
                     (os.path.join(tmpdir, "split2.edi"), "", "_2"),
                 ]
 
-                result = coordinator._process_single_file(0, parameters_dict, [(0, "file.edi", "hash123")], folder_errors_log)
+                result = coordinator._process_single_file(
+                    0, parameters_dict, [(0, "file.edi", "hash123")], folder_errors_log
+                )
 
             errors, _, _, _, _ = result
             assert errors is False
@@ -1431,9 +1598,10 @@ class TestDispatchCoordinatorConfigurationVariations:
         filtered_files = [(0, "file.txt", "hash123")]
         folder_errors_log = StringIO()
 
-        with patch.object(coordinator, "_process_edi") as mock_process_edi, \
-             patch.object(coordinator, "_send_file", return_value=False):
-
+        with (
+            patch.object(coordinator, "_process_edi") as mock_process_edi,
+            patch.object(coordinator, "_send_file", return_value=False),
+        ):
             mock_process_edi.return_value = [("/test/folder/file.txt", "", "")]
 
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -1443,7 +1611,9 @@ class TestDispatchCoordinatorConfigurationVariations:
 
                 parameters_dict["folder_name"] = tmpdir
 
-                result = coordinator._process_single_file(0, parameters_dict, [(0, "file.txt", "hash123")], folder_errors_log)
+                result = coordinator._process_single_file(
+                    0, parameters_dict, [(0, "file.txt", "hash123")], folder_errors_log
+                )
 
             errors, _, _, _, _ = result
             assert errors is False
@@ -1452,6 +1622,7 @@ class TestDispatchCoordinatorConfigurationVariations:
 # =============================================================================
 # Error Recovery Tests
 # =============================================================================
+
 
 class TestDispatchCoordinatorErrorRecovery:
     """Tests for error recovery and resilience."""
@@ -1469,7 +1640,9 @@ class TestDispatchCoordinatorErrorRecovery:
             (1, "file2.txt", "hash2"),
         ]
 
-        with patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor") as mock_executor:
+        with patch(
+            "dispatch.coordinator.concurrent.futures.ThreadPoolExecutor"
+        ) as mock_executor:
             mock_executor_instance = MagicMock()
             mock_executor.return_value.__enter__.return_value = mock_executor_instance
             # First file succeeds, second fails
@@ -1479,7 +1652,9 @@ class TestDispatchCoordinatorErrorRecovery:
             ]
 
             with patch.object(coordinator, "_write_folder_errors_report"):
-                result = coordinator._process_folder(parameters_dict, files, filtered_files, 1, 1)
+                result = coordinator._process_folder(
+                    parameters_dict, files, filtered_files, 1, 1
+                )
 
         assert result is True
 
@@ -1517,6 +1692,7 @@ class TestDispatchCoordinatorErrorRecovery:
 # Complex Workflow Tests
 # =============================================================================
 
+
 class TestDispatchCoordinatorComplexWorkflows:
     """Tests for complex multi-step workflows."""
 
@@ -1551,43 +1727,68 @@ class TestDispatchCoordinatorComplexWorkflows:
 
         os.makedirs(os.path.join(temp_dir, "output"), exist_ok=True)
 
-        with patch.object(coordinator.db_manager, "get_active_folders", return_value=folders), \
-             patch.object(coordinator.db_manager, "get_active_folder_count", return_value=1), \
-             patch.object(coordinator.db_manager, "get_processed_files", return_value=[]), \
-             patch.object(coordinator, "_load_upc_data"), \
-             patch.object(coordinator, "_create_hash_thread") as mock_create_thread, \
-             patch("dispatch.coordinator.os.path.isdir", return_value=True):
-
+        with (
+            patch.object(
+                coordinator.db_manager, "get_active_folders", return_value=folders
+            ),
+            patch.object(
+                coordinator.db_manager, "get_active_folder_count", return_value=1
+            ),
+            patch.object(
+                coordinator.db_manager, "get_processed_files", return_value=[]
+            ),
+            patch.object(coordinator, "_load_upc_data"),
+            patch.object(coordinator, "_create_hash_thread") as mock_create_thread,
+            patch("dispatch.coordinator.os.path.isdir", return_value=True),
+        ):
             mock_thread = MagicMock()
             mock_create_thread.return_value = mock_thread
 
-            # Setup queue with hash results
-            coordinator.context.hash_thread_return_queue.put({
-                "folder_name": temp_dir,
-                "files": [test_file],
-                "filtered_files": [(0, "test.edi", "hash123")],
-            })
+            # Setup queue with hash results via thread start side effect
+            def populate_queue():
+                coordinator.context.hash_thread_return_queue.put(
+                    {
+                        "folder_name": temp_dir,
+                        "files": [test_file],
+                        "filtered_files": [(0, "test.edi", "hash123")],
+                    }
+                )
+
+            mock_thread.start.side_effect = populate_queue
 
             # Mock EDI validation
             mock_validation_result = MagicMock()
             mock_validation_result.has_errors = False
             mock_validation_result.has_minor_errors = False
 
-            with patch.object(coordinator.edi_validator, "validate_file", return_value=mock_validation_result), \
-                 patch("dispatch.coordinator.EDIConverter") as mock_converter, \
-                 patch("dispatch.coordinator.EDITweaker") as mock_tweaker, \
-                 patch.object(coordinator.send_manager, "send_file") as mock_send, \
-                 patch.object(coordinator.db_manager.tracker, "mark_as_processed") as mock_mark, \
-                 patch.object(coordinator.db_manager.tracker, "is_resend", return_value=False):
-
+            with (
+                patch.object(
+                    coordinator.edi_validator,
+                    "validate_file",
+                    return_value=mock_validation_result,
+                ),
+                patch("dispatch.coordinator.EDIConverter") as mock_converter,
+                patch("dispatch.coordinator.EDITweaker") as mock_tweaker,
+                patch.object(coordinator.send_manager, "send_file") as mock_send,
+                patch.object(
+                    coordinator.db_manager.tracker, "mark_as_processed"
+                ) as mock_mark,
+                patch.object(
+                    coordinator.db_manager.tracker, "is_resend", return_value=False
+                ),
+            ):
                 mock_converter.convert_edi.return_value = test_file
                 mock_tweaker.tweak_edi.return_value = test_file
                 mock_send.return_value = [MagicMock(success=True)]
                 mock_mark.return_value = {"file_name": "test.edi", "folder_id": 1}
 
-                with patch("dispatch.coordinator.concurrent.futures.ThreadPoolExecutor") as mock_executor:
+                with patch(
+                    "dispatch.coordinator.concurrent.futures.ThreadPoolExecutor"
+                ) as mock_executor:
                     mock_executor_instance = MagicMock()
-                    mock_executor.return_value.__enter__.return_value = mock_executor_instance
+                    mock_executor.return_value.__enter__.return_value = (
+                        mock_executor_instance
+                    )
                     mock_executor_instance.map.return_value = [
                         (False, test_file, "hash123", ["log entry"], [])
                     ]

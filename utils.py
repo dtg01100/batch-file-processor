@@ -15,22 +15,23 @@ except (ImportError, RuntimeError):
 # Boolean Normalization Utilities (native boolean migration support)
 # ============================================================================
 
+
 def normalize_bool(value: Any) -> bool:
     """Convert any value to Python boolean.
-    
+
     Accepts:
     - bool: True/False (returned as-is)
     - str: "true"/"false" (case-insensitive), "1"/"0", "yes"/"no"
     - int: 1/0, any non-zero is True
     - None: False
     - list/dict: bool(value) checks if non-empty
-    
+
     Args:
         value: Any value to normalize
-    
+
     Returns:
         Python bool (True or False)
-    
+
     Examples:
         normalize_bool("True") → True
         normalize_bool("false") → False
@@ -41,7 +42,7 @@ def normalize_bool(value: Any) -> bool:
     """
     if isinstance(value, bool):
         return value
-    
+
     if isinstance(value, str):
         # Handle string booleans (legacy tkinter storage)
         lower_val = value.strip().lower()
@@ -51,25 +52,25 @@ def normalize_bool(value: Any) -> bool:
             return False
         # Default: non-empty string is truthy
         return bool(value.strip())
-    
+
     if value is None:
         return False
-    
+
     # For int/float: 0 is False, non-zero is True
     return bool(value)
 
 
 def to_db_bool(value: Any) -> int:
     """Convert any value to SQLite integer (0 or 1).
-    
+
     Used when writing boolean values to database.
-    
+
     Args:
         value: Any value to convert
-    
+
     Returns:
         1 for truthy values, 0 for falsy values
-    
+
     Examples:
         to_db_bool(True) → 1
         to_db_bool("True") → 1
@@ -81,17 +82,17 @@ def to_db_bool(value: Any) -> int:
 
 def from_db_bool(value: Any) -> bool:
     """Convert SQLite value to Python boolean.
-    
+
     Handles both legacy string booleans ("True"/"False") and new
     integer booleans (0/1). Used when reading boolean values from
     database or older code that stores strings.
-    
+
     Args:
         value: Database value (could be int, str, bool, or None)
-    
+
     Returns:
         Python bool
-    
+
     Examples:
         from_db_bool("True") → True   # Legacy string format
         from_db_bool(1) → True         # New integer format
@@ -294,7 +295,10 @@ def capture_records(line, parser=None):
 
     if parser is not None:
         result = parser.parse_line(line)
-        if result is None and line and not line.startswith(""):
+        if result is None and line and line.strip() != "":
+            # Ignore standard EOF marker (Ctrl+Z)
+            if line.strip() == "\x1a":
+                return None
             raise Exception("Not An EDI")
         return result
 

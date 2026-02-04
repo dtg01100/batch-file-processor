@@ -241,7 +241,15 @@ class BaseConverter(ABC, PluginConfigMixin):
 
         # Process each line
         for line in self.lines:
-            record = utils.capture_records(line, self.edi_parser)
+            try:
+                record = utils.capture_records(line, self.edi_parser)
+            except Exception as e:
+                # Capture specific "Not An EDI" exception from utils.capture_records
+                # and skip the line to allow robust processing of partial files
+                if "Not An EDI" in str(e):
+                    continue
+                raise e
+
             if record is not None:
                 record_type = record.get("record_type")
 
