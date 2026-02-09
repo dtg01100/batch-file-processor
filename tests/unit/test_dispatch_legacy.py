@@ -20,8 +20,8 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import legacy_dispatch as dispatch
-from legacy_dispatch import generate_match_lists, generate_file_hash, process
+import dispatch
+from dispatch import generate_match_lists, generate_file_hash, process
 
 
 class TestGenerateMatchLists(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestGenerateMatchLists(unittest.TestCase):
 class TestGenerateFileHash(unittest.TestCase):
     """Tests for generate_file_hash function."""
 
-    @patch("legacy_dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_successful_hash_generation(self, mock_md5):
         """Test successful file hash generation."""
         mock_md5.return_value.hexdigest.return_value = "abc123hash"
@@ -113,7 +113,7 @@ class TestGenerateFileHash(unittest.TestCase):
         finally:
             os.unlink(temp_file)
 
-    @patch("legacy_dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_existing_file_no_resend(self, mock_md5):
         """Test file that exists in processed list but no resend flag."""
         mock_md5.return_value.hexdigest.return_value = "existing_hash"
@@ -140,7 +140,7 @@ class TestGenerateFileHash(unittest.TestCase):
         finally:
             os.unlink(temp_file)
 
-    @patch("legacy_dispatch.hashlib.md5")
+    @patch("dispatch.file_processor.hashlib.md5")
     def test_existing_file_with_resend(self, mock_md5):
         """Test file with resend flag set."""
         mock_md5.return_value.hexdigest.return_value = "resend_hash"
@@ -167,8 +167,8 @@ class TestGenerateFileHash(unittest.TestCase):
         finally:
             os.unlink(temp_file)
 
-    @patch("legacy_dispatch.hashlib.md5")
-    @patch("legacy_dispatch.time.sleep")
+    @patch("dispatch.file_processor.hashlib.md5")
+    @patch("dispatch.file_processor.time.sleep")
     def test_retry_logic_success(self, mock_sleep, mock_md5):
         """Test retry logic eventually succeeds."""
         mock_md5.side_effect = [
@@ -193,8 +193,8 @@ class TestGenerateFileHash(unittest.TestCase):
         finally:
             os.unlink(temp_file)
 
-    @patch("legacy_dispatch.hashlib.md5")
-    @patch("legacy_dispatch.time.sleep")
+    @patch("dispatch.file_processor.hashlib.md5")
+    @patch("dispatch.file_processor.time.sleep")
     def test_retry_logic_failure(self, mock_sleep, mock_md5):
         """Test retry logic exceeds max attempts and raises."""
         mock_md5.side_effect = Exception("Persistent error")
@@ -239,9 +239,9 @@ class TestDispatchProcessComplex(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("legacy_dispatch.query_runner")
-    @patch("legacy_dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("legacy_dispatch.threading.Thread")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
     def test_process_empty_database(
         self, mock_thread, mock_process_executor, mock_query_runner
     ):
@@ -298,10 +298,10 @@ class TestDispatchProcessComplex(unittest.TestCase):
         self.assertFalse(has_errors)
         self.assertIn("0 processed", summary)
 
-    @patch("legacy_dispatch.query_runner")
-    @patch("legacy_dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("legacy_dispatch.threading.Thread")
-    @patch("legacy_dispatch.os.path.isdir")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
+    @patch("dispatch.file_processor.os.path.isdir")
     def test_process_missing_folder_error(
         self, mock_isdir, mock_thread, mock_process_executor, mock_query_runner
     ):
@@ -367,9 +367,9 @@ class TestDispatchProcessComplex(unittest.TestCase):
         self.assertTrue(has_errors)
         self.assertIn("1 errors", summary)
 
-    @patch("legacy_dispatch.query_runner")
-    @patch("legacy_dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("legacy_dispatch.threading.Thread")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
     def test_process_with_upc_query(
         self, mock_thread, mock_process_executor, mock_query_runner
     ):
@@ -439,7 +439,7 @@ class TestDispatchInnerFunctions(unittest.TestCase):
         root = MagicMock()
 
         # Simulate calling update_overlay through process
-        with patch("legacy_dispatch.doingstuffoverlay") as mock_overlay:
+        with patch("dispatch.coordinator.doingstuffoverlay") as mock_overlay:
             mock_overlay.update_overlay = MagicMock()
 
             # The update_overlay is defined inside process(), so we test it
@@ -451,9 +451,9 @@ class TestDispatchInnerFunctions(unittest.TestCase):
 class TestDispatchEdgeCases(unittest.TestCase):
     """Edge case tests for dispatch module."""
 
-    @patch("legacy_dispatch.query_runner")
-    @patch("legacy_dispatch.concurrent.futures.ProcessPoolExecutor")
-    @patch("legacy_dispatch.threading.Thread")
+    @patch("dispatch.coordinator.query_runner")
+    @patch("dispatch.coordinator.concurrent.futures.ProcessPoolExecutor")
+    @patch("dispatch.coordinator.threading.Thread")
     def test_process_with_old_id_keyerror(
         self, mock_thread, mock_process_executor, mock_query_runner
     ):

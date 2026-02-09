@@ -35,7 +35,7 @@ class TestStartupPerformance:
             del sys.modules["dispatch"]
 
         start_time = time.perf_counter()
-        import legacy_dispatch as dispatch
+        import dispatch
 
         end_time = time.perf_counter()
 
