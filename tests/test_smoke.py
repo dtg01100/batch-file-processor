@@ -86,7 +86,8 @@ def test_basic_project_structure():
     """Verify basic project structure is intact."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    assert os.path.exists(os.path.join(project_root, "utils.py"))
+    # After utils refactoring, we have utils/ package instead of utils.py
+    assert os.path.exists(os.path.join(project_root, "utils")) or os.path.exists(os.path.join(project_root, "utils.py"))
     assert os.path.exists(os.path.join(project_root, "record_error.py"))
     assert os.path.exists(os.path.join(project_root, "interface"))
     assert os.path.exists(os.path.join(project_root, "interface", "main.py"))
