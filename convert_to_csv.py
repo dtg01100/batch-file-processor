@@ -17,6 +17,8 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
     override_upc_level = parameters_dict['override_upc_level']
     override_upc_category_filter = parameters_dict['override_upc_category_filter']
     retail_uom = parameters_dict['retail_uom']
+    upc_target_length = int(parameters_dict.get('upc_target_length', 11))
+    upc_padding_pattern = parameters_dict.get('upc_padding_pattern', '           ')
 
     conv_calc_upc = calc_upc
     conv_inc_arec = inc_arec
@@ -69,9 +71,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                                 print("cannot parse b record field, skipping")
                             if edi_line_pass:
                                 try:
-                                    each_upc_string = upc_lut[item_number][1][:11].ljust(11)
+                                    each_upc_string = upc_lut[item_number][1][:upc_target_length].ljust(upc_target_length)
                                 except KeyError:
-                                    each_upc_string = "           "
+                                    each_upc_string = upc_padding_pattern[:upc_target_length]
                                 try:
                                     input_edi_dict["unit_cost"] = str(Decimal((Decimal(input_edi_dict['unit_cost'].strip()) / 100) / Decimal(input_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
                                     input_edi_dict['qty_of_units'] = str(int(input_edi_dict['unit_multiplier'].strip()) * int(input_edi_dict['qty_of_units'].strip())).rjust(5,'0')

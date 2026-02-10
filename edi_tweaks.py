@@ -29,6 +29,8 @@ def edi_tweak(
     override_upc_level = parameters_dict['override_upc_level']
     override_upc_category_filter = parameters_dict['override_upc_category_filter']
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
+    upc_target_length = int(parameters_dict.get('upc_target_length', 11))
+    upc_padding_pattern = parameters_dict.get('upc_padding_pattern', '           ')
 
     class poFetcher:
         def __init__(self, settings_dict):
@@ -203,6 +205,8 @@ def edi_tweak(
                             b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
             except KeyError:
                 b_rec_edi_dict['upc_number'] = ""
+            # Apply padding/truncating to UPC if retail_uom is enabled
+            # This runs after override_upc, so padding is applied to whatever UPC is set
             if retail_uom:
                 edi_line_pass = False
                 try:
@@ -216,14 +220,18 @@ def edi_tweak(
                 except Exception:
                     print("cannot parse b record field, skipping")
                 if edi_line_pass:
+                    # Apply padding/truncating to whatever UPC is already in the field
+                    # This runs after override_upc, so we pad the existing UPC value
                     try:
-                        each_upc_string = upc_dict[item_number][1][:11].ljust(11)
-                    except KeyError:
-                        each_upc_string = "           "
+                        fill_char = upc_padding_pattern[0] if upc_padding_pattern else ' '
+                        current_upc = b_rec_edi_dict['upc_number'].strip()[:upc_target_length]
+                        b_rec_edi_dict['upc_number'] = current_upc.rjust(upc_target_length, fill_char)
+                    except (AttributeError, TypeError):
+                        # Fallback: use padding pattern if UPC is empty/invalid
+                        b_rec_edi_dict['upc_number'] = upc_padding_pattern[:upc_target_length]
                     try:
                         b_rec_edi_dict["unit_cost"] = str(Decimal((Decimal(b_rec_edi_dict['unit_cost'].strip()) / 100) / Decimal(b_rec_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
                         b_rec_edi_dict['qty_of_units'] = str(int(b_rec_edi_dict['unit_multiplier'].strip()) * int(b_rec_edi_dict['qty_of_units'].strip())).rjust(5,'0')
-                        b_rec_edi_dict['upc_number'] = each_upc_string
                         b_rec_edi_dict['unit_multiplier'] = '000001'
                     except Exception as error:
                         print(error)
@@ -236,7 +244,7 @@ def edi_tweak(
 
                 if blank_upc is False:
                     proposed_upc = b_rec_edi_dict["upc_number"].strip()
-                    if len(str(proposed_upc)) == 11:
+                    if len(str(proposed_upc)) == upc_target_length:
                         b_rec_edi_dict['upc_number'] = str(proposed_upc) + str(
                             utils.calc_check_digit(proposed_upc)
                         )
@@ -246,7 +254,7 @@ def edi_tweak(
                                 utils.convert_UPCE_to_UPCA(proposed_upc)
                             )
                 else:
-                    b_rec_edi_dict['upc_number'] = "            "
+                    b_rec_edi_dict['upc_number'] = upc_padding_pattern[:upc_target_length]
 
             if len(writeable_line) < 77:
                 b_rec_edi_dict["parent_item_number"] = ""

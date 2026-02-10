@@ -16,6 +16,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        process_edi='False',
                                        convert_to_format='csv',
                                        calculate_upc_check_digit='False',
+                                       upc_target_length=11,
+                                       upc_padding_pattern='           ',
                                        include_a_records='False',
                                        include_c_records='False',
                                        include_headers='False',
@@ -31,77 +33,13 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        alias='',
                                        report_email_destination='',
                                        process_backend_copy=False,
-                                       process_backend_ftp=False,
-                                       process_backend_email=False,
-                                       ftp_server='',
-                                       ftp_folder='/',
-                                       ftp_username='',
-                                       ftp_password='',
-                                       email_to='',
-                                       logs_directory=os.path.join(config_folder, "run_logs"),
-                                       errors_folder=os.path.join(config_folder, "errors"),
-                                       enable_reporting="False",
-                                       report_printing_fallback="False",
-                                       ftp_port=21,
-                                       email_subject_line="",
-                                       single_add_folder_prior=os.path.expanduser('~'),
-                                       batch_add_folder_prior=os.path.expanduser('~'),
-                                       export_processed_folder_prior=os.path.expanduser('~'),
-                                       report_edi_errors=False,
-                                       split_edi=False,
-                                       split_edi_include_invoices=True,
-                                       split_edi_include_credits=True,
-                                       force_edi_validation=False,
-                                       append_a_records='False',
-                                       a_record_append_text='',
-                                       force_txt_file_ext="False",
-                                       invoice_date_offset=0,
-                                       retail_uom=False,
-                                       include_item_numbers=False,
-                                       include_item_description=False,
-                                       simple_csv_sort_order="upc_number,qty_of_units,unit_cost,description,vendor_item",
-                                       split_prepaid_sales_tax_crec=False,
-                                       estore_store_number=0,
-                                       estore_Vendor_OId=0,
-                                       estore_vendor_NameVendorOID="replaceme",
-                                       estore_c_record_OID="",
-                                       prepend_date_files = False,
-                                       rename_file = "",
-                                       override_upc_bool = False,
-                                       override_upc_level = 1,
-                                       override_upc_category_filter = "ALL",
-                                       split_edi_filter_categories = "ALL",
-                                       split_edi_filter_mode = "include",
-                                       fintech_division_id = 0,
+                                       backend_copy_destination=None,
+                                       process_edi_output=False,
+                                       edi_output_folder=None,
                                        )
 
-    oversight_and_defaults = database_connection['administrative']
-    folders_table = database_connection['folders']
+    settings = database_connection['settings']
+    settings.insert(initial_db_dict)
 
-    oversight_and_defaults.insert(initial_db_dict)
-    folders_table.insert(initial_db_dict)
-    database_connection.query('DELETE FROM "folders"')
-
-    settings_table = database_connection['settings']
-    settings_table.insert(dict(enable_email=False,
-                               email_address='',
-                               email_username='',
-                               email_password='',
-                               email_smtp_server='smtp.gmail.com',
-                               smtp_port=587,
-                               backup_counter=0,
-                               backup_counter_maximum=200,
-                               enable_interval_backups=True,
-                               odbc_driver = "Select ODBC Driver...",
-                               as400_address = '',
-                                as400_username = '',
-                                as400_password = ''))
-
-    processed_files = database_connection['processed_files']
-    processed_files.create_column('file_name', sqlalchemy.types.String)
-    processed_files.create_column('file_checksum', sqlalchemy.types.String)
-    processed_files.create_column('copy_destination', sqlalchemy.types.String)
-    processed_files.create_column('ftp_destination', sqlalchemy.types.String)
-    processed_files.create_column('email_destination', sqlalchemy.types.String)
-    processed_files.create_column('resend_flag', sqlalchemy.types.Boolean)
-    processed_files.create_column('folder_id', sqlalchemy.types.Integer)
+    database_connection.commit()
+    database_connection.close()

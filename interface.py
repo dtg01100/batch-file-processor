@@ -1279,6 +1279,8 @@ if __name__ == "__main__":
             self.override_upc_bool = tkinter.BooleanVar(master)
             self.override_upc_level = tkinter.IntVar(master)
             self.override_upc_category_filter = tkinter.StringVar(master)
+            self.upc_target_length = tkinter.IntVar(master)
+            self.upc_padding_pattern = tkinter.StringVar(master)
             self.otherslistboxframe = tkinter.ttk.Frame(master=self.othersframe)
             self.otherslistbox = tkinter.Listbox(master=self.otherslistboxframe)
             self.otherslistboxscrollbar = tkinter.ttk.Scrollbar(
@@ -1360,6 +1362,10 @@ if __name__ == "__main__":
                     self.override_upc_checkbutton,
                     self.override_upc_level_optionmenu,
                     self.override_upc_category_filter_entry,
+                    self.upc_target_length_label,
+                    self.upc_target_length_entry,
+                    self.upc_padding_pattern_label,
+                    self.upc_padding_pattern_entry,
                     self.each_uom_edi_tweak_checkbutton,
                     self.include_item_numbers_checkbutton,
                     self.include_item_description_checkbutton,
@@ -1407,8 +1413,20 @@ if __name__ == "__main__":
                     self.override_upc_category_filter_entry.grid(
                         row=10, column=2, sticky=tkinter.W
                     )
-                    self.each_uom_edi_tweak_checkbutton.grid(
+                    self.upc_target_length_label.grid(
                         row=11, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.upc_target_length_entry.grid(
+                        row=11, column=1, sticky=tkinter.W
+                    )
+                    self.upc_padding_pattern_label.grid(
+                        row=12, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.upc_padding_pattern_entry.grid(
+                        row=12, column=1, sticky=tkinter.W
+                    )
+                    self.each_uom_edi_tweak_checkbutton.grid(
+                        row=13, column=0, sticky=tkinter.W, padx=3
                     )
                 if self.convert_formats_var.get() == "ScannerWare":
                     self.pad_a_records_checkbutton.grid(
@@ -1916,6 +1934,21 @@ if __name__ == "__main__":
                 self.override_upc_category_filter_entry,
                 "Enter 'ALL' or a comma separated list of numbers")
 
+            self.upc_target_length_label = tkinter.ttk.Label(
+                self.convert_options_frame, text="UPC Target Length:"
+            )
+            self.upc_target_length_entry = tkinter.ttk.Entry(
+                self.convert_options_frame, width=5
+            )
+            self.upc_target_length_entry.insert(0, "11")
+            self.upc_padding_pattern_label = tkinter.ttk.Label(
+                self.convert_options_frame, text="UPC Padding Pattern:"
+            )
+            self.upc_padding_pattern_entry = tkinter.ttk.Entry(
+                self.convert_options_frame, width=15
+            )
+            self.upc_padding_pattern_entry.insert(0, "           ")
+
             self.split_prepaid_sales_tax_crec = tkinter.ttk.Checkbutton(
                 self.convert_options_frame,
                 variable=self.split_sales_tax_prepaid_var,
@@ -2046,6 +2079,14 @@ if __name__ == "__main__":
                 self.override_upc_category_filter_entry.delete(0, tkinter.END)
                 self.override_upc_category_filter_entry.insert(
                     0, config_dict["override_upc_category_filter"]
+                )
+                self.upc_target_length_entry.delete(0, tkinter.END)
+                self.upc_target_length_entry.insert(
+                    0, config_dict.get("upc_target_length", 11)
+                )
+                self.upc_padding_pattern_entry.delete(0, tkinter.END)
+                self.upc_padding_pattern_entry.insert(
+                    0, config_dict.get("upc_padding_pattern", "           ")
                 )
                 self.include_item_numbers.set(config_dict["include_item_numbers"])
                 self.include_item_description.set(
@@ -2206,8 +2247,20 @@ if __name__ == "__main__":
                     self.override_upc_category_filter_entry.grid(
                         row=15, column=2, sticky=tkinter.W, padx=3
                     )
-                    self.split_prepaid_sales_tax_crec.grid(
+                    self.upc_target_length_label.grid(
                         row=16, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.upc_target_length_entry.grid(
+                        row=16, column=1, sticky=tkinter.W
+                    )
+                    self.upc_padding_pattern_label.grid(
+                        row=17, column=0, sticky=tkinter.W, padx=3
+                    )
+                    self.upc_padding_pattern_entry.grid(
+                        row=17, column=1, sticky=tkinter.W
+                    )
+                    self.split_prepaid_sales_tax_crec.grid(
+                        row=18, column=0, sticky=tkinter.W, padx=3
                     )
 
             if self.foldersnameinput["process_edi"] == "True":
@@ -2374,6 +2427,8 @@ if __name__ == "__main__":
             apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
             apply_to_folder["override_upc_level"] = self.override_upc_level.get()
             apply_to_folder["override_upc_category_filter"] = self.override_upc_category_filter_entry.get()
+            apply_to_folder["upc_target_length"] = int(self.upc_target_length_entry.get())
+            apply_to_folder["upc_padding_pattern"] = self.upc_padding_pattern_entry.get()
             apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
             apply_to_folder[
                 "include_item_description"
