@@ -41,7 +41,7 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     APPNAME = "Batch File Sender"
     VERSION = "(Git Branch: Master)"
-    DATABASE_VERSION = "32"
+    DATABASE_VERSION = "33"
     print(APPNAME + " Version " + VERSION)
     running_platform = platform.system()
     print("Running on " + running_platform)
@@ -1239,6 +1239,8 @@ if __name__ == "__main__":
             self.split_edi = tkinter.BooleanVar(master)
             self.split_edi_send_credits = tkinter.BooleanVar(master)
             self.split_edi_send_invoices = tkinter.BooleanVar(master)
+            self.split_edi_filter_categories = tkinter.StringVar(master)
+            self.split_edi_filter_mode = tkinter.StringVar(master)
             self.prepend_file_dates = tkinter.BooleanVar(master)
             self.ediconvert_options = tkinter.StringVar(master)
             self.process_edi = tkinter.StringVar(master)
@@ -1328,9 +1330,6 @@ if __name__ == "__main__":
             )
             tkinter.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
                 row=0, column=0, columnspan=2, pady=3
-            )
-            tkinter.ttk.Label(self.ediframe, text="Rename File:").grid(
-                row=4, column=0, sticky=tkinter.W
             )
             tkinter.ttk.Separator(self.ediframe, orient=tkinter.HORIZONTAL).grid(
                 row=6, columnspan=2, sticky=tkinter.E + tkinter.W, pady=1
@@ -1534,11 +1533,14 @@ if __name__ == "__main__":
             def set_send_options_fields_state():
                 if not self.settings["enable_email"]:
                     self.email_backend_checkbutton.configure(state=tkinter.DISABLED)
+                # Category filter is independent - always enabled when at least one backend is enabled
+                category_filter_state = tkinter.NORMAL
                 if (
                     self.process_backend_copy_check.get() is False
                     and self.process_backend_ftp_check.get() is False
                     and self.process_backend_email_check.get() is False
                 ):
+                    category_filter_state = tkinter.DISABLED
                     self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
                     self.split_edi_send_invoices_checkbutton.configure(state=tkinter.DISABLED)
                     self.split_edi_send_credits_checkbutton.configure(state=tkinter.DISABLED)
@@ -1572,6 +1574,12 @@ if __name__ == "__main__":
                             child.configure(state=tkinter.NORMAL)
                         except tkinter.TclError:
                             pass
+                # Category filter controls - independent of split_edi state
+                for child in self.category_filter_frame.winfo_children():
+                    try:
+                        child.configure(state=category_filter_state)
+                    except tkinter.TclError:
+                        pass
                 if self.process_backend_copy_check.get() is False:
                     copy_state = tkinter.DISABLED
                 else:
@@ -1744,11 +1752,33 @@ if __name__ == "__main__":
                 offvalue=False,
             )
             self.prepend_file_dates_checkbutton = tkinter.ttk.Checkbutton(
-                self.ediframe,
+                self.split_edi_frame,
                 variable=self.prepend_file_dates,
                 text="Prepend dates",
                 onvalue=True,
                 offvalue=False,
+            )
+            # Category filter frame (independent of splitting)
+            self.category_filter_frame = tkinter.ttk.Frame(self.ediframe)
+            self.split_edi_filter_categories_label = tkinter.ttk.Label(
+                self.category_filter_frame, text="Filter Categories:"
+            )
+            self.split_edi_filter_categories_entry = tkinter.ttk.Entry(
+                self.category_filter_frame, width=15
+            )
+            self.split_edi_filter_categories_tooltip = tk_extra_widgets.CreateToolTip(
+                self.split_edi_filter_categories_entry,
+                "Enter 'ALL' or a comma separated list of category numbers (e.g., 1,5,12)"
+            )
+            self.split_edi_filter_mode_label = tkinter.ttk.Label(
+                self.category_filter_frame, text="Mode:"
+            )
+            self.split_edi_filter_mode_optionmenu = tkinter.ttk.OptionMenu(
+                self.category_filter_frame,
+                self.split_edi_filter_mode,
+                "include",
+                "include",
+                "exclude",
             )
             self.process_edi_checkbutton = tkinter.ttk.Checkbutton(
                 self.convert_options_frame,
@@ -1801,7 +1831,7 @@ if __name__ == "__main__":
             )
 
             self.rename_file_field = tkinter.ttk.Entry(
-                self.ediframe, width=10
+                self.split_edi_frame, width=10
             )
 
 
@@ -1984,6 +2014,13 @@ if __name__ == "__main__":
                 self.split_edi_send_credits.set(config_dict["split_edi_include_credits"])
                 self.split_edi_send_invoices.set(config_dict["split_edi_include_invoices"])
                 self.prepend_file_dates.set(config_dict["prepend_date_files"])
+                self.split_edi_filter_categories_entry.delete(0, tkinter.END)
+                self.split_edi_filter_categories_entry.insert(
+                    0, config_dict.get("split_edi_filter_categories", "ALL")
+                )
+                self.split_edi_filter_mode.set(
+                    config_dict.get("split_edi_filter_mode", "include")
+                )
                 self.rename_file_field.delete(0, tkinter.END)
                 self.rename_file_field.insert(0, config_dict["rename_file"])
                 self.a_record_padding_field.delete(0, tkinter.END)
@@ -2072,8 +2109,30 @@ if __name__ == "__main__":
             self.prepend_file_dates_checkbutton.grid(
                 row=3, column=0, columnspan=2, sticky=tkinter.W
             )
+            self.split_edi_rename_file_label = tkinter.ttk.Label(
+                self.split_edi_frame, text="Rename File:"
+            )
+            self.split_edi_rename_file_label.grid(
+                row=4, column=0, sticky=tkinter.W
+            )
             self.rename_file_field.grid(
-                row=4, column=1, sticky=tkinter.E
+                row=4, column=1, sticky=tkinter.W
+            )
+            # Category filter frame (independent of splitting)
+            self.category_filter_frame.grid(
+                row=3, column=0, columnspan=2, sticky=tkinter.W, pady=(5, 0)
+            )
+            self.split_edi_filter_categories_label.grid(
+                row=0, column=0, sticky=tkinter.W
+            )
+            self.split_edi_filter_categories_entry.grid(
+                row=0, column=1, sticky=tkinter.W
+            )
+            self.split_edi_filter_mode_label.grid(
+                row=1, column=0, sticky=tkinter.W
+            )
+            self.split_edi_filter_mode_optionmenu.grid(
+                row=1, column=1, sticky=tkinter.W
             )
 
             def make_ediconvert_options(argument):
@@ -2295,6 +2354,8 @@ if __name__ == "__main__":
             apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
             apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
             apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
+            apply_to_folder["split_edi_filter_categories"] = self.split_edi_filter_categories_entry.get()
+            apply_to_folder["split_edi_filter_mode"] = self.split_edi_filter_mode.get()
             apply_to_folder["rename_file"] = self.rename_file_field.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
             apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())

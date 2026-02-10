@@ -70,6 +70,8 @@ def do(database_version, database_path, config_folder, running_platform):  # cre
                                        override_upc_bool = False,
                                        override_upc_level = 1,
                                        override_upc_category_filter = "ALL",
+                                       split_edi_filter_categories = "ALL",
+                                       split_edi_filter_mode = "include",
                                        fintech_division_id = 0,
                                        )
 

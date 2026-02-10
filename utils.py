@@ -241,8 +241,146 @@ def convert_UPCE_to_UPCA(upce_value):
     return newmsg + str(check_digit)
 
 
-def do_split_edi(edi_process, work_directory, parameters_dict):
-    """credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642"""
+def filter_b_records_by_category(b_records, upc_dict, filter_categories, filter_mode):
+    """Filter B records based on item category.
+    
+    Args:
+        b_records: List of B record lines to filter
+        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: String of comma-separated categories or "ALL"
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+    
+    Returns:
+        List of filtered B record lines
+    """
+    if filter_categories == "ALL":
+        return b_records
+    
+    if not upc_dict:
+        return b_records
+    
+    categories_list = [c.strip() for c in filter_categories.split(",")]
+    filtered_records = []
+    
+    for record in b_records:
+        try:
+            b_rec_dict = capture_records(record)
+            vendor_item = int(b_rec_dict['vendor_item'].strip())
+            
+            if vendor_item in upc_dict:
+                item_category = str(upc_dict[vendor_item][0])
+                category_in_list = item_category in categories_list
+                
+                if filter_mode == "include":
+                    if category_in_list:
+                        filtered_records.append(record)
+                else:  # exclude mode
+                    if not category_in_list:
+                        filtered_records.append(record)
+            else:
+                # Item not in upc_dict - include by default (fail-open)
+                filtered_records.append(record)
+        except (ValueError, KeyError):
+            # On error, include the record (fail-open)
+            filtered_records.append(record)
+    
+    return filtered_records
+
+
+def filter_edi_file_by_category(input_file, output_file, upc_dict, filter_categories, filter_mode):
+    """Filter an EDI file by item category without splitting.
+    
+    Drops invoices that have no B records after filtering (only A and C records remain).
+    
+    Args:
+        input_file: Path to the input EDI file
+        output_file: Path to write the filtered EDI file
+        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: String of comma-separated categories or "ALL"
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+    
+    Returns:
+        True if filtering was applied, False if no filtering (ALL mode)
+    """
+    if filter_categories == "ALL":
+        return False
+    
+    if not upc_dict:
+        return False
+    
+    with open(input_file, encoding="utf-8") as work_file:
+        lines = work_file.readlines()
+    
+    filtered_lines = []
+    
+    # Process invoice by invoice (A record + B records + C records)
+    current_a_record = None
+    current_b_records = []
+    current_c_records = []
+    
+    def flush_invoice():
+        """Write the current invoice to filtered_lines if it has B records."""
+        nonlocal current_a_record, current_b_records, current_c_records
+        if current_a_record is None:
+            return
+        
+        # Filter B records
+        filtered_b = filter_b_records_by_category(
+            current_b_records, upc_dict, filter_categories, filter_mode
+        )
+        
+        # Only include invoice if it has B records after filtering
+        if filtered_b:
+            filtered_lines.append(current_a_record)
+            filtered_lines.extend(filtered_b)
+            filtered_lines.extend(current_c_records)
+        
+        # Reset for next invoice
+        current_a_record = None
+        current_b_records = []
+        current_c_records = []
+    
+    for line in lines:
+        if line.startswith("A"):
+            # Flush previous invoice before starting new one
+            flush_invoice()
+            current_a_record = line
+        elif line.startswith("B"):
+            current_b_records.append(line)
+        elif line.startswith("C"):
+            current_c_records.append(line)
+        else:
+            # Other record types (shouldn't happen in normal EDI)
+            filtered_lines.append(line)
+    
+    # Flush final invoice
+    flush_invoice()
+    
+    # Write output file with proper line endings
+    with open(output_file, 'wb') as out_file:
+        for line in filtered_lines:
+            out_file.write(line.replace('\n', "\r\n").encode())
+    
+    return True
+
+
+def do_split_edi(edi_process, work_directory, parameters_dict, upc_dict=None, filter_categories="ALL", filter_mode="include"):
+    """Split EDI file by A records, optionally filtering B records by category.
+    
+    Invoices with no B records after filtering are dropped (not written to output).
+    
+    Args:
+        edi_process: Path to the EDI file to process
+        work_directory: Directory to write split files to
+        parameters_dict: Dictionary of processing parameters
+        upc_dict: Optional dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: Categories to filter ("ALL" or comma-separated like "1,5,12")
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+    
+    Returns:
+        List of tuples (output_file_path, file_name_prefix, file_name_suffix)
+    
+    credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642"""
     def col_to_excel(col):  # col is 1 based
         excel_col = str()
         div = col
@@ -256,6 +394,7 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     count = 0
     write_counter = 0
     edi_send_list = []
+    skipped_invoices = 0
     if not os.path.exists(work_directory):
         os.mkdir(work_directory)
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
@@ -267,18 +406,53 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
             list_of_first_characters.append(line[0])
         if list_of_first_characters.count("A") > 700:
             return edi_send_list
+        
+        # Collect records for each invoice and apply category filtering
+        current_b_records = []  # B records for current invoice
+        current_a_record = None  # A record for current invoice
+        current_c_records = []  # C records for current invoice
+        current_output_file_path = None  # Output file for current invoice
+        
         for line_mum, line in enumerate(work_file_lined):  # iterate over work file contents
-            writeable_line = line
-            if writeable_line.startswith("A"):
+            if line.startswith("A"):
+                # Process previous invoice if exists
+                if current_a_record is not None and current_output_file_path is not None:
+                    # Filter B records by category
+                    filtered_b_records = filter_b_records_by_category(
+                        current_b_records, upc_dict, filter_categories, filter_mode
+                    )
+                    
+                    # Only write invoice if it has B records after filtering
+                    if filtered_b_records:
+                        # Write A record
+                        f.write(current_a_record.replace('\n', "\r\n").encode())
+                        write_counter += 1
+                        # Write filtered B records
+                        for b_rec in filtered_b_records:
+                            f.write(b_rec.replace('\n', "\r\n").encode())
+                            write_counter += 1
+                        # Write C records
+                        for c_rec in current_c_records:
+                            f.write(c_rec.replace('\n', "\r\n").encode())
+                            write_counter += 1
+                        f.close()
+                    else:
+                        # No B records after filtering - skip this invoice
+                        f.close()
+                        os.remove(current_output_file_path)
+                        skipped_invoices += 1
+                        # Remove from edi_send_list since we're skipping it
+                        if edi_send_list:
+                            edi_send_list.pop()
+                
+                # Start new invoice
                 count += 1
                 prepend_letters = col_to_excel(count)
-                line_dict = capture_records(writeable_line)
+                line_dict = capture_records(line)
                 if int(line_dict['invoice_total']) < 0:
                     file_name_suffix = '.cr'
                 else:
                     file_name_suffix = '.inv'
-                if len(edi_send_list) != 0:
-                    f.close()
                 file_name_prefix = prepend_letters + "_"
                 if parameters_dict['prepend_date_files']:
                     datetime_from_arec = datetime.strptime(line_dict['invoice_date'], "%m%d%y")
@@ -287,23 +461,56 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
                 output_file_path = os.path.join(work_directory, file_name_prefix + os.path.basename(edi_process) + file_name_suffix)
                 edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
                 f = open(output_file_path, 'wb')
-            f.write(writeable_line.replace('\n', "\r\n").encode())
-            write_counter += 1
-        f.close()  # close output file
-        # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
-        # edi_send_list.pop(0)
+                
+                # Reset for new invoice
+                current_a_record = line
+                current_b_records = []
+                current_c_records = []
+                current_output_file_path = output_file_path
+            elif line.startswith("B"):
+                current_b_records.append(line)
+            elif line.startswith("C"):
+                current_c_records.append(line)
+        
+        # Process last invoice
+        if current_a_record is not None and current_output_file_path is not None:
+            # Filter B records by category
+            filtered_b_records = filter_b_records_by_category(
+                current_b_records, upc_dict, filter_categories, filter_mode
+            )
+            
+            # Only write invoice if it has B records after filtering
+            if filtered_b_records:
+                # Write A record
+                f.write(current_a_record.replace('\n', "\r\n").encode())
+                write_counter += 1
+                # Write filtered B records
+                for b_rec in filtered_b_records:
+                    f.write(b_rec.replace('\n', "\r\n").encode())
+                    write_counter += 1
+                # Write C records
+                for c_rec in current_c_records:
+                    f.write(c_rec.replace('\n', "\r\n").encode())
+                    write_counter += 1
+                f.close()  # close output file
+            else:
+                # No B records after filtering - skip this invoice
+                f.close()
+                os.remove(current_output_file_path)
+                skipped_invoices += 1
+                if edi_send_list:
+                    edi_send_list.pop()
+        
+        # Validation: count output lines
         edi_send_list_lines = 0
         for output_file, _, _ in edi_send_list:
             with open(output_file, encoding="utf-8") as file_handle:
                 edi_send_list_lines += sum(1 for _ in file_handle)
-        if not lines_in_edi == write_counter:
-            raise Exception("not all lines in input were written out")
-        if not lines_in_edi == edi_send_list_lines:
-            raise Exception("total lines in output files do not match input file")
-        if not len(edi_send_list) == list_of_first_characters.count("A"):
-            raise Exception('mismatched number of "A" records')
+        if not write_counter == edi_send_list_lines:
+            raise Exception("total lines written do not match output file line count")
+        # Note: len(edi_send_list) may be less than A records count due to filtering
         if len(edi_send_list) < 1:
-            raise Exception("No Split EDIs")
+            raise Exception("No Split EDIs (all invoices may have been filtered out)")
     return edi_send_list
 
 

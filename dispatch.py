@@ -322,7 +322,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                         process_files_log.append(("Splitting edi file " + process_original_filename + "...\r\n"))
                         print("Splitting edi file " + process_original_filename + "...")
                         try:
-                            split_edi_list = utils.do_split_edi(input_filename, file_scratch_folder, parameters_dict)
+                            split_edi_list = utils.do_split_edi(
+                                input_filename,
+                                file_scratch_folder,
+                                parameters_dict,
+                                upc_dict=upc_dict,
+                                filter_categories=parameters_dict.get('split_edi_filter_categories', 'ALL'),
+                                filter_mode=parameters_dict.get('split_edi_filter_mode', 'include')
+                            )
                             if len(split_edi_list) > 1:
                                 process_files_log.append(
                                     ("edi file split into " + str(len(split_edi_list)) + " files\r\n\r\n"))
@@ -337,6 +344,17 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
                                                     process_error), input_filename,
                                                 "edi splitter", True)
                     else:
+                        # Category filtering without splitting
+                        filter_categories = parameters_dict.get('split_edi_filter_categories', 'ALL')
+                        filter_mode = parameters_dict.get('split_edi_filter_mode', 'include')
+                        if filter_categories != 'ALL' and valid_edi_file:
+                            process_files_log.append(("Filtering by category " + filter_categories + " (" + filter_mode + " mode)\r\n"))
+                            print("Filtering by category " + filter_categories + " (" + filter_mode + " mode)")
+                            filtered_output = os.path.join(file_scratch_folder, "filtered_" + os.path.basename(input_filename))
+                            if utils.filter_edi_file_by_category(input_filename, filtered_output, upc_dict, filter_categories, filter_mode):
+                                input_filename = filtered_output
+                                process_files_log.append(("Category filtering applied\r\n\r\n"))
+                                print("Category filtering applied")
                         split_edi_list = [(input_filename, "", "")]
                     if len(split_edi_list) <= 1 and parameters_dict['split_edi']:
                         process_files_log.append("Cannot split edi file\r\n\r\n")
