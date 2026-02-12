@@ -2,6 +2,8 @@
 
 This document describes how to build the Windows executable for the Batch File Processor application.
 
+If your target is Windows Server 2012 R2, follow BUILD_WINDOWS_2012R2.md for VM-based build instructions and compatibility notes.
+
 Note: For compatibility with older hosts (for example, Windows Server 2012 R2), prefer building on a Windows VM that matches the target OS or validate any cross-compiled binaries on an actual Windows Server 2012 R2 machine; the repository's batonogov devcontainer and other Linux-based devcontainers are Linux-only and cannot reliably produce native Win2012R2 binaries.
 
 ## Prerequisites
