@@ -10,3 +10,8 @@ Plan (this iteration):
 
 This iteration action: create this scratchpad and open an investigation task for the next iteration.
 
+
+
+- [2026-02-12T21:43:07Z] Investigation: attempted batonogov container run to check Win2012R2 compatibility; output -> .ralph/agent/batonogov_run.log
+
+Log saved: .ralph/agent/batonogov_run.log
