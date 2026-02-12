@@ -12,6 +12,7 @@ Refactored components:
 - Email validation: interface/validation/email_validator.py
 - UI protocols: interface/interfaces.py
 """
+
 import argparse
 import copy
 import datetime
@@ -33,9 +34,9 @@ from tkinter.filedialog import askdirectory
 from tkinter.messagebox import askokcancel, askyesno, showerror, showinfo
 
 import appdirs
-import dataset # type: ignore
-import pyodbc # type: ignore
-import thefuzz.process # type: ignore
+import dataset  # type: ignore
+import pyodbc  # type: ignore
+import thefuzz.process  # type: ignore
 
 import backup_increment
 import batch_log_sender
@@ -54,6 +55,7 @@ import resend_interface
 from interface.database.database_obj import DatabaseObj as RefactoredDatabaseObj
 from interface.operations.folder_manager import FolderManager
 from interface.validation.email_validator import validate_email as validate_email_format
+from interface.ui.dialogs.edit_folders_dialog import EditFoldersDialog
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
@@ -278,18 +280,19 @@ if __name__ == "__main__":
 
     def add_folder(folder_path):
         """Adds a folder to the database, using the default settings from the template."""
-        SKIP_LIST = ["folder_name",
-                    "alias",
-                    "id",
-                    "logs_directory",
-                    "errors_folder",
-                    'enable_reporting',
-                    'report_printing_fallback',
-                    'single_add_folder_prior',
-                    'batch_add_folder_prior',
-                    'export_processed_folder_prior',
-                    'report_edi_errors',
-                    ]
+        SKIP_LIST = [
+            "folder_name",
+            "alias",
+            "id",
+            "logs_directory",
+            "errors_folder",
+            "enable_reporting",
+            "report_printing_fallback",
+            "single_add_folder_prior",
+            "batch_add_folder_prior",
+            "export_processed_folder_prior",
+            "report_edi_errors",
+        ]
         template = database_obj_instance.oversight_and_defaults.find_one(id=1)
         template_settings = {k: v for k, v in template.items() if k not in SKIP_LIST}
 
@@ -301,10 +304,7 @@ if __name__ == "__main__":
 
         template_settings["folder_name"] = folder_path
         template_settings["alias"] = folder_name
-        database_obj_instance.folders_table.insert(
-            {**template_settings}
-        )
-
+        database_obj_instance.folders_table.insert({**template_settings})
 
     def check_folder_exists(check_folder):
         folder_list = database_obj_instance.folders_table.all()
@@ -348,7 +348,7 @@ if __name__ == "__main__":
                 if askokcancel(
                     "Query:", "Folder already known, would you like to edit?"
                 ):
-                    EditDialog(root, proposed_folder_dict)
+                    EditFoldersDialog(root, proposed_folder_dict)
 
     def batch_add_folders():
         prior_folder = database_obj_instance.oversight_and_defaults.find_one(id=1)
@@ -366,11 +366,14 @@ if __name__ == "__main__":
                 message=f"This will add {len(folders_to_add)} directories, are you sure?"
             ):
                 return
-            doingstuffoverlay.make_overlay(parent=root, overlay_text="Adding folders...")
+            doingstuffoverlay.make_overlay(
+                parent=root, overlay_text="Adding folders..."
+            )
             added, skipped = 0, 0
             for folder in folders_to_add:
                 doingstuffoverlay.update_overlay(
-                    parent=root, overlay_text=f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})"
+                    parent=root,
+                    overlay_text=f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})",
                 )
                 if check_folder_exists(folder)["truefalse"]:
                     skipped += 1
@@ -387,7 +390,7 @@ if __name__ == "__main__":
         os.chdir(starting_directory)
 
     def validate_email(email):
-        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+        regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if re.fullmatch(regex, email):
             return True
         else:
@@ -400,7 +403,7 @@ if __name__ == "__main__":
         edit_folder = database_obj_instance.folders_table.find_one(
             id=[folder_to_be_edited]
         )
-        EditDialog(root, edit_folder)
+        EditFoldersDialog(root, edit_folder)
 
     def send_single(folder_id):
         doingstuffoverlay.make_overlay(root, "Working...")
@@ -628,9 +631,9 @@ if __name__ == "__main__":
                 tkinter.ttk.Button(
                     inactive_folder_button_frame,
                     text="Delete",
-                    command=lambda name=folders_name["id"], alias=folders_name[
-                        "alias"
-                    ]: delete_folder_entry_wrapper(name, alias),
+                    command=lambda name=folders_name["id"], alias=folders_name["alias"]: (
+                        delete_folder_entry_wrapper(name, alias)
+                    ),
                 ).grid(column=1, row=0, sticky=tkinter.E, padx=(0, 10))
                 tkinter.ttk.Button(
                     inactive_folder_button_frame,
@@ -1189,18 +1192,18 @@ if __name__ == "__main__":
             self.settings["email_password"] = str(self.email_password_field.get())
             self.settings["email_smtp_server"] = str(self.email_smtp_server_field.get())
             self.settings["smtp_port"] = str(self.smtp_port_field.get())
-            self.settings[
-                "enable_interval_backups"
-            ] = self.enable_interval_backup_variable.get()
+            self.settings["enable_interval_backups"] = (
+                self.enable_interval_backup_variable.get()
+            )
             self.settings["backup_counter_maximum"] = int(
                 self.interval_backup_spinbox.get()
             )
             folders_name_apply["report_email_destination"] = str(
                 self.report_email_destination_field.get()
             )
-            folders_name_apply[
-                "report_edi_errors"
-            ] = self.report_edi_validator_warnings_checkbutton_variable.get()
+            folders_name_apply["report_edi_errors"] = (
+                self.report_edi_validator_warnings_checkbutton_variable.get()
+            )
             if not self.enable_email_checkbutton_variable.get():
                 for (
                     email_backend_to_disable
@@ -1396,7 +1399,7 @@ if __name__ == "__main__":
                     self.estore_vendor_namevendoroid_label,
                     self.estore_vendor_namevendoroid_field,
                     self.fintech_divisionid_field,
-                    self.fintech_divisionid_label
+                    self.fintech_divisionid_label,
                 ]:
                     frameentry.grid_forget()
                 if self.convert_formats_var.get() == "csv":
@@ -1518,7 +1521,7 @@ if __name__ == "__main__":
                     self.estore_c_record_oid_field.grid(
                         row=5, column=1, sticky=tkinter.E, padx=3
                     )
-                if self.convert_formats_var.get() == 'fintech':
+                if self.convert_formats_var.get() == "fintech":
                     self.fintech_divisionid_label.grid(
                         row=2, column=0, sticky=tkinter.W, padx=3
                     )
@@ -1578,9 +1581,15 @@ if __name__ == "__main__":
                 ):
                     category_filter_state = tkinter.DISABLED
                     self.split_edi_checkbutton.configure(state=tkinter.DISABLED)
-                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.DISABLED)
-                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.DISABLED)
-                    self.prepend_file_dates_checkbutton.configure(state=tkinter.DISABLED)
+                    self.split_edi_send_invoices_checkbutton.configure(
+                        state=tkinter.DISABLED
+                    )
+                    self.split_edi_send_credits_checkbutton.configure(
+                        state=tkinter.DISABLED
+                    )
+                    self.prepend_file_dates_checkbutton.configure(
+                        state=tkinter.DISABLED
+                    )
                     self.rename_file_field.configure(state=tkinter.DISABLED)
                     self.edi_options_menu.configure(state=tkinter.DISABLED)
                     for child in self.convert_options_frame.winfo_children():
@@ -1595,8 +1604,12 @@ if __name__ == "__main__":
                             pass
                 else:
                     self.split_edi_checkbutton.configure(state=tkinter.NORMAL)
-                    self.split_edi_send_invoices_checkbutton.configure(state=tkinter.NORMAL)
-                    self.split_edi_send_credits_checkbutton.configure(state=tkinter.NORMAL)
+                    self.split_edi_send_invoices_checkbutton.configure(
+                        state=tkinter.NORMAL
+                    )
+                    self.split_edi_send_credits_checkbutton.configure(
+                        state=tkinter.NORMAL
+                    )
                     self.prepend_file_dates_checkbutton.configure(state=tkinter.NORMAL)
                     self.rename_file_field.configure(state=tkinter.NORMAL)
                     self.edi_options_menu.configure(state=tkinter.NORMAL)
@@ -1716,13 +1729,17 @@ if __name__ == "__main__":
                 command=lambda: select_copy_to_directory(),
             )
             self.ftp_server_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(self.ftp_server_field)
+            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(
+                self.ftp_server_field
+            )
             self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
             self.ftp_port_field = tkinter.ttk.Entry(self.prefsframe, width=30)
             rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
             self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
             self.ftp_folder_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(self.ftp_folder_field)
+            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(
+                self.ftp_folder_field
+            )
             self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
             self.ftp_username_field = tkinter.ttk.Entry(self.prefsframe, width=30)
             rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
@@ -1804,7 +1821,7 @@ if __name__ == "__main__":
             )
             self.split_edi_filter_categories_tooltip = tk_extra_widgets.CreateToolTip(
                 self.split_edi_filter_categories_entry,
-                "Enter 'ALL' or a comma separated list of category numbers (e.g., 1,5,12)"
+                "Enter 'ALL' or a comma separated list of category numbers (e.g., 1,5,12)",
             )
             self.split_edi_filter_mode_label = tkinter.ttk.Label(
                 self.category_filter_frame, text="Mode:"
@@ -1866,10 +1883,7 @@ if __name__ == "__main__":
                 offvalue=False,
             )
 
-            self.rename_file_field = tkinter.ttk.Entry(
-                self.split_edi_frame, width=10
-            )
-
+            self.rename_file_field = tkinter.ttk.Entry(self.split_edi_frame, width=10)
 
             self.a_record_padding_frame = tkinter.ttk.Frame(self.convert_options_frame)
 
@@ -1940,17 +1954,18 @@ if __name__ == "__main__":
                 text="Override UPC",
             )
             self.override_upc_level_optionmenu = tkinter.ttk.OptionMenu(
-                self.convert_options_frame, 
+                self.convert_options_frame,
                 self.override_upc_level,
                 self.override_upc_level.get(),
-                *range(1, 5)
+                *range(1, 5),
             )
             self.override_upc_category_filter_entry = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
             self.override_upc_category_filter_tooltip = tk_extra_widgets.CreateToolTip(
                 self.override_upc_category_filter_entry,
-                "Enter 'ALL' or a comma separated list of numbers")
+                "Enter 'ALL' or a comma separated list of numbers",
+            )
 
             self.upc_target_length_label = tkinter.ttk.Label(
                 self.convert_options_frame, text="UPC Target Length:"
@@ -2062,8 +2077,12 @@ if __name__ == "__main__":
                 self.pad_arec_check.set(config_dict["pad_a_records"])
                 self.tweak_edi.set(config_dict["tweak_edi"])
                 self.split_edi.set(config_dict["split_edi"])
-                self.split_edi_send_credits.set(config_dict["split_edi_include_credits"])
-                self.split_edi_send_invoices.set(config_dict["split_edi_include_invoices"])
+                self.split_edi_send_credits.set(
+                    config_dict["split_edi_include_credits"]
+                )
+                self.split_edi_send_invoices.set(
+                    config_dict["split_edi_include_invoices"]
+                )
                 self.prepend_file_dates.set(config_dict["prepend_date_files"])
                 self.split_edi_filter_categories_entry.delete(0, tkinter.END)
                 self.split_edi_filter_categories_entry.insert(
@@ -2092,8 +2111,8 @@ if __name__ == "__main__":
                     0, config_dict["invoice_date_custom_format_string"]
                 )
                 self.edi_each_uom_tweak.set(config_dict["retail_uom"])
-                self.override_upc_bool.set(config_dict["override_upc_bool"]),
-                self.override_upc_level.set(config_dict["override_upc_level"]),
+                (self.override_upc_bool.set(config_dict["override_upc_bool"]),)
+                (self.override_upc_level.set(config_dict["override_upc_level"]),)
                 self.override_upc_category_filter_entry.delete(0, tkinter.END)
                 self.override_upc_category_filter_entry.insert(
                     0, config_dict["override_upc_category_filter"]
@@ -2154,8 +2173,7 @@ if __name__ == "__main__":
                     child.grid_forget()
                 make_ediconvert_options(argument)
 
-            self.split_edi_frame.grid(
-                row=2, column=0, columnspan=2, sticky=tkinter.W)
+            self.split_edi_frame.grid(row=2, column=0, columnspan=2, sticky=tkinter.W)
             self.split_edi_checkbutton.grid(
                 row=0, column=0, columnspan=2, sticky=tkinter.W
             )
@@ -2171,12 +2189,8 @@ if __name__ == "__main__":
             self.split_edi_rename_file_label = tkinter.ttk.Label(
                 self.split_edi_frame, text="Rename File:"
             )
-            self.split_edi_rename_file_label.grid(
-                row=4, column=0, sticky=tkinter.W
-            )
-            self.rename_file_field.grid(
-                row=4, column=1, sticky=tkinter.W
-            )
+            self.split_edi_rename_file_label.grid(row=4, column=0, sticky=tkinter.W)
+            self.rename_file_field.grid(row=4, column=1, sticky=tkinter.W)
             # Category filter frame (independent of splitting)
             self.category_filter_frame.grid(
                 row=3, column=0, columnspan=2, sticky=tkinter.W, pady=(5, 0)
@@ -2187,9 +2201,7 @@ if __name__ == "__main__":
             self.split_edi_filter_categories_entry.grid(
                 row=0, column=1, sticky=tkinter.W
             )
-            self.split_edi_filter_mode_label.grid(
-                row=1, column=0, sticky=tkinter.W
-            )
+            self.split_edi_filter_mode_label.grid(row=1, column=0, sticky=tkinter.W)
             self.split_edi_filter_mode_optionmenu.grid(
                 row=1, column=1, sticky=tkinter.W
             )
@@ -2394,15 +2406,15 @@ if __name__ == "__main__":
                 else:
                     apply_to_folder["alias"] = str(self.folder_alias_field.get())
             apply_to_folder["copy_to_directory"] = copy_to_directory
-            apply_to_folder[
-                "process_backend_copy"
-            ] = self.process_backend_copy_check.get()
-            apply_to_folder[
-                "process_backend_ftp"
-            ] = self.process_backend_ftp_check.get()
-            apply_to_folder[
-                "process_backend_email"
-            ] = self.process_backend_email_check.get()
+            apply_to_folder["process_backend_copy"] = (
+                self.process_backend_copy_check.get()
+            )
+            apply_to_folder["process_backend_ftp"] = (
+                self.process_backend_ftp_check.get()
+            )
+            apply_to_folder["process_backend_email"] = (
+                self.process_backend_email_check.get()
+            )
             apply_to_folder["ftp_server"] = str(self.ftp_server_field.get())
             apply_to_folder["ftp_port"] = int(self.ftp_port_field.get())
             apply_to_folder["ftp_folder"] = str(self.ftp_folder_field.get())
@@ -2422,10 +2434,16 @@ if __name__ == "__main__":
             apply_to_folder["force_edi_validation"] = self.force_edi_check_var.get()
             apply_to_folder["tweak_edi"] = self.tweak_edi.get()
             apply_to_folder["split_edi"] = self.split_edi.get()
-            apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
-            apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
+            apply_to_folder["split_edi_include_invoices"] = (
+                self.split_edi_send_invoices.get()
+            )
+            apply_to_folder["split_edi_include_credits"] = (
+                self.split_edi_send_credits.get()
+            )
             apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
-            apply_to_folder["split_edi_filter_categories"] = self.split_edi_filter_categories_entry.get()
+            apply_to_folder["split_edi_filter_categories"] = (
+                self.split_edi_filter_categories_entry.get()
+            )
             apply_to_folder["split_edi_filter_mode"] = self.split_edi_filter_mode.get()
             apply_to_folder["rename_file"] = self.rename_file_field.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
@@ -2444,33 +2462,39 @@ if __name__ == "__main__":
             apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
             apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
             apply_to_folder["override_upc_level"] = self.override_upc_level.get()
-            apply_to_folder["override_upc_category_filter"] = self.override_upc_category_filter_entry.get()
-            apply_to_folder["upc_target_length"] = int(self.upc_target_length_entry.get())
-            apply_to_folder["upc_padding_pattern"] = self.upc_padding_pattern_entry.get()
+            apply_to_folder["override_upc_category_filter"] = (
+                self.override_upc_category_filter_entry.get()
+            )
+            apply_to_folder["upc_target_length"] = int(
+                self.upc_target_length_entry.get()
+            )
+            apply_to_folder["upc_padding_pattern"] = (
+                self.upc_padding_pattern_entry.get()
+            )
             apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
-            apply_to_folder[
-                "include_item_description"
-            ] = self.include_item_description.get()
-            apply_to_folder[
-                "simple_csv_sort_order"
-            ] = self.simple_csv_column_sorter.get()
-            apply_to_folder[
-                "invoice_date_custom_format"
-            ] = self.invoice_date_custom_format.get()
-            apply_to_folder[
-                "invoice_date_custom_format_string"
-            ] = self.invoice_date_custom_format_field.get()
-            apply_to_folder[
-                "split_prepaid_sales_tax_crec"
-            ] = self.split_sales_tax_prepaid_var.get()
-            apply_to_folder[
-                "estore_store_number"
-            ] = self.estore_store_number_field.get()
+            apply_to_folder["include_item_description"] = (
+                self.include_item_description.get()
+            )
+            apply_to_folder["simple_csv_sort_order"] = (
+                self.simple_csv_column_sorter.get()
+            )
+            apply_to_folder["invoice_date_custom_format"] = (
+                self.invoice_date_custom_format.get()
+            )
+            apply_to_folder["invoice_date_custom_format_string"] = (
+                self.invoice_date_custom_format_field.get()
+            )
+            apply_to_folder["split_prepaid_sales_tax_crec"] = (
+                self.split_sales_tax_prepaid_var.get()
+            )
+            apply_to_folder["estore_store_number"] = (
+                self.estore_store_number_field.get()
+            )
             apply_to_folder["estore_Vendor_OId"] = self.estore_Vendor_OId_field.get()
-            apply_to_folder[
-                "estore_vendor_NameVendorOID"
-            ] = self.estore_vendor_namevendoroid_field.get()
-            apply_to_folder['fintech_division_id'] = self.fintech_divisionid_field.get()
+            apply_to_folder["estore_vendor_NameVendorOID"] = (
+                self.estore_vendor_namevendoroid_field.get()
+            )
+            apply_to_folder["fintech_division_id"] = self.fintech_divisionid_field.get()
 
             if self.foldersnameinput["folder_name"] != "template":
                 update_folder_alias(apply_to_folder)
@@ -2601,8 +2625,7 @@ if __name__ == "__main__":
 
                 if copy_to_directory is None or copy_to_directory == "":
                     error_string_constructor_list.append(
-                        "Copy Backend Destination Is currently Unset,"
-                        " Please Select One"
+                        "Copy Backend Destination Is currently Unset, Please Select One"
                     )
                     errors = True
 
@@ -2647,10 +2670,7 @@ if __name__ == "__main__":
                 )
                 errors = True
 
-            if (
-                self.prepend_file_dates.get() is True
-                and self.split_edi.get() is False
-            ):
+            if self.prepend_file_dates.get() is True and self.split_edi.get() is False:
                 error_string_constructor_list.append(
                     "Edi needs to be split for prepending dates"
                 )
@@ -2671,7 +2691,9 @@ if __name__ == "__main__":
                         "Override UPC Category Filter Is Required"
                     )
                     errors = True
-                for category in self.override_upc_category_filter_entry.get().split(","):
+                for category in self.override_upc_category_filter_entry.get().split(
+                    ","
+                ):
                     try:
                         int(category)
                         if int(category) not in list(range(1, 100)):
@@ -2780,7 +2802,70 @@ if __name__ == "__main__":
 
     def set_defaults_popup():
         defaults = database_obj_instance.oversight_and_defaults.find_one(id=1)
-        EditDialog(root, defaults)
+        if defaults is None:
+            defaults = {}
+        defaults.setdefault("copy_to_directory", "")
+        defaults.setdefault(
+            "logs_directory",
+            os.path.join(os.path.expanduser("~"), "BatchFileSenderLogs"),
+        )
+        defaults.setdefault("enable_reporting", False)
+        defaults.setdefault("report_email_destination", "")
+        defaults.setdefault("report_edi_errors", False)
+        defaults.setdefault("folder_name", "template")
+        defaults.setdefault("folder_is_active", "True")
+        defaults.setdefault("alias", "")
+        defaults.setdefault("process_backend_copy", False)
+        defaults.setdefault("process_backend_ftp", False)
+        defaults.setdefault("process_backend_email", False)
+        defaults.setdefault("ftp_server", "")
+        defaults.setdefault("ftp_port", 21)
+        defaults.setdefault("ftp_folder", "")
+        defaults.setdefault("ftp_username", "")
+        defaults.setdefault("ftp_password", "")
+        defaults.setdefault("email_to", "")
+        defaults.setdefault("email_subject_line", "")
+        defaults.setdefault("process_edi", "False")
+        defaults.setdefault("convert_to_format", "csv")
+        defaults.setdefault("calculate_upc_check_digit", "False")
+        defaults.setdefault("include_a_records", "False")
+        defaults.setdefault("include_c_records", "False")
+        defaults.setdefault("include_headers", "False")
+        defaults.setdefault("filter_ampersand", "False")
+        defaults.setdefault("tweak_edi", False)
+        defaults.setdefault("split_edi", False)
+        defaults.setdefault("split_edi_include_invoices", False)
+        defaults.setdefault("split_edi_include_credits", False)
+        defaults.setdefault("prepend_date_files", False)
+        defaults.setdefault("split_edi_filter_categories", "ALL")
+        defaults.setdefault("split_edi_filter_mode", "include")
+        defaults.setdefault("rename_file", "")
+        defaults.setdefault("pad_a_records", "False")
+        defaults.setdefault("a_record_padding", "")
+        defaults.setdefault("a_record_padding_length", 6)
+        defaults.setdefault("append_a_records", "False")
+        defaults.setdefault("a_record_append_text", "")
+        defaults.setdefault("force_txt_file_ext", "False")
+        defaults.setdefault("invoice_date_offset", 0)
+        defaults.setdefault("invoice_date_custom_format", False)
+        defaults.setdefault("invoice_date_custom_format_string", "%Y%m%d")
+        defaults.setdefault("retail_uom", False)
+        defaults.setdefault("force_edi_validation", False)
+        defaults.setdefault("override_upc_bool", False)
+        defaults.setdefault("override_upc_level", 1)
+        defaults.setdefault("override_upc_category_filter", "")
+        defaults.setdefault("upc_target_length", 11)
+        defaults.setdefault("upc_padding_pattern", "           ")
+        defaults.setdefault("include_item_numbers", False)
+        defaults.setdefault("include_item_description", False)
+        defaults.setdefault("simple_csv_sort_order", "")
+        defaults.setdefault("split_prepaid_sales_tax_crec", False)
+        defaults.setdefault("estore_store_number", "")
+        defaults.setdefault("estore_Vendor_OId", "")
+        defaults.setdefault("estore_vendor_NameVendorOID", "")
+        defaults.setdefault("estore_c_record_OID", "")
+        defaults.setdefault("fintech_division_id", "")
+        EditFoldersDialog(root, defaults)
 
     def process_directories(folders_table_process):
         original_folder = os.getcwd()
@@ -2926,7 +3011,9 @@ if __name__ == "__main__":
                             send_log_file["log"] = str(
                                 os.path.abspath(log["log"]) + ".zip"
                             )
-                            with zipfile.ZipFile(send_log_file["log"], "w") as zip_outfile:
+                            with zipfile.ZipFile(
+                                send_log_file["log"], "w"
+                            ) as zip_outfile:
                                 zip_outfile.write(
                                     os.path.abspath(log["log"]),
                                     os.path.basename(log["log"]),
@@ -3151,9 +3238,7 @@ if __name__ == "__main__":
         folder_total = len(database_obj_instance.folders_table_list)
         if selected_folder is None:
             doingstuffoverlay.make_overlay(master, "adding files to processed list...")
-        for (
-            parameters_dict
-        ) in (
+        for parameters_dict in (
             database_obj_instance.folders_table_list
         ):  # create list of active directories
             file_total = 0
@@ -3342,7 +3427,7 @@ if __name__ == "__main__":
             maintenance_popup_button_frame = tkinter.ttk.Frame(maintenance_popup)
             # a persistent warning that this dialog can break things...
             maintenance_popup_warning_label = tkinter.ttk.Label(
-                maintenance_popup, text="WARNING:\nFOR\nADVANCED" "\nUSERS\nONLY!"
+                maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!"
             )
             set_all_active_button = tkinter.ttk.Button(
                 maintenance_popup_button_frame,
@@ -3424,7 +3509,9 @@ if __name__ == "__main__":
                 print(f"{file_name + file_extension} exists")
                 i = 1
                 while True:
-                    potential_file_path = file_name + " (" + str(i) + ")" + file_extension
+                    potential_file_path = (
+                        file_name + " (" + str(i) + ")" + file_extension
+                    )
                     print(f"Checking if {potential_file_path} exists")
                     if not os.path.exists(potential_file_path):
                         print(f"{potential_file_path} does not exist")
@@ -3432,7 +3519,9 @@ if __name__ == "__main__":
                     i += 1
                     print(f"{potential_file_path} exists")
 
-        folder_alias = database_obj_instance.folders_table.find_one(id=folder_id)['alias']
+        folder_alias = database_obj_instance.folders_table.find_one(id=folder_id)[
+            "alias"
+        ]
 
         export_file_path = avoid_duplicate_export_file(
             os.path.join(output_folder, folder_alias + " processed report"), ".csv"
@@ -3451,7 +3540,9 @@ if __name__ == "__main__":
                     f"{line['email_destination']}"
                     "\n"
                 )
-            print(f"Wrote {len(list(database_obj_instance.processed_files.find(folder_id=folder_id)))} lines to {export_file_path}")
+            print(
+                f"Wrote {len(list(database_obj_instance.processed_files.find(folder_id=folder_id)))} lines to {export_file_path}"
+            )
 
     def processed_files_popup():
         def close_processed_files_popup(_=None):

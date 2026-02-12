@@ -1,49 +1,40 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
+//
+// This devcontainer is configured for Docker-in-Docker (DinD).
+// Docker is installed inside the container, allowing you to run containers
+// from within the devcontainer.
 {
-	"name": "batch_file_processor",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	// "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
-	"build": {
-        // Path is relative to the devcontainer.json file.
+    "name": "batch_file_processor",
+    "build": {
         "dockerfile": "Dockerfile"
     },
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {"ghcr.io/devcontainers/features/conda": {}},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// Use 'postStartCommand' to run commands every time the container starts.
-	// "postStartCommand": "sudo chown -R vscode:vscode /home/vscode",
-	
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root",
-	"initializeCommand": "xhost + || true",
-	"runArgs": [
-		"-e", "DISPLAY=:0"
-		],
-	"remoteUser": "vscode",
-	//   "containerUser": "vscode",
-	  "updateRemoteUserUID": true,
-	  "containerEnv": {
-		"HOME": "/home/vscode"
-	},
-	"mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+    "initializeCommand": "xhost + || true",
+    "runArgs": [
+        "-e", "DISPLAY=:99",
+        "-p", "6080:6080",
+        "--privileged"
+    ],
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
+    "containerEnv": {
+        "HOME": "/home/vscode"
+    },
+    "postCreateCommand": "unset WAYLAND_DISPLAY && Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 & sleep 2 && openbox-session > /tmp/openbox.log 2>&1 & sleep 2 && x11vnc -display :99 -forever -shared -rfbport 5900 -nopw > /tmp/x11vnc.log 2>&1 & sleep 1 && websockify --web /tmp/novnc 0.0.0.0:6080 localhost:5900 > /tmp/websockify.log 2>&1 &",
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
         "source=batch-file-processor-home,target=/home/vscode,type=volume"
-      ],
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.python",
-				"ms-azuretools.vscode-docker"
-			]
-		}
-	}
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-azuretools.vscode-docker"
+            ]
+        }
+    }
 }

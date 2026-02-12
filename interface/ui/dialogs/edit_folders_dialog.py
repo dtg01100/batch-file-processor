@@ -118,9 +118,8 @@ class EditFoldersDialog(Dialog):
         """
         Create dialog body with all widgets.
 
-        This method maintains the original UI creation logic but:
-        1. Stores widget references for extraction
-        2. Keeps validation/data extraction delegated to injected classes
+        This replicates the exact widget layout from the original
+        EditDialog.body() in main_interface.py.
         """
         # Store widget references for extractor
         self._field_refs: Dict[str, Any] = {}
@@ -130,7 +129,6 @@ class EditFoldersDialog(Dialog):
         if self._settings_provider:
             settings = self._settings_provider()
         else:
-            # Fallback to original database access (only if no provider)
             try:
                 import database_import
                 settings = database_import.database_obj_instance.settings.find_one(id=1)
@@ -140,12 +138,27 @@ class EditFoldersDialog(Dialog):
         self.settings = settings
         self.resizable(width=tk.FALSE, height=tk.FALSE)
 
-        # Copy to directory (will be handled by extractor)
         global copy_to_directory
-        copy_to_directory = self._field_refs.get("copy_to_directory", {}).get("value")
+        copy_to_directory = self.foldersnameinput.get("copy_to_directory", "")
 
-        # Initialize StringVar/BooleanVar
         self.convert_formats_var = tk.StringVar(master)
+        self.title("Folder Settings")
+
+        # --- Frames ---
+        self.bodyframe = ttk.Frame(master)
+        self.othersframe = ttk.Frame(self.bodyframe)
+        self.folderframe = ttk.Frame(self.bodyframe)
+        self.prefsframe = ttk.Frame(self.bodyframe)
+        self.ediframe = ttk.Frame(self.bodyframe)
+        self.convert_options_frame = ttk.Frame(self.ediframe)
+
+        # --- Separators ---
+        self.separatorv0 = ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
+        self.separatorv1 = ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
+        self.separatorv2 = ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
+
+        # --- Variables ---
+        self.backendvariable = tk.StringVar(master)
         self.active_checkbutton = tk.StringVar(master)
         self.split_edi = tk.BooleanVar(master)
         self.split_edi_send_credits = tk.BooleanVar(master)
@@ -169,7 +182,9 @@ class EditFoldersDialog(Dialog):
         self.process_backend_ftp_check = tk.BooleanVar(master)
         self.process_backend_email_check = tk.BooleanVar(master)
         self.force_edi_check_var = tk.BooleanVar(master)
+        self.header_frame_frame = ttk.Frame(master)
         self.invoice_date_offset = tk.IntVar(master)
+        self.invoice_date_custom_format_string = tk.StringVar(master)
         self.invoice_date_custom_format = tk.BooleanVar(master)
         self.edi_each_uom_tweak = tk.BooleanVar(master)
         self.include_item_numbers = tk.BooleanVar(master)
@@ -181,18 +196,1214 @@ class EditFoldersDialog(Dialog):
         self.upc_target_length = tk.IntVar(master)
         self.upc_padding_pattern = tk.StringVar(master)
 
-        # Store variable references for extractor
+        # --- Others listbox ---
+        self.otherslistboxframe = ttk.Frame(master=self.othersframe)
+        self.otherslistbox = tk.Listbox(master=self.otherslistboxframe)
+        self.otherslistboxscrollbar = ttk.Scrollbar(
+            master=self.otherslistboxframe, orient=tk.VERTICAL
+        )
+        self.otherslistboxscrollbar.config(command=self.otherslistbox.yview)
+        self.otherslistbox.config(yscrollcommand=self.otherslistboxscrollbar.set)
+        self.copyconfigbutton = ttk.Button(
+            master=self.othersframe, text="Copy Config"
+        )
+
+        # --- Folder frame labels ---
+        ttk.Label(self.folderframe, text="Backends:").grid(
+            row=2, sticky=tk.W
+        )
+
+        # --- Prefs frame labels and separators ---
+        ttk.Label(self.prefsframe, text="Copy Backend Settings:").grid(
+            row=3, columnspan=2, pady=3
+        )
+        ttk.Separator(self.prefsframe, orient=tk.HORIZONTAL).grid(
+            row=5, columnspan=2, sticky=tk.E + tk.W, pady=2
+        )
+        ttk.Label(self.prefsframe, text="Ftp Backend Settings:").grid(
+            row=6, columnspan=2, pady=3
+        )
+        ttk.Label(self.prefsframe, text="FTP Server:").grid(
+            row=7, sticky=tk.E
+        )
+        ttk.Label(self.prefsframe, text="FTP Port:").grid(
+            row=8, sticky=tk.E
+        )
+        ttk.Label(self.prefsframe, text="FTP Folder:").grid(
+            row=9, sticky=tk.E
+        )
+        ttk.Label(self.prefsframe, text="FTP Username:").grid(
+            row=10, sticky=tk.E
+        )
+        ttk.Label(self.prefsframe, text="FTP Password:").grid(
+            row=11, sticky=tk.E
+        )
+        ttk.Separator(self.prefsframe, orient=tk.HORIZONTAL).grid(
+            row=12, columnspan=2, sticky=tk.E + tk.W, pady=2
+        )
+        ttk.Label(self.prefsframe, text="Email Backend Settings:").grid(
+            row=13, columnspan=2, pady=3
+        )
+        ttk.Label(self.prefsframe, text="Recipient Address:").grid(
+            row=14, sticky=tk.E
+        )
+        ttk.Label(self.prefsframe, text="Email Subject:").grid(
+            row=18, sticky=tk.E
+        )
+
+        # --- EDI frame labels ---
+        ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
+            row=0, column=0, columnspan=2, pady=3
+        )
+        ttk.Separator(self.ediframe, orient=tk.HORIZONTAL).grid(
+            row=6, columnspan=2, sticky=tk.E + tk.W, pady=1
+        )
+        self.convert_options_frame.grid(
+            column=0, row=7, columnspan=2, sticky=tk.W
+        )
+
+        # --- Convert to selector ---
+        self.convert_to_selector_frame = ttk.Frame(
+            self.convert_options_frame
+        )
+        self.convert_to_selector_label = ttk.Label(
+            self.convert_to_selector_frame, text="Convert To: "
+        )
+
+        # --- make_convert_to_options callback ---
+        def make_convert_to_options(_=None):
+            for frameentry in [
+                self.upc_variable_process_checkbutton,
+                self.a_record_checkbutton,
+                self.c_record_checkbutton,
+                self.headers_checkbutton,
+                self.ampersand_checkbutton,
+                self.pad_a_records_checkbutton,
+                self.a_record_padding_frame,
+                self.a_record_padding_field,
+                self.pad_a_records_length_optionmenu,
+                self.append_a_records_checkbutton,
+                self.a_record_append_field,
+                self.override_upc_checkbutton,
+                self.override_upc_level_optionmenu,
+                self.override_upc_category_filter_entry,
+                self.upc_target_length_label,
+                self.upc_target_length_entry,
+                self.upc_padding_pattern_label,
+                self.upc_padding_pattern_entry,
+                self.each_uom_edi_tweak_checkbutton,
+                self.include_item_numbers_checkbutton,
+                self.include_item_description_checkbutton,
+                self.simple_csv_column_sorter.containerframe,
+                self.a_record_padding_field,
+                self.estore_store_number_label,
+                self.estore_store_number_field,
+                self.estore_Vendor_OId_label,
+                self.estore_Vendor_OId_field,
+                self.estore_vendor_namevendoroid_label,
+                self.estore_vendor_namevendoroid_field,
+                self.fintech_divisionid_field,
+                self.fintech_divisionid_label,
+            ]:
+                frameentry.grid_forget()
+            if self.convert_formats_var.get() == "csv":
+                self.upc_variable_process_checkbutton.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.a_record_checkbutton.grid(
+                    row=4, column=0, sticky=tk.W, padx=3
+                )
+                self.c_record_checkbutton.grid(
+                    row=5, column=0, sticky=tk.W, padx=3
+                )
+                self.headers_checkbutton.grid(
+                    row=6, column=0, sticky=tk.W, padx=3
+                )
+                self.ampersand_checkbutton.grid(
+                    row=7, column=0, sticky=tk.W, padx=3
+                )
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tk.W
+                )
+                self.a_record_padding_frame.grid(
+                    row=9, column=0, columnspan=2, sticky=tk.W, padx=3
+                )
+                self.a_record_padding_field.grid(row=9, column=1, sticky=tk.W)
+                self.override_upc_checkbutton.grid(
+                    row=10, column=0, sticky=tk.W, padx=3
+                )
+                self.override_upc_level_optionmenu.grid(
+                    row=10, column=1, sticky=tk.W
+                )
+                self.override_upc_category_filter_entry.grid(
+                    row=10, column=2, sticky=tk.W
+                )
+                self.upc_target_length_label.grid(
+                    row=11, column=0, sticky=tk.W, padx=3
+                )
+                self.upc_target_length_entry.grid(
+                    row=11, column=1, sticky=tk.W
+                )
+                self.upc_padding_pattern_label.grid(
+                    row=12, column=0, sticky=tk.W, padx=3
+                )
+                self.upc_padding_pattern_entry.grid(
+                    row=12, column=1, sticky=tk.W
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=13, column=0, sticky=tk.W, padx=3
+                )
+            if self.convert_formats_var.get() == "ScannerWare":
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tk.W
+                )
+                self.a_record_padding_field.grid(row=2, column=2)
+                self.a_record_padding_frame.grid(
+                    row=2, column=0, columnspan=2, sticky=tk.W, padx=3
+                )
+                self.append_a_records_checkbutton.grid(
+                    row=3, column=0, sticky=tk.W, padx=3
+                )
+                self.a_record_append_field.grid(row=3, column=2)
+            if self.convert_formats_var.get() == "simplified_csv":
+                self.headers_checkbutton.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.include_item_numbers_checkbutton.grid(
+                    row=3, column=0, sticky=tk.W, padx=3
+                )
+                self.include_item_description_checkbutton.grid(
+                    row=4, column=0, sticky=tk.W, padx=3
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=5, column=0, sticky=tk.W, padx=3
+                )
+                self.simple_csv_column_sorter.containerframe.grid(
+                    row=6, column=0, sticky=tk.W, padx=3, columnspan=2
+                )
+            if self.convert_formats_var.get() == "Estore eInvoice":
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tk.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tk.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tk.E, padx=3
+                )
+            if self.convert_formats_var.get() == "Estore eInvoice Generic":
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tk.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tk.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tk.E, padx=3
+                )
+                self.estore_c_record_oid_label.grid(
+                    row=5, column=0, sticky=tk.W, padx=3
+                )
+                self.estore_c_record_oid_field.grid(
+                    row=5, column=1, sticky=tk.E, padx=3
+                )
+            if self.convert_formats_var.get() == "fintech":
+                self.fintech_divisionid_label.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.fintech_divisionid_field.grid(
+                    row=2, column=1, sticky=tk.E, padx=3
+                )
+
+        # --- Convert to selector menu ---
+        self.convert_to_selector_menu = ttk.OptionMenu(
+            self.convert_to_selector_frame,
+            self.convert_formats_var,
+            self.foldersnameinput.get("convert_to_format", "csv"),
+            "csv",
+            "ScannerWare",
+            "scansheet-type-a",
+            "jolley_custom",
+            "stewarts_custom",
+            "simplified_csv",
+            "Estore eInvoice",
+            "Estore eInvoice Generic",
+            "YellowDog CSV",
+            "fintech",
+            command=make_convert_to_options,
+        )
+
+        # --- show_folder_path callback ---
+        def show_folder_path():
+            from tkinter.messagebox import showinfo
+            showinfo(
+                parent=master,
+                title="Folder Path",
+                message=self.foldersnameinput.get("folder_name", ""),
+            )
+
+        # --- select_copy_to_directory callback ---
+        def select_copy_to_directory():
+            global copy_to_directory
+            try:
+                if os.path.exists(copy_to_directory):
+                    initial_directory = copy_to_directory
+                else:
+                    initial_directory = os.getcwd()
+            except Exception:
+                initial_directory = os.getcwd()
+            from tkinter.filedialog import askdirectory
+            proposed_copy_to_directory = str(
+                askdirectory(parent=self.prefsframe, initialdir=initial_directory)
+            )
+            if os.path.isdir(proposed_copy_to_directory):
+                copy_to_directory = proposed_copy_to_directory
+
+        # --- set_send_options_fields_state callback ---
+        def set_send_options_fields_state():
+            if not self.settings.get("enable_email", False):
+                self.email_backend_checkbutton.configure(state=tk.DISABLED)
+            category_filter_state = tk.NORMAL
+            if (
+                self.process_backend_copy_check.get() is False
+                and self.process_backend_ftp_check.get() is False
+                and self.process_backend_email_check.get() is False
+            ):
+                category_filter_state = tk.DISABLED
+                self.split_edi_checkbutton.configure(state=tk.DISABLED)
+                self.split_edi_send_invoices_checkbutton.configure(
+                    state=tk.DISABLED
+                )
+                self.split_edi_send_credits_checkbutton.configure(
+                    state=tk.DISABLED
+                )
+                self.prepend_file_dates_checkbutton.configure(
+                    state=tk.DISABLED
+                )
+                self.rename_file_field.configure(state=tk.DISABLED)
+                self.edi_options_menu.configure(state=tk.DISABLED)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=tk.DISABLED)
+                    except tk.TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=tk.DISABLED)
+                    except tk.TclError:
+                        pass
+            else:
+                self.split_edi_checkbutton.configure(state=tk.NORMAL)
+                self.split_edi_send_invoices_checkbutton.configure(
+                    state=tk.NORMAL
+                )
+                self.split_edi_send_credits_checkbutton.configure(
+                    state=tk.NORMAL
+                )
+                self.prepend_file_dates_checkbutton.configure(state=tk.NORMAL)
+                self.rename_file_field.configure(state=tk.NORMAL)
+                self.edi_options_menu.configure(state=tk.NORMAL)
+                for child in self.convert_options_frame.winfo_children():
+                    try:
+                        child.configure(state=tk.NORMAL)
+                    except tk.TclError:
+                        pass
+                for child in self.convert_to_selector_frame.winfo_children():
+                    try:
+                        child.configure(state=tk.NORMAL)
+                    except tk.TclError:
+                        pass
+            for child in self.category_filter_frame.winfo_children():
+                try:
+                    child.configure(state=category_filter_state)
+                except tk.TclError:
+                    pass
+            if self.process_backend_copy_check.get() is False:
+                copy_state = tk.DISABLED
+            else:
+                copy_state = tk.NORMAL
+            if (
+                self.process_backend_email_check.get() is False
+                or self.settings.get("enable_email", False) is False
+            ):
+                email_state = tk.DISABLED
+            else:
+                email_state = tk.NORMAL
+            if self.process_backend_ftp_check.get() is False:
+                ftp_state = tk.DISABLED
+            else:
+                ftp_state = tk.NORMAL
+            self.copy_backend_folder_selection_button.configure(state=copy_state)
+            self.email_recepient_field.configure(state=email_state)
+            self.email_sender_subject_field.configure(state=email_state)
+            self.ftp_server_field.configure(state=ftp_state)
+            self.ftp_port_field.configure(state=ftp_state)
+            self.ftp_folder_field.configure(state=ftp_state)
+            self.ftp_username_field.configure(state=ftp_state)
+            self.ftp_password_field.configure(state=ftp_state)
+
+        # --- set_header_state callback ---
+        def set_header_state():
+            if self.active_checkbutton.get() == "False":
+                self.active_checkbutton_object.configure(
+                    text="Folder Is Disabled", activebackground="green"
+                )
+                self.copy_backend_checkbutton.configure(state=tk.DISABLED)
+                self.ftp_backend_checkbutton.configure(state=tk.DISABLED)
+                self.email_backend_checkbutton.configure(state=tk.DISABLED)
+            else:
+                self.active_checkbutton_object.configure(
+                    text="Folder Is Enabled", activebackground="red"
+                )
+                self.copy_backend_checkbutton.configure(state=tk.NORMAL)
+                self.ftp_backend_checkbutton.configure(state=tk.NORMAL)
+                if self.settings.get("enable_email", False):
+                    self.email_backend_checkbutton.configure(state=tk.NORMAL)
+
+        # --- Active checkbutton ---
+        self.active_checkbutton_object = tk.Checkbutton(
+            self.header_frame_frame,
+            text="Active",
+            variable=self.active_checkbutton,
+            onvalue="True",
+            offvalue="False",
+            command=set_header_state,
+            indicatoron=tk.FALSE,
+            selectcolor="green",
+            background="red",
+        )
+
+        # --- Backend checkbuttons ---
+        self.copy_backend_checkbutton = ttk.Checkbutton(
+            self.folderframe,
+            text="Copy Backend",
+            variable=self.process_backend_copy_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+        self.ftp_backend_checkbutton = ttk.Checkbutton(
+            self.folderframe,
+            text="FTP Backend",
+            variable=self.process_backend_ftp_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+        self.email_backend_checkbutton = ttk.Checkbutton(
+            self.folderframe,
+            text="Email Backend",
+            variable=self.process_backend_email_check,
+            onvalue=True,
+            offvalue=False,
+            command=set_send_options_fields_state,
+        )
+
+        # --- Folder alias frame ---
+        if self.foldersnameinput.get("folder_name") != "template":
+            self.folder_alias_frame = ttk.Frame(self.folderframe)
+            ttk.Label(self.folder_alias_frame, text="Folder Alias:").grid(
+                row=0, sticky=tk.W
+            )
+            self.folder_alias_field = ttk.Entry(
+                self.folder_alias_frame, width=30
+            )
+            try:
+                import tk_extra_widgets
+                rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
+                    self.folder_alias_field
+                )
+                self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
+            except ImportError:
+                pass
+            self.folder_alias_field.grid(row=0, column=1)
+            ttk.Button(
+                master=self.folder_alias_frame,
+                text="Show Folder Path",
+                command=show_folder_path,
+            ).grid(row=1, columnspan=2, sticky=tk.W, pady=5)
+
+        # --- Copy backend button ---
+        self.copy_backend_folder_selection_button = ttk.Button(
+            self.prefsframe,
+            text="Select Copy Backend Destination Folder...",
+            command=lambda: select_copy_to_directory(),
+        )
+
+        # --- FTP fields ---
+        self.ftp_server_field = ttk.Entry(self.prefsframe, width=30)
+        try:
+            import tk_extra_widgets
+            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(
+                self.ftp_server_field
+            )
+            self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
+        except ImportError:
+            pass
+        self.ftp_port_field = ttk.Entry(self.prefsframe, width=30)
+        try:
+            import tk_extra_widgets
+            rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
+            self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
+        except ImportError:
+            pass
+        self.ftp_folder_field = ttk.Entry(self.prefsframe, width=30)
+        try:
+            import tk_extra_widgets
+            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(
+                self.ftp_folder_field
+            )
+            self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
+        except ImportError:
+            pass
+        self.ftp_username_field = ttk.Entry(self.prefsframe, width=30)
+        try:
+            import tk_extra_widgets
+            rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
+                self.ftp_username_field
+            )
+            self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
+        except ImportError:
+            pass
+        self.ftp_password_field = ttk.Entry(
+            self.prefsframe, show="*", width=30
+        )
+
+        # --- Email fields ---
+        self.email_recepient_field = ttk.Entry(self.prefsframe, width=30)
+        try:
+            import tk_extra_widgets
+            rclick_email_recepient_field = tk_extra_widgets.RightClickMenu(
+                self.email_recepient_field
+            )
+            self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
+        except ImportError:
+            pass
+        self.email_sender_subject_field = ttk.Entry(
+            self.prefsframe, width=30
+        )
+        try:
+            import tk_extra_widgets
+            rclick_email_sender_subject_field = tk_extra_widgets.RightClickMenu(
+                self.email_sender_subject_field
+            )
+            self.email_sender_subject_field.bind(
+                "<3>", rclick_email_sender_subject_field
+            )
+        except ImportError:
+            pass
+
+        # --- Invoice date custom format field ---
+        self.invoice_date_custom_format_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        try:
+            import tk_extra_widgets
+            rclick_invoice_date_custom_format_field = tk_extra_widgets.RightClickMenu(
+                self.invoice_date_custom_format_field
+            )
+            self.invoice_date_custom_format_field.bind(
+                "<3>", rclick_invoice_date_custom_format_field
+            )
+        except ImportError:
+            pass
+
+        # --- Force EDI check ---
+        self.force_edi_check_checkbutton = ttk.Checkbutton(
+            self.ediframe,
+            variable=self.force_edi_check_var,
+            text="Force EDI Validation",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        # --- Split EDI frame and checkbuttons ---
+        self.split_edi_frame = ttk.Frame(self.ediframe)
+
+        self.split_edi_checkbutton = ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi,
+            text="Split EDI",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.split_edi_send_invoices_checkbutton = ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi_send_invoices,
+            text="Split EDI Send Invoices",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.split_edi_send_credits_checkbutton = ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.split_edi_send_credits,
+            text="Split EDI Send Credits",
+            onvalue=True,
+            offvalue=False,
+        )
+        self.prepend_file_dates_checkbutton = ttk.Checkbutton(
+            self.split_edi_frame,
+            variable=self.prepend_file_dates,
+            text="Prepend dates",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        # --- Category filter frame ---
+        self.category_filter_frame = ttk.Frame(self.ediframe)
+        self.split_edi_filter_categories_label = ttk.Label(
+            self.category_filter_frame, text="Filter Categories:"
+        )
+        self.split_edi_filter_categories_entry = ttk.Entry(
+            self.category_filter_frame, width=15
+        )
+        try:
+            import tk_extra_widgets
+            self.split_edi_filter_categories_tooltip = tk_extra_widgets.CreateToolTip(
+                self.split_edi_filter_categories_entry,
+                "Enter 'ALL' or a comma separated list of category numbers (e.g., 1,5,12)",
+            )
+        except ImportError:
+            pass
+        self.split_edi_filter_mode_label = ttk.Label(
+            self.category_filter_frame, text="Mode:"
+        )
+        self.split_edi_filter_mode_optionmenu = ttk.OptionMenu(
+            self.category_filter_frame,
+            self.split_edi_filter_mode,
+            "include",
+            "include",
+            "exclude",
+        )
+
+        # --- Convert options checkbuttons ---
+        self.process_edi_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.process_edi,
+            text="Process EDI",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.upc_variable_process_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.upc_var_check,
+            text="Calculate UPC Check Digit",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.a_record_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.a_rec_var_check,
+            text="Include " + "A " + "Records",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.c_record_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.c_rec_var_check,
+            text="Include " + "C " + "Records",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.headers_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.headers_check,
+            text="Include Headings",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.ampersand_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.ampersand_check,
+            text="Filter Ampersand:",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.tweak_edi_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.tweak_edi,
+            text="Apply Edi Tweaks",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        self.rename_file_field = ttk.Entry(self.split_edi_frame, width=10)
+
+        # --- A record padding ---
+        self.a_record_padding_frame = ttk.Frame(self.convert_options_frame)
+
+        self.pad_a_records_checkbutton = ttk.Checkbutton(
+            self.a_record_padding_frame,
+            variable=self.pad_arec_check,
+            text='Pad "A" Records',
+            onvalue="True",
+            offvalue="False",
+        )
+
+        self.pad_a_records_length_optionmenu = ttk.OptionMenu(
+            self.a_record_padding_frame,
+            self.a_record_padding_length,
+            self.a_record_padding_length.get(),
+            6,
+            30,
+        )
+
+        self.a_record_padding_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        self.append_a_records_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.append_arec_check,
+            text='Append to "A" Records (6 Characters)\n(Series2K)',
+            onvalue="True",
+            offvalue="False",
+        )
+        self.a_record_append_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        self.invoice_date_custom_format_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.invoice_date_custom_format,
+            text="Custom Invoice Date Format",
+            onvalue=True,
+            offvalue=False,
+        )
+
+        self.force_txt_file_ext_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.force_txt_file_ext_check,
+            text="Force .txt file extension",
+            onvalue="True",
+            offvalue="False",
+        )
+        self.invoice_date_offset_spinbox_label = ttk.Label(
+            self.convert_options_frame, text="Invoice Offset (Days)"
+        )
+        self.invoice_date_offset_spinbox = ttk.Spinbox(
+            self.convert_options_frame,
+            textvariable=self.invoice_date_offset,
+            from_=-14,
+            to=14,
+            width=3,
+        )
+        self.each_uom_edi_tweak_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.edi_each_uom_tweak,
+            text="Each UOM",
+        )
+        self.override_upc_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.override_upc_bool,
+            text="Override UPC",
+        )
+        self.override_upc_level_optionmenu = ttk.OptionMenu(
+            self.convert_options_frame,
+            self.override_upc_level,
+            self.override_upc_level.get(),
+            *range(1, 5),
+        )
+        self.override_upc_category_filter_entry = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        try:
+            import tk_extra_widgets
+            self.override_upc_category_filter_tooltip = tk_extra_widgets.CreateToolTip(
+                self.override_upc_category_filter_entry,
+                "Enter 'ALL' or a comma separated list of numbers",
+            )
+        except ImportError:
+            pass
+
+        self.upc_target_length_label = ttk.Label(
+            self.convert_options_frame, text="UPC Target Length:"
+        )
+        self.upc_target_length_entry = ttk.Entry(
+            self.convert_options_frame, width=5
+        )
+        self.upc_target_length_entry.insert(0, "11")
+        self.upc_padding_pattern_label = ttk.Label(
+            self.convert_options_frame, text="UPC Padding Pattern:"
+        )
+        self.upc_padding_pattern_entry = ttk.Entry(
+            self.convert_options_frame, width=15
+        )
+        self.upc_padding_pattern_entry.insert(0, "           ")
+
+        self.split_prepaid_sales_tax_crec = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.split_sales_tax_prepaid_var,
+            text="Split Sales Tax 'C' Records",
+        )
+
+        self.include_item_numbers_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.include_item_numbers,
+            text="Include Item Numbers",
+        )
+
+        self.include_item_description_checkbutton = ttk.Checkbutton(
+            self.convert_options_frame,
+            variable=self.include_item_description,
+            text="Include Item Description",
+        )
+
+        # Column sorter widget - try to import, create stub if unavailable
+        try:
+            from tk_extra_widgets import columnSorterWidget
+            self.simple_csv_column_sorter = columnSorterWidget(
+                self.convert_options_frame
+            )
+        except ImportError:
+            # Create a minimal stub with a containerframe attribute
+            class _StubColumnSorter:
+                def __init__(self, parent):
+                    self.containerframe = ttk.Frame(parent)
+                def set_columnstring(self, val):
+                    pass
+                def get_columnstring(self):
+                    return ""
+            self.simple_csv_column_sorter = _StubColumnSorter(
+                self.convert_options_frame
+            )
+
+        # --- Estore fields ---
+        self.estore_store_number_label = ttk.Label(
+            self.convert_options_frame, text="Estore Store Number"
+        )
+        self.estore_Vendor_OId_label = ttk.Label(
+            self.convert_options_frame, text="Estore Vendor OId"
+        )
+        self.estore_vendor_namevendoroid_label = ttk.Label(
+            self.convert_options_frame, text="Estore Vendor Name OId"
+        )
+        self.estore_store_number_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_Vendor_OId_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_vendor_namevendoroid_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.estore_c_record_oid_label = ttk.Label(
+            self.convert_options_frame, text="Estore C Record OId"
+        )
+        self.estore_c_record_oid_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+        self.fintech_divisionid_label = ttk.Label(
+            self.convert_options_frame, text="Fintech Division_id"
+        )
+        self.fintech_divisionid_field = ttk.Entry(
+            self.convert_options_frame, width=10
+        )
+
+        # --- set_dialog_variables ---
+        def set_dialog_variables(config_dict, copied):
+            if copied:
+                for child in self.bodyframe.winfo_children():
+                    try:
+                        child.configure(state=tk.NORMAL)
+                    except Exception:
+                        pass
+            self.active_checkbutton.set(config_dict.get("folder_is_active", "False"))
+            if config_dict.get("folder_name") != "template" and not copied:
+                if hasattr(self, "folder_alias_field"):
+                    self.folder_alias_field.insert(0, config_dict.get("alias", ""))
+            self.process_backend_copy_check.set(config_dict.get("process_backend_copy", False))
+            self.process_backend_ftp_check.set(config_dict.get("process_backend_ftp", False))
+            self.process_backend_email_check.set(
+                config_dict.get("process_backend_email", False)
+            )
+
+            self.ftp_server_field.delete(0, tk.END)
+            self.ftp_port_field.delete(0, tk.END)
+            self.ftp_folder_field.delete(0, tk.END)
+            self.ftp_username_field.delete(0, tk.END)
+            self.ftp_password_field.delete(0, tk.END)
+            self.email_recepient_field.delete(0, tk.END)
+            self.email_sender_subject_field.delete(0, tk.END)
+
+            self.ftp_server_field.insert(0, config_dict.get("ftp_server", ""))
+            self.ftp_port_field.insert(0, config_dict.get("ftp_port", ""))
+            self.ftp_folder_field.insert(0, config_dict.get("ftp_folder", ""))
+            self.ftp_username_field.insert(0, config_dict.get("ftp_username", ""))
+            self.ftp_password_field.insert(0, config_dict.get("ftp_password", ""))
+            self.email_recepient_field.insert(0, config_dict.get("email_to", ""))
+            self.email_sender_subject_field.insert(
+                0, config_dict.get("email_subject_line", "")
+            )
+
+            self.force_edi_check_var.set(config_dict.get("force_edi_validation", False))
+            self.process_edi.set(config_dict.get("process_edi", "False"))
+            self.upc_var_check.set(config_dict.get("calculate_upc_check_digit", "False"))
+            self.a_rec_var_check.set(config_dict.get("include_a_records", "False"))
+            self.c_rec_var_check.set(config_dict.get("include_c_records", "False"))
+            self.headers_check.set(config_dict.get("include_headers", "False"))
+            self.ampersand_check.set(config_dict.get("filter_ampersand", "False"))
+            self.pad_arec_check.set(config_dict.get("pad_a_records", "False"))
+            self.tweak_edi.set(config_dict.get("tweak_edi", False))
+            self.split_edi.set(config_dict.get("split_edi", False))
+            self.split_edi_send_credits.set(
+                config_dict.get("split_edi_include_credits", False)
+            )
+            self.split_edi_send_invoices.set(
+                config_dict.get("split_edi_include_invoices", False)
+            )
+            self.prepend_file_dates.set(config_dict.get("prepend_date_files", False))
+            self.split_edi_filter_categories_entry.delete(0, tk.END)
+            self.split_edi_filter_categories_entry.insert(
+                0, config_dict.get("split_edi_filter_categories", "ALL")
+            )
+            self.split_edi_filter_mode.set(
+                config_dict.get("split_edi_filter_mode", "include")
+            )
+            self.rename_file_field.delete(0, tk.END)
+            self.rename_file_field.insert(0, config_dict.get("rename_file", ""))
+            self.a_record_padding_field.delete(0, tk.END)
+            self.a_record_padding_field.insert(0, config_dict.get("a_record_padding", ""))
+            self.a_record_padding_length.set(config_dict.get("a_record_padding_length", 6))
+            self.append_arec_check.set(config_dict.get("append_a_records", "False"))
+            self.a_record_append_field.delete(0, tk.END)
+            self.a_record_append_field.insert(
+                0, config_dict.get("a_record_append_text", "")
+            )
+            self.force_txt_file_ext_check.set(config_dict.get("force_txt_file_ext", "False"))
+            self.invoice_date_offset.set(config_dict.get("invoice_date_offset", 0))
+            self.invoice_date_custom_format.set(
+                config_dict.get("invoice_date_custom_format", False)
+            )
+            self.invoice_date_custom_format_field.delete(0, tk.END)
+            self.invoice_date_custom_format_field.insert(
+                0, config_dict.get("invoice_date_custom_format_string", "")
+            )
+            self.edi_each_uom_tweak.set(config_dict.get("retail_uom", False))
+            self.override_upc_bool.set(config_dict.get("override_upc_bool", False))
+            self.override_upc_level.set(config_dict.get("override_upc_level", 1))
+            self.override_upc_category_filter_entry.delete(0, tk.END)
+            self.override_upc_category_filter_entry.insert(
+                0, config_dict.get("override_upc_category_filter", "")
+            )
+            self.upc_target_length_entry.delete(0, tk.END)
+            self.upc_target_length_entry.insert(
+                0, config_dict.get("upc_target_length", 11)
+            )
+            self.upc_padding_pattern_entry.delete(0, tk.END)
+            self.upc_padding_pattern_entry.insert(
+                0, config_dict.get("upc_padding_pattern", "           ")
+            )
+            self.include_item_numbers.set(config_dict.get("include_item_numbers", False))
+            self.include_item_description.set(
+                config_dict.get("include_item_description", False)
+            )
+            self.simple_csv_column_sorter.set_columnstring(
+                config_dict.get("simple_csv_sort_order", "")
+            )
+            self.split_sales_tax_prepaid_var.set(
+                config_dict.get("split_prepaid_sales_tax_crec", False)
+            )
+            self.estore_store_number_field.delete(0, tk.END)
+            self.estore_store_number_field.insert(
+                0, config_dict.get("estore_store_number", "")
+            )
+            self.estore_Vendor_OId_field.delete(0, tk.END)
+            self.estore_Vendor_OId_field.insert(0, config_dict.get("estore_Vendor_OId", ""))
+            self.estore_vendor_namevendoroid_field.delete(0, tk.END)
+            self.estore_vendor_namevendoroid_field.insert(
+                0, config_dict.get("estore_vendor_NameVendorOID", "")
+            )
+            self.estore_c_record_oid_field.delete(0, tk.END)
+            self.estore_c_record_oid_field.insert(
+                0, config_dict.get("estore_c_record_OID", "")
+            )
+            self.fintech_divisionid_field.delete(0, tk.END)
+            self.fintech_divisionid_field.insert(
+                0, config_dict.get("fintech_division_id", "")
+            )
+
+            if copied:
+                self.convert_formats_var.set(config_dict.get("convert_to_format", "csv"))
+                if config_dict.get("process_edi") == "True":
+                    self.ediconvert_options.set("Convert EDI")
+                    reset_ediconvert_options("Convert EDI")
+                elif config_dict.get("tweak_edi") is True:
+                    self.ediconvert_options.set("Tweak EDI")
+                    reset_ediconvert_options("Tweak EDI")
+                else:
+                    self.ediconvert_options.set("Do Nothing")
+                    reset_ediconvert_options("Do Nothing")
+
+        set_dialog_variables(self.foldersnameinput, False)
+
+        # --- reset/make ediconvert options ---
+        def reset_ediconvert_options(argument):
+            for child in self.convert_options_frame.winfo_children():
+                child.grid_forget()
+            make_ediconvert_options(argument)
+
+        # --- Grid split_edi_frame and its children ---
+        self.split_edi_frame.grid(row=2, column=0, columnspan=2, sticky=tk.W)
+        self.split_edi_checkbutton.grid(
+            row=0, column=0, columnspan=2, sticky=tk.W
+        )
+        self.split_edi_send_invoices_checkbutton.grid(
+            row=1, column=0, columnspan=2, sticky=tk.W
+        )
+        self.split_edi_send_credits_checkbutton.grid(
+            row=2, column=0, columnspan=2, sticky=tk.W
+        )
+        self.prepend_file_dates_checkbutton.grid(
+            row=3, column=0, columnspan=2, sticky=tk.W
+        )
+        self.split_edi_rename_file_label = ttk.Label(
+            self.split_edi_frame, text="Rename File:"
+        )
+        self.split_edi_rename_file_label.grid(row=4, column=0, sticky=tk.W)
+        self.rename_file_field.grid(row=4, column=1, sticky=tk.W)
+
+        # --- Category filter frame grid ---
+        self.category_filter_frame.grid(
+            row=3, column=0, columnspan=2, sticky=tk.W, pady=(5, 0)
+        )
+        self.split_edi_filter_categories_label.grid(
+            row=0, column=0, sticky=tk.W
+        )
+        self.split_edi_filter_categories_entry.grid(
+            row=0, column=1, sticky=tk.W
+        )
+        self.split_edi_filter_mode_label.grid(row=1, column=0, sticky=tk.W)
+        self.split_edi_filter_mode_optionmenu.grid(
+            row=1, column=1, sticky=tk.W
+        )
+
+        # --- make_ediconvert_options ---
+        def make_ediconvert_options(argument):
+            if argument == "Do Nothing":
+                self.tweak_edi.set(False)
+                self.process_edi.set("False")
+                ttk.Label(
+                    self.convert_options_frame, text="Send As Is"
+                ).grid()
+            if argument == "Convert EDI":
+                self.process_edi.set("True")
+                self.tweak_edi.set(False)
+                self.convert_to_selector_frame.grid(row=0, column=0, columnspan=2)
+                self.convert_to_selector_label.grid(
+                    row=0, column=0, sticky=tk.W
+                )
+                self.convert_to_selector_menu.grid(
+                    row=0, column=1, sticky=tk.W
+                )
+                make_convert_to_options()
+            if argument == "Tweak EDI":
+                self.tweak_edi.set(True)
+                self.process_edi.set("False")
+                self.upc_variable_process_checkbutton.grid(
+                    row=2, column=0, sticky=tk.W, padx=3
+                )
+                self.a_record_padding_frame.grid(
+                    row=9,
+                    column=0,
+                    columnspan=2,
+                    sticky=tk.W + tk.E,
+                    padx=3,
+                )
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tk.W
+                )
+                self.pad_a_records_length_optionmenu.grid(
+                    row=0, column=1, sticky=tk.E
+                )
+                self.a_record_padding_field.grid(
+                    row=9, column=2, sticky=tk.W, padx=3
+                )
+                self.append_a_records_checkbutton.grid(
+                    row=10, column=0, sticky=tk.W, padx=3
+                )
+                self.a_record_append_field.grid(row=10, column=2)
+                self.force_txt_file_ext_checkbutton.grid(
+                    row=11, column=0, sticky=tk.W, padx=3
+                )
+                self.invoice_date_offset_spinbox_label.grid(
+                    row=12, column=0, sticky=tk.W, padx=3
+                )
+                self.invoice_date_offset_spinbox.grid(
+                    row=12, column=2, sticky=tk.W, padx=3
+                )
+                self.invoice_date_custom_format_checkbutton.grid(
+                    row=13, column=0, sticky=tk.W, padx=3
+                )
+                self.invoice_date_custom_format_field.grid(
+                    row=13, column=2, sticky=tk.W, padx=3
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=14, column=0, sticky=tk.W, padx=3
+                )
+                self.override_upc_checkbutton.grid(
+                    row=15, column=0, sticky=tk.W, padx=3
+                )
+                self.override_upc_level_optionmenu.grid(
+                    row=15, column=1, sticky=tk.W, padx=3
+                )
+                self.override_upc_category_filter_entry.grid(
+                    row=15, column=2, sticky=tk.W, padx=3
+                )
+                self.upc_target_length_label.grid(
+                    row=16, column=0, sticky=tk.W, padx=3
+                )
+                self.upc_target_length_entry.grid(
+                    row=16, column=1, sticky=tk.W
+                )
+                self.upc_padding_pattern_label.grid(
+                    row=17, column=0, sticky=tk.W, padx=3
+                )
+                self.upc_padding_pattern_entry.grid(
+                    row=17, column=1, sticky=tk.W
+                )
+                self.split_prepaid_sales_tax_crec.grid(
+                    row=18, column=0, sticky=tk.W, padx=3
+                )
+
+        # --- Initial EDI convert options ---
+        if self.foldersnameinput.get("process_edi") == "True":
+            self.ediconvert_options.set("Convert EDI")
+            make_ediconvert_options("Convert EDI")
+        elif self.foldersnameinput.get("tweak_edi") is True:
+            self.ediconvert_options.set("Tweak EDI")
+            make_ediconvert_options("Tweak EDI")
+        else:
+            self.ediconvert_options.set("Do Nothing")
+            make_ediconvert_options("Do Nothing")
+
+        self.edi_options_menu = ttk.OptionMenu(
+            self.ediframe,
+            self.ediconvert_options,
+            self.ediconvert_options.get(),
+            "Do Nothing",
+            "Convert EDI",
+            "Tweak EDI",
+            command=reset_ediconvert_options,
+        )
+
+        # --- config_from_others callback ---
+        def config_from_others():
+            def recurse_set_default(parent):
+                for child in parent.winfo_children():
+                    try:
+                        child.configure(state=tk.NORMAL)
+                    except Exception:
+                        pass
+                    recurse_set_default(child)
+
+            recurse_set_default(master)
+            if self._alias_provider:
+                # Use alias provider to look up config
+                pass
+            else:
+                try:
+                    import database_import
+                    settings_table = database_import.database_obj_instance.folders_table.find_one(
+                        alias=self.otherslistbox.get(tk.ACTIVE)
+                    )
+                    set_dialog_variables(settings_table, True)
+                except (ImportError, AttributeError):
+                    pass
+            set_header_state()
+            set_send_options_fields_state()
+
+        self.copyconfigbutton.configure(command=config_from_others)
+
+        set_header_state()
+        set_send_options_fields_state()
+
+        # --- Grid/pack remaining widgets ---
+        self.force_edi_check_checkbutton.grid(
+            row=1, column=0, columnspan=2, sticky=tk.W
+        )
+        self.edi_options_menu.grid(row=5)
+        self.active_checkbutton_object.pack(fill=tk.X)
+        self.copy_backend_checkbutton.grid(row=3, column=0, sticky=tk.W)
+        self.ftp_backend_checkbutton.grid(row=4, column=0, sticky=tk.W)
+        self.email_backend_checkbutton.grid(row=5, column=0, sticky=tk.W)
+        if self.foldersnameinput.get("folder_name") != "template":
+            self.folder_alias_frame.grid(row=6, column=0, columnspan=2)
+        self.copy_backend_folder_selection_button.grid(
+            row=4, column=0, columnspan=2
+        )
+        self.ftp_server_field.grid(row=7, column=1)
+        self.ftp_port_field.grid(row=8, column=1)
+        self.ftp_folder_field.grid(row=9, column=1)
+        self.ftp_username_field.grid(row=10, column=1)
+        self.ftp_password_field.grid(row=11, column=1)
+        self.email_recepient_field.grid(row=14, column=1)
+        self.email_sender_subject_field.grid(row=18, column=1)
+        self.otherslistbox.pack(side=tk.LEFT, fill=tk.Y)
+        self.otherslistboxscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.copyconfigbutton.pack()
+
+        # --- Populate others listbox ---
+        self.aliaslist = []
+        if self._alias_provider:
+            aliases = self._alias_provider()
+            if aliases:
+                self.aliaslist = sorted(aliases)
+        else:
+            try:
+                import database_import
+                for entry in database_import.database_obj_instance.folders_table.all():
+                    self.aliaslist.append(entry["alias"])
+                self.aliaslist.sort()
+            except (ImportError, AttributeError):
+                pass
+        for alias in self.aliaslist:
+            self.otherslistbox.insert(tk.END, alias)
+        self.otherslistbox.config(width=0, height=10)
+
+        # --- Final pack layout (matches original exactly) ---
+        self.header_frame_frame.pack(fill=tk.X)
+        self.bodyframe.pack()
+
+        self.othersframe.pack(side=tk.LEFT, fill=tk.Y)
+        self.otherslistboxframe.pack(side=tk.LEFT, fill=tk.Y)
+        self.separatorv0.pack(side=tk.LEFT, fill=tk.Y, padx=2)
+        self.folderframe.pack(side=tk.LEFT, anchor="n")
+        self.separatorv1.pack(side=tk.LEFT, fill=tk.Y, padx=2)
+        self.prefsframe.pack(side=tk.LEFT, anchor="n")
+        self.separatorv2.pack(side=tk.LEFT, fill=tk.Y, padx=2)
+        self.ediframe.pack(side=tk.LEFT, anchor="n")
+
+        # Store field refs for extractor compatibility
         self._field_refs["active_checkbutton"] = self.active_checkbutton
         self._field_refs["process_backend_copy_check"] = self.process_backend_copy_check
         self._field_refs["process_backend_ftp_check"] = self.process_backend_ftp_check
         self._field_refs["process_backend_email_check"] = self.process_backend_email_check
-        self._field_refs["ftp_server_field"] = self._create_entry("ftp_server")
-        self._field_refs["ftp_port_field"] = self._create_entry("ftp_port")
-        self._field_refs["ftp_folder_field"] = self._create_entry("ftp_folder")
-        self._field_refs["ftp_username_field"] = self._create_entry("ftp_username")
-        self._field_refs["ftp_password_field"] = self._create_entry("ftp_password")
-        self._field_refs["email_recepient_field"] = self._create_entry("email_recipient")
-        self._field_refs["email_sender_subject_field"] = self._create_entry("email_subject")
+        self._field_refs["ftp_server_field"] = self.ftp_server_field
+        self._field_refs["ftp_port_field"] = self.ftp_port_field
+        self._field_refs["ftp_folder_field"] = self.ftp_folder_field
+        self._field_refs["ftp_username_field"] = self.ftp_username_field
+        self._field_refs["ftp_password_field"] = self.ftp_password_field
+        self._field_refs["email_recepient_field"] = self.email_recepient_field
+        self._field_refs["email_sender_subject_field"] = self.email_sender_subject_field
         self._field_refs["process_edi"] = self.process_edi
         self._field_refs["convert_formats_var"] = self.convert_formats_var
         self._field_refs["tweak_edi"] = self.tweak_edi
@@ -218,115 +1429,10 @@ class EditFoldersDialog(Dialog):
         self._field_refs["split_sales_tax_prepaid_var"] = self.split_sales_tax_prepaid_var
         self._field_refs["include_item_numbers"] = self.include_item_numbers
         self._field_refs["include_item_description"] = self.include_item_description
+        if hasattr(self, "folder_alias_field"):
+            self._field_refs["folder_alias_field"] = self.folder_alias_field
 
-        # Build UI
-        self._build_ui(master)
-
-        # Load existing configuration if editing
-        if self._foldersnameinput:
-            self._load_configuration(self._foldersnameinput)
-
-        return self.active_checkbutton_object
-
-    def _create_entry(self, name: str) -> tk.Entry:
-        """Create and store an Entry widget."""
-        entry = tk.Entry(self.prefsframe)
-        entry._field_name = name
-        return entry
-
-    def _build_ui(self, master):
-        """Build all UI elements."""
-        # Frames
-        self.bodyframe = tk.ttk.Frame(master)
-        self.othersframe = tk.ttk.Frame(self.bodyframe)
-        self.folderframe = tk.ttk.Frame(self.bodyframe)
-        self.prefsframe = tk.ttk.Frame(self.bodyframe)
-        self.ediframe = tk.ttk.Frame(self.bodyframe)
-        self.convert_options_frame = tk.ttk.Frame(self.ediframe)
-
-        # Separators
-        self.separatorv0 = tk.ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
-        self.separatorv1 = tk.ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
-        self.separatorv2 = tk.ttk.Separator(self.bodyframe, orient=tk.VERTICAL)
-
-        # Grid layout
-        self.bodyframe.grid(
-            column=0,
-            row=0,
-            sticky=(tk.N, tk.S, tk.E, tk.W),
-            padx=5,
-            pady=5,
-        )
-        self.othersframe.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-        self.folderframe.grid(column=1, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-        self.prefsframe.grid(column=2, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-
-        self.separatorv0.grid(column=0, row=0, sticky=(tk.N, tk.S), padx=5)
-        self.separatorv1.grid(column=1, row=0, sticky=(tk.N, tk.S), padx=5)
-        self.separatorv2.grid(column=2, row=0, sticky=(tk.N, tk.S), padx=5)
-
-        self.ediframe.grid(column=0, row=1, sticky=(tk.E, tk.W), columnspan=3)
-
-        # Labels and widgets
-        self._build_prefs_frame()
-        self._build_edi_frame()
-
-    def _build_prefs_frame(self):
-        """Build preferences frame (FTP, Email settings)."""
-        tk.ttk.Label(self.prefsframe, text="Copy Backend Settings:").grid(
-            row=3, columnspan=2, pady=3
-        )
-        tk.ttk.Separator(self.prefsframe, orient=tk.HORIZONTAL).grid(
-            row=5, columnspan=2, sticky=tk.E + tk.W, pady=2
-        )
-        tk.ttk.Label(self.prefsframe, text="Ftp Backend Settings:").grid(
-            row=6, columnspan=2, pady=3
-        )
-        tk.ttk.Label(self.prefsframe, text="FTP Server:").grid(row=7, sticky=tk.E)
-        tk.ttk.Label(self.prefsframe, text="FTP Port:").grid(row=8, sticky=tk.E)
-        tk.ttk.Label(self.prefsframe, text="FTP Folder:").grid(row=9, sticky=tk.E)
-        tk.ttk.Label(self.prefsframe, text="FTP Username:").grid(row=10, sticky=tk.E)
-        tk.ttk.Label(self.prefsframe, text="FTP Password:").grid(row=11, sticky=tk.E)
-        tk.ttk.Separator(self.prefsframe, orient=tk.HORIZONTAL).grid(
-            row=12, columnspan=2, sticky=tk.E + tk.W, pady=2
-        )
-        tk.ttk.Label(self.prefsframe, text="Email Backend Settings:").grid(
-            row=13, columnspan=2, pady=3
-        )
-        tk.ttk.Label(self.prefsframe, text="Recipient Address:").grid(
-            row=14, sticky=tk.E
-        )
-        tk.ttk.Label(self.prefsframe, text="Email Subject:").grid(row=18, sticky=tk.E)
-
-        # FTP entries
-        self._field_refs["ftp_server_field"].grid(row=7, column=1, sticky=tk.W)
-        self._field_refs["ftp_port_field"].grid(row=8, column=1, sticky=tk.W)
-        self._field_refs["ftp_folder_field"].grid(row=9, column=1, sticky=tk.W)
-        self._field_refs["ftp_username_field"].grid(row=10, column=1, sticky=tk.W)
-        self._field_refs["ftp_password_field"].grid(row=11, column=1, sticky=tk.W)
-        self._field_refs["ftp_password_field"].config(show="*")
-
-        # Email entries
-        self._field_refs["email_recepient_field"].grid(row=14, column=1, sticky=tk.W)
-        self._field_refs["email_sender_subject_field"].grid(row=18, column=1, sticky=tk.W)
-
-    def _build_edi_frame(self):
-        """Build EDI frame."""
-        tk.ttk.Label(self.ediframe, text="EDI Convert Settings:").grid(
-            row=0, column=0, columnspan=2, pady=3
-        )
-        tk.ttk.Separator(self.ediframe, orient=tk.HORIZONTAL).grid(
-            row=6, columnspan=2, sticky=tk.E + tk.W, pady=1
-        )
-        self.convert_options_frame.grid(
-            column=0, row=7, columnspan=2, sticky=tk.W
-        )
-
-    def _load_configuration(self, config_dict: Dict[str, Any]):
-        """Load configuration into dialog fields."""
-        # This would populate the fields from the config_dict
-        # Similar to the original set_dialog_variables function
-        pass
+        return self.active_checkbutton_object  # initial focus
 
     def validate(self) -> bool:
         """
