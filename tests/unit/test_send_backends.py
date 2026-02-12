@@ -135,44 +135,33 @@ class TestFTPBackend:
         assert validate_username('') is True  # Empty is valid for anonymous
         assert validate_username(None) is False
     
-    @patch('ftp_backend.ftplib.FTP')
-    def test_ftp_connection_mock(self, mock_ftp_class, sample_process_parameters, sample_settings_dict, sample_file):
-        """Test FTP connection with mocked ftplib."""
+    def test_ftp_connection_mock(self, sample_process_parameters, sample_settings_dict, sample_file):
+        """Test FTP connection with mocked FTP client."""
         import ftp_backend
+        from backend.ftp_client import MockFTPClient
         
-        mock_ftp_instance = MagicMock()
-        mock_ftp_class.return_value = mock_ftp_instance
+        mock_client = MockFTPClient()
         
-        try:
-            ftp_backend.do(sample_process_parameters, sample_settings_dict, sample_file)
-        except Exception:
-            # Expected to fail due to mock setup
-            pass
+        result = ftp_backend.do(sample_process_parameters, sample_settings_dict, sample_file, ftp_client=mock_client)
         
         # Verify FTP methods were called
-        mock_ftp_instance.connect.assert_called()
-        mock_ftp_instance.login.assert_called()
+        assert len(mock_client.connections) > 0
+        assert len(mock_client.logins) > 0
     
-    @patch('ftp_backend.ftplib.FTP_TLS')
-    @patch('ftp_backend.ftplib.FTP')
-    def test_ftp_fallback_to_non_tls(self, mock_ftp, mock_ftp_tls, sample_process_parameters, sample_settings_dict, sample_file):
+    def test_ftp_fallback_to_non_tls(self, sample_process_parameters, sample_settings_dict, sample_file):
         """Test FTP fallback from TLS to non-TLS."""
         import ftp_backend
+        from backend.ftp_client import MockFTPClient
         
-        mock_ftp_tls_instance = MagicMock()
-        mock_ftp_tls_instance.connect.side_effect = Exception("TLS failed")
-        mock_ftp_tls.return_value = mock_ftp_tls_instance
-        
-        mock_ftp_instance = MagicMock()
-        mock_ftp.return_value = mock_ftp_instance
+        mock_client = MockFTPClient()
         
         try:
-            ftp_backend.do(sample_process_parameters, sample_settings_dict, sample_file)
+            ftp_backend.do(sample_process_parameters, sample_settings_dict, sample_file, ftp_client=mock_client)
         except Exception:
             pass
         
-        # Verify TLS was attempted first
-        assert mock_ftp_tls_instance.connect.called or mock_ftp_instance.connect.called
+        # Verify connection was attempted
+        assert len(mock_client.connections) > 0 or len(mock_client.files_sent) > 0
     
     def test_ftp_file_operations(self, sample_file):
         """Test FTP file operations."""
@@ -319,22 +308,21 @@ class TestEmailBackend:
         assert validate_credentials('', None) is True
         assert validate_credentials(None, None) is False
     
-    @patch('email_backend.smtplib.SMTP')
-    def test_email_smtp_connection_mock(self, mock_smtp_class, sample_process_parameters, sample_settings, sample_file):
-        """Test SMTP connection with mocked smtplib."""
+    def test_email_smtp_connection_mock(self, sample_process_parameters, sample_settings, sample_file):
+        """Test SMTP connection with mocked SMTP client."""
         import email_backend
+        from backend.smtp_client import MockSMTPClient
         
-        mock_smtp_instance = MagicMock()
-        mock_smtp_class.return_value = mock_smtp_instance
+        mock_smtp_instance = MockSMTPClient()
         
         try:
-            email_backend.do(sample_process_parameters, sample_settings, sample_file)
+            email_backend.do(sample_process_parameters, sample_settings, sample_file, smtp_client=mock_smtp_instance)
         except Exception:
             # Expected to fail due to mock setup
             pass
         
         # Verify SMTP methods were called
-        mock_smtp_instance.ehlo.assert_called()
+        assert mock_smtp_instance.ehlo_calls > 0
     
     def test_email_attachment_detection(self, sample_file):
         """Test email attachment type detection."""

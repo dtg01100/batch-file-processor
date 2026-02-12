@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+"""
+Main interface module for Batch File Sender application.
+
+This module contains the main UI and business logic for the batch file processor.
+Components are being progressively refactored into separate modules for better
+testability and separation of concerns.
+
+Refactored components:
+- DatabaseObj: interface/database/database_obj.py
+- FolderManager: interface/operations/folder_manager.py
+- Email validation: interface/validation/email_validator.py
+- UI protocols: interface/interfaces.py
+"""
 import argparse
 import copy
 import datetime
@@ -36,6 +49,11 @@ import folders_database_migrator
 import print_run_log
 import tk_extra_widgets
 import resend_interface
+
+# Import refactored components
+from interface.database.database_obj import DatabaseObj as RefactoredDatabaseObj
+from interface.operations.folder_manager import FolderManager
+from interface.validation.email_validator import validate_email as validate_email_format
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()

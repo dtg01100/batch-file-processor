@@ -240,7 +240,7 @@ class TestCaptureRecordsFunction:
     def test_invalid_record_raises_exception(self):
         """Test that invalid record type raises Exception."""
         from utils import capture_records
-        with pytest.raises(Exception, match="Not An EDI"):
+        with pytest.raises(ValueError, match="Unknown record type"):
             capture_records("Xinvalid record")
 
 

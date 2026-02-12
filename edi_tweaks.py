@@ -1,9 +1,156 @@
+"""EDI tweaks module for processing EDI files.
+
+This module provides EDI file processing functionality including:
+- PO number fetching
+- C-record generation for split sales tax
+- Various EDI record transformations
+
+The module maintains backward compatibility while using the new
+refactored classes from core.edi.
+"""
+
 import time
 from datetime import datetime, timedelta
-from decimal import *
+from decimal import Decimal
+from typing import Optional
 
 import utils
 from query_runner import query_runner
+
+# Import refactored classes
+from core.edi.po_fetcher import POFetcher, POData
+from core.edi.c_rec_generator import CRecGenerator, CRecordConfig
+
+
+# Backward compatibility: Keep legacy class names as aliases
+class poFetcher:
+    """Legacy PO fetcher class for backward compatibility.
+    
+    This class wraps the new POFetcher class and provides
+    the same interface as the original implementation.
+    """
+    
+    DEFAULT_PO = POFetcher.DEFAULT_PO
+    
+    def __init__(self, settings_dict):
+        """Initialize with settings dictionary.
+        
+        Args:
+            settings_dict: Dictionary containing database connection settings
+        """
+        self.query_object = None
+        self.settings = settings_dict
+        self._fetcher: Optional[POFetcher] = None
+    
+    def _db_connect(self):
+        """Establish database connection using legacy query_runner."""
+        self.query_object = query_runner(
+            self.settings["as400_username"],
+            self.settings["as400_password"],
+            self.settings["as400_address"],
+            f"{self.settings['odbc_driver']}",
+        )
+        # Create adapter for the legacy query_runner
+        self._fetcher = POFetcher(self._create_adapter())
+    
+    def _create_adapter(self):
+        """Create an adapter that wraps legacy query_runner.
+        
+        Returns:
+            Object implementing QueryRunnerProtocol
+        """
+        class QueryRunnerAdapter:
+            def __init__(self, legacy_runner):
+                self._runner = legacy_runner
+            
+            def run_query(self, query: str, params: tuple = None) -> list:
+                # Legacy runner returns list of tuples
+                return self._runner.run_arbitrary_query(query)
+        
+        return QueryRunnerAdapter(self.query_object)
+    
+    def fetch_po_number(self, invoice_number):
+        """Fetch PO number for an invoice.
+        
+        Args:
+            invoice_number: Invoice number to look up
+            
+        Returns:
+            PO number string, or default if not found
+        """
+        if self._fetcher is None:
+            self._db_connect()
+        return self._fetcher.fetch_po_number(invoice_number)
+
+
+class cRecGenerator:
+    """Legacy C-record generator class for backward compatibility.
+    
+    This class wraps the new CRecGenerator class and provides
+    the same interface as the original implementation.
+    """
+    
+    def __init__(self, settings_dict):
+        """Initialize with settings dictionary.
+        
+        Args:
+            settings_dict: Dictionary containing database connection settings
+        """
+        self.query_object = None
+        self._invoice_number = "0"
+        self.unappended_records = False
+        self.settings = settings_dict
+        self._generator: Optional[CRecGenerator] = None
+    
+    def _db_connect(self):
+        """Establish database connection using legacy query_runner."""
+        self.query_object = query_runner(
+            self.settings["as400_username"],
+            self.settings["as400_password"],
+            self.settings["as400_address"],
+            f"{self.settings['odbc_driver']}",
+        )
+        # Create adapter for the legacy query_runner
+        self._generator = CRecGenerator(self._create_adapter())
+    
+    def _create_adapter(self):
+        """Create an adapter that wraps legacy query_runner.
+        
+        Returns:
+            Object implementing QueryRunnerProtocol
+        """
+        class QueryRunnerAdapter:
+            def __init__(self, legacy_runner):
+                self._runner = legacy_runner
+            
+            def run_query(self, query: str, params: tuple = None) -> list:
+                # Legacy runner returns list of tuples
+                return self._runner.run_arbitrary_query(query)
+        
+        return QueryRunnerAdapter(self.query_object)
+    
+    def set_invoice_number(self, invoice_number):
+        """Set the current invoice number.
+        
+        Args:
+            invoice_number: Invoice number for subsequent operations
+        """
+        if self._generator is None:
+            self._db_connect()
+        self._generator.set_invoice_number(invoice_number)
+        self._invoice_number = invoice_number
+        self.unappended_records = True
+    
+    def fetch_splitted_sales_tax_totals(self, procfile):
+        """Fetch and write split sales tax C records.
+        
+        Args:
+            procfile: File handle to write C records to
+        """
+        if self._generator is None:
+            self._db_connect()
+        self._generator.fetch_splitted_sales_tax_totals(procfile)
+        self.unappended_records = False
 
 
 def edi_tweak(
@@ -13,7 +160,21 @@ def edi_tweak(
     parameters_dict,
     upc_dict,
 ):
-
+    """Apply EDI tweaks to process an EDI file.
+    
+    This function processes an EDI file, applying various transformations
+    including date offsetting, UPC calculations, and C-record generation.
+    
+    Args:
+        edi_process: Path to input EDI file
+        output_filename: Path to output file
+        settings_dict: Dictionary containing database and app settings
+        parameters_dict: Dictionary containing processing parameters
+        upc_dict: Dictionary containing UPC mappings
+        
+    Returns:
+        Path to the output file
+    """
     pad_arec = parameters_dict['pad_a_records']
     arec_padding = parameters_dict['a_record_padding']
     arec_padding_len = parameters_dict['a_record_padding_length']
@@ -31,91 +192,6 @@ def edi_tweak(
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
     upc_target_length = int(parameters_dict.get('upc_target_length', 11))
     upc_padding_pattern = parameters_dict.get('upc_padding_pattern', '           ')
-
-    class poFetcher:
-        def __init__(self, settings_dict):
-            self.query_object = None
-            self.settings = settings_dict
-
-        def _db_connect(self):
-            self.query_object = query_runner(
-                self.settings["as400_username"],
-                self.settings["as400_password"],
-                self.settings["as400_address"],
-                f"{self.settings['odbc_driver']}",
-            )
-
-        def fetch_po_number(self, invoice_number):
-            if self.query_object is None:
-                self._db_connect()
-            qry_ret = self.query_object.run_arbitrary_query(
-                f"""
-                select ohhst.bte4cd
-                from dacdata.ohhst ohhst
-                where ohhst.bthhnb = {int(invoice_number)}
-                """
-            )
-            if len(qry_ret) == 0:
-                ret_str = "no_po_found    "
-            else:
-                ret_str = str(qry_ret[0][0])
-            return ret_str
-
-    class cRecGenerator:
-        def __init__(self, settings_dict):
-            self.query_object = None
-            self._invoice_number = "0"
-            self.unappended_records = False
-            self.settings = settings_dict
-
-        def _db_connect(self):
-            self.query_object = query_runner(
-                self.settings["as400_username"],
-                self.settings["as400_password"],
-                self.settings["as400_address"],
-                f"{self.settings['odbc_driver']}",
-            )
-
-        def set_invoice_number(self, invoice_number):
-            self._invoice_number = invoice_number
-            self.unappended_records = True
-
-        def fetch_splitted_sales_tax_totals(self, procfile):
-            if self.query_object is None:
-                self._db_connect()
-            qry_ret = self.query_object.run_arbitrary_query(
-                f"""
-                SELECT
-                    sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
-                    sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
-                FROM
-                    dacdata.odhst odhst
-                WHERE
-                    odhst.BUHHNB = {self._invoice_number}
-                """
-            )
-            qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]
-            def _write_line(typestr:str, amount:int, wprocfile):
-                descstr = typestr.ljust(25, " ")
-                if amount < 0:
-                    amount_builder = amount - (amount * 2)
-                else:
-                    amount_builder = amount
-
-                amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
-                if amount < 0:
-                    temp_amount_list = list(amountstr)
-                    temp_amount_list[0] = "-"
-                    amountstr = "".join(temp_amount_list)
-                linebuilder = f"CTAB{descstr}{amountstr}\n"
-                wprocfile.write(linebuilder)
-            # print(qry_ret_non_prepaid,qry_ret_prepaid)
-            if qry_ret_prepaid != 0 and qry_ret_prepaid is not None:
-                _write_line("Prepaid Sales Tax", qry_ret_prepaid, procfile)
-            if qry_ret_non_prepaid != 0 and qry_ret_non_prepaid is not None:
-                _write_line("Sales Tax", qry_ret_non_prepaid, procfile)
-            self.unappended_records = False
-
 
     work_file = None
     read_attempt_counter = 1
