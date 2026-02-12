@@ -43,3 +43,4 @@ Created task task-1770932908-50b2
 Reasoning: Linux batonogov devcontainer uses Linux-only tooling; to ensure compatibility with Win2012R2, build must be produced on a matching Windows environment or validated there.
 Next: Implement build on a Windows VM or CI runner matching the target OS; optionally explore cross-compile as a secondary path and require validation on actual Win2012R2 host.
 
+- 2026-02-12T21:52:10Z Updated BUILD_WINDOWS.md to note Win2012R2 compatibility and recommend Windows VM builds. Closed task task-1770933018-e7ba. Memory mem-1770933094-8fd1.
