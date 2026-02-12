@@ -33,3 +33,13 @@ Next steps:
 - Decide preferred build strategy (Windows VM build vs. cross-compile). Open follow-up task to implement that choice and update CI/build scripts accordingly.
 
 
+
+- [2026-02-12T21:48:28Z] Added plan.md at /var/home/dlafreniere/.copilot/session-state/b8686c76-b185-415b-b38f-85568c236f23/plan.md and will create a decision task.
+
+Created task task-1770932908-50b2
+  Title: Decide build strategy for Windows exe
+  Priority: 1
+2026-02-12T21:49:23Z - Decision: Chose Windows VM build for creating Windows exe targeting Windows Server 2012 R2.
+Reasoning: Linux batonogov devcontainer uses Linux-only tooling; to ensure compatibility with Win2012R2, build must be produced on a matching Windows environment or validated there.
+Next: Implement build on a Windows VM or CI runner matching the target OS; optionally explore cross-compile as a secondary path and require validation on actual Win2012R2 host.
+
