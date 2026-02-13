@@ -223,12 +223,16 @@ class TestTweakInvoiceDateOffset:
     
     def test_invoice_date_offset_cross_year(self):
         """Test date offset crossing year boundary."""
-        # Fix the date format - it should be MMDDYY format
+        # Date format is MMDDYY
         invoice_date = "010125"  # Jan 1, 2025
         offset = -5
         
-        # Skip this test since the date format is ambiguous
-        pytest.skip("Date format ambiguity in test data")
+        date_obj = datetime.strptime(invoice_date, "%m%d%y")
+        offset_date = date_obj + timedelta(days=offset)
+        result = datetime.strftime(offset_date, "%m%d%y")
+        
+        # Dec 27, 2024
+        assert result == "122724"
     
     def test_invoice_date_offset_year_boundary(self):
         """Test date offset at year boundary."""

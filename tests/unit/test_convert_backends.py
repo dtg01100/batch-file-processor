@@ -470,15 +470,23 @@ class TestConvertToFintech:
     
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths (33+76+1 = 110 chars + newlines)."""
-        return (
-            "AVENDOR00000000000101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description   1234560001000100000100010991000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        """Create sample EDI content with accurate field widths.
+        
+        A Record (33 chars): A + cust_vendor(6) + invoice_number(10) + invoice_date(6) + invoice_total(10)
+        B Record (76 chars): B + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) + 
+                             unit_multiplier(6) + qty(5) + retail(5) + multi_pack(3) + parent_item(6)
+        C Record (38 chars): C + charge_type(3) + description(25) + amount(9)
+        """
+        # A record: A + VENDOR(6) + 0000000001(10) + 010125(6) + 0000100000(10) = 33 chars
+        a_record = "AVENDOR00000000010101250000100000"
+        # B record: B(1) + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) + 
+        #           unit_multiplier(6) + qty(5) + retail(5) + multi_pack(3) + parent_item(6) = 76 chars
+        # vendor_item = "123456" which matches the upc_dict key
+        # Description is exactly 25 chars: "Test Item Description    " (21 chars + 4 spaces)
+        b_record = "B01234567890Test Item Description    1234560001000100000100010991001000000"
+        # C record: C(1) + charge_type(3) + description(25) + amount(9) = 38 chars
+        c_record = "CTABSales Tax                      000010000"
+        return f"{a_record}\n{b_record}\n{c_record}\n"
     
     @pytest.fixture
     def sample_settings_dict(self):
@@ -499,7 +507,10 @@ class TestConvertToFintech:
     
     @pytest.fixture
     def sample_upc_dict(self):
-        """Create sample UPC lookup dictionary."""
+        """Create sample UPC lookup dictionary.
+        
+        Key is vendor_item (int), value is list of UPCs at different levels.
+        """
         return {
             123456: ["1", "01234567890", "012345678901", "012345678902", "012345678903"],
         }
@@ -518,24 +529,25 @@ class TestConvertToFintech:
         input_file.write_text(sample_edi_content)
         output_file = tmp_path / "output"
         
-        # Mock the invFetcher to avoid database connection
-        with patch.object(convert_to_fintech.utils.invFetcher, '__init__', return_value=None):
-            with patch.object(convert_to_fintech.utils.invFetcher, 'fetch_cust_no', return_value="12345"):
-                try:
-                    result = convert_to_fintech.edi_convert(
-                        str(input_file),
-                        str(output_file),
-                        sample_settings_dict,
-                        sample_parameters_dict,
-                        sample_upc_dict
-                    )
-                    # Check that output file was created
-                    expected_csv = str(output_file) + ".csv"
-                    assert os.path.exists(expected_csv) or result is not None
-                except Exception as e:
-                    # Some conversion modules require database connections
-                    # This is expected in unit tests without mocks
-                    pytest.skip(f"Conversion requires database: {e}")
+        # Create a mock invFetcher instance
+        mock_inv_fetcher = MagicMock()
+        mock_inv_fetcher.fetch_cust_no.return_value = "12345"
+        
+        # Mock the invFetcher class to return our mock instance
+        with patch.object(convert_to_fintech.utils, 'invFetcher', autospec=True) as mock_inv_fetcher_class:
+            mock_inv_fetcher_class.return_value = mock_inv_fetcher
+            
+            result = convert_to_fintech.edi_convert(
+                str(input_file),
+                str(output_file),
+                sample_settings_dict,
+                sample_parameters_dict,
+                sample_upc_dict
+            )
+            # Check that output file was created
+            expected_csv = str(output_file) + ".csv"
+            assert os.path.exists(expected_csv), f"Output CSV should exist at {expected_csv}"
+            assert result == expected_csv
     
     def test_fintech_csv_structure(self, tmp_path, sample_settings_dict, sample_upc_dict):
         """Test that fintech CSV has correct structure."""
