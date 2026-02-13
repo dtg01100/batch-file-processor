@@ -17,14 +17,8 @@ import tempfile
 import shutil
 import re
 
-
-def validate_email(email):
-    """Email validation function matching interface.py implementation."""
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-    if re.fullmatch(regex, email):
-        return True
-    else:
-        return False
+# Import actual validation functions from the codebase
+from interface.validation.email_validator import validate_email
 
 
 class TestEmailValidation:

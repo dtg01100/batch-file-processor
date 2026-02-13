@@ -14,6 +14,10 @@ from datetime import datetime, timedelta
 import tempfile
 import os
 
+# Import actual edi_tweaks functions to test
+import edi_tweaks
+from edi_tweaks import edi_tweak, poFetcher, cRecGenerator
+
 
 class TestEdiTweaksValidation:
     """Test suite for EDI tweaks validation and application logic."""

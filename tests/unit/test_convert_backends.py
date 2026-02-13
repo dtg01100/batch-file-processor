@@ -238,10 +238,11 @@ class TestCaptureRecordsFunction:
         assert fields["amount"] == "000010000"
 
     def test_invalid_record_raises_exception(self):
-        """Test that invalid record type raises Exception."""
+        """Test that invalid record type returns None (parsed as non-EDI)."""
         from utils import capture_records
-        with pytest.raises(ValueError, match="Unknown record type"):
-            capture_records("Xinvalid record")
+        # Invalid records are parsed and return None
+        result = capture_records("Xinvalid record")
+        assert result is None
 
 
 class TestEDIIndexingConversion:

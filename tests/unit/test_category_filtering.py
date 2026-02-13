@@ -1,11 +1,12 @@
-"""Unit tests for the category filtering functionality in utils.py.
+"""Unit tests for the category filtering functionality in core/edi/edi_splitter.py.
 
 Tests the filter_b_records_by_category() function which filters B records
 based on item category from the upc_dict.
 """
 
 import pytest
-from utils import filter_b_records_by_category, capture_records
+from core.edi.edi_splitter import filter_b_records_by_category
+from utils import capture_records
 
 
 def create_b_record(vendor_item: int, upc: str = "01234567890") -> str:
