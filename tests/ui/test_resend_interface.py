@@ -65,23 +65,28 @@ class TestResendInterfaceCallbackPatterns:
     """Tests for callback patterns in resend_interface."""
 
     def test_checkbuttons_class_exists(self):
-        """Test that module can be imported."""
+        """Test that module can be imported and has expected structure."""
         import resend_interface
-        # Just verify module can be imported
+        # Verify module can be imported and has the main function
         assert resend_interface is not None
+        assert hasattr(resend_interface, 'do')
+        assert callable(resend_interface.do)
 
     def test_folder_button_pressed_pattern(self):
         """Test the folder_button_pressed callback pattern."""
-        # Verify the pattern exists
         import resend_interface
-        # Just verify module can be imported
+        # Verify the module has expected structure for folder handling
         assert resend_interface is not None
+        # The do() function handles folder button interactions
+        assert callable(resend_interface.do)
 
     def test_close_window_pattern(self):
         """Test the close_window callback pattern."""
         import resend_interface
-        # Just verify module can be imported
+        # Verify the module structure for window handling
         assert resend_interface is not None
+        # The module should have a do() function that creates/manages windows
+        assert callable(resend_interface.do)
 
 
 class TestResendInterfaceCallbacks:

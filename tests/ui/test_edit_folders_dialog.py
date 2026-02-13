@@ -428,17 +428,83 @@ class TestEditFoldersDialogApplyToFolder:
         dialog.active_checkbutton = MagicMock()
         dialog.active_checkbutton.get = MagicMock(return_value='True')
         dialog._foldersnameinput = {'folder_name': 'test'}
-        dialog._field_refs = {}
+        dialog._field_refs = {
+            'folder_alias_field': MagicMock(get=MagicMock(return_value='test_alias')),
+            'ftp_server_field': MagicMock(get=MagicMock(return_value='')),
+            'ftp_port_field': MagicMock(get=MagicMock(return_value='21')),
+            'ftp_folder_field': MagicMock(get=MagicMock(return_value='')),
+            'ftp_username_field': MagicMock(get=MagicMock(return_value='')),
+            'ftp_password_field': MagicMock(get=MagicMock(return_value='')),
+            'email_recepient_field': MagicMock(get=MagicMock(return_value='')),
+            'email_sender_subject_field': MagicMock(get=MagicMock(return_value='')),
+        }
+        dialog.process_backend_copy_check = MagicMock()
+        dialog.process_backend_copy_check.get = MagicMock(return_value=True)
+        dialog.process_backend_ftp_check = MagicMock()
+        dialog.process_backend_ftp_check.get = MagicMock(return_value=False)
+        dialog.process_backend_email_check = MagicMock()
+        dialog.process_backend_email_check.get = MagicMock(return_value=False)
+        dialog.process_edi = MagicMock()
+        dialog.process_edi.get = MagicMock(return_value='False')
+        dialog.convert_formats_var = MagicMock()
+        dialog.convert_formats_var.get = MagicMock(return_value='')
+        dialog.upc_var_check = MagicMock()
+        dialog.upc_var_check.get = MagicMock(return_value='False')
+        dialog.a_rec_var_check = MagicMock()
+        dialog.a_rec_var_check.get = MagicMock(return_value='False')
+        dialog.c_rec_var_check = MagicMock()
+        dialog.c_rec_var_check.get = MagicMock(return_value='False')
+        dialog.headers_check = MagicMock()
+        dialog.headers_check.get = MagicMock(return_value='False')
+        dialog.ampersand_check = MagicMock()
+        dialog.ampersand_check.get = MagicMock(return_value='False')
+        dialog.force_edi_check_var = MagicMock()
+        dialog.force_edi_check_var.get = MagicMock(return_value='False')
+        dialog.tweak_edi = MagicMock()
+        dialog.tweak_edi.get = MagicMock(return_value='False')
+        dialog.split_edi = MagicMock()
+        dialog.split_edi.get = MagicMock(return_value='False')
+        dialog.split_edi_send_invoices = MagicMock()
+        dialog.split_edi_send_invoices.get = MagicMock(return_value='False')
+        dialog.split_edi_send_credits = MagicMock()
+        dialog.split_edi_send_credits.get = MagicMock(return_value='False')
+        dialog.prepend_file_dates = MagicMock()
+        dialog.prepend_file_dates.get = MagicMock(return_value='False')
+        dialog.pad_arec_check = MagicMock()
+        dialog.pad_arec_check.get = MagicMock(return_value='False')
+        dialog.a_record_padding_length = MagicMock()
+        dialog.a_record_padding_length.get = MagicMock(return_value='0')
+        dialog.append_arec_check = MagicMock()
+        dialog.append_arec_check.get = MagicMock(return_value='False')
+        dialog.force_txt_file_ext_check = MagicMock()
+        dialog.force_txt_file_ext_check.get = MagicMock(return_value='False')
+        dialog.invoice_date_offset = MagicMock()
+        dialog.invoice_date_offset.get = MagicMock(return_value='0')
+        dialog.edi_each_uom_tweak = MagicMock()
+        dialog.edi_each_uom_tweak.get = MagicMock(return_value='False')
+        dialog.override_upc_bool = MagicMock()
+        dialog.override_upc_bool.get = MagicMock(return_value='False')
+        dialog.override_upc_level = MagicMock()
+        dialog.override_upc_level.get = MagicMock(return_value='0')
+        dialog.upc_target_length = MagicMock()
+        dialog.upc_target_length.get = MagicMock(return_value='11')
+        dialog.include_item_numbers = MagicMock()
+        dialog.include_item_numbers.get = MagicMock(return_value='False')
+        dialog.include_item_description = MagicMock()
+        dialog.include_item_description.get = MagicMock(return_value='False')
+        dialog.invoice_date_custom_format = MagicMock()
+        dialog.invoice_date_custom_format.get = MagicMock(return_value='False')
+        dialog.split_sales_tax_prepaid_var = MagicMock()
+        dialog.split_sales_tax_prepaid_var.get = MagicMock(return_value='False')
         
         # Test that method exists and can be called with proper args
         apply_to_folder_data = {}
         extracted = MagicMock()
         
-        try:
-            EditFoldersDialog._apply_to_folder(dialog, extracted, apply_to_folder_data)
-        except Exception:
-            # Method may require specific setup
-            pass
+        EditFoldersDialog._apply_to_folder(dialog, extracted, apply_to_folder_data)
+        
+        # Verify active state was set
+        assert 'folder_is_active' in apply_to_folder_data
 
     def test_apply_to_folder_sets_backend_toggles(self):
         """Test that _apply_to_folder handles backend toggles."""
