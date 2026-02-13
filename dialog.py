@@ -91,6 +91,6 @@ class Dialog(Toplevel):
 
         return 1  # override
 
-    def apply(self, foldersnameapply):
+    def apply(self, foldersnameapply=None):
 
         pass  # override

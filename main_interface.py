@@ -2302,6 +2302,11 @@ if __name__ == "__main__":
             error_string_constructor_list = []
             errors = False
 
+            # Skip validation if folder is disabled
+            if self.active_checkbutton.get() == "False":
+                doingstuffoverlay.destroy_overlay()
+                return True
+
             doingstuffoverlay.make_overlay(self, "Testing Changes...")
             backend_count = 0
             if self.process_backend_ftp_check.get() is True:

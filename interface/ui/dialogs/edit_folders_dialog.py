@@ -1443,6 +1443,10 @@ class EditFoldersDialog(Dialog):
         Returns:
             True if validation passes, False otherwise
         """
+        # Skip validation if folder is disabled
+        if self.active_checkbutton.get() == "False":
+            return True
+
         # Create validator with dependencies
         validator = self._create_validator()
 
@@ -1466,15 +1470,19 @@ class EditFoldersDialog(Dialog):
 
         return True
 
-    def apply(self, apply_to_folder: Dict[str, Any]):
+    def apply(self, apply_to_folder: Dict[str, Any] = None):
         """
         Apply dialog changes.
 
         Delegates to extractor while keeping database update logic.
 
         Args:
-            apply_to_folder: Dictionary to update with changes
+            apply_to_folder: Dictionary to update with changes. If None, uses
+                            the input folder dictionary from construction.
         """
+        # Use stored folder dictionary if not provided
+        if apply_to_folder is None:
+            apply_to_folder = self._foldersnameinput
         # Extract field values
         extractor = self._create_extractor(self._field_refs)
         extracted = extractor.extract_all()
