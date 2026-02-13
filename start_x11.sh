@@ -10,6 +10,11 @@ pkill x11vnc 2>/dev/null || true
 pkill websockify 2>/dev/null || true
 pkill openbox 2>/dev/null || true
 
+# Clone noVNC if not present
+if [ ! -d "/tmp/noVNC" ]; then
+    git clone https://github.com/novnc/noVNC.git /tmp/noVNC 2>/dev/null
+fi
+
 # Start Xvfb
 Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
 sleep 1
@@ -23,7 +28,7 @@ x11vnc -display :99 -forever -shared -rfbport 5900 -nopw > /tmp/x11vnc.log 2>&1 
 sleep 1
 
 # Start websockify
-websockify --web /tmp/novnc 0.0.0.0:6080 localhost:5900 > /tmp/websockify.log 2>&1 &
+websockify --web /tmp/noVNC 0.0.0.0:6080 localhost:5900 > /tmp/websockify.log 2>&1 &
 
 echo "X11 services started with Openbox window manager"
 echo "Access noVNC at: http://localhost:6080/vnc.html"

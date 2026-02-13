@@ -23,7 +23,10 @@
     "containerEnv": {
         "HOME": "/home/vscode"
     },
-    "postCreateCommand": "unset WAYLAND_DISPLAY && Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 & sleep 2 && openbox-session > /tmp/openbox.log 2>&1 & sleep 2 && x11vnc -display :99 -forever -shared -rfbport 5900 -nopw > /tmp/x11vnc.log 2>&1 & sleep 1 && websockify --web /tmp/novnc 0.0.0.0:6080 localhost:5900 > /tmp/websockify.log 2>&1 &",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/batch-file-processor,type=bind",
+    "workspaceFolder": "/workspaces/batch-file-processor",
+    "postCreateCommand": "chmod +x /workspaces/batch-file-processor/start_x11.sh",
+    "onStartCommand": "bash /workspaces/batch-file-processor/start_x11.sh",
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
         "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
