@@ -1,6 +1,7 @@
 """Pytest configuration for the test suite."""
 
 import sys
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,8 +15,79 @@ if str(project_root) not in sys.path:
 
 
 # ============================================================================
+# Virtual Display Setup for Tkinter Tests
+# ============================================================================
+
+# Global variable to hold the virtual display instance
+_vdisplay = None
+
+
+def _setup_virtual_display():
+    """Set up virtual display for headless Tkinter testing."""
+    global _vdisplay
+    
+    # If we already have a display set up, return
+    if _vdisplay is not None:
+        return _vdisplay
+    
+    # Clear any existing DISPLAY that might be broken
+    old_display = os.environ.pop('DISPLAY', None)
+    
+    # Try to start Xvfb
+    try:
+        from xvfbwrapper import Xvfb
+        _vdisplay = Xvfb(width=1024, height=768, colordepth=24)
+        _vdisplay.start()
+        return _vdisplay
+    except ImportError:
+        # Restore old display if xvfbwrapper not available
+        if old_display:
+            os.environ['DISPLAY'] = old_display
+        pass
+    except Exception:
+        # Restore old display on error
+        if old_display:
+            os.environ['DISPLAY'] = old_display
+        pass
+    
+    return None
+
+
+def _teardown_virtual_display():
+    """Tear down the virtual display."""
+    global _vdisplay
+    if _vdisplay is not None:
+        try:
+            _vdisplay.stop()
+        except Exception:
+            pass
+        _vdisplay = None
+
+
+# ============================================================================
 # Tkinter Mock Fixtures for Headless Testing
 # ============================================================================
+
+@pytest.fixture(scope='session', autouse=True)
+def virtual_display():
+    """Session-scoped fixture to set up virtual display for Tkinter tests."""
+    vdisplay = _setup_virtual_display()
+    yield vdisplay
+    _teardown_virtual_display()
+
+
+@pytest.fixture
+def tk_root():
+    """Create a real Tkinter root window for testing (with virtual display if needed)."""
+    import tkinter
+    try:
+        root = tkinter.Tk()
+        root.withdraw()
+        yield root
+        root.destroy()
+    except (RuntimeError, tkinter.TclError) as e:
+        pytest.skip(f"Cannot create Tkinter window: {e}")
+
 
 @pytest.fixture
 def mock_tk_root():

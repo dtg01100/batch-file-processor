@@ -21,33 +21,19 @@ from tk_extra_widgets import RightClickMenu
 class TestRightClickMenuBasics:
     """Tests for RightClickMenu basic functionality."""
 
-    def test_rclick_menu_creation(self):
+    def test_rclick_menu_creation(self, tk_root):
         """Test RightClickMenu can be created."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         assert menu is not None
-        root.destroy()
 
-    def test_rclick_menu_callable(self):
+    def test_rclick_menu_callable(self, tk_root):
         """Test RightClickMenu is callable."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         assert callable(menu)
-        root.destroy()
 
 
 # ==============================================================================
@@ -57,15 +43,9 @@ class TestRightClickMenuBasics:
 class TestRightClickMenuBuild:
     """Tests for RightClickMenu build_menu method."""
 
-    def test_build_menu_creates_menu(self):
+    def test_build_menu_creates_menu(self, tk_root):
         """Test build_menu creates a menu."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         # Create mock event with required coordinates
@@ -79,17 +59,10 @@ class TestRightClickMenuBuild:
         # Verify menu was created and posted (menu is a local var, not stored)
         # We verify by checking the entry widget state is functional
         assert entry.winfo_exists()
-        root.destroy()
 
-    def test_build_menu_adds_standard_items(self):
+    def test_build_menu_adds_standard_items(self, tk_root):
         """Test build_menu adds standard menu items."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         # Create mock event with required coordinates
@@ -102,7 +75,6 @@ class TestRightClickMenuBuild:
         # Verify menu was created and posted successfully
         # (menu is a local var in build_menu, not stored as instance attr)
         assert entry.winfo_exists()
-        root.destroy()
 
 
 # ==============================================================================
@@ -112,15 +84,9 @@ class TestRightClickMenuBuild:
 class TestRightClickMenuEventHandling:
     """Tests for RightClickMenu event handling."""
 
-    def test_rclick_event_handler(self):
+    def test_rclick_event_handler(self, tk_root):
         """Test right-click event handling."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         # Create mock event
@@ -130,17 +96,10 @@ class TestRightClickMenuEventHandling:
         
         # Menu should handle event without crashing
         # (In real implementation, this would show the menu)
-        root.destroy()
 
-    def test_select_all_method(self):
+    def test_select_all_method(self, tk_root):
         """Test select_all method."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         entry.insert(0, "test text")
         entry.selection_range(0, 4)
         
@@ -150,7 +109,6 @@ class TestRightClickMenuEventHandling:
         menu.select_all()
         
         # Verify selection
-        root.destroy()
 
 
 # ==============================================================================
@@ -160,15 +118,9 @@ class TestRightClickMenuEventHandling:
 class TestRightClickMenuIntegration:
     """Tests for RightClickMenu integration with Entry widgets."""
 
-    def test_bind_to_entry_widget(self):
+    def test_bind_to_entry_widget(self, tk_root):
         """Test binding RightClickMenu to Entry widget."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         # Bind right-click event
@@ -176,18 +128,11 @@ class TestRightClickMenuIntegration:
         
         # Verify binding - Tkinter converts <3> to <Button-3>
         assert "<Button-3>" in entry.bind()
-        root.destroy()
 
-    def test_multiple_entries_same_menu(self):
+    def test_multiple_entries_same_menu(self, tk_root):
         """Test same menu can be used for multiple entries."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry1 = tkinter.Entry(root)
-        entry2 = tkinter.Entry(root)
+        entry1 = tkinter.Entry(tk_root)
+        entry2 = tkinter.Entry(tk_root)
         
         menu1 = RightClickMenu(entry1)
         menu2 = RightClickMenu(entry2)
@@ -195,7 +140,6 @@ class TestRightClickMenuIntegration:
         # Both menus should work independently
         assert menu1 is not None
         assert menu2 is not None
-        root.destroy()
 
 
 # ==============================================================================
@@ -205,31 +149,17 @@ class TestRightClickMenuIntegration:
 class TestRightClickMenuEdgeCases:
     """Tests for RightClickMenu edge cases."""
 
-    def test_menu_with_empty_entry(self):
+    def test_menu_with_empty_entry(self, tk_root):
         """Test menu with empty Entry widget."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root)
+        entry = tkinter.Entry(tk_root)
         menu = RightClickMenu(entry)
         
         # Should handle empty entry without crashing
         menu.select_all()
-        
-        root.destroy()
 
-    def test_menu_with_disabled_entry(self):
+    def test_menu_with_disabled_entry(self, tk_root):
         """Test menu with disabled Entry widget."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        entry = tkinter.Entry(root, state='disabled')
+        entry = tkinter.Entry(tk_root, state='disabled')
         menu = RightClickMenu(entry)
         
         # Should handle disabled entry without crashing
@@ -238,8 +168,6 @@ class TestRightClickMenuEdgeCases:
             menu.select_all()
         except tkinter.TclError:
             pass  # Expected for disabled widget
-        
-        root.destroy()
 
 
 # ==============================================================================

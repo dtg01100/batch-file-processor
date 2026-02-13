@@ -88,15 +88,9 @@ class TestEmailValidationCallback:
 class TestTkinterVariableCallbacks:
     """Tests for tkinter variable callback behavior (patterns used in main_interface)."""
 
-    def test_booleanvar_trace_callback(self):
+    def test_booleanvar_trace_callback(self, tk_root):
         """Test BooleanVar trace callback behavior."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        var = tkinter.BooleanVar(value=False, master=root)
+        var = tkinter.BooleanVar(value=False, master=tk_root)
         
         changes = []
         
@@ -109,17 +103,10 @@ class TestTkinterVariableCallbacks:
         
         # Verify callbacks were triggered
         assert len(changes) >= 2
-        root.destroy()
 
-    def test_stringvar_trace_callback(self):
+    def test_stringvar_trace_callback(self, tk_root):
         """Test StringVar trace callback behavior."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        var = tkinter.StringVar(value="initial", master=root)
+        var = tkinter.StringVar(value="initial", master=tk_root)
         
         changes = []
         
@@ -134,17 +121,10 @@ class TestTkinterVariableCallbacks:
         
         # Verify all changes were recorded
         assert len(changes) == len(test_values)
-        root.destroy()
 
-    def test_intvar_trace_callback(self):
+    def test_intvar_trace_callback(self, tk_root):
         """Test IntVar trace callback behavior."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        var = tkinter.IntVar(value=0, master=root)
+        var = tkinter.IntVar(value=0, master=tk_root)
         
         changes = []
         
@@ -157,7 +137,6 @@ class TestTkinterVariableCallbacks:
             var.set(i)
         
         assert len(changes) == 5
-        root.destroy()
 
 
 # ==============================================================================
@@ -167,15 +146,9 @@ class TestTkinterVariableCallbacks:
 class TestCheckbuttonCallbackPattern:
     """Tests for checkbutton callback patterns used in main_interface."""
 
-    def test_checkbutton_state_changes(self):
+    def test_checkbutton_state_changes(self, tk_root):
         """Test checkbutton variable state changes."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        var = tkinter.BooleanVar(value=False, master=root)
+        var = tkinter.BooleanVar(value=False, master=tk_root)
         
         # Simulate checkbutton behavior
         var.set(True)
@@ -183,24 +156,16 @@ class TestCheckbuttonCallbackPattern:
         
         var.set(False)
         assert var.get() is False
-        root.destroy()
 
-    def test_radiobutton_group_behavior(self):
+    def test_radiobutton_group_behavior(self, tk_root):
         """Test radiobutton group behavior."""
-        try:
-            root = tkinter.Tk()
-            root.withdraw()
-        except (RuntimeError, tkinter.TclError):
-            pytest.skip("No display available")
-        
-        var = tkinter.StringVar(value="option1", master=root)
+        var = tkinter.StringVar(value="option1", master=tk_root)
         
         options = ["option1", "option2", "option3"]
         
         for option in options:
             var.set(option)
             assert var.get() == option
-        root.destroy()
 
 
 # ==============================================================================
