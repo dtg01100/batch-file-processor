@@ -56,6 +56,43 @@ from interface.database.database_obj import DatabaseObj as RefactoredDatabaseObj
 from interface.operations.folder_manager import FolderManager
 from interface.validation.email_validator import validate_email as validate_email_format
 from interface.ui.dialogs.edit_folders_dialog import EditFoldersDialog
+from tk_extra_widgets import columnSorterWidget
+
+
+def log_critical_error(error, VERSION):
+    """Log a critical error to the critical_error.log file and exit.
+
+    Args:
+        error: The error message or exception to log
+        VERSION: The program version string to include in the log
+
+    Raises:
+        SystemExit: Always exits the program after logging
+    """
+    try:
+        print(str(error))
+        with open("critical_error.log", "a", encoding="utf-8") as critical_log:
+            critical_log.write("program version is " + VERSION)
+            critical_log.write(str(datetime.datetime.now()) + str(error) + "\r\n")
+        raise SystemExit from error
+    except Exception as big_error:
+        print("error writing critical error log...")
+        raise SystemExit from big_error
+
+
+def attach_right_click_menu(entry_widget):
+    """Attach a right-click context menu to an entry widget.
+
+    Args:
+        entry_widget: A tkinter Entry widget to attach the menu to
+
+    Returns:
+        The RightClickMenu instance (in case caller needs reference)
+    """
+    rclick_menu = tk_extra_widgets.RightClickMenu(entry_widget)
+    entry_widget.bind("<3>", rclick_menu)
+    return rclick_menu
+
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
@@ -80,183 +117,12 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    class DatabaseObj:
-        def __init__(self, inclass_database_path):
-            if not os.path.isfile(
-                inclass_database_path
-            ):  # if the database file is missing
-                try:
-                    print("creating initial database file...")
-                    creating_database_popup = tkinter.Tk()
-                    tkinter.ttk.Label(
-                        creating_database_popup,
-                        text="Creating initial database file...",
-                    ).pack()
-                    creating_database_popup.update()
-                    create_database.do(
-                        DATABASE_VERSION,
-                        inclass_database_path,
-                        config_folder,
-                        running_platform,
-                    )  # make a new one
-                    print("done")
-                    creating_database_popup.destroy()
-                except (
-                    Exception
-                ) as error:  # if that doesn't work for some reason, log and quit
-                    try:
-                        print(str(error))
-                        with open(
-                            "critical_error.log", "a", encoding="utf-8"
-                        ) as critical_log:
-                            critical_log.write("program version is " + VERSION)
-                            critical_log.write(
-                                str(datetime.datetime.now()) + str(error) + "\r\n"
-                            )
-                        raise SystemExit from error
-                    except (
-                        Exception
-                    ) as big_error:  # if logging doesn't work, at least complain
-                        print(
-                            "error writing critical error log for error: "
-                            + str(error)
-                            + "\n"
-                            + "operation failed with error: "
-                            + str(big_error)
-                        )
-                        raise SystemExit from big_error
-
-            try:  # try to connect to database
-                self.database_connection = dataset.connect(
-                    "sqlite:///" + inclass_database_path
-                )  # connect to database
-                self.session_database = dataset.connect("sqlite:///")
-            except (
-                Exception
-            ) as connect_error:  # if that doesn't work for some reason, log and quit
-                try:
-                    print(str(connect_error))
-                    with open(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + VERSION)
-                        connect_critical_log.write(
-                            str(datetime.datetime.now()) + str(connect_error) + "\r\n"
-                        )
-                    raise SystemExit from connect_error
-                except (
-                    Exception
-                ) as connect_big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(connect_error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(connect_big_error)
-                    )
-                    raise SystemExit from connect_big_error
-
-            # open table required for database check in database
-            db_version = self.database_connection["version"]
-            db_version_dict = db_version.find_one(id=1)
-            if int(db_version_dict["version"]) < int(DATABASE_VERSION):
-                print("updating database file")
-                updating_database_popup = tkinter.Tk()
-                tkinter.ttk.Label(
-                    updating_database_popup, text="Updating database file..."
-                ).pack()
-                updating_database_popup.update()
-                backup_increment.do_backup(inclass_database_path)
-                folders_database_migrator.upgrade_database(
-                    self.database_connection, config_folder, running_platform
-                )
-                updating_database_popup.destroy()
-                print("done")
-            if int(db_version_dict["version"]) > int(DATABASE_VERSION):
-                tkinter.Tk().withdraw()
-                showerror(
-                    "Error",
-                    "Program version too old for database version,\r\n please install a more recent release.",
-                )
-                raise SystemExit
-
-            db_version = self.database_connection["version"]
-            db_version_dict = db_version.find_one(id=1)
-            if db_version_dict["os"] != running_platform:
-                tkinter.Tk().withdraw()
-                showerror(
-                    "Error",
-                    "The operating system detected is: "
-                    + '"'
-                    + running_platform
-                    + '",'
-                    + " this does not match the configuration creator, which is stored as: "
-                    + '"'
-                    + db_version_dict["os"]
-                    + '".'
-                    + "\r\n"
-                    "Folder paths are not portable between operating systems. Exiting",
-                )
-                raise SystemExit
-
-            self.folders_table = self.database_connection["folders"]
-            self.emails_table = self.database_connection["emails_to_send"]
-            self.emails_table_batch = self.database_connection[
-                "working_batch_emails_to_send"
-            ]
-            self.sent_emails_removal_queue = self.database_connection[
-                "sent_emails_removal_queue"
-            ]
-            self.oversight_and_defaults = self.database_connection["administrative"]
-            self.processed_files = self.database_connection["processed_files"]
-            self.settings = self.database_connection["settings"]
-
-        def reload(self):
-            try:  # try to connect to database
-                self.database_connection = dataset.connect(
-                    "sqlite:///" + database_path
-                )  # connect to database
-                self.session_database = dataset.connect("sqlite:///")
-            except (
-                Exception
-            ) as connect_error:  # if that doesn't work for some reason, log and quit
-                try:
-                    print(str(connect_error))
-                    with open(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as connect_critical_log:
-                        connect_critical_log.write("program version is " + VERSION)
-                        connect_critical_log.write(
-                            str(datetime.datetime.now()) + str(connect_error) + "\r\n"
-                        )
-                    raise SystemExit from connect_error
-                except (
-                    Exception
-                ) as connect_big_error:  # if logging doesn't work, at least complain
-                    print(
-                        "error writing critical error log for error: "
-                        + str(connect_error)
-                        + "\n"
-                        + "operation failed with error: "
-                        + str(connect_big_error)
-                    )
-                    raise SystemExit from connect_big_error
-            self.folders_table = self.database_connection["folders"]
-            self.emails_table = self.database_connection["emails_to_send"]
-            self.emails_table_batch = self.database_connection[
-                "working_batch_emails_to_send"
-            ]
-            self.sent_emails_removal_queue = self.database_connection[
-                "sent_emails_removal_queue"
-            ]
-            self.oversight_and_defaults = self.database_connection["administrative"]
-            self.processed_files = self.database_connection["processed_files"]
-            self.settings = self.database_connection["settings"]
-
-        def close(self):
-            self.database_connection.close()
-
-    database_obj_instance = DatabaseObj(database_path)
+    database_obj_instance = RefactoredDatabaseObj(
+        database_path,
+        DATABASE_VERSION,
+        config_folder,
+        running_platform
+    )
 
     launch_options = argparse.ArgumentParser()
     logs_directory = database_obj_instance.oversight_and_defaults.find_one(id=1)
@@ -389,13 +255,6 @@ if __name__ == "__main__":
             refresh_users_list()
         os.chdir(starting_directory)
 
-    def validate_email(email):
-        regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
-        if re.fullmatch(regex, email):
-            return True
-        else:
-            return False
-
     def edit_folder_selector(folder_to_be_edited):
         # feed EditDialog class the dict for the selected folder from the folders list buttons
         # note: would prefer to be able to do this inline,
@@ -470,8 +329,7 @@ if __name__ == "__main__":
         )  # inactive users title
         search_field = tkinter.ttk.Entry(search_frame)
         search_field.insert(0, folder_filter)
-        right_click_search_field = tk_extra_widgets.RightClickMenu(search_field)
-        search_field.bind("<3>", right_click_search_field)
+        attach_right_click_menu(search_field)
         search_field.bind("<Return>", search_field_callback)
         search_button = tkinter.ttk.Button(
             master=search_frame, text="Update Filter", command=search_field_callback
@@ -690,68 +548,6 @@ if __name__ == "__main__":
             side=tkinter.RIGHT, fill=tkinter.BOTH, expand=tkinter.TRUE
         )
 
-    class columnSorterWidget:
-        def __init__(self, parent_widget, input_column_layout_string=""):
-            self.columnstring = input_column_layout_string
-            self.entries_list = self.columnstring.split(",")
-            self.containerframe = tkinter.ttk.Frame(master=parent_widget)
-            self.listcontainer_frame = tkinter.ttk.Frame(master=self.containerframe)
-            self.entries_listbox = tkinter.Listbox(
-                master=self.listcontainer_frame, height=len(self.entries_list)
-            )
-            self.entries_listbox.pack()
-            self.buildinterface()
-            self.listcontainer_frame.pack(side=tkinter.LEFT)
-            self.adjustframe = tkinter.ttk.Frame(master=self.containerframe)
-            move_up_button = tkinter.ttk.Button(
-                master=self.adjustframe,
-                text="UP",
-                command=lambda: self._move_entry(True),
-            )
-            move_down_button = tkinter.ttk.Button(
-                master=self.adjustframe,
-                text="DOWN",
-                command=lambda: self._move_entry(False),
-            )
-            move_up_button.pack(side=tkinter.TOP)
-            move_down_button.pack(side=tkinter.BOTTOM)
-            self.adjustframe.pack(side=tkinter.RIGHT)
-
-        def set_columnstring(self, columnstring):
-            self.columnstring = columnstring
-            self.buildinterface()
-
-        def buildinterface(self):
-            self.entries_list = self.columnstring.split(",")
-            self.entries_listbox.configure(height=1)
-            for index in range(len(self.entries_list)):
-                self.entries_listbox.delete(index)
-            self.entries_listbox.configure(height=len(self.entries_list))
-            for item in self.entries_list:
-                self.entries_listbox.insert(tkinter.END, item)
-
-        def _move_entry(self, move_up=False):
-            current_selection = self.entries_listbox.selection_get()
-            counter = 0
-            for i in range(len(self.entries_list)):
-                if current_selection == self.entries_listbox.get(i):
-                    break
-                counter += 1
-            self.entries_listbox.delete(counter)
-            if move_up:
-                if counter != 0:
-                    counter -= 1
-            else:
-                if counter != len(self.entries_list) - 1:
-                    counter += 1
-            self.entries_listbox.insert(counter, current_selection)
-            self.entries_listbox.select_set(counter)
-
-        def get(self):
-            return ",".join(
-                [self.entries_listbox.get(i) for i in range(len(self.entries_list))]
-            )
-
     class EditSettingsDialog(dialog.Dialog):  # modal dialog for folder configuration.
         def body(self, master):
             self.settings = database_obj_instance.settings.find_one(id=1)
@@ -810,10 +606,10 @@ if __name__ == "__main__":
             ).grid(row=7, sticky=tkinter.E)
 
             def reporting_options_fields_state_set():
-                if self.enable_reporting_checkbutton_variable.get() == "False":
-                    state = tkinter.DISABLED
-                else:
+                if utils.normalize_bool(self.enable_reporting_checkbutton_variable.get()):
                     state = tkinter.NORMAL
+                else:
+                    state = tkinter.DISABLED
                 for child in report_sending_options_frame.winfo_children():
                     child.configure(state=state)
 
@@ -910,42 +706,15 @@ if __name__ == "__main__":
                 offvalue="False",
                 text="Enable Report Printing Fallback:",
             )
-            rclick_as400_address_field = tk_extra_widgets.RightClickMenu(
-                self.as400_address_field
-            )
-            rclick_as400_username_field = tk_extra_widgets.RightClickMenu(
-                self.as400_username_field
-            )
-            rclick_as400_password_field = tk_extra_widgets.RightClickMenu(
-                self.as400_password_field
-            )
-            rclick_report_email_address_field = tk_extra_widgets.RightClickMenu(
-                self.email_address_field
-            )
-            rclick_report_email_username_field = tk_extra_widgets.RightClickMenu(
-                self.email_username_field
-            )
-            rclick_report_email_smtp_server_field = tk_extra_widgets.RightClickMenu(
-                self.email_smtp_server_field
-            )
-            rclick_reporting_smtp_port_field = tk_extra_widgets.RightClickMenu(
-                self.smtp_port_field
-            )
-            rclick_report_email_destination_field = tk_extra_widgets.RightClickMenu(
-                self.report_email_destination_field
-            )
-            self.as400_address_field.bind("<3>", rclick_as400_address_field)
-            self.as400_username_field.bind("<3>", rclick_as400_username_field)
-            self.as400_password_field.bind("<3>", rclick_as400_password_field)
-            self.email_address_field.bind("<3>", rclick_report_email_address_field)
-            self.email_username_field.bind("<3>", rclick_report_email_username_field)
-            self.email_smtp_server_field.bind(
-                "<3>", rclick_report_email_smtp_server_field
-            )
-            self.smtp_port_field.bind("<3>", rclick_reporting_smtp_port_field)
-            self.report_email_destination_field.bind(
-                "<3>", rclick_report_email_destination_field
-            )
+            attach_right_click_menu(self.as400_address_field)
+            attach_right_click_menu(self.as400_username_field)
+            attach_right_click_menu(self.as400_password_field)
+            attach_right_click_menu(self.email_address_field)
+            attach_right_click_menu(self.email_username_field)
+            attach_right_click_menu(self.email_smtp_server_field)
+            attach_right_click_menu(self.smtp_port_field)
+            attach_right_click_menu(self.report_email_destination_field)
+
             self.select_log_folder_button = tkinter.ttk.Button(
                 master,
                 text="Select Log Folder...",
@@ -1051,7 +820,7 @@ if __name__ == "__main__":
                     error_list.append("Email Address Is A Required Field\r")
                     errors = True
                 else:
-                    if (validate_email(str(self.email_address_field.get()))) is False:
+                    if (validate_email_format(str(self.email_address_field.get()))) is False:
                         error_list.append("Invalid Email Origin Address\r")
                         errors = True
 
@@ -1103,7 +872,7 @@ if __name__ == "__main__":
                     error_list.append("SMTP Port Is A Required Field\r")
                     errors = True
 
-            if self.enable_reporting_checkbutton_variable.get() == "True":
+            if utils.normalize_bool(self.enable_reporting_checkbutton_variable.get()):
                 if self.report_email_destination_field.get() == "":
                     error_list.append(
                         "Reporting Email Destination Is A Required Field\r"
@@ -1115,7 +884,7 @@ if __name__ == "__main__":
                     ).split(", ")
                     for email_recipient in email_recipients:
                         print(email_recipient)
-                        if (validate_email(str(email_recipient))) is False:
+                        if (validate_email_format(str(email_recipient))) is False:
                             error_list.append("Invalid Email Destination Address\r\n")
                             errors = True
 
@@ -1367,167 +1136,219 @@ if __name__ == "__main__":
                 self.convert_to_selector_frame, text="Convert To: "
             )
 
+            # Widgets that may need to be hidden/shown based on format
+            self._convert_options_widgets = [
+                self.upc_variable_process_checkbutton,
+                self.a_record_checkbutton,
+                self.c_record_checkbutton,
+                self.headers_checkbutton,
+                self.ampersand_checkbutton,
+                self.pad_a_records_checkbutton,
+                self.a_record_padding_frame,
+                self.a_record_padding_field,
+                self.pad_a_records_length_optionmenu,
+                self.append_a_records_checkbutton,
+                self.a_record_append_field,
+                self.override_upc_checkbutton,
+                self.override_upc_level_optionmenu,
+                self.override_upc_category_filter_entry,
+                self.upc_target_length_label,
+                self.upc_target_length_entry,
+                self.upc_padding_pattern_label,
+                self.upc_padding_pattern_entry,
+                self.each_uom_edi_tweak_checkbutton,
+                self.include_item_numbers_checkbutton,
+                self.include_item_description_checkbutton,
+                self.simple_csv_column_sorter.containerframe,
+                self.a_record_padding_field,
+                self.estore_store_number_label,
+                self.estore_store_number_field,
+                self.estore_Vendor_OId_label,
+                self.estore_Vendor_OId_field,
+                self.estore_vendor_namevendoroid_label,
+                self.estore_vendor_namevendoroid_field,
+                self.fintech_divisionid_field,
+                self.fintech_divisionid_label,
+            ]
+
+            # Format-specific UI builder methods
+            def _build_csv_options():
+                """Build UI options for CSV format."""
+                self.upc_variable_process_checkbutton.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_checkbutton.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.c_record_checkbutton.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.headers_checkbutton.grid(
+                    row=6, column=0, sticky=tkinter.W, padx=3
+                )
+                self.ampersand_checkbutton.grid(
+                    row=7, column=0, sticky=tkinter.W, padx=3
+                )
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.a_record_padding_frame.grid(
+                    row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3
+                )
+                self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
+                self.override_upc_checkbutton.grid(
+                    row=10, column=0, sticky=tkinter.W, padx=3
+                )
+                self.override_upc_level_optionmenu.grid(
+                    row=10, column=1, sticky=tkinter.W
+                )
+                self.override_upc_category_filter_entry.grid(
+                    row=10, column=2, sticky=tkinter.W
+                )
+                self.upc_target_length_label.grid(
+                    row=11, column=0, sticky=tkinter.W, padx=3
+                )
+                self.upc_target_length_entry.grid(
+                    row=11, column=1, sticky=tkinter.W
+                )
+                self.upc_padding_pattern_label.grid(
+                    row=12, column=0, sticky=tkinter.W, padx=3
+                )
+                self.upc_padding_pattern_entry.grid(
+                    row=12, column=1, sticky=tkinter.W
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=13, column=0, sticky=tkinter.W, padx=3
+                )
+
+            def _build_scannerware_options():
+                """Build UI options for ScannerWare format."""
+                self.pad_a_records_checkbutton.grid(
+                    row=0, column=0, sticky=tkinter.W
+                )
+                self.a_record_padding_field.grid(row=2, column=2)
+                self.a_record_padding_frame.grid(
+                    row=2, column=0, columnspan=2, sticky=tkinter.W, padx=3
+                )
+                self.append_a_records_checkbutton.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.a_record_append_field.grid(row=3, column=2)
+
+            def _build_simplified_csv_options():
+                """Build UI options for Simplified CSV format."""
+                self.headers_checkbutton.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.include_item_numbers_checkbutton.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.include_item_description_checkbutton.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.each_uom_edi_tweak_checkbutton.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.simple_csv_column_sorter.containerframe.grid(
+                    row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2
+                )
+
+            def _build_estore_options():
+                """Build UI options for Estore eInvoice format."""
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tkinter.E, padx=3
+                )
+
+            def _build_estore_generic_options():
+                """Build UI options for Estore eInvoice Generic format."""
+                self.estore_store_number_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_store_number_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_Vendor_OId_label.grid(
+                    row=3, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_Vendor_OId_field.grid(
+                    row=3, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_vendor_namevendoroid_label.grid(
+                    row=4, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_vendor_namevendoroid_field.grid(
+                    row=4, column=1, sticky=tkinter.E, padx=3
+                )
+                self.estore_c_record_oid_label.grid(
+                    row=5, column=0, sticky=tkinter.W, padx=3
+                )
+                self.estore_c_record_oid_field.grid(
+                    row=5, column=1, sticky=tkinter.E, padx=3
+                )
+
+            def _build_fintech_options():
+                """Build UI options for Fintech format."""
+                self.fintech_divisionid_label.grid(
+                    row=2, column=0, sticky=tkinter.W, padx=3
+                )
+                self.fintech_divisionid_field.grid(
+                    row=2, column=1, sticky=tkinter.E, padx=3
+                )
+
+            def _build_scansheet_options():
+                """Build UI options for Scansheet format (no additional options)."""
+                pass
+
+            def _build_jolley_options():
+                """Build UI options for Jolley format (no additional options)."""
+                pass
+
+            def _build_stewarts_options():
+                """Build UI options for Stewarts format (no additional options)."""
+                pass
+
+            def _build_yellowdog_options():
+                """Build UI options for YellowDog format (no additional options)."""
+                pass
+
+            # Update the builder dictionary with the local functions
+            self._convert_options_builders = {
+                "csv": _build_csv_options,
+                "ScannerWare": _build_scannerware_options,
+                "simplified_csv": _build_simplified_csv_options,
+                "Estore eInvoice": _build_estore_options,
+                "Estore eInvoice Generic": _build_estore_generic_options,
+                "fintech": _build_fintech_options,
+                "scansheet-type-a": _build_scansheet_options,
+                "jolley_custom": _build_jolley_options,
+                "stewarts_custom": _build_stewarts_options,
+                "YellowDog CSV": _build_yellowdog_options,
+            }
+
             def make_convert_to_options(_=None):
-                for frameentry in [
-                    self.upc_variable_process_checkbutton,
-                    self.a_record_checkbutton,
-                    self.c_record_checkbutton,
-                    self.headers_checkbutton,
-                    self.ampersand_checkbutton,
-                    self.pad_a_records_checkbutton,
-                    self.a_record_padding_frame,
-                    self.a_record_padding_field,
-                    self.pad_a_records_length_optionmenu,
-                    self.append_a_records_checkbutton,
-                    self.a_record_append_field,
-                    self.override_upc_checkbutton,
-                    self.override_upc_level_optionmenu,
-                    self.override_upc_category_filter_entry,
-                    self.upc_target_length_label,
-                    self.upc_target_length_entry,
-                    self.upc_padding_pattern_label,
-                    self.upc_padding_pattern_entry,
-                    self.each_uom_edi_tweak_checkbutton,
-                    self.include_item_numbers_checkbutton,
-                    self.include_item_description_checkbutton,
-                    self.simple_csv_column_sorter.containerframe,
-                    self.a_record_padding_field,
-                    self.estore_store_number_label,
-                    self.estore_store_number_field,
-                    self.estore_Vendor_OId_label,
-                    self.estore_Vendor_OId_field,
-                    self.estore_vendor_namevendoroid_label,
-                    self.estore_vendor_namevendoroid_field,
-                    self.fintech_divisionid_field,
-                    self.fintech_divisionid_label,
-                ]:
+                # Hide all format-specific widgets first
+                for frameentry in self._convert_options_widgets:
                     frameentry.grid_forget()
-                if self.convert_formats_var.get() == "csv":
-                    self.upc_variable_process_checkbutton.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_checkbutton.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.c_record_checkbutton.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.headers_checkbutton.grid(
-                        row=6, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.ampersand_checkbutton.grid(
-                        row=7, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.pad_a_records_checkbutton.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.a_record_padding_frame.grid(
-                        row=9, column=0, columnspan=2, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_padding_field.grid(row=9, column=1, sticky=tkinter.W)
-                    self.override_upc_checkbutton.grid(
-                        row=10, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.override_upc_level_optionmenu.grid(
-                        row=10, column=1, sticky=tkinter.W
-                    )
-                    self.override_upc_category_filter_entry.grid(
-                        row=10, column=2, sticky=tkinter.W
-                    )
-                    self.upc_target_length_label.grid(
-                        row=11, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.upc_target_length_entry.grid(
-                        row=11, column=1, sticky=tkinter.W
-                    )
-                    self.upc_padding_pattern_label.grid(
-                        row=12, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.upc_padding_pattern_entry.grid(
-                        row=12, column=1, sticky=tkinter.W
-                    )
-                    self.each_uom_edi_tweak_checkbutton.grid(
-                        row=13, column=0, sticky=tkinter.W, padx=3
-                    )
-                if self.convert_formats_var.get() == "ScannerWare":
-                    self.pad_a_records_checkbutton.grid(
-                        row=0, column=0, sticky=tkinter.W
-                    )
-                    self.a_record_padding_field.grid(row=2, column=2)
-                    self.a_record_padding_frame.grid(
-                        row=2, column=0, columnspan=2, sticky=tkinter.W, padx=3
-                    )
-                    self.append_a_records_checkbutton.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.a_record_append_field.grid(row=3, column=2)
-                if self.convert_formats_var.get() == "simplified_csv":
-                    self.headers_checkbutton.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.include_item_numbers_checkbutton.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.include_item_description_checkbutton.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.each_uom_edi_tweak_checkbutton.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.simple_csv_column_sorter.containerframe.grid(
-                        row=6, column=0, sticky=tkinter.W, padx=3, columnspan=2
-                    )
-                if self.convert_formats_var.get() == "Estore eInvoice":
-                    self.estore_store_number_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_store_number_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_Vendor_OId_label.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_Vendor_OId_field.grid(
-                        row=3, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_label.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_field.grid(
-                        row=4, column=1, sticky=tkinter.E, padx=3
-                    )
-                if self.convert_formats_var.get() == "Estore eInvoice Generic":
-                    self.estore_store_number_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_store_number_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_Vendor_OId_label.grid(
-                        row=3, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_Vendor_OId_field.grid(
-                        row=3, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_label.grid(
-                        row=4, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_vendor_namevendoroid_field.grid(
-                        row=4, column=1, sticky=tkinter.E, padx=3
-                    )
-                    self.estore_c_record_oid_label.grid(
-                        row=5, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.estore_c_record_oid_field.grid(
-                        row=5, column=1, sticky=tkinter.E, padx=3
-                    )
-                if self.convert_formats_var.get() == "fintech":
-                    self.fintech_divisionid_label.grid(
-                        row=2, column=0, sticky=tkinter.W, padx=3
-                    )
-                    self.fintech_divisionid_field.grid(
-                        row=2, column=1, sticky=tkinter.E, padx=3
-                    )
+                # Get the selected format and call the appropriate builder
+                selected_format = self.convert_formats_var.get()
+                builder = self._convert_options_builders.get(selected_format)
+                if builder:
+                    builder()
 
             self.convert_to_selector_menu = tkinter.ttk.OptionMenu(
                 self.convert_to_selector_frame,
@@ -1654,7 +1475,7 @@ if __name__ == "__main__":
                 self.ftp_password_field.configure(state=ftp_state)
 
             def set_header_state():
-                if self.active_checkbutton.get() == "False":
+                if not utils.normalize_bool(self.active_checkbutton.get()):
                     self.active_checkbutton_object.configure(
                         text="Folder Is Disabled", activebackground="green"
                     )
@@ -1713,10 +1534,7 @@ if __name__ == "__main__":
                 self.folder_alias_field = tkinter.ttk.Entry(
                     self.folder_alias_frame, width=30
                 )
-                rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
-                    self.folder_alias_field
-                )
-                self.folder_alias_field.bind("<3>", rclick_folder_alias_field)
+                attach_right_click_menu(self.folder_alias_field)
                 self.folder_alias_field.grid(row=0, column=1)
                 tkinter.ttk.Button(
                     master=self.folder_alias_frame,
@@ -1729,49 +1547,26 @@ if __name__ == "__main__":
                 command=lambda: select_copy_to_directory(),
             )
             self.ftp_server_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_server_field = tk_extra_widgets.RightClickMenu(
-                self.ftp_server_field
-            )
-            self.ftp_server_field.bind("<3>", rclick_ftp_server_field)
+            attach_right_click_menu(self.ftp_server_field)
             self.ftp_port_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_port_field = tk_extra_widgets.RightClickMenu(self.ftp_port_field)
-            self.ftp_port_field.bind("<3>", rclick_ftp_port_field)
+            attach_right_click_menu(self.ftp_port_field)
             self.ftp_folder_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_folder_field = tk_extra_widgets.RightClickMenu(
-                self.ftp_folder_field
-            )
-            self.ftp_folder_field.bind("<3>", rclick_ftp_folder_field)
+            attach_right_click_menu(self.ftp_folder_field)
             self.ftp_username_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_ftp_username_field = tk_extra_widgets.RightClickMenu(
-                self.ftp_username_field
-            )
-            self.ftp_username_field.bind("<3>", rclick_ftp_username_field)
+            attach_right_click_menu(self.ftp_username_field)
             self.ftp_password_field = tkinter.ttk.Entry(
                 self.prefsframe, show="*", width=30
             )
             self.email_recepient_field = tkinter.ttk.Entry(self.prefsframe, width=30)
-            rclick_email_recepient_field = tk_extra_widgets.RightClickMenu(
-                self.email_recepient_field
-            )
-            self.email_recepient_field.bind("<3>", rclick_email_recepient_field)
+            attach_right_click_menu(self.email_recepient_field)
             self.email_sender_subject_field = tkinter.ttk.Entry(
                 self.prefsframe, width=30
             )
-            rclick_email_sender_subject_field = tk_extra_widgets.RightClickMenu(
-                self.email_sender_subject_field
-            )
-            self.email_sender_subject_field.bind(
-                "<3>", rclick_email_sender_subject_field
-            )
+            attach_right_click_menu(self.email_sender_subject_field)
             self.invoice_date_custom_format_field = tkinter.ttk.Entry(
                 self.convert_options_frame, width=10
             )
-            rclick_invoice_date_custom_format_field = tk_extra_widgets.RightClickMenu(
-                self.invoice_date_custom_format_field
-            )
-            self.invoice_date_custom_format_field.bind(
-                "<3>", rclick_invoice_date_custom_format_field
-            )
+            attach_right_click_menu(self.invoice_date_custom_format_field)
 
             self.force_edi_check_checkbutton = tkinter.ttk.Checkbutton(
                 self.ediframe,
@@ -2156,7 +1951,7 @@ if __name__ == "__main__":
 
                 if copied:
                     self.convert_formats_var.set(config_dict["convert_to_format"])
-                    if config_dict["process_edi"] == "True":
+                    if utils.normalize_bool(config_dict["process_edi"]):
                         self.ediconvert_options.set("Convert EDI")
                         reset_ediconvert_options("Convert EDI")
                     elif config_dict["tweak_edi"] is True:
@@ -2293,7 +2088,7 @@ if __name__ == "__main__":
                         row=18, column=0, sticky=tkinter.W, padx=3
                     )
 
-            if self.foldersnameinput["process_edi"] == "True":
+            if utils.normalize_bool(self.foldersnameinput["process_edi"]):
                 self.ediconvert_options.set("Convert EDI")
                 make_ediconvert_options("Convert EDI")
             elif self.foldersnameinput["tweak_edi"] is True:
@@ -2614,7 +2409,7 @@ if __name__ == "__main__":
                 else:
                     email_recepients = str(self.email_recepient_field.get()).split(", ")
                     for email_recepient in email_recepients:
-                        if (validate_email(str(email_recepient))) is False:
+                        if (validate_email_format(str(email_recepient))) is False:
                             error_string_constructor_list.append(
                                 "Invalid Email Destination Address"
                             )
@@ -2629,7 +2424,7 @@ if __name__ == "__main__":
                     )
                     errors = True
 
-            if backend_count == 0 and self.active_checkbutton.get() == "True":
+            if backend_count == 0 and utils.normalize_bool(self.active_checkbutton.get()):
                 error_string_constructor_list.append("No Backend Is Selected")
                 errors = True
             print(self.tweak_edi.get())
@@ -2647,7 +2442,7 @@ if __name__ == "__main__":
             if (
                 len(str(self.a_record_padding_field.get()))
                 > self.a_record_padding_length.get()
-                and str(self.pad_arec_check.get()) == "True"
+                and utils.normalize_bool(self.pad_arec_check.get())
             ):
                 if self.convert_formats_var.get() not in ["ScannerWare"]:
                     error_string_constructor_list.append(
@@ -2657,7 +2452,7 @@ if __name__ == "__main__":
 
             if (
                 len(str(self.a_record_padding_field.get())) != 6
-                and str(self.pad_arec_check.get()) == "True"
+                and utils.normalize_bool(self.pad_arec_check.get())
             ):
                 error_string_constructor_list.append(
                     '"A" Record Padding Needs To Be Six Characters'
@@ -2913,25 +2708,11 @@ if __name__ == "__main__":
                         )
                         raise SystemExit
             else:
-                try:
-                    # can't prompt for new logs directory, can only complain in a critical log and quit
-                    print(
-                        "can't write into logs directory. in automatic mode,"
-                        " so no prompt. this error will be stored in critical log"
-                    )
-                    with open(
-                        "critical_error.log", "a", encoding="utf-8"
-                    ) as process_folders_critical_log:
-                        process_folders_critical_log.write(
-                            str(datetime.datetime.now())
-                            + "can't write into logs directory."
-                            " in automatic mode, so no prompt\r\n"
-                        )
-                    raise SystemExit
-                except IOError as exc:
-                    # can't complain in a critical log, so ill complain in standard output and quit
-                    print("Can't write critical error log, aborting")
-                    raise SystemExit from exc
+                # can't prompt for new logs directory, can only complain in a critical log and quit
+                log_critical_error(
+                    "can't write into logs directory. in automatic mode, so no prompt",
+                    VERSION,
+                )
         run_log_path = reporting["logs_directory"]
         run_log_path = str(
             run_log_path
@@ -2944,7 +2725,7 @@ if __name__ == "__main__":
             utils.do_clear_old_files(run_log_path, 1000)
             run_log.write(("Batch File Sender Version " + VERSION + "\r\n").encode())
             run_log.write(("starting run at " + time.ctime() + "\r\n").encode())
-            if reporting["enable_reporting"] == "True":
+            if utils.normalize_bool(reporting["enable_reporting"]):
                 # add run log to email queue if reporting is enabled
                 database_obj_instance.emails_table.insert(
                     {"log": run_log_full_path, "folder_alias": run_log_name_constructor}
@@ -2990,7 +2771,7 @@ if __name__ == "__main__":
                     ).encode()
                 )
                 run_log.write(traceback.print_exc())
-        if reporting["enable_reporting"] == "True":
+        if utils.normalize_bool(reporting["enable_reporting"]):
             try:
                 database_obj_instance.sent_emails_removal_queue.delete()
                 total_size = 0
@@ -3129,7 +2910,7 @@ if __name__ == "__main__":
             except Exception as dispatch_error:
                 database_obj_instance.emails_table_batch.delete()
                 with open(run_log_full_path, "a", encoding="utf-8") as run_log:
-                    if reporting["report_printing_fallback"] == "True":
+                    if utils.normalize_bool(reporting["report_printing_fallback"]):
                         print(
                             "Emailing report log failed with error: "
                             + str(dispatch_error)
@@ -3151,7 +2932,7 @@ if __name__ == "__main__":
                             + str(dispatch_error)
                             + ", printing disabled, stopping\r\n"
                         )
-                if reporting["report_printing_fallback"] == "True":
+                if utils.normalize_bool(reporting["report_printing_fallback"]):
                     # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
                     try:
                         with open(run_log_full_path, "r", encoding="utf-8") as run_log:
@@ -3181,13 +2962,7 @@ if __name__ == "__main__":
                 root.update()
                 process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
-                print(str(automatic_process_error))
-                with open(
-                    "critical_error.log", "a", encoding="utf-8"
-                ) as automatic_process_critical_log:
-                    automatic_process_critical_log.write(
-                        str(automatic_process_error) + "\r\n"
-                    )
+                log_critical_error(automatic_process_error, VERSION)
         else:
             print("Error, No Active Folders")
         database_obj_instance.close()
