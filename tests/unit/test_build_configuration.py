@@ -211,7 +211,7 @@ class TestImportDiscovery:
         dynamic_imports = set()
 
         for py_file in PROJECT_ROOT.rglob("*.py"):
-            if ".venv" in str(py_file) or "test_venv" in str(py_file):
+            if ".venv" in str(py_file) or "test_venv" in str(py_file) or "/venv" in str(py_file):
                 continue
 
             try:

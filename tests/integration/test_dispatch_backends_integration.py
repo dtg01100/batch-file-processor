@@ -78,7 +78,7 @@ def folder_config_with_copy(sample_folder):
         'copy_to_directory': '/tmp/test_output',
         'process_backend_ftp': False,
         'process_backend_email': False,
-        'process_edi': False,
+        'process_edi': "False",
         'force_edi_validation': False,
     }
 
@@ -98,7 +98,7 @@ def folder_config_with_ftp(sample_folder):
         'ftp_folder': '/uploads/',
         'process_backend_copy': False,
         'process_backend_email': False,
-        'process_edi': False,
+        'process_edi': "False",
         'force_edi_validation': False,
     }
 
@@ -115,7 +115,7 @@ def folder_config_with_email(sample_folder):
         'email_subject_line': 'File: %filename%',
         'process_backend_copy': False,
         'process_backend_ftp': False,
-        'process_edi': False,
+        'process_edi': "False",
         'force_edi_validation': False,
     }
 
@@ -138,7 +138,7 @@ def folder_config_with_all_backends(sample_folder):
         'process_backend_email': True,
         'email_to': 'recipient@example.com',
         'email_subject_line': 'File: %filename%',
-        'process_edi': False,
+        'process_edi': "False",
         'force_edi_validation': False,
     }
 

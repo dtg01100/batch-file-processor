@@ -67,10 +67,8 @@ def mock_ftp_service() -> MagicMock:
     """
     mock = MagicMock(spec=FTPServiceProtocol)
 
-    # Default to successful connection
-    mock.test_connection = MagicMock(
-        return_value=FTPConnectionResult(success=True)
-    )
+    # Default to successful connection - using side_effect to track connections
+    mock.test_connection = MagicMock()
 
     # Track connection attempts for verification
     mock.connection_attempts = []

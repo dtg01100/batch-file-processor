@@ -328,117 +328,117 @@ C00000002000010000
 class TestEDITweakingFlow:
     """Test EDI tweaking workflows (date offsets, padding, etc.)."""
     
-    def test_date_offset_tweak(self, temp_workspace):
+    @pytest.fixture
+    def complete_parameters_dict(self):
+        """Create a complete parameters dictionary with all required keys for edi_tweak."""
+        return {
+            'pad_a_records': "False",
+            'a_record_padding': "",
+            'a_record_padding_length': 6,
+            'append_a_records': "False",
+            'a_record_append_text': "",
+            'invoice_date_custom_format': False,
+            'invoice_date_custom_format_string': "%Y%m%d",
+            'force_txt_file_ext': "False",
+            'calculate_upc_check_digit': "False",
+            'invoice_date_offset': 0,
+            'retail_uom': False,
+            'override_upc_bool': False,
+            'override_upc_level': None,
+            'override_upc_category_filter': None,
+            'split_prepaid_sales_tax_crec': "False",
+            'upc_target_length': 11,
+            'upc_padding_pattern': "           ",
+        }
+    
+    @pytest.fixture
+    def complete_settings_dict(self):
+        """Create a complete settings dictionary for edi_tweak."""
+        return {
+            "as400_username": "testuser",
+            "as400_password": "testpass",
+            "as400_address": "test.as400.local",
+            "odbc_driver": "{ODBC Driver 17 for SQL Server}",
+        }
+    
+    def test_date_offset_tweak(self, temp_workspace, complete_parameters_dict, complete_settings_dict):
         """Test applying date offset to EDI file."""
         test_file = temp_workspace['input_folder'] / "date_test.edi"
         output_file = temp_workspace['output_folder'] / "date_test.edi"
-        content = """A00001120240101001VENDOR1           Vendor One                      00001
-B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
-C00000002000010000
-"""
+        # Properly formatted EDI A record: A + cust_vendor(6) + invoice_number(10) + invoice_date(6) + invoice_total(10)
+        # A VENDOR 0000000001 010125 0000100000
+        content = "AVENDOR00000000010101250000100000\n"
         test_file.write_text(content)
         
-        # Create proper parameters dict
-        parameters_dict = {
-            'pad_a_records': False,
-            'a_record_padding': '',
-            'a_record_padding_length': 0,
-            'date_offset': 5,
-            'append_po_num': False,
-            'append_po_text': '',
-        }
+        # Set date offset
+        complete_parameters_dict['invoice_date_offset'] = 5
         
-        settings_dict = {}
         upc_dict = {}
         
         # Apply date offset (+5 days)
-        try:
-            result = edi_tweaks.edi_tweak(
-                str(test_file),
-                str(output_file),
-                settings_dict,
-                parameters_dict,
-                upc_dict
-            )
-            # Verify operation completed
-            assert result is not None, "Should return result"
-        except Exception as e:
-            # If edi_tweak has issues with test setup, that's OK for this flow test
-            pass
+        result = edi_tweaks.edi_tweak(
+            str(test_file),
+            str(output_file),
+            complete_settings_dict,
+            complete_parameters_dict,
+            upc_dict
+        )
+        # Verify operation completed
+        assert result is not None, "Should return result"
+        assert output_file.exists(), "Output file should exist"
     
-    def test_padding_tweak(self, temp_workspace):
+    def test_padding_tweak(self, temp_workspace, complete_parameters_dict, complete_settings_dict):
         """Test applying padding to EDI records."""
         test_file = temp_workspace['input_folder'] / "pad_test.edi"
         output_file = temp_workspace['output_folder'] / "pad_test.edi"
-        content = """A00001120240101001VENDOR1           Vendor One                      00001
-B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
-C00000002000010000
-"""
+        # Properly formatted EDI A record
+        content = "AVENDOR00000000010101250000100000\n"
         test_file.write_text(content)
         
-        # Create proper parameters dict
-        parameters_dict = {
-            'pad_a_records': True,
-            'a_record_padding': "PADDING",
-            'a_record_padding_length': 7,
-            'date_offset': 0,
-            'append_po_num': False,
-            'append_po_text': '',
-        }
+        # Enable padding
+        complete_parameters_dict['pad_a_records'] = "True"
+        complete_parameters_dict['a_record_padding'] = "PADDING"
+        complete_parameters_dict['a_record_padding_length'] = 7
         
-        settings_dict = {}
         upc_dict = {}
         
         # Apply padding
-        try:
-            result = edi_tweaks.edi_tweak(
-                str(test_file),
-                str(output_file),
-                settings_dict,
-                parameters_dict,
-                upc_dict
-            )
-            assert result is not None, "Should return result"
-        except Exception as e:
-            # edi_tweak may have specific requirements, that's OK
-            pass
+        result = edi_tweaks.edi_tweak(
+            str(test_file),
+            str(output_file),
+            complete_settings_dict,
+            complete_parameters_dict,
+            upc_dict
+        )
+        assert result is not None, "Should return result"
+        assert output_file.exists(), "Output file should exist"
     
-    def test_combined_tweaks(self, temp_workspace):
+    def test_combined_tweaks(self, temp_workspace, complete_parameters_dict, complete_settings_dict):
         """Test applying multiple tweaks simultaneously."""
         test_file = temp_workspace['input_folder'] / "combined_test.edi"
         output_file = temp_workspace['output_folder'] / "combined_test.edi"
-        content = """A00001120240101001VENDOR1           Vendor One                      00001
-B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
-C00000002000010000
-"""
+        # Properly formatted EDI A record
+        content = "AVENDOR00000000010101250000100000\n"
         test_file.write_text(content)
         
-        # Create proper parameters dict with multiple tweaks
-        parameters_dict = {
-            'pad_a_records': True,
-            'a_record_padding': "PAD",
-            'a_record_padding_length': 3,
-            'date_offset': 3,
-            'append_po_num': True,
-            'append_po_text': "APPENDED",
-        }
+        # Enable multiple tweaks
+        complete_parameters_dict['pad_a_records'] = "True"
+        complete_parameters_dict['a_record_padding'] = "PAD"
+        complete_parameters_dict['a_record_padding_length'] = 3
+        complete_parameters_dict['invoice_date_offset'] = 3
         
-        settings_dict = {}
         upc_dict = {}
         
         # Apply multiple tweaks
-        try:
-            result = edi_tweaks.edi_tweak(
-                str(test_file),
-                str(output_file),
-                settings_dict,
-                parameters_dict,
-                upc_dict
-            )
-            assert result is not None, "Should return result"
-        except Exception as e:
-            # edi_tweak may have specific requirements, that's OK for flow test
-            pass
+        result = edi_tweaks.edi_tweak(
+            str(test_file),
+            str(output_file),
+            complete_settings_dict,
+            complete_parameters_dict,
+            upc_dict
+        )
+        assert result is not None, "Should return result"
+        assert output_file.exists(), "Output file should exist"
 
 
 # =============================================================================
