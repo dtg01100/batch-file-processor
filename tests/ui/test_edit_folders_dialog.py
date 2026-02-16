@@ -451,6 +451,7 @@ class TestEditFoldersDialogApplyToFolder:
             'estore_store_number_field': MagicMock(get=MagicMock(return_value='')),
             'estore_Vendor_OId_field': MagicMock(get=MagicMock(return_value='')),
             'estore_vendor_namevendoroid_field': MagicMock(get=MagicMock(return_value='')),
+            'estore_c_record_oid_field': MagicMock(get=MagicMock(return_value='')),
             'fintech_divisionid_field': MagicMock(get=MagicMock(return_value='')),
         }
         

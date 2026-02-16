@@ -9,17 +9,22 @@ import tk_extra_widgets
 
 
 def do(database_connection, master_window):
-    processed_files_table = database_connection['processed_files']
-    if processed_files_table.count() == 0:
-        showerror(message="Nothing To Configure")
+    try:
+        processed_files_table = database_connection['processed_files']
+        if processed_files_table.count() == 0:
+            showerror(message="Nothing To Configure")
+            return
+        configured_folders_table = database_connection['folders']
+    except Exception as e:
+        showerror(message=f"Database error: {e}")
         return
-    configured_folders_table = database_connection['folders']
     folder_list = []
     folder_button_variable = IntVar()
     files_count_variable = StringVar()
     files_count_variable.set(str(10))
     file_list = []
     file_name_length = 0
+    folder_id = None
     resend_interface = Toplevel()
     resend_interface.title("Enable Resend")
     resend_interface.transient(master_window)
@@ -34,14 +39,23 @@ def do(database_connection, master_window):
     resend_interface_close_frame = Frame(resend_interface)
 
     def set_resend_flag(identifier, resend_flag):
-        processed_files_update = dict(dict(resend_flag=resend_flag, id=identifier))
-        processed_files_table.update(processed_files_update, ['id'])
+        try:
+            processed_files_update = dict(dict(resend_flag=resend_flag, id=identifier))
+            processed_files_table.update(processed_files_update, ['id'])
+        except Exception as e:
+            showerror(message=f"Database error: {e}")
 
     def make_file_checkbutton_list(_=None):
-        global file_list
-        global file_name_length
+        nonlocal file_list
+        nonlocal file_name_length
         for child in resend_interface_scrollable_files_frame.interior.winfo_children():
-            child.destroy()
+            try:
+                if child.winfo_exists():
+                    child.destroy()
+            except tkinter.TclError:
+                pass
+        if folder_id is None:
+            return
         file_list = []
         file_name_list = []
         processed_lines = list(processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"))
@@ -50,7 +64,10 @@ def do(database_connection, master_window):
                 file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
                                   processed_line['sent_date_time']])
                 file_name_list.append(processed_line['file_name'])
-        file_name_length = len(os.path.basename(max(file_name_list, key=len)))
+        if file_name_list:
+            file_name_length = len(os.path.basename(max(file_name_list, key=len)))
+        else:
+            file_name_length = 0
         for file_name, resend_flag, identifier, sent_date_time in file_list:
             CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
                          sent_date_time, file_name_length)
@@ -58,8 +75,8 @@ def do(database_connection, master_window):
     def folder_button_pressed(button):
         def round_to_next5(n):
             return n + (5 - n) % 5
-        global folder_id
-        global file_list
+        nonlocal folder_id
+        nonlocal file_list
         file_list = []
         file_name_list = []
         folder_id = button.get()
@@ -107,7 +124,8 @@ def do(database_connection, master_window):
 
     for line in processed_files_table.distinct('folder_id'):
         folder_alias = configured_folders_table.find_one(id=line['folder_id'])
-        folder_list.append([line['folder_id'], folder_alias['alias']])
+        if folder_alias is not None:
+            folder_list.append([line['folder_id'], folder_alias['alias']])
     sorted_folder_list = sorted(folder_list, key=itemgetter(1))
 
     resend_interface_scrollable_folders_frame = tk_extra_widgets.VerticalScrolledFrame(resend_interface_folders_frame)

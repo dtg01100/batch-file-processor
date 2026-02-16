@@ -103,12 +103,15 @@ class VerticalScrolledFrame(tkinter.ttk.Frame):
     """
 
     def __init__(self, parent, *args, **kw):
-        tkinter.Frame.__init__(self, parent, *args, **kw)
+        tkinter.ttk.Frame.__init__(self, parent, *args, **kw)
+        self._activeArea = None
+        self._canvas = None
+        self._vscrollbar = None
 
         # create a canvas object and a vertical scrollbar for scrolling it
-        vscrollbar = tkinter.ttk.Scrollbar(self, orient=tkinter.VERTICAL)
+        self._vscrollbar = vscrollbar = tkinter.ttk.Scrollbar(self, orient=tkinter.VERTICAL)
         vscrollbar.pack(fill=tkinter.Y, side=tkinter.RIGHT, expand=tkinter.FALSE)
-        canvas = tkinter.Canvas(self, bd=0, highlightthickness=0,
+        self._canvas = canvas = tkinter.Canvas(self, bd=0, highlightthickness=0,
                         yscrollcommand=vscrollbar.set)
         canvas.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=tkinter.TRUE)
         vscrollbar.config(command=canvas.yview)
@@ -185,12 +188,9 @@ class VerticalScrolledFrame(tkinter.ttk.Frame):
 
                 factor = 2
 
-                activeArea = None
-
                 def onMouseWheel(event):
-                    global activeArea
-                    if activeArea:
-                        activeArea.onMouseWheel(event)
+                    if self._activeArea:
+                        self._activeArea.onMouseWheel(event)
 
                 def build_function_onMouseWheel(widget, orient, factor):
                     view_command = getattr(widget, orient + 'view')
@@ -219,24 +219,35 @@ class VerticalScrolledFrame(tkinter.ttk.Frame):
                     # Windows and MacOS
                     vscrollbar.bind_all("<MouseWheel>", onMouseWheel, add='+')
 
-                def mouseWheel_bind(self, widget):
-                    global activeArea
-                    activeArea = widget
+                def mouseWheel_bind(widget):
+                    self._activeArea = widget
 
-                def mouseWheel_unbind(self):
-                    global activeArea
-                    activeArea = None
+                def mouseWheel_unbind():
+                    self._activeArea = None
 
                 if vscrollbar and not hasattr(vscrollbar, 'onMouseWheel'):
                     vscrollbar.onMouseWheel = build_function_onMouseWheel(canvas, 'y', factor)
 
-                self.interior.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
-                self.interior.bind('<Leave>', lambda event: mouseWheel_unbind(event))
-                vscrollbar.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(event, scrollbar))
-                vscrollbar.bind('<Leave>', lambda event: mouseWheel_unbind(event))
+                self.interior.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(scrollbar))
+                self.interior.bind('<Leave>', lambda event: mouseWheel_unbind())
+                vscrollbar.bind('<Enter>', lambda event, scrollbar=vscrollbar: mouseWheel_bind(scrollbar))
+                vscrollbar.bind('<Leave>', lambda event: mouseWheel_unbind())
 
                 canvas.onMouseWheel = vscrollbar.onMouseWheel
         _configure_scrollwheel()
+
+    def destroy(self):
+        """Unbind mouse wheel events and destroy the frame."""
+        try:
+            if self._vscrollbar:
+                if platform.system() == "Linux":
+                    self._vscrollbar.unbind_all('<4>')
+                    self._vscrollbar.unbind_all('<5>')
+                else:
+                    self._vscrollbar.unbind_all("<MouseWheel>")
+        except Exception:
+            pass
+        super().destroy()
 
 class CreateToolTip(object):
     """
@@ -273,7 +284,13 @@ class CreateToolTip(object):
 
     def showtip(self, event=None):
         x = y = 0
-        x, y, cx, cy = self.widget.bbox("insert")
+        try:
+            bbox = self.widget.bbox("insert")
+            if bbox and len(bbox) == 4:
+                x, y, cx, cy = bbox
+        except (tkinter.TclError, TypeError, ValueError):
+            # bbox not supported for this widget type or returned invalid data
+            pass
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 20
         # creates a toplevel window
@@ -329,19 +346,17 @@ class columnSorterWidget:
     def buildinterface(self):
         self.entries_list = self.columnstring.split(",")
         self.entries_listbox.configure(height=1)
-        for index in range(len(self.entries_list)):
-            self.entries_listbox.delete(index)
+        self.entries_listbox.delete(0, tkinter.END)
         self.entries_listbox.configure(height=len(self.entries_list))
         for item in self.entries_list:
             self.entries_listbox.insert(tkinter.END, item)
 
     def _move_entry(self, move_up=False):
-        current_selection = self.entries_listbox.selection_get()
-        counter = 0
-        for i in range(len(self.entries_list)):
-            if current_selection == self.entries_listbox.get(i):
-                break
-            counter += 1
+        selection_indices = self.entries_listbox.curselection()
+        if not selection_indices:
+            return
+        counter = selection_indices[0]
+        current_selection = self.entries_listbox.get(counter)
         self.entries_listbox.delete(counter)
         if move_up:
             if counter != 0:

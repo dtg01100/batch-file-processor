@@ -67,16 +67,17 @@ class Dialog(Toplevel):
 
     def ok(self, event=None):
 
-        if not self.validate():
-            self.initial_focus.focus_set()  # put focus back
-            return
+        try:
+            if not self.validate():
+                self.initial_focus.focus_set()  # put focus back
+                return
 
-        self.withdraw()
-        self.update_idletasks()
+            self.withdraw()
+            self.update_idletasks()
 
-        self.apply()
-
-        self.cancel()
+            self.apply()
+        finally:
+            self.cancel()
 
     def cancel(self, event=None):
 
@@ -91,6 +92,6 @@ class Dialog(Toplevel):
 
         return 1  # override
 
-    def apply(self, foldersnameapply=None):
+    def apply(self):
 
         pass  # override

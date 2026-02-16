@@ -1,6 +1,15 @@
 import tkinter
 import tkinter.ttk
 
+# Initialize global variables at module level
+doing_stuff_frame = None
+doing_stuff = None
+label_var = None
+header_var = None
+header_label = None
+footer_var = None
+footer_label = None
+
 
 class DoingStuffOverlay:
     def __init__(self, parent):
@@ -15,6 +24,13 @@ def make_overlay(parent, overlay_text, header="", footer="", overlay_height=100)
     global header_label
     global footer_var
     global footer_label
+    # Destroy existing overlay if present to prevent memory leaks
+    if doing_stuff_frame is not None:
+        try:
+            doing_stuff_frame.grab_release()
+        except tkinter.TclError:
+            pass  # Widget may already be destroyed
+        doing_stuff_frame.destroy()
     label_var = tkinter.StringVar()
     label_var.set(overlay_text)
     header_var = tkinter.StringVar()
@@ -34,6 +50,8 @@ def make_overlay(parent, overlay_text, header="", footer="", overlay_height=100)
 
 
 def update_overlay(parent, overlay_text, header="", footer="", overlay_height=None):
+    if doing_stuff is None or doing_stuff_frame is None:
+        return
     doing_stuff.configure(text=overlay_text)
     header_label.configure(text=header)
     footer_label.configure(text=footer)
@@ -43,4 +61,11 @@ def update_overlay(parent, overlay_text, header="", footer="", overlay_height=No
 
 
 def destroy_overlay():
-    doing_stuff_frame.destroy()
+    global doing_stuff_frame
+    if doing_stuff_frame is not None:
+        try:
+            doing_stuff_frame.grab_release()
+        except tkinter.TclError:
+            pass  # Widget may already be destroyed
+        doing_stuff_frame.destroy()
+        doing_stuff_frame = None

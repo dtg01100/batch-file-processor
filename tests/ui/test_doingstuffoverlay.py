@@ -469,12 +469,13 @@ class TestDestroyOverlay:
             
             import doingstuffoverlay
             
-            doingstuffoverlay.doing_stuff_frame = MagicMock()
-            doingstuffoverlay.doing_stuff_frame.destroy = MagicMock()
+            mock_frame = MagicMock()
+            doingstuffoverlay.doing_stuff_frame = mock_frame
             
             doingstuffoverlay.destroy_overlay()
             
-            doingstuffoverlay.doing_stuff_frame.destroy.assert_called_once()
+            mock_frame.destroy.assert_called_once()
+            assert doingstuffoverlay.doing_stuff_frame is None
 
     def test_destroy_overlay_multiple_calls(self, mock_tk_root):
         """Test that destroy_overlay handles multiple calls."""
@@ -484,14 +485,17 @@ class TestDestroyOverlay:
             
             import doingstuffoverlay
             
-            doingstuffoverlay.doing_stuff_frame = MagicMock()
-            doingstuffoverlay.doing_stuff_frame.destroy = MagicMock()
+            mock_frame = MagicMock()
+            doingstuffoverlay.doing_stuff_frame = mock_frame
             
             doingstuffoverlay.destroy_overlay()
             
-            # Second call should fail since frame is destroyed
-            # But we can test the first call succeeded
-            doingstuffoverlay.doing_stuff_frame.destroy.assert_called_once()
+            # First call should succeed
+            mock_frame.destroy.assert_called_once()
+            assert doingstuffoverlay.doing_stuff_frame is None
+            
+            # Second call should not raise an error (frame is already None)
+            doingstuffoverlay.destroy_overlay()  # Should not raise
 
 
 class TestOverlayIntegration:
@@ -669,9 +673,9 @@ class TestOverlayEdgeCases:
         doingstuffoverlay.footer_label = None
         doingstuffoverlay.doing_stuff_frame = None
         
-        # This should fail since globals are not set
-        with pytest.raises(AttributeError):
-            doingstuffoverlay.update_overlay(mock_tk_root, "Processing...")
+        # This should gracefully return without error since globals are not set
+        # (fixed bug: previously would raise AttributeError)
+        doingstuffoverlay.update_overlay(mock_tk_root, "Processing...")
 
     def test_destroy_overlay_without_make(self):
         """Test destroy_overlay without prior make_overlay call."""
@@ -680,9 +684,9 @@ class TestOverlayEdgeCases:
         # Reset globals
         doingstuffoverlay.doing_stuff_frame = None
         
-        # This should fail since global is not set
-        with pytest.raises(AttributeError):
-            doingstuffoverlay.destroy_overlay()
+        # This should gracefully return without error since global is not set
+        # (fixed bug: previously would raise AttributeError)
+        doingstuffoverlay.destroy_overlay()
 
     def test_make_overlay_default_height(self, mock_tk_root):
         """Test make_overlay uses default height when not specified."""

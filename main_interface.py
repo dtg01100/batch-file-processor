@@ -295,7 +295,7 @@ if __name__ == "__main__":
         def search_field_callback(_=None):
             if folder_filter != search_field.get():
                 try:
-                    root.unbind(0, "<Escape>")
+                    root.unbind("<Escape>")
                 except tkinter.TclError:
                     pass
                 filter_field = search_field.get()
@@ -397,10 +397,10 @@ if __name__ == "__main__":
                     i[0] for i in pre_filtered_folder_dict_list
                 ]
                 filtered_active_folder_dict_list = [
-                    i[0] for i in pre_filtered_folder_dict_list
+                    i[0] for i in pre_filtered_active_folder_dict_list
                 ]
                 filtered_inactive_folder_dict_list = [
-                    i[0] for i in pre_filtered_folder_dict_list
+                    i[0] for i in pre_filtered_inactive_folder_dict_list
                 ]
 
         else:
@@ -934,7 +934,7 @@ if __name__ == "__main__":
             return 1
 
         def ok(self, event=None):
-            if not self.validate:
+            if not self.validate():
                 self.initial_focus.focus_set()  # put focus back
                 return
 
@@ -1450,18 +1450,18 @@ if __name__ == "__main__":
                         child.configure(state=category_filter_state)
                     except tkinter.TclError:
                         pass
-                if self.process_backend_copy_check.get() is False:
+                if self.process_backend_copy_check.get() == False:
                     copy_state = tkinter.DISABLED
                 else:
                     copy_state = tkinter.NORMAL
                 if (
-                    self.process_backend_email_check.get() is False
-                    or self.settings["enable_email"] is False
+                    self.process_backend_email_check.get() == False
+                    or self.settings["enable_email"] == False
                 ):
                     email_state = tkinter.DISABLED
                 else:
                     email_state = tkinter.NORMAL
-                if self.process_backend_ftp_check.get() is False:
+                if self.process_backend_ftp_check.get() == False:
                     ftp_state = tkinter.DISABLED
                 else:
                     ftp_state = tkinter.NORMAL
@@ -1906,8 +1906,8 @@ if __name__ == "__main__":
                     0, config_dict["invoice_date_custom_format_string"]
                 )
                 self.edi_each_uom_tweak.set(config_dict["retail_uom"])
-                (self.override_upc_bool.set(config_dict["override_upc_bool"]),)
-                (self.override_upc_level.set(config_dict["override_upc_level"]),)
+                self.override_upc_bool.set(config_dict["override_upc_bool"])
+                self.override_upc_level.set(config_dict["override_upc_level"])
                 self.override_upc_category_filter_entry.delete(0, tkinter.END)
                 self.override_upc_category_filter_entry.insert(
                     0, config_dict["override_upc_category_filter"]
@@ -2211,7 +2211,10 @@ if __name__ == "__main__":
                 self.process_backend_email_check.get()
             )
             apply_to_folder["ftp_server"] = str(self.ftp_server_field.get())
-            apply_to_folder["ftp_port"] = int(self.ftp_port_field.get())
+            try:
+                apply_to_folder["ftp_port"] = int(self.ftp_port_field.get())
+            except ValueError:
+                apply_to_folder["ftp_port"] = 21
             apply_to_folder["ftp_folder"] = str(self.ftp_folder_field.get())
             apply_to_folder["ftp_username"] = str(self.ftp_username_field.get())
             apply_to_folder["ftp_password"] = str(self.ftp_password_field.get())
@@ -2243,9 +2246,12 @@ if __name__ == "__main__":
             apply_to_folder["rename_file"] = self.rename_file_field.get()
             apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
             apply_to_folder["a_record_padding"] = str(self.a_record_padding_field.get())
-            apply_to_folder["a_record_padding_length"] = int(
-                self.a_record_padding_length.get()
-            )
+            try:
+                apply_to_folder["a_record_padding_length"] = int(
+                    self.a_record_padding_length.get()
+                )
+            except ValueError:
+                apply_to_folder["a_record_padding_length"] = 0
             apply_to_folder["append_a_records"] = str(self.append_arec_check.get())
             apply_to_folder["a_record_append_text"] = str(
                 self.a_record_append_field.get()
@@ -2253,16 +2259,22 @@ if __name__ == "__main__":
             apply_to_folder["force_txt_file_ext"] = str(
                 self.force_txt_file_ext_check.get()
             )
-            apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
+            try:
+                apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
+            except ValueError:
+                apply_to_folder["invoice_date_offset"] = 0
             apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
             apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
             apply_to_folder["override_upc_level"] = self.override_upc_level.get()
             apply_to_folder["override_upc_category_filter"] = (
                 self.override_upc_category_filter_entry.get()
             )
-            apply_to_folder["upc_target_length"] = int(
-                self.upc_target_length_entry.get()
-            )
+            try:
+                apply_to_folder["upc_target_length"] = int(
+                    self.upc_target_length_entry.get()
+                )
+            except ValueError:
+                apply_to_folder["upc_target_length"] = 0
             apply_to_folder["upc_padding_pattern"] = (
                 self.upc_padding_pattern_entry.get()
             )
@@ -2394,7 +2406,6 @@ if __name__ == "__main__":
                                 "FTP Username or Password Incorrect"
                             )
                             errors = True
-                        ftp.close()
                     except Exception as ftp_error:
                         print("server/port")
                         print(ftp_error)
@@ -2402,6 +2413,8 @@ if __name__ == "__main__":
                             "FTP Server or Port Field Incorrect"
                         )
                         errors = True
+                    finally:
+                        ftp.close()
 
             if self.process_backend_email_check.get() is True:
                 backend_count += 1
@@ -2775,7 +2788,7 @@ if __name__ == "__main__":
                         + "\r\n"
                     ).encode()
                 )
-                run_log.write(traceback.print_exc())
+                run_log.write(traceback.format_exc().encode())
         if utils.normalize_bool(reporting["enable_reporting"]):
             try:
                 database_obj_instance.sent_emails_removal_queue.delete()
@@ -2882,9 +2895,6 @@ if __name__ == "__main__":
                     with open(
                         email_errors_log_full_path, "w", encoding="utf-8"
                     ) as reporting_emails_errors:
-                        reporting_emails_errors = open(
-                            email_errors_log_full_path, "w", encoding="utf-8"
-                        )
                         reporting_emails_errors.write(email_errors.getvalue())
                     database_obj_instance.emails_table_batch.insert(
                         dict(
@@ -2941,7 +2951,6 @@ if __name__ == "__main__":
                     # if for some reason emailing logs fails, and printing fallback is enabled, print the run log
                     try:
                         with open(run_log_full_path, "r", encoding="utf-8") as run_log:
-                            run_log = open(run_log_full_path, "r", encoding="utf-8")
                             print_run_log.do(run_log)
                     except Exception as printing_error:
                         print(
@@ -3054,10 +3063,12 @@ if __name__ == "__main__":
                     + " of "
                     + str(file_total),
                 )
+                with open(f, "rb") as file_handle:
+                    file_checksum = hashlib.md5(file_handle.read()).hexdigest()
                 if (
                     database_obj_instance.processed_files.find_one(
                         file_name=os.path.join(os.getcwd(), f),
-                        file_checksum=hashlib.md5(open(f, "rb").read()).hexdigest(),
+                        file_checksum=file_checksum,
                     )
                     is None
                 ):
@@ -3079,12 +3090,12 @@ if __name__ == "__main__":
                     + " of "
                     + str(file_total),
                 )
+                with open(filename, "rb") as file_handle:
+                    file_checksum = hashlib.md5(file_handle.read()).hexdigest()
                 database_obj_instance.processed_files.insert(
                     {
                         "file_name": str(os.path.abspath(filename)),
-                        "file_checksum": hashlib.md5(
-                            open(filename, "rb").read()
-                        ).hexdigest(),
+                        "file_checksum": file_checksum,
                         "folder_id": parameters_dict["id"],
                         "folder_alias": parameters_dict["alias"],
                         "copy_destination": "N/A",
@@ -3435,6 +3446,8 @@ if __name__ == "__main__":
         folder_entry_tuple_list = []
         for entry in processed_files_distinct_list:
             folder_dict = database_obj_instance.folders_table.find_one(id=str(entry))
+            if folder_dict is None:
+                continue
             folder_alias = folder_dict["alias"]
             folder_entry_tuple_list.append([entry, folder_alias])
         sorted_folder_list = sorted(folder_entry_tuple_list, key=itemgetter(1))

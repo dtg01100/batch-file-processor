@@ -135,7 +135,7 @@ class EditFoldersDialog(Dialog):
             except (ImportError, AttributeError):
                 settings = {}
 
-        self.settings = settings
+        self.settings = settings or {}
         self.resizable(width=tk.FALSE, height=tk.FALSE)
 
         # Store copy_to_directory as instance variable (not global)
@@ -305,7 +305,10 @@ class EditFoldersDialog(Dialog):
                 self.fintech_divisionid_field,
                 self.fintech_divisionid_label,
             ]:
-                frameentry.grid_forget()
+                try:
+                    frameentry.grid_forget()
+                except tk.TclError:
+                    pass
             if self.convert_formats_var.get() == "csv":
                 self.upc_variable_process_checkbutton.grid(
                     row=2, column=0, sticky=tk.W, padx=3
@@ -479,26 +482,47 @@ class EditFoldersDialog(Dialog):
         # --- set_send_options_fields_state callback ---
         def set_send_options_fields_state():
             if not self.settings.get("enable_email", False):
-                self.email_backend_checkbutton.configure(state=tk.DISABLED)
+                try:
+                    self.email_backend_checkbutton.configure(state=tk.DISABLED)
+                except tk.TclError:
+                    pass
             category_filter_state = tk.NORMAL
             if (
-                self.process_backend_copy_check.get() is False
-                and self.process_backend_ftp_check.get() is False
-                and self.process_backend_email_check.get() is False
+                self.process_backend_copy_check.get() == False
+                and self.process_backend_ftp_check.get() == False
+                and self.process_backend_email_check.get() == False
             ):
                 category_filter_state = tk.DISABLED
-                self.split_edi_checkbutton.configure(state=tk.DISABLED)
-                self.split_edi_send_invoices_checkbutton.configure(
-                    state=tk.DISABLED
-                )
-                self.split_edi_send_credits_checkbutton.configure(
-                    state=tk.DISABLED
-                )
-                self.prepend_file_dates_checkbutton.configure(
-                    state=tk.DISABLED
-                )
-                self.rename_file_field.configure(state=tk.DISABLED)
-                self.edi_options_menu.configure(state=tk.DISABLED)
+                try:
+                    self.split_edi_checkbutton.configure(state=tk.DISABLED)
+                except tk.TclError:
+                    pass
+                try:
+                    self.split_edi_send_invoices_checkbutton.configure(
+                        state=tk.DISABLED
+                    )
+                except tk.TclError:
+                    pass
+                try:
+                    self.split_edi_send_credits_checkbutton.configure(
+                        state=tk.DISABLED
+                    )
+                except tk.TclError:
+                    pass
+                try:
+                    self.prepend_file_dates_checkbutton.configure(
+                        state=tk.DISABLED
+                    )
+                except tk.TclError:
+                    pass
+                try:
+                    self.rename_file_field.configure(state=tk.DISABLED)
+                except tk.TclError:
+                    pass
+                try:
+                    self.edi_options_menu.configure(state=tk.DISABLED)
+                except tk.TclError:
+                    pass
                 for child in self.convert_options_frame.winfo_children():
                     try:
                         child.configure(state=tk.DISABLED)
@@ -510,16 +534,34 @@ class EditFoldersDialog(Dialog):
                     except tk.TclError:
                         pass
             else:
-                self.split_edi_checkbutton.configure(state=tk.NORMAL)
-                self.split_edi_send_invoices_checkbutton.configure(
-                    state=tk.NORMAL
-                )
-                self.split_edi_send_credits_checkbutton.configure(
-                    state=tk.NORMAL
-                )
-                self.prepend_file_dates_checkbutton.configure(state=tk.NORMAL)
-                self.rename_file_field.configure(state=tk.NORMAL)
-                self.edi_options_menu.configure(state=tk.NORMAL)
+                try:
+                    self.split_edi_checkbutton.configure(state=tk.NORMAL)
+                except tk.TclError:
+                    pass
+                try:
+                    self.split_edi_send_invoices_checkbutton.configure(
+                        state=tk.NORMAL
+                    )
+                except tk.TclError:
+                    pass
+                try:
+                    self.split_edi_send_credits_checkbutton.configure(
+                        state=tk.NORMAL
+                    )
+                except tk.TclError:
+                    pass
+                try:
+                    self.prepend_file_dates_checkbutton.configure(state=tk.NORMAL)
+                except tk.TclError:
+                    pass
+                try:
+                    self.rename_file_field.configure(state=tk.NORMAL)
+                except tk.TclError:
+                    pass
+                try:
+                    self.edi_options_menu.configure(state=tk.NORMAL)
+                except tk.TclError:
+                    pass
                 for child in self.convert_options_frame.winfo_children():
                     try:
                         child.configure(state=tk.NORMAL)
@@ -535,26 +577,41 @@ class EditFoldersDialog(Dialog):
                     child.configure(state=category_filter_state)
                 except tk.TclError:
                     pass
-            if self.process_backend_copy_check.get() is False:
+            if self.process_backend_copy_check.get() == False:
                 copy_state = tk.DISABLED
             else:
                 copy_state = tk.NORMAL
             if (
-                self.process_backend_email_check.get() is False
-                or self.settings.get("enable_email", False) is False
+                self.process_backend_email_check.get() == False
+                or self.settings.get("enable_email", False) == False
             ):
                 email_state = tk.DISABLED
             else:
                 email_state = tk.NORMAL
-            if self.process_backend_ftp_check.get() is False:
+            if self.process_backend_ftp_check.get() == False:
                 ftp_state = tk.DISABLED
             else:
                 ftp_state = tk.NORMAL
-            self.copy_backend_folder_selection_button.configure(state=copy_state)
-            self.email_recepient_field.configure(state=email_state)
-            self.email_sender_subject_field.configure(state=email_state)
-            self.ftp_server_field.configure(state=ftp_state)
-            self.ftp_port_field.configure(state=ftp_state)
+            try:
+                self.copy_backend_folder_selection_button.configure(state=copy_state)
+            except tk.TclError:
+                pass
+            try:
+                self.email_recepient_field.configure(state=email_state)
+            except tk.TclError:
+                pass
+            try:
+                self.email_sender_subject_field.configure(state=email_state)
+            except tk.TclError:
+                pass
+            try:
+                self.ftp_server_field.configure(state=ftp_state)
+            except tk.TclError:
+                pass
+            try:
+                self.ftp_port_field.configure(state=ftp_state)
+            except tk.TclError:
+                pass
             self.ftp_folder_field.configure(state=ftp_state)
             self.ftp_username_field.configure(state=ftp_state)
             self.ftp_password_field.configure(state=ftp_state)
@@ -1107,6 +1164,7 @@ class EditFoldersDialog(Dialog):
             self.upc_target_length_entry.insert(
                 0, config_dict.get("upc_target_length", 11)
             )
+            self.upc_target_length.set(config_dict.get("upc_target_length", 11))
             self.upc_padding_pattern_entry.delete(0, tk.END)
             self.upc_padding_pattern_entry.insert(
                 0, config_dict.get("upc_padding_pattern", "           ")
@@ -1438,12 +1496,14 @@ class EditFoldersDialog(Dialog):
         self._field_refs["a_record_padding_field"] = self.a_record_padding_field
         self._field_refs["a_record_append_field"] = self.a_record_append_field
         self._field_refs["override_upc_category_filter_entry"] = self.override_upc_category_filter_entry
+        self._field_refs["upc_target_length_entry"] = self.upc_target_length_entry
         self._field_refs["upc_padding_pattern_entry"] = self.upc_padding_pattern_entry
         self._field_refs["simple_csv_column_sorter"] = self.simple_csv_column_sorter
         self._field_refs["invoice_date_custom_format_field"] = self.invoice_date_custom_format_field
         self._field_refs["estore_store_number_field"] = self.estore_store_number_field
         self._field_refs["estore_Vendor_OId_field"] = self.estore_Vendor_OId_field
         self._field_refs["estore_vendor_namevendoroid_field"] = self.estore_vendor_namevendoroid_field
+        self._field_refs["estore_c_record_oid_field"] = self.estore_c_record_oid_field
         self._field_refs["fintech_divisionid_field"] = self.fintech_divisionid_field
 
         return self.active_checkbutton_object  # initial focus
@@ -1557,7 +1617,10 @@ class EditFoldersDialog(Dialog):
         apply_to_folder["process_backend_email"] = self.process_backend_email_check.get()
 
         apply_to_folder["ftp_server"] = str(self._field_refs["ftp_server_field"].get())
-        apply_to_folder["ftp_port"] = int(self._field_refs["ftp_port_field"].get())
+        try:
+            apply_to_folder["ftp_port"] = int(self._field_refs["ftp_port_field"].get())
+        except ValueError:
+            apply_to_folder["ftp_port"] = 21
         apply_to_folder["ftp_folder"] = str(self._field_refs["ftp_folder_field"].get())
         apply_to_folder["ftp_username"] = str(self._field_refs["ftp_username_field"].get())
         apply_to_folder["ftp_password"] = str(self._field_refs["ftp_password_field"].get())
@@ -1585,16 +1648,25 @@ class EditFoldersDialog(Dialog):
         apply_to_folder["rename_file"] = str(self._field_refs["rename_file_field"].get())
         apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
         apply_to_folder["a_record_padding"] = str(self._field_refs["a_record_padding_field"].get())
-        apply_to_folder["a_record_padding_length"] = int(self.a_record_padding_length.get())
+        try:
+            apply_to_folder["a_record_padding_length"] = int(self.a_record_padding_length.get())
+        except ValueError:
+            apply_to_folder["a_record_padding_length"] = 0
         apply_to_folder["append_a_records"] = str(self.append_arec_check.get())
         apply_to_folder["a_record_append_text"] = str(self._field_refs["a_record_append_field"].get())
         apply_to_folder["force_txt_file_ext"] = str(self.force_txt_file_ext_check.get())
-        apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
+        try:
+            apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
+        except ValueError:
+            apply_to_folder["invoice_date_offset"] = 0
         apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
         apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
         apply_to_folder["override_upc_level"] = self.override_upc_level.get()
         apply_to_folder["override_upc_category_filter"] = str(self._field_refs["override_upc_category_filter_entry"].get())
-        apply_to_folder["upc_target_length"] = int(self.upc_target_length.get())
+        try:
+            apply_to_folder["upc_target_length"] = int(self.upc_target_length.get())
+        except ValueError:
+            apply_to_folder["upc_target_length"] = 0
         apply_to_folder["upc_padding_pattern"] = str(self._field_refs["upc_padding_pattern_entry"].get())
         apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
         apply_to_folder["include_item_description"] = self.include_item_description.get()
@@ -1605,6 +1677,7 @@ class EditFoldersDialog(Dialog):
         apply_to_folder["estore_store_number"] = str(self._field_refs["estore_store_number_field"].get())
         apply_to_folder["estore_Vendor_OId"] = str(self._field_refs["estore_Vendor_OId_field"].get())
         apply_to_folder["estore_vendor_NameVendorOID"] = str(self._field_refs["estore_vendor_namevendoroid_field"].get())
+        apply_to_folder["estore_c_record_OID"] = str(self._field_refs["estore_c_record_oid_field"].get())
         apply_to_folder["fintech_division_id"] = str(self._field_refs["fintech_divisionid_field"].get())
 
     def _show_validation_errors(self, errors: List[str]):
