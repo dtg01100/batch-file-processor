@@ -138,8 +138,8 @@ class EditFoldersDialog(Dialog):
         self.settings = settings
         self.resizable(width=tk.FALSE, height=tk.FALSE)
 
-        global copy_to_directory
-        copy_to_directory = self.foldersnameinput.get("copy_to_directory", "")
+        # Store copy_to_directory as instance variable (not global)
+        self.copy_to_directory = self.foldersnameinput.get("copy_to_directory", "")
 
         self.convert_formats_var = tk.StringVar(master)
         self.title("Folder Settings")
@@ -462,10 +462,9 @@ class EditFoldersDialog(Dialog):
 
         # --- select_copy_to_directory callback ---
         def select_copy_to_directory():
-            global copy_to_directory
             try:
-                if os.path.exists(copy_to_directory):
-                    initial_directory = copy_to_directory
+                if self.copy_to_directory and os.path.exists(self.copy_to_directory):
+                    initial_directory = self.copy_to_directory
                 else:
                     initial_directory = os.getcwd()
             except Exception:
@@ -475,7 +474,7 @@ class EditFoldersDialog(Dialog):
                 askdirectory(parent=self.prefsframe, initialdir=initial_directory)
             )
             if os.path.isdir(proposed_copy_to_directory):
-                copy_to_directory = proposed_copy_to_directory
+                self.copy_to_directory = proposed_copy_to_directory
 
         # --- set_send_options_fields_state callback ---
         def set_send_options_fields_state():
@@ -1432,6 +1431,21 @@ class EditFoldersDialog(Dialog):
         if hasattr(self, "folder_alias_field"):
             self._field_refs["folder_alias_field"] = self.folder_alias_field
 
+        # Add missing field refs for text entry widgets
+        self._field_refs["split_edi_filter_categories_entry"] = self.split_edi_filter_categories_entry
+        self._field_refs["split_edi_filter_mode"] = self.split_edi_filter_mode
+        self._field_refs["rename_file_field"] = self.rename_file_field
+        self._field_refs["a_record_padding_field"] = self.a_record_padding_field
+        self._field_refs["a_record_append_field"] = self.a_record_append_field
+        self._field_refs["override_upc_category_filter_entry"] = self.override_upc_category_filter_entry
+        self._field_refs["upc_padding_pattern_entry"] = self.upc_padding_pattern_entry
+        self._field_refs["simple_csv_column_sorter"] = self.simple_csv_column_sorter
+        self._field_refs["invoice_date_custom_format_field"] = self.invoice_date_custom_format_field
+        self._field_refs["estore_store_number_field"] = self.estore_store_number_field
+        self._field_refs["estore_Vendor_OId_field"] = self.estore_Vendor_OId_field
+        self._field_refs["estore_vendor_namevendoroid_field"] = self.estore_vendor_namevendoroid_field
+        self._field_refs["fintech_divisionid_field"] = self.fintech_divisionid_field
+
         return self.active_checkbutton_object  # initial focus
 
     def validate(self) -> bool:
@@ -1533,7 +1547,7 @@ class EditFoldersDialog(Dialog):
                     self._field_refs.get("folder_alias_field", tk.Entry()).get()
                 )
 
-        apply_to_folder["copy_to_directory"] = ""
+        apply_to_folder["copy_to_directory"] = self.copy_to_directory
         apply_to_folder["process_backend_copy"] = self.process_backend_copy_check.get()
         apply_to_folder["process_backend_ftp"] = self.process_backend_ftp_check.get()
         apply_to_folder["process_backend_email"] = self.process_backend_email_check.get()
@@ -1562,32 +1576,32 @@ class EditFoldersDialog(Dialog):
         apply_to_folder["split_edi_include_invoices"] = self.split_edi_send_invoices.get()
         apply_to_folder["split_edi_include_credits"] = self.split_edi_send_credits.get()
         apply_to_folder["prepend_date_files"] = self.prepend_file_dates.get()
-        apply_to_folder["split_edi_filter_categories"] = ""
-        apply_to_folder["split_edi_filter_mode"] = ""
-        apply_to_folder["rename_file"] = ""
+        apply_to_folder["split_edi_filter_categories"] = str(self._field_refs["split_edi_filter_categories_entry"].get())
+        apply_to_folder["split_edi_filter_mode"] = str(self._field_refs["split_edi_filter_mode"].get())
+        apply_to_folder["rename_file"] = str(self._field_refs["rename_file_field"].get())
         apply_to_folder["pad_a_records"] = str(self.pad_arec_check.get())
-        apply_to_folder["a_record_padding"] = ""
+        apply_to_folder["a_record_padding"] = str(self._field_refs["a_record_padding_field"].get())
         apply_to_folder["a_record_padding_length"] = int(self.a_record_padding_length.get())
         apply_to_folder["append_a_records"] = str(self.append_arec_check.get())
-        apply_to_folder["a_record_append_text"] = ""
+        apply_to_folder["a_record_append_text"] = str(self._field_refs["a_record_append_field"].get())
         apply_to_folder["force_txt_file_ext"] = str(self.force_txt_file_ext_check.get())
         apply_to_folder["invoice_date_offset"] = int(self.invoice_date_offset.get())
         apply_to_folder["retail_uom"] = self.edi_each_uom_tweak.get()
         apply_to_folder["override_upc_bool"] = self.override_upc_bool.get()
         apply_to_folder["override_upc_level"] = self.override_upc_level.get()
-        apply_to_folder["override_upc_category_filter"] = ""
+        apply_to_folder["override_upc_category_filter"] = str(self._field_refs["override_upc_category_filter_entry"].get())
         apply_to_folder["upc_target_length"] = int(self.upc_target_length.get())
-        apply_to_folder["upc_padding_pattern"] = ""
+        apply_to_folder["upc_padding_pattern"] = str(self._field_refs["upc_padding_pattern_entry"].get())
         apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
         apply_to_folder["include_item_description"] = self.include_item_description.get()
-        apply_to_folder["simple_csv_sort_order"] = ""
+        apply_to_folder["simple_csv_sort_order"] = str(self._field_refs["simple_csv_column_sorter"].get_columnstring())
         apply_to_folder["invoice_date_custom_format"] = self.invoice_date_custom_format.get()
-        apply_to_folder["invoice_date_custom_format_string"] = ""
+        apply_to_folder["invoice_date_custom_format_string"] = str(self._field_refs["invoice_date_custom_format_field"].get())
         apply_to_folder["split_prepaid_sales_tax_crec"] = self.split_sales_tax_prepaid_var.get()
-        apply_to_folder["estore_store_number"] = ""
-        apply_to_folder["estore_Vendor_OId"] = ""
-        apply_to_folder["estore_vendor_NameVendorOID"] = ""
-        apply_to_folder["fintech_division_id"] = ""
+        apply_to_folder["estore_store_number"] = str(self._field_refs["estore_store_number_field"].get())
+        apply_to_folder["estore_Vendor_OId"] = str(self._field_refs["estore_Vendor_OId_field"].get())
+        apply_to_folder["estore_vendor_NameVendorOID"] = str(self._field_refs["estore_vendor_namevendoroid_field"].get())
+        apply_to_folder["fintech_division_id"] = str(self._field_refs["fintech_divisionid_field"].get())
 
     def _show_validation_errors(self, errors: List[str]):
         """Show validation errors in dialog."""
