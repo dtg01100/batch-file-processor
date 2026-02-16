@@ -1468,6 +1468,10 @@ class EditFoldersDialog(Dialog):
         extractor = self._create_extractor(self._field_refs)
         extracted = extractor.extract_all()
 
+        # Override copy_to_directory with the actual value from the dialog
+        # (extractor hardcodes this to empty string, but dialog stores it in self.copy_to_directory)
+        extracted.copy_to_directory = self.copy_to_directory
+
         # Get current alias if editing
         current_alias = ""
         if self._foldersnameinput:
@@ -1594,7 +1598,7 @@ class EditFoldersDialog(Dialog):
         apply_to_folder["upc_padding_pattern"] = str(self._field_refs["upc_padding_pattern_entry"].get())
         apply_to_folder["include_item_numbers"] = self.include_item_numbers.get()
         apply_to_folder["include_item_description"] = self.include_item_description.get()
-        apply_to_folder["simple_csv_sort_order"] = str(self._field_refs["simple_csv_column_sorter"].get_columnstring())
+        apply_to_folder["simple_csv_sort_order"] = str(self._field_refs["simple_csv_column_sorter"].get())
         apply_to_folder["invoice_date_custom_format"] = self.invoice_date_custom_format.get()
         apply_to_folder["invoice_date_custom_format_string"] = str(self._field_refs["invoice_date_custom_format_field"].get())
         apply_to_folder["split_prepaid_sales_tax_crec"] = self.split_sales_tax_prepaid_var.get()
