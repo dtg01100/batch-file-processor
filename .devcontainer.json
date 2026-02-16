@@ -12,12 +12,21 @@
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {}
     },
-    "initializeCommand": "xhost + || true",
     "runArgs": [
         "-e", "DISPLAY=:99",
         "-p", "6080:6080",
         "--privileged"
     ],
+    "forwardPorts": [
+        6080
+    ],
+    "portsAttributes": {
+        "6080": {
+            "label": "noVNC",
+            "protocol": "http",
+            "onAutoForward": "openBrowser"
+        }
+    },
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,
     "containerEnv": {
@@ -26,9 +35,8 @@
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/batch-file-processor,type=bind",
     "workspaceFolder": "/workspaces/batch-file-processor",
     "postCreateCommand": "chmod +x /workspaces/batch-file-processor/start_x11.sh",
-    "onStartCommand": "bash /workspaces/batch-file-processor/start_x11.sh",
+    "postStartCommand": "bash /workspaces/batch-file-processor/start_x11.sh",
     "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
         "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
         "source=batch-file-processor-home,target=/home/vscode,type=volume"
     ],
