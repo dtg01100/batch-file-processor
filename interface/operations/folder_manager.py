@@ -61,6 +61,16 @@ class DatabaseProtocol(Protocol):
     def oversight_and_defaults(self) -> TableProtocol:
         """Access administrative table."""
         ...
+    
+    @property
+    def processed_files(self) -> TableProtocol:
+        """Access processed files table."""
+        ...
+    
+    @property
+    def emails_table(self) -> TableProtocol:
+        """Access emails table."""
+        ...
 
 
 class FolderManager:
@@ -260,6 +270,28 @@ class FolderManager:
         folder = self.get_folder_by_id(folder_id)
         if folder:
             self._db.folders_table.delete(id=folder_id)
+            return True
+        return False
+    
+    def delete_folder_with_related(self, folder_id: int) -> bool:
+        """Delete a folder and all related records from the database.
+        
+        This deletes:
+        - The folder configuration
+        - All processed files records for this folder
+        - All queued emails for this folder
+        
+        Args:
+            folder_id: The folder ID to delete
+            
+        Returns:
+            True if deleted, False if folder not found
+        """
+        folder = self.get_folder_by_id(folder_id)
+        if folder:
+            self._db.folders_table.delete(id=folder_id)
+            self._db.processed_files.delete(folder_id=folder_id)
+            self._db.emails_table.delete(folder_id=folder_id)
             return True
         return False
     
