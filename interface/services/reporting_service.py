@@ -13,6 +13,8 @@ import zipfile
 from io import StringIO
 from typing import Protocol, runtime_checkable, Optional, Any, Callable
 
+from interface.services.progress_service import ProgressCallback
+
 
 @runtime_checkable
 class TableProtocol(Protocol):
@@ -125,7 +127,6 @@ class ReportingService:
         """
         if self._utils is not None:
             return self._utils.normalize_bool(value)
-        # Fallback implementation
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -158,9 +159,7 @@ class ReportingService:
         run_log_path: str,
         start_time: str,
         run_summary: str,
-        args: Any = None,
-        root: Any = None,
-        feedback_text: Any = None,
+        progress_callback: Optional[ProgressCallback] = None,
     ) -> None:
         """Send all queued report emails.
         
@@ -176,9 +175,7 @@ class ReportingService:
             run_log_path: Path to the log directory
             start_time: Start time string for the run
             run_summary: Summary string of the run
-            args: Command line arguments (optional)
-            root: Tkinter root window (optional)
-            feedback_text: Feedback widget for status updates (optional)
+            progress_callback: Progress callback for status updates (optional)
         """
         try:
             self._db.sent_emails_removal_queue.delete()
@@ -198,7 +195,6 @@ class ReportingService:
                 if os.path.isfile(os.path.abspath(log["log"])):
                     send_log_file = copy.deepcopy(log)
                     
-                    # Compress if too large
                     if os.path.getsize(os.path.abspath(log["log"])) > self.MAX_EMAIL_SIZE:
                         send_log_file["log"] = str(
                             os.path.abspath(log["log"]) + ".zip"
@@ -212,7 +208,6 @@ class ReportingService:
                                 zipfile.ZIP_DEFLATED,
                             )
                     
-                    # Add size of current file to total
                     total_size += os.path.getsize(
                         os.path.abspath(send_log_file["log"])
                     )
@@ -220,7 +215,6 @@ class ReportingService:
                         dict(log=send_log_file["log"])
                     )
                     
-                    # Send batch if size or count limit reached
                     if (
                         total_size > self.MAX_EMAIL_SIZE
                         or self._db.emails_table_batch.count() >= self.MAX_BATCH_COUNT
@@ -229,13 +223,11 @@ class ReportingService:
                             settings_dict=settings_dict,
                             reporting_config=reporting_config,
                             start_time=start_time,
-                            args=args,
-                            root=root,
                             batch_number=batch_number,
                             emails_count=emails_count,
                             total_emails=total_emails,
-                            feedback_text=feedback_text,
                             run_summary=run_summary,
+                            progress_callback=progress_callback,
                         )
                         self._db.emails_table_batch.delete()
                         total_size = 0
@@ -251,27 +243,22 @@ class ReportingService:
                     skipped_files += 1
                     self._db.sent_emails_removal_queue.insert(log)
             
-            # Send remaining batch
             self._send_batch(
                 settings_dict=settings_dict,
                 reporting_config=reporting_config,
                 start_time=start_time,
-                args=args,
-                root=root,
                 batch_number=batch_number,
                 emails_count=emails_count,
                 total_emails=total_emails,
-                feedback_text=feedback_text,
                 run_summary=run_summary,
+                progress_callback=progress_callback,
             )
             self._db.emails_table_batch.delete()
             
-            # Clean up sent emails
             for line in self._db.sent_emails_removal_queue.all():
                 self._db.emails_table.delete(log=str(line["log"]))
             self._db.sent_emails_removal_queue.delete()
             
-            # Handle skipped files
             if skipped_files > 0:
                 self._handle_skipped_files(
                     skipped_files=skipped_files,
@@ -280,12 +267,10 @@ class ReportingService:
                     settings_dict=settings_dict,
                     reporting_config=reporting_config,
                     start_time=start_time,
-                    args=args,
-                    root=root,
                     batch_number=batch_number,
                     emails_count=emails_count,
                     total_emails=total_emails,
-                    feedback_text=feedback_text,
+                    progress_callback=progress_callback,
                 )
                 
         except Exception as dispatch_error:
@@ -301,13 +286,11 @@ class ReportingService:
         settings_dict: dict,
         reporting_config: dict,
         start_time: str,
-        args: Any,
-        root: Any,
         batch_number: int,
         emails_count: int,
         total_emails: int,
-        feedback_text: Any,
         run_summary: str,
+        progress_callback: Optional[ProgressCallback] = None,
     ) -> None:
         """Send a batch of emails.
         
@@ -315,13 +298,11 @@ class ReportingService:
             settings_dict: Application settings dictionary
             reporting_config: Reporting configuration dictionary
             start_time: Start time string for the run
-            args: Command line arguments
-            root: Tkinter root window
             batch_number: Current batch number
             emails_count: Current email count
             total_emails: Total emails to send
-            feedback_text: Feedback widget for status updates
             run_summary: Summary string of the run
+            progress_callback: Progress callback for status updates (optional)
         """
         if self._batch_log_sender is not None:
             self._batch_log_sender.do(
@@ -330,13 +311,11 @@ class ReportingService:
                 self._db.emails_table_batch,
                 self._db.sent_emails_removal_queue,
                 start_time,
-                args,
-                root,
                 batch_number,
                 emails_count,
                 total_emails,
-                feedback_text,
                 run_summary,
+                progress_callback,
             )
     
     def _handle_skipped_files(
@@ -347,12 +326,10 @@ class ReportingService:
         settings_dict: dict,
         reporting_config: dict,
         start_time: str,
-        args: Any,
-        root: Any,
         batch_number: int,
         emails_count: int,
         total_emails: int,
-        feedback_text: Any,
+        progress_callback: Optional[ProgressCallback] = None,
     ) -> None:
         """Handle skipped files by creating and sending an error log.
         
@@ -363,12 +340,10 @@ class ReportingService:
             settings_dict: Application settings dictionary
             reporting_config: Reporting configuration dictionary
             start_time: Start time string
-            args: Command line arguments
-            root: Tkinter root window
             batch_number: Current batch number
             emails_count: Current email count
             total_emails: Total emails
-            feedback_text: Feedback widget
+            progress_callback: Progress callback for status updates (optional)
         """
         batch_number += 1
         emails_count += 1
@@ -402,13 +377,11 @@ class ReportingService:
                 settings_dict=settings_dict,
                 reporting_config=reporting_config,
                 start_time=start_time,
-                args=args,
-                root=root,
                 batch_number=batch_number,
                 emails_count=emails_count,
                 total_emails=total_emails,
-                feedback_text=feedback_text,
                 run_summary="Error, cannot send all logs. ",
+                progress_callback=progress_callback,
             )
             self._db.emails_table_batch.delete()
         except Exception as email_send_error:
@@ -428,7 +401,6 @@ class ReportingService:
             run_log_path: Path to log directory
             reporting_config: Reporting configuration dictionary
         """
-        # Find the run log file
         run_log_file = None
         for f in os.listdir(run_log_path):
             if f.startswith("Run Log"):

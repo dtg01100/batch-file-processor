@@ -5,7 +5,6 @@ for testability, extracted from main_interface.py.
 """
 
 import os
-import smtplib
 import tkinter
 import tkinter.ttk
 from typing import Any, Callable, Dict, Optional
@@ -18,6 +17,7 @@ import pyodbc  # type: ignore
 import doingstuffoverlay
 import utils
 from dialog import Dialog
+from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format
 
 
@@ -71,6 +71,7 @@ class EditSettingsDialog(Dialog):
         disable_email_backends: Optional[Callable[[], None]] = None,
         disable_folders_without_backends: Optional[Callable[[], None]] = None,
         root: Optional[tkinter.Tk] = None,
+        smtp_service: Optional[SMTPServiceProtocol] = None,
     ):
         """Initialize EditSettingsDialog with dependencies.
 
@@ -89,6 +90,7 @@ class EditSettingsDialog(Dialog):
             disable_email_backends: Callable to disable all email backends
             disable_folders_without_backends: Callable to disable folders without backends
             root: Root window for overlay display
+            smtp_service: SMTP connection testing service
         """
         self._settings_provider = settings_provider
         self._oversight_provider = oversight_provider
@@ -101,6 +103,7 @@ class EditSettingsDialog(Dialog):
         self._disable_email_backends = disable_email_backends
         self._disable_folders_without_backends = disable_folders_without_backends
         self._root_window = root
+        self._smtp_service = smtp_service or SMTPService()
 
         # Initialize base dialog
         super().__init__(parent, foldersnameinput, title)
@@ -388,27 +391,15 @@ class EditSettingsDialog(Dialog):
                     error_list.append("Invalid Email Origin Address\r")
                     errors = True
 
-            try:
-                server = smtplib.SMTP(
-                    str(self.email_smtp_server_field.get()),
-                    str(self.smtp_port_field.get()),
-                )
-                server.ehlo()
-                server.starttls()
-                if (
-                    self.email_username_field.get() != ""
-                    and self.email_password_field.get() != ""
-                ):
-                    server.login(
-                        str(self.email_username_field.get()),
-                        str(self.email_password_field.get()),
-                    )
-                server.quit()
-            except Exception as email_test_login_result_string:
-                print(email_test_login_result_string)
+            success, error_msg = self._smtp_service.test_connection(
+                smtp_server=str(self.email_smtp_server_field.get()),
+                smtp_port=str(self.smtp_port_field.get()),
+                username=str(self.email_username_field.get()),
+                password=str(self.email_password_field.get()),
+            )
+            if not success:
                 error_list.append(
-                    "Test Login Failed With Error\r"
-                    + str(email_test_login_result_string)
+                    "Test Login Failed With Error\r" + error_msg
                 )
                 errors = True
 

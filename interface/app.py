@@ -706,12 +706,10 @@ class BatchFileSenderApp:
                     reporting["logs_directory"],
                     reporting,
                     self._database.processed_files,
-                    self._root,
-                    self._args,
                     self._version,
                     self._errors_directory,
                     settings_dict,
-                    simple_output=None if not self._args.automatic else self._feedback_text,
+                    progress_callback=self._build_progress_callback(),
                 )
                 if run_error_bool and not self._args.automatic:
                     showinfo(
@@ -742,9 +740,7 @@ class BatchFileSenderApp:
                 run_log_path=run_log_path,
                 start_time=start_time,
                 run_summary=run_summary_string,
-                args=self._args,
-                root=self._root,
-                feedback_text=self._feedback_text,
+                progress_callback=self._build_progress_callback(),
             )
     
     def _automatic_process_directories(self, automatic_process_folders_table) -> None:
@@ -920,6 +916,23 @@ class BatchFileSenderApp:
             master: The parent window
             selected_folder: Optional folder ID to mark
         """
+        import doingstuffoverlay as _overlay
+        from interface.services.progress_service import ProgressCallback
+
+        class _TkProgressCb:
+            def show(self, message: str = "") -> None:
+                _overlay.make_overlay(master, message)
+
+            def hide(self) -> None:
+                _overlay.destroy_overlay()
+                master.update()
+
+            def update_message(self, message: str) -> None:
+                _overlay.update_overlay(parent=master, overlay_text=message)
+
+            def is_visible(self) -> bool:
+                return _overlay.doing_stuff_frame is not None
+
         maintenance = MaintenanceFunctions(
             database_obj=self._database,
             refresh_callback=self._refresh_users_list,
@@ -928,8 +941,53 @@ class BatchFileSenderApp:
             database_path=self._database_path,
             running_platform=self._running_platform,
             database_version=self._database_version,
+            progress_callback=_TkProgressCb(),
         )
-        maintenance.mark_active_as_processed(master, selected_folder)
+        maintenance.mark_active_as_processed(selected_folder=selected_folder)
+    
+    def _build_progress_callback(self):
+        import doingstuffoverlay as _overlay
+        from interface.services.progress_service import NullProgressCallback
+
+        if self._args is not None and self._args.automatic:
+            class _AutoProgressCb:
+                def __init__(self, feedback_text):
+                    self._feedback_text = feedback_text
+
+                def show(self, message: str = "") -> None:
+                    if self._feedback_text is not None:
+                        self._feedback_text.configure(text=message)
+
+                def hide(self) -> None:
+                    pass
+
+                def update_message(self, message: str) -> None:
+                    if self._feedback_text is not None:
+                        self._feedback_text.configure(text=message)
+
+                def is_visible(self) -> bool:
+                    return True
+
+            return _AutoProgressCb(self._feedback_text)
+
+        root = self._root
+
+        class _TkProgressCb:
+            def show(self, message: str = "") -> None:
+                _overlay.destroy_overlay()
+                _overlay.make_overlay(root, message)
+
+            def hide(self) -> None:
+                _overlay.destroy_overlay()
+
+            def update_message(self, message: str) -> None:
+                _overlay.update_overlay(parent=root, overlay_text=message)
+                root.update()
+
+            def is_visible(self) -> bool:
+                return _overlay.doing_stuff_frame is not None
+
+        return _TkProgressCb()
     
     # -------------------------------------------------------------------------
     # Utility Methods
