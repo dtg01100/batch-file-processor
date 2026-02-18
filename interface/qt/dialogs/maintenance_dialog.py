@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.ports import UIServiceProtocol
-from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
+from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions  # Toolkit-agnostic business logic
 
 
 class MaintenanceDialog(QDialog):
@@ -44,7 +44,7 @@ class MaintenanceDialog(QDialog):
 
         self.setWindowTitle("Maintenance Functions")
         self.setModal(True)
-        self.setFixedSize(self.sizeHint())
+        self.setMinimumSize(600, 400)
 
         self._build_ui()
 

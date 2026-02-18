@@ -3,8 +3,7 @@
 This module defines the complete set of ports (abstractions) the application
 needs from ANY UI toolkit. It provides Protocol definitions for all UI
 interactions (message boxes, file dialogs, progress overlays, event loop
-pumping) plus a null implementation for headless/testing use and a concrete
-Tkinter adapter.
+pumping) plus a null implementation for headless/testing use.
 
 By programming against these protocols, the application logic is fully
 decoupled from any specific UI framework.
@@ -250,67 +249,98 @@ class NullUIService:
 
 
 # ---------------------------------------------------------------------------
-# Tkinter adapter
+# Qt adapter
 # ---------------------------------------------------------------------------
 
 
-class TkinterUIService:
-    """Adapter that satisfies :class:`UIServiceProtocol` using Tkinter.
+class QtUIService:
+    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt6.
 
-    Tkinter modules (``tkinter.messagebox``, ``tkinter.filedialog``) are
-    imported lazily inside ``__init__`` so that the mere *definition* of this
-    class never triggers a Tkinter import — only instantiation does.
+    Uses QMessageBox for dialogs, QFileDialog for file/directory selection,
+    and QApplication.processEvents() for event-loop pumping.
 
     Args:
-        root: The ``tkinter.Tk`` root window instance used for
-            ``pump_events()`` and as the implicit parent for dialogs.
+        parent: Optional parent widget for dialogs.
     """
 
-    def __init__(self, root) -> None:  # root: tkinter.Tk
-        import tkinter.filedialog as _fd
-        import tkinter.messagebox as _mb
-
-        self._root = root
-        self._messagebox = _mb
-        self._filedialog = _fd
+    def __init__(self, parent=None) -> None:
+        from PyQt6.QtWidgets import QWidget
+        self._parent: Optional[QWidget] = parent
 
     # -- informational dialogs ------------------------------------------------
 
     def show_info(self, title: str, message: str) -> None:
-        """Delegates to ``tkinter.messagebox.showinfo``."""
-        self._messagebox.showinfo(title, message)
+        """Delegates to QMessageBox.information."""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self._parent, title, message)
 
     def show_error(self, title: str, message: str) -> None:
-        """Delegates to ``tkinter.messagebox.showerror``."""
-        self._messagebox.showerror(title, message)
+        """Delegates to QMessageBox.critical."""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(self._parent, title, message)
 
     def show_warning(self, title: str, message: str) -> None:
-        """Delegates to ``tkinter.messagebox.showwarning``."""
-        self._messagebox.showwarning(title, message)
+        """Delegates to QMessageBox.warning."""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(self._parent, title, message)
 
     # -- question dialogs -----------------------------------------------------
 
     def ask_yes_no(self, title: str, message: str) -> bool:
-        """Delegates to ``tkinter.messagebox.askyesno``."""
-        return self._messagebox.askyesno(title, message)
+        """Delegates to QMessageBox.question."""
+        from PyQt6.QtWidgets import QMessageBox
+        result = QMessageBox.question(
+            self._parent,
+            title,
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return result == QMessageBox.StandardButton.Yes
 
     def ask_ok_cancel(self, title: str, message: str) -> bool:
-        """Delegates to ``tkinter.messagebox.askokcancel``."""
-        return self._messagebox.askokcancel(title, message)
+        """Delegates to QMessageBox.question."""
+        from PyQt6.QtWidgets import QMessageBox
+        result = QMessageBox.question(
+            self._parent,
+            title,
+            message,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        return result == QMessageBox.StandardButton.Ok
 
     # -- file / directory dialogs ---------------------------------------------
+
+    @staticmethod
+    def _convert_filetypes(
+        filetypes: Optional[list[tuple[str, str]]],
+    ) -> str:
+        """Convert filetypes to a Qt filter string.
+
+        Tkinter format: ``[("Description", "*.ext"), ...]``
+        Qt format:      ``"Description (*.ext);;..."``
+        """
+        if not filetypes:
+            return ""
+        parts: list[str] = []
+        for description, pattern in filetypes:
+            parts.append(f"{description} ({pattern})")
+        return ";;".join(parts)
 
     def ask_directory(
         self,
         title: str = "Select Directory",
         initial_dir: Optional[str] = None,
     ) -> str:
-        """Delegates to ``tkinter.filedialog.askdirectory``."""
-        kwargs: dict[str, object] = {"title": title}
-        if initial_dir is not None:
-            kwargs["initialdir"] = initial_dir
-        result = self._filedialog.askdirectory(**kwargs)
-        return result if isinstance(result, str) else ""
+        """Delegates to QFileDialog.getExistingDirectory."""
+        from PyQt6.QtWidgets import QFileDialog
+        result = QFileDialog.getExistingDirectory(
+            self._parent,
+            title,
+            initial_dir or "",
+        )
+        return result or ""
 
     def ask_open_filename(
         self,
@@ -318,14 +348,16 @@ class TkinterUIService:
         initial_dir: Optional[str] = None,
         filetypes: Optional[list[tuple[str, str]]] = None,
     ) -> str:
-        """Delegates to ``tkinter.filedialog.askopenfilename``."""
-        kwargs: dict[str, object] = {"title": title}
-        if initial_dir is not None:
-            kwargs["initialdir"] = initial_dir
-        if filetypes is not None:
-            kwargs["filetypes"] = filetypes
-        result = self._filedialog.askopenfilename(**kwargs)
-        return result if isinstance(result, str) else ""
+        """Delegates to QFileDialog.getOpenFileName."""
+        from PyQt6.QtWidgets import QFileDialog
+        filter_str = self._convert_filetypes(filetypes)
+        path, _ = QFileDialog.getOpenFileName(
+            self._parent,
+            title,
+            initial_dir or "",
+            filter_str,
+        )
+        return path or ""
 
     def ask_save_filename(
         self,
@@ -334,20 +366,22 @@ class TkinterUIService:
         default_ext: str = "",
         filetypes: Optional[list[tuple[str, str]]] = None,
     ) -> str:
-        """Delegates to ``tkinter.filedialog.asksaveasfilename``."""
-        kwargs: dict[str, object] = {
-            "title": title,
-            "defaultextension": default_ext,
-        }
-        if initial_dir is not None:
-            kwargs["initialdir"] = initial_dir
-        if filetypes is not None:
-            kwargs["filetypes"] = filetypes
-        result = self._filedialog.asksaveasfilename(**kwargs)
-        return result if isinstance(result, str) else ""
+        """Delegates to QFileDialog.getSaveFileName."""
+        from PyQt6.QtWidgets import QFileDialog
+        filter_str = self._convert_filetypes(filetypes)
+        path, _ = QFileDialog.getSaveFileName(
+            self._parent,
+            title,
+            initial_dir or "",
+            filter_str,
+        )
+        if path and default_ext and "." not in path.rsplit("/", 1)[-1]:
+            path += default_ext
+        return path or ""
 
     # -- event loop -----------------------------------------------------------
 
     def pump_events(self) -> None:
-        """Delegates to ``root.update()`` to process pending Tk events."""
-        self._root.update()
+        """Delegates to QApplication.processEvents()."""
+        from PyQt6.QtWidgets import QApplication
+        QApplication.processEvents()

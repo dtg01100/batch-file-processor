@@ -612,8 +612,18 @@ class QtBatchFileSenderApp:
     def _open_edit_folders_dialog(self, folder_config: dict) -> None:
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        dlg = EditFoldersDialog(self._window, folder_config)
-        dlg.exec()
+        dlg = EditFoldersDialog(
+            self._window,
+            folder_config,
+            on_apply_success=self._on_folder_edit_applied,
+        )
+        if dlg.exec():
+            self._refresh_users_list()
+            self._set_main_button_states()
+
+    def _on_folder_edit_applied(self, folder_config: dict) -> None:
+        """Persist folder configuration changes after dialog apply."""
+        self._database.folders_table.update(folder_config, ["id"])
 
     def _set_defaults_popup(self) -> None:
         defaults = self._database.oversight_and_defaults.find_one(id=1)

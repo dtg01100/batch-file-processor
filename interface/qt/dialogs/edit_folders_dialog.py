@@ -206,6 +206,7 @@ class EditFoldersDialog(QDialog):
 
         self.setWindowTitle(title)
         self.setModal(True)
+        self.setMinimumSize(900, 650)
         self._build_ui()
         self._populate_fields(folder_config)
         self._update_active_state()

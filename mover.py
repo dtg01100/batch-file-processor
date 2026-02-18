@@ -1,6 +1,12 @@
+"""Database migration utilities.
+
+This module provides utilities for migrating and merging database files.
+It has been refactored to remove tkinter dependencies.
+"""
+
 import os
 import threading
-from tkinter import IntVar
+from typing import Any, Callable, Optional
 
 import dataset
 
@@ -9,13 +15,39 @@ import folders_database_migrator
 
 
 class DbMigrationThing:
-    def __init__(self, original_folder_path, new_folder_path):
+    """Database migration handler.
+
+    This class handles the migration of folder data between database files.
+    It has been refactored to use callback-based progress reporting instead
+    of tkinter variables.
+
+    Attributes:
+        original_folder_path: Path to the original database file
+        new_folder_path: Path to the new database file to import from
+    """
+
+    def __init__(self, original_folder_path: str, new_folder_path: str) -> None:
         self.original_folder_path = original_folder_path
         self.new_folder_path = new_folder_path
-        self.number_of_folders = IntVar()
-        self.progress_of_folders = IntVar()
+        self.number_of_folders: int = 0
+        self.progress_of_folders: int = 0
 
-    def do_migrate(self, progress_bar, master, original_database_path):
+    def do_migrate(
+        self,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+        original_database_path: Optional[str] = None,
+    ) -> None:
+        """Perform the database migration.
+
+        Args:
+            progress_callback: Optional callback function(progress, maximum) for
+                reporting progress. Replaces tkinter progress_bar parameter.
+            original_database_path: Path to the original database file. If not
+                provided, uses self.original_folder_path.
+        """
+        if original_database_path is None:
+            original_database_path = self.original_folder_path
+
         def database_preimport_operations():
             global new_database_connection
             global modified_new_folder_path
@@ -33,24 +65,44 @@ class DbMigrationThing:
 
         preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
         preimport_operations_thread_object.start()
-        progress_bar.configure(mode='indeterminate', maximum=100)
-        progress_bar.start()
-        while preimport_operations_thread_object.isAlive():
-            master.update()
-        progress_bar.stop()
-        progress_bar.configure(maximum=100, value=0, mode='determinate')
+
+        # Report indeterminate progress
+        if progress_callback:
+            progress_callback(0, 100)
+
+        while preimport_operations_thread_object.is_alive():
+            # Process events if needed (for Qt compatibility)
+            try:
+                from PyQt6.QtWidgets import QApplication
+                QApplication.processEvents()
+            except ImportError:
+                pass
+
+        # Report determinate progress
+        if progress_callback:
+            progress_callback(0, 100)
+
         new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
         new_folders_table = new_database_connection['folders']
         original_database_connection = dataset.connect('sqlite:///' + original_database_path)
         old_folders_table = original_database_connection['folders']
-        # After migration, folder_is_active may be integer 1 or string "True"
-        # Count both to handle pre- and post-v41 databases
-        self.number_of_folders = (
-            new_folders_table.count(folder_is_active="True") +
-            new_folders_table.count(folder_is_active=1)
-        )
+
+        # Count folders for progress
+        active_folders = list(new_folders_table.find(folder_is_active="True"))
+        active_folders.extend(list(new_folders_table.find(folder_is_active=1)))
+        # Deduplicate by id
+        seen_ids = set()
+        unique_folders = []
+        for folder in active_folders:
+            if folder['id'] not in seen_ids:
+                seen_ids.add(folder['id'])
+                unique_folders.append(folder)
+
+        self.number_of_folders = len(unique_folders)
         self.progress_of_folders = 0
-        progress_bar.configure(maximum=self.number_of_folders, value=self.progress_of_folders)
+
+        if progress_callback and self.number_of_folders > 0:
+            progress_callback(0, self.number_of_folders)
 
         def _get_active_folders(table):
             """Get active folders handling both string and integer boolean formats."""
@@ -115,6 +167,7 @@ class DbMigrationThing:
                     old_folders_table.insert(line)
             except Exception as error:
                 print("import of folder failed with " + str(error))
+
             self.progress_of_folders += 1
-            progress_bar.configure(value=self.progress_of_folders)
-            master.update()
+            if progress_callback:
+                progress_callback(self.progress_of_folders, self.number_of_folders)

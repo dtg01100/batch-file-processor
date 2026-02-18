@@ -58,6 +58,7 @@ class ProcessedFilesDialog(QDialog):
         self._button_group = QButtonGroup(self)
         self._button_group.setExclusive(True)
 
+        self.setMinimumSize(600, 450)
         self._build_ui()
 
     def _build_ui(self) -> None:

@@ -76,6 +76,9 @@ class EditSettingsDialog(QDialog):
         self._on_enable_email_toggled()
         self._on_enable_backup_toggled()
 
+        # Set minimum size for comfortable viewing of all form fields
+        self.setMinimumSize(550, 500)
+
     def _get_settings(self) -> Dict[str, Any]:
         if self._settings_provider:
             return self._settings_provider()

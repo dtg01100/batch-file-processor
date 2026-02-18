@@ -1,27 +1,23 @@
-"""Qt reimplementation of the resend interface.
+"""Qt-based resend configuration dialog.
 
-Provides a QDialog that shows folders with processed files and allows
-toggling the resend flag on individual files via the toolkit-agnostic
-:class:`ResendService`.
+Replaces the tkinter-based resend_interface.py with a Qt implementation.
 """
 
 from __future__ import annotations
 
-import math
-import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
+    QDialogButtonBox,
     QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -31,174 +27,197 @@ from interface.services.resend_service import ResendService
 
 
 class ResendDialog(QDialog):
-    """Dialog for toggling resend flags on processed files.
+    """Dialog for configuring file resend flags.
 
-    Args:
-        parent: Optional parent widget.
-        resend_service: The toolkit-agnostic resend business-logic service.
+    Allows users to select which processed files should be marked for resend.
     """
 
     def __init__(
         self,
-        parent: Optional[QWidget],
-        resend_service: ResendService,
+        parent: QWidget,
+        database_connection: Any,
     ) -> None:
         super().__init__(parent)
-        self._service = resend_service
-        self._selected_folder_id: Optional[int] = None
-        self._folder_buttons: list[QPushButton] = []
-
         self.setWindowTitle("Enable Resend")
         self.setModal(True)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
-        self._build_ui()
-        self._populate_folders()
+        self._database_connection = database_connection
+        self._service: Optional[ResendService] = None
+        self._folder_id: Optional[int] = None
+        self._file_checkboxes: Dict[int, QCheckBox] = {}
+        self._folder_buttons: Dict[int, QPushButton] = {}
 
-    def _build_ui(self) -> None:
-        root_layout = QVBoxLayout(self)
+        self._setup_ui()
+        self._load_data()
 
-        top_bar = QHBoxLayout()
-        top_bar.addWidget(QLabel("File Limit:"))
-        self._spin_box = QSpinBox()
-        self._spin_box.setMinimum(10)
-        self._spin_box.setMaximum(5000)
-        self._spin_box.setSingleStep(5)
-        self._spin_box.setValue(10)
-        self._spin_box.setEnabled(False)
-        self._spin_box.valueChanged.connect(self._on_limit_changed)
-        top_bar.addWidget(self._spin_box)
-        root_layout.addLayout(top_bar)
+    def _setup_ui(self) -> None:
+        """Set up the dialog UI."""
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(10)
 
-        separator_top = QFrame()
-        separator_top.setFrameShape(QFrame.Shape.HLine)
-        separator_top.setFrameShadow(QFrame.Shadow.Sunken)
-        root_layout.addWidget(separator_top)
+        # Set minimum size for comfortable viewing
+        self.setMinimumSize(700, 500)
 
-        split_layout = QHBoxLayout()
+        # Files and folders frame
+        files_folders_frame = QFrame()
+        files_folders_layout = QHBoxLayout(files_folders_frame)
+        files_folders_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._folders_scroll = QScrollArea()
-        self._folders_scroll.setWidgetResizable(True)
-        self._folders_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self._folders_content = QWidget()
-        self._folders_layout = QVBoxLayout(self._folders_content)
-        self._folders_layout.setContentsMargins(3, 3, 3, 3)
-        self._folders_layout.setSpacing(2)
-        self._folders_layout.addStretch(1)
-        self._folders_scroll.setWidget(self._folders_content)
-        split_layout.addWidget(self._folders_scroll)
+        # Folders frame (left)
+        folders_frame = QGroupBox("Folders")
+        self._folders_layout = QVBoxLayout(folders_frame)
+        self._folders_layout.setSpacing(5)
 
+        # Files frame (right)
+        files_frame = QGroupBox("Files")
+        files_layout = QVBoxLayout(files_frame)
+
+        # File count control
+        file_count_frame = QHBoxLayout()
+        file_count_label = QLabel("Show:")
+        file_count_frame.addWidget(file_count_label)
+
+        self._file_count_spinbox = QSpinBox()
+        self._file_count_spinbox.setMinimum(5)
+        self._file_count_spinbox.setMaximum(1000)
+        self._file_count_spinbox.setValue(10)
+        self._file_count_spinbox.setSingleStep(5)
+        self._file_count_spinbox.setEnabled(False)
+        self._file_count_spinbox.valueChanged.connect(self._on_file_count_changed)
+        file_count_frame.addWidget(self._file_count_spinbox)
+
+        file_count_frame.addStretch()
+        files_layout.addLayout(file_count_frame)
+
+        # Scrollable file list
         self._files_scroll = QScrollArea()
         self._files_scroll.setWidgetResizable(True)
-        self._files_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        self._files_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._files_content = QWidget()
-        self._files_layout = QVBoxLayout(self._files_content)
-        self._files_layout.setContentsMargins(3, 3, 3, 3)
-        self._files_layout.setSpacing(2)
-        self._select_label = QLabel("Select a Folder.")
-        self._files_layout.addWidget(self._select_label)
-        self._files_layout.addStretch(1)
+        self._files_content_layout = QVBoxLayout(self._files_content)
+        self._files_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._files_scroll.setWidget(self._files_content)
-        split_layout.addWidget(self._files_scroll)
+        files_layout.addWidget(self._files_scroll)
 
-        root_layout.addLayout(split_layout, stretch=1)
+        # Assemble
+        files_folders_layout.addWidget(folders_frame, stretch=1)
+        files_folders_layout.addWidget(files_frame, stretch=2)
+        main_layout.addWidget(files_folders_frame)
 
-        separator_bottom = QFrame()
-        separator_bottom.setFrameShape(QFrame.Shape.HLine)
-        separator_bottom.setFrameShadow(QFrame.Shadow.Sunken)
-        root_layout.addWidget(separator_bottom)
+        # Close button
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        button_box.rejected.connect(self.reject)
+        main_layout.addWidget(button_box)
 
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.close)
-        root_layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+    def _load_data(self) -> None:
+        """Load data from database."""
+        try:
+            self._service = ResendService(self._database_connection)
+            if not self._service.has_processed_files():
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Nothing To Configure", "No processed files found.")
+                self.reject()
+                return
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Database Error", f"Database error: {e}")
+            self.reject()
+            return
 
-    def _populate_folders(self) -> None:
-        folder_list = self._service.get_folder_list()
-        for folder_id, alias in folder_list:
-            btn = QPushButton(alias)
-            btn.setCheckable(True)
-            btn.setAutoExclusive(True)
-            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            btn.clicked.connect(
-                lambda _checked, fid=folder_id: self._on_folder_selected(fid)
-            )
-            self._folder_buttons.append(btn)
-            self._folders_layout.insertWidget(
-                self._folders_layout.count() - 1, btn
-            )
+        # Load folders
+        folders = self._service.get_folders_with_files()
+        for folder_info in folders:
+            self._add_folder_button(folder_info)
+
+    def _add_folder_button(self, folder_info: Dict[str, Any]) -> None:
+        """Add a folder button to the folders list."""
+        folder_id = folder_info['id']
+        folder_name = folder_info['folder_name']
+
+        button = QPushButton(folder_name)
+        button.setCheckable(True)
+        button.clicked.connect(lambda checked: self._on_folder_selected(folder_id))
+        self._folder_buttons[folder_id] = button
+        self._folders_layout.addWidget(button)
 
     def _on_folder_selected(self, folder_id: int) -> None:
-        self._selected_folder_id = folder_id
-        self._spin_box.setEnabled(True)
+        """Handle folder selection."""
+        # Update button states
+        for fid, button in self._folder_buttons.items():
+            button.setChecked(fid == folder_id)
 
-        file_count = self._service.count_files_for_folder(folder_id)
-        rounded_max = self._round_up_to_5(file_count) if file_count > 10 else 10
-        self._spin_box.setMaximum(rounded_max)
-        if self._spin_box.value() > rounded_max:
-            self._spin_box.setValue(rounded_max)
+        self._folder_id = folder_id
 
-        self._rebuild_file_list()
+        # Load files for this folder
+        self._load_files_for_folder(folder_id)
 
-    def _on_limit_changed(self) -> None:
-        if self._selected_folder_id is not None:
-            self._rebuild_file_list()
+    def _load_files_for_folder(self, folder_id: int) -> None:
+        """Load and display files for the selected folder."""
+        # Clear existing checkboxes
+        for checkbox in self._file_checkboxes.values():
+            checkbox.deleteLater()
+        self._file_checkboxes.clear()
 
-    def _rebuild_file_list(self) -> None:
-        while self._files_layout.count():
-            item = self._files_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+        # Get file count and update spinbox
+        number_of_files = self._service.count_files_for_folder(folder_id)
+        self._file_count_spinbox.setEnabled(True)
+        self._file_count_spinbox.setMaximum(max(1000, number_of_files))
+        if number_of_files > 10:
+            self._file_count_spinbox.setValue(((number_of_files + 4) // 5) * 5)
+        else:
+            self._file_count_spinbox.setValue(10)
 
-        if self._selected_folder_id is None:
-            self._select_label = QLabel("Select a Folder.")
-            self._files_layout.addWidget(self._select_label)
-            self._files_layout.addStretch(1)
+        # Load files
+        self._populate_file_checkboxes()
+
+    def _populate_file_checkboxes(self) -> None:
+        """Populate the file checkboxes."""
+        if self._folder_id is None:
             return
 
-        file_list = self._service.get_files_for_folder(
-            self._selected_folder_id, limit=self._spin_box.value()
-        )
+        limit = int(self._file_count_spinbox.value())
+        files = self._service.get_files_for_folder(self._folder_id, limit=limit)
 
-        if not file_list:
-            self._files_layout.addWidget(QLabel("No files."))
-            self._files_layout.addStretch(1)
-            return
+        # Calculate max filename length for alignment
+        if files:
+            max_name_length = max(len(f['file_name']) for f in files)
+        else:
+            max_name_length = 0
 
-        file_names = [os.path.basename(f["file_name"]) for f in file_list]
-        max_name_length = len(max(file_names, key=len)) if file_names else 0
-
-        mono_font = QFont("monospace")
-        mono_font.setStyleHint(QFont.StyleHint.Monospace)
-
-        for file_info in file_list:
-            base_name = os.path.basename(file_info["file_name"])
-            label_text = base_name.ljust(max_name_length) + " (" + str(file_info["sent_date_time"]) + ")"
-
-            cb = QCheckBox(label_text)
-            cb.setFont(mono_font)
-            cb.setChecked(bool(file_info["resend_flag"]))
-            cb.toggled.connect(
-                lambda checked, fid=file_info["id"]: self._service.set_resend_flag(fid, checked)
+        for file_info in files:
+            checkbox = QCheckBox(self._files_content)
+            checkbox.setText(file_info['file_name'])
+            checkbox.setChecked(file_info['resend_flag'])
+            checkbox.toggled.connect(
+                lambda checked, fid=file_info['id']: self._on_file_toggled(fid, checked)
             )
-            self._files_layout.addWidget(cb)
+            self._file_checkboxes[file_info['id']] = checkbox
+            self._files_content_layout.addWidget(checkbox)
 
-            sep = QFrame()
-            sep.setFrameShape(QFrame.Shape.HLine)
-            sep.setFrameShadow(QFrame.Shadow.Sunken)
-            self._files_layout.addWidget(sep)
+        self._files_content_layout.addStretch()
 
-        self._files_layout.addStretch(1)
+    def _on_file_count_changed(self, value: int) -> None:
+        """Handle file count spinbox change."""
+        if self._folder_id is not None:
+            self._populate_file_checkboxes()
 
-    @staticmethod
-    def _round_up_to_5(n: int) -> int:
-        return int(math.ceil(n / 5.0)) * 5
+    def _on_file_toggled(self, file_id: int, checked: bool) -> None:
+        """Handle file checkbox toggle."""
+        try:
+            self._service.set_resend_flag(file_id, checked)
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Database Error", f"Database error: {e}")
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802
-        if event.key() == Qt.Key.Key_Escape:
-            self.close()
-            return
-        super().keyPressEvent(event)
+
+def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
+    """Show the resend configuration dialog.
+
+    Args:
+        parent: Parent widget
+        database_connection: Database connection object
+    """
+    dialog = ResendDialog(parent, database_connection)
+    dialog.exec()
