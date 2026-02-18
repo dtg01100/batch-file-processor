@@ -23,10 +23,9 @@ class TestMaintenanceFunctionsSetInactive:
         
         maintenance = MaintenanceFunctions(mock_db)
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.set_all_inactive()
+        maintenance.set_all_inactive()
             
-            mock_db.database_connection.query.assert_called_once()
+        mock_db.database_connection.query.assert_called_once()
 
 
 class TestMaintenanceFunctionsSetActive:
@@ -41,10 +40,9 @@ class TestMaintenanceFunctionsSetActive:
         
         maintenance = MaintenanceFunctions(mock_db)
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.set_all_active()
+        maintenance.set_all_active()
             
-            mock_db.database_connection.query.assert_called_once()
+        mock_db.database_connection.query.assert_called_once()
 
 
 class TestMaintenanceFunctionsClearResendFlags:
@@ -58,27 +56,28 @@ class TestMaintenanceFunctionsClearResendFlags:
         
         maintenance = MaintenanceFunctions(mock_db)
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.clear_resend_flags()
+        maintenance.clear_resend_flags()
             
-            mock_db.database_connection.query.assert_called_once()
+        mock_db.database_connection.query.assert_called_once()
 
 
 class TestMaintenanceFunctionsClearProcessedFilesLog:
     """Tests for MaintenanceFunctions.clear_processed_files_log() method."""
 
     def test_clear_processed_files_log_prompts_user(self):
-        """Test that clear_processed_files_log prompts user for confirmation."""
+        """Test that clear_processed_files_log deletes when confirmed."""
         from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
         
         mock_db = MagicMock()
         
-        maintenance = MaintenanceFunctions(mock_db)
+        maintenance = MaintenanceFunctions(
+            mock_db,
+            confirm_callback=lambda msg: True,
+        )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.askokcancel', return_value=True):
-            maintenance.clear_processed_files_log()
-            
-            mock_db.processed_files.delete.assert_called_once()
+        maintenance.clear_processed_files_log()
+        
+        mock_db.processed_files.delete.assert_called_once()
 
     def test_clear_processed_files_log_cancelled(self):
         """Test that clear_processed_files_log does nothing when cancelled."""
@@ -86,12 +85,14 @@ class TestMaintenanceFunctionsClearProcessedFilesLog:
         
         mock_db = MagicMock()
         
-        maintenance = MaintenanceFunctions(mock_db)
+        maintenance = MaintenanceFunctions(
+            mock_db,
+            confirm_callback=lambda msg: False,
+        )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.askokcancel', return_value=False):
-            maintenance.clear_processed_files_log()
-            
-            mock_db.processed_files.delete.assert_not_called()
+        maintenance.clear_processed_files_log()
+        
+        mock_db.processed_files.delete.assert_not_called()
 
 
 class TestMaintenanceFunctionsRemoveInactive:
@@ -115,10 +116,9 @@ class TestMaintenanceFunctionsRemoveInactive:
             delete_folder_callback=delete_callback
         )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.remove_inactive_folders()
+        maintenance.remove_inactive_folders()
             
-            assert 1 in delete_called
+        assert 1 in delete_called
 
 
 class TestMaintenanceFunctionsDatabaseImport:
@@ -134,21 +134,17 @@ class TestMaintenanceFunctionsDatabaseImport:
         mock_db.folders_table.find = MagicMock(return_value=[])
         mock_db.reload = MagicMock()
         
-        mock_popup = MagicMock()
-        
         maintenance = MaintenanceFunctions(
             mock_db,
             database_path='/test/path',
             running_platform='Linux',
             database_version='1.0'
         )
-        maintenance.set_maintenance_popup(mock_popup)
         
         with patch('interface.ui.dialogs.maintenance_dialog.database_import.import_interface', return_value=True):
-            with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-                maintenance.database_import_wrapper('/backup/path')
+            maintenance.database_import_wrapper('/backup/path')
                 
-                mock_db.reload.assert_called_once()
+            mock_db.reload.assert_called_once()
 
 
 class TestMaintenanceFunctionsMarkActiveAsProcessed:
@@ -163,8 +159,7 @@ class TestMaintenanceFunctionsMarkActiveAsProcessed:
         
         maintenance = MaintenanceFunctions(mock_db)
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.mark_active_as_processed()
+        maintenance.mark_active_as_processed()
             
             # Should handle gracefully with no folders
 
@@ -191,38 +186,43 @@ class TestMaintenanceDialog:
             assert result is None
 
 
-class TestMaintenanceFunctionsSetMaintenancePopup:
-    """Tests for set_maintenance_popup method."""
+class TestMaintenanceFunctionsProgressCallback:
+    """Tests for progress callback integration."""
 
-    def test_set_maintenance_popup_stores_reference(self):
-        """Test that set_maintenance_popup stores the popup reference."""
+    def test_set_all_active_uses_progress_callback(self):
+        """Test that set_all_active calls progress callback."""
         from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
         
         mock_db = MagicMock()
-        maintenance = MaintenanceFunctions(mock_db)
+        mock_db.database_connection = MagicMock()
+        mock_progress = MagicMock()
         
-        mock_popup = MagicMock()
-        maintenance.set_maintenance_popup(mock_popup)
+        maintenance = MaintenanceFunctions(mock_db, progress_callback=mock_progress)
         
-        assert maintenance._maintenance_popup == mock_popup
+        maintenance.set_all_active()
+        
+        mock_progress.show.assert_called_once_with("Working...")
+        mock_progress.hide.assert_called_once()
 
-
-class TestMaintenanceFunctionsDestroyPopup:
-    """Tests for _destroy_maintenance_popup method."""
-
-    def test_destroy_maintenance_popup(self):
-        """Test that _destroy_maintenance_popup destroys the popup."""
+    def test_operation_start_end_callbacks(self):
+        """Test that on_operation_start/end callbacks are called."""
         from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
         
         mock_db = MagicMock()
-        maintenance = MaintenanceFunctions(mock_db)
+        mock_db.database_connection = MagicMock()
+        on_start = MagicMock()
+        on_end = MagicMock()
         
-        mock_popup = MagicMock()
-        maintenance.set_maintenance_popup(mock_popup)
+        maintenance = MaintenanceFunctions(
+            mock_db,
+            on_operation_start=on_start,
+            on_operation_end=on_end,
+        )
         
-        maintenance._destroy_maintenance_popup()
+        maintenance.set_all_inactive()
         
-        mock_popup.destroy.assert_called_once()
+        on_start.assert_called_once()
+        on_end.assert_called_once()
 
 
 class TestMaintenanceFunctionsCallbackIntegration:
@@ -244,10 +244,9 @@ class TestMaintenanceFunctionsCallbackIntegration:
             refresh_callback=refresh_callback
         )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.set_all_active()
+        maintenance.set_all_active()
             
-            assert len(refresh_called) == 1
+        assert len(refresh_called) == 1
 
     def test_set_all_inactive_calls_refresh_callback(self):
         """Test that set_all_inactive calls refresh callback."""
@@ -265,10 +264,9 @@ class TestMaintenanceFunctionsCallbackIntegration:
             refresh_callback=refresh_callback
         )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.doingstuffoverlay'):
-            maintenance.set_all_inactive()
+        maintenance.set_all_inactive()
             
-            assert len(refresh_called) == 1
+        assert len(refresh_called) == 1
 
 
 if __name__ == "__main__":
