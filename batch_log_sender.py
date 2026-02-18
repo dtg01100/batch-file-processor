@@ -4,11 +4,14 @@ import smtplib
 from email.message import EmailMessage
 from pathlib import Path
 
-import doingstuffoverlay
+from interface.services.progress_service import ProgressCallback, NullProgressCallback
 
 
-def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args, root, batch_number, emails_count,
-       total_emails, simple_output, run_summary_string):
+def do(settings, reporting, emails_table, sent_emails_removal_queue, time, batch_number, emails_count,
+       total_emails, run_summary_string, progress_callback: ProgressCallback = None):
+    if progress_callback is None:
+        progress_callback = NullProgressCallback()
+
     from_address = settings['email_address']
     email_username = settings['email_username']
     to_address = reporting['report_email_destination']
@@ -21,12 +24,7 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         subject_line = "Log from run at: " + time
         email_body_text = run_summary_string + ". See attached log"
 
-    if not args.automatic:
-        doingstuffoverlay.destroy_overlay()
-        doingstuffoverlay.make_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
-                                       " attachment " + str(emails_count) + " of " + str(total_emails))
-    else:
-        simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
+    progress_callback.update_message("sending reports emails\r" + "email " + str(batch_number) +
                                      " attachment " + str(emails_count) + " of " + str(total_emails))
 
     message = EmailMessage()
@@ -37,13 +35,8 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
 
     for log in emails_table.all():
 
-        if not args.automatic:
-            doingstuffoverlay.update_overlay(root, "sending reports emails\r" + "email " + str(batch_number) +
-                                             " attachment " + str(emails_count) + " of " + str(total_emails))
-        else:
-            simple_output.configure(text="sending reports emails\r" + "email " + str(batch_number) +
+        progress_callback.update_message("sending reports emails\r" + "email " + str(batch_number) +
                                          " attachment " + str(emails_count) + " of " + str(total_emails))
-        root.update()
 
         filename = log['log']
 
@@ -51,8 +44,6 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         attachmentname = os.path.basename(filename)
         ctype, encoding = mimetypes.guess_type(attachmentpath)
         if ctype is None or encoding is not None:
-            # No guess could be made, or the file is encoded (compressed), so
-            # use a generic bag-of-bits type.
             ctype = 'application/octet-stream'
         maintype, subtype = ctype.split('/', 1)
         with open(attachmentpath, 'rb') as fp:
@@ -75,6 +66,3 @@ def do(settings, reporting, emails_table, sent_emails_removal_queue, time, args,
         server.login(settings['email_username'], settings['email_password'])
     server.send_message(message)
     server.close()
-    
-    if not args.automatic:
-        doingstuffoverlay.destroy_overlay()

@@ -1,24 +1,22 @@
 import os
 import tkinter
-from operator import itemgetter
 from tkinter import *
 from tkinter.messagebox import showerror
 from tkinter.ttk import *
 
 import tk_extra_widgets
+from interface.services.resend_service import ResendService
 
 
 def do(database_connection, master_window):
     try:
-        processed_files_table = database_connection['processed_files']
-        if processed_files_table.count() == 0:
+        service = ResendService(database_connection)
+        if not service.has_processed_files():
             showerror(message="Nothing To Configure")
             return
-        configured_folders_table = database_connection['folders']
     except Exception as e:
         showerror(message=f"Database error: {e}")
         return
-    folder_list = []
     folder_button_variable = IntVar()
     files_count_variable = StringVar()
     files_count_variable.set(str(10))
@@ -40,8 +38,7 @@ def do(database_connection, master_window):
 
     def set_resend_flag(identifier, resend_flag):
         try:
-            processed_files_update = dict(dict(resend_flag=resend_flag, id=identifier))
-            processed_files_table.update(processed_files_update, ['id'])
+            service.set_resend_flag(identifier, resend_flag)
         except Exception as e:
             showerror(message=f"Database error: {e}")
 
@@ -56,37 +53,30 @@ def do(database_connection, master_window):
                 pass
         if folder_id is None:
             return
-        file_list = []
-        file_name_list = []
-        processed_lines = list(processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"))
-        for processed_line in processed_lines[:int(resend_interface_files_list_count_spinbox.get())]:
-            if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
-                file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
-                                  processed_line['sent_date_time']])
-                file_name_list.append(processed_line['file_name'])
+        file_list = service.get_files_for_folder(
+            folder_id, limit=int(resend_interface_files_list_count_spinbox.get())
+        )
+        file_name_list = [f['file_name'] for f in file_list]
         if file_name_list:
             file_name_length = len(os.path.basename(max(file_name_list, key=len)))
         else:
             file_name_length = 0
-        for file_name, resend_flag, identifier, sent_date_time in file_list:
-            CheckButtons(resend_interface_scrollable_files_frame.interior, file_name, resend_flag, identifier,
-                         sent_date_time, file_name_length)
+        for file_info in file_list:
+            CheckButtons(resend_interface_scrollable_files_frame.interior,
+                         file_info['file_name'], file_info['resend_flag'],
+                         file_info['id'], file_info['sent_date_time'],
+                         file_name_length)
 
     def folder_button_pressed(button):
         def round_to_next5(n):
             return n + (5 - n) % 5
         nonlocal folder_id
         nonlocal file_list
-        file_list = []
-        file_name_list = []
         folder_id = button.get()
-        for processed_line in processed_files_table.find(folder_id=folder_id, order_by="-sent_date_time"):
-            if processed_line['file_name'] not in file_name_list and os.path.exists(processed_line['file_name']):
-                file_list.append([processed_line['file_name'], processed_line['resend_flag'], processed_line['id'],
-                                  processed_line['sent_date_time']])
-                file_name_list.append(processed_line['file_name'])
-
-        number_of_files = len(file_name_list)
+        number_of_files = service.count_files_for_folder(folder_id)
+        file_list = service.get_files_for_folder(
+            folder_id, limit=int(resend_interface_files_list_count_spinbox.get())
+        )
         resend_interface_files_list_count_spinbox.configure(state='normal')
         resend_interface_files_list_count_spinbox.configure(
             to=(round_to_next5(number_of_files) if number_of_files > 10 else 10))
@@ -122,11 +112,7 @@ def do(database_connection, master_window):
     loading_label.pack()
     master_window.update()
 
-    for line in processed_files_table.distinct('folder_id'):
-        folder_alias = configured_folders_table.find_one(id=line['folder_id'])
-        if folder_alias is not None:
-            folder_list.append([line['folder_id'], folder_alias['alias']])
-    sorted_folder_list = sorted(folder_list, key=itemgetter(1))
+    sorted_folder_list = service.get_folder_list()
 
     resend_interface_scrollable_folders_frame = tk_extra_widgets.VerticalScrolledFrame(resend_interface_folders_frame)
     resend_interface_scrollable_files_frame = tk_extra_widgets.VerticalScrolledFrame(resend_interface_files_frame)

@@ -3,7 +3,7 @@ import os
 from typing import Any
 
 try:
-    from query_runner import query_runner
+    from core.database import query_runner
 
     HAS_QUERY_RUNNER = True
 except (ImportError, RuntimeError):

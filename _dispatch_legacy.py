@@ -11,13 +11,14 @@ import tempfile
 import threading
 import time
 from io import StringIO
+from typing import Optional
 
-import doingstuffoverlay
 import edi_tweaks
 import mtc_edi_validator
 import record_error
 import utils
-from query_runner import query_runner
+from core.database import query_runner
+from interface.services.progress_service import ProgressCallback, NullProgressCallback
 
 
 def generate_match_lists(folder_temp_processed_files_list):
@@ -79,8 +80,8 @@ hash_thread_return_queue = queue.Queue()
 
 
 def process(database_connection, folders_database, run_log, emails_table, run_log_directory,
-            reporting, processed_files, root, args, version, errors_folder, settings,
-            simple_output=None):
+            reporting, processed_files, version, errors_folder, settings,
+            progress_callback: Optional[ProgressCallback] = None):
     global hash_counter
     global file_count
     global parameters_dict_list
@@ -94,6 +95,9 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     hash_counter = 0
     file_count = 0
     hash_thread_return_queue = queue.Queue()
+
+    if progress_callback is None:
+        progress_callback = NullProgressCallback()
 
     query_object = query_runner(
         settings["as400_username"],
@@ -118,20 +122,14 @@ def process(database_connection, folders_database, run_log, emails_table, run_lo
     upc_dict = dict(upc_qreturn)
 
     def update_overlay(overlay_text, dispatch_folder_count, folder_total, dispatch_file_count, file_total, footer):
-        if not args.automatic:
-            doingstuffoverlay.update_overlay(parent=root,
-                                             overlay_text=overlay_text + " folder " +
-                                             str(dispatch_folder_count) + " of " +
-                                             str(folder_total) + "," + " file " +
-                                             str(dispatch_file_count) + " of " +
-                                             str(file_total), footer=footer, overlay_height=120)
-        elif simple_output is not None:
-            simple_output.configure(text=overlay_text + " folder " +
-                                    str(dispatch_folder_count) + " of " +
-                                    str(folder_total) + "," + " file " +
-                                    str(dispatch_file_count) + " of " +
-                                    str(file_total))
-        root.update()
+        message = (
+            overlay_text + " folder " +
+            str(dispatch_folder_count) + " of " +
+            str(folder_total) + "," + " file " +
+            str(dispatch_file_count) + " of " +
+            str(file_total)
+        )
+        progress_callback.update_message(message)
 
     edi_validator_errors = StringIO()
     global_edi_validator_error_status = False

@@ -5,152 +5,52 @@ This module provides EDI file processing functionality including:
 - C-record generation for split sales tax
 - Various EDI record transformations
 
-The module maintains backward compatibility while using the new
-refactored classes from core.edi.
+The module uses the refactored classes from core.edi.
 """
 
 import time
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, TextIO
 
 import utils
-from query_runner import query_runner
+from core.database import query_runner
 
 # Import refactored classes
 from core.edi.po_fetcher import POFetcher, POData
 from core.edi.c_rec_generator import CRecGenerator, CRecordConfig
 
 
-# Backward compatibility: Keep legacy class names as aliases
-class poFetcher:
-    """Legacy PO fetcher class for backward compatibility.
+def _create_query_runner_adapter(settings_dict: dict):
+    """Create an adapter that wraps legacy query_runner.
     
-    This class wraps the new POFetcher class and provides
-    the same interface as the original implementation.
+    This function creates a query runner from settings and wraps it
+    with an adapter that implements the QueryRunnerProtocol.
+    
+    Args:
+        settings_dict: Dictionary containing database connection settings
+        
+    Returns:
+        Object implementing QueryRunnerProtocol
     """
+    legacy_runner = query_runner(
+        settings_dict["as400_username"],
+        settings_dict["as400_password"],
+        settings_dict["as400_address"],
+        f"{settings_dict['odbc_driver']}",
+    )
     
-    DEFAULT_PO = POFetcher.DEFAULT_PO
-    
-    def __init__(self, settings_dict):
-        """Initialize with settings dictionary.
+    class QueryRunnerAdapter:
+        """Adapter wrapping legacy query_runner for protocol compliance."""
         
-        Args:
-            settings_dict: Dictionary containing database connection settings
-        """
-        self.query_object = None
-        self.settings = settings_dict
-        self._fetcher: Optional[POFetcher] = None
-    
-    def _db_connect(self):
-        """Establish database connection using legacy query_runner."""
-        self.query_object = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
-        )
-        # Create adapter for the legacy query_runner
-        self._fetcher = POFetcher(self._create_adapter())
-    
-    def _create_adapter(self):
-        """Create an adapter that wraps legacy query_runner.
+        def __init__(self, runner):
+            self._runner = runner
         
-        Returns:
-            Object implementing QueryRunnerProtocol
-        """
-        class QueryRunnerAdapter:
-            def __init__(self, legacy_runner):
-                self._runner = legacy_runner
-            
-            def run_query(self, query: str, params: tuple = None) -> list:
-                # Legacy runner returns list of tuples
-                return self._runner.run_arbitrary_query(query)
-        
-        return QueryRunnerAdapter(self.query_object)
+        def run_query(self, query: str, params: tuple = None) -> list:
+            # Legacy runner returns list of tuples
+            return self._runner.run_arbitrary_query(query)
     
-    def fetch_po_number(self, invoice_number):
-        """Fetch PO number for an invoice.
-        
-        Args:
-            invoice_number: Invoice number to look up
-            
-        Returns:
-            PO number string, or default if not found
-        """
-        if self._fetcher is None:
-            self._db_connect()
-        return self._fetcher.fetch_po_number(invoice_number)
-
-
-class cRecGenerator:
-    """Legacy C-record generator class for backward compatibility.
-    
-    This class wraps the new CRecGenerator class and provides
-    the same interface as the original implementation.
-    """
-    
-    def __init__(self, settings_dict):
-        """Initialize with settings dictionary.
-        
-        Args:
-            settings_dict: Dictionary containing database connection settings
-        """
-        self.query_object = None
-        self._invoice_number = "0"
-        self.unappended_records = False
-        self.settings = settings_dict
-        self._generator: Optional[CRecGenerator] = None
-    
-    def _db_connect(self):
-        """Establish database connection using legacy query_runner."""
-        self.query_object = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
-        )
-        # Create adapter for the legacy query_runner
-        self._generator = CRecGenerator(self._create_adapter())
-    
-    def _create_adapter(self):
-        """Create an adapter that wraps legacy query_runner.
-        
-        Returns:
-            Object implementing QueryRunnerProtocol
-        """
-        class QueryRunnerAdapter:
-            def __init__(self, legacy_runner):
-                self._runner = legacy_runner
-            
-            def run_query(self, query: str, params: tuple = None) -> list:
-                # Legacy runner returns list of tuples
-                return self._runner.run_arbitrary_query(query)
-        
-        return QueryRunnerAdapter(self.query_object)
-    
-    def set_invoice_number(self, invoice_number):
-        """Set the current invoice number.
-        
-        Args:
-            invoice_number: Invoice number for subsequent operations
-        """
-        if self._generator is None:
-            self._db_connect()
-        self._generator.set_invoice_number(invoice_number)
-        self._invoice_number = invoice_number
-        self.unappended_records = True
-    
-    def fetch_splitted_sales_tax_totals(self, procfile):
-        """Fetch and write split sales tax C records.
-        
-        Args:
-            procfile: File handle to write C records to
-        """
-        if self._generator is None:
-            self._db_connect()
-        self._generator.fetch_splitted_sales_tax_totals(procfile)
-        self.unappended_records = False
+    return QueryRunnerAdapter(legacy_runner)
 
 
 def edi_tweak(
@@ -226,9 +126,12 @@ def edi_tweak(
                 print(f"error opening file for write {error}")
                 raise
 
-    crec_appender = cRecGenerator(settings_dict)
-
-    po_fetcher = poFetcher(settings_dict)
+    # Create query runner adapter for modern classes
+    query_adapter = _create_query_runner_adapter(settings_dict)
+    
+    # Use modern classes directly
+    crec_appender = CRecGenerator(query_adapter)
+    po_fetcher = POFetcher(query_adapter)
 
     for line_num, line in enumerate(work_file_lined):  # iterate over work file contents
         input_edi_dict = utils.capture_records(line)

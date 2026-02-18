@@ -43,32 +43,57 @@ class DbMigrationThing:
         new_folders_table = new_database_connection['folders']
         original_database_connection = dataset.connect('sqlite:///' + original_database_path)
         old_folders_table = original_database_connection['folders']
-        self.number_of_folders = new_folders_table.count(folder_is_active="True")
+        # After migration, folder_is_active may be integer 1 or string "True"
+        # Count both to handle pre- and post-v41 databases
+        self.number_of_folders = (
+            new_folders_table.count(folder_is_active="True") +
+            new_folders_table.count(folder_is_active=1)
+        )
         self.progress_of_folders = 0
         progress_bar.configure(maximum=self.number_of_folders, value=self.progress_of_folders)
+
+        def _get_active_folders(table):
+            """Get active folders handling both string and integer boolean formats."""
+            results = list(table.find(folder_is_active="True"))
+            results.extend(list(table.find(folder_is_active=1)))
+            # Deduplicate by id
+            seen_ids = set()
+            unique_results = []
+            for row in results:
+                if row['id'] not in seen_ids:
+                    seen_ids.add(row['id'])
+                    unique_results.append(row)
+            return unique_results
 
         def test_line_for_match(line):
             line_match = False
             new_db_line = None
-            for db_line in old_folders_table.find(folder_is_active="True"):
-                if os.path.samefile(db_line['folder_name'], line['folder_name']):
-                    new_db_line = db_line
-                    line_match = True
-                    break
+            for db_line in _get_active_folders(old_folders_table):
+                try:
+                    if os.path.samefile(db_line['folder_name'], line['folder_name']):
+                        new_db_line = db_line
+                        line_match = True
+                        break
+                except (OSError, TypeError, ValueError):
+                    # Path may not exist on this system; compare as strings
+                    if db_line['folder_name'] == line['folder_name']:
+                        new_db_line = db_line
+                        line_match = True
+                        break
             return line_match, new_db_line
 
-        for line in new_folders_table.find(folder_is_active="True"):
+        for line in _get_active_folders(new_folders_table):
             try:
                 line_match, new_db_line = test_line_for_match(line)
                 print(str(line_match))
                 if line_match is True:
                     update_db_line = new_db_line
-                    if new_db_line['process_backend_copy'] is True:
+                    if new_db_line.get('process_backend_copy') in (True, 1, "True"):
                         print("merging copy backend settings")
                         update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
                                                    copy_to_directory=new_db_line['copy_to_directory'],
                                                    id=line['id']))
-                    if new_db_line['process_backend_ftp'] is True:
+                    if new_db_line.get('process_backend_ftp') in (True, 1, "True"):
                         print("merging ftp backend settings")
                         update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
                                                    ftp_folder=new_db_line['ftp_folder'],
@@ -76,7 +101,7 @@ class DbMigrationThing:
                                                    ftp_password=new_db_line['ftp_password'],
                                                    ftp_port=new_db_line['ftp_port'],
                                                    id=line['id']))
-                    if new_db_line['process_backend_email'] is True:
+                    if new_db_line.get('process_backend_email') in (True, 1, "True"):
                         print("merging email backend settings")
                         update_db_line.update(dict(email_to=new_db_line['email_to'],
                                                    email_subject_line=new_db_line['email_subject_line'],

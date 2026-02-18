@@ -6,6 +6,26 @@ def _log_migration_step(from_version, to_version):
     print(f"  Migrating: v{from_version} → v{to_version}")
 
 
+def _add_column_safe(database_connection, table_name, column_name, default_value):
+    """Add a column to a table if it doesn't already exist.
+    
+    Args:
+        database_connection: The dataset database connection
+        table_name: Name of the table to alter
+        column_name: Name of the column to add
+        default_value: SQL expression for the default value (e.g., '"ALL"', '0', '""')
+    """
+    try:
+        database_connection.query(
+            f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}'"
+        )
+        database_connection.query(
+            f'UPDATE "{table_name}" SET "{column_name}" = {default_value}'
+        )
+    except Exception:
+        pass
+
+
 def upgrade_database(
     database_connection, config_folder, running_platform, target_version=None
 ):
@@ -713,10 +733,17 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "32":
-        from migrations.add_plugin_config_column import apply_migration
-
-        if not apply_migration(database_connection):
-            raise RuntimeError("Plugin config migration failed")
+        # v32→v33: Add category filter columns and plugin config column.
+        # This replaces the old migration that was split across two different code paths:
+        # - Original (commit 9446b3de): added split_edi_filter_categories/mode
+        # - Later refactor: added plugin_config via external migrations/ module
+        # We now add all three columns, tolerating pre-existing columns.
+        _add_column_safe(database_connection, "folders", "split_edi_filter_categories", '"ALL"')
+        _add_column_safe(database_connection, "folders", "split_edi_filter_mode", '"include"')
+        _add_column_safe(database_connection, "administrative", "split_edi_filter_categories", '"ALL"')
+        _add_column_safe(database_connection, "administrative", "split_edi_filter_mode", '"include"')
+        _add_column_safe(database_connection, "folders", "plugin_config", '""')
+        _add_column_safe(database_connection, "administrative", "plugin_config", '""')
 
         update_version = dict(id=1, version="33", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -731,6 +758,18 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "33":
+        # Schema normalization for v33 databases.
+        # Old v33 databases (from commit 9446b3de7e) have split_edi_filter_categories
+        # and split_edi_filter_mode but lack plugin_config. Newer v33 databases have
+        # plugin_config but may lack the filter columns. Ensure all columns exist
+        # before proceeding to v33→v34.
+        _add_column_safe(database_connection, "folders", "split_edi_filter_categories", '"ALL"')
+        _add_column_safe(database_connection, "folders", "split_edi_filter_mode", '"include"')
+        _add_column_safe(database_connection, "administrative", "split_edi_filter_categories", '"ALL"')
+        _add_column_safe(database_connection, "administrative", "split_edi_filter_mode", '"include"')
+        _add_column_safe(database_connection, "folders", "plugin_config", '""')
+        _add_column_safe(database_connection, "administrative", "plugin_config", '""')
+
         import datetime
 
         now = datetime.datetime.now().isoformat()
@@ -901,67 +940,43 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "39":
-        # Check if 'id' column exists in folders table
-        cursor = database_connection.raw_connection.cursor()
-        cursor.execute("PRAGMA table_info(folders)")
-        columns = [row[1] for row in cursor.fetchall()]
-        
+        columns = [row['name'] for row in database_connection.query("PRAGMA table_info(folders)")]
+
         if "id" not in columns:
-            # SQLite doesn't support adding PRIMARY KEY via ALTER TABLE
-            # We need to recreate the table with the id column
-            
-            # Get current table info
-            cursor.execute("PRAGMA table_info(folders)")
-            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
-            
-            # Build column definitions
+            old_columns = [(row['name'], row['type']) for row in database_connection.query("PRAGMA table_info(folders)")]
+
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-            
+
             columns_sql = ", ".join(col_defs)
-            
-            # Create new table with id column
-            cursor.execute(f"CREATE TABLE folders_new ({columns_sql})")
-            
-            # Copy data (excluding any old id if it existed but was null)
+
+            database_connection.query(f"CREATE TABLE folders_new ({columns_sql})")
+
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
-            
-            # Drop old table and rename new one
-            cursor.execute("DROP TABLE folders")
-            cursor.execute("ALTER TABLE folders_new RENAME TO folders")
-            
-            database_connection.raw_connection.commit()
-        
-        # Also ensure administrative table has id column (for consistency)
-        cursor.execute("PRAGMA table_info(administrative)")
-        admin_columns = [row[1] for row in cursor.fetchall()]
-        
+            database_connection.query(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
+
+            database_connection.query("DROP TABLE folders")
+            database_connection.query("ALTER TABLE folders_new RENAME TO folders")
+
+        admin_columns = [row['name'] for row in database_connection.query("PRAGMA table_info(administrative)")]
+
         if "id" not in admin_columns:
-            # Get current table info
-            cursor.execute("PRAGMA table_info(administrative)")
-            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
-            
-            # Build column definitions
+            old_columns = [(row['name'], row['type']) for row in database_connection.query("PRAGMA table_info(administrative)")]
+
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-            
+
             columns_sql = ", ".join(col_defs)
-            
-            # Create new table with id column
-            cursor.execute(f"CREATE TABLE administrative_new ({columns_sql})")
-            
-            # Copy data
+
+            database_connection.query(f"CREATE TABLE administrative_new ({columns_sql})")
+
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
-            
-            # Drop old table and rename new one
-            cursor.execute("DROP TABLE administrative")
-            cursor.execute("ALTER TABLE administrative_new RENAME TO administrative")
-            
-            database_connection.raw_connection.commit()
+            database_connection.query(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
+
+            database_connection.query("DROP TABLE administrative")
+            database_connection.query("ALTER TABLE administrative_new RENAME TO administrative")
 
         update_version = dict(id=1, version="40", os=running_platform)
         db_version.update(update_version, ["id"])
