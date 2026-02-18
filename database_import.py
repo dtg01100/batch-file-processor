@@ -43,7 +43,7 @@ def import_interface(master_window, original_database_path, running_platform, ba
                                                    " systems.\nThere is no guarantee that the imported folders will "
                                                    "work, Continue?")
         elif int(new_db_version_var) >= 14:
-            if int(new_db_version_var > current_db_version):
+            if int(new_db_version_var) > int(current_db_version):
                 if askokcancel(message="The proposed database version is newer than the version supported by this "
                                        "program.\nContinue?"):
                     run_can_continue = askokcancel(
