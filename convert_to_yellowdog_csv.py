@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict
 
 import utils
-from query_runner import query_runner
+from core.database import query_runner
 
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):

@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from decimal import Decimal
 from typing import List
-from query_runner import query_runner
+from core.database import query_runner
 
 import utils
 

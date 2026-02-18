@@ -6,7 +6,7 @@ from dateutil import parser
 
 import utils
 
-from query_runner import query_runner
+from core.database import query_runner
 
 
 class CustomerLookupError(Exception):

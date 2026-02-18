@@ -11,7 +11,7 @@ from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
 
 import utils
-from query_runner import query_runner
+from core.database import query_runner
 
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
