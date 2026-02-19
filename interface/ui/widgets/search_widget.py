@@ -8,7 +8,7 @@ import tkinter
 import tkinter.ttk
 from typing import Callable, Optional
 
-import tk_extra_widgets
+from interface.qt.widgets import extra_widgets as tk_extra_widgets
 
 
 class SearchWidget:

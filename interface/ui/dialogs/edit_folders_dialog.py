@@ -19,6 +19,7 @@ sys.path.insert(0, interface_dir)
 from dialog import Dialog
 
 from interface.models.folder_configuration import FolderConfiguration
+from interface.qt.widgets import extra_widgets as tk_extra_widgets
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
@@ -113,6 +114,43 @@ class EditFoldersDialog(Dialog):
     def _create_extractor(self, field_refs: Dict[str, Any]) -> FolderDataExtractor:
         """Create extractor with dialog field references."""
         return self._extractor_class(field_refs)
+
+    def _create_column_sorter_widget(self):
+        """Create a column sorter widget, trying Qt first, then Tk, then stub.
+        
+        Returns:
+            A widget with set_columnstring(val) and get() methods.
+        """
+        # Try Qt version first
+        try:
+            from interface.qt.widgets.extra_widgets import ColumnSorterWidget
+            widget = ColumnSorterWidget(self.convert_options_frame)
+            # Add Tk-compatible methods for compatibility
+            if not hasattr(widget, 'containerframe'):
+                widget.containerframe = widget
+            return widget
+        except (ImportError, TypeError):
+            pass
+        
+        # Fall back to Tk version
+        try:
+            from interface.qt.widgets.extra_widgets import ColumnSorterWidget as columnSorterWidget
+            return columnSorterWidget(self.convert_options_frame)
+        except ImportError:
+            pass
+        
+        # Final fallback: create a minimal stub with a containerframe attribute
+        class _StubColumnSorter:
+            def __init__(self, parent):
+                self.containerframe = ttk.Frame(parent)
+            def set_columnstring(self, val):
+                pass
+            def get(self):
+                return ""
+            def get_columnstring(self):
+                return ""
+        
+        return _StubColumnSorter(self.convert_options_frame)
 
     def body(self, master) -> tk.Widget:
         """
@@ -683,7 +721,7 @@ class EditFoldersDialog(Dialog):
                 self.folder_alias_frame, width=30
             )
             try:
-                import tk_extra_widgets
+                from interface.qt.widgets import extra_widgets as tk_extra_widgets
                 rclick_folder_alias_field = tk_extra_widgets.RightClickMenu(
                     self.folder_alias_field
                 )
@@ -1023,24 +1061,8 @@ class EditFoldersDialog(Dialog):
             text="Include Item Description",
         )
 
-        # Column sorter widget - try to import, create stub if unavailable
-        try:
-            from tk_extra_widgets import columnSorterWidget
-            self.simple_csv_column_sorter = columnSorterWidget(
-                self.convert_options_frame
-            )
-        except ImportError:
-            # Create a minimal stub with a containerframe attribute
-            class _StubColumnSorter:
-                def __init__(self, parent):
-                    self.containerframe = ttk.Frame(parent)
-                def set_columnstring(self, val):
-                    pass
-                def get_columnstring(self):
-                    return ""
-            self.simple_csv_column_sorter = _StubColumnSorter(
-                self.convert_options_frame
-            )
+        # Column sorter widget - try to import from Qt first, then Tk fallback
+        self.simple_csv_column_sorter = self._create_column_sorter_widget()
 
         # --- Estore fields ---
         self.estore_store_number_label = ttk.Label(

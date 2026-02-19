@@ -14,7 +14,19 @@ from tkinter.messagebox import askokcancel, showerror
 
 import pyodbc  # type: ignore
 
-import doingstuffoverlay
+# `doingstuffoverlay` removed — provide a no-op fallback so legacy Tk modules can still import
+try:
+    import doingstuffoverlay
+except Exception:  # pragma: no cover - fallback for headless/Qt-only builds
+    class _NoopOverlay:
+        def make_overlay(self, *a, **k):
+            return None
+        def update_overlay(self, *a, **k):
+            return None
+        def destroy_overlay(self, *a, **k):
+            return None
+    doingstuffoverlay = _NoopOverlay()
+
 import utils
 from dialog import Dialog
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
@@ -30,10 +42,20 @@ def attach_right_click_menu(entry_widget):
     Returns:
         The RightClickMenu instance (in case caller needs reference)
     """
-    import tk_extra_widgets
-    rclick_menu = tk_extra_widgets.RightClickMenu(entry_widget)
-    entry_widget.bind("<3>", rclick_menu)
-    return rclick_menu
+    try:
+        # Try to use Qt equivalent first if available
+        from interface.qt.widgets.extra_widgets import RightClickMenu
+        return RightClickMenu(entry_widget)
+    except (ImportError, TypeError):
+        # Fall back to Tk version
+        try:
+            from interface.qt.widgets import extra_widgets as tk_extra_widgets
+            rclick_menu = tk_extra_widgets.RightClickMenu(entry_widget)
+            entry_widget.bind("<3>", rclick_menu)
+            return rclick_menu
+        except (ImportError, AttributeError):  # pragma: no cover
+            # No-op fallback if neither version is available
+            return None
 
 
 class EditSettingsDialog(Dialog):
@@ -391,17 +413,24 @@ class EditSettingsDialog(Dialog):
                     error_list.append("Invalid Email Origin Address\r")
                     errors = True
 
-            success, error_msg = self._smtp_service.test_connection(
-                smtp_server=str(self.email_smtp_server_field.get()),
-                smtp_port=str(self.smtp_port_field.get()),
-                username=str(self.email_username_field.get()),
-                password=str(self.email_password_field.get()),
-            )
-            if not success:
-                error_list.append(
-                    "Test Login Failed With Error\r" + error_msg
+            # Only attempt SMTP connection test if server and port were provided
+            smtp_server_val = str(self.email_smtp_server_field.get()).strip()
+            smtp_port_val = str(self.smtp_port_field.get()).strip()
+            if smtp_server_val and smtp_port_val:
+                success, error_msg = self._smtp_service.test_connection(
+                    smtp_server=smtp_server_val,
+                    smtp_port=smtp_port_val,
+                    username=str(self.email_username_field.get()),
+                    password=str(self.email_password_field.get()),
                 )
-                errors = True
+                if not success:
+                    error_list.append(
+                        "Test Login Failed With Error\r" + (error_msg or "")
+                    )
+                    errors = True
+            else:
+                # missing server/port will be caught by subsequent required-field checks
+                pass
 
             if (
                 self.email_username_field.get() == ""

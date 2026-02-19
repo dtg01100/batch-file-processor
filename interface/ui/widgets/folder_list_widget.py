@@ -10,7 +10,7 @@ from operator import itemgetter
 from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 import thefuzz.process  # type: ignore
-import tk_extra_widgets
+from interface.qt.widgets import extra_widgets as tk_extra_widgets
 
 
 class FolderTableProtocol(Protocol):

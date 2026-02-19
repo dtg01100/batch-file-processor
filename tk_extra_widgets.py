@@ -383,25 +383,6 @@ class columnSorterWidget:
         )
 
 
-# Prefer Qt implementations when available (shim)
-try:
-    from interface.qt.widgets.extra_widgets import (
-        RightClickMenu as QtRightClickMenu,
-        VerticalScrolledFrame as QtVerticalScrolledFrame,
-        ColumnSorterWidget as QtColumnSorterWidget,
-    )
-    # Re-export Qt classes under the old names so existing imports work
-    RightClickMenu = QtRightClickMenu
-    VerticalScrolledFrame = QtVerticalScrolledFrame
-    columnSorterWidget = QtColumnSorterWidget
-
-    class CreateToolTip:
-        def __init__(self, widget, text='widget info'):
-            try:
-                widget.setToolTip(text)
-            except Exception:
-                pass
-except Exception:
-    # Qt not available; fall back to the Tk implementations defined above
-    pass
+# Shim removed: prefer direct Qt imports in callers instead of runtime fallback.
+# Keep only Tk implementations in this module for legacy Tk-based code.
 

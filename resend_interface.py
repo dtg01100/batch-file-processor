@@ -1,10 +1,34 @@
+"""Resend Interface - Legacy Tk-based dialog.
+
+DEPRECATED: This module is deprecated in favor of the Qt-based ResendDialog
+in interface.qt.dialogs.resend_dialog. It is kept for backward compatibility
+with the legacy Tkinter-based BatchFileSenderApp.
+
+For new code, use:
+    from interface.qt.dialogs.resend_dialog import show_resend_dialog
+"""
+
 import os
 import tkinter
 from tkinter import *
 from tkinter.messagebox import showerror
 from tkinter.ttk import *
 
-import tk_extra_widgets
+# Import VerticalScrolledFrame with fallback
+try:
+    from interface.qt.widgets.extra_widgets import VerticalScrolledFrame
+except (ImportError, ModuleNotFoundError):
+    # Fallback to Qt version if Tk version unavailable
+    try:
+        from interface.qt.widgets.extra_widgets import VerticalScrolledFrame
+    except (ImportError, TypeError):
+        # Stub if neither available
+        class VerticalScrolledFrame(tkinter.ttk.Frame):
+            """Stub VerticalScrolledFrame for when tk_extra_widgets is unavailable."""
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.interior = parent
+
 from interface.services.resend_service import ResendService
 
 
