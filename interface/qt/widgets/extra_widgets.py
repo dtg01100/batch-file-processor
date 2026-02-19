@@ -20,7 +20,9 @@ from PyQt6.QtWidgets import (
 )
 
 
-class RightClickMenu:
+from PyQt6.QtCore import QObject
+
+class RightClickMenu(QObject):
     """Context menu for QLineEdit widgets.
 
     Provides standard edit operations (Cut, Copy, Paste, Delete, Select All)
@@ -32,14 +34,15 @@ class RightClickMenu:
         # Context menu is automatically enabled
 
     Attributes:
-        parent: The QLineEdit widget this menu is attached to
+        _parent: The QLineEdit widget this menu is attached to
     """
 
-    def __init__(self, parent: QWidget) -> None:
-        self.parent = parent
+    def __init__(self, parent: 'QLineEdit') -> None:
+        super().__init__(parent)
+        self._parent = parent
 
         # Install event filter to intercept right-click
-        self.parent.installEventFilter(self)
+        self._parent.installEventFilter(self)
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
@@ -47,7 +50,7 @@ class RightClickMenu:
     def _setup_shortcuts(self) -> None:
         """Set up keyboard shortcuts for edit operations."""
         # Ctrl+A for Select All
-        select_all_shortcut = QShortcut(QKeySequence.StandardKey.SelectAll, self.parent)
+        select_all_shortcut = QShortcut(QKeySequence.StandardKey.SelectAll, self._parent)
         select_all_shortcut.activated.connect(self._select_all)
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
@@ -65,23 +68,23 @@ class RightClickMenu:
     def _show_menu(self, pos) -> None:
         """Show the context menu at the specified position."""
         # Check if widget is disabled
-        if not self.parent.isEnabled():
+        if not self._parent.isEnabled():
             return
 
-        menu = QMenu(self.parent)
+        menu = QMenu(self._parent)
 
         # Check for selected text
-        has_selection = self.parent.hasSelectedText()
+        has_selection = self._parent.hasSelectedText()
 
         # Cut
         cut_action = menu.addAction("Cut")
         cut_action.setEnabled(has_selection)
-        cut_action.triggered.connect(lambda: self.parent.cut())
+        cut_action.triggered.connect(lambda: self._parent.cut())
 
         # Copy
         copy_action = menu.addAction("Copy")
         copy_action.setEnabled(has_selection)
-        copy_action.triggered.connect(lambda: self.parent.copy())
+        copy_action.triggered.connect(lambda: self._parent.copy())
 
         menu.addSeparator()
 
@@ -90,14 +93,14 @@ class RightClickMenu:
         from PyQt6.QtWidgets import QApplication
         clipboard = QApplication.clipboard()
         paste_action.setEnabled(bool(clipboard.text()))
-        paste_action.triggered.connect(lambda: self.parent.paste())
+        paste_action.triggered.connect(lambda: self._parent.paste())
 
         menu.addSeparator()
 
         # Delete
         delete_action = menu.addAction("Delete")
         delete_action.setEnabled(has_selection)
-        delete_action.triggered.connect(lambda: self.parent.del_())
+        delete_action.triggered.connect(lambda: self._parent.del_())
 
         menu.addSeparator()
 
@@ -109,7 +112,7 @@ class RightClickMenu:
 
     def _select_all(self) -> None:
         """Select all text in the widget."""
-        self.parent.selectAll()
+        self._parent.selectAll()
 
 
 class VerticalScrolledFrame(QScrollArea):
