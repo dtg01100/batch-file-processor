@@ -357,7 +357,7 @@ class TestEditSettingsDialogIntegration:
         with patch('interface.ui.dialogs.edit_settings_dialog.doingstuffoverlay'):
             # Mock SMTP to avoid actual network call
             mock_smtp = MagicMock()
-            with patch('interface.ui.dialogs.edit_settings_dialog.smtplib.SMTP', return_value=mock_smtp):
+            with patch('smtplib.SMTP', return_value=mock_smtp):
                 with patch('interface.ui.dialogs.edit_settings_dialog.validate_email_format', return_value=True):
                     # The test might fail on SMTP connection but validates the flow
                     try:

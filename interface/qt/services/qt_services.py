@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QVBoxLayout,
     QWidget,
+    QProgressBar,
 )
 
 
@@ -196,9 +197,12 @@ class QtProgressService(QObject):
         self._parent = parent
         self._overlay = self._build_overlay(parent)
         self._label = self._build_label(self._overlay)
+        self._throbber = self._build_throbber(self._overlay)
+        self._progress_bar = self._build_progress_bar(self._overlay)
         self._setup_layout()
         self._overlay.hide()
         parent.installEventFilter(self)
+        self.set_indeterminate()  # Default to indeterminate mode
 
     # -- construction helpers -------------------------------------------------
 
@@ -228,10 +232,67 @@ class QtProgressService(QObject):
         label.setWordWrap(True)
         return label
 
+    @staticmethod
+    def _build_throbber(parent: QWidget) -> QLabel:
+        """Create an animated throbber indicator with pulsing effect."""
+        throbber = QLabel("◐", parent)
+        throbber.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        throbber.setStyleSheet("color: white; font-size: 36pt; font-weight: bold;")
+        # Create pulsing animation for opacity (ping-pong effect)
+        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+        animation = QPropertyAnimation(throbber, b"opacity")
+        animation.setDuration(1000)
+        animation.setStartValue(0.3)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
+        # Ping-pong effect: reverse direction when animation finishes
+        def on_animation_finished():
+            current_dir = animation.direction()
+            new_dir = (
+                QPropertyAnimation.Direction.Backward
+                if current_dir == QPropertyAnimation.Direction.Forward
+                else QPropertyAnimation.Direction.Forward
+            )
+            animation.setDirection(new_dir)
+            animation.start()
+        
+        animation.finished.connect(on_animation_finished)
+        animation.start()
+        animation.start()
+        # Store animation as attribute (ignore type check for this line)
+        setattr(throbber, "_animation", animation)
+        return throbber
+
+    @staticmethod
+    def _build_progress_bar(parent: QWidget) -> 'QProgressBar':
+        """Create a QProgressBar for percentage-based progress."""
+        from PyQt6.QtWidgets import QProgressBar
+        progress_bar = QProgressBar(parent)
+        progress_bar.setMinimum(0)
+        progress_bar.setMaximum(100)
+        progress_bar.setValue(0)
+        progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #666;
+                border-radius: 5px;
+                text-align: center;
+                color: white;
+                font-size: 12pt;
+            }
+            QProgressBar::chunk {
+                background-color: #4CAF50;
+                border-radius: 3px;
+            }
+        """)
+        return progress_bar
+
     def _setup_layout(self) -> None:
-        """Arrange the label inside the overlay with a centred layout."""
+        """Arrange the widgets inside the overlay with a centred layout."""
         layout = QVBoxLayout(self._overlay)
         layout.addStretch()
+        layout.addWidget(self._throbber)
+        layout.addWidget(self._progress_bar)
         layout.addWidget(self._label)
         layout.addStretch()
         self._overlay.setLayout(layout)
@@ -266,14 +327,34 @@ class QtProgressService(QObject):
         """Return whether the overlay is currently visible."""
         return self._overlay.isVisible()
 
+    def update_progress(self, progress: int) -> None:
+        """Update the progress with a percentage value (0-100).
+        
+        Shows a progress bar with the given percentage and hides the throbber.
+        
+        Args:
+            progress: Progress percentage from 0 to 100
+        """
+        # Ensure progress is within valid range
+        progress = max(0, min(100, progress))
+        self._progress_bar.setValue(progress)
+        self._throbber.hide()
+        self._progress_bar.show()
+
+    def set_indeterminate(self) -> None:
+        """Switch to indeterminate mode (show throbber, hide progress bar)."""
+        self._throbber.show()
+        self._progress_bar.hide()
+        self._progress_bar.setValue(0)
+
     # -- geometry management --------------------------------------------------
 
     def _sync_geometry(self) -> None:
         """Resize the overlay to match the parent widget."""
         self._overlay.setGeometry(self._parent.rect())
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:  # noqa: N802
         """Resize overlay when the parent widget is resized."""
-        if obj is self._parent and event.type() == QEvent.Type.Resize:
+        if a0 is self._parent and a1 and a1.type() == QEvent.Type.Resize:
             self._sync_geometry()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)

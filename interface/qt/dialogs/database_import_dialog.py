@@ -24,13 +24,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.dialogs.base_dialog import BaseDialog
+
 import dataset
 
 import backup_increment
 import folders_database_migrator
 
 
-class DatabaseImportDialog(QDialog):
+class DatabaseImportDialog(BaseDialog):
     """Dialog for importing folders from another database."""
 
     def __init__(
@@ -41,9 +43,7 @@ class DatabaseImportDialog(QDialog):
         backup_path: str,
         current_db_version: str,
     ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("folders.db merging utility")
-        self.setModal(True)
+        super().__init__(parent, "folders.db merging utility")
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._original_database_path = original_database_path

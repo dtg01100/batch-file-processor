@@ -4,8 +4,8 @@ This module contains refactored components for the dispatch system,
 designed for testability and loose coupling.
 """
 
-# Import legacy process function for backward compatibility
-from _dispatch_legacy import process
+# Import process function from dispatch_process module
+from dispatch_process import process
 
 from dispatch.hash_utils import generate_match_lists, generate_file_hash
 from dispatch.file_utils import build_output_filename, filter_files_by_checksum

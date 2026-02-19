@@ -18,11 +18,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.dialogs.base_dialog import BaseDialog
+
 from interface.ports import UIServiceProtocol
 from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions  # Toolkit-agnostic business logic
 
 
-class MaintenanceDialog(QDialog):
+class MaintenanceDialog(BaseDialog):
     """Advanced maintenance operations dialog.
 
     Args:
@@ -37,23 +39,21 @@ class MaintenanceDialog(QDialog):
         maintenance_functions: MaintenanceFunctions,
         ui_service: Optional[UIServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent)
         self._mf = maintenance_functions
         self._ui = ui_service
         self._buttons: list[QPushButton] = []
+        super().__init__(parent, "Maintenance Functions")
 
-        self.setWindowTitle("Maintenance Functions")
         self.setModal(True)
         self.setMinimumSize(600, 400)
 
-        self._build_ui()
+        # Maintenance dialog shouldn't have OK/Cancel buttons
+        self._button_box.hide()
 
         self._mf._on_operation_start = self._on_operation_start
         self._mf._on_operation_end = self._on_operation_end
 
-    def _build_ui(self) -> None:
-        root_layout = QHBoxLayout(self)
-
+    def body(self, parent: QWidget) -> Optional[QWidget]:
         button_layout = QVBoxLayout()
         buttons = [
             ("Move all to active (Skips Settings Validation)", self._set_all_active),
@@ -71,12 +71,17 @@ class MaintenanceDialog(QDialog):
             button_layout.addWidget(btn)
             self._buttons.append(btn)
 
+        root_layout = QHBoxLayout()
         root_layout.addLayout(button_layout)
 
         warning_label = QLabel("WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         warning_label.setStyleSheet("color: red; font-weight: bold; font-size: 14pt;")
         root_layout.addWidget(warning_label)
+
+        parent.layout().addLayout(root_layout)
+
+        return None
 
     def _set_buttons_enabled(self, enabled: bool) -> None:
         for btn in self._buttons:

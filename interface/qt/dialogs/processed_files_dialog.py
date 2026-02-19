@@ -27,11 +27,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.dialogs.base_dialog import BaseDialog
+
 from interface.ports import UIServiceProtocol
 from interface.ui.dialogs.processed_files_dialog import export_processed_report
 
 
-class ProcessedFilesDialog(QDialog):
+class ProcessedFilesDialog(BaseDialog):
     """Modal dialog for exporting processed-file reports per folder."""
 
     def __init__(
@@ -40,7 +42,7 @@ class ProcessedFilesDialog(QDialog):
         database_obj: Any,
         ui_service: Optional[UIServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, "Processed Files Report")
         self._database_obj = database_obj
         self._ui_service = ui_service
 
@@ -146,9 +148,15 @@ class ProcessedFilesDialog(QDialog):
     def _rebuild_actions(self) -> None:
         while self._actions_layout.count():
             item = self._actions_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)
+                    widget.deleteLater()
+                # Also remove any nested layouts
+                sub_layout = item.layout()
+                if sub_layout:
+                    sub_layout.deleteLater()
 
         choose_btn = QPushButton("Choose Output Folder")
         choose_btn.clicked.connect(self._choose_output_folder)

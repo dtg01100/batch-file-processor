@@ -1,3 +1,14 @@
+"""Dialog base class - DEPRECATED Tkinter implementation.
+
+DEPRECATED: This module is deprecated. Dialogs should inherit from:
+    - interface.qt.dialogs.base_dialog.BaseDialog (for Qt-based dialogs)
+    - Or implement your own dialog base class if needed
+
+This module is kept for backward compatibility with legacy Tkinter dialogs.
+For new dialogs, use interface.qt.dialogs.BaseDialog or implement dialog logic
+as services with toolkit-agnostic interfaces.
+"""
+
 from tkinter import *
 from tkinter.ttk import *
 

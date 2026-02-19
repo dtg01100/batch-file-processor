@@ -13,7 +13,7 @@ from operator import itemgetter
 
 from tkinter.filedialog import askdirectory
 
-from interface.qt.widgets import extra_widgets as tk_extra_widgets
+import tk_extra_widgets
 
 
 def export_processed_report(

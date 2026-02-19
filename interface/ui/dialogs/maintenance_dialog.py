@@ -14,7 +14,6 @@ from typing import Any, Callable, Optional
 from tkinter.messagebox import askokcancel
 
 import backup_increment
-import database_import
 
 from interface.services.progress_service import ProgressCallback, NullProgressCallback
 
@@ -51,6 +50,7 @@ class MaintenanceFunctions:
         on_operation_start: Optional[Callable[[], None]] = None,
         on_operation_end: Optional[Callable[[], None]] = None,
         confirm_callback: Optional[Callable[[str], bool]] = None,
+        database_import_callback: Optional[Callable[[str], bool]] = None,
     ):
         """Initialize MaintenanceFunctions with dependencies.
 
@@ -66,6 +66,7 @@ class MaintenanceFunctions:
             on_operation_start: Called at the start of each operation
             on_operation_end: Called at the end of each operation
             confirm_callback: Callback for user confirmation prompts
+            database_import_callback: Callback for database import (receives backup_path, returns success)
         """
         self._database_obj = database_obj
         self._refresh_callback = refresh_callback
@@ -78,6 +79,7 @@ class MaintenanceFunctions:
         self._on_operation_start = on_operation_start
         self._on_operation_end = on_operation_end
         self._confirm = confirm_callback or (lambda msg: True)
+        self._database_import_callback = database_import_callback
 
     def set_all_inactive(self) -> None:
         """Set all folders to inactive status."""
@@ -274,45 +276,42 @@ class MaintenanceFunctions:
         Args:
             backup_path: Path to the backup file
         """
-        if self._database_path and self._running_platform:
-            if database_import.import_interface(
-                None,
-                self._database_path,
-                self._running_platform,
-                backup_path,
-                self._database_version,
-            ):
-                if self._on_operation_start:
-                    self._on_operation_start()
-                self._progress.show("Working...")
-                self._database_obj.reload()
-                settings_dict = self._database_obj.settings.find_one(id=1)
-                print(settings_dict["enable_email"])
-                if not settings_dict["enable_email"]:
-                    for (
-                        email_backend_to_disable
-                    ) in self._database_obj.folders_table.find(
-                        process_backend_email=True
-                    ):
-                        email_backend_to_disable["process_backend_email"] = False
-                        self._database_obj.folders_table.update(
-                            email_backend_to_disable, ["id"]
-                        )
-                    for folder_to_disable in self._database_obj.folders_table.find(
-                        process_backend_ftp=False,
-                        process_backend_copy=False,
-                        process_backend_email=False,
-                        folder_is_active="True",
-                    ):
-                        folder_to_disable["folder_is_active"] = "False"
-                        self._database_obj.folders_table.update(
-                            folder_to_disable, ["id"]
-                        )
-                if self._refresh_callback:
-                    self._refresh_callback()
-                self._progress.hide()
-            if self._on_operation_end:
-                self._on_operation_end()
+        if self._database_import_callback is None:
+            print("Database import callback not configured")
+            return
+        
+        if self._database_import_callback(backup_path):
+            if self._on_operation_start:
+                self._on_operation_start()
+            self._progress.show("Working...")
+            self._database_obj.reload()
+            settings_dict = self._database_obj.settings.find_one(id=1)
+            print(settings_dict["enable_email"])
+            if not settings_dict["enable_email"]:
+                for (
+                    email_backend_to_disable
+                ) in self._database_obj.folders_table.find(
+                    process_backend_email=True
+                ):
+                    email_backend_to_disable["process_backend_email"] = False
+                    self._database_obj.folders_table.update(
+                        email_backend_to_disable, ["id"]
+                    )
+                for folder_to_disable in self._database_obj.folders_table.find(
+                    process_backend_ftp=False,
+                    process_backend_copy=False,
+                    process_backend_email=False,
+                    folder_is_active="True",
+                ):
+                    folder_to_disable["folder_is_active"] = "False"
+                    self._database_obj.folders_table.update(
+                        folder_to_disable, ["id"]
+                    )
+            if self._refresh_callback:
+                self._refresh_callback()
+            self._progress.hide()
+        if self._on_operation_end:
+            self._on_operation_end()
 
 
 def show_maintenance_dialog(

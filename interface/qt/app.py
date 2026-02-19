@@ -719,9 +719,25 @@ class QtBatchFileSenderApp:
 
     def _show_maintenance_dialog_wrapper(self) -> None:
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+        from interface.qt.dialogs.database_import_dialog import show_database_import_dialog
         from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
 
         backup_increment.do_backup(self._database_path)
+
+        def database_import_callback(backup_path: str) -> bool:
+            """Callback to show database import dialog."""
+            try:
+                show_database_import_dialog(
+                    parent=self._window,
+                    original_database_path=self._database_path,
+                    running_platform=self._running_platform,
+                    backup_path=backup_path,
+                    current_db_version=self._database_version,
+                )
+                return True
+            except Exception as e:
+                print(f"Database import failed: {e}")
+                return False
 
         maintenance = MaintenanceFunctions(
             database_obj=self._database,
@@ -733,6 +749,7 @@ class QtBatchFileSenderApp:
             database_version=self._database_version,
             progress_callback=self._progress_service,
             confirm_callback=lambda msg: self._ui_service.ask_ok_cancel("Confirm", msg),
+            database_import_callback=database_import_callback,
         )
 
         MaintenanceDialog.open_dialog(

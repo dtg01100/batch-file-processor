@@ -1,14 +1,9 @@
 """Batch File Sender Application class.
 
-This module contains the main application class that encapsulates
-the Tkinter application state, initialization, and lifecycle management.
+DEPRECATED: This module contains the legacy Tkinter-based BatchFileSenderApp.
+Please use interface.qt.app.QtBatchFileSenderApp instead.
 
-The BatchFileSenderApp class provides:
-- Application initialization and configuration
-- UI setup and management
-- Event coordination
-- Lifecycle methods (setup, run, cleanup)
-- Dependency injection for testability
+This module is kept for backward compatibility but may be removed in a future version.
 """
 
 import argparse
@@ -29,16 +24,21 @@ from tkinter.messagebox import askokcancel, askyesno, showerror, showinfo
 # Import application modules
 import batch_log_sender
 import create_database
-import database_import
-import dialog
 import dispatch
-import doingstuffoverlay
 import folders_database_migrator
 import print_run_log
-import resend_interface
 import utils
-import tk_extra_widgets
 import backup_increment
+
+# No-op fallback for removed doingstuffoverlay module
+class _NoopOverlay:
+    """No-op overlay for headless/Qt-only environments."""
+    doing_stuff_frame = None
+    def make_overlay(self, *args, **kwargs): pass
+    def update_overlay(self, *args, **kwargs): pass
+    def destroy_overlay(self, *args, **kwargs): pass
+
+doingstuffoverlay = _NoopOverlay()
 
 # Import refactored components
 from interface.database.database_obj import DatabaseObj
@@ -53,7 +53,6 @@ from interface.ui.dialogs.processed_files_dialog import (
 )
 from interface.ui.widgets.folder_list_widget import FolderListWidget
 from interface.ui.widgets.search_widget import SearchWidget
-from tk_extra_widgets import columnSorterWidget
 
 from .interfaces import TkinterProtocol
 
@@ -335,9 +334,7 @@ class BatchFileSenderApp:
         self._allow_resend_button = tkinter.ttk.Button(
             self._options_frame,
             text="Enable Resend...",
-            command=lambda: resend_interface.do(
-                self._database.database_connection, self._root
-            ),
+            command=self._show_resend_dialog,
         )
         
         maintenance_button = tkinter.ttk.Button(
@@ -907,6 +904,17 @@ class BatchFileSenderApp:
             database_obj=self._database,
         )
     
+    def _show_resend_dialog(self) -> None:
+        """Show the resend configuration dialog.
+        
+        DEPRECATED: The legacy Tk resend_interface has been removed.
+        Please use the Qt-based application for resend functionality.
+        """
+        showerror(
+            "Deprecated",
+            "The Tk resend interface has been removed. Please use the Qt-based application."
+        )
+    
     def _mark_active_as_processed_wrapper(
         self, master: tkinter.Tk, selected_folder: Optional[int] = None
     ) -> None:
@@ -916,19 +924,18 @@ class BatchFileSenderApp:
             master: The parent window
             selected_folder: Optional folder ID to mark
         """
-        import doingstuffoverlay as _overlay
         from interface.services.progress_service import ProgressCallback
 
         class _TkProgressCb:
             def show(self, message: str = "") -> None:
-                _overlay.make_overlay(master, message)
+                doingstuffoverlay.make_overlay(master, message)
 
             def hide(self) -> None:
-                _overlay.destroy_overlay()
+                doingstuffoverlay.destroy_overlay()
                 master.update()
 
             def update_message(self, message: str) -> None:
-                _overlay.update_overlay(parent=master, overlay_text=message)
+                doingstuffoverlay.update_overlay(parent=master, overlay_text=message)
 
             def is_visible(self) -> bool:
                 return _overlay.doing_stuff_frame is not None
@@ -946,7 +953,6 @@ class BatchFileSenderApp:
         maintenance.mark_active_as_processed(selected_folder=selected_folder)
     
     def _build_progress_callback(self):
-        import doingstuffoverlay as _overlay
         from interface.services.progress_service import NullProgressCallback
 
         if self._args is not None and self._args.automatic:
@@ -974,18 +980,18 @@ class BatchFileSenderApp:
 
         class _TkProgressCb:
             def show(self, message: str = "") -> None:
-                _overlay.destroy_overlay()
-                _overlay.make_overlay(root, message)
+                doingstuffoverlay.destroy_overlay()
+                doingstuffoverlay.make_overlay(root, message)
 
             def hide(self) -> None:
-                _overlay.destroy_overlay()
+                doingstuffoverlay.destroy_overlay()
 
             def update_message(self, message: str) -> None:
-                _overlay.update_overlay(parent=root, overlay_text=message)
+                doingstuffoverlay.update_overlay(parent=root, overlay_text=message)
                 root.update()
 
             def is_visible(self) -> bool:
-                return _overlay.doing_stuff_frame is not None
+                return doingstuffoverlay.doing_stuff_frame is not None
 
         return _TkProgressCb()
     

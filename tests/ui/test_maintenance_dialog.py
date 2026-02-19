@@ -134,17 +134,40 @@ class TestMaintenanceFunctionsDatabaseImport:
         mock_db.folders_table.find = MagicMock(return_value=[])
         mock_db.reload = MagicMock()
         
+        # Create a callback that returns True (success)
+        import_callback = MagicMock(return_value=True)
+        
         maintenance = MaintenanceFunctions(
             mock_db,
             database_path='/test/path',
             running_platform='Linux',
-            database_version='1.0'
+            database_version='1.0',
+            database_import_callback=import_callback,
         )
         
-        with patch('interface.ui.dialogs.maintenance_dialog.database_import.import_interface', return_value=True):
-            maintenance.database_import_wrapper('/backup/path')
-                
-            mock_db.reload.assert_called_once()
+        maintenance.database_import_wrapper('/backup/path')
+            
+        import_callback.assert_called_once_with('/backup/path')
+        mock_db.reload.assert_called_once()
+
+    def test_database_import_wrapper_no_callback(self):
+        """Test database import when no callback is provided."""
+        from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
+        
+        mock_db = MagicMock()
+        
+        maintenance = MaintenanceFunctions(
+            mock_db,
+            database_path='/test/path',
+            running_platform='Linux',
+            database_version='1.0',
+        )
+        
+        # Should return early without error
+        maintenance.database_import_wrapper('/backup/path')
+        
+        # Database should not be reloaded
+        mock_db.reload.assert_not_called()
 
 
 class TestMaintenanceFunctionsMarkActiveAsProcessed:

@@ -1,41 +1,5 @@
-"""
-Aggressive unit tests for doingstuffoverlay.py.
-
-Tests are designed to run headlessly using mocks for all tkinter objects.
-"""
-
-from unittest.mock import MagicMock, patch, PropertyMock
-
 import pytest
-
-
-class TestDoingStuffOverlayClass:
-    """Tests for the DoingStuffOverlay class."""
-
-    def test_init_stores_parent(self, mock_tk_root):
-        """Test that DoingStuffOverlay.__init__ stores parent."""
-        from doingstuffoverlay import DoingStuffOverlay
-        
-        overlay = DoingStuffOverlay(mock_tk_root)
-        
-        assert overlay.parent == mock_tk_root
-
-    def test_init_with_none_parent(self):
-        """Test that DoingStuffOverlay.__init__ accepts None parent."""
-        from doingstuffoverlay import DoingStuffOverlay
-        
-        overlay = DoingStuffOverlay(None)
-        
-        assert overlay.parent is None
-
-    def test_init_with_mock_parent(self):
-        """Test that DoingStuffOverlay.__init__ works with mock parent."""
-        from doingstuffoverlay import DoingStuffOverlay
-        
-        mock_parent = MagicMock()
-        overlay = DoingStuffOverlay(mock_parent)
-        
-        assert overlay.parent == mock_parent
+pytest.skip("`doingstuffoverlay` removed — tests migrated to Qt/progress-service equivalents", allow_module_level=True)
 
 
 class TestMakeOverlay:

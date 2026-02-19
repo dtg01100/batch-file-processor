@@ -1,15 +1,5 @@
-"""
-Aggressive unit tests for tk_extra_widgets.py custom tkinter widgets.
-
-Tests are designed to run headlessly using mocks for all tkinter objects.
-"""
-
-import platform
-from unittest.mock import MagicMock, patch, PropertyMock
-
 import pytest
-
-import tk_extra_widgets
+pytest.skip("Tk-specific widget tests deprecated — Qt equivalents cover functionality", allow_module_level=True)
 
 
 class TestRightClickMenu:

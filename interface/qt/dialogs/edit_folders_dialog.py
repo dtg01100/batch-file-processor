@@ -28,6 +28,8 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QSizePolicy,
 )
+
+from interface.qt.dialogs.base_dialog import BaseDialog
 from PyQt6.QtCore import Qt
 
 from interface.validation.folder_settings_validator import (
@@ -159,7 +161,7 @@ class QtFolderDataExtractor:
         return ""
 
 
-class EditFoldersDialog(QDialog):
+class EditFoldersDialog(BaseDialog):
     """Qt-based dialog for editing folder configuration settings.
 
     All dependencies are injectable via the constructor for testability.
@@ -191,7 +193,7 @@ class EditFoldersDialog(QDialog):
         alias_provider: Optional[Callable] = None,
         on_apply_success: Optional[Callable] = None,
     ):
-        super().__init__(parent)
+        super().__init__(parent, title)
         self._folder_config = folder_config
         self._ftp_service = ftp_service
         self._validator = validator
@@ -204,8 +206,6 @@ class EditFoldersDialog(QDialog):
 
         self._settings = self._load_settings()
 
-        self.setWindowTitle(title)
-        self.setModal(True)
         self.setMinimumSize(900, 650)
         self._build_ui()
         self._populate_fields(folder_config)
@@ -237,11 +237,11 @@ class EditFoldersDialog(QDialog):
         columns_layout = QHBoxLayout()
 
         columns_layout.addWidget(self._build_others_column())
-        columns_layout.addWidget(self._make_vseparator())
+        columns_layout.addSpacing(10)
         columns_layout.addWidget(self._build_folder_column())
-        columns_layout.addWidget(self._make_vseparator())
+        columns_layout.addSpacing(10)
         columns_layout.addWidget(self._build_backend_column())
-        columns_layout.addWidget(self._make_vseparator())
+        columns_layout.addSpacing(10)
         columns_layout.addWidget(self._build_edi_column())
 
         main_layout.addLayout(columns_layout)
@@ -256,12 +256,7 @@ class EditFoldersDialog(QDialog):
         button_box.rejected.connect(self.reject)
         outer_layout.addWidget(button_box)
 
-    @staticmethod
-    def _make_vseparator() -> QFrame:
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setFrameShadow(QFrame.Shadow.Sunken)
-        return sep
+
 
     # ------------------------------------------------------------------
     # Column 1 – Others List
@@ -463,10 +458,15 @@ class EditFoldersDialog(QDialog):
     def _clear_dynamic_edi(self):
         while self._dynamic_edi_layout.count():
             item = self._dynamic_edi_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-                widget.deleteLater()
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)
+                    widget.deleteLater()
+                # Also remove any nested layouts
+                sub_layout = item.layout()
+                if sub_layout:
+                    sub_layout.deleteLater()
 
     def _on_edi_option_changed(self, option: str):
         self._clear_dynamic_edi()
@@ -669,10 +669,15 @@ class EditFoldersDialog(QDialog):
     def _clear_convert_sub(self):
         while self._convert_sub_layout.count():
             item = self._convert_sub_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-                widget.deleteLater()
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)
+                    widget.deleteLater()
+                # Also remove any nested layouts
+                sub_layout = item.layout()
+                if sub_layout:
+                    sub_layout.deleteLater()
 
     def _on_convert_format_changed(self, fmt: str):
         self._clear_convert_sub()

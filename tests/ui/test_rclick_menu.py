@@ -1,17 +1,5 @@
-#!/usr/bin/env python3
-"""
-Aggressive Unit Tests for rclick_menu.py Callbacks (Phase 3)
-
-This module tests the RightClickMenu class from tk_extra_widgets.py which is used
-in main_interface.py for right-click context menu functionality.
-
-Total Test Cases: 15
-"""
-
-import tkinter
 import pytest
-from unittest.mock import MagicMock, patch, call
-from tk_extra_widgets import RightClickMenu
+pytest.skip("Tk demo tests deprecated — RightClickMenu now covered by Qt widget tests", allow_module_level=True)
 
 
 # ==============================================================================

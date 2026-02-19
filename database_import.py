@@ -1,3 +1,13 @@
+"""Database Import - Legacy Tk-based migration interface.
+
+DEPRECATED: This module is deprecated in favor of the Qt-based DatabaseImportDialog
+in interface.qt.dialogs.database_import_dialog. It is kept for backward compatibility
+with the legacy Tkinter-based BatchFileSenderApp.
+
+For new code, use:
+    from interface.qt.dialogs.database_import_dialog import show_database_import_dialog
+"""
+
 from tkinter import *
 from tkinter.messagebox import askokcancel
 from tkinter.ttk import *

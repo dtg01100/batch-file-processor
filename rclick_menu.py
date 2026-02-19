@@ -1,16 +1,19 @@
-#  this module was from the following address
-#  https://paperrobot.wordpress.com/2008/12/24/python-right-click-edit-menu-widget/
+"""Deprecated demo shim — right-click menu demo was Tk-based and has been replaced by the Qt implementation.
 
-import tkinter
+This module now re-exports the Qt `RightClickMenu` where possible to preserve import compatibility
+for any remaining legacy code. Importing this module in a non-GUI/test environment is a no-op.
+"""
 
-from tk_extra_widgets import RightClickMenu
- 
+try:
+    # Prefer Qt implementation (keeps API surface for tests that import this demo)
+    from interface.qt.widgets.extra_widgets import RightClickMenu  # type: ignore
+except Exception:  # pragma: no cover - best-effort compatibility shim
+    # Fallback minimal shim matching the callable API used in legacy demos/tests
+    class RightClickMenu(object):
+        def __init__(self, widget=None):
+            self._widget = widget
+        def __call__(self, event=None):
+            return None
+
 if __name__ == '__main__':
-    root = tkinter.Tk()
-    root.geometry("156x65")
-    tkinter.Label(root, text="Right mouse click in\nthe entry widget below:").pack()
-    entry_w = tkinter.Entry(root)
-    entry_w.pack()
-    rclick = RightClickMenu(entry_w)
-    entry_w.bind("<3>", rclick)
-    root.mainloop()
+    print("rclick_menu demo removed — use the Qt demo in interface/qt/widgets instead.")

@@ -383,38 +383,35 @@ class TestErrorHandling:
 
 
 class TestOverlayBehavior:
-    """Tests for the doingstuffoverlay behavior used in both modes."""
+    """Tests for overlay-like behavior used in both modes (migrated from Tk to ProgressService API)."""
     
     def test_overlay_called_during_processing(self):
-        """Overlay should be shown during folder processing."""
-        mock_make = MagicMock()
-        mock_destroy = MagicMock()
-        
-        with patch('doingstuffoverlay.make_overlay', mock_make), \
-             patch('doingstuffoverlay.destroy_overlay', mock_destroy):
-            
-            # Simulate what happens in graphical_process_directories
-            # doingstuffoverlay.make_overlay(parent=root, overlay_text="processing folders...")
-            mock_make(parent="mock_root", overlay_text="processing folders...")
-            
-            # Verify overlay was called
-            mock_make.assert_called_once()
-            
-            # Now simulate destroy being called (what happens after processing)
-            mock_destroy()
-            
-            # Verify destroy overlay was called
-            mock_destroy.assert_called_once()
-    
+        """Overlay (progress service) should be shown during folder processing."""
+        mock_show = MagicMock()
+        mock_hide = MagicMock()
+
+        # Use a mock progress-like object instead of the removed Tk overlay
+        mock_progress = MagicMock()
+        mock_progress.show = mock_show
+        mock_progress.hide = mock_hide
+
+        # Simulate what the UI/dispatcher should do with a ProgressCallback
+        mock_progress.show("processing folders...")
+        mock_show.assert_called_once_with("processing folders...")
+
+        mock_progress.hide()
+        mock_hide.assert_called_once()
+
     def test_single_folder_overlay_text(self):
-        """Single folder mode should show 'Working...' overlay."""
-        with patch('doingstuffoverlay.make_overlay') as mock_make:
-            
-            # This is what send_single does:
-            # doingstuffoverlay.make_overlay(root, "Working...")
-            mock_make(root="mock_root", overlay_text="Working...")
-            
-            mock_make.assert_called_with(root="mock_root", overlay_text="Working...")
+        """Single folder mode should call progress.show("Working...")."""
+        mock_show = MagicMock()
+        mock_progress = MagicMock()
+        mock_progress.show = mock_show
+
+        # Simulate send_single behavior
+        mock_progress.show("Working...")
+
+        mock_show.assert_called_with("Working...")
 
 
 class TestUIButtonBinding:

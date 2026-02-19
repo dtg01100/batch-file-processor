@@ -21,12 +21,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.dialogs.base_dialog import BaseDialog
+
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format
 import utils
 
 
-class EditSettingsDialog(QDialog):
+class EditSettingsDialog(BaseDialog):
     """Modal dialog for editing application settings.
 
     Handles email configuration, AS400 database settings, reporting options,
@@ -50,8 +52,7 @@ class EditSettingsDialog(QDialog):
         disable_folders_without_backends: Optional[Callable[[], None]] = None,
         smtp_service: Optional[SMTPServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle(title)
+        super().__init__(parent, title)
         self.setModal(True)
 
         self._settings_data = dict(settings_data)

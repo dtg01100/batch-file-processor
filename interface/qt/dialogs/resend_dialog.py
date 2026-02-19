@@ -23,10 +23,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.dialogs.base_dialog import BaseDialog
+
 from interface.services.resend_service import ResendService
 
 
-class ResendDialog(QDialog):
+class ResendDialog(BaseDialog):
     """Dialog for configuring file resend flags.
 
     Allows users to select which processed files should be marked for resend.
@@ -37,9 +39,7 @@ class ResendDialog(QDialog):
         parent: QWidget,
         database_connection: Any,
     ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Enable Resend")
-        self.setModal(True)
+        super().__init__(parent, "Enable Resend")
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._database_connection = database_connection
