@@ -1075,3 +1075,133 @@ def upgrade_database(
         update_version = dict(id=1, version="41", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("40", "41")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    # v41 -> v42: Create normalized schema tables for new separation of concerns.
+    if db_version_dict["version"] == "41":
+        # Create users, organizations, projects, files, batches, processors, processing_jobs, job_logs, tags, file_tags
+        try:
+            database_connection.query("PRAGMA foreign_keys = ON;")
+        except Exception:
+            pass
+
+        try:
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    display_name TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS organizations (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    org_id TEXT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS files (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT,
+                    original_filename TEXT NOT NULL,
+                    storage_path TEXT NOT NULL,
+                    size_bytes INTEGER,
+                    checksum TEXT,
+                    created_by TEXT,
+                    created_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS batches (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT,
+                    name TEXT,
+                    status TEXT,
+                    created_at TEXT,
+                    started_at TEXT,
+                    completed_at TEXT,
+                    created_by TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS processors (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    version TEXT,
+                    config TEXT,
+                    created_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS processing_jobs (
+                    id TEXT PRIMARY KEY,
+                    batch_id TEXT,
+                    file_id TEXT,
+                    processor_id TEXT,
+                    status TEXT,
+                    scheduled_at TEXT,
+                    started_at TEXT,
+                    finished_at TEXT,
+                    attempts INTEGER DEFAULT 0,
+                    result TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS job_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT,
+                    level TEXT,
+                    message TEXT,
+                    created_at TEXT
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS tags (
+                    id TEXT PRIMARY KEY,
+                    name TEXT UNIQUE NOT NULL
+                )
+            ''')
+
+            database_connection.query('''
+                CREATE TABLE IF NOT EXISTS file_tags (
+                    file_id TEXT,
+                    tag_id TEXT,
+                    PRIMARY KEY (file_id, tag_id)
+                )
+            ''')
+
+            database_connection.query("CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id)")
+            database_connection.query("CREATE INDEX IF NOT EXISTS idx_batches_project_id ON batches(project_id)")
+            database_connection.query("CREATE INDEX IF NOT EXISTS idx_jobs_status ON processing_jobs(status)")
+            database_connection.query("CREATE INDEX IF NOT EXISTS idx_jobs_file_id ON processing_jobs(file_id)")
+        except Exception:
+            # Best-effort: do not block upgrades if DB engine rejects some statements
+            pass
+
+        update_version = dict(id=1, version="42", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("41", "42")
