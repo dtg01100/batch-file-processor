@@ -1,3 +1,13 @@
+"""Extra Tkinter widgets - DEPRECATED.
+
+DEPRECATED: This module is deprecated. Use the Qt equivalents instead:
+    - interface.qt.widgets.extra_widgets.RightClickMenu
+    - interface.qt.widgets.extra_widgets.VerticalScrolledFrame
+    - interface.qt.widgets.extra_widgets.ColumnSorterWidget
+
+This module is kept for backward compatibility with legacy Tkinter code.
+"""
+
 import platform
 import tkinter
 import tkinter.ttk
@@ -371,3 +381,27 @@ class columnSorterWidget:
         return ",".join(
             [self.entries_listbox.get(i) for i in range(len(self.entries_list))]
         )
+
+
+# Prefer Qt implementations when available (shim)
+try:
+    from interface.qt.widgets.extra_widgets import (
+        RightClickMenu as QtRightClickMenu,
+        VerticalScrolledFrame as QtVerticalScrolledFrame,
+        ColumnSorterWidget as QtColumnSorterWidget,
+    )
+    # Re-export Qt classes under the old names so existing imports work
+    RightClickMenu = QtRightClickMenu
+    VerticalScrolledFrame = QtVerticalScrolledFrame
+    columnSorterWidget = QtColumnSorterWidget
+
+    class CreateToolTip:
+        def __init__(self, widget, text='widget info'):
+            try:
+                widget.setToolTip(text)
+            except Exception:
+                pass
+except Exception:
+    # Qt not available; fall back to the Tk implementations defined above
+    pass
+
