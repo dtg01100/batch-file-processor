@@ -50,9 +50,37 @@ class Table:
         cols = ", ".join(keys)
         placeholders = ", ".join("?" for _ in keys)
         sql = f"INSERT INTO {self._name} ({cols}) VALUES ({placeholders})"
-        cur = self._conn.execute(sql, tuple(record[k] for k in keys))
-        self._conn.commit()
-        return cur.lastrowid
+        try:
+            cur = self._conn.execute(sql, tuple(record[k] for k in keys))
+            self._conn.commit()
+            return cur.lastrowid
+        except sqlite3.OperationalError as e:
+            # If the table does not exist, attempt to create it with simple typing and retry
+            if 'no such table' in str(e):
+                cols_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+                for k in keys:
+                    # Avoid adding duplicate id column if caller provided id
+                    if k == "id":
+                        continue
+                    v = record.get(k)
+                    # Choose SQL type based on Python value
+                    if isinstance(v, bool):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, int):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, float):
+                        sql_t = 'REAL'
+                    else:
+                        sql_t = 'TEXT'
+                    cols_defs.append(f'"{k}" {sql_t}')
+                create_sql = f"CREATE TABLE IF NOT EXISTS {self._name} ({', '.join(cols_defs)})"
+                self._conn.execute(create_sql)
+                self._conn.commit()
+                # Retry the insert
+                cur = self._conn.execute(sql, tuple(record[k] for k in keys))
+                self._conn.commit()
+                return cur.lastrowid
+            raise
 
     def update(self, record: Dict[str, Any], keys: List[str]) -> None:
         set_keys = [k for k in record.keys() if k not in keys]
@@ -65,6 +93,24 @@ class Table:
         params = [record[k] for k in set_keys] + [record[k] for k in keys]
         self._conn.execute(sql, tuple(params))
         self._conn.commit()
+
+    def create_column(self, column_name: str, column_type: str) -> None:
+        """Create a column in the table if it doesn't already exist.
+
+        column_type is a Dataset-style type like 'String' or 'Boolean'.
+        """
+        # Map dataset types to SQLite types
+        t = column_type.lower()
+        if 'bool' in t:
+            sql_type = 'INTEGER'
+        else:
+            sql_type = 'TEXT'
+        try:
+            self._conn.execute(f"ALTER TABLE {self._name} ADD COLUMN '{column_name}' {sql_type}")
+            self._conn.commit()
+        except sqlite3.OperationalError:
+            # SQLite will raise if column already exists or cannot be added; ignore
+            pass
 
     def delete(self, **kwargs) -> None:
         if not kwargs:
@@ -114,6 +160,20 @@ class Database:
             self._conn.close()
         except Exception:
             pass
+
+    def query(self, sql: str):
+        """Execute raw SQL and return rows as dict-like sqlite3.Row objects."""
+        cur = self._conn.execute(sql)
+        try:
+            # Ensure changes are persisted for DDL/DML
+            self._conn.commit()
+            return [dict(r) for r in cur.fetchall()]
+        except Exception:
+            try:
+                self._conn.commit()
+            except Exception:
+                pass
+            return []
 
 
 def connect(url: str) -> Database:

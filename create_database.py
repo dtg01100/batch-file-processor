@@ -2,6 +2,7 @@ import os
 
 import dataset
 import sqlalchemy
+import schema
 
 
 def do(
@@ -10,6 +11,8 @@ def do(
     database_connection = dataset.connect(
         "sqlite:///" + database_path
     )  # connect to database
+    # Ensure core tables exist using centralized schema definitions
+    schema.ensure_schema(database_connection)
 
     version = database_connection["version"]
 

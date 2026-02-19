@@ -19,8 +19,14 @@ def _add_column_safe(database_connection, table_name, column_name, default_value
         database_connection.query(
             f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}'"
         )
+        # Normalize default_value: tests sometimes pass double-quoted literals like ""default""
+        dv = default_value
+        if isinstance(dv, str) and dv.startswith('"') and dv.endswith('"'):
+            # Convert to single-quoted SQL literal safely
+            lit = dv.strip('"').replace("'", "''")
+            dv = f"'{lit}'"
         database_connection.query(
-            f'UPDATE "{table_name}" SET "{column_name}" = {default_value}'
+            f'UPDATE "{table_name}" SET "{column_name}" = {dv}'
         )
     except Exception:
         pass
