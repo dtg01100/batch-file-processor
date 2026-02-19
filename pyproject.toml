@@ -1,0 +1,14 @@
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 88
+extend-ignore = ["E203", "W503"]
+select = ["E", "F", "W", "C90", "I"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
