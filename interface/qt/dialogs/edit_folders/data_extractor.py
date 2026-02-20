@@ -5,11 +5,12 @@ field name -> QWidget mappings and produces an ExtractedDialogFields dataclass,
 mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 """
 
-from typing import Dict
+from typing import Dict, Any
 
 from PyQt6.QtWidgets import QWidget, QLineEdit, QCheckBox, QComboBox, QSpinBox
 
 from interface.operations.folder_data_extractor import ExtractedDialogFields
+from interface.plugins.plugin_manager import PluginManager
 
 
 class QtFolderDataExtractor:
@@ -24,6 +25,9 @@ class QtFolderDataExtractor:
         self.fields = fields
 
     def extract_all(self) -> ExtractedDialogFields:
+        # Extract plugin configurations
+        plugin_configs = self._extract_plugin_configurations()
+        
         return ExtractedDialogFields(
             folder_name=self._get_text("folder_name_value"),
             alias=self._get_text("folder_alias_field"),
@@ -70,7 +74,32 @@ class QtFolderDataExtractor:
             upc_target_length=self._get_int("upc_target_length_entry", 11),
             upc_padding_pattern=self._get_text("upc_padding_pattern_entry"),
             include_item_numbers=self._get_bool("include_item_numbers"),
+            plugin_configurations=plugin_configs,
         )
+    
+    def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
+        """Extract plugin configurations from the form."""
+        plugin_configs = {}
+        
+        # Get all configuration plugins
+        plugin_manager = PluginManager()
+        plugin_manager.discover_plugins()
+        plugin_manager.initialize_plugins()
+        
+        for plugin in plugin_manager.get_configuration_plugins():
+            # Check if we have a form generator for this plugin
+            plugin_key = f"plugin_config_{plugin.get_identifier()}"
+            generator_key = f"{plugin_key}_generator"
+            
+            if generator_key in self.fields:
+                try:
+                    form_generator = self.fields[generator_key]
+                    config_values = form_generator.get_values()
+                    plugin_configs[plugin.get_format_name().lower()] = config_values
+                except Exception as e:
+                    print(f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}")
+                
+        return plugin_configs
 
     def _get_text(self, key: str) -> str:
         widget = self.fields.get(key)

@@ -5,7 +5,7 @@ from dialog fields and converting them to structured formats.
 """
 
 from typing import Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 
 import tkinter as tk
@@ -93,8 +93,11 @@ class ExtractedDialogFields:
     estore_vendor_namevendoroid: str = ""
     fintech_division_id: str = ""
 
-    # Copy destination
+     # Copy destination
     copy_to_directory: str = ""
+    
+    # Plugin configurations
+    plugin_configurations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 class FolderDataExtractor:
@@ -116,6 +119,8 @@ class FolderDataExtractor:
 
     def extract_all(self) -> ExtractedDialogFields:
         """Extract all field values from the dialog."""
+        plugin_configs = self._extract_plugin_configurations()
+        
         return ExtractedDialogFields(
             # Identity
             folder_name=self._get_text("foldersnameinput", "folder_name"),
@@ -195,9 +200,23 @@ class FolderDataExtractor:
             estore_vendor_namevendoroid=self._get_text("estore_vendor_namevendoroid_field"),
             fintech_division_id=self._get_text("fintech_divisionid_field"),
 
-            # Copy destination
-            copy_to_directory=""
-        )
+             # Copy destination
+             copy_to_directory="",
+             
+             # Plugin configurations
+             plugin_configurations=plugin_configs,
+         )
+    
+    def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
+        """Extract plugin configurations from the form."""
+        plugin_configs = {}
+        
+        # We need to find all form generators that might have been created
+        # This is a bit tricky since they're stored in the builder, but we can
+        # look for them in the fields dict or use the plugin manager to find
+        # all available plugins and check if their widgets exist
+        
+        return plugin_configs
 
     def _get_alias(self, extracted: ExtractedDialogFields) -> str:
         """Get alias value, using folder name basename if empty."""

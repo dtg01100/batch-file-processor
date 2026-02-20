@@ -18,6 +18,11 @@ from PyQt6.QtWidgets import (
     QSpinBox,
 )
 
+from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.models.folder_configuration import ConvertFormat
+from interface.form.form_generator import FormGeneratorFactory
+
 
 class DynamicEDIBuilder:
     """Builder class for dynamic EDI configuration sections.
@@ -26,24 +31,11 @@ class DynamicEDIBuilder:
     sections based on user selections.
     """
 
-    CONVERT_FORMATS = [
-        "csv",
-        "ScannerWare",
-        "scansheet-type-a",
-        "jolley_custom",
-        "stewarts_custom",
-        "simplified_csv",
-        "Estore eInvoice",
-        "Estore eInvoice Generic",
-        "YellowDog CSV",
-        "fintech",
-    ]
-
     EDI_OPTIONS = ["Do Nothing", "Convert EDI", "Tweak EDI"]
 
     def __init__(
         self,
-        fields: Dict[str, QWidget],
+        fields: Dict[str, Any],
         folder_config: Dict[str, Any],
         dynamic_container: QWidget,
         dynamic_layout: QVBoxLayout,
@@ -64,11 +56,22 @@ class DynamicEDIBuilder:
         self.dynamic_layout = dynamic_layout
         self.on_convert_format_changed = on_convert_format_changed
 
+        # Initialize plugin manager
+        self.plugin_manager = PluginManager()
+        self.plugin_manager.discover_plugins()
+        self.plugin_manager.initialize_plugins()
+
+        # Get all configuration plugins
+        self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
+
         # Widget references
         self.edi_options_combo = None
         self.convert_format_combo = None
         self.convert_sub_container = None
         self.convert_sub_layout = None
+
+        # Form generator for plugin configurations
+        self.form_generator = None
 
         # Tweak EDI widgets
         self.tweak_upc_check = None
@@ -88,6 +91,28 @@ class DynamicEDIBuilder:
         self.tweak_upc_target_length = None
         self.tweak_upc_padding_pattern = None
         self.tweak_split_sales_tax_check = None
+
+    def _get_convert_formats(self):
+        """Get all available convert formats from configuration plugins."""
+        formats = []
+        for plugin in self.configuration_plugins:
+            formats.append(plugin.get_format_name())
+        # Add remaining hardcoded formats that don't have plugins yet
+        hardcoded_formats = [
+            "ScannerWare",
+            "scansheet-type-a",
+            "jolley_custom",
+            "stewarts_custom",
+            "simplified_csv",
+            "Estore eInvoice",
+            "Estore eInvoice Generic",
+            "YellowDog CSV",
+            "fintech",
+        ]
+        for fmt in hardcoded_formats:
+            if fmt not in formats:
+                formats.append(fmt)
+        return sorted(formats)
 
     def build_edi_options_combo(self) -> QComboBox:
         """Build and configure the EDI options dropdown."""
@@ -146,7 +171,7 @@ class DynamicEDIBuilder:
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel("Convert To:"))
         self.convert_format_combo = QComboBox()
-        self.convert_format_combo.addItems(self.CONVERT_FORMATS)
+        self.convert_format_combo.addItems(self._get_convert_formats())
         self.fields["convert_formats_var"] = self.convert_format_combo
         fmt_row.addWidget(self.convert_format_combo)
         wrapper_layout.addLayout(fmt_row)
@@ -380,20 +405,49 @@ class DynamicEDIBuilder:
     def handle_convert_format_changed(self, fmt: str):
         """Handle convert format selection changes."""
         self.clear_convert_sub()
-        if fmt == "csv":
-            self._build_csv_sub()
-        elif fmt == "ScannerWare":
-            self._build_scannerware_sub()
-        elif fmt == "simplified_csv":
-            self._build_simplified_csv_sub()
-        elif fmt in ("Estore eInvoice", "Estore eInvoice Generic"):
-            self._build_estore_sub(fmt)
-        elif fmt == "fintech":
-            self._build_fintech_sub()
-        elif fmt == "scansheet-type-a":
-            pass
-        elif fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
-            self._build_basic_options_sub()
+        
+        # Try to find a configuration plugin for this format
+        plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
+        if plugin:
+            self._build_plugin_config_sub(plugin)
+        else:
+            # Fall back to hardcoded implementations for formats without plugins
+            if fmt == "csv":
+                self._build_csv_sub()
+            elif fmt == "ScannerWare":
+                self._build_scannerware_sub()
+            elif fmt == "simplified_csv":
+                self._build_simplified_csv_sub()
+            elif fmt in ("Estore eInvoice", "Estore eInvoice Generic"):
+                self._build_estore_sub(fmt)
+            elif fmt == "fintech":
+                self._build_fintech_sub()
+            elif fmt == "scansheet-type-a":
+                pass
+            elif fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
+                self._build_basic_options_sub()
+    
+    def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
+        """Build plugin configuration sub-section."""
+        # Get plugin configuration schema
+        schema = plugin.get_configuration_schema()
+        if schema:
+            # Create form generator
+            form_generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
+            
+            # Get existing plugin configuration from folder config
+            plugin_config = self.folder_config.get('plugin_configurations', {}).get(plugin.get_format_name().lower(), {})
+            
+            # Build the form
+            form_widget = form_generator.build_form(plugin_config, self.convert_sub_container)
+            
+            # Store widget reference and form generator
+            plugin_key = f"plugin_config_{plugin.get_identifier()}"
+            self.fields[plugin_key] = form_widget
+            self.fields[f"{plugin_key}_generator"] = form_generator
+            
+            # Add to layout
+            self.convert_sub_layout.addWidget(form_widget)
 
     # ------------------------------------------------------------------
     # Convert format sub-widget builders

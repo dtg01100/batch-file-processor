@@ -10,7 +10,10 @@ import pkgutil
 from typing import Dict, List, Optional, Type, Any
 
 from .plugin_base import PluginBase
-from .folder_config_plugin import FolderConfigPlugin
+from .configuration_plugin import ConfigurationPlugin
+from ..models.folder_configuration import ConvertFormat
+from .validation_framework import ValidationResult
+from .config_schemas import FieldDefinition
 
 
 class PluginManager:
@@ -37,125 +40,9 @@ class PluginManager:
         self._plugin_classes: Dict[str, Type[PluginBase]] = {}
         self._configurations: Dict[str, Dict[str, Any]] = {}
         self._initialized = False
-
-    def get_folder_config_plugins(self) -> List[Type[FolderConfigPlugin]]:
-        """
-        Get all folder configuration plugin classes.
-
-        Returns:
-            List[Type[FolderConfigPlugin]]: List of folder configuration plugin classes
-        """
-        folder_plugins = []
-        for plugin_class in self._plugin_classes.values():
-            if issubclass(plugin_class, FolderConfigPlugin) and plugin_class is not FolderConfigPlugin:
-                folder_plugins.append(plugin_class)
-        return folder_plugins
-
-    def get_initialized_folder_config_plugins(self) -> List[FolderConfigPlugin]:
-        """
-        Get all initialized folder configuration plugin instances.
-
-        Returns:
-            List[FolderConfigPlugin]: List of initialized folder configuration plugin instances
-        """
-        folder_plugins = []
-        for plugin in self._plugins.values():
-            if isinstance(plugin, FolderConfigPlugin):
-                folder_plugins.append(plugin)
-        return folder_plugins
-
-    def get_folder_config_plugins_by_column(self, column: str) -> List[Type[FolderConfigPlugin]]:
-        """
-        Get folder configuration plugins by column.
-
-        Args:
-            column: Column identifier (LEFT, RIGHT, or CENTER)
-
-        Returns:
-            List[Type[FolderConfigPlugin]]: List of folder configuration plugin classes in the specified column
-        """
-        plugins = self.get_folder_config_plugins()
-        return [
-            plugin for plugin in plugins
-            if plugin.get_column() == column
-        ]
-
-    def get_folder_config_plugins_by_section(self, column: str, section: str) -> List[Type[FolderConfigPlugin]]:
-        """
-        Get folder configuration plugins by column and section.
-
-        Args:
-            column: Column identifier (LEFT, RIGHT, or CENTER)
-            section: Section name
-
-        Returns:
-            List[Type[FolderConfigPlugin]]: List of folder configuration plugin classes in the specified section
-        """
-        plugins = self.get_folder_config_plugins_by_column(column)
-        return [
-            plugin for plugin in plugins
-            if plugin.get_section() == section
-        ]
-
-    def get_sorted_folder_config_plugins(self) -> List[Type[FolderConfigPlugin]]:
-        """
-        Get all folder configuration plugins sorted by their placement.
-
-        Plugins are sorted first by column, then by section order, then by widget order.
-
-        Returns:
-            List[Type[FolderConfigPlugin]]: Sorted list of folder configuration plugin classes
-        """
-        plugins = self.get_folder_config_plugins()
-        return sorted(
-            plugins,
-            key=lambda p: (
-                p.get_column(),
-                p.get_section_order(),
-                p.get_section(),
-                p.get_widget_order()
-            )
-        )
-
-    def get_folder_config_sections(self, column: str) -> List[str]:
-        """
-        Get all unique section names for folder configuration plugins in a column.
-
-        Args:
-            column: Column identifier (LEFT, RIGHT, or CENTER)
-
-        Returns:
-            List[str]: List of unique section names
-        """
-        plugins = self.get_folder_config_plugins_by_column(column)
-        sections = set()
-        for plugin in plugins:
-            sections.add(plugin.get_section())
-        return list(sections)
-
-    def get_sorted_folder_config_sections(self, column: str) -> List[str]:
-        """
-        Get sorted section names for folder configuration plugins in a column.
-
-        Sections are sorted by their section order.
-
-        Args:
-            column: Column identifier (LEFT, RIGHT, or CENTER)
-
-        Returns:
-            List[str]: Sorted list of section names
-        """
-        plugins = self.get_folder_config_plugins_by_column(column)
-        section_info = {}
-        for plugin in plugins:
-            section = plugin.get_section()
-            if section not in section_info:
-                section_info[section] = plugin.get_section_order()
-        sorted_sections = sorted(
-            section_info.items(),
-            key=lambda x: x[1]
-        )
-        return [section for section, _ in sorted_sections]
+        # Configuration plugin specific storage
+        self._configuration_plugins: Dict[ConvertFormat, ConfigurationPlugin] = {}
+        self._configuration_plugin_classes: Dict[ConvertFormat, Type[ConfigurationPlugin]] = {}
 
     def add_plugin_directory(self, directory: str) -> None:
         """
@@ -269,16 +156,168 @@ class PluginManager:
                 if plugin_id not in self._plugin_classes:
                     self._plugin_classes[plugin_id] = obj
                     discovered.append(plugin_id)
+                
+                # If it's a ConfigurationPlugin, also store in configuration plugin maps
+                if (
+                    isinstance(obj, type) and
+                    issubclass(obj, ConfigurationPlugin) and
+                    obj is not ConfigurationPlugin and
+                    not obj.__name__.startswith('_')
+                ):
+                    try:
+                        format_enum = obj.get_format_enum()
+                        if format_enum not in self._configuration_plugin_classes:
+                            self._configuration_plugin_classes[format_enum] = obj
+                    except Exception as e:
+                        print(f"Error extracting configuration plugin {name}: {e}")
 
-    def _build_dependency_graph(self):
+    def get_configuration_plugins(self) -> List[ConfigurationPlugin]:
         """
-        Build a simple dependency graph for plugins.
-        
+        Get all available configuration plugins.
+
         Returns:
-            List of plugin classes in dependency order
+            List[ConfigurationPlugin]: List of all configuration plugin instances
         """
-        # For simplicity, return plugins in any order (no dependency resolution)
-        return list(self._plugin_classes.values())
+        if not self._initialized:
+            self.initialize_plugins()
+        
+        return list(self._configuration_plugins.values())
+
+    def get_configuration_plugin_by_format(self, format_enum: ConvertFormat) -> Optional[ConfigurationPlugin]:
+        """
+        Get configuration plugin by format enum.
+
+        Args:
+            format_enum: ConvertFormat enum value
+
+        Returns:
+            Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
+        """
+        if not self._initialized:
+            self.initialize_plugins()
+        
+        return self._configuration_plugins.get(format_enum)
+
+    def get_configuration_plugin_by_format_name(self, format_name: str) -> Optional[ConfigurationPlugin]:
+        """
+        Get configuration plugin by format name.
+
+        Args:
+            format_name: Format name string
+
+        Returns:
+            Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
+        """
+        if not self._initialized:
+            self.initialize_plugins()
+        
+        for plugin in self._configuration_plugins.values():
+            if plugin.get_format_name().lower() == format_name.lower():
+                return plugin
+        
+        return None
+
+    def create_configuration_widget(self, format_enum: ConvertFormat, parent: Any = None) -> Any:
+        """
+        Create a configuration widget for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+            parent: Optional parent widget
+
+        Returns:
+            Any: UI widget for configuration or None if format not supported
+        """
+        plugin = self.get_configuration_plugin_by_format(format_enum)
+        if plugin:
+            return plugin.create_widget(parent)
+        
+        return None
+
+    def validate_configuration(self, format_enum: ConvertFormat, config: Dict[str, Any]) -> ValidationResult:
+        """
+        Validate configuration data for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+            config: Configuration data to validate
+
+        Returns:
+            ValidationResult: Result of the validation operation
+        """
+        plugin = self.get_configuration_plugin_by_format(format_enum)
+        if plugin:
+            return plugin.validate_config(config)
+        
+        from .validation_framework import ValidationResult
+        return ValidationResult(success=False, errors=["Unsupported format"])
+
+    def create_configuration(self, format_enum: ConvertFormat, data: Dict[str, Any]) -> Any:
+        """
+        Create a configuration instance for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+            data: Raw data to create the configuration from
+
+        Returns:
+            Any: Configuration instance specific to the format
+        """
+        plugin = self.get_configuration_plugin_by_format(format_enum)
+        if plugin:
+            return plugin.create_config(data)
+        
+        return None
+
+    def serialize_configuration(self, format_enum: ConvertFormat, config: Any) -> Dict[str, Any]:
+        """
+        Serialize a configuration instance for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+            config: Configuration instance to serialize
+
+        Returns:
+            Dict[str, Any]: Serialized configuration data
+        """
+        plugin = self.get_configuration_plugin_by_format(format_enum)
+        if plugin:
+            return plugin.serialize_config(config)
+        
+        return {}
+
+    def deserialize_configuration(self, format_enum: ConvertFormat, data: Dict[str, Any]) -> Any:
+        """
+        Deserialize configuration data for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+            data: Stored data to deserialize
+
+        Returns:
+            Any: Configuration instance specific to the format
+        """
+        plugin = self.get_configuration_plugin_by_format(format_enum)
+        if plugin:
+            return plugin.deserialize_config(data)
+        
+        return None
+
+    def get_configuration_fields(self, format_enum: ConvertFormat):
+        """
+        Get the configuration field definitions for a specific format.
+
+        Args:
+            format_enum: ConvertFormat enum value
+
+        Returns:
+            List[FieldDefinition]: List of field definitions for the format
+        """
+        plugin_class = self._configuration_plugin_classes.get(format_enum)
+        if plugin_class:
+            return plugin_class.get_config_fields()
+        
+        return []
 
     def initialize_plugins(self, config: Optional[Dict[str, Dict[str, Any]]] = None) -> List[str]:
         """
@@ -310,9 +349,28 @@ class PluginManager:
                 self._plugins[plugin_id] = plugin
                 self._configurations[plugin_id] = plugin_config
                 initialized.append(plugin_id)
+                
+                # If it's a ConfigurationPlugin, also store in configuration plugins map
+                if isinstance(plugin, ConfigurationPlugin):
+                    try:
+                        format_enum = plugin_class.get_format_enum()
+                        self._configuration_plugins[format_enum] = plugin
+                    except Exception as e:
+                        print(f"Error storing configuration plugin {plugin_id}: {e}")
+                        
             except Exception as e:
                 print(f"Error initializing plugin {plugin_class.get_name()}: {e}")
 
         self._initialized = True
         return initialized
+
+    def _build_dependency_graph(self):
+        """
+        Build a simple dependency graph for plugins.
+
+        Returns:
+            List of plugin classes in dependency order
+        """
+        # For simplicity, return plugins in any order (no dependency resolution)
+        return list(self._plugin_classes.values())
 

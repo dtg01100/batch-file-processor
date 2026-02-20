@@ -255,6 +255,79 @@ class FolderConfiguration:
     # CSV
     csv: Optional[CSVConfiguration] = None
 
+    # Plugin configurations - stored as dict of format -> config dict
+    plugin_configurations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+    def get_plugin_configuration(self, format_name: str) -> Optional[Dict[str, Any]]:
+        """Get plugin configuration for a specific format.
+        
+        Args:
+            format_name: The convert format name (e.g., "csv", "ScannerWare")
+            
+        Returns:
+            Optional[Dict[str, Any]]: Plugin configuration for the format, or None if not found
+        """
+        return self.plugin_configurations.get(format_name.lower())
+
+    def set_plugin_configuration(self, format_name: str, config: Dict[str, Any]) -> None:
+        """Set plugin configuration for a specific format.
+        
+        Args:
+            format_name: The convert format name (e.g., "csv", "ScannerWare")
+            config: Plugin configuration to store
+        """
+        self.plugin_configurations[format_name.lower()] = config
+
+    def remove_plugin_configuration(self, format_name: str) -> None:
+        """Remove plugin configuration for a specific format.
+        
+        Args:
+            format_name: The convert format name (e.g., "csv", "ScannerWare")
+        """
+        if format_name.lower() in self.plugin_configurations:
+            del self.plugin_configurations[format_name.lower()]
+
+    def has_plugin_configuration(self, format_name: str) -> bool:
+        """Check if plugin configuration exists for a specific format.
+        
+        Args:
+            format_name: The convert format name (e.g., "csv", "ScannerWare")
+            
+        Returns:
+            bool: True if configuration exists, False otherwise
+        """
+        return format_name.lower() in self.plugin_configurations
+
+    def validate_plugin_configurations(self) -> List[str]:
+        """Validate all plugin configurations.
+        
+        Returns:
+            List[str]: List of validation errors
+        """
+        errors = []
+        from interface.plugins.plugin_manager import PluginManager
+        from interface.plugins.validation_framework import ValidationResult
+        
+        try:
+            plugin_manager = PluginManager()
+            plugin_manager.discover_plugins()
+            plugin_manager.initialize_plugins()
+            
+            for format_name, config in self.plugin_configurations.items():
+                # Find the plugin for this format
+                plugin = plugin_manager.get_configuration_plugin_by_format_name(format_name)
+                if plugin:
+                    validation: ValidationResult = plugin.validate_config(config)
+                    if not validation.success:
+                        for error in validation.errors:
+                            errors.append(f"Plugin config for {format_name}: {error}")
+                else:
+                    errors.append(f"No configuration plugin found for format: {format_name}")
+        except Exception as e:
+            errors.append(f"Error validating plugin configurations: {str(e)}")
+            
+        return errors
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "FolderConfiguration":
         """Create FolderConfiguration from dictionary."""
@@ -360,7 +433,8 @@ class FolderConfiguration:
             a_record_padding=a_record_padding,
             invoice_date=invoice_date,
             backend_specific=backend_specific,
-            csv=csv
+            csv=csv,
+            plugin_configurations=data.get('plugin_configurations', {})
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -451,5 +525,9 @@ class FolderConfiguration:
                 'simple_csv_sort_order': self.csv.simple_csv_sort_order,
                 'split_prepaid_sales_tax_crec': self.csv.split_prepaid_sales_tax_crec,
             })
+
+        # Plugin configurations
+        if self.plugin_configurations:
+            data['plugin_configurations'] = self.plugin_configurations
 
         return data
