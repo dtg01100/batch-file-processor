@@ -44,12 +44,25 @@ class Table:
             raise
 
     def find(self, **kwargs) -> List[Dict[str, Any]]:
+        order_by = kwargs.pop('order_by', None)
+        _limit = kwargs.pop('_limit', None)
+        
+        sql = f"SELECT * FROM {self._name}"
+        params = []
+        
         if kwargs:
             where = " AND ".join(f"{k}=?" for k in kwargs)
-            cur = self._conn.execute(f"SELECT * FROM {self._name} WHERE {where}", tuple(kwargs.values()))
-        else:
-            cur = self._conn.execute(f"SELECT * FROM {self._name}")
-        return [dict(r) for r in cur.fetchall()]
+            sql += f" WHERE {where}"
+            params = list(kwargs.values())
+        
+        if order_by:
+            sql += f" ORDER BY {order_by}"
+        
+        if _limit:
+            sql += f" LIMIT {_limit}"
+        
+        cur = self._conn.execute(sql, tuple(params))
+        return [self._row_to_dict(r) for r in cur.fetchall()]
 
     def all(self) -> List[Dict[str, Any]]:
         cur = self._conn.execute(f"SELECT * FROM {self._name}")
