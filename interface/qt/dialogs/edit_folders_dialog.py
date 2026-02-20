@@ -104,8 +104,6 @@ class EditFoldersDialog(BaseDialog):
         return {}
 
     def _build_ui(self):
-        outer_layout = QVBoxLayout(self)
-
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -133,14 +131,7 @@ class EditFoldersDialog(BaseDialog):
         main_layout.addLayout(columns_layout)
 
         scroll_area.setWidget(scroll_content)
-        outer_layout.addWidget(scroll_area)
-
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self._on_ok)
-        button_box.rejected.connect(self.reject)
-        outer_layout.addWidget(button_box)
+        self._body_layout.addWidget(scroll_area)
 
 
 
