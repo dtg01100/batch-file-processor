@@ -175,11 +175,20 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         Serialize a configuration instance to dictionary format.
         
         Args:
-            config: Configuration instance to serialize
+            config: Configuration instance or dict to serialize
             
         Returns:
             Dict[str, Any]: Serialized configuration data
         """
+        if isinstance(config, dict):
+            return {
+                "include_headers": config.get("include_headers", False),
+                "filter_ampersand": config.get("filter_ampersand", False),
+                "include_item_numbers": config.get("include_item_numbers", False),
+                "include_item_description": config.get("include_item_description", False),
+                "simple_csv_sort_order": config.get("simple_csv_sort_order", ""),
+                "split_prepaid_sales_tax_crec": config.get("split_prepaid_sales_tax_crec", False)
+            }
         return {
             "include_headers": config.include_headers,
             "filter_ampersand": config.filter_ampersand,
@@ -194,11 +203,13 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         Deserialize stored data into a configuration instance.
         
         Args:
-            data: Stored data to deserialize
+            data: Stored data dict to deserialize
             
         Returns:
             CSVConfiguration: CSV configuration instance
         """
+        if isinstance(data, CSVConfiguration):
+            return data
         return self.create_config(data)
     
     def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:

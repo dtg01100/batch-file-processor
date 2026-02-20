@@ -5,6 +5,7 @@ Responsible for dynamic plugin discovery, management, and lifecycle control.
 """
 
 import importlib
+import inspect
 import os
 import pkgutil
 from typing import Dict, List, Optional, Type, Any
@@ -150,7 +151,8 @@ class PluginManager:
                 isinstance(obj, type) and
                 issubclass(obj, PluginBase) and
                 obj is not PluginBase and
-                not obj.__name__.startswith('_')
+                not obj.__name__.startswith('_') and
+                not inspect.isabstract(obj)
             ):
                 plugin_id = obj.get_identifier()
                 if plugin_id not in self._plugin_classes:
@@ -162,7 +164,8 @@ class PluginManager:
                     isinstance(obj, type) and
                     issubclass(obj, ConfigurationPlugin) and
                     obj is not ConfigurationPlugin and
-                    not obj.__name__.startswith('_')
+                    not obj.__name__.startswith('_') and
+                    not inspect.isabstract(obj)
                 ):
                     try:
                         format_enum = obj.get_format_enum()
@@ -359,7 +362,8 @@ class PluginManager:
                         print(f"Error storing configuration plugin {plugin_id}: {e}")
                         
             except Exception as e:
-                print(f"Error initializing plugin {plugin_class.get_name()}: {e}")
+                plugin_id = getattr(plugin_class, 'get_identifier', lambda: 'Unknown')()
+                print(f"Error initializing plugin {plugin_id}: {e}")
 
         self._initialized = True
         return initialized
