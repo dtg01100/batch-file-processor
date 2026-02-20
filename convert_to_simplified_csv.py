@@ -15,12 +15,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
     inc_item_desc = parameters_dict["include_item_description"]
     columnlayout = parameters_dict["simple_csv_sort_order"]
 
-    def convert_to_price(value):
-        return (
-            (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
-            + "."
-            + value[-2:]
-        )
+
 
     def add_row(rowdict):
         column_list = []
@@ -123,7 +118,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                         row_dict = dict(
                             upc_number=input_edi_dict["upc_number"],
                             qty_of_units=qty_to_int(input_edi_dict["qty_of_units"]),
-                            unit_cost=convert_to_price(input_edi_dict["unit_cost"]),
+                            unit_cost=utils.convert_to_price(input_edi_dict["unit_cost"]),
                             description=input_edi_dict["description"],
                             vendor_item=int(input_edi_dict["vendor_item"].strip()),
                         )

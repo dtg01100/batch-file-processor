@@ -1,0 +1,24 @@
+from datetime import datetime
+
+
+def dactime_from_datetime(date_time: datetime) -> str:
+    dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
+    dactime_date = dactime_date_century_digit + str(
+        datetime.strftime(date_time.date(), "%y%m%d")
+    )
+    return dactime_date
+
+
+def datetime_from_dactime(dac_time: int) -> datetime:
+    dac_time_int = int(dac_time)
+    return datetime.strptime(str(dac_time_int + 19000000), "%Y%m%d")
+
+
+def datetime_from_invtime(invtime: str) -> datetime:
+    return datetime.strptime(invtime, "%m%d%y")
+
+
+def dactime_from_invtime(inv_no: str):
+    datetime_obj = datetime_from_invtime(inv_no)
+    dactime = dactime_from_datetime(datetime_obj)
+    return dactime

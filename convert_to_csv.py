@@ -25,8 +25,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
     conv_inc_crec = inc_crec
     conv_inc_headers = inc_headers
 
-    def convert_to_price(value):
-        return (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0") + "." + value[-2:]
+
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = [n for n in work_file.readlines()]  # make list of lines
@@ -120,9 +119,9 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                         quantity_shipped_in_csv = input_edi_dict['qty_of_units'].lstrip("0") \
                             if not input_edi_dict['qty_of_units'].lstrip("0") == "" else input_edi_dict['qty_of_units']
 
-                        cost_in_csv = convert_to_price(input_edi_dict['unit_cost'])
+                        cost_in_csv = utils.convert_to_price(input_edi_dict['unit_cost'])
 
-                        suggested_retail_in_csv = convert_to_price(input_edi_dict['suggested_retail_price'])
+                        suggested_retail_in_csv = utils.convert_to_price(input_edi_dict['suggested_retail_price'])
 
                         description_in_csv = (input_edi_dict['description'].replace("&", "AND").rstrip(" ")
                                             if filter_ampersand != "False" else

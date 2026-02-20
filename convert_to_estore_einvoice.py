@@ -8,16 +8,7 @@ import utils
 
 
 def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
-    def convert_to_price(value):
-        retprice = (
-            (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
-            + "."
-            + value[-2:]
-        )
-        try:
-            return Decimal(retprice)
-        except Exception:
-            return 0
+
 
     def qty_to_int(qty):
         if qty.startswith("-"):
@@ -152,11 +143,11 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                             "GTIN": upc_entry.strip(),
                             "GTIN Type": "",
                             "QTY": qty_to_int(input_edi_dict["qty_of_units"]),
-                            "Unit Cost": convert_to_price(input_edi_dict["unit_cost"]),
-                            "Unit Retail": convert_to_price(
+                            "Unit Cost": utils.convert_to_price_decimal(input_edi_dict["unit_cost"]),
+                            "Unit Retail": utils.convert_to_price_decimal(
                                 input_edi_dict["suggested_retail_price"]
                             ),
-                            "Extended Cost": convert_to_price(
+                            "Extended Cost": utils.convert_to_price_decimal(
                                 input_edi_dict["unit_cost"]
                             )
                             * qty_to_int(input_edi_dict["qty_of_units"]),
@@ -194,7 +185,7 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                                 else:
                                     row_dict["Detail Type"] = "C"
                                     shipper_accum.append(
-                                        convert_to_price(input_edi_dict["unit_cost"])
+                                        utils.convert_to_price_decimal(input_edi_dict["unit_cost"])
                                         * qty_to_int(input_edi_dict["qty_of_units"])
                                     )
                             else:

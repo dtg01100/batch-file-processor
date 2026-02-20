@@ -13,12 +13,7 @@ class CustomerLookupError(Exception):
     pass
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_dict):
-    def convert_to_price(value):
-        return (
-            (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
-            + "."
-            + value[-2:]
-        )
+
 
     def prettify_dates(date_string, offset=0, adj_offset=0):
         try:
@@ -206,7 +201,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     except ValueError:
                         wrkqtyint = 0
                 try:
-                    item_total = decimal.Decimal(convert_to_price(unit_cost)) * wrkqtyint
+                    item_total = decimal.Decimal(utils.convert_to_price(unit_cost)) * wrkqtyint
                 except ValueError:
                     item_total = decimal.Decimal()
                 except decimal.InvalidOperation:
@@ -246,7 +241,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                             generate_full_upc(input_edi_dict['upc_number']),
                             qtyint,
                             get_uom(input_edi_dict['vendor_item'], input_edi_dict['unit_multiplier']),
-                            "$"+str(convert_to_price(input_edi_dict['unit_cost'])),
+                            "$"+str(utils.convert_to_price(input_edi_dict['unit_cost'])),
                             "$"+str(total_price)
                         ])
                     if input_edi_dict['record_type'] == 'C':
@@ -255,8 +250,8 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                             '000000000000',
                             1,
                             'EA',
-                            "$"+str(convert_to_price(input_edi_dict['amount'])),
-                            "$"+str(convert_to_price(input_edi_dict['amount']))
+                            "$"+str(utils.convert_to_price(input_edi_dict['amount'])),
+                            "$"+str(utils.convert_to_price(input_edi_dict['amount']))
                         ])
-            csv_file.writerow(["","","","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
+            csv_file.writerow(["","","","","","","","Total:","$"+str(utils.convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
     return(output_filename + ".csv")
