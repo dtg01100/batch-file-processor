@@ -8,7 +8,7 @@ designed for testability and loose coupling.
 from dispatch_process import process
 
 from dispatch.hash_utils import generate_match_lists, generate_file_hash
-from dispatch.file_utils import build_output_filename, filter_files_by_checksum
+from dispatch.file_utils import build_output_filename, filter_files_by_checksum, do_clear_old_files
 from dispatch.interfaces import (
     DatabaseInterface,
     FileSystemInterface,
@@ -50,6 +50,7 @@ __all__ = [
     # File utilities
     'build_output_filename',
     'filter_files_by_checksum',
+    'do_clear_old_files',
     # Interfaces
     'DatabaseInterface',
     'FileSystemInterface',

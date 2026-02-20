@@ -215,5 +215,18 @@ def build_processed_file_record(
     }
 
 
+def do_clear_old_files(folder_path, maximum_files):
+    while len(os.listdir(folder_path)) > maximum_files:
+        os.remove(
+            os.path.join(
+                folder_path,
+                min(
+                    os.listdir(folder_path),
+                    key=lambda f: os.path.getctime("{}/{}".format(folder_path, f)),
+                ),
+            )
+        )
+
+
 # Import time module for build_error_log_filename
 import time

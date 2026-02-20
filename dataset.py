@@ -21,15 +21,27 @@ class Table:
         self._name = name
 
     def _row_to_dict(self, row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
-        return dict(row) if row is not None else None
+        if row is None:
+            return None
+        d = dict(row)
+        # Convert SQLite booleans (0/1 integers) to Python booleans
+        for k, v in d.items():
+            if isinstance(v, int) and (v == 0 or v == 1):
+                d[k] = bool(v)
+        return d
 
     def find_one(self, **kwargs) -> Optional[Dict[str, Any]]:
-        if kwargs:
-            where = " AND ".join(f"{k}=?" for k in kwargs)
-            cur = self._conn.execute(f"SELECT * FROM {self._name} WHERE {where} LIMIT 1", tuple(kwargs.values()))
-        else:
-            cur = self._conn.execute(f"SELECT * FROM {self._name} LIMIT 1")
-        return self._row_to_dict(cur.fetchone())
+        try:
+            if kwargs:
+                where = " AND ".join(f"{k}=?" for k in kwargs)
+                cur = self._conn.execute(f"SELECT * FROM {self._name} WHERE {where} LIMIT 1", tuple(kwargs.values()))
+            else:
+                cur = self._conn.execute(f"SELECT * FROM {self._name} LIMIT 1")
+            return self._row_to_dict(cur.fetchone())
+        except sqlite3.OperationalError as e:
+            if 'no such table' in str(e):
+                return None
+            raise
 
     def find(self, **kwargs) -> List[Dict[str, Any]]:
         if kwargs:
@@ -131,6 +143,46 @@ class Table:
         row = cur.fetchone()
         return int(row[0]) if row is not None else 0
 
+    def insert_many(self, records: List[Dict[str, Any]]) -> None:
+        if not records:
+            return
+        # Use first record to determine keys
+        keys = list(records[0].keys())
+        cols = ", ".join(keys)
+        placeholders = ", ".join("?" for _ in keys)
+        sql = f"INSERT INTO {self._name} ({cols}) VALUES ({placeholders})"
+        params = [tuple(record[k] for k in keys) for record in records]
+        try:
+            self._conn.executemany(sql, params)
+            self._conn.commit()
+        except sqlite3.OperationalError as e:
+            # If the table does not exist, attempt to create it with simple typing and retry
+            if 'no such table' in str(e):
+                cols_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+                for k in keys:
+                    # Avoid adding duplicate id column if caller provided id
+                    if k == "id":
+                        continue
+                    v = records[0].get(k)
+                    # Choose SQL type based on Python value
+                    if isinstance(v, bool):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, int):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, float):
+                        sql_t = 'REAL'
+                    else:
+                        sql_t = 'TEXT'
+                    cols_defs.append(f'"{k}" {sql_t}')
+                create_sql = f"CREATE TABLE IF NOT EXISTS {self._name} ({', '.join(cols_defs)})"
+                self._conn.execute(create_sql)
+                self._conn.commit()
+                # Retry the insert
+                self._conn.executemany(sql, params)
+                self._conn.commit()
+            else:
+                raise
+
     def upsert(self, record: Dict[str, Any], keys: List[str]) -> None:
         # If a matching row exists (by keys), update it; otherwise insert
         where_clause = " AND ".join(f"{k}=?" for k in keys)
@@ -151,6 +203,16 @@ class Database:
             self._conn.execute("PRAGMA foreign_keys = ON")
         except Exception:
             pass
+
+    @property
+    def tables(self) -> List[str]:
+        """Get list of table names in the database."""
+        cur = self._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        return [row[0] for row in cur.fetchall()]
+
+    def commit(self) -> None:
+        """Commit changes to the database."""
+        self._conn.commit()
 
     def __getitem__(self, table_name: str) -> Table:
         return Table(self._conn, table_name)

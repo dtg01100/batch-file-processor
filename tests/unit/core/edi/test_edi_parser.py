@@ -142,9 +142,9 @@ class TestCaptureRecords:
         assert result is None
     
     def test_capture_unknown_record_type(self):
-        """Test parsing unknown record type raises error."""
-        with pytest.raises(ValueError, match="Unknown record type"):
-            capture_records("X123456\n")
+        """Test parsing unknown record type returns None."""
+        result = capture_records("X123456\n")
+        assert result is None
     
     def test_capture_a_record_negative_total(self):
         """Test parsing A record with negative total (credit)."""

@@ -216,6 +216,10 @@ def filter_b_records_by_category(
     for record in b_records:
         try:
             b_rec_dict = capture_records(record)
+            if b_rec_dict is None:
+                # Include unparsable records in output
+                filtered_records.append(record)
+                continue
             vendor_item = int(b_rec_dict['vendor_item'].strip())
             
             if vendor_item in upc_dict:
@@ -236,6 +240,111 @@ def filter_b_records_by_category(
             filtered_records.append(record)
     
     return filtered_records
+
+
+def filter_edi_file_by_category(
+    input_file: str,
+    output_file: str,
+    upc_dict: dict,
+    filter_categories: str,
+    filter_mode: str = "include"
+) -> bool:
+    """Filter EDI file by item category, dropping invoices without matching B records.
+    
+    Reads an EDI file, filters B records based on category, and writes the result
+    to an output file. Invoices (A + B + C records) that have no B records after
+    filtering are completely removed.
+    
+    Args:
+        input_file: Path to input EDI file
+        output_file: Path to output EDI file
+        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: Comma-separated categories or "ALL"
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        
+    Returns:
+        True if any filtering was applied, False if no filtering occurred
+    """
+    # Handle ALL mode - no filtering needed
+    if filter_categories == "ALL":
+        # Just copy file unchanged
+        with open(input_file, 'r') as infile:
+            content = infile.read()
+        with open(output_file, 'w') as outfile:
+            outfile.write(content)
+        return False
+    
+    # Read input file
+    with open(input_file, 'r') as infile:
+        lines = infile.readlines()
+    
+    if not lines:
+        # Empty file - just copy it
+        with open(output_file, 'w') as outfile:
+            pass
+        return False
+    
+    # Group lines into invoices (each starts with 'A' record)
+    invoices = []
+    current_invoice = []
+    
+    for line in lines:
+        if line.startswith('A'):
+            # Start of new invoice - save previous if exists
+            if current_invoice:
+                invoices.append(current_invoice)
+            current_invoice = [line]
+        elif line.strip():  # Non-empty line
+            current_invoice.append(line)
+    
+    # Don't forget last invoice
+    if current_invoice:
+        invoices.append(current_invoice)
+    
+    # Process each invoice
+    filtered_invoices = []
+    any_filtered = False
+    
+    for invoice_lines in invoices:
+        # Separate A, B, and C records
+        a_record = None
+        b_records = []
+        c_record = None
+        
+        for line in invoice_lines:
+            if line.startswith('A'):
+                a_record = line
+            elif line.startswith('B'):
+                b_records.append(line)
+            elif line.startswith('C'):
+                c_record = line
+        
+        # Filter B records by category
+        filtered_b_records = filter_b_records_by_category(
+            b_records, upc_dict, filter_categories, filter_mode
+        )
+        
+        # Check if any B records were filtered out
+        if len(filtered_b_records) != len(b_records):
+            any_filtered = True
+        
+        # Only keep invoice if it has at least one B record after filtering
+        if filtered_b_records:
+            # Rebuild invoice with filtered B records
+            filtered_invoice = [a_record] + filtered_b_records
+            if c_record:
+                filtered_invoice.append(c_record)
+            filtered_invoices.append(filtered_invoice)
+        else:
+            # Invoice dropped because no matching B records
+            any_filtered = True
+    
+    # Write output file
+    with open(output_file, 'w') as outfile:
+        for invoice in filtered_invoices:
+            outfile.writelines(invoice)
+    
+    return any_filtered
 
 
 class EDISplitter:

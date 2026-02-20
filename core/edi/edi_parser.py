@@ -6,6 +6,69 @@ Pure functions for parsing EDI A, B, and C records.
 from typing import Optional
 from dataclasses import dataclass
 
+_default_parser = None
+
+
+def _get_default_parser():
+    global _default_parser
+    if _default_parser is None:
+        try:
+            from edi_format_parser import EDIFormatParser
+
+            _default_parser = EDIFormatParser.get_default_parser()
+        except Exception:
+            _default_parser = False
+    return _default_parser if _default_parser is not False else None
+
+
+def capture_records(line, parser=None):
+    if parser is None:
+        parser = _get_default_parser()
+
+    if parser is not None:
+        result = parser.parse_line(line)
+        if result is None and line and line.strip() != "":
+            # Ignore standard EOF marker (Ctrl+Z)
+            if line.strip() == "\x1a":
+                return None
+            raise Exception("Not An EDI")
+        return result
+
+    if not line or line.startswith("\x1a"):
+        return None
+
+    if line.startswith("A"):
+        return {
+            "record_type": line[0],
+            "cust_vendor": line[1:7],
+            "invoice_number": line[7:17],
+            "invoice_date": line[17:23],
+            "invoice_total": line[23:33],
+        }
+    elif line.startswith("B"):
+        return {
+            "record_type": line[0],
+            "upc_number": line[1:12],
+            "description": line[12:37],
+            "vendor_item": line[37:43],
+            "unit_cost": line[43:49],
+            "combo_code": line[49:51],
+            "unit_multiplier": line[51:57],
+            "qty_of_units": line[57:62],
+            "suggested_retail_price": line[62:67],
+            "price_multi_pack": line[67:70],
+            "parent_item_number": line[70:76],
+        }
+    elif line.startswith("C"):
+        return {
+            "record_type": line[0],
+            "charge_type": line[1:4],
+            "description": line[4:29],
+            "amount": line[29:38],
+        }
+    else:
+        return None  # Invalid record type
+
 
 @dataclass
 class ARecord:
@@ -87,7 +150,7 @@ def capture_records(line: str) -> Optional[dict]:
         >>> capture_records("AVENDOR0000000001120240000000123\\n")
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
     """
-    if not line or line.startswith("\x1a"):
+    if not line or line.startswith("\x1a") or line.strip() == "":
         return None
     
     if line.startswith("A"):
@@ -120,7 +183,7 @@ def capture_records(line: str) -> Optional[dict]:
             "amount": line[29:38],
         }
     else:
-        raise ValueError(f"Unknown record type: {line[0] if line else 'empty'}")
+        return None  # Invalid record type
 
 
 def parse_a_record(line: str) -> ARecord:
