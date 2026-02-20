@@ -159,7 +159,7 @@ class TestResendFlow:
         
         # Verify resend flag is set
         updated_record = list(processed_table.find(id=record_id))[0]
-        assert updated_record['resend_flag'] is True, "Resend flag should be set"
+        assert updated_record['resend_flag'] == True, "Resend flag should be set"
         
         # Clear resend flag after verification
         processed_table.update({
@@ -168,7 +168,7 @@ class TestResendFlow:
         }, ['id'])
         
         cleared_record = list(processed_table.find(id=record_id))[0]
-        assert cleared_record['resend_flag'] is False, "Resend flag should be cleared"
+        assert cleared_record['resend_flag'] == False, "Resend flag should be cleared"
     
     def test_resend_with_duplicate_detection(self, temp_workspace, folder_config, mock_backend):
         """Test that resend flag bypasses duplicate detection."""
@@ -203,7 +203,7 @@ class TestResendFlow:
         
         # Verify resend flag is set
         updated_record = processed_table.find_one(id=record['id'])
-        assert updated_record['resend_flag'] is True, "Resend flag should be set"
+        assert updated_record['resend_flag'] == True, "Resend flag should be set"
     
     def test_resend_multiple_files(self, temp_workspace, folder_config, mock_backend):
         """Test resending multiple files simultaneously."""
