@@ -294,7 +294,7 @@ class TestOldV33DatabaseMigration:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
-        assert version['version'] == "41"
+        assert version['version'] == "42"
         db.close()
 
     def test_old_v33_gains_plugin_config_column(self, tmp_path):
@@ -413,7 +413,7 @@ class TestV32DatabaseMigration:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
-        assert version['version'] == "41"
+        assert version['version'] == "42"
         db.close()
 
     def test_v32_gets_all_v33_columns(self, tmp_path):
@@ -512,12 +512,12 @@ class TestMigrationIdempotency:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
-        assert version['version'] == "41"
+        assert version['version'] == "42"
 
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
-        assert version['version'] == "41"
+        assert version['version'] == "42"
         db.close()
 
     def test_old_v33_to_v33_target_preserves_both_column_sets(self, tmp_path):
@@ -539,12 +539,12 @@ class TestMigrationIdempotency:
 
         db = dataset.connect('sqlite:///' + db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
-        assert db['version'].find_one(id=1)['version'] == "41"
+        assert db['version'].find_one(id=1)['version'] == "42"
 
         db.close()
         db = dataset.connect('sqlite:///' + db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
-        assert db['version'].find_one(id=1)['version'] == "41"
+        assert db['version'].find_one(id=1)['version'] == "42"
 
         folder = db['folders'].find_one(id=1)
         assert 'plugin_config' in folder
