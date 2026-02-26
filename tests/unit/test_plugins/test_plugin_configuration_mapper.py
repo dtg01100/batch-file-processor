@@ -1,257 +1,383 @@
-"""
-Plugin Configuration Mapper and FolderConfiguration Tests
-
-Tests for the plugin configuration mapper and FolderConfiguration integration
-with plugin configurations.
-"""
+"""Tests for plugin configuration mapper integration and state management."""
 
 import unittest
 from unittest.mock import MagicMock, patch
-from interface.models.folder_configuration import FolderConfiguration, ConvertFormat, CSVConfiguration, EDIConfiguration
-from interface.plugins import PluginManager
-from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
+
+from interface.operations.plugin_configuration_mapper import (
+    PluginConfigurationMapper,
+    PluginSectionStateManager,
+    ExtractedPluginConfig,
+    PluginConfigPopulationResult,
+    PluginSectionState,
+)
+from interface.models.folder_configuration import FolderConfiguration
+
+
+class TestPluginSectionStateManager(unittest.TestCase):
+    """Tests for PluginSectionStateManager."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.state_manager = PluginSectionStateManager()
+
+    def test_initialize_state(self):
+        """Test initializing state for a plugin section."""
+        config = {'include_headers': True, 'filter_ampersand': False}
+        
+        self.state_manager.initialize_state('csv', config, True, [])
+        
+        state = self.state_manager.get_state('csv')
+        self.assertIsNotNone(state)
+        self.assertEqual(state.config, config)
+        self.assertTrue(state.is_valid)
+        self.assertEqual(len(state.validation_errors), 0)
+
+    def test_update_state(self):
+        """Test updating state for a plugin section."""
+        config = {'include_headers': True}
+        new_config = {'include_headers': False}
+        
+        self.state_manager.initialize_state('csv', config, True, [])
+        changed = self.state_manager.update_state('csv', new_config, True, [])
+        
+        self.assertTrue(changed)
+        state = self.state_manager.get_state('csv')
+        self.assertEqual(state.config, new_config)
+        self.assertTrue(self.state_manager.is_dirty)
+
+    def test_update_state_no_change(self):
+        """Test updating state when config hasn't changed."""
+        config = {'include_headers': True}
+        
+        self.state_manager.initialize_state('csv', config, True, [])
+        changed = self.state_manager.update_state('csv', config, True, [])
+        
+        self.assertFalse(changed)
+
+    def test_undo(self):
+        """Test undo functionality."""
+        config1 = {'include_headers': True}
+        config2 = {'include_headers': False}
+        
+        self.state_manager.initialize_state('csv', config1, True, [])
+        self.state_manager.update_state('csv', config2, True, [])
+        
+        result = self.state_manager.undo()
+        
+        self.assertTrue(result)
+        state = self.state_manager.get_state('csv')
+        self.assertEqual(state.config, config1)
+
+    def test_redo(self):
+        """Test redo functionality."""
+        config1 = {'include_headers': True}
+        config2 = {'include_headers': False}
+        
+        self.state_manager.initialize_state('csv', config1, True, [])
+        self.state_manager.update_state('csv', config2, True, [])
+        self.state_manager.undo()
+        
+        result = self.state_manager.redo()
+        
+        self.assertTrue(result)
+        state = self.state_manager.get_state('csv')
+        self.assertEqual(state.config, config2)
+
+    def test_undo_empty_stack(self):
+        """Test undo with empty stack."""
+        result = self.state_manager.undo()
+        self.assertFalse(result)
+
+    def test_redo_empty_stack(self):
+        """Test redo with empty stack."""
+        result = self.state_manager.redo()
+        self.assertFalse(result)
+
+    def test_mark_saved(self):
+        """Test marking state as saved."""
+        config = {'include_headers': True}
+        
+        self.state_manager.initialize_state('csv', config, True, [])
+        self.state_manager.update_state('csv', {'include_headers': False}, True, [])
+        
+        self.state_manager.mark_saved()
+        
+        self.assertFalse(self.state_manager.is_dirty)
+
+    def test_reset_to_saved(self):
+        """Test resetting to saved state."""
+        config = {'include_headers': True}
+        
+        self.state_manager.initialize_state('csv', config, True, [])
+        self.state_manager.update_state('csv', {'include_headers': False}, True, [])
+        
+        self.state_manager.reset_to_saved()
+        
+        state = self.state_manager.get_state('csv')
+        self.assertEqual(state.config, config)
+        self.assertFalse(self.state_manager.is_dirty)
+
+    def test_get_all_configs(self):
+        """Test getting all configurations."""
+        config1 = {'include_headers': True}
+        config2 = {'field1': 'value1'}
+        
+        self.state_manager.initialize_state('csv', config1, True, [])
+        self.state_manager.initialize_state('scannerware', config2, True, [])
+        
+        configs = self.state_manager.get_all_configs()
+        
+        self.assertEqual(len(configs), 2)
+        self.assertIn('csv', configs)
+        self.assertIn('scannerware', configs)
+
+    def test_get_invalid_sections(self):
+        """Test getting sections with validation errors."""
+        self.state_manager.initialize_state('csv', {'include_headers': True}, True, [])
+        self.state_manager.initialize_state('invalid', {'field': 'value'}, False, ['Error 1', 'Error 2'])
+        
+        invalid = self.state_manager.get_invalid_sections()
+        
+        self.assertIn('invalid', invalid)
+        self.assertNotIn('csv', invalid)
+
+    def test_get_all_validation_errors(self):
+        """Test getting all validation errors."""
+        self.state_manager.initialize_state('csv', {'include_headers': True}, False, ['Error 1'])
+        self.state_manager.initialize_state('invalid', {'field': 'value'}, False, ['Error 2', 'Error 3'])
+        
+        errors = self.state_manager.get_all_validation_errors()
+        
+        self.assertEqual(len(errors), 3)
+        self.assertIn('Error 1', errors)
+        self.assertIn('Error 2', errors)
+        self.assertIn('Error 3', errors)
+
+    def test_can_undo_property(self):
+        """Test can_undo property."""
+        self.assertFalse(self.state_manager.can_undo)
+        
+        self.state_manager.initialize_state('csv', {'value': 1}, True, [])
+        self.state_manager.update_state('csv', {'value': 2}, True, [])
+        
+        self.assertTrue(self.state_manager.can_undo)
+
+    def test_can_redo_property(self):
+        """Test can_redo property."""
+        self.assertFalse(self.state_manager.can_redo)
+        
+        self.state_manager.initialize_state('csv', {'value': 1}, True, [])
+        self.state_manager.update_state('csv', {'value': 2}, True, [])
+        self.state_manager.undo()
+        
+        self.assertTrue(self.state_manager.can_redo)
+
+    def test_clear(self):
+        """Test clearing all state."""
+        self.state_manager.initialize_state('csv', {'include_headers': True}, True, [])
+        self.state_manager.update_state('csv', {'include_headers': False}, True, [])
+        
+        self.state_manager.clear()
+        
+        self.assertIsNone(self.state_manager.get_state('csv'))
+        self.assertFalse(self.state_manager.is_dirty)
 
 
 class TestPluginConfigurationMapper(unittest.TestCase):
-    """Tests for plugin configuration mapping and conversion."""
-    
+    """Tests for PluginConfigurationMapper."""
+
     def setUp(self):
-        """Create test instances."""
-        self.manager = PluginManager()
-        self.csv_plugin = CSVConfigurationPlugin()
-    
-    def test_csv_configuration_creation(self):
-        """Test CSV configuration creation from plugin."""
-        config_data = {
-            'include_headers': True,
-            'filter_ampersand': False,
-            'include_item_numbers': True,
-            'include_item_description': False,
-            'simple_csv_sort_order': 'asc',
-            'split_prepaid_sales_tax_crec': True
-        }
-        
-        config = self.csv_plugin.create_config(config_data)
-        self.assertIsNotNone(config)
-        self.assertIsInstance(config, CSVConfiguration)
-        self.assertEqual(config.include_headers, config_data['include_headers'])
-        self.assertEqual(config.filter_ampersand, config_data['filter_ampersand'])
-        self.assertEqual(config.include_item_numbers, config_data['include_item_numbers'])
-        self.assertEqual(config.include_item_description, config_data['include_item_description'])
-        self.assertEqual(config.simple_csv_sort_order, config_data['simple_csv_sort_order'])
-        self.assertEqual(config.split_prepaid_sales_tax_crec, config_data['split_prepaid_sales_tax_crec'])
-    
-    def test_csv_configuration_serialization(self):
-        """Test CSV configuration serialization."""
-        config = CSVConfiguration(
-            include_headers=True,
-            filter_ampersand=True,
-            include_item_numbers=False,
-            include_item_description=True,
-            simple_csv_sort_order='desc',
-            split_prepaid_sales_tax_crec=False
-        )
-        
-        serialized = self.csv_plugin.serialize_config(config)
-        self.assertIsNotNone(serialized)
-        self.assertIsInstance(serialized, dict)
-        self.assertEqual(serialized['include_headers'], config.include_headers)
-        self.assertEqual(serialized['filter_ampersand'], config.filter_ampersand)
-        self.assertEqual(serialized['include_item_numbers'], config.include_item_numbers)
-        self.assertEqual(serialized['include_item_description'], config.include_item_description)
-        self.assertEqual(serialized['simple_csv_sort_order'], config.simple_csv_sort_order)
-        self.assertEqual(serialized['split_prepaid_sales_tax_crec'], config.split_prepaid_sales_tax_crec)
-    
-    def test_csv_configuration_deserialization(self):
-        """Test CSV configuration deserialization."""
-        config_data = {
-            'include_headers': False,
-            'filter_ampersand': True,
-            'include_item_numbers': False,
-            'include_item_description': True,
-            'simple_csv_sort_order': 'custom',
-            'split_prepaid_sales_tax_crec': True
-        }
-        
-        config = self.csv_plugin.deserialize_config(config_data)
-        self.assertIsNotNone(config)
-        self.assertIsInstance(config, CSVConfiguration)
-        self.assertEqual(config.include_headers, config_data['include_headers'])
-        self.assertEqual(config.filter_ampersand, config_data['filter_ampersand'])
-        self.assertEqual(config.include_item_numbers, config_data['include_item_numbers'])
-        self.assertEqual(config.include_item_description, config_data['include_item_description'])
-        self.assertEqual(config.simple_csv_sort_order, config_data['simple_csv_sort_order'])
-        self.assertEqual(config.split_prepaid_sales_tax_crec, config_data['split_prepaid_sales_tax_crec'])
+        """Set up test fixtures."""
+        self.mapper = PluginConfigurationMapper()
 
+    def test_init(self):
+        """Test initialization."""
+        self.assertIsNotNone(self.mapper)
+        self.assertIsNotNone(self.mapper.state_manager)
+        self.assertIsNotNone(self.mapper.plugin_manager)
 
-class TestFolderConfigurationWithPlugins(unittest.TestCase):
-    """Tests for FolderConfiguration with plugin configurations."""
-    
-    def setUp(self):
-        """Create test instances."""
-        self.folder_config = FolderConfiguration(
-            folder_name="Test Folder",
-            folder_is_active="True",
-            alias="Test",
-            edi=EDIConfiguration(convert_to_format=ConvertFormat.CSV.value)
-        )
+    def test_get_supported_plugin_formats(self):
+        """Test getting supported plugin formats."""
+        formats = self.mapper.get_supported_plugin_formats()
         
-        self.csv_config = {
-            'include_headers': True,
-            'filter_ampersand': True,
-            'include_item_numbers': False,
-            'include_item_description': True,
-            'simple_csv_sort_order': 'asc',
-            'split_prepaid_sales_tax_crec': True
-        }
-    
-    def test_folder_configuration_creation(self):
-        """Test FolderConfiguration creation with plugin config."""
-        self.assertIsNotNone(self.folder_config)
-        self.assertEqual(self.folder_config.folder_name, "Test Folder")
-        self.assertEqual(self.folder_config.folder_is_active, "True")
-        self.assertEqual(self.folder_config.alias, "Test")
-        self.assertIsNotNone(self.folder_config.edi)
-        self.assertEqual(self.folder_config.edi.convert_to_format, ConvertFormat.CSV.value)
-    
-    def test_set_plugin_configuration(self):
-        """Test setting and getting plugin configuration."""
-        self.folder_config.set_plugin_configuration(ConvertFormat.CSV.value, self.csv_config)
-        
-        stored_config = self.folder_config.get_plugin_configuration(ConvertFormat.CSV.value)
-        self.assertIsNotNone(stored_config)
-        self.assertIsInstance(stored_config, dict)
-        self.assertEqual(stored_config['include_headers'], self.csv_config['include_headers'])
-        self.assertEqual(stored_config['filter_ampersand'], self.csv_config['filter_ampersand'])
-        self.assertEqual(stored_config['include_item_numbers'], self.csv_config['include_item_numbers'])
-        self.assertEqual(stored_config['include_item_description'], self.csv_config['include_item_description'])
-        self.assertEqual(stored_config['simple_csv_sort_order'], self.csv_config['simple_csv_sort_order'])
-        self.assertEqual(stored_config['split_prepaid_sales_tax_crec'], self.csv_config['split_prepaid_sales_tax_crec'])
-    
-    def test_get_nonexistent_plugin_configuration(self):
-        """Test getting plugin configuration that doesn't exist."""
-        config = self.folder_config.get_plugin_configuration(ConvertFormat.CSV.value)
-        self.assertIsNone(config)
-    
-    def test_has_plugin_configuration(self):
-        """Test checking if plugin configuration exists."""
-        self.assertFalse(ConvertFormat.CSV.value in self.folder_config.plugin_configurations)
-        
-        self.folder_config.set_plugin_configuration(ConvertFormat.CSV.value, self.csv_config)
-        self.assertTrue(ConvertFormat.CSV.value in self.folder_config.plugin_configurations)
-    
-    def test_remove_plugin_configuration(self):
-        """Test removing plugin configuration."""
-        self.folder_config.set_plugin_configuration(ConvertFormat.CSV.value, self.csv_config)
-        self.assertTrue(ConvertFormat.CSV.value in self.folder_config.plugin_configurations)
-        
-        self.folder_config.remove_plugin_configuration(ConvertFormat.CSV.value)
-        self.assertFalse(ConvertFormat.CSV.value in self.folder_config.plugin_configurations)
-        self.assertIsNone(self.folder_config.get_plugin_configuration(ConvertFormat.CSV.value))
-    
-    def test_multiple_plugin_configurations(self):
-        """Test storing multiple plugin configurations."""
-        # Create another configuration type (if available)
-        csv_config2 = {
-            'include_headers': False,
-            'filter_ampersand': False,
-            'include_item_numbers': True,
-            'include_item_description': False,
-            'simple_csv_sort_order': 'desc',
-            'split_prepaid_sales_tax_crec': False
-        }
-        
-        # Test storing configurations for different formats
-        self.folder_config.set_plugin_configuration(ConvertFormat.CSV.value, self.csv_config)
-        self.folder_config.set_plugin_configuration(ConvertFormat.SCANNERWARE.value, csv_config2)
-        
-        self.assertEqual(len(self.folder_config.plugin_configurations), 2)
-        self.assertIn(ConvertFormat.CSV.value.lower(), self.folder_config.plugin_configurations)
-        self.assertIn(ConvertFormat.SCANNERWARE.value.lower(), self.folder_config.plugin_configurations)
+        self.assertIsInstance(formats, list)
 
+    def test_get_plugin_configuration_fields(self):
+        """Test getting plugin configuration fields."""
+        fields = self.mapper.get_plugin_configuration_fields('csv')
+        
+        self.assertIsInstance(fields, list)
 
-class TestFolderConfigurationSerialization(unittest.TestCase):
-    """Tests for FolderConfiguration serialization and deserialization with plugins."""
-    
-    def setUp(self):
-        """Create test instances."""
-        self.folder_config = FolderConfiguration(
-            folder_name="Test Folder",
-            folder_is_active="True",
-            alias="Test",
-            edi=EDIConfiguration(convert_to_format=ConvertFormat.CSV.value)
-        )
+    def test_serialize_plugin_config(self):
+        """Test serializing plugin config."""
+        config = {'include_headers': True, 'filter_ampersand': False}
         
-        self.csv_config = {
-            'include_headers': True,
-            'filter_ampersand': True,
-            'include_item_numbers': False,
-            'include_item_description': True,
-            'simple_csv_sort_order': 'asc',
-            'split_prepaid_sales_tax_crec': True
-        }
-    
-    @patch('interface.plugins.plugin_manager.PluginManager')
-    def test_folder_config_to_dict(self, mock_manager):
-        """Test converting FolderConfiguration to dictionary."""
-        # Set up mock plugin manager
-        mock_instance = MagicMock()
-        mock_manager.return_value = mock_instance
-        mock_instance.serialize_configuration.return_value = self.csv_config
+        serialized = self.mapper.serialize_plugin_config('csv', config)
         
-        self.folder_config.set_plugin_configuration(ConvertFormat.CSV.value, self.csv_config)
+        self.assertIsInstance(serialized, str)
+        self.assertIn('csv', serialized)
+
+    def test_deserialize_plugin_config(self):
+        """Test deserializing plugin config."""
+        config = {'include_headers': True, 'filter_ampersand': False}
         
-        config_dict = self.folder_config.to_dict()
+        serialized = self.mapper.serialize_plugin_config('csv', config)
+        format_name, deserialized_config = self.mapper.deserialize_plugin_config(serialized)
         
-        self.assertIsNotNone(config_dict)
-        self.assertIsInstance(config_dict, dict)
+        self.assertEqual(format_name, 'csv')
+        self.assertEqual(deserialized_config, config)
+
+    def test_roundtrip_serialization(self):
+        """Test roundtrip serialization/deserialization."""
+        config = {'include_headers': True, 'filter_ampersand': False}
         
-        # Check core properties
-        self.assertEqual(config_dict['folder_name'], "Test Folder")
-        self.assertEqual(config_dict['folder_is_active'], "True")
-        self.assertEqual(config_dict['alias'], "Test")
-        self.assertEqual(config_dict['convert_to_format'], ConvertFormat.CSV.value)
+        serialized = self.mapper.serialize_plugin_config('csv', config)
+        format_name, deserialized = self.mapper.deserialize_plugin_config(serialized)
         
-        # Check plugin configuration
-        self.assertIn('plugin_configurations', config_dict)
-        self.assertIsInstance(config_dict['plugin_configurations'], dict)
-        self.assertIn(ConvertFormat.CSV.value.lower(), config_dict['plugin_configurations'])
-        
-        csv_config_dict = config_dict['plugin_configurations'][ConvertFormat.CSV.value.lower()]
-        self.assertEqual(csv_config_dict['include_headers'], True)
-        self.assertEqual(csv_config_dict['filter_ampersand'], True)
-    
-    @patch('interface.plugins.plugin_manager.PluginManager')
-    def test_from_dict_with_plugin_config(self, mock_manager):
-        """Test creating FolderConfiguration from dictionary with plugin config."""
-        # Set up mock plugin manager
-        mock_instance = MagicMock()
-        mock_manager.return_value = mock_instance
-        mock_instance.deserialize_configuration.return_value = self.csv_config
-        
-        config_dict = {
-            'folder_name': "Test Folder",
-            'folder_is_active': "True",
-            'alias': "Test",
-            'convert_to_format': ConvertFormat.CSV.value,
+        self.assertEqual(format_name, 'csv')
+        self.assertEqual(deserialized, config)
+
+    def test_validate_plugin_configurations_from_dict(self):
+        """Test validating plugin configurations from dict."""
+        folder_config_dict = {
             'plugin_configurations': {
-                ConvertFormat.CSV.value.lower(): self.csv_config
+                'csv': {'include_headers': True}
             }
         }
         
-        folder_config = FolderConfiguration.from_dict(config_dict)
+        errors = self.mapper.validate_plugin_configurations_from_dict(folder_config_dict)
         
-        self.assertIsNotNone(folder_config)
-        self.assertEqual(folder_config.folder_name, "Test Folder")
-        self.assertEqual(folder_config.folder_is_active, "True")
-        self.assertEqual(folder_config.alias, "Test")
-        self.assertEqual(folder_config.edi.convert_to_format, ConvertFormat.CSV.value)
+        self.assertIsInstance(errors, list)
+
+    def test_state_manager_integration(self):
+        """Test that state manager is properly integrated."""
+        config = {'include_headers': True}
         
-        # Verify plugin configuration was restored
-        restored_config = folder_config.get_plugin_configuration(ConvertFormat.CSV.value)
-        self.assertIsNotNone(restored_config)
-        self.assertEqual(restored_config['include_headers'], self.csv_config['include_headers'])
-        self.assertEqual(restored_config['filter_ampersand'], self.csv_config['filter_ampersand'])
+        self.mapper.state_manager.initialize_state('csv', config, True, [])
+        
+        # After initialization, state is saved so is_dirty should be False
+        self.assertFalse(self.mapper.state_manager.is_dirty)
+        
+        # After update, it should be dirty
+        self.mapper.state_manager.update_state('csv', {'include_headers': False}, True, [])
+        
+        self.assertTrue(self.mapper.state_manager.is_dirty)
+        
+        self.mapper.state_manager.mark_saved()
+        
+        self.assertFalse(self.mapper.state_manager.is_dirty)
+
+    def test_get_state_manager(self):
+        """Test getting state manager."""
+        state_manager = self.mapper.get_state_manager()
+        
+        self.assertIsNotNone(state_manager)
+        self.assertIsInstance(state_manager, PluginSectionStateManager)
+
+
+class TestPluginConfigurationMapperWithFolderConfig(unittest.TestCase):
+    """Tests for PluginConfigurationMapper with FolderConfiguration."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.mapper = PluginConfigurationMapper()
+        self.folder_config = FolderConfiguration(
+            folder_name="Test Folder",
+            folder_is_active="True",
+            alias="Test"
+        )
+
+    def test_populate_plugin_widgets_from_dict(self):
+        """Test populating plugin widgets from dict."""
+        folder_config_dict = {
+            'folder_name': 'Test Folder',
+            'folder_is_active': 'True',
+            'alias': 'Test',
+            'plugin_configurations': {
+                'csv': {'include_headers': True}
+            }
+        }
+        
+        dialog_fields = {}
+        
+        result = self.mapper.populate_plugin_widgets_from_dict(
+            folder_config_dict,
+            dialog_fields,
+            framework='qt'
+        )
+        
+        self.assertIsInstance(result, PluginConfigPopulationResult)
+
+    def test_update_folder_configuration_from_dict(self):
+        """Test updating folder configuration from dict."""
+        folder_config_dict = {
+            'folder_name': 'Test Folder',
+            'plugin_configurations': {}
+        }
+        
+        extracted_configs = [
+            ExtractedPluginConfig(
+                format_name='csv',
+                config={'include_headers': True},
+                validation_errors=[]
+            )
+        ]
+        
+        updated = self.mapper.update_folder_configuration_from_dict(
+            folder_config_dict,
+            extracted_configs
+        )
+        
+        self.assertIn('plugin_configurations', updated)
+        self.assertIn('csv', updated['plugin_configurations'])
+
+
+class TestExtractedPluginConfig(unittest.TestCase):
+    """Tests for ExtractedPluginConfig dataclass."""
+
+    def test_creation(self):
+        """Test creating ExtractedPluginConfig."""
+        config = ExtractedPluginConfig(
+            format_name='csv',
+            config={'include_headers': True},
+            validation_errors=['Error 1']
+        )
+        
+        self.assertEqual(config.format_name, 'csv')
+        self.assertEqual(config.config, {'include_headers': True})
+        self.assertEqual(config.validation_errors, ['Error 1'])
+
+    def test_default_validation_errors(self):
+        """Test default validation errors."""
+        config = ExtractedPluginConfig(
+            format_name='csv',
+            config={}
+        )
+        
+        self.assertEqual(config.validation_errors, [])
+
+
+class TestPluginConfigPopulationResult(unittest.TestCase):
+    """Tests for PluginConfigPopulationResult dataclass."""
+
+    def test_creation(self):
+        """Test creating PluginConfigPopulationResult."""
+        result = PluginConfigPopulationResult(
+            success=True,
+            widget_count=5,
+            errors=['Error 1']
+        )
+        
+        self.assertTrue(result.success)
+        self.assertEqual(result.widget_count, 5)
+        self.assertEqual(result.errors, ['Error 1'])
+
+    def test_default_values(self):
+        """Test default values."""
+        result = PluginConfigPopulationResult(success=True)
+        
+        self.assertEqual(result.widget_count, 0)
+        self.assertEqual(result.errors, [])
 
 
 if __name__ == "__main__":

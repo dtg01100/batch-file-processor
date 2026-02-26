@@ -28,12 +28,6 @@ class TestFormGenerator:
         assert generator is not None
         assert isinstance(generator, FormGenerator)
 
-    def test_factory_creation_tkinter(self):
-        """Test creating a Tkinter form generator instance."""
-        generator = FormGeneratorFactory.create_form_generator(self.basic_schema, 'tkinter')
-        assert generator is not None
-        assert isinstance(generator, FormGenerator)
-
     def test_factory_invalid_framework(self):
         """Test factory with invalid framework."""
         with pytest.raises(ValueError):

@@ -8,9 +8,6 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 import os
 
-import tkinter as tk
-from tkinter import ttk
-
 
 @dataclass
 class ExtractedDialogFields:
@@ -105,7 +102,7 @@ class FolderDataExtractor:
     Extracts folder configuration data from dialog fields.
 
     This class centralizes the logic for extracting values from
-    tkinter widgets and converting them to a consistent format.
+    dialog widgets and converting them to a consistent format.
     """
 
     def __init__(self, dialog_fields: Dict[str, Any]):
@@ -113,7 +110,7 @@ class FolderDataExtractor:
         Initialize extractor with dialog field references.
 
         Args:
-            dialog_fields: Dictionary mapping field names to tkinter widget references
+            dialog_fields: Dictionary mapping field names to dialog widget references
         """
         self.fields = dialog_fields
 
@@ -242,7 +239,7 @@ class FolderDataExtractor:
             return 0
         try:
             return int(widget.get())
-        except (ValueError, tk.TclError):
+        except ValueError:
             return 0
 
     def _get_bool(self, field_name: str) -> bool:

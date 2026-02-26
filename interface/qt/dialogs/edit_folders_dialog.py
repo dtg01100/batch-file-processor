@@ -39,6 +39,11 @@ from interface.validation.folder_settings_validator import (
 from interface.operations.folder_data_extractor import ExtractedDialogFields
 from interface.services.ftp_service import FTPServiceProtocol
 
+from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.form.form_generator import FormGeneratorFactory
+from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
+
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
@@ -87,7 +92,17 @@ class EditFoldersDialog(BaseDialog):
         self._alias_provider = alias_provider
         self._on_apply_success = on_apply_success
 
-        self._fields: Dict[str, QWidget] = {}
+        # Initialize plugin manager
+        self.plugin_manager = PluginManager()
+        self.plugin_manager.discover_plugins()
+        self.plugin_manager.initialize_plugins()
+        self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
+
+        # Initialize plugin configuration mapper with state management
+        self.plugin_config_mapper = PluginConfigurationMapper()
+        self._plugin_form_generators: Dict[str, Any] = {}
+
+        self._fields: Dict[str, Any] = {}
         self.copy_to_directory: str = folder_config.get("copy_to_directory", "")
 
         self._settings = self._load_settings()
@@ -112,8 +127,13 @@ class EditFoldersDialog(BaseDialog):
         scroll_content = QWidget()
         main_layout = QVBoxLayout(scroll_content)
 
-        self._active_checkbox = QCheckBox("Folder Is Disabled")
-        self._active_checkbox.setStyleSheet("QCheckBox { background-color: red; padding: 4px; }")
+        self._active_checkbox = QPushButton("Folder Is Disabled")
+        self._active_checkbox.setCheckable(True)
+        self._active_checkbox.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._active_checkbox.setMinimumHeight(40)
+        self._active_checkbox.setStyleSheet(
+            "QPushButton { background-color: red; color: white; padding: 8px; }"
+        )
         self._active_checkbox.toggled.connect(self._update_active_state)
         self._fields["active_checkbutton"] = self._active_checkbox
         main_layout.addWidget(self._active_checkbox)
@@ -354,6 +374,8 @@ class EditFoldersDialog(BaseDialog):
         elif option == "Tweak EDI":
             self._build_tweak_edi_area()
 
+        self._update_backend_states()
+
     def _build_do_nothing_area(self):
         self._fields["process_edi"] = self._make_hidden_check(False)
         self._fields["tweak_edi"] = self._make_hidden_check(False)
@@ -371,7 +393,9 @@ class EditFoldersDialog(BaseDialog):
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel("Convert To:"))
         self._convert_format_combo = QComboBox()
-        self._convert_format_combo.addItems(self.CONVERT_FORMATS)
+        # Get formats from plugins plus hardcoded fallbacks
+        formats = self._get_plugin_convert_formats()
+        self._convert_format_combo.addItems(formats)
         self._fields["convert_formats_var"] = self._convert_format_combo
         fmt_row.addWidget(self._convert_format_combo)
         wrapper_layout.addLayout(fmt_row)
@@ -390,6 +414,28 @@ class EditFoldersDialog(BaseDialog):
         self._on_convert_format_changed(self._convert_format_combo.currentText())
 
         self._dynamic_edi_layout.addWidget(wrapper)
+
+    def _get_plugin_convert_formats(self) -> List[str]:
+        """Get all available convert formats from configuration plugins."""
+        formats = []
+        for plugin in self.configuration_plugins:
+            formats.append(plugin.get_format_name())
+        # Add remaining hardcoded formats that don't have plugins yet
+        hardcoded_formats = [
+            "ScannerWare",
+            "scansheet-type-a",
+            "jolley_custom",
+            "stewarts_custom",
+            "simplified_csv",
+            "Estore eInvoice",
+            "Estore eInvoice Generic",
+            "YellowDog CSV",
+            "fintech",
+        ]
+        for fmt in hardcoded_formats:
+            if fmt not in formats:
+                formats.append(fmt)
+        return sorted(formats)
 
     def _build_tweak_edi_area(self):
         self._fields["process_edi"] = self._make_hidden_check(False)
@@ -557,21 +603,60 @@ class EditFoldersDialog(BaseDialog):
                     sub_layout.deleteLater()
 
     def _on_convert_format_changed(self, fmt: str):
+        """Handle convert format selection changes using plugin system."""
         self._clear_convert_sub()
-        if fmt == "csv":
-            self._build_csv_sub()
-        elif fmt == "ScannerWare":
-            self._build_scannerware_sub()
-        elif fmt == "simplified_csv":
-            self._build_simplified_csv_sub()
-        elif fmt in ("Estore eInvoice", "Estore eInvoice Generic"):
-            self._build_estore_sub(fmt)
-        elif fmt == "fintech":
-            self._build_fintech_sub()
-        elif fmt == "scansheet-type-a":
-            pass
-        elif fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
-            self._build_basic_options_sub()
+        
+        # Try to find a configuration plugin for this format
+        plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
+        if plugin:
+            self._build_plugin_config_sub(plugin)
+        else:
+            # Fall back to hardcoded implementations for formats without plugins
+            if fmt == "csv":
+                self._build_csv_sub()
+            elif fmt == "ScannerWare":
+                self._build_scannerware_sub()
+            elif fmt == "simplified_csv":
+                self._build_simplified_csv_sub()
+            elif fmt in ("Estore eInvoice", "Estore eInvoice Generic"):
+                self._build_estore_sub(fmt)
+            elif fmt == "fintech":
+                self._build_fintech_sub()
+            elif fmt == "scansheet-type-a":
+                pass
+            elif fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
+                self._build_basic_options_sub()
+    
+    def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
+        """Build plugin configuration sub-section."""
+        # Get plugin configuration schema
+        schema = plugin.get_configuration_schema()
+        if schema:
+            # Create form generator
+            form_generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
+            
+            # Get existing plugin configuration from folder config
+            plugin_config = self._folder_config.get('plugin_configurations', {}).get(plugin.get_format_name().lower(), {})
+            
+            # Initialize state in the plugin configuration mapper
+            self.plugin_config_mapper.state_manager.initialize_state(
+                plugin.get_format_name(),
+                plugin_config,
+                True,
+                []
+            )
+            
+            # Build the form
+            form_widget = form_generator.build_form(plugin_config, self._convert_sub_container)
+            
+            # Store widget reference and form generator
+            plugin_key = f"plugin_config_{plugin.get_identifier()}"
+            self._fields[plugin_key] = form_widget
+            self._fields[f"{plugin_key}_generator"] = form_generator
+            self._plugin_form_generators[plugin.get_format_name().lower()] = form_generator
+            
+            # Add to layout
+            self._convert_sub_layout.addWidget(form_widget)
 
     def _build_csv_sub(self):
         wrapper = QWidget()
@@ -917,13 +1002,15 @@ class EditFoldersDialog(BaseDialog):
         if is_active:
             self._active_checkbox.setText("Folder Is Enabled")
             self._active_checkbox.setStyleSheet(
-                "QCheckBox { background-color: green; color: white; padding: 4px; }"
+                "QPushButton { background-color: green; color: white; padding: 8px; }"
             )
         else:
             self._active_checkbox.setText("Folder Is Disabled")
             self._active_checkbox.setStyleSheet(
-                "QCheckBox { background-color: red; color: white; padding: 4px; }"
+                "QPushButton { background-color: red; color: white; padding: 8px; }"
             )
+
+        self._active_checkbox.setEnabled(True)
 
         self._copy_backend_check.setEnabled(is_active)
         self._ftp_backend_check.setEnabled(is_active)
@@ -931,8 +1018,7 @@ class EditFoldersDialog(BaseDialog):
         email_enabled = is_active and self._settings.get("enable_email", False)
         self._email_backend_check.setEnabled(email_enabled)
 
-        if not is_active:
-            self._update_backend_states()
+        self._update_backend_states()
 
     def _update_backend_states(self):
         is_active = self._active_checkbox.isChecked()
@@ -968,6 +1054,7 @@ class EditFoldersDialog(BaseDialog):
 
         edi_enabled = is_active and any_backend
         self._split_edi_check.setEnabled(edi_enabled)
+        self._force_edi_check.setEnabled(edi_enabled)
         self._send_invoices_check.setEnabled(edi_enabled)
         self._send_credits_check.setEnabled(edi_enabled)
         self._prepend_dates_check.setEnabled(edi_enabled)
@@ -1143,11 +1230,104 @@ class EditFoldersDialog(BaseDialog):
         target["estore_c_record_OID"] = self._get_estore_c_record_oid()
         target["fintech_division_id"] = extracted.fintech_division_id
 
+        # Apply plugin configurations using the plugin configuration mapper
+        self._apply_plugin_configurations(target)
+
     def _get_estore_c_record_oid(self) -> str:
         widget = self._fields.get("estore_c_record_oid_field")
         if widget and isinstance(widget, QLineEdit):
             return widget.text()
         return self._folder_config.get("estore_c_record_OID", "")
+
+    def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
+        """Apply plugin configurations to the target config dictionary.
+        
+        Args:
+            target: Target configuration dictionary to update
+        """
+        extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(
+            self._fields, 
+            framework='qt'
+        )
+        
+        # Update target with plugin configurations
+        self.plugin_config_mapper.update_folder_configuration_from_dict(
+            target, 
+            extracted_configs
+        )
+        
+        # Mark state as saved
+        self.plugin_config_mapper.state_manager.mark_saved()
+
+    def has_plugin_changes(self) -> bool:
+        """Check if there are unsaved plugin configuration changes.
+        
+        Returns:
+            bool: True if there are unsaved changes
+        """
+        return self.plugin_config_mapper.state_manager.is_dirty
+
+    def get_plugin_validation_errors(self) -> List[str]:
+        """Get all plugin configuration validation errors.
+        
+        Returns:
+            List[str]: List of validation error messages
+        """
+        return self.plugin_config_mapper.state_manager.get_all_validation_errors()
+
+    def can_undo_plugin_changes(self) -> bool:
+        """Check if undo is available for plugin changes.
+        
+        Returns:
+            bool: True if undo is available
+        """
+        return self.plugin_config_mapper.state_manager.can_undo
+
+    def can_redo_plugin_changes(self) -> bool:
+        """Check if redo is available for plugin changes.
+        
+        Returns:
+            bool: True if redo is available
+        """
+        return self.plugin_config_mapper.state_manager.can_redo
+
+    def undo_plugin_changes(self) -> bool:
+        """Undo the last plugin configuration change.
+        
+        Returns:
+            bool: True if undo was successful
+        """
+        if self.plugin_config_mapper.state_manager.undo():
+            # Refresh the form with the restored state
+            self._refresh_plugin_forms()
+            return True
+        return False
+
+    def redo_plugin_changes(self) -> bool:
+        """Redo the last undone plugin configuration change.
+        
+        Returns:
+            bool: True if redo was successful
+        """
+        if self.plugin_config_mapper.state_manager.redo():
+            # Refresh the form with the restored state
+            self._refresh_plugin_forms()
+            return True
+        return False
+
+    def _refresh_plugin_forms(self) -> None:
+        """Refresh plugin forms with current state values."""
+        current_fmt = getattr(self, '_convert_format_combo', None)
+        if current_fmt:
+            fmt = current_fmt.currentText()
+            if fmt:
+                plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
+                if plugin:
+                    state = self.plugin_config_mapper.state_manager.get_state(plugin.get_format_name())
+                    if state:
+                        form_gen = self._plugin_form_generators.get(plugin.get_format_name().lower())
+                        if form_gen:
+                            form_gen.set_values(state.config)
 
     # ------------------------------------------------------------------
     # OK / Cancel

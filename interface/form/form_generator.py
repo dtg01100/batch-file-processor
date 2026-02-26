@@ -2,7 +2,7 @@
 Dynamic Form Generator
 
 Provides a framework-agnostic form generator that can dynamically render UI
-from ConfigurationSchema definitions. Supports both Qt and Tkinter frameworks
+from ConfigurationSchema definitions. Supports the Qt framework
 through the existing UI abstraction layer.
 """
 
@@ -32,7 +32,7 @@ class FormGenerator(ABC):
 
         Args:
             schema: Configuration schema to generate form from
-            framework: UI framework to use ('qt' or 'tkinter')
+            framework: UI framework to use ('qt')
         """
         self.schema = schema
         self.framework = framework
@@ -44,6 +44,8 @@ class FormGenerator(ABC):
         self.form_container: Any = None
         self._field_dependencies: Dict[str, List[str]] = {}
         self._visibility_callbacks: Dict[str, List] = {}
+        self._plugin_sections: List[WidgetBase] = []
+        self._plugin_configs: Dict[str, Dict[str, Any]] = {}
 
     @abstractmethod
     def build_form(self, config: dict = None, parent: Any = None) -> Any:
@@ -221,6 +223,84 @@ class FormGenerator(ABC):
 
             self.set_field_visibility(dependent_field, visible)
 
+    def add_plugin_section(
+        self,
+        section_id: str,
+        schema: ConfigurationSchema,
+        config: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Add a plugin configuration section to the form.
+
+        Args:
+            section_id: Unique identifier for the section
+            schema: Configuration schema for the section
+            config: Optional initial configuration values
+        """
+        self._plugin_configs[section_id] = config or {}
+        # This will be rendered in build_form when _render_plugin_sections is called
+
+    def add_plugin_sections(
+        self,
+        sections: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Add multiple plugin configuration sections to the form.
+
+        Args:
+            sections: List of section definitions with 'id', 'schema', and optional 'config'
+        """
+        for section in sections:
+            self.add_plugin_section(
+                section.get('id', f'section_{len(self._plugin_sections)}'),
+                section.get('schema'),
+                section.get('config')
+            )
+
+    def get_plugin_section_values(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get configuration values from all plugin sections.
+
+        Returns:
+            Dict[str, Dict[str, Any]]: Dictionary mapping section IDs to their values
+        """
+        values = {}
+        for section in self._plugin_sections:
+            if hasattr(section, 'get_values'):
+                section_id = getattr(section, 'section_id', 'unknown')
+                values[section_id] = section.get_values()
+        return values
+
+    def set_plugin_section_values(self, configs: Dict[str, Dict[str, Any]]) -> None:
+        """
+        Set configuration values for plugin sections.
+
+        Args:
+            configs: Dictionary mapping section IDs to their configuration values
+        """
+        for section in self._plugin_sections:
+            section_id = getattr(section, 'section_id', None)
+            if section_id and section_id in configs:
+                section.set_values(configs[section_id])
+
+    def validate_plugin_sections(self) -> ValidationResult:
+        """
+        Validate all plugin sections.
+
+        Returns:
+            ValidationResult: Combined validation result for all sections
+        """
+        all_errors = []
+        for section in self._plugin_sections:
+            if hasattr(section, 'validate'):
+                result = section.validate()
+                if not result.success:
+                    all_errors.extend(result.errors)
+            elif hasattr(section, 'get_validation_errors'):
+                all_errors.extend(section.get_validation_errors())
+        
+        return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
+
 
 class QtFormGenerator(FormGenerator):
     """
@@ -285,7 +365,47 @@ class QtFormGenerator(FormGenerator):
         # Setup field dependencies
         self._setup_field_dependencies()
 
+        # Render plugin sections
+        self._render_plugin_sections(parent)
+
         return self.form_container
+
+    def _render_plugin_sections(self, parent: Any = None) -> None:
+        """
+        Render plugin sections added to the form.
+
+        Args:
+            parent: Optional parent widget
+        """
+        if not self._plugin_configs:
+            return
+
+        from interface.form.section_factory import SectionFactoryRegistry
+
+        try:
+            section_layout = self.form_container.layout()
+            
+            for section_id, schema in self._plugin_configs.items():
+                if schema is None:
+                    continue
+                    
+                config = self._plugin_configs.get(section_id)
+                section_widget = SectionFactoryRegistry.create_section(
+                    'default',
+                    schema,
+                    self.framework,
+                    config,
+                    self.form_container
+                )
+                
+                if section_widget:
+                    section_widget.section_id = section_id
+                    self._plugin_sections.append(section_widget)
+                    native_widget = section_widget.render(config)
+                    section_layout.addWidget(native_widget)
+                    
+        except Exception as e:
+            print(f"Error rendering plugin sections: {e}")
 
     def get_values(self) -> Dict[str, Any]:
         """
@@ -363,148 +483,6 @@ class QtFormGenerator(FormGenerator):
                     )
 
 
-class TkinterFormGenerator(FormGenerator):
-    """
-    Tkinter implementation of the form generator.
-    """
-
-    def build_form(self, config: dict = None, parent: Any = None) -> Any:
-        """
-        Build the Tkinter form from the schema.
-
-        Args:
-            config: Optional initial configuration values
-            parent: Optional parent widget
-
-        Returns:
-            Any: Tkinter form container widget
-        """
-        import tkinter as tk
-        from tkinter import ttk
-
-        # Create main container widget
-        self.form_container = ttk.Frame(parent)
-        self.form_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Create widget builder
-        from interface.plugins.ui_abstraction import ConfigurationWidgetBuilder
-        
-        class TkinterWidgetBuilder(ConfigurationWidgetBuilder):
-            def _layout_widgets(self, widgets, schema, parent):
-                container = ttk.Frame(parent)
-                
-                row = 0
-                for field in schema.fields:
-                    widget = widgets[field.name]
-                    native_widget = widget.get_widget()
-                    
-                    # Create label
-                    label = ttk.Label(container, text=field.label)
-                    label.grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
-                    
-                    # Place widget
-                    if field.field_type == 'boolean':
-                        native_widget.grid(row=row, column=1, sticky=tk.W, padx=5, pady=5)
-                    elif field.field_type in ['list', 'dict']:
-                        native_widget.grid(row=row, column=1, sticky=tk.EW, padx=5, pady=5)
-                        container.grid_columnconfigure(1, weight=1)
-                    else:
-                        native_widget.grid(row=row, column=1, sticky=tk.EW, padx=5, pady=5)
-                        container.grid_columnconfigure(1, weight=1)
-                    
-                    # Add description as tooltip if available
-                    if field.description:
-                        label.bind("<Enter>", lambda e, d=field.description: self._show_tooltip(e, d))
-                        native_widget.bind("<Enter>", lambda e, d=field.description: self._show_tooltip(e, d))
-                    
-                    row += 1
-                
-                return container
-
-        builder = TkinterWidgetBuilder('tkinter')
-        widget_container = builder.build_configuration_panel(self.schema, config, self.form_container)
-        widget_container.pack(fill=tk.BOTH, expand=True)
-
-        # Store widget references
-        for field in self.schema.fields:
-            widget = self.factory.create_widget(field.field_type, field, self.form_container)
-            self.widgets[field.name] = widget
-
-        # Set initial values if provided
-        if config:
-            self.set_values(config)
-
-        # Setup field dependencies
-        self._setup_field_dependencies()
-
-        return self.form_container
-
-    def get_values(self) -> Dict[str, Any]:
-        """
-        Get current values from all Tkinter form fields.
-
-        Returns:
-            Dict[str, Any]: Current field values
-        """
-        values = {}
-        for field_name, widget in self.widgets.items():
-            values[field_name] = widget.get_value()
-        return values
-
-    def set_values(self, config: Dict[str, Any]) -> None:
-        """
-        Set values for all Tkinter form fields.
-
-        Args:
-            config: Configuration values to set
-        """
-        for field_name, value in config.items():
-            if field_name in self.widgets:
-                self.widgets[field_name].set_value(value)
-
-    def validate(self) -> ValidationResult:
-        """
-        Validate the entire Tkinter form.
-
-        Returns:
-            ValidationResult: Validation result
-        """
-        all_errors = []
-        for field_name, widget in self.widgets.items():
-            if not widget.validate():
-                all_errors.extend(widget.get_validation_errors())
-        
-        return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
-
-    def get_validation_errors(self) -> List[str]:
-        """
-        Get all validation errors from the Tkinter form.
-
-        Returns:
-            List[str]: List of validation error messages
-        """
-        errors = []
-        for widget in self.widgets.values():
-            errors.extend(widget.get_validation_errors())
-        return errors
-
-    def _setup_field_dependencies(self):
-        """
-        Setup field dependencies and dynamic visibility callbacks for Tkinter.
-        """
-        # For each field, check if it has dependencies
-        for trigger_field in self._field_dependencies:
-            if trigger_field in self.widgets:
-                widget = self.widgets[trigger_field]
-                native_widget = widget.get_widget()
-                
-                # Bind value change events
-                native_widget.bind('<FocusOut>', 
-                    lambda e, tf=trigger_field: self._update_dependent_fields(tf))
-                native_widget.bind('<KeyRelease>',
-                    lambda e, tf=trigger_field: self._update_dependent_fields(tf))
-
-
 class FormGeneratorFactory:
     """
     Factory for creating form generator instances.
@@ -518,7 +496,7 @@ class FormGeneratorFactory:
 
         Args:
             schema: Configuration schema
-            framework: UI framework ('qt' or 'tkinter')
+            framework: UI framework ('qt')
 
         Returns:
             FormGenerator: Form generator instance
@@ -528,7 +506,5 @@ class FormGeneratorFactory:
         """
         if framework == 'qt':
             return QtFormGenerator(schema, framework)
-        elif framework == 'tkinter':
-            return TkinterFormGenerator(schema, framework)
         else:
             raise ValueError(f"Unsupported UI framework: {framework}")

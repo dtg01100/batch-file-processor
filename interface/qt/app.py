@@ -432,7 +432,7 @@ class QtBatchFileSenderApp:
         os.chdir(starting_directory)
 
     def _edit_folder_selector(self, folder_to_be_edited: int) -> None:
-        edit_folder = self._database.folders_table.find_one(id=[folder_to_be_edited])
+        edit_folder = self._database.folders_table.find_one(id=folder_to_be_edited)
         self._open_edit_folders_dialog(edit_folder)
 
     def _send_single(self, folder_id: int) -> None:
@@ -720,7 +720,7 @@ class QtBatchFileSenderApp:
     def _show_maintenance_dialog_wrapper(self) -> None:
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
         from interface.qt.dialogs.database_import_dialog import show_database_import_dialog
-        from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
+        from interface.operations.maintenance_functions import MaintenanceFunctions
 
         backup_increment.do_backup(self._database_path)
 
@@ -803,7 +803,7 @@ class QtBatchFileSenderApp:
     # ------------------------------------------------------------------
 
     def _mark_active_as_processed_wrapper(self, selected_folder: Optional[int] = None) -> None:
-        from interface.ui.dialogs.maintenance_dialog import MaintenanceFunctions
+        from interface.operations.maintenance_functions import MaintenanceFunctions
 
         maintenance = MaintenanceFunctions(
             database_obj=self._database,

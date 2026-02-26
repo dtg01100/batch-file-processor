@@ -2,7 +2,7 @@
 UI Widget Abstraction Layer
 
 Provides a framework-agnostic abstraction layer for creating UI widgets,
-supporting both Qt and Tkinter to ensure compatibility with the application's
+supporting Qt to ensure compatibility with the application's
 dual UI framework architecture.
 """
 
@@ -28,7 +28,7 @@ class WidgetBase(ABC):
         Returns the actual widget object from the UI framework.
 
         Returns:
-            Any: Native widget instance (Qt or Tkinter)
+            Any: Native widget instance (Qt)
         """
         pass
 
@@ -154,7 +154,7 @@ class WidgetFactoryRegistry:
         Register a widget factory for a specific UI framework.
 
         Args:
-            framework: UI framework identifier (e.g., 'qt', 'tkinter')
+            framework: UI framework identifier (e.g., 'qt')
             factory: Widget factory to register
         """
         cls._factories[framework] = factory
@@ -199,7 +199,7 @@ class ConfigurationWidgetBuilder:
         Initialize the widget builder.
 
         Args:
-            framework: UI framework to use ('qt' or 'tkinter')
+            framework: UI framework to use ('qt')
         """
         self.framework = framework
         self.factory = WidgetFactoryRegistry.get_factory(framework)
@@ -612,49 +612,5 @@ class QtTextEditWidget(QtWidgetBase):
         self.widget.setVisible(visible)
 
 
-class TkinterWidgetFactory(WidgetFactory):
-    """
-    Widget factory for Tkinter UI framework.
-
-    Creates Tkinter-compatible widgets for each field type.
-    """
-
-    def create_widget(self, field_type: FieldType,
-                     field_definition: dict, parent: Any = None) -> WidgetBase:
-        """
-        Create a Tkinter widget for a specific field type.
-
-        Args:
-            field_type: Type of field to create widget for
-            field_definition: Field definition metadata
-            parent: Optional parent widget
-
-        Returns:
-            WidgetBase: Created widget instance
-        """
-        import tkinter as tk
-        from tkinter import ttk
-
-        if field_type == FieldType.STRING:
-            return TkinterEntryWidget(field_definition, parent)
-        elif field_type == FieldType.INTEGER:
-            return TkinterSpinboxWidget(field_definition, parent)
-        elif field_type == FieldType.FLOAT:
-            return TkinterSpinboxWidget(field_definition, parent)
-        elif field_type == FieldType.BOOLEAN:
-            return TkinterCheckbuttonWidget(field_definition, parent)
-        elif field_type == FieldType.SELECT:
-            return TkinterComboboxWidget(field_definition, parent)
-        elif field_type == FieldType.MULTI_SELECT:
-            return TkinterListboxWidget(field_definition, parent)
-        elif field_type == FieldType.LIST:
-            return TkinterTextWidget(field_definition, parent)
-        elif field_type == FieldType.DICT:
-            return TkinterTextWidget(field_definition, parent)
-        else:
-            raise ValueError(f"Unsupported field type: {field_type}")
-
-
 # Register widget factories
 WidgetFactoryRegistry.register_factory('qt', QtWidgetFactory())
-WidgetFactoryRegistry.register_factory('tkinter', TkinterWidgetFactory())

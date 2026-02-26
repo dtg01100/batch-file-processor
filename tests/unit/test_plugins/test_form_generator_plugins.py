@@ -26,10 +26,6 @@ class TestFormGeneratorForPlugins(unittest.TestCase):
         # Test Qt form generator
         qt_generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
         self.assertIsNotNone(qt_generator)
-        
-        # Test Tkinter form generator
-        tk_generator = FormGeneratorFactory.create_form_generator(schema, 'tkinter')
-        self.assertIsNotNone(tk_generator)
     
     def test_csv_config_schema_completeness(self):
         """Test that CSV configuration schema has all required fields."""

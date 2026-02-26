@@ -29,7 +29,7 @@ def normalize_bool(value: Any) -> bool:
         return value
 
     if isinstance(value, str):
-        # Handle string booleans (legacy tkinter storage)
+        # Handle string booleans
         lower_val = value.strip().lower()
         if lower_val in ("true", "1", "yes", "on"):
             return True

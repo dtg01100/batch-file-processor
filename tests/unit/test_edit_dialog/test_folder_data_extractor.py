@@ -2,8 +2,6 @@
 
 import pytest
 from unittest.mock import MagicMock, PropertyMock
-import tkinter as tk
-
 import sys
 import os
 
@@ -14,19 +12,6 @@ from interface.operations.folder_data_extractor import (
     FolderDataExtractor,
     ExtractedDialogFields,
 )
-
-
-class MockWidget:
-    """Mock tkinter widget for testing."""
-    
-    def __init__(self, value=None, text_value=""):
-        self._value = value
-        self._text_value = text_value
-    
-    def get(self, *args):
-        if args:
-            return self._value.get(args[0], "") if hasattr(self._value, 'get') else self._value
-        return self._value if self._value is not None else self._text_value
 
 
 class TestExtractedDialogFields:
@@ -414,18 +399,6 @@ class TestFolderDataExtractorEdgeCases:
         
         assert result == ""
     
-    def test_get_int_with_tcl_error(self, empty_extractor):
-        """Test _get_int handles TclError gracefully."""
-        import tkinter as tk
-        
-        mock_widget = MagicMock()
-        mock_widget.get.side_effect = tk.TclError("Invalid value")
-        
-        empty_extractor.fields["test_field"] = mock_widget
-        result = empty_extractor._get_int("test_field")
-        
-        assert result == 0
-
 
 class TestFolderDataExtractorBackendSpecific:
     """Test suite for backend-specific extraction logic."""

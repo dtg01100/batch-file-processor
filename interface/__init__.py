@@ -11,6 +11,8 @@ Key components:
 - Dialogs: UI dialogs (interface.qt.dialogs)
 """
 
-from interface.qt.app import QtBatchFileSenderApp
-
-__all__ = ["QtBatchFileSenderApp"]
+try:
+    from interface.qt.app import QtBatchFileSenderApp
+    __all__ = ["QtBatchFileSenderApp"]
+except ImportError:
+    __all__ = []

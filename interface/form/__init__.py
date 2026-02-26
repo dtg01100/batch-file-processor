@@ -2,14 +2,16 @@
 Dynamic Form Generator Package
 
 Provides a framework-agnostic form generator system that can dynamically render
-UI from ConfigurationSchema definitions. Supports both Qt and Tkinter frameworks
+UI from ConfigurationSchema definitions. Supports both Qt frameworks
 through the existing UI abstraction layer.
 
 Key Components:
 - FormGenerator: Base interface for all form generators
 - QtFormGenerator: Qt framework implementation
-- TkinterFormGenerator: Tkinter framework implementation
 - FormGeneratorFactory: Factory for creating form generator instances
+- SectionFactory: Factory for creating form sections
+- ConfigSectionWidget: Base class for config section widgets
+- SectionRegistry: Registry for managing config sections
 
 Usage Example:
     from interface.form import FormGeneratorFactory
@@ -22,7 +24,7 @@ Usage Example:
         FieldDefinition('email', FieldType.STRING, label='Email', required=True),
     ])
 
-    # Create form generator (Qt or Tkinter)
+    # Create form generator (Qt)
     generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
 
     # Build form
@@ -42,13 +44,33 @@ Usage Example:
 from .form_generator import (
     FormGenerator,
     QtFormGenerator,
-    TkinterFormGenerator,
     FormGeneratorFactory
+)
+from .section_factory import (
+    SectionFactory,
+    QtSectionFactory,
+    SectionFactoryRegistry,
+    PluginSectionFactory
+)
+from .config_section_widgets import (
+    ConfigSectionWidget,
+    QtConfigSectionWidget,
+    CollapsibleSectionWidget,
+    QtCollapsibleSectionWidget,
+    TabbedSectionWidget
 )
 
 __all__ = [
     'FormGenerator',
     'QtFormGenerator',
-    'TkinterFormGenerator',
-    'FormGeneratorFactory'
+    'FormGeneratorFactory',
+    'SectionFactory',
+    'QtSectionFactory',
+    'SectionFactoryRegistry',
+    'PluginSectionFactory',
+    'ConfigSectionWidget',
+    'QtConfigSectionWidget',
+    'CollapsibleSectionWidget',
+    'QtCollapsibleSectionWidget',
+    'TabbedSectionWidget',
 ]

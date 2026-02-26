@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
 from interface.qt.dialogs.base_dialog import BaseDialog
 
 from interface.ports import UIServiceProtocol
-from interface.ui.dialogs.processed_files_dialog import export_processed_report
+from interface.operations.processed_files import export_processed_report
 
 
 class ProcessedFilesDialog(BaseDialog):

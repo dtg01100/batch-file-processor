@@ -1,4 +1,4 @@
-"""MaintenanceDialog for advanced maintenance functions.
+"""MaintenanceFunctions for batch file processing operations.
 
 This module provides maintenance functions for the Batch File Sender application,
 extracted from main_interface.py for better testability.
@@ -7,13 +7,7 @@ extracted from main_interface.py for better testability.
 import os
 import datetime
 import hashlib
-import tkinter
-import tkinter.ttk
 from typing import Any, Callable, Optional
-
-from tkinter.messagebox import askokcancel
-
-import backup_increment
 
 from interface.services.progress_service import ProgressCallback, NullProgressCallback
 
@@ -279,7 +273,7 @@ class MaintenanceFunctions:
         if self._database_import_callback is None:
             print("Database import callback not configured")
             return
-        
+
         if self._database_import_callback(backup_path):
             if self._on_operation_start:
                 self._on_operation_start()
@@ -312,164 +306,3 @@ class MaintenanceFunctions:
             self._progress.hide()
         if self._on_operation_end:
             self._on_operation_end()
-
-
-def show_maintenance_dialog(
-    root: tkinter.Tk,
-    database_obj: Any,
-    database_path: str,
-    running_platform: str,
-    database_version: str,
-    refresh_callback: Callable[[], None],
-    set_button_states_callback: Callable[[], None],
-    delete_folder_callback: Callable[[int], None],
-) -> Optional[tkinter.Toplevel]:
-    """Show the maintenance functions popup dialog.
-
-    Args:
-        root: Parent window
-        database_obj: Database object for data access
-        database_path: Path to the database file
-        running_platform: Platform identifier
-        database_version: Database version string
-        refresh_callback: Callback to refresh the UI
-        set_button_states_callback: Callback to update button states
-        delete_folder_callback: Callback to delete a folder by ID
-
-    Returns:
-        The maintenance popup window, or None if cancelled
-    """
-    if not askokcancel(
-        message="Maintenance window is for advanced users only, potential for data loss if incorrectly used."
-        " Are you sure you want to continue?"
-    ):
-        return None
-
-    backup_path = backup_increment.do_backup(database_path)
-
-    maintenance_popup = tkinter.Toplevel()
-    maintenance_popup.title("Maintenance Functions")
-    maintenance_popup.transient(root)
-    maintenance_popup.geometry(
-        "+%d+%d" % (root.winfo_rootx() + 50, root.winfo_rooty() + 50)
-    )
-    maintenance_popup.grab_set()
-    maintenance_popup.focus_set()
-    maintenance_popup.resizable(width=tkinter.FALSE, height=tkinter.FALSE)
-
-    import doingstuffoverlay
-
-    class _TkinterProgressCallback:
-        def __init__(self, parent: tkinter.Toplevel):
-            self._parent = parent
-
-        def show(self, message: str = "") -> None:
-            doingstuffoverlay.make_overlay(self._parent, message)
-
-        def hide(self) -> None:
-            doingstuffoverlay.destroy_overlay()
-            self._parent.update()
-
-        def update_message(self, message: str) -> None:
-            doingstuffoverlay.update_overlay(
-                parent=self._parent, overlay_text=message
-            )
-
-        def is_visible(self) -> bool:
-            return doingstuffoverlay.doing_stuff_frame is not None
-
-    def _destroy_popup(_=None):
-        maintenance_popup.destroy()
-
-    def _on_operation_start():
-        maintenance_popup.unbind("<Escape>")
-
-    def _on_operation_end():
-        maintenance_popup.bind("<Escape>", _destroy_popup)
-        maintenance_popup.grab_set()
-        maintenance_popup.focus_set()
-
-    progress = _TkinterProgressCallback(maintenance_popup)
-
-    maintenance = MaintenanceFunctions(
-        database_obj=database_obj,
-        refresh_callback=refresh_callback,
-        set_button_states_callback=set_button_states_callback,
-        delete_folder_callback=delete_folder_callback,
-        database_path=database_path,
-        running_platform=running_platform,
-        database_version=database_version,
-        progress_callback=progress,
-        on_operation_start=_on_operation_start,
-        on_operation_end=_on_operation_end,
-        confirm_callback=lambda msg: askokcancel(message=msg),
-    )
-
-    maintenance_popup_button_frame = tkinter.ttk.Frame(maintenance_popup)
-    maintenance_popup_warning_label = tkinter.ttk.Label(
-        maintenance_popup, text="WARNING:\nFOR\nADVANCED\nUSERS\nONLY!"
-    )
-    set_all_active_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Move all to active (Skips Settings Validation)",
-        command=maintenance.set_all_active,
-    )
-    set_all_inactive_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Move all to inactive",
-        command=maintenance.set_all_inactive,
-    )
-    clear_resend_flags_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Clear all resend flags",
-        command=maintenance.clear_resend_flags,
-    )
-    clear_emails_queue = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Clear queued emails",
-        command=database_obj.emails_table.delete,
-    )
-    move_active_to_obe_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Mark all in active as processed",
-        command=maintenance.mark_active_as_processed,
-    )
-    remove_all_inactive = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Remove all inactive configurations",
-        command=maintenance.remove_inactive_folders,
-    )
-    clear_processed_files_log_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Clear sent file records",
-        command=maintenance.clear_processed_files_log,
-    )
-    database_import_button = tkinter.ttk.Button(
-        maintenance_popup_button_frame,
-        text="Import old configurations...",
-        command=lambda: maintenance.database_import_wrapper(backup_path),
-    )
-
-    set_all_active_button.pack(side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2)
-    set_all_inactive_button.pack(
-        side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2
-    )
-    clear_resend_flags_button.pack(
-        side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2
-    )
-    clear_emails_queue.pack(side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2)
-    move_active_to_obe_button.pack(
-        side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2
-    )
-    remove_all_inactive.pack(side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2)
-    clear_processed_files_log_button.pack(
-        side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2
-    )
-    database_import_button.pack(
-        side=tkinter.TOP, fill=tkinter.X, padx=2, pady=2
-    )
-    maintenance_popup_button_frame.pack(side=tkinter.LEFT)
-    maintenance_popup_warning_label.pack(side=tkinter.RIGHT, padx=20)
-    maintenance_popup.bind("<Escape>", _destroy_popup)
-
-    return maintenance_popup
