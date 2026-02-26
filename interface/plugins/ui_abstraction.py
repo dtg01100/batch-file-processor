@@ -291,7 +291,7 @@ class QtWidgetFactory(WidgetFactory):
         Returns:
             WidgetBase: Created widget instance
         """
-        from PyQt5.QtWidgets import (
+        from PyQt6.QtWidgets import (
             QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
             QListWidget, QTextEdit
         )
@@ -395,7 +395,7 @@ class QtLineEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QLineEdit
+        from PyQt6.QtWidgets import QLineEdit
 
         self.widget = QLineEdit(parent)
         if field_definition.default:
@@ -422,7 +422,7 @@ class QtSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QSpinBox
+        from PyQt6.QtWidgets import QSpinBox
 
         self.widget = QSpinBox(parent)
         if field_definition.min_value is not None:
@@ -453,7 +453,7 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QDoubleSpinBox
+        from PyQt6.QtWidgets import QDoubleSpinBox
 
         self.widget = QDoubleSpinBox(parent)
         if field_definition.min_value is not None:
@@ -485,7 +485,7 @@ class QtComboBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QComboBox
+        from PyQt6.QtWidgets import QComboBox
 
         self.widget = QComboBox(parent)
         for choice in field_definition.choices:
@@ -518,7 +518,7 @@ class QtCheckBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QCheckBox
+        from PyQt6.QtWidgets import QCheckBox
 
         self.widget = QCheckBox(field_definition.label, parent)
         if field_definition.default:
@@ -548,10 +548,11 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QListWidget
+        from PyQt6.QtWidgets import QListWidget, QAbstractItemView
 
         self.widget = QListWidget(parent)
-        self.widget.setSelectionMode(QListWidget.MultiSelection)
+        # Use QAbstractItemView.MultiSelection for PyQt6 selection mode
+        self.widget.setSelectionMode(QAbstractItemView.MultiSelection)
         for choice in field_definition.choices:
             self.widget.addItem(choice["label"], choice["value"])
         if field_definition.default:
@@ -586,7 +587,7 @@ class QtTextEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QTextEdit
+        from PyQt6.QtWidgets import QTextEdit
 
         self.widget = QTextEdit(parent)
         if field_definition.default:

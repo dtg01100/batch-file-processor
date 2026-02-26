@@ -361,3 +361,13 @@ def ensure_schema(database_connection) -> None:
             except Exception:
                 # last resort: skip silently to avoid breaking upgrades
                 pass
+
+    # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
+    # is safe if they already exist because we catch errors.
+    try:
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT")
+        # initialize existing rows with an empty JSON/dict-like string if needed
+        database_connection.query('UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL')
+    except Exception:
+        # Ignore failures (column exists or DB locked) — migrations handle this elsewhere
+        pass

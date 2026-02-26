@@ -21,19 +21,19 @@ class TestEditFoldersDialogClassAttributes:
     
     def test_default_ftp_service_is_none(self):
         """Test that default FTP service is None."""
-        from interface.ui.dialogs.edit_folders_dialog import EditFoldersDialog
+        from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
         
         assert EditFoldersDialog.DEFAULT_FTP_SERVICE is None
     
     def test_default_validator_class(self):
         """Test that default validator class is set."""
-        from interface.ui.dialogs.edit_folders_dialog import EditFoldersDialog
+        from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
         
         assert EditFoldersDialog.DEFAULT_VALIDATOR_CLASS == FolderSettingsValidator
     
     def test_default_extractor_class(self):
         """Test that default extractor class is set."""
-        from interface.ui.dialogs.edit_folders_dialog import EditFoldersDialog
+        from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
         
         assert EditFoldersDialog.DEFAULT_EXTRACTOR_CLASS == FolderDataExtractor
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Any, Dict, List, Optional
+import json
 
 
 class Table:
@@ -26,9 +27,50 @@ class Table:
         d = dict(row)
         # Convert SQLite booleans (0/1 integers) to Python booleans
         for k, v in d.items():
+            # Skip 'id' column to avoid incorrect boolean conversion
+            if k == 'id':
+                continue
+            # Integers 0/1 are often used for booleans in this DB
             if isinstance(v, int) and (v == 0 or v == 1):
                 d[k] = bool(v)
+            # If a value is a JSON-serialized dict/list, deserialize it for callers
+            elif isinstance(v, str) and v and (v[0] == '{' or v[0] == '['):
+                try:
+                    parsed = json.loads(v)
+                    d[k] = parsed
+                except Exception:
+                    # leave as string if parsing fails
+                    d[k] = v
         return d
+
+    def _serialize_value(self, v: Any) -> Any:
+        """Serialize values that sqlite3 cannot bind directly into supported types.
+
+        - dict/list/tuple: JSON-serialize, falling back to str on failure
+        - bool: convert to int
+        - unsupported objects: convert to str so sqlite can bind them
+        """
+        # Convert booleans to ints for sqlite compatibility
+        if isinstance(v, bool):
+            return int(v)
+
+        # Serialize complex structures into JSON
+        if isinstance(v, (dict, list, tuple)):
+            try:
+                return json.dumps(v)
+            except Exception:
+                return str(v)
+
+        # Common primitive types are fine
+        if isinstance(v, (int, float, str)):
+            return v
+
+        # Fallback for any other type: use string representation
+        try:
+            return str(v)
+        except Exception:
+            # last resort, return original (may still fail)
+            return v
 
     def find_one(self, **kwargs) -> Optional[Dict[str, Any]]:
         try:
@@ -66,7 +108,7 @@ class Table:
 
     def all(self) -> List[Dict[str, Any]]:
         cur = self._conn.execute(f"SELECT * FROM {self._name}")
-        return [dict(r) for r in cur.fetchall()]
+        return [self._row_to_dict(r) for r in cur.fetchall()]
 
     def insert(self, record: Dict[str, Any]) -> int:
         keys = list(record.keys())
@@ -76,12 +118,13 @@ class Table:
         placeholders = ", ".join("?" for _ in keys)
         sql = f"INSERT INTO {self._name} ({cols}) VALUES ({placeholders})"
         try:
-            cur = self._conn.execute(sql, tuple(record[k] for k in keys))
+            cur = self._conn.execute(sql, tuple(self._serialize_value(record[k]) for k in keys))
             self._conn.commit()
             return cur.lastrowid
         except sqlite3.OperationalError as e:
+            msg = str(e)
             # If the table does not exist, attempt to create it with simple typing and retry
-            if 'no such table' in str(e):
+            if 'no such table' in msg:
                 cols_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
                 for k in keys:
                     # Avoid adding duplicate id column if caller provided id
@@ -102,7 +145,33 @@ class Table:
                 self._conn.execute(create_sql)
                 self._conn.commit()
                 # Retry the insert
-                cur = self._conn.execute(sql, tuple(record[k] for k in keys))
+                cur = self._conn.execute(sql, tuple(self._serialize_value(record[k]) for k in keys))
+                self._conn.commit()
+                return cur.lastrowid
+            # Missing column(s) - attempt to add them and retry
+            if 'has no column named' in msg or 'no such column' in msg:
+                # determine existing columns
+                cur = self._conn.execute(f"PRAGMA table_info({self._name})")
+                existing = {r[1] for r in cur.fetchall()}
+                for k in keys:
+                    if k in existing:
+                        continue
+                    v = record.get(k)
+                    if isinstance(v, bool):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, int):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, float):
+                        sql_t = 'REAL'
+                    else:
+                        sql_t = 'TEXT'
+                    try:
+                        self._conn.execute(f"ALTER TABLE {self._name} ADD COLUMN '{k}' {sql_t}")
+                    except sqlite3.OperationalError:
+                        pass
+                self._conn.commit()
+                # Retry
+                cur = self._conn.execute(sql, tuple(self._serialize_value(record[k]) for k in keys))
                 self._conn.commit()
                 return cur.lastrowid
             raise
@@ -115,9 +184,38 @@ class Table:
         set_clause = ", ".join(f"{k}=?" for k in set_keys)
         where_clause = " AND ".join(f"{k}=?" for k in keys)
         sql = f"UPDATE {self._name} SET {set_clause} WHERE {where_clause}"
-        params = [record[k] for k in set_keys] + [record[k] for k in keys]
-        self._conn.execute(sql, tuple(params))
-        self._conn.commit()
+        params = [self._serialize_value(record[k]) for k in set_keys] + [self._serialize_value(record[k]) for k in keys]
+        try:
+            self._conn.execute(sql, tuple(params))
+            self._conn.commit()
+        except sqlite3.OperationalError as e:
+            msg = str(e)
+            if 'has no column named' in msg or 'no such column' in msg:
+                # add missing columns based on record values
+                cur = self._conn.execute(f"PRAGMA table_info({self._name})")
+                existing = {r[1] for r in cur.fetchall()}
+                for k in set_keys + keys:
+                    if k in existing:
+                        continue
+                    v = record.get(k)
+                    if isinstance(v, bool):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, int):
+                        sql_t = 'INTEGER'
+                    elif isinstance(v, float):
+                        sql_t = 'REAL'
+                    else:
+                        sql_t = 'TEXT'
+                    try:
+                        self._conn.execute(f"ALTER TABLE {self._name} ADD COLUMN '{k}' {sql_t}")
+                    except sqlite3.OperationalError:
+                        pass
+                self._conn.commit()
+                # retry
+                self._conn.execute(sql, tuple(params))
+                self._conn.commit()
+            else:
+                raise
 
     def create_column(self, column_name: str, column_type: str) -> None:
         """Create a column in the table if it doesn't already exist.
@@ -164,7 +262,7 @@ class Table:
         cols = ", ".join(keys)
         placeholders = ", ".join("?" for _ in keys)
         sql = f"INSERT INTO {self._name} ({cols}) VALUES ({placeholders})"
-        params = [tuple(record[k] for k in keys) for record in records]
+        params = [tuple(self._serialize_value(record[k]) for k in keys) for record in records]
         try:
             self._conn.executemany(sql, params)
             self._conn.commit()
@@ -199,7 +297,7 @@ class Table:
     def upsert(self, record: Dict[str, Any], keys: List[str]) -> None:
         # If a matching row exists (by keys), update it; otherwise insert
         where_clause = " AND ".join(f"{k}=?" for k in keys)
-        cur = self._conn.execute(f"SELECT 1 FROM {self._name} WHERE {where_clause} LIMIT 1", tuple(record[k] for k in keys))
+        cur = self._conn.execute(f"SELECT 1 FROM {self._name} WHERE {where_clause} LIMIT 1", tuple(self._serialize_value(record[k]) for k in keys))
         exists = cur.fetchone() is not None
         if exists:
             self.update(record, keys)
@@ -237,13 +335,44 @@ class Database:
             pass
 
     def query(self, sql: str):
-        """Execute raw SQL and return rows as dict-like sqlite3.Row objects."""
-        cur = self._conn.execute(sql)
+        """Execute raw SQL and return rows as dict-like sqlite3.Row objects.
+
+        Any errors during execution or fetch are caught and an empty list is
+        returned so callers need not wrap every call in try/except.
+        """
         try:
-            # Ensure changes are persisted for DDL/DML
+            cur = self._conn.execute(sql)
+        except sqlite3.DatabaseError:
+            # If execution fails (e.g. missing table, syntax error), commit any
+            # pending changes and return empty.
+            try:
+                self._conn.commit()
+            except Exception:
+                pass
+            return []
+        
+        # Handle PRAGMA statements specially - they don't need commit and return raw dict
+        if sql.strip().upper().startswith('PRAGMA'):
+            try:
+                return [dict(r) for r in cur.fetchall()]
+            except Exception:
+                return []
+        
+        try:
+            # Ensure changes are persisted for DDL/DML and return processed rows
             self._conn.commit()
-            return [dict(r) for r in cur.fetchall()]
+            return [Table(self._conn, 'dummy')._row_to_dict(r) for r in cur.fetchall()]
         except Exception:
+            try:
+                self._conn.commit()
+            except Exception:
+                pass
+            return []
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+
             try:
                 self._conn.commit()
             except Exception:

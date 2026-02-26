@@ -16,18 +16,23 @@ def _add_column_safe(database_connection, table_name, column_name, default_value
         default_value: SQL expression for the default value (e.g., '"ALL"', '0', '""')
     """
     try:
-        database_connection.query(
-            f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}'"
-        )
-        # Normalize default_value: tests sometimes pass double-quoted literals like ""default""
-        dv = default_value
-        if isinstance(dv, str) and dv.startswith('"') and dv.endswith('"'):
-            # Convert to single-quoted SQL literal safely
-            lit = dv.strip('"').replace("'", "''")
-            dv = f"'{lit}'"
-        database_connection.query(
-            f'UPDATE "{table_name}" SET "{column_name}" = {dv}'
-        )
+        # Check if column exists using PRAGMA table_info with direct cursor
+        cursor = database_connection._conn.execute(f"PRAGMA table_info('{table_name}')")
+        column_exists = any(row[1] == column_name for row in cursor.fetchall())
+        
+        if not column_exists:
+            database_connection.query(
+                f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}'"
+            )
+            # Normalize default_value: tests sometimes pass double-quoted literals like ""default""
+            dv = default_value
+            if isinstance(dv, str) and dv.startswith('"') and dv.endswith('"'):
+                # Convert to single-quoted SQL literal safely
+                lit = dv.strip('"').replace("'", "''")
+                dv = f"'{lit}'"
+            database_connection.query(
+                f'UPDATE "{table_name}" SET "{column_name}" = {dv}'
+            )
     except Exception:
         pass
 

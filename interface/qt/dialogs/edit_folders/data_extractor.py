@@ -7,7 +7,7 @@ mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 
 from typing import Dict, Any
 
-from PyQt6.QtWidgets import QWidget, QLineEdit, QCheckBox, QComboBox, QSpinBox
+from PyQt6.QtWidgets import QWidget, QLineEdit, QCheckBox, QComboBox, QSpinBox, QPushButton
 
 from interface.operations.folder_data_extractor import ExtractedDialogFields
 from interface.plugins.plugin_manager import PluginManager
@@ -109,13 +109,13 @@ class QtFolderDataExtractor:
 
     def _get_bool(self, key: str) -> bool:
         widget = self.fields.get(key)
-        if isinstance(widget, QCheckBox):
+        if isinstance(widget, (QCheckBox, QPushButton)):
             return widget.isChecked()
         return False
 
     def _get_check_str(self, key: str) -> str:
         widget = self.fields.get(key)
-        if isinstance(widget, QCheckBox):
+        if isinstance(widget, (QCheckBox, QPushButton)):
             return "True" if widget.isChecked() else "False"
         return "False"
 

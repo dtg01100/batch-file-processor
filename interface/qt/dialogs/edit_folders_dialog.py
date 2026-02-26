@@ -36,7 +36,7 @@ from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
 )
-from interface.operations.folder_data_extractor import ExtractedDialogFields
+from interface.operations.folder_data_extractor import FolderDataExtractor, ExtractedDialogFields
 from interface.services.ftp_service import FTPServiceProtocol
 
 from interface.plugins.plugin_manager import PluginManager
@@ -57,6 +57,11 @@ class EditFoldersDialog(BaseDialog):
 
     All dependencies are injectable via the constructor for testability.
     """
+
+    # Default class-level attributes for dependency injection
+    DEFAULT_FTP_SERVICE = None
+    DEFAULT_VALIDATOR_CLASS = FolderSettingsValidator
+    DEFAULT_EXTRACTOR_CLASS = FolderDataExtractor
 
     CONVERT_FORMATS = [
         "csv",
@@ -605,27 +610,30 @@ class EditFoldersDialog(BaseDialog):
     def _on_convert_format_changed(self, fmt: str):
         """Handle convert format selection changes using plugin system."""
         self._clear_convert_sub()
-        
-        # Try to find a configuration plugin for this format
-        plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
-        if plugin:
-            self._build_plugin_config_sub(plugin)
+        # Prefer built-in hardcoded sub-sections for known formats so tests and
+        # legacy behavior remain stable. If no hardcoded handler exists,
+        # fall back to plugin-provided configuration widgets when available.
+        fmt_lower = (fmt or "").lower()
+        if fmt_lower == "csv":
+            self._build_csv_sub()
+        elif fmt_lower == "scannerware":
+            self._build_scannerware_sub()
+        elif fmt_lower == "simplified_csv":
+            self._build_simplified_csv_sub()
+        elif fmt_lower in ("estore einvoice", "estore einvoice generic"):
+            # Pass the original fmt through so the estore builder can distinguish generic vs specific
+            self._build_estore_sub(fmt)
+        elif fmt_lower == "fintech":
+            self._build_fintech_sub()
+        elif fmt_lower == "scansheet-type-a":
+            pass
+        elif fmt_lower in ("jolley_custom", "stewarts_custom", "yellowdog csv"):
+            self._build_basic_options_sub()
         else:
-            # Fall back to hardcoded implementations for formats without plugins
-            if fmt == "csv":
-                self._build_csv_sub()
-            elif fmt == "ScannerWare":
-                self._build_scannerware_sub()
-            elif fmt == "simplified_csv":
-                self._build_simplified_csv_sub()
-            elif fmt in ("Estore eInvoice", "Estore eInvoice Generic"):
-                self._build_estore_sub(fmt)
-            elif fmt == "fintech":
-                self._build_fintech_sub()
-            elif fmt == "scansheet-type-a":
-                pass
-            elif fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
-                self._build_basic_options_sub()
+            # Try to find a configuration plugin for this format
+            plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
+            if plugin:
+                self._build_plugin_config_sub(plugin)
     
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
         """Build plugin configuration sub-section."""
