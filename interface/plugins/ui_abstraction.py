@@ -548,29 +548,34 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QListWidget, QAbstractItemView
+        from PyQt6.QtWidgets import QListWidget, QAbstractItemView, QListWidgetItem
+        from PyQt6.QtCore import Qt
 
         self.widget = QListWidget(parent)
         # Use QAbstractItemView.MultiSelection for PyQt6 selection mode
-        self.widget.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.widget.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         for choice in field_definition.choices:
-            self.widget.addItem(choice["label"], choice["value"])
+            item = QListWidgetItem(choice["label"])
+            item.setData(Qt.ItemDataRole.UserRole, choice["value"])
+            self.widget.addItem(item)
         if field_definition.default:
             for i in range(self.widget.count()):
                 item = self.widget.item(i)
-                if item.data(0) in field_definition.default:
+                if item.data(Qt.ItemDataRole.UserRole) in field_definition.default:
                     item.setSelected(True)
 
     def set_value(self, value: Any) -> None:
         if value is not None:
+            from PyQt6.QtCore import Qt
             for i in range(self.widget.count()):
                 item = self.widget.item(i)
-                item.setSelected(item.data(0) in value)
+                item.setSelected(item.data(Qt.ItemDataRole.UserRole) in value)
 
     def get_value(self) -> Any:
         selected = []
+        from PyQt6.QtCore import Qt
         for item in self.widget.selectedItems():
-            selected.append(item.data(0))
+            selected.append(item.data(Qt.ItemDataRole.UserRole))
         return selected
 
     def set_enabled(self, enabled: bool) -> None:
