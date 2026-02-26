@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Build the Windows executable via Docker and optionally run --self-test via Wine.
+#
+# Usage:
+#   ./buildwin_test.sh              # build + self-test
+#   ./buildwin_test.sh --build-only # build only, skip self-test
+set -e
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect if we're in a devcontainer with host Docker socket
+is_devcontainer() {
+    [[ -n "$DEVCONTAINER" ]] || ([[ -f /.dockerenv ]] && [[ -S /var/run/docker.sock ]])
+}
+
+# Get host path for Docker volume mount
+get_host_path() {
+    local container_path="$1"
+    
+    # First check if HOST_PATH is explicitly provided
+    if [[ -n "$HOST_PATH" ]]; then
+        echo "$HOST_PATH"
+        return
+    fi
+    
+    if is_devcontainer; then
+        if [[ -n "$DEVCONTAINER_WORKDIR" ]]; then
+            echo "$DEVCONTAINER_WORKDIR"
+        elif [[ -n "$WORKSPACE_FOLDER" ]]; then
+            echo "$WORKSPACE_FOLDER"
+        else
+            echo "$container_path"
+        fi
+    else
+        echo "$container_path"
+    fi
+}
+
+host_path=$(get_host_path "$PROJECT_ROOT")
+IMAGE="docker.io/batonogov/pyinstaller-windows:v4.0.1"
+
+if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; then
+    echo "WARNING: Running inside a devcontainer; mounting /workspaces may be required for docker-in-docker."
+    echo "Proceeding to run Docker with the workspace mounted. If the build or test fails, rerun with HOST_PATH set to your host path:"
+    echo "  HOST_PATH=/home/user/projects/batch-file-processor ./buildwin_test.sh"
+    # continue to support docker-in-docker scenarios
+fi
+
+BUILD_ONLY=0
+for arg in "$@"; do
+    case "$arg" in
+        --build-only) BUILD_ONLY=1 ;;
+    esac
+done
+
+echo "========================================"
+echo "  Building Windows executable           "
+echo "========================================"
+
+sudo docker run --rm \
+    --volume "$host_path:/src/" \
+    --env SPECFILE=./main_interface.spec \
+    "$IMAGE"
+
+if [ "$BUILD_ONLY" -eq 1 ]; then
+    echo "Build complete (--build-only)."
+    exit 0
+fi
+
+echo "========================================"
+echo "  Running self-test via Wine            "
+echo "========================================"
+
+sudo docker run --rm \
+    --volume "$host_path:/src/" \
+    "$IMAGE" \
+    "cd /src && wine './dist/Batch File Sender/Batch File Sender.exe' --self-test"
