@@ -74,6 +74,7 @@ echo "  Building Windows executable           "
 echo "========================================"
 
 sudo docker run --rm \
+    --workdir /src \
     --volume "$host_path:/src/" \
     --env SPECFILE=./main_interface.spec \
     "$IMAGE"
@@ -88,6 +89,7 @@ echo "  Running self-test via Wine            "
 echo "========================================"
 
 sudo docker run --rm \
+    --workdir /src \
     --volume "$host_path:/src/" \
     "$IMAGE" \
-    "cd /src && wine './dist/Batch File Sender/Batch File Sender.exe' --self-test"
+    wine './dist/Batch File Sender/Batch File Sender.exe' --self-test
