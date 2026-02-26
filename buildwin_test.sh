@@ -46,19 +46,22 @@ if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; 
     # If /workspaces is read-only (common in some devcontainers), copy workspace to /tmp so Docker can mount it.
     parent_dir="$(dirname "$host_path")"
     if [[ ! -w "$parent_dir" ]]; then
-        TMP_SRC="/tmp/src/batch-file-processor-$$"
-        echo "Host path parent ($parent_dir) is read-only; copying workspace to $TMP_SRC to allow Docker mount."
-        rm -rf "$TMP_SRC"
-        mkdir -p "$TMP_SRC"
-        if command -v rsync >/dev/null 2>&1; then
-            rsync -a --exclude='.git' "$PROJECT_ROOT"/ "$TMP_SRC"/
-        else
-            cp -a "$PROJECT_ROOT"/. "$TMP_SRC"/
+        # Use tar-stream mode: stream the workspace into the Docker daemon, build, and stream back dist/
+        echo "Host path parent ($parent_dir) is read-only; using tar-stream mode to send workspace to Docker daemon."
+        tar -C "$PROJECT_ROOT" -c . |
+        sudo docker run -i --workdir /src --env SPECFILE=/src/main_interface.spec "$IMAGE" \
+            sh -c "mkdir -p /src && tar -x -C /src && pyinstaller /src/main_interface.spec && tar -C /src/dist -c -" \
+            | tar -C "$PROJECT_ROOT" -x - || exit $?
+        # If build-only was requested, we have the dist extracted locally now
+        if [ "$BUILD_ONLY" -eq 1 ]; then
+            echo "Build complete (--build-only)."
+            exit 0
         fi
-        host_path="$TMP_SRC"
-        echo "Using $host_path as docker mount source."
-        # cleanup when the script exits
-        trap 'rm -rf "$TMP_SRC"' EXIT
+        # Stream the built dist into the container and run the self-test with wine
+        tar -C "$PROJECT_ROOT/dist" -c . |
+        sudo docker run -i --workdir /src "$IMAGE" \
+            sh -c "mkdir -p /src && tar -x -C /src && wine './dist/Batch File Sender/Batch File Sender.exe' --self-test"
+        exit $?
     fi
 fi
 
