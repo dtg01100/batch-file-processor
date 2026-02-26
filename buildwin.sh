@@ -51,7 +51,7 @@ if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; 
 		# Stream workspace into the container, run pyinstaller using the in-container spec, then stream back the resulting dist/ directory
 		tar -C "$PROJECT_ROOT" -c . |
 		sudo docker run -i --workdir /src --env SPECFILE=/src/main_interface.spec docker.io/batonogov/pyinstaller-windows:v4.0.1 \
-		sh -c $'python - <<\'PY\'\nimport sys,tarfile,os\nos.makedirs("/src", exist_ok=True)\nwith tarfile.open(fileobj=sys.stdin.buffer, mode="r|*") as tf:\n    tf.extractall("/src")\nPY\n\npyinstaller /src/main_interface.spec\n\npython - <<\'PY\'\nimport sys,tarfile,os\nwith tarfile.open(fileobj=sys.stdout.buffer, mode="w|") as tf:\n    if os.path.exists("/src/dist"):\n        tf.add('/src/dist', arcname='dist')\nPY\n' \
+		sh -c "python -c \"import sys,tarfile,os; os.makedirs('/src', exist_ok=True); tarfile.open(fileobj=sys.stdin.buffer, mode='r|*').extractall('/src')\" && pyinstaller /src/main_interface.spec && python -c \"import sys,tarfile,os; tf=tarfile.open(fileobj=sys.stdout.buffer, mode='w|'); import os;\nif os.path.exists('/src/dist'): tf.add('/src/dist', arcname='dist'); tf.close()\"" \
 		| tar -C "$PROJECT_ROOT" -x -
 		exit $?
 	fi
