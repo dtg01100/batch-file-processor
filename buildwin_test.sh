@@ -43,7 +43,23 @@ if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; 
     echo "WARNING: Running inside a devcontainer; mounting /workspaces may be required for docker-in-docker."
     echo "Proceeding to run Docker with the workspace mounted. If the build or test fails, rerun with HOST_PATH set to your host path:"
     echo "  HOST_PATH=/home/user/projects/batch-file-processor ./buildwin_test.sh"
-    # continue to support docker-in-docker scenarios
+    # If /workspaces is read-only (common in some devcontainers), copy workspace to /tmp so Docker can mount it.
+    parent_dir="$(dirname "$host_path")"
+    if [[ ! -w "$parent_dir" ]]; then
+        TMP_SRC="/tmp/src/batch-file-processor-$$"
+        echo "Host path parent ($parent_dir) is read-only; copying workspace to $TMP_SRC to allow Docker mount."
+        rm -rf "$TMP_SRC"
+        mkdir -p "$TMP_SRC"
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -a --exclude='.git' "$PROJECT_ROOT"/ "$TMP_SRC"/
+        else
+            cp -a "$PROJECT_ROOT"/. "$TMP_SRC"/
+        fi
+        host_path="$TMP_SRC"
+        echo "Using $host_path as docker mount source."
+        # cleanup when the script exits
+        trap 'rm -rf "$TMP_SRC"' EXIT
+    fi
 fi
 
 BUILD_ONLY=0
