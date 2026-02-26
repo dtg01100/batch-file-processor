@@ -76,7 +76,7 @@ echo "========================================"
 sudo docker run --rm \
     --workdir /src \
     --volume "$host_path:/src/" \
-    --env SPECFILE=./main_interface.spec \
+    --env SPECFILE=/src/main_interface.spec \
     "$IMAGE"
 
 if [ "$BUILD_ONLY" -eq 1 ]; then

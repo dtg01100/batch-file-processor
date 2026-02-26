@@ -60,4 +60,4 @@ if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; 
 	fi
 fi
 
-sudo docker run --rm --workdir /src --volume "$host_path:/src/" --env SPECFILE=./main_interface.spec docker.io/batonogov/pyinstaller-windows:v4.0.1
+sudo docker run --rm --workdir /src --volume "$host_path:/src/" --env SPECFILE=/src/main_interface.spec docker.io/batonogov/pyinstaller-windows:v4.0.1
