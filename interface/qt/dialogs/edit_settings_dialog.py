@@ -52,9 +52,6 @@ class EditSettingsDialog(BaseDialog):
         disable_folders_without_backends: Optional[Callable[[], None]] = None,
         smtp_service: Optional[SMTPServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent, title)
-        self.setModal(True)
-
         self._settings_data = dict(settings_data)
         self._settings_provider = settings_provider
         self._oversight_provider = oversight_provider
@@ -71,11 +68,8 @@ class EditSettingsDialog(BaseDialog):
         self._settings = self._get_settings()
         self._logs_directory = self._settings_data.get("logs_directory", "")
 
-        self._build_ui()
-        self._populate_fields()
-        self._connect_signals()
-        self._on_enable_email_toggled()
-        self._on_enable_backup_toggled()
+        super().__init__(parent, title)
+        self.setModal(True)
 
         # Set minimum size for comfortable viewing of all form fields
         self.setMinimumSize(550, 500)
@@ -85,22 +79,24 @@ class EditSettingsDialog(BaseDialog):
             return self._settings_provider()
         return {}
 
-    def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+    def body(self, parent: QWidget) -> Optional[QWidget]:
+        """Create dialog body."""
+        layout = QVBoxLayout(parent)
 
         layout.addWidget(self._build_as400_section())
         layout.addWidget(self._build_email_section())
         layout.addWidget(self._build_reporting_section())
         layout.addWidget(self._build_backup_section())
 
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self._on_ok)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
         self.setSizeGripEnabled(False)
+        
+        # Now that UI is built, populate fields and connect signals
+        self._populate_fields()
+        self._connect_signals()
+        self._on_enable_email_toggled()
+        self._on_enable_backup_toggled()
+        
+        return None
 
     def _build_as400_section(self) -> QGroupBox:
         group = QGroupBox("AS400 Database Connection")

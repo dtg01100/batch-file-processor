@@ -2,10 +2,9 @@
 
 Tests the migration path for databases created before the v32->v33 migration
 was changed, ensuring old database files can be imported and upgraded to
-the current schema version (v41).
+the current schema version (v42).
 """
 
-import os
 import pytest
 import dataset
 
@@ -402,32 +401,26 @@ class TestOldV33DatabaseMigration:
 
 
 class TestV32DatabaseMigration:
-    """Test migration from v32 through the fixed v32->v33 step."""
+    """Test migration from v32 using the real legacy fixture database."""
 
-    def test_v32_migrates_to_v41(self, tmp_path):
-        """A v32 database should be upgradable to v41 through the fixed migration."""
-        db_path = str(tmp_path / "v32.db")
-        _create_v32_database(db_path)
-
-        db = dataset.connect('sqlite:///' + db_path)
+    def test_v32_migrates_to_v41(self, legacy_v32_db, tmp_path):
+        """A real v32 database should be upgradable to v42."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
         assert version['version'] == "42"
         db.close()
 
-    def test_v32_gets_all_v33_columns(self, tmp_path):
-        """A v32 database should get both filter columns AND plugin_config at v33."""
-        db_path = str(tmp_path / "v32.db")
-        _create_v32_database(db_path)
-
-        db = dataset.connect('sqlite:///' + db_path)
+    def test_v32_gets_all_v33_columns(self, legacy_v32_db, tmp_path):
+        """A real v32 database should get filter columns AND plugin_config at v33."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux", target_version="33")
 
         version = db['version'].find_one(id=1)
         assert version['version'] == "33"
 
-        folder = db['folders'].find_one(id=1)
+        folder = db['folders'].find_one(id=21)
         assert 'split_edi_filter_categories' in folder
         assert folder['split_edi_filter_categories'] == "ALL"
         assert 'split_edi_filter_mode' in folder
@@ -441,17 +434,89 @@ class TestV32DatabaseMigration:
         assert 'plugin_config' in admin
         db.close()
 
-    def test_v32_preserves_existing_data(self, tmp_path):
-        """v32->v33 migration should not lose existing folder data."""
-        db_path = str(tmp_path / "v32.db")
-        _create_v32_database(db_path)
-
-        db = dataset.connect('sqlite:///' + db_path)
+    def test_v32_preserves_existing_data(self, legacy_v32_db, tmp_path):
+        """v32 migration should preserve existing folder data from real production DB."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
-        folder = db['folders'].find_one(id=1)
-        assert folder['folder_name'] == "/tmp/test_v32_folder"
-        assert folder['alias'] == "V32 Test Folder"
+        folder = db['folders'].find_one(id=21)
+        assert folder['folder_name'] == "D:/DATA/OUT/012258"
+        assert folder['alias'] == "012258"
+        db.close()
+
+
+class TestV32FixtureDbMigrationAtScale:
+    """Test migration at scale using the 530-folder real legacy fixture database."""
+
+    def test_all_530_folders_survive_migration(self, legacy_v32_db, tmp_path):
+        """All 530 folders from the real v32 DB should survive migration to v42."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+        assert db['folders'].count() == 530
+        db.close()
+
+    def test_all_folders_have_required_columns_after_migration(self, legacy_v32_db, tmp_path):
+        """Every migrated folder should have all columns added by migration steps."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+        required_columns = [
+            'plugin_config',
+            'edi_format',
+            'created_at',
+            'updated_at',
+            'split_edi_filter_categories',
+            'split_edi_filter_mode',
+        ]
+        for folder in db['folders'].find(_limit=20):
+            for col in required_columns:
+                assert col in folder, (
+                    f"Folder id={folder['id']} missing column '{col}'"
+                )
+        db.close()
+
+    def test_boolean_normalization_across_real_data(self, legacy_v32_db, tmp_path):
+        """No folder should have string 'True'/'False' in boolean fields after migration."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+        boolean_fields = [
+            'folder_is_active',
+            'process_edi',
+            'calculate_upc_check_digit',
+            'include_a_records',
+            'include_c_records',
+            'include_headers',
+            'filter_ampersand',
+            'pad_a_records',
+        ]
+        for folder in db['folders'].find(_limit=20):
+            for field in boolean_fields:
+                if field in folder:
+                    val = str(folder[field])
+                    assert val not in ("True", "False"), (
+                        f"Folder id={folder['id']} field '{field}' "
+                        f"still has string boolean value '{val}'"
+                    )
+        db.close()
+
+    def test_settings_preserved_through_migration(self, legacy_v32_db, tmp_path):
+        """Settings table values should be preserved through full migration."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+        settings = db['settings'].find_one(id=1)
+        assert settings['smtp_port'] == 587
+        assert settings['email_smtp_server'] == "smtp.example.com"
+        db.close()
+
+    def test_processed_files_preserved(self, legacy_v32_db, tmp_path):
+        """All 227501 processed_files records should survive migration."""
+        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+        assert db['processed_files'].count() == 227501
         db.close()
 
 
