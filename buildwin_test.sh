@@ -50,7 +50,7 @@ if [[ "$host_path" == "/workspaces/batch-file-processor" ]] && is_devcontainer; 
         echo "Host path parent ($parent_dir) is read-only; using tar-stream mode to send workspace to Docker daemon."
         tar -C "$PROJECT_ROOT" -c . |
         sudo docker run -i --workdir /src --env SPECFILE=/src/main_interface.spec "$IMAGE" \
-            sh -c "mkdir -p /src && tar -x -C /src && pyinstaller /src/main_interface.spec && tar -C /src/dist -c -" \
+            sh -c $'python - <<\'PY\'\nimport sys,tarfile,os\nos.makedirs("/src", exist_ok=True)\nwith tarfile.open(fileobj=sys.stdin.buffer, mode="r|*") as tf:\n    tf.extractall("/src")\nPY\n\npyinstaller /src/main_interface.spec\n\npython - <<\'PY\'\nimport sys,tarfile,os\nwith tarfile.open(fileobj=sys.stdout.buffer, mode="w|") as tf:\n    if os.path.exists("/src/dist"):\n        tf.add('/src/dist', arcname='dist')\nPY\n' \
             | tar -C "$PROJECT_ROOT" -x - || exit $?
         # If build-only was requested, we have the dist extracted locally now
         if [ "$BUILD_ONLY" -eq 1 ]; then
