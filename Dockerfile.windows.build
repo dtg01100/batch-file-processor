@@ -1,0 +1,23 @@
+
+FROM docker.io/batonogov/pyinstaller-windows:v4.0.1
+
+# Install git (needed for some dependencies)
+RUN apt-get update && apt-get install -y git
+
+# Copy all project files
+COPY . /src/
+
+# Set working directory
+WORKDIR /src
+
+# Ensure spec file exists
+RUN ls -la /src/main_interface.spec
+
+# Set environment variable for the original entrypoint
+ENV SPECFILE=/src/main_interface.spec
+
+# Install Python dependencies
+RUN pip install -r requirements.txt
+
+# Run PyInstaller and keep output in /src/dist
+RUN pyinstaller main_interface.spec --noconfirm --clean

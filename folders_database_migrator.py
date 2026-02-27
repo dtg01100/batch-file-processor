@@ -6,37 +6,6 @@ def _log_migration_step(from_version, to_version):
     print(f"  Migrating: v{from_version} → v{to_version}")
 
 
-def _add_column_safe(database_connection, table_name, column_name, default_value):
-    """Add a column to a table if it doesn't already exist.
-    
-    Args:
-        database_connection: The dataset database connection
-        table_name: Name of the table to alter
-        column_name: Name of the column to add
-        default_value: SQL expression for the default value (e.g., '"ALL"', '0', '""')
-    """
-    try:
-        # Check if column exists using PRAGMA table_info with direct cursor
-        cursor = database_connection._conn.execute(f"PRAGMA table_info('{table_name}')")
-        column_exists = any(row[1] == column_name for row in cursor.fetchall())
-        
-        if not column_exists:
-            database_connection.query(
-                f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}'"
-            )
-            # Normalize default_value: tests sometimes pass double-quoted literals like ""default""
-            dv = default_value
-            if isinstance(dv, str) and dv.startswith('"') and dv.endswith('"'):
-                # Convert to single-quoted SQL literal safely
-                lit = dv.strip('"').replace("'", "''")
-                dv = f"'{lit}'"
-            database_connection.query(
-                f'UPDATE "{table_name}" SET "{column_name}" = {dv}'
-            )
-    except Exception:
-        pass
-
-
 def upgrade_database(
     database_connection, config_folder, running_platform, target_version=None
 ):
@@ -744,17 +713,10 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "32":
-        # v32→v33: Add category filter columns and plugin config column.
-        # This replaces the old migration that was split across two different code paths:
-        # - Original (commit 9446b3de): added split_edi_filter_categories/mode
-        # - Later refactor: added plugin_config via external migrations/ module
-        # We now add all three columns, tolerating pre-existing columns.
-        _add_column_safe(database_connection, "folders", "split_edi_filter_categories", '"ALL"')
-        _add_column_safe(database_connection, "folders", "split_edi_filter_mode", '"include"')
-        _add_column_safe(database_connection, "administrative", "split_edi_filter_categories", '"ALL"')
-        _add_column_safe(database_connection, "administrative", "split_edi_filter_mode", '"include"')
-        _add_column_safe(database_connection, "folders", "plugin_config", '""')
-        _add_column_safe(database_connection, "administrative", "plugin_config", '""')
+        from migrations.add_plugin_config_column import apply_migration
+
+        if not apply_migration(database_connection):
+            raise RuntimeError("Plugin config migration failed")
 
         update_version = dict(id=1, version="33", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -769,18 +731,6 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "33":
-        # Schema normalization for v33 databases.
-        # Old v33 databases (from commit 9446b3de7e) have split_edi_filter_categories
-        # and split_edi_filter_mode but lack plugin_config. Newer v33 databases have
-        # plugin_config but may lack the filter columns. Ensure all columns exist
-        # before proceeding to v33→v34.
-        _add_column_safe(database_connection, "folders", "split_edi_filter_categories", '"ALL"')
-        _add_column_safe(database_connection, "folders", "split_edi_filter_mode", '"include"')
-        _add_column_safe(database_connection, "administrative", "split_edi_filter_categories", '"ALL"')
-        _add_column_safe(database_connection, "administrative", "split_edi_filter_mode", '"include"')
-        _add_column_safe(database_connection, "folders", "plugin_config", '""')
-        _add_column_safe(database_connection, "administrative", "plugin_config", '""')
-
         import datetime
 
         now = datetime.datetime.now().isoformat()
@@ -951,262 +901,68 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "39":
-        columns = [row['name'] for row in database_connection.query("PRAGMA table_info(folders)")]
-
+        # Check if 'id' column exists in folders table
+        cursor = database_connection.raw_connection.cursor()
+        cursor.execute("PRAGMA table_info(folders)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
         if "id" not in columns:
-            old_columns = [(row['name'], row['type']) for row in database_connection.query("PRAGMA table_info(folders)")]
-
+            # SQLite doesn't support adding PRIMARY KEY via ALTER TABLE
+            # We need to recreate the table with the id column
+            
+            # Get current table info
+            cursor.execute("PRAGMA table_info(folders)")
+            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
+            
+            # Build column definitions
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-
+            
             columns_sql = ", ".join(col_defs)
-
-            database_connection.query(f"CREATE TABLE folders_new ({columns_sql})")
-
+            
+            # Create new table with id column
+            cursor.execute(f"CREATE TABLE folders_new ({columns_sql})")
+            
+            # Copy data (excluding any old id if it existed but was null)
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            database_connection.query(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
-
-            database_connection.query("DROP TABLE folders")
-            database_connection.query("ALTER TABLE folders_new RENAME TO folders")
-
-        admin_columns = [row['name'] for row in database_connection.query("PRAGMA table_info(administrative)")]
-
+            cursor.execute(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
+            
+            # Drop old table and rename new one
+            cursor.execute("DROP TABLE folders")
+            cursor.execute("ALTER TABLE folders_new RENAME TO folders")
+            
+            database_connection.raw_connection.commit()
+        
+        # Also ensure administrative table has id column (for consistency)
+        cursor.execute("PRAGMA table_info(administrative)")
+        admin_columns = [row[1] for row in cursor.fetchall()]
+        
         if "id" not in admin_columns:
-            old_columns = [(row['name'], row['type']) for row in database_connection.query("PRAGMA table_info(administrative)")]
-
+            # Get current table info
+            cursor.execute("PRAGMA table_info(administrative)")
+            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
+            
+            # Build column definitions
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-
+            
             columns_sql = ", ".join(col_defs)
-
-            database_connection.query(f"CREATE TABLE administrative_new ({columns_sql})")
-
+            
+            # Create new table with id column
+            cursor.execute(f"CREATE TABLE administrative_new ({columns_sql})")
+            
+            # Copy data
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            database_connection.query(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
-
-            database_connection.query("DROP TABLE administrative")
-            database_connection.query("ALTER TABLE administrative_new RENAME TO administrative")
+            cursor.execute(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
+            
+            # Drop old table and rename new one
+            cursor.execute("DROP TABLE administrative")
+            cursor.execute("ALTER TABLE administrative_new RENAME TO administrative")
+            
+            database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="40", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("39", "40")
-
-    db_version_dict = db_version.find_one(id=1)
-    if target_version and int(db_version_dict["version"]) >= int(target_version):
-        return
-
-    # Migration 40 → 41: Convert string booleans to native INTEGER (0/1)
-    # This migration normalizes boolean storage across all tables.
-    # String booleans ("True"/"False") are converted to INTEGER (1/0).
-    if db_version_dict["version"] == "40":
-        # List of boolean columns that need migration
-        # These columns may contain "True"/"False" strings and need to be converted to 0/1
-        boolean_columns = [
-            "folder_is_active",
-            "process_edi",
-            "calculate_upc_check_digit",
-            "include_a_records",
-            "include_c_records",
-            "include_headers",
-            "filter_ampersand",
-            "pad_a_records",
-            "invoice_date_custom_format",
-            "append_a_records",
-            "force_txt_file_ext",
-            "enable_reporting",
-            "report_printing_fallback",
-        ]
-
-        # Migrate folders table
-        for col in boolean_columns:
-            try:
-                database_connection.query(f"""
-                    UPDATE folders
-                    SET "{col}" = CASE
-                        WHEN "{col}" = 'True' THEN 1
-                        WHEN "{col}" = 'true' THEN 1
-                        WHEN "{col}" = '1' THEN 1
-                        WHEN "{col}" = 1 THEN 1
-                        WHEN "{col}" IS NULL THEN 0
-                        ELSE 0
-                    END
-                    WHERE "{col}" IN ('True', 'False', 'true', 'false', '0', '1')
-                       OR typeof("{col}") = 'text'
-                """)
-            except Exception as e:
-                # Column might not exist in this table; log and continue
-                _log_migration_step(f"skip-{col}", f"folders-{col}-{str(e)}")
-
-        # Migrate administrative table
-        for col in boolean_columns:
-            try:
-                database_connection.query(f"""
-                    UPDATE administrative
-                    SET "{col}" = CASE
-                        WHEN "{col}" = 'True' THEN 1
-                        WHEN "{col}" = 'true' THEN 1
-                        WHEN "{col}" = '1' THEN 1
-                        WHEN "{col}" = 1 THEN 1
-                        WHEN "{col}" IS NULL THEN 0
-                        ELSE 0
-                    END
-                    WHERE "{col}" IN ('True', 'False', 'true', 'false', '0', '1')
-                       OR typeof("{col}") = 'text'
-                """)
-            except Exception as e:
-                # Column might not exist in this table; log and continue
-                _log_migration_step(f"skip-{col}", f"admin-{col}-{str(e)}")
-
-        # Migrate oversight/administrative table reporting-related fields
-        oversight_bool_columns = ["enable_reporting", "report_printing_fallback"]
-        for col in oversight_bool_columns:
-            try:
-                database_connection.query(f"""
-                    UPDATE administrative
-                    SET "{col}" = CASE
-                        WHEN "{col}" = 'True' THEN 1
-                        WHEN "{col}" = 'true' THEN 1
-                        WHEN "{col}" = '1' THEN 1
-                        WHEN "{col}" = 1 THEN 1
-                        WHEN "{col}" IS NULL THEN 0
-                        ELSE 0
-                    END
-                """)
-            except Exception as e:
-                _log_migration_step(f"skip-oversight-{col}", str(e))
-
-        update_version = dict(id=1, version="41", os=running_platform)
-        db_version.update(update_version, ["id"])
-        _log_migration_step("40", "41")
-
-    db_version_dict = db_version.find_one(id=1)
-    if target_version and int(db_version_dict["version"]) >= int(target_version):
-        return
-
-    # v41 -> v42: Create normalized schema tables for new separation of concerns.
-    if db_version_dict["version"] == "41":
-        # Create users, organizations, projects, files, batches, processors, processing_jobs, job_logs, tags, file_tags
-        try:
-            database_connection.query("PRAGMA foreign_keys = ON;")
-        except Exception:
-            pass
-
-        try:
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    email TEXT UNIQUE NOT NULL,
-                    display_name TEXT,
-                    created_at TEXT,
-                    updated_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS organizations (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    created_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS projects (
-                    id TEXT PRIMARY KEY,
-                    org_id TEXT,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    created_at TEXT,
-                    updated_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS files (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT,
-                    original_filename TEXT NOT NULL,
-                    storage_path TEXT NOT NULL,
-                    size_bytes INTEGER,
-                    checksum TEXT,
-                    created_by TEXT,
-                    created_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS batches (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT,
-                    name TEXT,
-                    status TEXT,
-                    created_at TEXT,
-                    started_at TEXT,
-                    completed_at TEXT,
-                    created_by TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS processors (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    version TEXT,
-                    config TEXT,
-                    created_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS processing_jobs (
-                    id TEXT PRIMARY KEY,
-                    batch_id TEXT,
-                    file_id TEXT,
-                    processor_id TEXT,
-                    status TEXT,
-                    scheduled_at TEXT,
-                    started_at TEXT,
-                    finished_at TEXT,
-                    attempts INTEGER DEFAULT 0,
-                    result TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS job_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    job_id TEXT,
-                    level TEXT,
-                    message TEXT,
-                    created_at TEXT
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS tags (
-                    id TEXT PRIMARY KEY,
-                    name TEXT UNIQUE NOT NULL
-                )
-            ''')
-
-            database_connection.query('''
-                CREATE TABLE IF NOT EXISTS file_tags (
-                    file_id TEXT,
-                    tag_id TEXT,
-                    PRIMARY KEY (file_id, tag_id)
-                )
-            ''')
-
-            database_connection.query("CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id)")
-            database_connection.query("CREATE INDEX IF NOT EXISTS idx_batches_project_id ON batches(project_id)")
-            database_connection.query("CREATE INDEX IF NOT EXISTS idx_jobs_status ON processing_jobs(status)")
-            database_connection.query("CREATE INDEX IF NOT EXISTS idx_jobs_file_id ON processing_jobs(file_id)")
-        except Exception:
-            # Best-effort: do not block upgrades if DB engine rejects some statements
-            pass
-
-        update_version = dict(id=1, version="42", os=running_platform)
-        db_version.update(update_version, ["id"])
-        _log_migration_step("41", "42")

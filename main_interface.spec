@@ -3,11 +3,107 @@
 PyInstaller spec file for Batch File Sender application.
 This file configures the build process and includes hidden imports
 for dynamically loaded modules.
+
+Note: This spec file includes logic to download Windows PyQt6 ICU DLLs
+when building on Linux for Windows targets.
 """
 
 import os
+import sys
+import tempfile
+import zipfile
+import subprocess
+import shutil
 
 block_cipher = None
+
+
+def get_windows_pyqt6_icu_dlls():
+    """
+    Download and extract Windows PyQt6 wheel to get ICU DLLs.
+    Returns a list of tuples (source_path, dest_dir) for the ICU DLLs.
+    """
+    icu_dlls = []
+    icu_dll_names = ['icuuc.dll', 'icuin.dll', 'icudt.dll']
+    
+    # Check if we're on Windows with PyQt6 installed
+    if sys.platform == 'win32':
+        try:
+            import PyQt6
+            qt_bin_path = os.path.join(os.path.dirname(PyQt6.__file__), "Qt6", "bin")
+            if os.path.exists(qt_bin_path):
+                for dll in icu_dll_names:
+                    dll_path = os.path.join(qt_bin_path, dll)
+                    if os.path.exists(dll_path):
+                        icu_dlls.append((dll_path, 'PyQt6/Qt6/bin'))
+                return icu_dlls
+        except ImportError:
+            pass
+    
+    # On Linux/macOS or if Windows PyQt6 not found, download Windows wheel
+    temp_dir = tempfile.mkdtemp(prefix='pyqt6_windows_wheel_')
+    
+    try:
+        # Download the Windows PyQt6 wheel
+        print("Downloading Windows PyQt6 wheel to extract ICU DLLs...")
+        subprocess.run([
+            sys.executable, '-m', 'pip', 'download',
+            '--only-binary', ':all:',
+            '--platform', 'win_amd64',
+            '--python-version', '311',
+            '--no-deps',
+            '-d', temp_dir,
+            'PyQt6'
+        ], check=True, capture_output=True)
+        
+        # Find the downloaded wheel
+        wheel_files = [f for f in os.listdir(temp_dir) if f.endswith('.whl')]
+        if not wheel_files:
+            print("Warning: Could not download Windows PyQt6 wheel")
+            return []
+        
+        wheel_path = os.path.join(temp_dir, wheel_files[0])
+        print(f"Extracting ICU DLLs from {wheel_files[0]}...")
+        
+        # Extract the wheel
+        extract_dir = os.path.join(temp_dir, 'extracted')
+        with zipfile.ZipFile(wheel_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        
+        # Look for ICU DLLs in the extracted wheel
+        # They are typically in PyQt6/Qt6/bin/
+        possible_paths = [
+            os.path.join(extract_dir, 'PyQt6', 'Qt6', 'bin'),
+            os.path.join(extract_dir, 'PyQt6', 'Qt', 'bin'),
+        ]
+        
+        for qt_bin_path in possible_paths:
+            if os.path.exists(qt_bin_path):
+                for dll in icu_dll_names:
+                    dll_path = os.path.join(qt_bin_path, dll)
+                    if os.path.exists(dll_path):
+                        print(f"Found ICU DLL: {dll}")
+                        icu_dlls.append((dll_path, 'PyQt6/Qt6/bin'))
+                break
+        
+        if not icu_dlls:
+            print("Warning: Could not find ICU DLLs in Windows PyQt6 wheel")
+            # List what we found for debugging
+            for root, dirs, files in os.walk(extract_dir):
+                for f in files:
+                    if f.endswith('.dll'):
+                        print(f"  Found DLL: {os.path.join(root, f)}")
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Warning: Failed to download Windows PyQt6 wheel: {e}")
+    except Exception as e:
+        print(f"Warning: Error extracting ICU DLLs: {e}")
+    finally:
+        # Clean up temp directory but keep the DLLs (they're copied)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+    
+    return icu_dlls
+
 
 # Hidden imports for dynamically loaded modules
 hidden_imports = [
@@ -116,14 +212,27 @@ hidden_imports = [
     'sip',
 ]
 
+# Get ICU DLLs from Windows PyQt6 wheel
+icu_binaries = get_windows_pyqt6_icu_dlls()
+if icu_binaries:
+    print(f"Including {len(icu_binaries)} ICU DLLs from Windows PyQt6")
+
 a = Analysis(
     ['main_interface.py'],
     pathex=[],
-    binaries=[],
+    binaries=icu_binaries,
     datas=[
         # Include Qt platform plugins, etc. for PyQt6
         ('interface/qt/**', 'interface/qt'),
         ('hooks/*', 'hooks'),
+        
+        # Database migrations - include migrations directory and migration files
+        # The migrations directory for future use (even if empty)
+        ('migrations', 'migrations'),
+        # schema.py contains centralized schema definitions needed for migrations
+        ('schema.py', '.'),
+        # folders_database_migrator.py is the main migration file
+        ('folders_database_migrator.py', '.'),
     ],
     hiddenimports=hidden_imports,
     hookspath=['hooks'],
