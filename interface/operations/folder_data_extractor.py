@@ -198,7 +198,7 @@ class FolderDataExtractor:
             fintech_division_id=self._get_text("fintech_divisionid_field"),
 
              # Copy destination
-             copy_to_directory="",
+             copy_to_directory=self._get_text("copy_to_directory_field"),
              
              # Plugin configurations
              plugin_configurations=plugin_configs,

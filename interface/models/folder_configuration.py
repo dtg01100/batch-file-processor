@@ -147,8 +147,7 @@ class UPCOverrideConfiguration:
                         if cat_int not in range(1, 100):
                             errors.append("Override UPC Category Filter Is Invalid")
                     except ValueError:
-                        if category != "ALL":
-                            errors.append("Override UPC Category Filter Is Invalid")
+                        errors.append("Override UPC Category Filter Is Invalid")
         return errors
 
 
@@ -343,7 +342,7 @@ class FolderConfiguration:
             )
 
         email = None
-        if all(k in data for k in ['email_to', 'email_subject_line']):
+        if 'email_to' in data:
             email = EmailConfiguration(
                 recipients=data.get('email_to', ''),
                 subject_line=data.get('email_subject_line', '')
