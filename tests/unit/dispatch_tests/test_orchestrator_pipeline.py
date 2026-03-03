@@ -439,7 +439,7 @@ class TestProcessFileWithPipeline:
         
         result = orchestrator._process_file_with_pipeline('/data/input/file.edi', folder, {})
         
-        mock_splitter.execute.assert_called_once()
+        mock_splitter.split.assert_called_once()
     
     def test_pipeline_converter_integration(self):
         """Test pipeline with converter step."""
