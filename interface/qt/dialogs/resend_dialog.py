@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -47,15 +48,23 @@ class ResendDialog(BaseDialog):
         self._folder_id: Optional[int] = None
         self._file_checkboxes: Dict[int, QCheckBox] = {}
         self._folder_buttons: Dict[int, QPushButton] = {}
+        self._should_show = True  # Flag to control if dialog should be shown
 
         self._setup_ui()
         self._load_data()
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        main_layout = QVBoxLayout(self)
+        # Use the main layout from BaseDialog instead of creating a new one
+        main_layout = self._main_layout
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
+
+        # Clear default widgets from BaseDialog
+        while main_layout.count() > 0:
+            item = main_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         # Set minimum size for comfortable viewing
         self.setMinimumSize(700, 500)
@@ -65,10 +74,20 @@ class ResendDialog(BaseDialog):
         files_folders_layout = QHBoxLayout(files_folders_frame)
         files_folders_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Folders frame (left)
+        # Folders frame (left) with scrolling
         folders_frame = QGroupBox("Folders")
-        self._folders_layout = QVBoxLayout(folders_frame)
+        folders_frame_layout = QVBoxLayout(folders_frame)
+        folders_frame_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self._folders_scroll = QScrollArea()
+        self._folders_scroll.setWidgetResizable(True)
+        self._folders_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._folders_content = QWidget()
+        self._folders_layout = QVBoxLayout(self._folders_content)
         self._folders_layout.setSpacing(5)
+        self._folders_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._folders_scroll.setWidget(self._folders_content)
+        folders_frame_layout.addWidget(self._folders_scroll)
 
         # Files frame (right)
         files_frame = QGroupBox("Files")
@@ -113,22 +132,28 @@ class ResendDialog(BaseDialog):
 
     def _load_data(self) -> None:
         """Load data from database."""
+        # Clear existing folder buttons to prevent duplicates
+        for button in self._folder_buttons.values():
+            button.deleteLater()
+        self._folder_buttons.clear()
+        
         try:
             self._service = ResendService(self._database_connection)
             if not self._service.has_processed_files():
                 from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.information(self, "Nothing To Configure", "No processed files found.")
-                self.reject()
+                self._should_show = False
                 return
         except Exception as e:
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.critical(self, "Database Error", f"Database error: {e}")
-            self.reject()
+            self._should_show = False
             return
 
-        # Load folders
-        folders = self._service.get_folders_with_files()
-        for folder_info in folders:
+        # Load folders (get_folder_list returns list of (folder_id, alias) tuples)
+        folders = self._service.get_folder_list()
+        for folder_id, folder_alias in folders:
+            folder_info = {'id': folder_id, 'folder_name': folder_alias}
             self._add_folder_button(folder_info)
 
     def _add_folder_button(self, folder_info: Dict[str, Any]) -> None:
@@ -138,6 +163,8 @@ class ResendDialog(BaseDialog):
 
         button = QPushButton(folder_name)
         button.setCheckable(True)
+        button.setMinimumHeight(35)
+        button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.clicked.connect(lambda checked: self._on_folder_selected(folder_id))
         self._folder_buttons[folder_id] = button
         self._folders_layout.addWidget(button)
@@ -155,9 +182,11 @@ class ResendDialog(BaseDialog):
 
     def _load_files_for_folder(self, folder_id: int) -> None:
         """Load and display files for the selected folder."""
-        # Clear existing checkboxes
-        for checkbox in self._file_checkboxes.values():
-            checkbox.deleteLater()
+        # Clear existing checkboxes and layout items
+        while self._files_content_layout.count():
+            item = self._files_content_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
         self._file_checkboxes.clear()
 
         # Get file count and update spinbox
@@ -220,4 +249,6 @@ def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
         database_connection: Database connection object
     """
     dialog = ResendDialog(parent, database_connection)
-    dialog.exec()
+    # Only show dialog if data loaded successfully
+    if dialog._should_show:
+        dialog.exec()

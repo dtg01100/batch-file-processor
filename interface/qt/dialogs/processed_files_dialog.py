@@ -50,9 +50,8 @@ class ProcessedFilesDialog(BaseDialog):
         self._output_folder: str = ""
         self._output_folder_confirmed: bool = False
 
-        prior = database_obj.oversight_and_defaults.find_one(id=1)
-        if prior:
-            self._output_folder = prior.get("export_processed_folder_prior", "")
+        prior = database_obj.get_oversight_or_default()
+        self._output_folder = prior.get("export_processed_folder_prior", "")
 
         self.setWindowTitle("Processed Files Report")
         self.setModal(True)
@@ -64,7 +63,14 @@ class ProcessedFilesDialog(BaseDialog):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        root_layout = QVBoxLayout(self)
+        # Use the main layout from BaseDialog instead of creating a new one
+        root_layout = self._main_layout
+        
+        # Clear default widgets from BaseDialog
+        while root_layout.count() > 0:
+            item = root_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         body_layout = QHBoxLayout()
         root_layout.addLayout(body_layout, stretch=1)
@@ -126,15 +132,19 @@ class ProcessedFilesDialog(BaseDialog):
         return scroll_area
 
     def _get_folder_tuples(self) -> List[Tuple[int, str]]:
-        distinct_ids: List[int] = [
-            row["folder_id"]
-            for row in self._database_obj.processed_files.distinct("folder_id")
-        ]
+        distinct_ids: List[int] = []
+        seen_ids = set()
+        for row in self._database_obj.processed_files.distinct("folder_id"):
+            fid = row["folder_id"]
+            if fid not in seen_ids:
+                distinct_ids.append(fid)
+                seen_ids.add(fid)
 
         tuples: List[Tuple[int, str]] = []
         for fid in distinct_ids:
             folder = self._database_obj.folders_table.find_one(id=str(fid))
             if folder is None:
+                # Skip folders that no longer exist
                 continue
             tuples.append((fid, folder["alias"]))
 
@@ -146,17 +156,16 @@ class ProcessedFilesDialog(BaseDialog):
         self._rebuild_actions()
 
     def _rebuild_actions(self) -> None:
-        while self._actions_layout.count():
-            item = self._actions_layout.takeAt(0)
-            if item:
-                widget = item.widget()
-                if widget:
-                    widget.setParent(None)
-                    widget.deleteLater()
-                # Also remove any nested layouts
-                sub_layout = item.layout()
-                if sub_layout:
-                    sub_layout.deleteLater()
+        def _clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().setParent(None)
+                    item.widget().deleteLater()
+                elif item.layout():
+                    _clear_layout(item.layout())
+
+        _clear_layout(self._actions_layout)
 
         choose_btn = QPushButton("Choose Output Folder")
         choose_btn.clicked.connect(self._choose_output_folder)

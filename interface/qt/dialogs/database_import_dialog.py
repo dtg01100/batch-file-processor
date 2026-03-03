@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 
-import dataset
+from interface.database import sqlite_wrapper
 
 import backup_increment
 import folders_database_migrator
@@ -57,9 +57,16 @@ class DatabaseImportDialog(BaseDialog):
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        main_layout = QVBoxLayout(self)
+        # Use the main layout from BaseDialog instead of creating a new one
+        main_layout = self._main_layout
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
+
+        # Clear default widgets from BaseDialog
+        while main_layout.count() > 0:
+            item = main_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         # Database file selection frame
         db_file_frame = QFrame()
@@ -142,6 +149,7 @@ class DatabaseImportDialog(BaseDialog):
         self._import_thread.progress.connect(self._on_progress)
         self._import_thread.finished.connect(self._on_finished)
         self._import_thread.error.connect(self._on_error)
+        self._import_thread.confirm_required.connect(self._on_confirm_required)
         self._import_thread.start()
 
     def _on_progress(self, value: int, maximum: int, message: str) -> None:
@@ -170,6 +178,19 @@ class DatabaseImportDialog(BaseDialog):
         self._import_button.setEnabled(True)
         self._select_button.setEnabled(True)
 
+    def _on_confirm_required(self, title: str, message: str, result_event: threading.Event) -> None:
+        """Handle confirmation request from background thread."""
+        reply = QMessageBox.question(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        # Store result in the thread's result container via the event's dict
+        result_event.result = (reply == QMessageBox.StandardButton.Yes)
+        result_event.set()
+
 
 class ImportThread(QThread):
     """Background thread for database import."""
@@ -177,6 +198,7 @@ class ImportThread(QThread):
     progress = pyqtSignal(int, int, str)
     finished = pyqtSignal(bool, str)
     error = pyqtSignal(str)
+    confirm_required = pyqtSignal(str, str, object)  # title, message, result_event
 
     def __init__(
         self,
@@ -195,68 +217,64 @@ class ImportThread(QThread):
         self._db_version = db_version
         self._backup_path = backup_path
 
+    def _confirm(self, title: str, message: str) -> bool:
+        """Request confirmation from main thread using signals/slots."""
+        result_event = threading.Event()
+        result_event.result = False  # type: ignore[attr-defined]
+
+        # Emit signal to main thread - handler will set result_event.result and call result_event.set()
+        self.confirm_required.emit(title, message, result_event)
+
+        # Wait for result
+        result_event.wait()
+        return result_event.result  # type: ignore[attr-defined]
+
     def run(self) -> None:
         """Run the import process."""
         try:
             # Validate database version
-            new_db_connection = dataset.connect('sqlite:///' + self._new_db_path)
+            new_db_connection = sqlite_wrapper.Database.connect(self._new_db_path)
             new_db_version_table = new_db_connection['version']
             new_db_version_dict = new_db_version_table.find_one(id=1)
             new_db_version = new_db_version_dict['version']
 
             # Check version compatibility
             if int(new_db_version) < 14:
-                reply = QMessageBox.question(
-                    None,
+                if not self._confirm(
                     "Version Warning",
                     "Database versions below 14 do not contain operating system "
                     "information.\nFolder paths are not portable between operating "
                     "systems.\nThere is no guarantee that the imported folders will "
-                    "work. Continue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
-                )
-                if reply != QMessageBox.StandardButton.Yes:
+                    "work. Continue?"
+                ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
             elif int(new_db_version) > int(self._db_version):
-                reply = QMessageBox.question(
-                    None,
+                if not self._confirm(
                     "Version Warning",
                     "The proposed database version is newer than the version "
-                    "supported by this program.\nContinue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
-                )
-                if reply != QMessageBox.StandardButton.Yes:
+                    "supported by this program.\nContinue?"
+                ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
-                reply = QMessageBox.question(
-                    None,
+                if not self._confirm(
                     "Compatibility Warning",
                     "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
-                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path,
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
-                )
-                if reply != QMessageBox.StandardButton.Yes:
+                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path
+                ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
             elif new_db_version_dict.get('os') != self._platform:
-                reply = QMessageBox.question(
-                    None,
+                if not self._confirm(
                     "Platform Warning",
                     "The operating system specified in the configuration does "
                     "not match the currently running operating system.\n"
                     "There is no guarantee that the imported folders will work. "
-                    "Continue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
-                )
-                if reply != QMessageBox.StandardButton.Yes:
+                    "Continue?"
+                ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
@@ -269,8 +287,18 @@ class ImportThread(QThread):
 
             self.finished.emit(True, "Import completed successfully")
 
+        except FileNotFoundError as e:
+            self.error.emit(f"Database file not found: {e}")
+        except PermissionError as e:
+            self.error.emit(f"Permission denied accessing database: {e}")
+        except sqlite_wrapper.DatabaseError as e:
+            self.error.emit(f"Database error: {e}")
+        except KeyError as e:
+            self.error.emit(f"Database schema error (missing field): {e}")
+        except ValueError as e:
+            self.error.emit(f"Invalid data in database: {e}")
         except Exception as e:
-            self.error.emit(f"Import failed: {e}")
+            self.error.emit(f"Import failed: {type(e).__name__}: {e}")
 
 
 class DbMigrationJob:
@@ -288,14 +316,14 @@ class DbMigrationJob:
     ) -> None:
         """Perform the database migration."""
         # Pre-import operations
-        original_db = dataset.connect('sqlite:///' + original_database_path)
+        original_db = sqlite_wrapper.Database.connect(original_database_path)
         backup_increment.do_backup(self.original_folder_path)
         modified_new_path = backup_increment.do_backup(self.new_folder_path)
 
         original_db_version = original_db['version']
         original_db_version_dict = original_db_version.find_one(id=1)
 
-        new_db = dataset.connect('sqlite:///' + modified_new_path)
+        new_db = sqlite_wrapper.Database.connect(modified_new_path)
         new_db_version = new_db['version']
         new_db_version_dict = new_db_version.find_one(id=1)
 
@@ -307,21 +335,13 @@ class DbMigrationJob:
         old_folders = original_db['folders']
 
         # Count folders for progress
-        active_new_folders = list(new_folders.find(folder_is_active="True"))
-        active_new_folders.extend(list(new_folders.find(folder_is_active=1)))
-        # Deduplicate
-        seen_ids = set()
-        unique_folders = []
-        for folder in active_new_folders:
-            if folder['id'] not in seen_ids:
-                seen_ids.add(folder['id'])
-                unique_folders.append(folder)
-
-        total_folders = len(unique_folders)
+        active_new_folders = list(new_folders.find(folder_is_active=1))
+        
+        total_folders = len(active_new_folders)
         thread.progress.emit(0, total_folders, "Migrating folders...")
 
         # Migrate folders
-        for i, folder in enumerate(unique_folders):
+        for i, folder in enumerate(active_new_folders):
             self._migrate_folder(folder, old_folders, new_db)
             thread.progress.emit(i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders")
 
@@ -334,7 +354,7 @@ class DbMigrationJob:
         """Migrate a single folder's settings."""
         # Find matching folder in old database
         match = None
-        for old_folder in old_folders.find(folder_is_active="True"):
+        for old_folder in old_folders.find(folder_is_active=1):
             try:
                 if os.path.samefile(
                     old_folder['folder_name'],

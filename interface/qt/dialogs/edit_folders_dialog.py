@@ -267,7 +267,7 @@ class EditFoldersDialog(BaseDialog):
         email_group = QGroupBox("Email Backend Settings")
         email_layout = QFormLayout(email_group)
         self._email_recipient_field = QLineEdit()
-        self._fields["email_recepient_field"] = self._email_recipient_field
+        self._fields["email_recipient_field"] = self._email_recipient_field
         email_layout.addRow("Recipient Address:", self._email_recipient_field)
 
         self._email_subject_field = QLineEdit()
@@ -1097,7 +1097,15 @@ class EditFoldersDialog(BaseDialog):
 
         other_config: Optional[Dict[str, Any]] = None
         if self._alias_provider and self._settings_provider:
-            pass
+            # Use the providers to get the other folder's configuration
+            all_aliases = self._alias_provider() or []
+            if selected_alias in all_aliases:
+                settings = self._settings_provider()
+                if settings and "folders" in settings:
+                    for folder in settings["folders"]:
+                        if folder.get("alias") == selected_alias:
+                            other_config = folder
+                            break
 
         if other_config is None:
             try:
