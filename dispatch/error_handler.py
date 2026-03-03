@@ -166,9 +166,9 @@ class ErrorHandler:
         """
         try:
             self.db.insert(error_record)
-        except Exception:
-            # Don't raise - just log that persistence failed
-            pass
+        except Exception as e:
+            if self.error_log:
+                self.error_log.write(f"Failed to persist error to database: {e}\n")
     
     def write_error_log_file(
         self,

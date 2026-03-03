@@ -301,7 +301,8 @@ class ErrorHandlerInterface(Protocol):
         folder: str,
         filename: str,
         error: Exception,
-        context: Optional[dict] = None
+        context: Optional[dict] = None,
+        error_source: str = "Dispatch"
     ) -> None:
         """Record an error.
         
@@ -310,6 +311,7 @@ class ErrorHandlerInterface(Protocol):
             filename: File being processed when error occurred
             error: The exception that was raised
             context: Optional additional context
+            error_source: Source module/component name
         """
         ...
     
