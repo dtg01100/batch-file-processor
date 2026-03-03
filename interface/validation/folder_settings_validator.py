@@ -122,12 +122,15 @@ class FolderSettingsValidator:
             result.add_error("ftp_password", "FTP Password Field Is Required")
 
         # Port validation
-        try:
-            port_int = int(port)
-            if not (1 <= port_int <= 65535):
-                result.add_error("ftp_port", "FTP Port Field Needs To Be A Valid Port Number")
-        except ValueError:
-            result.add_error("ftp_port", "FTP Port Field Needs To Be A Number")
+        if port == "":
+            result.add_error("ftp_port", "FTP Port Field Is Required")
+        else:
+            try:
+                port_int = int(port)
+                if not (1 <= port_int <= 65535):
+                    result.add_error("ftp_port", "FTP Port Field Needs To Be A Valid Port Number")
+            except ValueError:
+                result.add_error("ftp_port", "FTP Port Field Needs To Be A Number")
 
         # FTP connection test (if all fields valid and service available)
         if result.is_valid and self.ftp_service:
@@ -169,7 +172,7 @@ class FolderSettingsValidator:
             return result
 
         # Validate each recipient
-        emails = recipients.split(", ")
+        emails = re.split(r'[;,]\s*', recipients.strip())
         for email in emails:
             if not self._validate_email(email):
                 result.add_error("email_recipient", f"Invalid Email Destination Address: {email}")
@@ -178,7 +181,7 @@ class FolderSettingsValidator:
 
     def _validate_email(self, email: str) -> bool:
         """Basic email validation."""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$'
         return bool(re.match(pattern, email))
 
     def validate_copy_settings(
@@ -277,6 +280,14 @@ class FolderSettingsValidator:
         """
         result = ValidationResult()
 
+        # ScannerWare specific - check before enabled return
+        if convert_format == "ScannerWare" and not enabled:
+            result.add_error(
+                "a_record_padding",
+                '"A" Record Padding Needs To Be Enabled For ScannerWare Backend'
+            )
+            return result
+
         if not enabled:
             return result
 
@@ -288,14 +299,6 @@ class FolderSettingsValidator:
 
         if len(padding_text) != 6:
             result.add_error("a_record_padding", '"A" Record Padding Needs To Be Six Characters')
-
-        # ScannerWare specific
-        if convert_format == "ScannerWare":
-            if not enabled:
-                result.add_error(
-                    "a_record_padding",
-                    '"A" Record Padding Needs To Be Enabled For ScannerWare Backend'
-                )
 
         return result
 

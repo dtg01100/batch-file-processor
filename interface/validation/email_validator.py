@@ -12,7 +12,7 @@ from typing import Optional, Tuple, List
 
 
 # Default email regex pattern
-DEFAULT_EMAIL_PATTERN = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+DEFAULT_EMAIL_PATTERN = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
 
 
 def validate_email(email: str, pattern: Optional[str] = None) -> bool:
