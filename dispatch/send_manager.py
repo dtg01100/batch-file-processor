@@ -5,7 +5,12 @@ using dependency injection for testability.
 """
 
 import importlib
+import logging
 from typing import Optional, Protocol, runtime_checkable
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 from dispatch.interfaces import BackendInterface
 
@@ -87,8 +92,8 @@ class SendManager:
                 self.results[backend_name] = success
             except Exception as e:
                 self.results[backend_name] = False
-                # Re-raise to let caller handle
-                raise
+                logger.error(f"Backend '{backend_name}' failed to send: {e}")
+                # Continue with other backends instead of raising
         
         return self.results
     

@@ -221,7 +221,28 @@ class FileProcessor:
         self._tweaker = tweaker
         self._send_manager = send_manager
         self._error_handler = error_handler
-    
+
+    def process(
+        self,
+        file_path: str,
+        folder: dict
+    ) -> str | None:
+        """Process a file (wrapper for orchestrator compatibility).
+
+        Args:
+            file_path: Path to the input file
+            folder: Folder parameters dictionary containing settings and upc_dict
+
+        Returns:
+            Path to processed file, or None if processing failed
+        """
+        settings = folder.get('settings', {})
+        upc_dict = folder.get('upc_dict', {})
+        result = self.process_file(file_path, folder, settings, upc_dict)
+        if result.files_sent or result.validation_passed:
+            return result.output_path if result.output_path else file_path
+        return None
+
     def process_file(
         self,
         file_path: str,

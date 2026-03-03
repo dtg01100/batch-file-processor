@@ -290,8 +290,10 @@ class EDIConverterStep:
                 errors=errors
             )
         
-        process_edi = params.get('process_edi', '')
-        if process_edi != "True":
+        process_edi = params.get('process_edi', False)
+        if isinstance(process_edi, str):
+            process_edi = process_edi.lower() == 'true'
+        if not process_edi:
             return ConverterResult(
                 output_path=input_path,
                 format_used=convert_to_format,
@@ -316,9 +318,9 @@ class EDIConverterStep:
         
         output_filename = os.path.join(output_dir, os.path.basename(input_path))
         
-        if self._file_system and not self._file_system.dir_exists(os.path.dirname(output_filename)):
+        if self._file_system and not self._file_system.dir_exists(output_dir):
             try:
-                self._file_system.makedirs(os.path.dirname(output_filename))
+                self._file_system.makedirs(output_dir)
             except Exception as e:
                 error_msg = f"Failed to create output directory: {e}"
                 errors.append(error_msg)
@@ -405,3 +407,24 @@ class EDIConverterStep:
             context={'source': 'EDIConverterStep'},
             error_source="EDIConverter"
         )
+    
+    def execute(self, file_path: str, folder: dict) -> str | None:
+        """Execute convert step (wrapper for pipeline compatibility).
+        
+        Args:
+            file_path: Path to the file to convert
+            folder: Folder configuration dictionary
+            
+        Returns:
+            Path to converted file, or None if conversion failed/not needed
+        """
+        import tempfile
+        
+        settings = folder.get('settings', {})
+        upc_dict = folder.get('upc_dict', {})
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = self.convert(file_path, temp_dir, folder, settings, upc_dict)
+            if result.success and result.output_path != file_path:
+                return result.output_path
+            return None

@@ -205,6 +205,10 @@ class DispatchOrchestrator:
                 result.errors.extend(file_result.errors)
         
         result.success = result.files_failed == 0
+        
+        if self.config.progress_reporter:
+            self.config.progress_reporter.complete_folder(result.success)
+        
         return result
     
     def process_folder_with_pipeline(
@@ -274,10 +278,11 @@ class DispatchOrchestrator:
                 self.error_count += 1
                 result.errors.extend(file_result.errors)
         
+        result.success = result.files_failed == 0
+        
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(result.success)
         
-        result.success = result.files_failed == 0
         return result
     
     def _is_pipeline_ready(self) -> bool:
@@ -351,10 +356,22 @@ class DispatchOrchestrator:
             current_file = file_path
             
             if self.config.validator_step and self._should_validate(folder):
-                validated, errors_or_file = self.config.validator_step.execute(current_file, folder)
-                result.validated = validated
+                validation_result = self.config.validator_step.execute(current_file, folder)
+                # Handle both tuple return (old) and ValidationResult object (new)
+                if isinstance(validation_result, tuple):
+                    is_valid, errors_or_file = validation_result
+                else:
+                    from dispatch.pipeline.validator import ValidationResult
+                    if isinstance(validation_result, ValidationResult):
+                        is_valid = validation_result.is_valid
+                        errors_or_file = validation_result.errors if not validation_result.is_valid else current_file
+                    else:
+                        is_valid = bool(validation_result)
+                        errors_or_file = current_file
                 
-                if not validated:
+                result.validated = is_valid
+                
+                if not is_valid:
                     if isinstance(errors_or_file, list):
                         result.errors.extend(errors_or_file)
                     else:
@@ -362,12 +379,17 @@ class DispatchOrchestrator:
                     
                     if not folder.get('force_edi_validation', False):
                         return result
-                
-                if isinstance(errors_or_file, str):
+                elif isinstance(errors_or_file, str):
                     current_file = errors_or_file
             
             if self.config.splitter_step and folder.get('split_edi', False):
-                split_files = self.config.splitter_step.execute(current_file, folder)
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    split_result = self.config.splitter_step.split(current_file, temp_dir, folder, upc_dict)
+                    if hasattr(split_result, 'files'):
+                        split_files = [f[0] for f in split_result.files]
+                    else:
+                        split_files = split_result
                 
                 if split_files and isinstance(split_files, list):
                     for split_file in split_files:
