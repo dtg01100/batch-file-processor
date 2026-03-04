@@ -495,3 +495,22 @@ class EDISplitterStep:
             context={'source': 'EDISplitterStep'},
             error_source="EDISplitter"
         )
+    
+    def execute(self, file_path: str, folder: dict) -> list[str]:
+        """Execute split step (wrapper for pipeline compatibility).
+        
+        Args:
+            file_path: Path to the file to split
+            folder: Folder configuration dictionary
+            
+        Returns:
+            List of output file paths
+        """
+        import os
+        import tempfile
+        
+        upc_dict = folder.get('upc_dict', {})
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = self.split(file_path, temp_dir, folder, upc_dict)
+            return [f[0] for f in result.files]

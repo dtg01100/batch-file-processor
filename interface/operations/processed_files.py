@@ -39,9 +39,10 @@ def export_processed_report(
                 i += 1
                 print(f"{potential_file_path} exists")
 
-    folder_alias = database_obj.folders_table.find_one(id=folder_id)[
-        "alias"
-    ]
+    folder_dict = database_obj.folders_table.find_one(id=folder_id)
+    if folder_dict is None:
+        raise ValueError(f"Folder with id {folder_id} not found")
+    folder_alias = folder_dict["alias"]
 
     export_file_path = avoid_duplicate_export_file(
         os.path.join(output_folder, folder_alias + " processed report"), ".csv"

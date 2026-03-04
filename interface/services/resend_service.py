@@ -34,10 +34,16 @@ class ResendService:
             Sorted list of (folder_id, alias) tuples
         """
         folder_list = []
+        seen_folder_ids = set()
         for line in self._processed_files.distinct('folder_id'):
-            folder_alias = self._folders.find_one(id=line['folder_id'])
-            if folder_alias is not None:
-                folder_list.append((line['folder_id'], folder_alias['alias']))
+            folder_id = line['folder_id']
+            # Skip if we've already added this folder
+            if folder_id in seen_folder_ids:
+                continue
+            seen_folder_ids.add(folder_id)
+            folder_alias_dict = self._folders.find_one(id=folder_id)
+            if folder_alias_dict is not None:
+                folder_list.append((folder_id, folder_alias_dict['alias']))
         return sorted(folder_list, key=itemgetter(1))
     
     def get_files_for_folder(

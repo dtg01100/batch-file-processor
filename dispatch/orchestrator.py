@@ -18,6 +18,8 @@ from dispatch.interfaces import (
 from dispatch.edi_validator import EDIValidator
 from dispatch.send_manager import SendManager
 from dispatch.error_handler import ErrorHandler
+from dispatch.hash_utils import generate_match_lists, generate_file_hash
+from dispatch.file_utils import filter_files_by_checksum
 
 
 @dataclass
@@ -57,7 +59,7 @@ class DispatchConfig:
     tweaker_step: Optional[Any] = None
     file_processor: Optional[Any] = None
     upc_dict: dict = field(default_factory=dict)
-    use_pipeline: bool = False
+    use_pipeline: bool = True
 
 
 @dataclass
@@ -383,9 +385,13 @@ class DispatchOrchestrator:
                     current_file = errors_or_file
             
             if self.config.splitter_step and folder.get('split_edi', False):
+                # Ensure process_edi flag is also set for the splitter to work correctly
+                updated_folder = folder.copy()
+                if 'process_edi' not in updated_folder:
+                    updated_folder['process_edi'] = True
                 import tempfile
                 with tempfile.TemporaryDirectory() as temp_dir:
-                    split_result = self.config.splitter_step.split(current_file, temp_dir, folder, upc_dict)
+                    split_result = self.config.splitter_step.split(current_file, temp_dir, updated_folder, upc_dict)
                     if hasattr(split_result, 'files'):
                         split_files = [f[0] for f in split_result.files]
                     else:
@@ -401,13 +407,21 @@ class DispatchOrchestrator:
                     return result
             
             if self.config.converter_step and folder.get('convert_edi', False):
-                converted_file = self.config.converter_step.execute(current_file, folder)
+                # Ensure process_edi flag is also set for the converter to work correctly
+                updated_folder = folder.copy()
+                if 'process_edi' not in updated_folder:
+                    updated_folder['process_edi'] = True
+                converted_file = self.config.converter_step.execute(current_file, updated_folder)
                 if converted_file:
                     current_file = converted_file
                     result.converted = True
             
             if self.config.tweaker_step and folder.get('tweak_edi', False):
-                tweaked_file = self.config.tweaker_step.execute(current_file, folder, upc_dict)
+                # Ensure process_edi flag is also set for the tweaker to work correctly
+                updated_folder = folder.copy()
+                if 'process_edi' not in updated_folder:
+                    updated_folder['process_edi'] = True
+                tweaked_file = self.config.tweaker_step.execute(current_file, updated_folder, upc_dict)
                 if tweaked_file:
                     current_file = tweaked_file
             
@@ -513,7 +527,13 @@ class DispatchOrchestrator:
                     name for name, success in send_results.items()
                     if not success
                 ]
-                result.errors.append(f"Failed backends: {', '.join(failed_backends)}")
+                # Include original error messages for better debugging
+                backend_errors = self.send_manager.get_errors()
+                for backend_name in failed_backends:
+                    if backend_name in backend_errors:
+                        result.errors.append(f"{backend_name}: {backend_errors[backend_name]}")
+                    else:
+                        result.errors.append(f"Failed backend: {backend_name}")
         
         except Exception as e:
             result.errors.append(str(e))
@@ -661,3 +681,70 @@ class DispatchOrchestrator:
         self.processed_count = 0
         self.error_count = 0
         self.error_handler.clear_errors()
+
+    @staticmethod
+    def process(
+        database_connection,
+        folders_database,
+        run_log,
+        emails_table,
+        run_log_directory,
+        reporting,
+        processed_files,
+        version,
+        errors_folder,
+        settings,
+        progress_callback=None,
+    ):
+        """Static method for backward-compatible dispatch processing.
+        
+        This provides a drop-in replacement for the legacy dispatch.process() function.
+        It creates a DispatchOrchestrator and processes all active folders.
+        
+        Args:
+            database_connection: Database connection (not used directly, kept for compatibility)
+            folders_database: Folders database interface
+            run_log: Run log for recording processing activity
+            emails_table: Emails table for storing log references
+            run_log_directory: Directory for storing run logs
+            reporting: Reporting configuration
+            processed_files: Processed files database
+            version: Application version string
+            errors_folder: Directory for storing error logs
+            settings: Global application settings
+            progress_callback: Optional progress callback for UI updates
+            
+        Returns:
+            Tuple of (has_errors: bool, summary: str)
+        """
+        # Create orchestrator config
+        config = DispatchConfig(
+            database=folders_database,
+            settings=settings,
+            version=version,
+            use_pipeline=False,
+        )
+        
+        orchestrator = DispatchOrchestrator(config)
+        
+        # Get UPC dictionary for category filtering
+        upc_dict = orchestrator._get_upc_dictionary(settings)
+        
+        # Get all active folders
+        folders = list(folders_database.find(folder_is_active="True", order_by="alias"))
+        
+        has_errors = False
+        
+        for folder in folders:
+            try:
+                result = orchestrator.process_folder(folder, run_log, processed_files)
+                if not result.success:
+                    has_errors = True
+            except Exception as folder_error:
+                has_errors = True
+                if hasattr(run_log, 'write'):
+                    run_log.write(
+                        f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
+                    )
+        
+        return has_errors, orchestrator.get_summary()

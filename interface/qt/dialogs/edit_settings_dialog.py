@@ -52,7 +52,7 @@ class EditSettingsDialog(BaseDialog):
         disable_folders_without_backends: Optional[Callable[[], None]] = None,
         smtp_service: Optional[SMTPServiceProtocol] = None,
     ) -> None:
-        self._settings_data = dict(settings_data)
+        self._settings_data = dict(settings_data) if settings_data else {}
         self._settings_provider = settings_provider
         self._oversight_provider = oversight_provider
         self._update_settings = update_settings
@@ -76,12 +76,16 @@ class EditSettingsDialog(BaseDialog):
 
     def _get_settings(self) -> Dict[str, Any]:
         if self._settings_provider:
-            return self._settings_provider()
+            result = self._settings_provider()
+            return result if result else {}
         return {}
 
     def body(self, parent: QWidget) -> Optional[QWidget]:
         """Create dialog body."""
-        layout = QVBoxLayout(parent)
+        # Use parent's existing layout instead of creating a new one
+        layout = parent.layout()
+        if layout is None:
+            layout = QVBoxLayout(parent)
 
         layout.addWidget(self._build_as400_section())
         layout.addWidget(self._build_email_section())
@@ -89,13 +93,13 @@ class EditSettingsDialog(BaseDialog):
         layout.addWidget(self._build_backup_section())
 
         self.setSizeGripEnabled(False)
-        
+
         # Now that UI is built, populate fields and connect signals
         self._populate_fields()
         self._connect_signals()
         self._on_enable_email_toggled()
         self._on_enable_backup_toggled()
-        
+
         return None
 
     def _build_as400_section(self) -> QGroupBox:

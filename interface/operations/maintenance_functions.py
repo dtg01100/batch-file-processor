@@ -176,9 +176,12 @@ class MaintenanceFunctions:
             ):
                 self._database_obj.folders_table_list.append(row)
         else:
-            self._database_obj.folders_table_list = [
-                self._database_obj.folders_table.find_one(id=selected_folder)
-            ]
+            folder_dict = self._database_obj.folders_table.find_one(id=selected_folder)
+            if folder_dict:
+                self._database_obj.folders_table_list = [folder_dict]
+            else:
+                print(f"Warning: Folder with id {selected_folder} not found")
+                self._database_obj.folders_table_list = []
         folder_total = len(self._database_obj.folders_table_list)
         if selected_folder is None:
             self._progress.show("adding files to processed list...")
@@ -279,7 +282,7 @@ class MaintenanceFunctions:
                 self._on_operation_start()
             self._progress.show("Working...")
             self._database_obj.reload()
-            settings_dict = self._database_obj.settings.find_one(id=1)
+            settings_dict = self._database_obj.get_settings_or_default()
             print(settings_dict["enable_email"])
             if not settings_dict["enable_email"]:
                 for (

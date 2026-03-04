@@ -181,7 +181,6 @@ hidden_imports = [
     
     # Other utility modules
     'utils',
-    'edi_tweaks',
     'record_error',
     'doingstuffoverlay',
     'tk_extra_widgets',
@@ -193,7 +192,6 @@ hidden_imports = [
     'batch_log_sender',
     'print_run_log',
     'resend_interface',
-    'mtc_edi_validator',
     'query_runner',
     'mover',
     'clear_old_files',
@@ -251,14 +249,28 @@ from PyInstaller.utils.hooks import collect_data_files
 import PyQt6
 
 # Collect Qt platform plugins automatically
-qt_plugins_path = os.path.join(os.path.dirname(PyQt6.__file__), "Qt", "plugins")
-if os.path.exists(qt_plugins_path):
-    a.datas += [(qt_plugins_path, "PyQt6/Qt/plugins")]
+# Try different possible locations for Qt plugins
+possible_plugin_paths = [
+    os.path.join(os.path.dirname(PyQt6.__file__), "Qt", "plugins"),
+    os.path.join(os.path.dirname(PyQt6.__file__), "Qt6", "plugins"),
+]
+for qt_plugins_path in possible_plugin_paths:
+    if os.path.exists(qt_plugins_path):
+        print(f"Including Qt plugins from: {qt_plugins_path}")
+        a.datas += [(qt_plugins_path, "PyQt6/Qt/plugins")]
+        break
 
 # Collect Qt binary files (DLLs) such as Qt6Core.dll and ICU libraries
-qt_bin_path = os.path.join(os.path.dirname(PyQt6.__file__), "Qt", "bin")
-if os.path.exists(qt_bin_path):
-    a.datas += [(qt_bin_path, "PyQt6/Qt/bin")]
+# Try different possible locations for Qt binaries
+possible_bin_paths = [
+    os.path.join(os.path.dirname(PyQt6.__file__), "Qt", "bin"),
+    os.path.join(os.path.dirname(PyQt6.__file__), "Qt6", "bin"),
+]
+for qt_bin_path in possible_bin_paths:
+    if os.path.exists(qt_bin_path):
+        print(f"Including Qt binaries from: {qt_bin_path}")
+        a.datas += [(qt_bin_path, "PyQt6/Qt/bin")]
+        break
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 

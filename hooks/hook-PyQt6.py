@@ -1,5 +1,6 @@
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_system_data_files, copy_metadata
 import os
+import sys
 import PyQt6
 
 # Collect all necessary PyQt6 data files
@@ -28,6 +29,10 @@ hiddenimports = [
 ]
 
 # Collect Qt bin DLLs (e.g., Qt6Core.dll, icu*.dll) to ensure they are bundled on Windows.
-qt_bin_path = os.path.join(os.path.dirname(PyQt6.__file__), "Qt", "bin")
+# This is critical for PyQt6 to work - ICU libraries are required by Qt6Core.dll
+qt_bin_path = os.path.join(os.path.dirname(PyQt6.__file__), "Qt6", "bin")
 if os.path.exists(qt_bin_path):
-    datas += [(qt_bin_path, "PyQt6/Qt/bin")]
+    # Explicitly collect all DLLs from Qt6/bin directory
+    for filename in os.listdir(qt_bin_path):
+        if filename.endswith('.dll'):
+            datas.append((os.path.join(qt_bin_path, filename), 'PyQt6/Qt6/bin'))

@@ -40,7 +40,7 @@ class QtFolderDataExtractor:
             ftp_folder=self._get_text("ftp_folder_field"),
             ftp_username=self._get_text("ftp_username_field"),
             ftp_password=self._get_text("ftp_password_field"),
-            email_to=self._get_text("email_recepient_field"),
+            email_to=self._get_text("email_recipient_field"),
             email_subject_line=self._get_text("email_sender_subject_field"),
             process_edi=self._get_check_str("process_edi"),
             convert_to_format=self._get_combo("convert_formats_var"),

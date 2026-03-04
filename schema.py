@@ -32,6 +32,10 @@ def ensure_schema(database_connection) -> None:
             email_password TEXT,
             email_smtp_server TEXT,
             smtp_port INTEGER,
+            odbc_driver TEXT,
+            as400_address TEXT,
+            as400_username TEXT,
+            as400_password TEXT,
             backup_counter INTEGER,
             backup_counter_maximum INTEGER,
             enable_interval_backups INTEGER,
@@ -74,6 +78,7 @@ def ensure_schema(database_connection) -> None:
             enable_reporting INTEGER,
             report_email_destination TEXT,
             report_edi_errors INTEGER,
+            report_printing_fallback INTEGER,
             convert_to_format TEXT,
             tweak_edi INTEGER,
             split_edi INTEGER,
@@ -113,7 +118,15 @@ def ensure_schema(database_connection) -> None:
             single_add_folder_prior TEXT,
             batch_add_folder_prior TEXT,
             export_processed_folder_prior TEXT,
-            edi_format TEXT
+            edi_format TEXT,
+            process_backend_email INTEGER,
+            process_backend_ftp INTEGER,
+            email_to TEXT,
+            ftp_server TEXT,
+            ftp_port INTEGER,
+            ftp_folder TEXT,
+            ftp_username TEXT,
+            ftp_password TEXT
         )
         """,
 
@@ -144,6 +157,15 @@ def ensure_schema(database_connection) -> None:
             report_email_destination TEXT,
             process_backend_copy INTEGER,
             backend_copy_destination TEXT,
+            process_backend_email INTEGER,
+            process_backend_ftp INTEGER,
+            email_to TEXT,
+            email_subject_line TEXT,
+            ftp_server TEXT,
+            ftp_port INTEGER,
+            ftp_folder TEXT,
+            ftp_username TEXT,
+            ftp_password TEXT,
             process_edi_output INTEGER,
             edi_output_folder TEXT,
             split_edi INTEGER,
@@ -192,6 +214,7 @@ def ensure_schema(database_connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_name TEXT,
             md5 TEXT,
+            file_checksum TEXT,
             resend_flag INTEGER,
             folder_id INTEGER,
             created_at TEXT,
@@ -203,6 +226,37 @@ def ensure_schema(database_connection) -> None:
             error_message TEXT,
             convert_format TEXT,
             sent_to TEXT
+        )
+        """,
+
+        # emails_to_send (queue for emails to be sent)
+        """
+        CREATE TABLE IF NOT EXISTS emails_to_send (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_alias TEXT,
+            log TEXT,
+            folder_id INTEGER
+        )
+        """,
+
+        # working_batch_emails_to_send (batch email operations)
+        """
+        CREATE TABLE IF NOT EXISTS working_batch_emails_to_send (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_alias TEXT,
+            log TEXT,
+            folder_id TEXT
+        )
+        """,
+
+        # sent_emails_removal_queue (queue for sent email removal)
+        """
+        CREATE TABLE IF NOT EXISTS sent_emails_removal_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_alias TEXT,
+            log TEXT,
+            folder_id TEXT,
+            old_id INTEGER
         )
         """,
     ]

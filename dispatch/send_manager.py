@@ -63,6 +63,7 @@ class SendManager:
         self.backends = backends or {}
         self.use_default_backends = use_default_backends
         self.results: dict[str, bool] = {}
+        self.errors: dict[str, str] = {}
     
     def send_all(
         self,
@@ -83,6 +84,7 @@ class SendManager:
             Dictionary mapping backend names to success status
         """
         self.results = {}
+        self.errors = {}
         
         for backend_name in enabled_backends:
             try:
@@ -92,6 +94,7 @@ class SendManager:
                 self.results[backend_name] = success
             except Exception as e:
                 self.results[backend_name] = False
+                self.errors[backend_name] = str(e)
                 logger.error(f"Backend '{backend_name}' failed to send: {e}")
                 # Continue with other backends instead of raising
         
@@ -213,9 +216,18 @@ class SendManager:
         """
         return self.results.copy()
     
+    def get_errors(self) -> dict[str, str]:
+        """Get the errors from the last send operation.
+        
+        Returns:
+            Dictionary mapping backend names to error messages
+        """
+        return self.errors.copy()
+    
     def clear_results(self) -> None:
         """Clear the results of the last send operation."""
         self.results = {}
+        self.errors = {}
 
 
 class MockBackend:

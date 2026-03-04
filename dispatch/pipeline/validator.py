@@ -223,6 +223,22 @@ class EDIValidationStep:
         report_edi_errors = params.get('report_edi_errors', False)
         return report_edi_errors
     
+    def execute(self, file_path: str, folder: dict) -> tuple[bool, list[str] | str]:
+        """Execute validation step (wrapper for pipeline compatibility).
+        
+        Args:
+            file_path: Path to the file to validate
+            folder: Folder configuration dictionary
+            
+        Returns:
+            Tuple of (is_valid, errors_or_file_path)
+        """
+        filename = folder.get('filename_for_log', file_path)
+        result = self.validate(file_path, filename)
+        if result.is_valid:
+            return True, file_path
+        return False, result.errors
+    
     def get_error_log(self) -> str:
         """Get the accumulated error log contents.
         

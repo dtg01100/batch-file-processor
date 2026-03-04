@@ -9,8 +9,10 @@ enabling testing without actual database connections.
 
 from typing import Protocol, runtime_checkable, Optional, Any
 import os
+import sys
 import datetime
-import dataset  # type: ignore
+import traceback
+from interface.database import sqlite_wrapper
 
 
 @runtime_checkable
@@ -170,10 +172,10 @@ class DatabaseObj:
             self._create_database()
         
         try:
-            self.database_connection = dataset.connect(
-                f"sqlite:///{self._database_path}"
+            self.database_connection = sqlite_wrapper.Database.connect(
+                self._database_path
             )
-            self.session_database = dataset.connect("sqlite:///")
+            self.session_database = sqlite_wrapper.Database.connect("")
             self._check_version()
             self._initialize_tables()
         except Exception as connect_error:
@@ -219,6 +221,16 @@ class DatabaseObj:
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
         
+        # Guard against corrupted database with missing version record
+        if db_version_dict is None:
+            if self._show_error_func:
+                self._show_error_func(
+                    "Error",
+                    "Database is corrupted or invalid. Version information is missing.\r\n"
+                    "The database file will need to be recreated or restored from backup."
+                )
+            raise SystemExit("Database corrupted: missing version record")
+        
         if int(db_version_dict["version"]) < int(self._database_version):
             self._upgrade_database()
         
@@ -232,8 +244,8 @@ class DatabaseObj:
             raise SystemExit("Database version too new")
         
         # Check OS compatibility
-        db_version_dict = db_version.find_one(id=1)
-        if db_version_dict["os"] != self._running_platform:
+        # Note: db_version_dict is guaranteed non-None here due to the guard above
+        if db_version_dict.get("os") != self._running_platform:
             if self._show_error_func:
                 self._show_error_func(
                     "Error",
@@ -282,28 +294,131 @@ class DatabaseObj:
         self.oversight_and_defaults = self.database_connection["administrative"]
         self.processed_files = self.database_connection["processed_files"]
         self.settings = self.database_connection["settings"]
+        
+        # Ensure singleton records exist after initialization
+        self._ensure_singleton_records()
+    
+    def _ensure_singleton_records(self) -> None:
+        """Ensure required singleton records exist in database.
+        
+        This method ensures that the settings and oversight_and_defaults
+        records (both id=1) exist after database initialization or upgrade.
+        It's called automatically during initialization to prevent crashes
+        from missing records.
+        """
+        # Ensure settings record exists
+        if self.settings.find_one(id=1) is None:
+            self.settings.insert({
+                "id": 1,
+                "enable_email": False,
+                "email_address": "",
+                "email_username": "",
+                "email_password": "",
+                "email_smtp_server": "",
+                "smtp_port": 587,
+                "odbc_driver": "",
+                "as400_address": "",
+                "as400_username": "",
+                "as400_password": "",
+                "enable_interval_backups": False,
+                "backup_counter": 0,
+                "backup_counter_maximum": 100,
+            })
+        
+        # Ensure oversight_and_defaults record exists
+        if self.oversight_and_defaults.find_one(id=1) is None:
+            self.oversight_and_defaults.insert({
+                "id": 1,
+                "logs_directory": os.path.join(
+                    os.path.expanduser("~"), "BatchFileSenderLogs"
+                ),
+                "copy_to_directory": "",
+                "enable_reporting": False,
+                "report_email_destination": "",
+                "report_edi_errors": False,
+                "report_printing_fallback": False,
+                "single_add_folder_prior": os.path.expanduser("~"),
+                "batch_add_folder_prior": os.path.expanduser("~"),
+                "export_processed_folder_prior": os.path.expanduser("~"),
+            })
+    
+    def verify_database_integrity(self) -> tuple[bool, list[str]]:
+        """Verify database integrity and return status.
+        
+        Checks that all required tables and singleton records exist.
+        Useful for debugging and health checks.
+        
+        Returns:
+            Tuple of (is_valid, list_of_errors)
+        """
+        errors = []
+        
+        # Check that version record exists
+        try:
+            version_table = self.database_connection["version"]
+            if version_table.find_one(id=1) is None:
+                errors.append("Missing version record (id=1)")
+        except Exception as e:
+            errors.append(f"Cannot access version table: {e}")
+        
+        # Check settings record
+        try:
+            if self.settings.find_one(id=1) is None:
+                errors.append("Missing settings record (id=1)")
+        except Exception as e:
+            errors.append(f"Cannot access settings table: {e}")
+        
+        # Check oversight_and_defaults record
+        try:
+            if self.oversight_and_defaults.find_one(id=1) is None:
+                errors.append("Missing oversight_and_defaults record (id=1)")
+        except Exception as e:
+            errors.append(f"Cannot access oversight_and_defaults table: {e}")
+        
+        # Check that tables are accessible
+        required_tables = [
+            "folders", "emails_to_send", "working_batch_emails_to_send",
+            "sent_emails_removal_queue", "administrative", "processed_files", "settings"
+        ]
+        for table_name in required_tables:
+            try:
+                self.database_connection[table_name]
+            except Exception as e:
+                errors.append(f"Cannot access table '{table_name}': {e}")
+        
+        return (len(errors) == 0, errors)
     
     def _handle_critical_error(self, error: Exception) -> None:
         """Handle critical errors during database operations.
+        
+        Logs the error to file and re-raises the original exception to preserve
+        the full traceback and exception context.
         
         Args:
             error: The exception that occurred
             
         Raises:
-            SystemExit: Always exits the program
+            Exception: Re-raises the original exception after logging
         """
+        # Log full traceback to file before re-raising
         try:
-            print(str(error))
             with open("critical_error.log", "a", encoding="utf-8") as log_file:
-                log_file.write(f"program version is {self._database_version}")
-                log_file.write(f"{str(datetime.datetime.now())}{str(error)}\r\n")
-            raise SystemExit from error
+                log_file.write(f"\n{'='*60}\n")
+                log_file.write(f"Program version: {self._database_version}\n")
+                log_file.write(f"Timestamp: {datetime.datetime.now()}\n")
+                log_file.write(f"Error: {str(error)}\n")
+                log_file.write(f"Traceback:\n")
+                log_file.write(traceback.format_exc())
+                log_file.write(f"{'='*60}\n")
         except Exception as log_error:
+            # If logging fails, print to stderr but still re-raise original error
             print(
-                f"error writing critical error log for error: {str(error)}\n"
-                f"operation failed with error: {str(log_error)}"
+                f"\nWARNING: Failed to write critical error log: {str(log_error)}\n",
+                file=sys.stderr
             )
-            raise SystemExit from log_error
+        
+        # Re-raise the original exception to preserve full context
+        raise
     
     def _handle_connection_error(self, error: Exception) -> None:
         """Handle connection errors.
@@ -331,10 +446,10 @@ class DatabaseObj:
         Reconnects to the database and reinitializes all table references.
         """
         try:
-            self.database_connection = dataset.connect(
-                f"sqlite:///{self._database_path}"
+            self.database_connection = sqlite_wrapper.Database.connect(
+                self._database_path
             )
-            self.session_database = dataset.connect("sqlite:///")
+            self.session_database = sqlite_wrapper.Database.connect("")
         except Exception as connect_error:
             self._handle_connection_error(connect_error)
         
@@ -344,6 +459,17 @@ class DatabaseObj:
         """Close the database connection."""
         if self.database_connection:
             self.database_connection.close()
+        if self.session_database:
+            self.session_database.close()
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensures database is closed."""
+        self.close()
+        return False  # Don't suppress exceptions
     
     def get_folder(self, folder_name: str) -> Optional[dict]:
         """Get a folder configuration by name.
@@ -401,3 +527,103 @@ class DatabaseObj:
         """
         settings["id"] = 1
         self.oversight_and_defaults.update(settings, ["id"])
+    
+    # ------------------------------------------------------------------
+    # Safe accessor methods to prevent None reference errors
+    # ------------------------------------------------------------------
+    
+    def get_settings_or_default(self) -> dict:
+        """Get application settings, creating with defaults if missing.
+        
+        Settings should always exist (id=1), but this method ensures
+        we never crash with None access.
+        
+        Returns:
+            Settings dictionary with guaranteed keys
+        """
+        settings = self.settings.find_one(id=1)
+        if settings is None:
+            # Create default settings if missing
+            default_settings = {
+                "id": 1,
+                "enable_email": False,
+                "email_address": "",
+                "email_username": "",
+                "email_password": "",
+                "email_smtp_server": "",
+                "smtp_port": 587,
+                "odbc_driver": "",
+                "as400_address": "",
+                "as400_username": "",
+                "as400_password": "",
+                "enable_interval_backups": False,
+                "backup_counter": 0,
+                "backup_counter_maximum": 100,
+            }
+            self.settings.insert(default_settings)
+            return default_settings
+        return settings
+    
+    def get_oversight_or_default(self) -> dict:
+        """Get oversight and defaults record, creating if missing.
+        
+        This is a singleton record (id=1) that should always exist.
+        
+        Returns:
+            Oversight and defaults dictionary
+        """
+        oversight = self.oversight_and_defaults.find_one(id=1)
+        if oversight is None:
+            # Create default oversight record if missing
+            default_oversight = {
+                "id": 1,
+                "logs_directory": os.path.join(
+                    os.path.expanduser("~"), "BatchFileSenderLogs"
+                ),
+                "copy_to_directory": "",
+                "enable_reporting": False,
+                "report_email_destination": "",
+                "report_edi_errors": False,
+                "report_printing_fallback": False,
+                "single_add_folder_prior": os.path.expanduser("~"),
+                "batch_add_folder_prior": os.path.expanduser("~"),
+                "export_processed_folder_prior": os.path.expanduser("~"),
+            }
+            self.oversight_and_defaults.insert(default_oversight)
+            return default_oversight
+        return oversight
+    
+    def find_folder_required(self, **kwargs) -> dict:
+        """Find a folder configuration, raising an error if not found.
+        
+        Use this when a folder MUST exist for the operation to proceed.
+        
+        Args:
+            **kwargs: Search criteria for find_one()
+            
+        Returns:
+            Folder configuration dictionary
+            
+        Raises:
+            ValueError: If folder is not found
+        """
+        folder = self.folders_table.find_one(**kwargs)
+        if folder is None:
+            raise ValueError(
+                f"Required folder not found with criteria: {kwargs}"
+            )
+        return folder
+    
+    def find_folder_optional(self, **kwargs) -> Optional[dict]:
+        """Find a folder configuration, returning None if not found.
+        
+        This is an explicit wrapper that documents the intent that
+        None is an acceptable return value.
+        
+        Args:
+            **kwargs: Search criteria for find_one()
+            
+        Returns:
+            Folder configuration dictionary or None
+        """
+        return self.folders_table.find_one(**kwargs)

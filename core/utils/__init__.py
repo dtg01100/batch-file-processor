@@ -12,6 +12,7 @@ from .date_utils import (
     datetime_from_dactime,
     datetime_from_invtime,
     dactime_from_invtime,
+    prettify_dates,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "datetime_from_dactime",
     "datetime_from_invtime",
     "dactime_from_invtime",
+    "prettify_dates",
 ]

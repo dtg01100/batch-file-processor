@@ -201,6 +201,12 @@ class EDITweakerStep:
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
         """
+        # Import from archive folder (legacy location)
+        import sys
+        import os
+        archive_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'archive')
+        if archive_path not in sys.path:
+            sys.path.insert(0, archive_path)
         import edi_tweaks
         self._tweak_function: TweakFunctionProtocol = tweak_function or edi_tweaks.edi_tweak
         self._error_handler = error_handler
@@ -298,3 +304,25 @@ class EDITweakerStep:
             context={'source': 'EDITweakerStep'},
             error_source="EDITweaker"
         )
+    
+    def execute(self, file_path: str, folder: dict, upc_dict: dict) -> str | None:
+        """Execute tweak step (wrapper for pipeline compatibility).
+        
+        Args:
+            file_path: Path to the file to tweak
+            folder: Folder configuration dictionary
+            upc_dict: UPC dictionary for lookups
+            
+        Returns:
+            Path to tweaked file, or None if tweaking failed/not needed
+        """
+        import os
+        import tempfile
+        
+        settings = folder.get('settings', {})
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = self.tweak(file_path, temp_dir, folder, settings, upc_dict)
+            if result.success and result.output_path != file_path:
+                return result.output_path
+            return None

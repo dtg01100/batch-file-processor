@@ -109,6 +109,7 @@ class FolderManager:
         "batch_add_folder_prior",
         "export_processed_folder_prior",
         "report_edi_errors",
+        "edi_converter_scratch_folder",
     ]
     
     def __init__(self, database: DatabaseProtocol):
@@ -130,7 +131,7 @@ class FolderManager:
             The inserted folder record
         """
         if template_data is None:
-            template = self._db.oversight_and_defaults.find_one(id=1)
+            template = self._db.get_oversight_or_default()
         else:
             template = template_data
             

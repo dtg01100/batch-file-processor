@@ -238,9 +238,16 @@ class QtProgressService(QObject):
         throbber = QLabel("◐", parent)
         throbber.setAlignment(Qt.AlignmentFlag.AlignCenter)
         throbber.setStyleSheet("color: white; font-size: 36pt; font-weight: bold;")
+        
         # Create pulsing animation for opacity (ping-pong effect)
+        # Use QGraphicsOpacityEffect for proper opacity animation support
         from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
-        animation = QPropertyAnimation(throbber, b"opacity")
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect
+        
+        opacity_effect = QGraphicsOpacityEffect(throbber)
+        throbber.setGraphicsEffect(opacity_effect)
+        
+        animation = QPropertyAnimation(opacity_effect, b"opacity")
         animation.setDuration(1000)
         animation.setStartValue(0.3)
         animation.setEndValue(1.0)
@@ -259,9 +266,9 @@ class QtProgressService(QObject):
         
         animation.finished.connect(on_animation_finished)
         animation.start()
-        animation.start()
-        # Store animation as attribute (ignore type check for this line)
+        # Store animation and effect as attributes to prevent garbage collection
         setattr(throbber, "_animation", animation)
+        setattr(throbber, "_opacity_effect", opacity_effect)
         return throbber
 
     @staticmethod

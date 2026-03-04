@@ -55,7 +55,7 @@ class QtBatchFileSenderApp:
         self,
         appname: str = "Batch File Sender",
         version: str = "(Git Branch: Master)",
-        database_version: str = "33",
+        database_version: str = "41",
         database_obj: Optional[DatabaseObj] = None,
         ui_service: Optional[UIServiceProtocol] = None,
         progress_service: Optional[ProgressServiceProtocol] = None,
@@ -140,8 +140,8 @@ class QtBatchFileSenderApp:
             "core.edi.edi_parser", "core.edi.edi_splitter", "core.edi.inv_fetcher", "core.edi.po_fetcher",
             "dispatch", "dispatch.orchestrator", "dispatch.send_manager",
             "backend.ftp_client", "backend.smtp_client",
-            "edi_tweaks", "record_error", "folders_database_migrator",
-            "mover", "clear_old_files", "rclick_menu", "mtc_edi_validator",
+            "record_error", "folders_database_migrator",
+            "mover", "clear_old_files", "rclick_menu",
             # Convert backends
             "convert_to_csv", "convert_to_fintech", "convert_to_simplified_csv",
             "convert_to_stewarts_custom", "convert_to_yellowdog_csv",
@@ -150,23 +150,37 @@ class QtBatchFileSenderApp:
             # Backend modules
             "copy_backend", "ftp_backend", "email_backend",
             # Third-party dependencies
-            "pyodbc", "PIL", "lxml", "lxml.etree",
+            "lxml", "lxml.etree",
         ]
+        
+        # pyodbc is only bundled on Windows builds (excluded from Linux native builds)
+        optional_modules = []
+        if sys.platform != "win32":
+            optional_modules = ["pyodbc", "PIL"]
+        else:
+            required_modules.extend(["pyodbc", "PIL"])
         
         for module in required_modules:
             try:
                 __import__(module)
-                print(f"  ✓ {module}")
+                print(f"  [OK] {module}")
             except ImportError as e:
-                print(f"  ✗ {module}: {e}")
+                print(f"  [FAIL] {module}: {e}")
                 failures += 1
+        
+        for module in optional_modules:
+            try:
+                __import__(module)
+                print(f"  [OK] {module} (optional)")
+            except ImportError as e:
+                print(f"  [?] {module} (optional, not bundled on this platform): {e}")
         
         # Check for sip which is required by PyQt6 but imported differently
         try:
             import PyQt6.sip
-            print(f"  ✓ PyQt6.sip")
+            print(f"  [OK] PyQt6.sip")
         except ImportError as e:
-            print(f"  ✗ PyQt6.sip: {e}")
+            print(f"  [FAIL] PyQt6.sip: {e}")
             failures += 1
         
         # Check 2: Validate configuration directory setup
@@ -174,21 +188,21 @@ class QtBatchFileSenderApp:
         try:
             self._setup_config_directories()
             if self._config_folder and os.path.exists(self._config_folder):
-                print(f"  ✓ Config directory: {self._config_folder}")
+                print(f"  [OK] Config directory: {self._config_folder}")
             else:
-                print(f"  ✗ Config directory not created: {self._config_folder}")
+                print(f"  [FAIL] Config directory not created: {self._config_folder}")
                 failures += 1
         except Exception as e:
-            print(f"  ✗ Failed to setup config directories: {e}")
+            print(f"  [FAIL] Failed to setup config directories: {e}")
             failures += 1
         
         # Check 3: Test appdirs module functionality
         print("\n3. Checking appdirs functionality...")
         try:
             test_config = appdirs.user_data_dir("TestApp")
-            print(f"  ✓ appdirs module working: {test_config}")
+            print(f"  [OK] appdirs module working: {test_config}")
         except Exception as e:
-            print(f"  ✗ appdirs module error: {e}")
+            print(f"  [FAIL] appdirs module error: {e}")
             failures += 1
         
         # Check 4: Verify file system access
@@ -201,9 +215,9 @@ class QtBatchFileSenderApp:
                 f.write("test")
             os.remove(temp_file)
             os.rmdir(temp_dir)
-            print(f"  ✓ File system access working")
+            print(f"  [OK] File system access working")
         except Exception as e:
-            print(f"  ✗ File system access error: {e}")
+            print(f"  [FAIL] File system access error: {e}")
             failures += 1
         
         # Check 5: Validate essential local modules
@@ -219,24 +233,141 @@ class QtBatchFileSenderApp:
             try:
                 module = __import__(import_name)
                 if hasattr(module, "__file__"):
-                    print(f"  ✓ {module_name}")
+                    print(f"  [OK] {module_name}")
                 else:
-                    print(f"  ✗ {module_name}: Module imported but no __file__ attribute")
+                    print(f"  [FAIL] {module_name}: Module imported but no __file__ attribute")
                     failures += 1
             except Exception as e:
-                print(f"  ✗ {module_name}: {e}")
+                print(f"  [FAIL] {module_name}: {e}")
                 failures += 1
         
         print("\n" + "=" * 50)
         if failures == 0:
-            print(f"✅ Self-test passed - all {len(required_modules) + len(local_modules) + 3} checks successful")
+            print(f"[PASS] Self-test passed - all {len(required_modules) + len(local_modules) + 3} checks successful")
             return 0
         else:
-            print(f"❌ Self-test failed - {failures} out of {len(required_modules) + len(local_modules) + 3} checks failed")
+            print(f"[FAIL] Self-test failed - {failures} out of {len(required_modules) + len(local_modules) + 3} checks failed")
             return 1
+
+    def _run_gui_self_test(self) -> int:
+        """Run GUI self-test: verify Qt widgets can be created and displayed.
+        
+        This test creates the main window, verifies all widgets are properly
+        initialized, shows the window briefly, then closes it.
+        
+        Returns:
+            0 for success, 1 for failures
+        """
+        from PyQt6.QtCore import QTimer
+        
+        print(f"\n{'=' * 50}")
+        print("GUI Self-Test")
+        print("=" * 50)
+        
+        failures = 0
+        
+        # Step 1: Create QApplication
+        print("\n1. Creating QApplication...")
+        try:
+            self._app = QApplication.instance() or QApplication(sys.argv)
+            print("  [OK] QApplication created")
+        except Exception as e:
+            print(f"  [FAIL] QApplication creation failed: {e}")
+            return 1
+        
+        # Step 2: Create main window
+        print("\n2. Creating main window...")
+        try:
+            self._window = QMainWindow()
+            self._window.setWindowTitle(f"{self._appname} {self._version} (GUI Test)")
+            print("  [OK] QMainWindow created")
+        except Exception as e:
+            print(f"  [FAIL] QMainWindow creation failed: {e}")
+            return 1
+        
+        # Step 3: Initialize database and services
+        print("\n3. Initializing database and services...")
+        try:
+            self._setup_config_directories()
+            if self._database is None:
+                self._database = DatabaseObj(
+                    self._database_path,
+                    self._database_version,
+                    self._config_folder,
+                    self._running_platform,
+                )
+            print("  [OK] Database initialized")
+        except Exception as e:
+            print(f"  [FAIL] Database initialization failed: {e}")
+            failures += 1
+        
+        try:
+            self._folder_manager = FolderManager(self._database)
+            print("  [OK] FolderManager initialized")
+        except Exception as e:
+            print(f"  [FAIL] FolderManager initialization failed: {e}")
+            failures += 1
+        
+        # Step 4: Build UI
+        print("\n4. Building UI components...")
+        try:
+            self._build_main_window()
+            print("  [OK] Main window built")
+        except Exception as e:
+            print(f"  [FAIL] Main window build failed: {e}")
+            failures += 1
+        
+        # Step 5: Verify widgets exist
+        print("\n5. Verifying widgets...")
+        widgets_to_check = [
+            ("Folder list widget", self._folder_list_widget),
+            ("Search widget", self._search_widget),
+            ("Right panel widget", self._right_panel_widget),
+            ("Process folder button", self._process_folder_button),
+            ("Processed files button", self._processed_files_button),
+            ("Allow resend button", self._allow_resend_button),
+        ]
+        
+        for widget_name, widget in widgets_to_check:
+            if widget is not None:
+                print(f"  [OK] {widget_name}")
+            else:
+                print(f"  [FAIL] {widget_name} is None")
+                failures += 1
+        
+        # Step 6: Show window and schedule close
+        print("\n6. Displaying window (will auto-close in 2 seconds)...")
+        try:
+            self._window.show()
+            print("  [OK] Window displayed")
+        except Exception as e:
+            print(f"  [FAIL] Window display failed: {e}")
+            failures += 1
+        
+        # Schedule window close and app quit
+        def close_and_quit():
+            print("\n7. Closing window...")
+            self._window.close()
+            self._app.quit()
+            print("  [OK] Window closed")
+            print(f"\n{'=' * 50}")
+            if failures == 0:
+                print("[PASS] GUI self-test passed")
+            else:
+                print(f"[FAIL] GUI self-test failed with {failures} errors")
+            print("=" * 50)
+        
+        QTimer.singleShot(2000, close_and_quit)
+        
+        # Run the event loop
+        return self._app.exec()
 
     def initialize(self) -> None:
         multiprocessing.freeze_support()
+        
+        # Fix Qt platform plugin issues: force X11 when Wayland is misconfigured
+        self._configure_qt_platform()
+        
         print(f"{self._appname} Version {self._version}")
         print(f"Running on {self._running_platform}")
 
@@ -245,6 +376,11 @@ class QtBatchFileSenderApp:
         # Run self-test if requested
         if self._args.self_test:
             exit_code = self._run_self_test()
+            sys.exit(exit_code)
+        
+        # Run GUI self-test if requested
+        if self._args.gui_test:
+            exit_code = self._run_gui_self_test()
             sys.exit(exit_code)
             
         self._setup_config_directories()
@@ -265,8 +401,10 @@ class QtBatchFileSenderApp:
             utils_module=utils,
         )
 
-        self._logs_directory = self._database.oversight_and_defaults.find_one(id=1)
-        self._errors_directory = self._database.oversight_and_defaults.find_one(id=1)
+        # Use safe accessor to ensure these singleton records exist
+        oversight = self._database.get_oversight_or_default()
+        self._logs_directory = oversight
+        self._errors_directory = oversight
 
         if self._args.automatic:
             self._automatic_process_directories(self._database.folders_table)
@@ -301,6 +439,36 @@ class QtBatchFileSenderApp:
             self._database.close()
 
     # ------------------------------------------------------------------
+    # Platform Configuration
+    # ------------------------------------------------------------------
+
+    def _configure_qt_platform(self) -> None:
+        """Configure Qt platform plugin to avoid Wayland issues.
+        
+        When both WAYLAND_DISPLAY and DISPLAY are set, Qt may try to use
+        Wayland but fail to connect. This forces Qt to use X11 (xcb) in
+        such cases.
+        
+        Note: Windows builds running under Wine should use the 'windows' 
+        platform plugin, not xcb.
+        """
+        import os
+        
+        # Don't override platform for Windows builds (even under Wine)
+        if sys.platform == "win32":
+            return
+        
+        wayland_display = os.environ.get('WAYLAND_DISPLAY')
+        x11_display = os.environ.get('DISPLAY')
+        qpa_platform = os.environ.get('QT_QPA_PLATFORM')
+        
+        # If Wayland is set but QT_QPA_PLATFORM is not explicitly set,
+        # and we have X11 available, force X11 to avoid Wayland connection issues
+        if wayland_display and x11_display and not qpa_platform:
+            os.environ['QT_QPA_PLATFORM'] = 'xcb'
+            print(f"Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence")
+
+    # ------------------------------------------------------------------
     # Argument parsing / config
     # ------------------------------------------------------------------
 
@@ -308,6 +476,7 @@ class QtBatchFileSenderApp:
         launch_options = argparse.ArgumentParser()
         launch_options.add_argument("-a", "--automatic", action="store_true")
         launch_options.add_argument("-s", "--self-test", action="store_true", help="Run self-test and exit")
+        launch_options.add_argument("-g", "--gui-test", action="store_true", help="Run GUI self-test (opens and closes main window)")
         self._args = launch_options.parse_args()
 
     def _setup_config_directories(self) -> None:
@@ -474,7 +643,7 @@ class QtBatchFileSenderApp:
     # ------------------------------------------------------------------
 
     def _select_folder(self) -> None:
-        prior_folder = self._database.oversight_and_defaults.find_one(id=1)
+        prior_folder = self._database.get_oversight_or_default()
         initial_directory = prior_folder.get("single_add_folder_prior", "")
         if not initial_directory or not os.path.exists(initial_directory):
             initial_directory = os.path.expanduser("~")
@@ -500,7 +669,8 @@ class QtBatchFileSenderApp:
                 folder_dict = self._database.folders_table.find_one(
                     folder_name=selected_folder
                 )
-                self._mark_active_as_processed_wrapper(folder_dict["id"])
+                if folder_dict:
+                    self._mark_active_as_processed_wrapper(folder_dict["id"])
             self._progress_service.hide()
             self._refresh_users_list()
         else:
@@ -511,7 +681,7 @@ class QtBatchFileSenderApp:
                 self._open_edit_folders_dialog(proposed_folder_dict)
 
     def _batch_add_folders(self) -> None:
-        prior_folder = self._database.oversight_and_defaults.find_one(id=1)
+        prior_folder = self._database.get_oversight_or_default()
         starting_directory = os.getcwd()
         initial = prior_folder.get("batch_add_folder_prior") or os.path.expanduser("~")
 
@@ -559,7 +729,12 @@ class QtBatchFileSenderApp:
 
     def _edit_folder_selector(self, folder_to_be_edited: int) -> None:
         edit_folder = self._database.folders_table.find_one(id=folder_to_be_edited)
-        self._open_edit_folders_dialog(edit_folder)
+        if edit_folder:
+            self._open_edit_folders_dialog(edit_folder)
+        else:
+            self._ui_service.show_error(
+                "Error", f"Folder with id {folder_to_be_edited} not found."
+            )
 
     def _send_single(self, folder_id: int) -> None:
         self._progress_service.show("Working...")
@@ -569,8 +744,14 @@ class QtBatchFileSenderApp:
         finally:
             single_table = self._database.session_database["single_table"]
             table_dict = self._database.folders_table.find_one(id=folder_id)
-            table_dict["old_id"] = table_dict.pop("id")
-            single_table.insert(table_dict)
+            if table_dict:
+                table_dict["old_id"] = table_dict.pop("id")
+                single_table.insert(table_dict)
+            else:
+                self._ui_service.show_error(
+                    "Error", f"Folder with id {folder_id} not found."
+                )
+                return
             self._progress_service.hide()
             self._graphical_process_directories(single_table)
             single_table.drop()
@@ -617,7 +798,7 @@ class QtBatchFileSenderApp:
 
     def _process_directories(self, folders_table_process) -> None:
         original_folder = os.getcwd()
-        settings_dict = self._database.settings.find_one(id=1)
+        settings_dict = self._database.get_settings_or_default()
 
         if (
             settings_dict["enable_interval_backups"]
@@ -630,7 +811,7 @@ class QtBatchFileSenderApp:
 
         log_folder_creation_error = False
         start_time = str(datetime.datetime.now())
-        reporting = self._database.oversight_and_defaults.find_one(id=1)
+        reporting = self._database.get_oversight_or_default()
         run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
 
         if not os.path.isdir(self._logs_directory["logs_directory"]):
@@ -674,9 +855,9 @@ class QtBatchFileSenderApp:
                 )
 
             try:
-                import dispatch
+                from dispatch import process
 
-                run_error_bool, run_summary_string = dispatch.process(
+                run_error_bool, run_summary_string = process(
                     self._database.database_connection,
                     folders_table_process,
                     run_log,
@@ -752,9 +933,10 @@ class QtBatchFileSenderApp:
         self._database.folders_table.update(folder_config, ["id"])
 
     def _set_defaults_popup(self) -> None:
-        defaults = self._database.oversight_and_defaults.find_one(id=1)
-        if defaults is None:
-            defaults = {}
+        # Use safe accessor which guarantees non-None return
+        defaults = self._database.get_oversight_or_default()
+        # Create a copy to avoid modifying the persistent record
+        defaults = dict(defaults)
         defaults.setdefault("copy_to_directory", "")
         defaults.setdefault(
             "logs_directory",
@@ -823,9 +1005,9 @@ class QtBatchFileSenderApp:
 
         EditSettingsDialog(
             self._window,
-            self._database.oversight_and_defaults.find_one(id=1),
-            settings_provider=lambda: self._database.settings.find_one(id=1),
-            oversight_provider=lambda: self._database.oversight_and_defaults.find_one(id=1),
+            self._database.get_oversight_or_default(),
+            settings_provider=lambda: self._database.get_settings_or_default(),
+            oversight_provider=lambda: self._database.get_oversight_or_default(),
             update_settings=lambda s: self._database.settings.update(s, ["id"]),
             update_oversight=lambda o: self._database.oversight_and_defaults.update(o, ["id"]),
             on_apply=self._update_reporting,
@@ -896,11 +1078,11 @@ class QtBatchFileSenderApp:
 
     def _show_resend_dialog(self) -> None:
         from interface.qt.dialogs.resend_dialog import ResendDialog
-        from interface.services.resend_service import ResendService
 
-        resend_service = ResendService(self._database.database_connection)
-        dlg = ResendDialog(parent=self._window, resend_service=resend_service)
-        dlg.exec()
+        dlg = ResendDialog(parent=self._window, database_connection=self._database.database_connection)
+        # Only show if data loaded successfully
+        if dlg._should_show:
+            dlg.exec()
 
     # ------------------------------------------------------------------
     # Settings helpers
@@ -978,7 +1160,7 @@ def main() -> None:
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",
         version="(Git Branch: Master)",
-        database_version="33",
+        database_version="41",
     )
     app.initialize()
     app.run()

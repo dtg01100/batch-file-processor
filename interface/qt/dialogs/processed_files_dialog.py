@@ -159,9 +159,12 @@ class ProcessedFilesDialog(BaseDialog):
         def _clear_layout(layout):
             while layout.count():
                 item = layout.takeAt(0)
-                if item.widget():
-                    item.widget().setParent(None)
-                    item.widget().deleteLater()
+                if item is None:
+                    continue
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)
+                    widget.deleteLater()
                 elif item.layout():
                     _clear_layout(item.layout())
 

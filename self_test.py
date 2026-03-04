@@ -118,13 +118,11 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         "dispatch.send_manager",
         "backend.ftp_client",
         "backend.smtp_client",
-        "edi_tweaks",
         "record_error",
         "folders_database_migrator",
         "mover",
         "clear_old_files",
         "rclick_menu",
-        "mtc_edi_validator",
     ]
     for mod_name in app_modules:
         try:
