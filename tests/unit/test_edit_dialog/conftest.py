@@ -52,12 +52,7 @@ from interface.services.ftp_service import (
 
 @pytest.fixture
 def mock_ftp_service() -> MagicMock:
-    """Create a mock FTP service with configurable behavior.
-
-    The mock implements FTPServiceProtocol and can be configured to:
-    - Succeed or fail connections
-    - Track connection attempts
-    - Return specific error types
+    """Create a mock FTP service implementing FTPServiceProtocol.
 
     Returns:
         MagicMock: A mock implementing FTPServiceProtocol
@@ -65,26 +60,7 @@ def mock_ftp_service() -> MagicMock:
     Example:
         >>> mock_ftp_service.test_connection.return_value = FTPConnectionResult(success=True)
     """
-    mock = MagicMock(spec=FTPServiceProtocol)
-
-    # Default to successful connection - using side_effect to track connections
-    mock.test_connection = MagicMock()
-
-    # Track connection attempts for verification
-    mock.connection_attempts = []
-
-    def track_connection(server, port, username, password, folder):
-        mock.connection_attempts.append({
-            'server': server,
-            'port': port,
-            'username': username,
-            'folder': folder
-        })
-        return FTPConnectionResult(success=True)
-
-    mock.test_connection.side_effect = track_connection
-
-    return mock
+    return MagicMock(spec=FTPServiceProtocol)
 
 
 @pytest.fixture
@@ -112,45 +88,16 @@ def failing_ftp_service() -> MagicMock:
 
 @pytest.fixture
 def mock_validator() -> MagicMock:
-    """Create a mock FolderSettingsValidator with configurable validation.
-
-    The mock can be configured to:
-    - Return success or specific validation errors
-    - Track validation calls and arguments
-    - Support FTP connection testing via mock FTP service
+    """Create a mock FolderSettingsValidator.
 
     Returns:
-        MagicMock: A mock validator with validation control
+        MagicMock: A mock implementing FolderSettingsValidator
 
     Example:
         >>> validator = mock_validator()
         >>> validator.validate_extracted_fields.return_value = ValidationResult(is_valid=False)
     """
-    mock = MagicMock(spec=FolderSettingsValidator)
-
-    # Default successful validation
-    mock.validate_extracted_fields = MagicMock(
-        return_value=ValidationResult(is_valid=True)
-    )
-
-    # Track calls for verification
-    mock.validate_call_args = None
-    mock.validate_called = False
-
-    def track_validation(extracted, current_alias=""):
-        mock.validate_called = True
-        mock.validate_call_args = (extracted, current_alias)
-        return ValidationResult(is_valid=True)
-
-    mock.validate_extracted_fields.side_effect = track_validation
-
-    # Mock other validator methods
-    mock.validate_ftp_settings = MagicMock(return_value=[])
-    mock.validate_email_settings = MagicMock(return_value=[])
-    mock.validate_copy_settings = MagicMock(return_value=[])
-    mock.validate_edi_settings = MagicMock(return_value=[])
-
-    return mock
+    return MagicMock(spec=FolderSettingsValidator)
 
 
 @pytest.fixture
@@ -197,51 +144,16 @@ def validating_mock_validator(mock_ftp_service) -> FolderSettingsValidator:
 
 @pytest.fixture
 def mock_extractor() -> MagicMock:
-    """Create a mock FolderDataExtractor with configurable extraction.
-
-    The mock can be configured to:
-    - Return specific extracted field values
-    - Track extraction calls
-    - Support all dialog field extraction
+    """Create a mock FolderDataExtractor.
 
     Returns:
-        MagicMock: A mock extractor with extraction control
+        MagicMock: A mock implementing FolderDataExtractor
 
     Example:
         >>> extractor = mock_extractor()
         >>> extractor.extract_all.return_value = ExtractedDialogFields(folder_name="/test")
     """
-    mock = MagicMock(spec=FolderDataExtractor)
-
-    # Default extracted fields
-    default_fields = ExtractedDialogFields(
-        folder_name="/test/folder",
-        alias="Test Folder",
-        folder_is_active="True",
-        process_backend_copy=False,
-        process_backend_ftp=True,
-        process_backend_email=False,
-        ftp_server="ftp.example.com",
-        ftp_port=21,
-        ftp_folder="/uploads/",
-        ftp_username="testuser",
-        ftp_password="testpass",
-        email_to="",
-        email_subject_line="",
-        process_edi="False",
-        convert_to_format=""
-    )
-
-    mock.extract_all = MagicMock(return_value=default_fields)
-    mock.extract_called = False
-
-    def track_extraction():
-        mock.extract_called = True
-        return default_fields
-
-    mock.extract_all.side_effect = track_extraction
-
-    return mock
+    return MagicMock(spec=FolderDataExtractor)
 
 
 @pytest.fixture

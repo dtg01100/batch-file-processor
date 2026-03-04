@@ -2,7 +2,7 @@ import unittest
 import json
 import ast
 
-import dataset
+from interface.database import sqlite_wrapper
 
 from interface.models.folder_configuration import FolderConfiguration
 import schema
@@ -32,7 +32,7 @@ def _normalize_plugin_configs(value):
 class TestFolderDatabaseRoundTrip(unittest.TestCase):
     def setUp(self):
         # in-memory DB
-        self.db = dataset.connect('sqlite:///')
+        self.db = sqlite_wrapper.Database.connect(':memory:')
         schema.ensure_schema(self.db)
 
     def tearDown(self):

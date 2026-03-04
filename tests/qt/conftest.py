@@ -26,38 +26,6 @@ def mock_database_obj():
     db.settings = MagicMock()
     db.session_database = MagicMock()
     db.database_connection = MagicMock()
-
-    db.folders_table.count.return_value = 0
-    db.folders_table.find.return_value = iter([])
-    db.processed_files.count.return_value = 0
-    db.processed_files.distinct.return_value = []
-    db.oversight_and_defaults.find_one.return_value = {
-        "id": 1,
-        "logs_directory": "/tmp/logs",
-        "enable_reporting": "False",
-        "report_email_destination": "",
-        "report_edi_errors": False,
-        "report_printing_fallback": "False",
-        "single_add_folder_prior": "",
-        "batch_add_folder_prior": "",
-        "export_processed_folder_prior": "",
-    }
-    db.settings.find_one.return_value = {
-        "id": 1,
-        "odbc_driver": "",
-        "as400_address": "",
-        "as400_username": "",
-        "as400_password": "",
-        "enable_email": False,
-        "email_address": "",
-        "email_username": "",
-        "email_password": "",
-        "email_smtp_server": "",
-        "smtp_port": "",
-        "enable_interval_backups": False,
-        "backup_counter_maximum": 100,
-        "backup_counter": 0,
-    }
     return db
 
 
@@ -153,37 +121,16 @@ def sample_folder_config():
 @pytest.fixture
 def mock_folders_table():
     """Create a mock folders table for FolderListWidget tests."""
-    table = MagicMock()
-    table.find.return_value = iter([])
-    table.count.return_value = 0
-    table.find_one.return_value = None
-    return table
+    return MagicMock()
 
 
 @pytest.fixture
 def mock_resend_service():
     """Create a mock ResendService."""
-    service = MagicMock()
-    service.has_processed_files.return_value = False
-    service.get_folder_list.return_value = []
-    service.get_files_for_folder.return_value = []
-    service.count_files_for_folder.return_value = 0
-    service.set_resend_flag = MagicMock()
-    return service
+    return MagicMock()
 
 
 @pytest.fixture
 def mock_maintenance_functions():
     """Create a mock MaintenanceFunctions."""
-    mf = MagicMock()
-    mf.set_all_active = MagicMock()
-    mf.set_all_inactive = MagicMock()
-    mf.clear_resend_flags = MagicMock()
-    mf.clear_processed_files_log = MagicMock()
-    mf.remove_inactive_folders = MagicMock()
-    mf.mark_active_as_processed = MagicMock()
-    mf.database_import_wrapper = MagicMock()
-    mf._database_obj = MagicMock()
-    mf._on_operation_start = None
-    mf._on_operation_end = None
-    return mf
+    return MagicMock()

@@ -61,7 +61,7 @@ class TestDatabaseObj:
         """Create DatabaseObj with injectable connection."""
         return DatabaseObj(
             database_path="/test/path.db",
-            database_version="33",
+            database_version="41",
             config_folder="/test/config",
             running_platform="Linux",
             connection=mock_connection
@@ -73,7 +73,7 @@ class TestDatabaseObj:
         
         db = DatabaseObj(
             database_path="/test/path.db",
-            database_version="33",
+            database_version="41",
             config_folder="/test/config",
             running_platform="Linux",
             connection=mock_connection
@@ -108,6 +108,8 @@ class TestDatabaseObj:
     
     def test_get_setting(self, database_obj, mock_tables):
         """Test getting a setting by key."""
+        # Reset call count to only track calls made during this specific test
+        mock_tables["settings"].find_one.reset_mock()
         mock_tables["settings"].find_one.return_value = {
             "key": "test_key",
             "value": "test_value"
@@ -120,6 +122,8 @@ class TestDatabaseObj:
     
     def test_get_setting_not_found(self, database_obj, mock_tables):
         """Test getting a non-existent setting."""
+        # Reset call count to only track calls made during this specific test
+        mock_tables["settings"].find_one.reset_mock()
         mock_tables["settings"].find_one.return_value = None
         
         result = database_obj.get_setting("nonexistent")
@@ -233,14 +237,14 @@ class TestDatabaseObjVersionChecking:
             }
         
         # Create without injecting connection - will initialize from path
-        with patch('interface.database.database_obj.dataset') as mock_dataset:
+        with patch('interface.database.database_obj.sqlite_wrapper') as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
-            mock_dataset.connect.return_value = mock_conn
+            mock_sqlite_wrapper.Database.connect.return_value = mock_conn
             
             with patch('interface.database.database_obj.os.path.isfile', return_value=True):
                 db = DatabaseObj(
                     database_path="/test/path.db",
-                    database_version="33",
+                    database_version="41",
                     config_folder="/test/config",
                     running_platform="Linux",
                     connection=None,  # No connection injected
@@ -264,15 +268,15 @@ class TestDatabaseObjVersionChecking:
         def mock_show_error(title, message):
             error_shown.append((title, message))
         
-        with patch('interface.database.database_obj.dataset') as mock_dataset:
+        with patch('interface.database.database_obj.sqlite_wrapper') as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
-            mock_dataset.connect.return_value = mock_conn
+            mock_sqlite_wrapper.Database.connect.return_value = mock_conn
             
             with patch('interface.database.database_obj.os.path.isfile', return_value=True):
                 with pytest.raises(SystemExit):
                     DatabaseObj(
                         database_path="/test/path.db",
-                        database_version="33",
+                        database_version="41",
                         config_folder="/test/config",
                         running_platform="Linux",
                         connection=None,  # No connection injected
@@ -290,15 +294,15 @@ class TestDatabaseObjVersionChecking:
         def mock_show_error(title, message):
             error_shown.append((title, message))
         
-        with patch('interface.database.database_obj.dataset') as mock_dataset:
+        with patch('interface.database.database_obj.sqlite_wrapper') as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
-            mock_dataset.connect.return_value = mock_conn
+            mock_sqlite_wrapper.Database.connect.return_value = mock_conn
             
             with patch('interface.database.database_obj.os.path.isfile', return_value=True):
                 with pytest.raises(SystemExit):
                     DatabaseObj(
                         database_path="/test/path.db",
-                        database_version="33",
+                        database_version="41",
                         config_folder="/test/config",
                         running_platform="Linux",
                         connection=None,  # No connection injected
@@ -318,7 +322,7 @@ class TestDatabaseObjVersionChecking:
         # Should NOT raise because connection is injected
         db = DatabaseObj(
             database_path="/test/path.db",
-            database_version="33",
+            database_version="41",
             config_folder="/test/config",
             running_platform="Linux",
             connection=mock_connection,  # Connection injected
@@ -349,7 +353,7 @@ class TestDatabaseObjReload:
         
         db = DatabaseObj(
             database_path="/test/path.db",
-            database_version="33",
+            database_version="41",
             config_folder="/test/config",
             running_platform="Linux",
             connection=mock_conn1
@@ -371,8 +375,8 @@ class TestDatabaseObjReload:
         mock_tables2["version"].find_one.return_value = {"version": "33", "os": "Linux"}
         mock_conn2 = create_mock_connection(mock_tables2)
         
-        with patch('interface.database.database_obj.dataset') as mock_dataset:
-            mock_dataset.connect.return_value = mock_conn2
+        with patch('interface.database.database_obj.sqlite_wrapper') as mock_sqlite_wrapper:
+            mock_sqlite_wrapper.Database.connect.return_value = mock_conn2
             db.reload()
         
         # Tables should be reinitialized

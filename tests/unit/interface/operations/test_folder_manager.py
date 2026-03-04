@@ -404,7 +404,7 @@ class TestFolderManagerSkipList:
     def test_skip_list_excludes_fields(self):
         """Test that skip list excludes correct fields."""
         mock_db = MagicMock()
-        mock_db.oversight_and_defaults.find_one.return_value = {
+        mock_db.get_oversight_or_default.return_value = {
             "id": 1,
             "folder_name": "should_be_skipped",
             "alias": "should_be_skipped",

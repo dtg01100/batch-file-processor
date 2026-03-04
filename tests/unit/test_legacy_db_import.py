@@ -6,7 +6,7 @@ the current schema version (v42).
 """
 
 import pytest
-import dataset
+from interface.database import sqlite_wrapper
 
 import folders_database_migrator
 
@@ -18,7 +18,7 @@ def _create_old_v33_database(db_path, platform="Linux"):
     which added split_edi_filter_categories and split_edi_filter_mode columns,
     but did NOT add plugin_config.
     """
-    db = dataset.connect('sqlite:///' + db_path)
+    db = sqlite_wrapper.Database.connect(db_path)
 
     db['version'].insert(dict(version="33", os=platform))
 
@@ -182,7 +182,7 @@ def _create_v32_database(db_path, platform="Linux"):
 
     This tests the migration path through the fixed v32->v33 step.
     """
-    db = dataset.connect('sqlite:///' + db_path)
+    db = sqlite_wrapper.Database.connect(db_path)
 
     db['version'].insert(dict(version="32", os=platform))
 
@@ -289,7 +289,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
@@ -301,7 +301,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -318,7 +318,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -333,7 +333,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -347,7 +347,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -362,7 +362,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -375,7 +375,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=1)
@@ -390,7 +390,7 @@ class TestOldV33DatabaseMigration:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         settings = db['settings'].find_one(id=1)
@@ -405,7 +405,7 @@ class TestV32DatabaseMigration:
 
     def test_v32_migrates_to_v41(self, legacy_v32_db, tmp_path):
         """A real v32 database should be upgradable to v42."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
@@ -414,7 +414,7 @@ class TestV32DatabaseMigration:
 
     def test_v32_gets_all_v33_columns(self, legacy_v32_db, tmp_path):
         """A real v32 database should get filter columns AND plugin_config at v33."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux", target_version="33")
 
         version = db['version'].find_one(id=1)
@@ -436,7 +436,7 @@ class TestV32DatabaseMigration:
 
     def test_v32_preserves_existing_data(self, legacy_v32_db, tmp_path):
         """v32 migration should preserve existing folder data from real production DB."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db['folders'].find_one(id=21)
@@ -450,7 +450,7 @@ class TestV32FixtureDbMigrationAtScale:
 
     def test_all_530_folders_survive_migration(self, legacy_v32_db, tmp_path):
         """All 530 folders from the real v32 DB should survive migration to v42."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         assert db['folders'].count() == 530
@@ -458,7 +458,7 @@ class TestV32FixtureDbMigrationAtScale:
 
     def test_all_folders_have_required_columns_after_migration(self, legacy_v32_db, tmp_path):
         """Every migrated folder should have all columns added by migration steps."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         required_columns = [
@@ -478,7 +478,7 @@ class TestV32FixtureDbMigrationAtScale:
 
     def test_boolean_normalization_across_real_data(self, legacy_v32_db, tmp_path):
         """No folder should have string 'True'/'False' in boolean fields after migration."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         boolean_fields = [
@@ -503,7 +503,7 @@ class TestV32FixtureDbMigrationAtScale:
 
     def test_settings_preserved_through_migration(self, legacy_v32_db, tmp_path):
         """Settings table values should be preserved through full migration."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         settings = db['settings'].find_one(id=1)
@@ -513,7 +513,7 @@ class TestV32FixtureDbMigrationAtScale:
 
     def test_processed_files_preserved(self, legacy_v32_db, tmp_path):
         """All 227501 processed_files records should survive migration."""
-        db = dataset.connect('sqlite:///' + legacy_v32_db)
+        db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         assert db['processed_files'].count() == 227501
@@ -526,13 +526,13 @@ class TestAddColumnSafe:
     def test_adds_new_column(self, tmp_path):
         """_add_column_safe should add a column that doesn't exist."""
         db_path = str(tmp_path / "test.db")
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         db['test_table'].insert(dict(id=1, name="test"))
 
         folders_database_migrator._add_column_safe(db, "test_table", "new_col", '"default_val"')
 
         db.close()
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         row = db['test_table'].find_one(id=1)
         assert 'new_col' in row
         assert row['new_col'] == "default_val"
@@ -541,7 +541,7 @@ class TestAddColumnSafe:
     def test_skips_existing_column(self, tmp_path):
         """_add_column_safe should not fail if column already exists."""
         db_path = str(tmp_path / "test.db")
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         db['test_table'].insert(dict(id=1, name="test", existing_col="original"))
 
         folders_database_migrator._add_column_safe(db, "test_table", "existing_col", '"new_default"')
@@ -553,13 +553,13 @@ class TestAddColumnSafe:
     def test_handles_integer_default(self, tmp_path):
         """_add_column_safe should work with integer defaults."""
         db_path = str(tmp_path / "test.db")
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         db['test_table'].insert(dict(id=1, name="test"))
 
         folders_database_migrator._add_column_safe(db, "test_table", "int_col", "42")
 
         db.close()
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         row = db['test_table'].find_one(id=1)
         assert row['int_col'] == 42
         db.close()
@@ -573,7 +573,7 @@ class TestMigrationIdempotency:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db['version'].find_one(id=1)
@@ -590,7 +590,7 @@ class TestMigrationIdempotency:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux", target_version="33")
 
         version = db['version'].find_one(id=1)
@@ -602,12 +602,12 @@ class TestMigrationIdempotency:
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         assert db['version'].find_one(id=1)['version'] == "42"
 
         db.close()
-        db = dataset.connect('sqlite:///' + db_path)
+        db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         assert db['version'].find_one(id=1)['version'] == "42"
 

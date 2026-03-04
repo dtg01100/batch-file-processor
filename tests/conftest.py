@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import dataset
+from interface.database import sqlite_wrapper
 import pytest
 
 import folders_database_migrator
@@ -76,17 +76,17 @@ def legacy_v32_db(tmp_path):
 
 @pytest.fixture
 def migrated_v42_db(legacy_v32_db, tmp_path):
-    """Provide a fully migrated v42 dataset connection (v32 -> v42).
+    """Provide a fully migrated v42 database connection (v32 -> v42).
 
-    Connects to the copied legacy database via *dataset*, runs the full
+    Connects to the copied legacy database via *sqlite_wrapper*, runs the full
     migration pipeline through ``folders_database_migrator.upgrade_database``,
     and yields the open connection.  The connection is closed automatically
     on teardown.
 
     Yields:
-        dataset.Database: An open dataset connection to the migrated database.
+        sqlite_wrapper.Database: An open database connection to the migrated database.
     """
-    db = dataset.connect("sqlite:///" + legacy_v32_db)
+    db = sqlite_wrapper.Database.connect(legacy_v32_db)
     folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
     yield db
     db.close()

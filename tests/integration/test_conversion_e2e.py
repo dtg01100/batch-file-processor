@@ -407,7 +407,11 @@ class TestConvertToFintech:
         assert 'Division_id' in rows[0], "Header should contain Division_id"
 
     def test_convert_handles_missing_upc(self, edi_file, tmp_path, default_parameters_dict, default_settings_dict):
-        """Test that convert_to_fintech handles missing UPC in lookup table."""
+        """Test that convert_to_fintech handles missing UPC in lookup table gracefully.
+        
+        When UPC is not found in the lookup table, the converter should use
+        empty strings for upc_pack and upc_case rather than failing.
+        """
         import convert_to_fintech
         
         output_path = str(tmp_path / "output_missing_upc")
@@ -418,15 +422,37 @@ class TestConvertToFintech:
             mock_fetcher.fetch_cust_no.return_value = 'STORE001'
             mock_inv_fetcher_class.return_value = mock_fetcher
             
-            # This should raise KeyError for missing UPC
-            with pytest.raises(KeyError):
-                convert_to_fintech.edi_convert(
-                    edi_file,
-                    output_path,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    empty_upc_lut
-                )
+            # Should handle missing UPC gracefully (use empty strings)
+            result = convert_to_fintech.edi_convert(
+                edi_file,
+                output_path,
+                default_settings_dict,
+                default_parameters_dict,
+                empty_upc_lut
+            )
+            
+            # Verify the output file was created
+            assert result is not None
+            import os
+            # result already includes .csv extension
+            assert os.path.exists(result), "Output CSV should be created even with missing UPCs"
+            
+            # Read the output and verify empty UPC fields
+            with open(result, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+            
+            # Should have header + at least one data row
+            assert len(rows) >= 2, "Should have header and data rows"
+            
+            # upc_pack and upc_case columns (indices 7 and 8) should be empty
+            # Header row: Division_id, invoice_number, invoice_date, Vendor_store_id,
+            #             quantity_shipped, Quantity_uom, item_number, upc_pack, upc_case, ...
+            for row in rows[1:]:  # Skip header
+                if len(row) > 8:
+                    # upc_pack (index 7) and upc_case (index 8) should be empty
+                    assert row[7] == '', f"upc_pack should be empty for missing UPC, got: {row[7]}"
+                    assert row[8] == '', f"upc_case should be empty for missing UPC, got: {row[8]}"
 
 
 # =============================================================================

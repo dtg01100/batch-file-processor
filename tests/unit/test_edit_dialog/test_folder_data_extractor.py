@@ -14,6 +14,40 @@ from interface.operations.folder_data_extractor import (
 )
 
 
+# =============================================================================
+# Widget Factory Helpers - Reduce mock boilerplate
+# =============================================================================
+
+def create_mock_widget(value):
+    """Create a mock widget with a get() method returning the specified value.
+    
+    This helper reduces the mock boilerplate in test fixtures.
+    
+    Args:
+        value: The value to return from widget.get()
+        
+    Returns:
+        MagicMock: A mock widget that returns value from get()
+    """
+    widget = MagicMock()
+    widget.get.return_value = value
+    return widget
+
+
+def create_field_dict(**kwargs):
+    """Create a dictionary of mock widget fields from keyword arguments.
+    
+    This helper creates a dict of mock widgets in one call, reducing boilerplate.
+    
+    Args:
+        **kwargs: Field names and their values
+        
+    Returns:
+        dict: Dictionary of mock widgets
+    """
+    return {key: create_mock_widget(value) for key, value in kwargs.items()}
+
+
 class TestExtractedDialogFields:
     """Test suite for ExtractedDialogFields dataclass."""
     
@@ -110,61 +144,64 @@ class TestFolderDataExtractor:
     
     @pytest.fixture
     def mock_fields(self):
-        """Create mock dialog fields."""
-        return {
-            'foldersnameinput': MagicMock(get=MagicMock(return_value='/path/to/folder')),
-            'folder_alias_field': MagicMock(get=MagicMock(return_value='alias_field')),
-            'active_checkbutton': MagicMock(get=MagicMock(return_value='True')),
-            'process_backend_copy_check': MagicMock(get=MagicMock(return_value=True)),
-            'process_backend_ftp_check': MagicMock(get=MagicMock(return_value=True)),
-            'process_backend_email_check': MagicMock(get=MagicMock(return_value=False)),
-            'ftp_server_field': MagicMock(get=MagicMock(return_value='ftp.example.com')),
-            'ftp_port_field': MagicMock(get=MagicMock(return_value='21')),
-            'ftp_folder_field': MagicMock(get=MagicMock(return_value='/uploads/')),
-            'ftp_username_field': MagicMock(get=MagicMock(return_value='testuser')),
-            'ftp_password_field': MagicMock(get=MagicMock(return_value='testpass')),
-            'email_recepient_field': MagicMock(get=MagicMock(return_value='test@example.com')),
-            'email_sender_subject_field': MagicMock(get=MagicMock(return_value='Test Subject')),
-            'process_edi': MagicMock(get=MagicMock(return_value='False')),
-            'convert_formats_var': MagicMock(get=MagicMock(return_value='csv')),
-            'tweak_edi': MagicMock(get=MagicMock(return_value=True)),
-            'split_edi': MagicMock(get=MagicMock(return_value=False)),
-            'split_edi_send_invoices': MagicMock(get=MagicMock(return_value=True)),
-            'split_edi_send_credits': MagicMock(get=MagicMock(return_value=True)),
-            'prepend_file_dates': MagicMock(get=MagicMock(return_value=False)),
-            'rename_file_field': MagicMock(get=MagicMock(return_value='')),
-            'split_edi_filter_categories_entry': MagicMock(get=MagicMock(return_value='ALL')),
-            'split_edi_filter_mode': MagicMock(get=MagicMock(return_value='include')),
-            'upc_var_check': MagicMock(get=MagicMock(return_value='True')),
-            'a_rec_var_check': MagicMock(get=MagicMock(return_value='True')),
-            'c_rec_var_check': MagicMock(get=MagicMock(return_value='False')),
-            'headers_check': MagicMock(get=MagicMock(return_value='True')),
-            'ampersand_check': MagicMock(get=MagicMock(return_value='False')),
-            'force_edi_check_var': MagicMock(get=MagicMock(return_value=False)),
-            'pad_arec_check': MagicMock(get=MagicMock(return_value='False')),
-            'a_record_padding_field': MagicMock(get=MagicMock(return_value='')),
-            'a_record_padding_length': MagicMock(get=MagicMock(return_value='6')),
-            'append_arec_check': MagicMock(get=MagicMock(return_value='False')),
-            'a_record_append_field': MagicMock(get=MagicMock(return_value='')),
-            'force_txt_file_ext_check': MagicMock(get=MagicMock(return_value='False')),
-            'invoice_date_offset': MagicMock(get=MagicMock(return_value='0')),
-            'invoice_date_custom_format': MagicMock(get=MagicMock(return_value=False)),
-            'invoice_date_custom_format_field': MagicMock(get=MagicMock(return_value='')),
-            'edi_each_uom_tweak': MagicMock(get=MagicMock(return_value=False)),
-            'override_upc_bool': MagicMock(get=MagicMock(return_value=False)),
-            'override_upc_level': MagicMock(get=MagicMock(return_value='1')),
-            'override_upc_category_filter_entry': MagicMock(get=MagicMock(return_value='')),
-            'upc_target_length_entry': MagicMock(get=MagicMock(return_value='11')),
-            'upc_padding_pattern_entry': MagicMock(get=MagicMock(return_value='           ')),
-            'include_item_numbers': MagicMock(get=MagicMock(return_value=False)),
-            'include_item_description': MagicMock(get=MagicMock(return_value=False)),
-            'simple_csv_column_sorter': MagicMock(get=MagicMock(return_value='')),
-            'split_sales_tax_prepaid_var': MagicMock(get=MagicMock(return_value=False)),
-            'estore_store_number_field': MagicMock(get=MagicMock(return_value='')),
-            'estore_Vendor_OId_field': MagicMock(get=MagicMock(return_value='')),
-            'estore_vendor_namevendoroid_field': MagicMock(get=MagicMock(return_value='')),
-            'fintech_divisionid_field': MagicMock(get=MagicMock(return_value='')),
-        }
+        """Create mock dialog fields using factory helpers.
+        
+        Uses create_field_dict helper to reduce mock boilerplate.
+        """
+        return create_field_dict(
+            foldersnameinput='/path/to/folder',
+            folder_alias_field='alias_field',
+            active_checkbutton='True',
+            process_backend_copy_check=True,
+            process_backend_ftp_check=True,
+            process_backend_email_check=False,
+            ftp_server_field='ftp.example.com',
+            ftp_port_field='21',
+            ftp_folder_field='/uploads/',
+            ftp_username_field='testuser',
+            ftp_password_field='testpass',
+            email_recepient_field='test@example.com',
+            email_sender_subject_field='Test Subject',
+            process_edi='False',
+            convert_formats_var='csv',
+            tweak_edi=True,
+            split_edi=False,
+            split_edi_send_invoices=True,
+            split_edi_send_credits=True,
+            prepend_file_dates=False,
+            rename_file_field='',
+            split_edi_filter_categories_entry='ALL',
+            split_edi_filter_mode='include',
+            upc_var_check='True',
+            a_rec_var_check='True',
+            c_rec_var_check='False',
+            headers_check='True',
+            ampersand_check='False',
+            force_edi_check_var=False,
+            pad_arec_check='False',
+            a_record_padding_field='',
+            a_record_padding_length='6',
+            append_arec_check='False',
+            a_record_append_field='',
+            force_txt_file_ext_check='False',
+            invoice_date_offset='0',
+            invoice_date_custom_format=False,
+            invoice_date_custom_format_field='',
+            edi_each_uom_tweak=False,
+            override_upc_bool=False,
+            override_upc_level='1',
+            override_upc_category_filter_entry='',
+            upc_target_length_entry='11',
+            upc_padding_pattern_entry='           ',
+            include_item_numbers=False,
+            include_item_description=False,
+            simple_csv_column_sorter='',
+            split_sales_tax_prepaid_var=False,
+            estore_store_number_field='',
+            estore_Vendor_OId_field='',
+            estore_vendor_namevendoroid_field='',
+            fintech_divisionid_field='',
+        )
     
     @pytest.fixture
     def extractor(self, mock_fields):
@@ -405,32 +442,32 @@ class TestFolderDataExtractorBackendSpecific:
     
     @pytest.fixture
     def ftp_fields(self):
-        """Create FTP-specific mock fields."""
-        return {
-            'process_backend_ftp_check': MagicMock(get=MagicMock(return_value=True)),
-            'ftp_server_field': MagicMock(get=MagicMock(return_value='ftp.test.com')),
-            'ftp_port_field': MagicMock(get=MagicMock(return_value='990')),
-            'ftp_folder_field': MagicMock(get=MagicMock(return_value='/secure/')),
-            'ftp_username_field': MagicMock(get=MagicMock(return_value='admin')),
-            'ftp_password_field': MagicMock(get=MagicMock(return_value='secret')),
-        }
+        """Create FTP-specific mock fields using factory helpers."""
+        return create_field_dict(
+            process_backend_ftp_check=True,
+            ftp_server_field='ftp.test.com',
+            ftp_port_field='990',
+            ftp_folder_field='/secure/',
+            ftp_username_field='admin',
+            ftp_password_field='secret',
+        )
     
     @pytest.fixture
     def email_fields(self):
-        """Create Email-specific mock fields."""
-        return {
-            'process_backend_email_check': MagicMock(get=MagicMock(return_value=True)),
-            'email_recepient_field': MagicMock(get=MagicMock(return_value='user@example.com, other@example.com')),
-            'email_sender_subject_field': MagicMock(get=MagicMock(return_value='EDIFACT Invoice')),
-        }
+        """Create Email-specific mock fields using factory helpers."""
+        return create_field_dict(
+            process_backend_email_check=True,
+            email_recepient_field='user@example.com, other@example.com',
+            email_sender_subject_field='EDIFACT Invoice',
+        )
     
     @pytest.fixture
     def copy_fields(self):
-        """Create Copy-specific mock fields."""
-        return {
-            'process_backend_copy_check': MagicMock(get=MagicMock(return_value=True)),
-            'copy_to_directory': MagicMock(get=MagicMock(return_value='/output/dir')),
-        }
+        """Create Copy-specific mock fields using factory helpers."""
+        return create_field_dict(
+            process_backend_copy_check=True,
+            copy_to_directory='/output/dir',
+        )
     
     def test_extract_ftp_backend_enabled(self, ftp_fields):
         """Test extracting FTP backend when enabled."""

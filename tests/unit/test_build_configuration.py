@@ -80,24 +80,31 @@ class TestHiddenImports:
     def test_hook_files_collect_all_submodules(self):
         """Verify hook files collect all submodules for their packages."""
         hook_packages = get_hook_packages()
+        
+        # Qt hooks use collect_data_files/collect_dynamic_libs instead of collect_submodules
+        # This is correct for Qt modules which need binary/data collection
+        qt_hooks = {"PyQt6", "PyQt6.QtCore", "PyQt6.QtGui", "PyQt6.QtWidgets"}
 
         for package in hook_packages:
             hook_file = HOOKS_DIR / f"hook-{package}.py"
             assert hook_file.exists(), f"Hook file for {package} not found"
 
-            collected = collect_submodules(package)
-            assert len(collected) > 0, f"No submodules collected for {package}"
-
-            expected_items = [package] + [
-                f"{package}.{m}" for m in collected if m != package
-            ]
-
             with open(hook_file) as f:
                 hook_content = f.read()
 
-            assert "collect_submodules" in hook_content, (
-                f"Hook for {package} should use collect_submodules"
-            )
+            # Qt hooks should use collect_data_files/collect_dynamic_libs
+            if package in qt_hooks:
+                assert "collect_data_files" in hook_content or "collect_dynamic_libs" in hook_content, (
+                    f"Qt hook for {package} should use collect_data_files or collect_dynamic_libs"
+                )
+            else:
+                # Non-Qt hooks should use collect_submodules
+                collected = collect_submodules(package)
+                assert len(collected) > 0, f"No submodules collected for {package}"
+
+                assert "collect_submodules" in hook_content, (
+                    f"Hook for {package} should use collect_submodules"
+                )
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):

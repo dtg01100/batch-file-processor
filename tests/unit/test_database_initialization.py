@@ -24,15 +24,15 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        import dataset
+        from interface.database import sqlite_wrapper
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         tables = db.tables
         assert "version" in tables, "version table should exist"
@@ -47,15 +47,15 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        import dataset
+        from interface.database import sqlite_wrapper
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         administrative = db["administrative"]
         record = administrative.find_one(id=1)
@@ -74,15 +74,15 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        import dataset
+        from interface.database import sqlite_wrapper
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         settings = db["settings"]
         record = settings.find_one(id=1)
@@ -101,15 +101,15 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        import dataset
+        from interface.database import sqlite_wrapper
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         tables = db.tables
         assert "folders_table" not in tables, (
@@ -125,17 +125,17 @@ class TestAfterFirstRun:
     def test_administrative_record_exists_after_init(self, tmp_path):
         """Verify administrative record exists after database initialization."""
         import create_database
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
         record = db["administrative"].find_one(id=1)
 
         assert record is not None, "administrative record should exist after init"
@@ -146,17 +146,17 @@ class TestAfterFirstRun:
     def test_administrative_record_can_be_updated(self, tmp_path):
         """Verify administrative record can be updated after first run."""
         import create_database
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         updated_record = {
             "id": 1,
@@ -177,17 +177,17 @@ class TestAfterFirstRun:
     def test_oversight_and_defaults_find_one_returns_record(self, tmp_path):
         """Verify oversight_and_defaults.find_one returns record after first run."""
         import create_database
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
         administrative = db["administrative"]
 
         record = administrative.find_one(id=1)
@@ -236,17 +236,17 @@ class TestSetDefaultsPopup:
     def test_set_defaults_popup_with_existing_record(self, tmp_path):
         """Verify set_defaults_popup preserves existing values from database."""
         import create_database
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="1.0.0",
+            database_version="41",
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
         )
 
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         existing_record = {
             "id": 1,
@@ -388,10 +388,10 @@ class TestDatabaseMigration:
 
     def test_old_database_missing_administrative_table(self, tmp_path):
         """Verify code handles database without administrative table (legacy)."""
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "old_test.db")
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         db["version"].insert({"version": "10", "os": "Windows"})
         db["settings"].insert({"folder_is_active": "False", "convert_to_format": "csv"})
@@ -409,10 +409,10 @@ class TestDatabaseMigration:
 
     def test_legacy_database_handled_gracefully(self, tmp_path):
         """Verify legacy database without administrative table is handled."""
-        import dataset
+        from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "legacy_test.db")
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(db_path)
 
         db["version"].insert({"version": "10", "os": "Windows"})
 

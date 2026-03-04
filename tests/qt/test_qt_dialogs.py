@@ -297,7 +297,7 @@ class TestEditFoldersDialog:
         qtbot.addWidget(dialog)
         
         dialog._fields["process_backend_email_check"].setChecked(True)
-        dialog._fields["email_recepient_field"].setText("test@example.com")
+        dialog._fields["email_recipient_field"].setText("test@example.com")
         dialog._fields["email_sender_subject_field"].setText("Test Subject")
         
         assert dialog.validate() is True
@@ -315,7 +315,7 @@ class TestEditFoldersDialog:
         qtbot.addWidget(dialog)
         
         dialog._fields["process_backend_email_check"].setChecked(True)
-        dialog._fields["email_recepient_field"].setText("")
+        dialog._fields["email_recipient_field"].setText("")
         
         assert dialog.validate() is False
     
@@ -764,6 +764,148 @@ class TestDatabaseImportDialog:
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
         
         assert dialog._import_button.isEnabled() is True
+
+    def test_start_import_noop_without_selected_database(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+
+        class _ShouldNotConstruct:
+            def __init__(self, *args, **kwargs):
+                raise AssertionError("ImportThread should not be created")
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.ImportThread",
+            _ShouldNotConstruct,
+        )
+
+        dialog._start_import()
+        assert dialog._import_button.isEnabled() is False
+        assert dialog._select_button.isEnabled() is True
+
+    def test_start_import_disables_buttons_and_starts_thread(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        class _FakeSignal:
+            def __init__(self):
+                self.callbacks = []
+
+            def connect(self, callback):
+                self.callbacks.append(callback)
+
+        class _FakeImportThread:
+            def __init__(self, *args, **kwargs):
+                self.progress = _FakeSignal()
+                self.finished = _FakeSignal()
+                self.error = _FakeSignal()
+                self.confirm_required = _FakeSignal()
+                self.started = False
+
+            def start(self):
+                self.started = True
+
+        created_threads = []
+
+        def _make_fake_thread(*args, **kwargs):
+            thread = _FakeImportThread(*args, **kwargs)
+            created_threads.append(thread)
+            return thread
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.ImportThread",
+            _make_fake_thread,
+        )
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+        dialog._new_database_path = "/new.db"
+        dialog._database_migrate_job = MagicMock()
+        dialog._import_button.setEnabled(True)
+
+        dialog._start_import()
+
+        assert len(created_threads) == 1
+        fake_thread = created_threads[0]
+        assert fake_thread.started is True
+        assert dialog._import_button.isEnabled() is False
+        assert dialog._select_button.isEnabled() is False
+        assert dialog._progress_bar.isHidden() is False
+        assert len(fake_thread.progress.callbacks) == 1
+        assert len(fake_thread.finished.callbacks) == 1
+        assert len(fake_thread.error.callbacks) == 1
+
+    def test_on_progress_updates_progress_bar(self, qtbot):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+
+        dialog._on_progress(3, 10, "working")
+
+        assert dialog._progress_bar.maximum() == 10
+        assert dialog._progress_bar.value() == 3
+
+    def test_on_finished_success_updates_label_and_reenables_buttons(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        info_mock = MagicMock()
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.QMessageBox.information",
+            info_mock,
+        )
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+        dialog._import_button.setEnabled(False)
+        dialog._select_button.setEnabled(False)
+
+        dialog._on_finished(True, "done")
+
+        assert dialog._db_label.text() == "Import Completed"
+        assert dialog._import_button.isEnabled() is True
+        assert dialog._select_button.isEnabled() is True
+        info_mock.assert_called_once_with(dialog, "Import Complete", "done")
+
+    def test_on_finished_failure_shows_error_and_reenables_buttons(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        critical_mock = MagicMock()
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.QMessageBox.critical",
+            critical_mock,
+        )
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+        dialog._import_button.setEnabled(False)
+        dialog._select_button.setEnabled(False)
+
+        dialog._on_finished(False, "boom")
+
+        assert dialog._import_button.isEnabled() is True
+        assert dialog._select_button.isEnabled() is True
+        critical_mock.assert_called_once_with(dialog, "Import Failed", "boom")
+
+    def test_on_error_shows_error_and_reenables_buttons(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        critical_mock = MagicMock()
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.QMessageBox.critical",
+            critical_mock,
+        )
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        qtbot.addWidget(dialog)
+        dialog._import_button.setEnabled(False)
+        dialog._select_button.setEnabled(False)
+
+        dialog._on_error("bad things")
+
+        assert dialog._import_button.isEnabled() is True
+        assert dialog._select_button.isEnabled() is True
+        critical_mock.assert_called_once_with(dialog, "Import Error", "bad things")
 
 
 @ pytest.mark.qt

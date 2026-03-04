@@ -22,7 +22,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 import tempfile
 import os
-import dataset
+from interface.database import sqlite_wrapper
+import schema
 
 
 class TestDatabaseCreation:
@@ -66,11 +67,12 @@ class TestDatabaseCreation:
     
     def test_create_database_file(self, temp_db_path, sample_initial_dict):
         """Test database file creation."""
-        database_version = "33"
+        database_version = "41"
         running_platform = "Linux"
         
         # Create database
-        db_conn = dataset.connect('sqlite:///' + temp_db_path)
+        db_conn = sqlite_wrapper.Database.connect(temp_db_path)
+        schema.ensure_schema(db_conn)
         
         # Insert version
         version_table = db_conn['version']
@@ -88,10 +90,11 @@ class TestDatabaseCreation:
     
     def test_database_version_table(self, temp_db_path, sample_initial_dict):
         """Test version table operations."""
-        database_version = "33"
+        database_version = "41"
         running_platform = "Linux"
         
-        db_conn = dataset.connect('sqlite:///' + temp_db_path)
+        db_conn = sqlite_wrapper.Database.connect(temp_db_path)
+        schema.ensure_schema(db_conn)
         version_table = db_conn['version']
         version_table.insert(dict(version=database_version, os=running_platform))
         
@@ -106,7 +109,8 @@ class TestDatabaseCreation:
     
     def test_database_settings_table(self, temp_db_path, sample_initial_dict):
         """Test settings table operations."""
-        db_conn = dataset.connect('sqlite:///' + temp_db_path)
+        db_conn = sqlite_wrapper.Database.connect(temp_db_path)
+        schema.ensure_schema(db_conn)
         settings_table = db_conn['settings']
         settings_table.insert(sample_initial_dict)
         
@@ -128,7 +132,8 @@ class TestFoldersTableCRUD:
     def populated_database(self, tmp_path):
         """Create a populated database."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         # Setup version
         db_conn['version'].insert(dict(version="33", os="Linux"))
@@ -250,7 +255,8 @@ class TestAdministrativeTable:
     def database_with_admin(self, tmp_path):
         """Create database with administrative record."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         db_conn['administrative'].insert(dict(
@@ -298,7 +304,8 @@ class TestSettingsTableOperations:
     def database_with_settings(self, tmp_path):
         """Create database with settings."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         db_conn['settings'].insert(dict(
@@ -346,7 +353,8 @@ class TestEmailsTable:
     def database_with_emails(self, tmp_path):
         """Create database with emails."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         db_conn['emails_to_send'].insert_many([
@@ -394,7 +402,8 @@ class TestProcessedFilesTable:
     def database_with_processed_files(self, tmp_path):
         """Create database with processed files."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         db_conn['processed_files'].insert_many([
@@ -444,7 +453,8 @@ class TestDatabaseMigrations:
     def old_database(self, tmp_path):
         """Create an older version database."""
         db_path = str(tmp_path / "old.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         # Simulate older version
         db_conn['version'].insert(dict(version="30", os="Linux"))
@@ -492,7 +502,11 @@ class TestDatabaseIntegrity:
     def test_database_commit(self, tmp_path):
         """Test database commit operation."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+        # Create test_table for this test
+        db_conn._conn.execute("CREATE TABLE test_table (id INTEGER PRIMARY KEY, value TEXT)")
+        db_conn._conn.commit()
         
         db_conn['test_table'].insert(dict(value='test'))
         
@@ -503,7 +517,7 @@ class TestDatabaseIntegrity:
         db_conn.close()
         
         # Reconnect and verify
-        db_conn2 = dataset.connect('sqlite:///' + db_path)
+        db_conn2 = sqlite_wrapper.Database.connect(db_path)
         record = db_conn2['test_table'].find_one()
         assert record is not None
         db_conn2.close()
@@ -511,14 +525,18 @@ class TestDatabaseIntegrity:
     def test_database_close(self, tmp_path):
         """Test database close operation."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+        # Create test_table for this test
+        db_conn._conn.execute("CREATE TABLE test_table (id INTEGER PRIMARY KEY, value TEXT)")
+        db_conn._conn.commit()
         
         db_conn['test_table'].insert(dict(value='test'))
         db_conn.close()
         
         # Database should be closed, operations should not be possible
         # (This is implicitly tested by reopening)
-        db_conn2 = dataset.connect('sqlite:///' + db_path)
+        db_conn2 = sqlite_wrapper.Database.connect(db_path)
         record = db_conn2['test_table'].find_one()
         assert record is not None
         db_conn2.close()
@@ -528,11 +546,15 @@ class TestDatabaseIntegrity:
         db_path = str(tmp_path / "test.db")
         
         # Connection 1
-        db_conn1 = dataset.connect('sqlite:///' + db_path)
-        db_conn1['test_table'].insert(dict(value='conn1'))
+        db_conn1 = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn1)
+        # Create test_table for this test
+        db_conn1._conn.execute("CREATE TABLE test_table (id INTEGER PRIMARY KEY, value TEXT)")
+        db_conn1._conn.commit()
+        db_conn1['test_table'].insert(dict(value='test1'))
         
         # Connection 2
-        db_conn2 = dataset.connect('sqlite:///' + db_path)
+        db_conn2 = sqlite_wrapper.Database.connect(db_path)
         db_conn2['test_table'].insert(dict(value='conn2'))
         
         db_conn1.commit()
@@ -552,7 +574,8 @@ class TestTableRelationships:
     def test_folder_to_settings_relationship(self, tmp_path):
         """Test relationship between folders and settings."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         
@@ -580,7 +603,8 @@ class TestTableRelationships:
     def test_folder_to_emails_relationship(self, tmp_path):
         """Test relationship between folders and emails."""
         db_path = str(tmp_path / "test.db")
-        db_conn = dataset.connect('sqlite:///' + db_path)
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
         
         db_conn['version'].insert(dict(version="33", os="Linux"))
         

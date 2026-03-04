@@ -97,16 +97,20 @@ class TestSendManager:
         assert len(mock_copy.send_calls) == 1
     
     def test_send_all_with_failure(self):
-        """Test sending with one backend failing."""
+        """Test sending with one backend failing - continues to other backends."""
         mock_copy = MockBackend(should_succeed=False)
-        
+
         manager = SendManager(backends={'copy': mock_copy})
-        
+
         params = {}
         settings = {}
-        
-        with pytest.raises(Exception):
-            manager.send_all({'copy'}, '/test/file.edi', params, settings)
+
+        # Should not raise - should continue with other backends
+        results = manager.send_all({'copy'}, '/test/file.edi', params, settings)
+
+        # Backend that failed should be marked as False
+        assert results['copy'] is False
+        assert len(mock_copy.send_calls) == 1
     
     def test_send_all_multiple_backends(self):
         """Test sending to multiple backends."""
@@ -136,11 +140,14 @@ class TestSendManager:
         assert len(mock_email.send_calls) == 1
     
     def test_send_to_unknown_backend(self):
-        """Test sending to unknown backend raises error."""
+        """Test sending to unknown backend logs error and continues."""
         manager = SendManager(use_default_backends=False)
-        
-        with pytest.raises(ValueError, match="Unknown backend"):
-            manager.send_all({'unknown'}, '/test/file.edi', {}, {})
+
+        # Should not raise - should continue with other backends
+        results = manager.send_all({'unknown'}, '/test/file.edi', {}, {})
+
+        # Unknown backend should be marked as False
+        assert results['unknown'] is False
     
     def test_validate_backend_config_valid(self):
         """Test validation with valid configuration."""
@@ -389,24 +396,24 @@ class TestSendManagerIntegration:
         assert all(results.values())
     
     def test_partial_failure_workflow(self):
-        """Test workflow with partial backend failure."""
+        """Test workflow with partial backend failure - continues processing."""
         copy_backend = MockBackend(should_succeed=True)
         ftp_backend = MockBackend(should_succeed=False)
-        
+
         manager = SendManager(backends={
             'copy': copy_backend,
             'ftp': ftp_backend
         })
-        
+
         params = {
             'process_backend_copy': True,
             'process_backend_ftp': True
         }
-        
+
         # First backend should succeed
         results = manager.send_all({'copy'}, '/test/file.edi', params, {})
         assert results['copy'] is True
-        
-        # Second backend should fail
-        with pytest.raises(Exception):
-            manager.send_all({'ftp'}, '/test/file.edi', params, {})
+
+        # Second backend should fail but not raise
+        results = manager.send_all({'ftp'}, '/test/file.edi', params, {})
+        assert results['ftp'] is False

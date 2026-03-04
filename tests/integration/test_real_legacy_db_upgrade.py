@@ -13,7 +13,7 @@ import os
 import shutil
 import sqlite3
 
-import dataset
+from interface.database import sqlite_wrapper
 import pytest
 
 import folders_database_migrator
@@ -45,7 +45,7 @@ def migrated_db(legacy_db, tmp_path):
 
     Returns the dataset connection to the migrated database.
     """
-    db = dataset.connect('sqlite:///' + legacy_db)
+    db = sqlite_wrapper.Database.connect(legacy_db)
     folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
     yield db
     db.close()
@@ -56,7 +56,7 @@ class TestLegacyDatabasePreConditions:
 
     def test_legacy_db_is_version_32(self, legacy_db):
         """The fixture database should be at version 32."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         version = db['version'].find_one(id=1)
         assert version['version'] == "32"
         assert version['os'] == "Windows"
@@ -64,21 +64,21 @@ class TestLegacyDatabasePreConditions:
 
     def test_legacy_db_has_530_folders(self, legacy_db):
         """The fixture database should contain 530 folder records."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         count = db['folders'].count()
         assert count == 530
         db.close()
 
     def test_legacy_db_has_227501_processed_files(self, legacy_db):
         """The fixture database should contain 227,501 processed file records."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         count = db['processed_files'].count()
         assert count == 227501
         db.close()
 
     def test_legacy_db_has_expected_tables(self, legacy_db):
         """The fixture database should have all 8 expected tables."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         tables = db.tables
         expected = {'version', 'administrative', 'folders', 'processed_files',
                     'settings', 'emails_to_send', 'working_batch_emails_to_send',
@@ -113,7 +113,7 @@ class TestLegacyDatabasePreConditions:
 
     def test_legacy_db_has_string_booleans(self, legacy_db):
         """v32 database should have string "True"/"False" boolean values."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         # Folder id=21 has folder_is_active="True"
         folder = db['folders'].find_one(id=21)
         assert folder is not None
@@ -304,7 +304,7 @@ class TestIndexesCreated:
 
     def test_idx_folders_active_exists(self, legacy_db, tmp_path):
         """idx_folders_active index should exist after migration."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -318,7 +318,7 @@ class TestIndexesCreated:
 
     def test_idx_folders_alias_exists(self, legacy_db, tmp_path):
         """idx_folders_alias index should exist after migration."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -332,7 +332,7 @@ class TestIndexesCreated:
 
     def test_idx_processed_files_folder_exists(self, legacy_db, tmp_path):
         """idx_processed_files_folder index should exist after migration."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -346,7 +346,7 @@ class TestIndexesCreated:
 
     def test_idx_processed_files_status_exists(self, legacy_db, tmp_path):
         """idx_processed_files_status index should exist after migration."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -408,7 +408,7 @@ class TestTableRebuild:
 
     def test_folders_has_primary_key(self, legacy_db, tmp_path):
         """After migration, folders table should have PRIMARY KEY on id."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -423,7 +423,7 @@ class TestTableRebuild:
 
     def test_administrative_has_primary_key(self, legacy_db, tmp_path):
         """After migration, administrative table should have PRIMARY KEY on id."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         db.close()
 
@@ -527,7 +527,7 @@ class TestSchemaEnsureOnMigratedDb:
 
     def test_ensure_schema_is_idempotent(self, legacy_db, tmp_path):
         """Running ensure_schema() on a migrated database should not break anything."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         # Count folders before
@@ -551,7 +551,7 @@ class TestIntermediateMigrationStops:
 
     def test_stop_at_v33(self, legacy_db, tmp_path):
         """Migration should stop at v33 when target_version='33'."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(
             db, str(tmp_path), "Linux", target_version="33"
         )
@@ -566,7 +566,7 @@ class TestIntermediateMigrationStops:
 
     def test_stop_at_v36(self, legacy_db, tmp_path):
         """Migration should stop at v36 (after indexes are created)."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(
             db, str(tmp_path), "Linux", target_version="36"
         )
@@ -580,7 +580,7 @@ class TestIntermediateMigrationStops:
 
     def test_stop_at_v39(self, legacy_db, tmp_path):
         """Migration should stop at v39 (after edi_format added)."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
         folders_database_migrator.upgrade_database(
             db, str(tmp_path), "Linux", target_version="39"
         )
@@ -594,7 +594,7 @@ class TestIntermediateMigrationStops:
 
     def test_resume_from_v33_to_v42(self, legacy_db, tmp_path):
         """Should be able to migrate to v33, then resume to v42."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
 
         # First stop at v33
         folders_database_migrator.upgrade_database(
@@ -618,7 +618,7 @@ class TestMigrationIdempotency:
 
     def test_double_migration_is_safe(self, legacy_db, tmp_path):
         """Running migration twice should not corrupt data."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
 
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
         assert db['version'].find_one(id=1)['version'] == "42"
@@ -633,7 +633,7 @@ class TestMigrationIdempotency:
 
     def test_triple_migration_is_safe(self, legacy_db, tmp_path):
         """Running migration three times should not corrupt data."""
-        db = dataset.connect('sqlite:///' + legacy_db)
+        db = sqlite_wrapper.Database.connect(legacy_db)
 
         for _ in range(3):
             folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")

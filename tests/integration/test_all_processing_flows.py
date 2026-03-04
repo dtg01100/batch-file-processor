@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 from datetime import datetime, timedelta
-import dataset
+from interface.database import sqlite_wrapper
 
 import pytest
 
@@ -23,8 +23,9 @@ from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
 from dispatch.processed_files_tracker import ProcessedFilesTracker
 from dispatch.hash_utils import generate_file_hash
 from dispatch.error_handler import ErrorHandler
-import edi_tweaks
-import utils
+from dispatch.pipeline.tweaker import EDITweakerStep
+from core.edi.edi_splitter import filter_edi_file_by_category
+from schema import ensure_schema
 
 
 # =============================================================================
@@ -70,7 +71,8 @@ def temp_workspace(sample_edi_content):
         
         # Database
         db_path = workspace / "test.db"
-        db = dataset.connect(f"sqlite:///{db_path}")
+        db = sqlite_wrapper.Database.connect(str(db_path))
+        ensure_schema(db)
         
         yield {
             'workspace': workspace,
@@ -107,9 +109,7 @@ def folder_config(temp_workspace):
         'copy_to_directory': str(temp_workspace['output_folder']),
         'process_backend_ftp': False,
         'process_backend_email': False,
-        'convert_to_type': 'csv',
-        'edi_filter_category': '',
-        'check_file_hash': True,
+        'convert_to_format': 'csv',
     }
 
 
@@ -133,7 +133,7 @@ class TestResendFlow:
         db = temp_workspace['db']
         
         # Setup processed_files table with sample record
-        processed_table = db['processed']
+        processed_table = db['processed_files']
         file_path = str(temp_workspace['input_folder'] / "invoice_001.edi")
         file_hash = generate_file_hash(file_path)
         
@@ -141,14 +141,13 @@ class TestResendFlow:
         record_id = processed_table.insert({
             'file_name': file_path,
             'folder_id': folder_config['id'],
-            'folder_name': folder_config['folder_name'],
-            'hash': file_hash,
-            'sent_date_time': datetime.now().isoformat(),
+            'md5': file_hash,
+            'processed_at': datetime.now().isoformat(),
             'resend_flag': False,
         })
         
         # Verify file is in processed table
-        records = list(processed_table.find(hash=file_hash))
+        records = list(processed_table.find(md5=file_hash))
         assert len(records) > 0, "File should be tracked in database"
         
         # Mark for resend using table operations
@@ -176,7 +175,7 @@ class TestResendFlow:
         tracker = ProcessedFilesTracker(db)
         
         # Initialize processed_files table
-        processed_table = db['processed']
+        processed_table = db['processed_files']
         file_path = str(temp_workspace['input_folder'] / "invoice_001.edi")
         file_hash = generate_file_hash(file_path)
         
@@ -184,14 +183,13 @@ class TestResendFlow:
         processed_table.insert({
             'file_name': file_path,
             'folder_id': folder_config['id'],
-            'folder_name': folder_config['folder_name'],
-            'hash': file_hash,
-            'sent_date_time': datetime.now().isoformat(),
+            'md5': file_hash,
+            'processed_at': datetime.now().isoformat(),
             'resend_flag': False,
         })
         
         # Verify file exists in processed table
-        records = list(processed_table.find(hash=file_hash))
+        records = list(processed_table.find(md5=file_hash))
         assert len(records) == 1, "Should have one processed record"
         
         # Mark for resend using the table directly (not tracker)
@@ -211,7 +209,7 @@ class TestResendFlow:
         tracker = ProcessedFilesTracker(db)
         
         # Insert multiple processed records
-        processed_table = db['processed']
+        processed_table = db['processed_files']
         files = [
             str(temp_workspace['input_folder'] / "invoice_001.edi"),
             str(temp_workspace['input_folder'] / "invoice_002.edi"),
@@ -222,9 +220,8 @@ class TestResendFlow:
             processed_table.insert({
                 'file_name': file_path,
                 'folder_id': folder_config['id'],
-                'folder_name': folder_config['folder_name'],
-                'hash': file_hash,
-                'sent_date_time': datetime.now().isoformat(),
+                'md5': file_hash,
+                'processed_at': datetime.now().isoformat(),
                 'resend_flag': False,
             })
         
@@ -261,7 +258,7 @@ C00000004000060000
         test_file.write_text(content)
         
         # Apply filter for CAT1
-        result = utils.filter_edi_file_by_category(
+        result = filter_edi_file_by_category(
             str(test_file),
             str(output_file),
             {},  # upc_dict
@@ -288,7 +285,7 @@ C00000002000020000
         test_file.write_text(content)
         
         # Filter for CAT1 - should drop first invoice
-        result = utils.filter_edi_file_by_category(
+        result = filter_edi_file_by_category(
             str(test_file),
             str(output_file),
             {},  # upc_dict
@@ -310,7 +307,7 @@ C00000002000010000
         test_file.write_text(content)
         
         # Filter for non-existent category
-        result = utils.filter_edi_file_by_category(
+        result = filter_edi_file_by_category(
             str(test_file),
             str(output_file),
             {},  # upc_dict
@@ -376,11 +373,13 @@ class TestEDITweakingFlow:
         upc_dict = {}
         
         # Apply date offset (+5 days)
-        result = edi_tweaks.edi_tweak(
+        complete_parameters_dict['tweak_edi'] = True
+        tweaker = EDITweakerStep()
+        result = tweaker.tweak(
             str(test_file),
-            str(output_file),
-            complete_settings_dict,
+            str(output_file.parent),
             complete_parameters_dict,
+            complete_settings_dict,
             upc_dict
         )
         # Verify operation completed
@@ -403,11 +402,13 @@ class TestEDITweakingFlow:
         upc_dict = {}
         
         # Apply padding
-        result = edi_tweaks.edi_tweak(
+        complete_parameters_dict['tweak_edi'] = True
+        tweaker = EDITweakerStep()
+        result = tweaker.tweak(
             str(test_file),
-            str(output_file),
-            complete_settings_dict,
+            str(output_file.parent),
             complete_parameters_dict,
+            complete_settings_dict,
             upc_dict
         )
         assert result is not None, "Should return result"
@@ -430,11 +431,13 @@ class TestEDITweakingFlow:
         upc_dict = {}
         
         # Apply multiple tweaks
-        result = edi_tweaks.edi_tweak(
+        complete_parameters_dict['tweak_edi'] = True
+        tweaker = EDITweakerStep()
+        result = tweaker.tweak(
             str(test_file),
-            str(output_file),
-            complete_settings_dict,
+            str(output_file.parent),
             complete_parameters_dict,
+            complete_settings_dict,
             upc_dict
         )
         assert result is not None, "Should return result"
@@ -623,7 +626,7 @@ class TestFolderConfigurationFlow:
             'copy_to_directory': str(temp_workspace['output_folder']),
             'process_backend_ftp': False,
             'process_backend_email': False,
-            'convert_to_type': 'csv',
+            'convert_to_format': 'csv',
         }
         
         result = folders_table.insert(new_config)
@@ -672,7 +675,7 @@ class TestFolderConfigurationFlow:
         # Verify update
         config = folders_table.find_one(id=result)
         assert config['alias'] == 'UpdatedTest'
-        assert config['process_backend_copy'] is True
+        assert config['process_backend_copy'] == True or config['process_backend_copy'] == 1
     
     def test_delete_folder_config(self, temp_workspace):
         """Test deleting a folder configuration."""
@@ -733,7 +736,7 @@ C00000003000030000
         
         # Step 1: Filter by category
         try:
-            utils.filter_edi_file_by_category(
+            filter_edi_file_by_category(
                 str(test_file),
                 str(temp_workspace['output_folder'] / "filtered.edi"),
                 {},
@@ -744,20 +747,22 @@ C00000003000030000
         
         # Step 2: Apply tweaks
         parameters_dict = {
+            'tweak_edi': True,
             'pad_a_records': False,
             'a_record_padding': '',
             'a_record_padding_length': 0,
-            'date_offset': 1,
-            'append_po_num': False,
-            'append_po_text': '',
+            'invoice_date_offset': 1,
+            'append_a_records': False,
+            'a_record_append_text': '',
         }
         
         try:
-            edi_tweaks.edi_tweak(
+            tweaker = EDITweakerStep()
+            tweaker.tweak(
                 str(test_file),
-                str(temp_workspace['output_folder'] / "tweaked.edi"),
-                {},
+                str(temp_workspace['output_folder']),
                 parameters_dict,
+                {},
                 {}
             )
         except Exception:
@@ -823,8 +828,7 @@ C00000003000030000
             'copy_to_directory': str(temp_workspace['output_folder']),
             'process_backend_ftp': False,
             'process_backend_email': False,
-            'convert_to_type': 'csv',
-            'check_file_hash': True,
+            'convert_to_format': 'csv',
         })
         
         assert folder_id is not None, "Should create folder config"

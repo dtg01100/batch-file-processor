@@ -14,7 +14,8 @@ import pytest
 import sys
 import os
 import tempfile
-import dataset
+from interface.database import sqlite_wrapper
+from schema import ensure_schema
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -135,7 +136,10 @@ def sample_folder_config():
 def temp_database(tmp_path):
     """Create a temporary SQLite database for testing."""
     db_path = str(tmp_path / "test_folders.db")
-    db_conn = dataset.connect('sqlite:///' + db_path)
+    db_conn = sqlite_wrapper.Database.connect(db_path)
+    
+    # Initialize database schema
+    ensure_schema(db_conn)
     
     # Setup version table
     version_table = db_conn['version']
@@ -677,6 +681,7 @@ class TestCSVFieldsMapping:
         loaded_dict = temp_database['folders'].find_one(id=folder_id)
         
         # Verify loaded dict has correct values (accounting for type differences)
-        assert loaded_dict['include_item_numbers'] is True
-        assert loaded_dict['include_item_description'] is True
+        # Note: SQLite stores booleans as integers, so we use == for comparison, not 'is'
+        assert loaded_dict['include_item_numbers'] == True
+        assert loaded_dict['include_item_description'] == True
         assert loaded_dict['simple_csv_sort_order'] == "item,quantity,price"
