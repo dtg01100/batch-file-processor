@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Local Windows executable build using PyInstaller
-# This script builds the Windows executable using PyInstaller on the current system.
+# Local executable build using PyInstaller
+# This script builds executables for the current platform using PyInstaller.
 # 
-# For actual Windows .exe files, run this on Windows or use ./buildwin.sh on a machine
-# with Docker access to batch-file-processor.
+# Supports:
+#   - Native Linux executables
+#   - Native macOS executables  
+#   - Windows executables (via Wine on Linux/macOS)
 #
 # Usage:
 #   ./build_local.sh              # Build and run self-test
@@ -32,18 +34,26 @@ echo -e "${YELLOW}=====================================${NC}"
 echo -e "${YELLOW}  Building executable locally       ${NC}"
 echo -e "${YELLOW}=====================================${NC}"
 
-# Check for Python
-if ! command -v python &> /dev/null && ! command -v python3 &> /dev/null; then
-    echo -e "${RED}ERROR: Python not found${NC}"
-    exit 1
-fi
-
+# Determine Python command
 PYTHON_CMD="python"
 if ! command -v python &> /dev/null; then
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${RED}ERROR: Python not found${NC}"
+        exit 1
+    fi
     PYTHON_CMD="python3"
 fi
 
 echo -e "${BLUE}Using Python: $($PYTHON_CMD --version)${NC}"
+
+# Use virtual environment if available
+if [[ -f ".venv/bin/python" ]]; then
+    echo -e "${BLUE}Using virtual environment: .venv${NC}"
+    PYTHON_CMD=".venv/bin/python"
+elif [[ -f ".venv/Scripts/python.exe" ]]; then
+    # Windows venv
+    PYTHON_CMD=".venv/Scripts/python.exe"
+fi
 
 # Check/install PyInstaller
 echo -e "${BLUE}Checking PyInstaller...${NC}"
@@ -59,7 +69,7 @@ $PYTHON_CMD -m pip install PyQt6==6.10.2 -r requirements.txt
 
 # Build the executable
 echo -e "${YELLOW}Building executable with PyInstaller...${NC}"
-$PYTHON_CMD -m PyInstaller --clean main_interface.spec
+$PYTHON_CMD -m PyInstaller --clean main_interface_native.spec
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Build failed!${NC}"
@@ -84,16 +94,18 @@ echo -e "${YELLOW}=====================================${NC}"
 EXEC_PATH="./dist/Batch File Sender/Batch File Sender"
 
 if [[ ! -f "$EXEC_PATH" ]] && [[ ! -x "$EXEC_PATH" ]]; then
-    # On Linux, might be in different location or have different name
+    # On different platforms, might be in different locations or have different names
     if [[ -f "./dist/main_interface" ]]; then
         EXEC_PATH="./dist/main_interface"
+    elif [[ -f "./dist/Batch File Sender.exe" ]]; then
+        EXEC_PATH="./dist/Batch File Sender.exe"
     fi
 fi
 
 if [[ ! -f "$EXEC_PATH" ]] && [[ ! -x "$EXEC_PATH" ]]; then
     echo -e "${RED}ERROR: Executable not found at $EXEC_PATH${NC}"
     echo "Available files in dist/:"
-    find ./dist -type f | head -10
+    find ./dist -type f 2>/dev/null | head -10
     exit 1
 fi
 
