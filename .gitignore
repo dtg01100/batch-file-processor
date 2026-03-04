@@ -14,6 +14,8 @@ env/
 build/
 develop-eggs/
 dist/
+dist_windows/
+dist_linux/
 downloads/
 eggs/
 .eggs/
@@ -72,11 +74,14 @@ setup.py
 setup.bat
 /build.bat
 /.vscode
-/venv*/
+/*venv*/
 .venv/
 .gitignore
 /.mypy_cache
 plugin_test.py
+
+# Wine prefix for Windows builds
+.wine/
 
 # containerhome is mounted to project dir
 containerhome/
@@ -89,3 +94,24 @@ ibm-iaccess-1.1.0.28-1.0.amd64.deb
 030016/
 dest/new_test_venv/
 new_test_venv/
+
+# Test artifacts
+test_edi/
+test_results.txt
+
+# Windows virtual environment
+winvenv/
+
+# Cache directories
+.pytest_cache/
+.ruff_cache/
+
+# Executables
+*.exe
+
+# Coverage reports
+coverage_*/
+
+# Allow tracked spec files (exceptions to *.spec above)
+!main_interface.spec
+!main_interface_native.spec
