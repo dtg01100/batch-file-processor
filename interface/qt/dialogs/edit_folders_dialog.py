@@ -5,6 +5,7 @@ All dependencies are injectable via the constructor for testability.
 """
 
 import os
+import logging
 from typing import Dict, Any, Optional, List, Callable
 
 from PyQt6.QtWidgets import (
@@ -31,6 +32,7 @@ from PyQt6.QtWidgets import (
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 from PyQt6.QtCore import Qt
+from PyQt6 import QtCore
 
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
@@ -358,28 +360,122 @@ class EditFoldersDialog(BaseDialog):
     # Dynamic EDI area builders
     # ------------------------------------------------------------------
     def _clear_dynamic_edi(self):
-        while self._dynamic_edi_layout.count():
-            item = self._dynamic_edi_layout.takeAt(0)
+        """Clear dynamic EDI widgets and clean up field references.
+        
+        This method removes all widgets from the dynamic EDI layout and
+        cleans up corresponding entries in self._fields to prevent crashes
+        from accessing deleted widgets.
+        """
+        logging.debug("Clearing dynamic EDI widgets")
+        try:
+            # Track keys to remove from self._fields to prevent stale references
+            keys_to_remove = []
+            
+            # Store items to remove in a list to avoid modifying the layout during iteration
+            items_to_remove = []
+            for i in range(self._dynamic_edi_layout.count()):
+                items_to_remove.append(self._dynamic_edi_layout.takeAt(0))
+
+            # Process the removal of each item
+            for item in items_to_remove:
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        logging.debug(f"Removing widget: {widget.__class__.__name__}")
+                        # Find all descendant widgets and track their keys
+                        self._find_and_track_widget_keys(widget, keys_to_remove)
+                        # Check if widget is still valid before attempting to modify it
+                        if widget and not widget.testAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose):
+                            # Remove from parent and schedule for deletion
+                            widget.setParent(None)
+                            widget.deleteLater()
+                    # Also remove any nested layouts
+                    sub_layout = item.layout()
+                    if sub_layout:
+                        logging.debug(f"Removing layout: {sub_layout.__class__.__name__}")
+                        # Find all widgets in this layout and track their keys
+                        self._find_and_track_layout_keys(sub_layout, keys_to_remove)
+                        sub_layout.deleteLater()
+            
+            # Remove all tracked keys from self._fields immediately
+            for key in keys_to_remove:
+                logging.debug(f"Removing stale field reference: {key}")
+                del self._fields[key]
+                
+        except Exception as e:
+            logging.error(f"Error in _clear_dynamic_edi: {e}")
+        logging.debug("Finished clearing dynamic EDI widgets")
+    
+    def _find_and_track_widget_keys(self, widget, keys_to_remove):
+        """Recursively find all descendant widgets and track their field keys."""
+        # Check if this widget is in self._fields
+        for key, value in list(self._fields.items()):
+            if value is widget:
+                if key not in keys_to_remove:
+                    keys_to_remove.append(key)
+                    logging.debug(f"  Tracking widget key: {key}")
+                break
+        
+        # Recursively check child widgets
+        for child in widget.findChildren(QWidget):
+            for key, value in list(self._fields.items()):
+                if value is child:
+                    if key not in keys_to_remove:
+                        keys_to_remove.append(key)
+                        logging.debug(f"  Tracking child widget key: {key}")
+                    break
+    
+    def _find_and_track_layout_keys(self, layout, keys_to_remove):
+        """Find all widgets in a layout and track their field keys."""
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
             if item:
                 widget = item.widget()
                 if widget:
-                    widget.setParent(None)
-                    widget.deleteLater()
-                # Also remove any nested layouts
+                    for key, value in list(self._fields.items()):
+                        if value is widget:
+                            if key not in keys_to_remove:
+                                keys_to_remove.append(key)
+                                logging.debug(f"  Tracking layout widget key: {key}")
+                            break
+                    # Recursively check child widgets
+                    for child in widget.findChildren(QWidget):
+                        for key, value in list(self._fields.items()):
+                            if value is child:
+                                if key not in keys_to_remove:
+                                    keys_to_remove.append(key)
+                                    logging.debug(f"  Tracking layout child widget key: {key}")
+                                break
+                # Recursively handle nested layouts
                 sub_layout = item.layout()
                 if sub_layout:
-                    sub_layout.deleteLater()
+                    self._find_and_track_layout_keys(sub_layout, keys_to_remove)
 
     def _on_edi_option_changed(self, option: str):
-        self._clear_dynamic_edi()
-        if option == "Do Nothing":
-            self._build_do_nothing_area()
-        elif option == "Convert EDI":
-            self._build_convert_edi_area()
-        elif option == "Tweak EDI":
-            self._build_tweak_edi_area()
-
-        self._update_backend_states()
+        logging.debug(f"EDI option changed to: {option}")
+        # Debounce: Check if we're already processing a change
+        if hasattr(self, '_edi_option_processing') and self._edi_option_processing:
+            logging.debug("EDI option change already in progress, skipping")
+            return
+        
+        self._edi_option_processing = True
+        try:
+            self._clear_dynamic_edi()
+            if option == "Do Nothing":
+                self._build_do_nothing_area()
+            elif option == "Convert EDI":
+                self._build_convert_edi_area()
+            elif option == "Tweak EDI":
+                self._build_tweak_edi_area()
+        finally:
+            # Use QTimer to clear the flag after a short delay to prevent rapid successive calls
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(100, self._clear_edi_processing_flag)
+            logging.debug(f"Finished processing EDI option change: {option}")
+    
+    def _clear_edi_processing_flag(self):
+        """Clear the EDI processing flag after a delay."""
+        self._edi_option_processing = False
 
     def _build_do_nothing_area(self):
         self._fields["process_edi"] = self._make_hidden_check(False)
@@ -595,20 +691,54 @@ class EditFoldersDialog(BaseDialog):
     # Convert format sub-widgets
     # ------------------------------------------------------------------
     def _clear_convert_sub(self):
-        while self._convert_sub_layout.count():
-            item = self._convert_sub_layout.takeAt(0)
-            if item:
-                widget = item.widget()
-                if widget:
-                    widget.setParent(None)
-                    widget.deleteLater()
-                # Also remove any nested layouts
-                sub_layout = item.layout()
-                if sub_layout:
-                    sub_layout.deleteLater()
+        """Clear convert sub-widgets and clean up field references.
+        
+        This method removes all widgets from the convert sub-layout and
+        cleans up corresponding entries in self._fields to prevent crashes
+        from accessing deleted widgets.
+        """
+        logging.debug("Clearing convert sub widgets")
+        try:
+            # Track keys to remove from self._fields to prevent stale references
+            keys_to_remove = []
+            
+            # Store items to remove in a list to avoid modifying the layout during iteration
+            items_to_remove = []
+            for i in range(self._convert_sub_layout.count()):
+                items_to_remove.append(self._convert_sub_layout.takeAt(0))
+
+            # Process the removal of each item
+            for item in items_to_remove:
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        logging.debug(f"Removing convert sub widget: {widget.__class__.__name__}")
+                        # Find all descendant widgets and track their keys
+                        self._find_and_track_widget_keys(widget, keys_to_remove)
+                        # Check if widget is still valid before attempting to modify it
+                        if widget and not widget.testAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose):
+                            widget.setParent(None)
+                            widget.deleteLater()
+                    # Also remove any nested layouts
+                    sub_layout = item.layout()
+                    if sub_layout:
+                        logging.debug(f"Removing convert sub layout: {sub_layout.__class__.__name__}")
+                        # Find all widgets in this layout and track their keys
+                        self._find_and_track_layout_keys(sub_layout, keys_to_remove)
+                        sub_layout.deleteLater()
+            
+            # Remove all tracked keys from self._fields immediately
+            for key in keys_to_remove:
+                logging.debug(f"Removing stale field reference: {key}")
+                del self._fields[key]
+                
+        except Exception as e:
+            logging.error(f"Error in _clear_convert_sub: {e}")
+        logging.debug("Finished clearing convert sub widgets")
 
     def _on_convert_format_changed(self, fmt: str):
         """Handle convert format selection changes using plugin system."""
+        logging.debug(f"Convert format changed to: {fmt}")
         self._clear_convert_sub()
         # Prefer built-in hardcoded sub-sections for known formats so tests and
         # legacy behavior remain stable. If no hardcoded handler exists,
@@ -634,6 +764,7 @@ class EditFoldersDialog(BaseDialog):
             plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
             if plugin:
                 self._build_plugin_config_sub(plugin)
+        logging.debug(f"Finished processing convert format change: {fmt}")
     
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
         """Build plugin configuration sub-section."""
@@ -1090,10 +1221,13 @@ class EditFoldersDialog(BaseDialog):
             self.copy_to_directory = directory
 
     def _copy_config_from_other(self):
+        logging.debug("Starting copy config from other")
         current_item = self._others_list.currentItem()
         if not current_item:
+            logging.debug("No item selected in others list")
             return
         selected_alias = current_item.text()
+        logging.debug(f"Selected alias: {selected_alias}")
 
         other_config: Optional[Dict[str, Any]] = None
         if self._alias_provider and self._settings_provider:
@@ -1113,11 +1247,19 @@ class EditFoldersDialog(BaseDialog):
                 other_config = database_import.database_obj_instance.folders_table.find_one(
                     alias=selected_alias
                 )
-            except (ImportError, AttributeError):
+                logging.debug(f"Found config from database for alias: {selected_alias}")
+            except (ImportError, AttributeError) as e:
+                logging.error(f"Error importing database_import or finding config: {e}")
+                return
+            except Exception as e:
+                logging.error(f"Unexpected error when copying config from other: {e}")
                 return
 
         if other_config:
+            logging.debug(f"Populating fields from config for alias: {selected_alias}")
             self._populate_fields_from_config(other_config)
+        else:
+            logging.debug(f"No config found for alias: {selected_alias}")
 
     # ------------------------------------------------------------------
     # Validation

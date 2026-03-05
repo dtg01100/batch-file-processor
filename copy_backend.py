@@ -43,9 +43,17 @@ def do(
     if file_ops is None:
         file_ops = create_file_operations()
     
+    # Ensure destination directory exists
+    dest_dir = process_parameters['copy_to_directory']
+    if not file_ops.dir_exists(dest_dir):
+        try:
+            file_ops.makedirs(dest_dir)
+        except Exception as e:
+            raise IOError(f"Failed to create destination directory '{dest_dir}': {e}")
+    
     while not file_pass:
         try:
-            file_ops.copy(filename, process_parameters['copy_to_directory'])
+            file_ops.copy(filename, dest_dir)
             file_pass = True
         except IOError:
             if counter == 10:

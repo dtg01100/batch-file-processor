@@ -693,3 +693,144 @@ class TestFilterModeAndCategories:
         dialog = create_dialog(qtbot, sample_folder_config)
 
         assert dialog._filter_mode_combo.currentText() == "exclude"
+
+
+# ============================================================================
+# Test Widget Cleanup and Lifecycle - Crash Prevention
+# ============================================================================
+@pytest.mark.qt
+class TestWidgetCleanupAndLifecycle:
+    """Tests for widget cleanup to prevent crashes from stale references.
+    
+    These tests verify that when widgets are cleared and recreated (e.g., when
+    switching EDI options or convert formats), the old widget references are
+    properly removed from self._fields to prevent crashes.
+    """
+
+    def test_clear_dynamic_edi_removes_field_references(self, qtbot, sample_folder_config):
+        """When dynamic EDI widgets are cleared, field references should be removed."""
+        from PyQt6.QtWidgets import QComboBox
+        
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        
+        # Switch to "Convert EDI" which creates widgets
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
+        
+        # Verify widgets were created
+        assert "process_edi" in dialog._fields
+        assert "convert_formats_var" in dialog._fields
+        
+        # Store reference to the widget and its type
+        old_widget = dialog._fields.get("convert_formats_var")
+        assert old_widget is not None
+        assert isinstance(old_widget, QComboBox)
+        
+        # Switch to "Tweak EDI" which clears convert widgets
+        dialog._edi_options_combo.setCurrentText("Tweak EDI")
+        qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
+        
+        # The convert_formats_var key should be removed since it's part of Convert EDI
+        # (Tweak EDI has different widgets)
+        assert "convert_formats_var" not in dialog._fields, \
+            "convert_formats_var should be removed when switching away from Convert EDI"
+
+    def test_clear_convert_sub_removes_field_references(self, qtbot, sample_folder_config):
+        """When convert sub-widgets are cleared, field references should be removed."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        
+        # Switch to "Convert EDI" with CSV format
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.wait(200)
+        
+        dialog._convert_format_combo.setCurrentText("csv")
+        qtbot.wait(200)
+        
+        # Verify CSV widgets were created
+        assert "upc_var_check" in dialog._fields
+        
+        # Store reference to widget that will be deleted
+        old_widget = dialog._fields.get("upc_var_check")
+        assert old_widget is not None
+        
+        # Change to different format (ScannerWare doesn't have upc_var_check)
+        dialog._convert_format_combo.setCurrentText("ScannerWare")
+        qtbot.wait(200)
+        
+        # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
+        assert "upc_var_check" not in dialog._fields, \
+            "upc_var_check should be removed when switching from CSV format"
+
+    def test_data_extractor_handles_missing_widgets_gracefully(self, qtbot, sample_folder_config):
+        """Data extractor should handle missing widgets gracefully without crashing."""
+        from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
+        
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        
+        # Create extractor with current fields
+        extractor = QtFolderDataExtractor(dialog._fields)
+        
+        # Simulate a deleted widget by removing it from fields
+        if "convert_formats_var" in dialog._fields:
+            del dialog._fields["convert_formats_var"]
+        
+        # Should not crash, should return default value
+        try:
+            extracted = extractor.extract_all()
+            # If we get here, the extractor handled missing widgets gracefully
+            assert extracted is not None
+        except Exception as e:
+            pytest.fail(f"Data extractor crashed with missing widgets: {e}")
+
+    def test_rapid_edi_option_changes_no_crash(self, qtbot, sample_folder_config):
+        """Rapidly changing EDI options should not cause crashes."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        
+        # Rapidly switch EDI options (with proper debounce wait times)
+        options = ["Do Nothing", "Convert EDI", "Tweak EDI", "Convert EDI", "Do Nothing"]
+        for option in options:
+            dialog._edi_options_combo.setCurrentText(option)
+            qtbot.wait(200)  # Wait for debounce timer
+        
+        # Should not crash - if we get here, test passes
+        assert True
+
+    def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
+        """Data extractor should handle widgets that have been deleted with deleteLater()."""
+        from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
+        from PyQt6.QtWidgets import QLineEdit
+        
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        
+        # Create a test widget and add it to fields
+        test_widget = QLineEdit("test value")
+        dialog._fields["test_field"] = test_widget
+        
+        # Delete the widget (simulate what happens during clear operations)
+        test_widget.deleteLater()
+        qtbot.wait(50)  # Let Qt process the deletion
+        
+        # Create extractor and try to extract - should handle gracefully
+        extractor = QtFolderDataExtractor(dialog._fields)
+        
+        try:
+            # This should not crash even though widget is deleted
+            result = extractor._get_text("test_field")
+            # Should return empty string for deleted widget
+            assert result == "" or isinstance(result, str)
+        except RuntimeError as e:
+            # RuntimeError is expected when accessing deleted Qt widgets
+            # but our fix should catch this
+            pytest.fail(f"Data extractor should catch RuntimeError for deleted widgets: {e}")
+        except Exception as e:
+            pytest.fail(f"Data extractor crashed with deleted widget: {e}")

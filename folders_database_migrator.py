@@ -23,7 +23,7 @@ def upgrade_database(
     if db_version_dict["version"] == "5":
         folders_table = database_connection["folders"]
         folders_table.create_column("convert_to_format", "String")
-        convert_to_csv_list = folders_table.find(process_edi="True")
+        convert_to_csv_list = folders_table.find(process_edi=1)
         for line in convert_to_csv_list:
             line["convert_to_format"] = "csv"
             folders_table.update(line, ["id"])
@@ -48,8 +48,8 @@ def upgrade_database(
     if db_version_dict["version"] == "6":
         processed_table = database_connection["processed_files"]
         processed_table.create_column("resend_flag", "Boolean")
-        for line in processed_table:
-            line["resend_flag"] = False
+        for line in processed_table.all():
+            line["resend_flag"] = 0
             processed_table.update(line, ["id"])
 
         update_version = dict(id=1, version="7")
@@ -68,16 +68,16 @@ def upgrade_database(
         administrative_section = database_connection["administrative"]
         administrative_section.create_column("tweak_edi", "Boolean")
         administrative_section_update_dict = administrative_section.find_one(id=1)
-        administrative_section_update_dict["tweak_edi"] = False
+        administrative_section_update_dict["tweak_edi"] = 0
         administrative_section.update(administrative_section_update_dict, ["id"])
 
         folders_table.create_column("tweak_edi", "Boolean")
-        for line in folders_table:
-            if line["pad_a_records"] == "False":
-                line["tweak_edi"] = False
+        for line in folders_table.all():
+            if line["pad_a_records"] == 0:
+                line["tweak_edi"] = 0
                 folders_table.update(line, ["id"])
             else:
-                line["tweak_edi"] = True
+                line["tweak_edi"] = 1
                 folders_table.update(line, ["id"])
         update_version = dict(id=1, version="8")
         db_version.update(update_version, ["id"])
@@ -120,7 +120,7 @@ def upgrade_database(
     if db_version_dict["version"] == "9":
         administrative_section = database_connection["administrative"]
         administrative_section.create_column("report_edi_errors", "Boolean")
-        administrative_section_update_dict = dict(id=1, report_edi_errors=False)
+        administrative_section_update_dict = dict(id=1, report_edi_errors=0)
         administrative_section.update(administrative_section_update_dict, ["id"])
         update_version = dict(id=1, version="10")
         db_version.update(update_version, ["id"])
@@ -139,12 +139,12 @@ def upgrade_database(
         administrative_section = database_connection["administrative"]
         administrative_section.create_column("split_edi", "Boolean")
         administrative_section_update_dict = administrative_section.find_one(id=1)
-        administrative_section_update_dict["split_edi"] = False
+        administrative_section_update_dict["split_edi"] = 0
         administrative_section.update(administrative_section_update_dict, ["id"])
 
         folders_table.create_column("split_edi", "Boolean")
         for line in folders_table.all():
-            line["split_edi"] = False
+            line["split_edi"] = 0
             folders_table.update(line, ["id"])
         update_version = dict(id=1, version="11")
         db_version.update(update_version, ["id"])
@@ -180,7 +180,7 @@ def upgrade_database(
         administrative_section_dict = administrative_section.find_one(id=1)
 
         email_state = (
-            1 if administrative_section_dict.get("enable_reporting") == "True" else 0
+            1 if administrative_section_dict.get("enable_reporting") == 1 else 0
         )
 
         settings_table.insert(
@@ -249,7 +249,7 @@ def upgrade_database(
 
     if db_version_dict["version"] == "13":
         database_connection.query(
-            'update "folders" set "convert_to_format"="", "process_edi"="False" where "convert_to_format"="insight"'
+            'update "folders" set "convert_to_format"="", "process_edi"=0 where "convert_to_format"="insight"'
         )
         update_version = dict(id=1, version="14", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -284,7 +284,7 @@ def upgrade_database(
 
     if db_version_dict["version"] == "15":
         database_connection.query("alter table 'folders' add column 'append_a_records'")
-        database_connection.query('UPDATE "folders" SET "append_a_records" = "False"')
+        database_connection.query('UPDATE "folders" SET "append_a_records" = 0')
         database_connection.query(
             "alter table 'folders' add column 'a_record_append_text'"
         )
@@ -292,12 +292,12 @@ def upgrade_database(
         database_connection.query(
             "alter table 'folders' add column 'force_txt_file_ext'"
         )
-        database_connection.query('UPDATE "folders" SET "force_txt_file_ext" = "False"')
+        database_connection.query('UPDATE "folders" SET "force_txt_file_ext" = 0')
         database_connection.query(
             "alter table 'administrative' add column 'append_a_records'"
         )
         database_connection.query(
-            'UPDATE "administrative" SET "append_a_records" = "False"'
+            'UPDATE "administrative" SET "append_a_records" = 0'
         )
         database_connection.query(
             "alter table 'administrative' add column 'a_record_append_text'"
@@ -309,7 +309,7 @@ def upgrade_database(
             "alter table 'administrative' add column 'force_txt_file_ext'"
         )
         database_connection.query(
-            'UPDATE "administrative" SET "force_txt_file_ext" = "False"'
+            'UPDATE "administrative" SET "force_txt_file_ext" = 0'
         )
         update_version = dict(id=1, version="16", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -620,7 +620,7 @@ def upgrade_database(
         database_connection.query(
             "alter table 'folders' add column 'override_upc_bool'"
         )
-        database_connection.query('UPDATE "folders" set "override_upc_bool"=False')
+        database_connection.query('UPDATE "folders" set "override_upc_bool"=0')
         database_connection.query(
             "alter table 'folders' add column 'override_upc_level'"
         )
@@ -632,13 +632,13 @@ def upgrade_database(
             'UPDATE "folders" set "override_upc_category_filter"="ALL"'
         )
         database_connection.query(
-            'update "folders" set "override_upc_bool"=True, "override_upc_level"=1 where "force_each_upc"=True'
+            'update "folders" set "override_upc_bool"=1, "override_upc_level"=1 where "force_each_upc"=1'
         )
         database_connection.query(
             "alter table 'administrative' add column 'override_upc_bool'"
         )
         database_connection.query(
-            'UPDATE "administrative" set "override_upc_bool"=False'
+            'UPDATE "administrative" set "override_upc_bool"=0'
         )
         database_connection.query(
             "alter table 'administrative' add column 'override_upc_level'"
@@ -663,25 +663,25 @@ def upgrade_database(
             "alter table 'folders' add column 'split_edi_include_invoices'"
         )
         database_connection.query(
-            'UPDATE "folders" set "split_edi_include_invoices"=True'
+            'UPDATE "folders" set "split_edi_include_invoices"=1'
         )
         database_connection.query(
             "alter table 'folders' add column 'split_edi_include_credits'"
         )
         database_connection.query(
-            'UPDATE "folders" set "split_edi_include_credits"=True'
+            'UPDATE "folders" set "split_edi_include_credits"=1'
         )
         database_connection.query(
             "alter table 'administrative' add column 'split_edi_include_invoices'"
         )
         database_connection.query(
-            'UPDATE "administrative" set "split_edi_include_invoices"=True'
+            'UPDATE "administrative" set "split_edi_include_invoices"=1'
         )
         database_connection.query(
             "alter table 'administrative' add column 'split_edi_include_credits'"
         )
         database_connection.query(
-            'UPDATE "administrative" set "split_edi_include_credits"=True'
+            'UPDATE "administrative" set "split_edi_include_credits"=1'
         )
         update_version = dict(id=1, version="31", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -966,3 +966,51 @@ def upgrade_database(
         update_version = dict(id=1, version="40", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("39", "40")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if str(db_version_dict["version"]) == "40":
+        # Add missing backend columns to folders and administrative tables
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'process_backend_email' INTEGER")
+        database_connection.query("UPDATE 'folders' SET 'process_backend_email' = 0")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'process_backend_ftp' INTEGER")
+        database_connection.query("UPDATE 'folders' SET 'process_backend_ftp' = 0")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'email_to' TEXT")
+        database_connection.query("UPDATE 'folders' SET 'email_to' = ''")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_server' TEXT")
+        database_connection.query("UPDATE 'folders' SET 'ftp_server' = ''")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_port' INTEGER")
+        database_connection.query("UPDATE 'folders' SET 'ftp_port' = 21")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_folder' TEXT")
+        database_connection.query("UPDATE 'folders' SET 'ftp_folder' = ''")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_username' TEXT")
+        database_connection.query("UPDATE 'folders' SET 'ftp_username' = ''")
+        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_password' TEXT")
+        database_connection.query("UPDATE 'folders' SET 'ftp_password' = ''")
+        
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_email' INTEGER")
+        database_connection.query("UPDATE 'administrative' SET 'process_backend_email' = 0")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_ftp' INTEGER")
+        database_connection.query("UPDATE 'administrative' SET 'process_backend_ftp' = 0")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'email_to' TEXT")
+        database_connection.query("UPDATE 'administrative' SET 'email_to' = ''")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_server' TEXT")
+        database_connection.query("UPDATE 'administrative' SET 'ftp_server' = ''")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_port' INTEGER")
+        database_connection.query("UPDATE 'administrative' SET 'ftp_port' = 21")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_folder' TEXT")
+        database_connection.query("UPDATE 'administrative' SET 'ftp_folder' = ''")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_username' TEXT")
+        database_connection.query("UPDATE 'administrative' SET 'ftp_username' = ''")
+        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_password' TEXT")
+        database_connection.query("UPDATE 'administrative' SET 'ftp_password' = ''")
+
+        update_version = dict(id=1, version="41", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("40", "41")

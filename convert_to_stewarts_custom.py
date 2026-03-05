@@ -1,53 +1,98 @@
+"""Stewarts Custom CSV EDI Converter - Refactored to use Template Method Pattern.
+
+This module converts EDI files to Stewarts Custom CSV format with database lookups
+for customer information. It has been refactored to use the BaseEDIConverter
+base class, eliminating ~60 lines of duplicated code while maintaining the
+exact same behavior and output format.
+
+The converter features:
+- Database lookups via query_runner for customer information
+- Customer address formatting with corporate/bill-to logic
+- UPC code generation with check digit calculation
+- UOM (Unit of Measure) lookup from database
+- Item total calculations with proper decimal handling
+- Date prettification for display
+
+Output Format:
+    Multi-section CSV with invoice details, ship/bill addresses,
+    and line items with quantities, UOM, prices, and totals.
+
+Backward Compatibility:
+    The module-level edi_convert() function maintains the same signature
+    as before: edi_convert(edi_process, output_filename, settings_dict,
+    parameters_dict, upc_dict)
+"""
+
 import csv
 import decimal
-from datetime import datetime, timedelta
-
-from dateutil import parser
+from typing import Any, Dict, List, Tuple
 
 import utils
-
+from convert_base import (
+    BaseEDIConverter,
+    ConversionContext,
+    EDIRecord,
+)
 from core.database import query_runner
+from core.exceptions import CustomerLookupError
+from core.utils import prettify_dates
 
 
-class CustomerLookupError(Exception):
-    pass
-
-def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_dict):
-
-
-    def prettify_dates(date_string, offset=0, adj_offset=0):
-        try:
-            date_column_value = date_string
-            stripped_date_value = str(date_column_value).strip()
-            calculated_date_string = (
-                str(int(stripped_date_value[0]) + 19) + stripped_date_value[1:]
-            )
-            parsed_date_string = parser.isoparse(calculated_date_string).date()
-            corrected_date_string = parsed_date_string + timedelta(days=int(offset) + adj_offset)
-            formatted_date_string = str(datetime.strftime(corrected_date_string, "%m/%d/%y"))
-        except Exception:
-            formatted_date_string = "Not Available"
-        return formatted_date_string
-
-    with open(edi_process, encoding="utf-8") as work_file:  # open input file
-        work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-        with open(
-            output_filename + ".csv", "w", newline="\n", encoding="utf-8"
-        ) as f:  # open work file, overwriting old file
-            csv_file = csv.writer(f, dialect="unix")
-            query_object = query_runner(
-                settings_dict["as400_username"],
-                settings_dict["as400_password"],
-                settings_dict["as400_address"],
-                f"{settings_dict['odbc_driver']}",
-            )
-
-            # build header
-
-            header_a_record = utils.capture_records(work_file_lined[0])
-
-            header_fields = query_object.run_arbitrary_query(
-                f"""
+class StewartsCustomConverter(BaseEDIConverter):
+    """Converter for Stewarts Custom CSV format with database lookups.
+    
+    This class implements the hook methods required by BaseEDIConverter
+    to produce Stewarts-compatible CSV output. It features:
+    - Database lookups for customer and invoice information
+    - Corporate customer handling for bill-to addresses
+    - UOM (Unit of Measure) lookup and caching
+    - UPC code generation with check digit calculation
+    - Proper decimal arithmetic for item totals
+    """
+    
+    def _initialize_output(self, context: ConversionContext) -> None:
+        """Initialize CSV output file, writer, and database connection.
+        
+        Args:
+            context: The conversion context
+        """
+        # Initialize database connection
+        settings_dict = context.settings_dict
+        self.query_object = query_runner(
+            settings_dict["as400_username"],
+            settings_dict["as400_password"],
+            settings_dict["as400_address"],
+            f"{settings_dict['odbc_driver']}",
+        )
+        
+        # Initialize state
+        self.header_fields_dict: Dict[str, Any] = {}
+        self.uom_lookup_list: List[Tuple] = []
+        self.header_a_record: Dict[str, str] = {}
+        
+        # Open output file and create CSV writer
+        context.output_file = open(
+            context.get_output_path(".csv"),
+            "w",
+            newline="\n",
+            encoding="utf-8"
+        )
+        context.csv_writer = csv.writer(context.output_file, dialect="unix")
+    
+    def _get_customer_header_fields(self, invoice_number: str) -> Dict[str, Any]:
+        """Fetch customer header fields from database.
+        
+        Args:
+            invoice_number: The invoice number to look up
+            
+        Returns:
+            Dictionary of customer header fields
+            
+        Raises:
+            CustomerLookupError: If the order is not found in history
+        """
+        header_fields = self.query_object.run_arbitrary_query(
+            f"""
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
         ohhst.btcfdt AS "Invoice Date",
         TRIM(ohhst.btfdtx) AS "Terms Code",
@@ -88,170 +133,313 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
             LEFT outer JOIN dacdata.dsadrep dsadrep_corp
                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
-        WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
+        WHERE ohhst.bthhnb = {invoice_number.lstrip("0")}
             """
-            )
-
-            # print(header_fields[0])
-
-            header_fields_list = [
-                "Salesperson_Name",
-                "Invoice_Date",
-                "Terms_Code",
-                "Terms_Duration",
-                "Customer_Status",
-                "Customer_Number",
-                "Customer_Name",
-                "Customer_Store_Number",
-                "Customer_Address",
-                "Customer_Town",
-                "Customer_State",
-                "Customer_Zip",
-                "Customer_Phone",
-                "Customer_Email",
-                "Customer_Email_2",
-                "Corporate_Customer_Status",
-                "Corporate_Customer_Number",
-                "Corporate_Customer_Name",
-                "Corporate_Customer_Address",
-                "Corporate_Customer_Town",
-                "Corporate_Customer_State",
-                "Corporate_Customer_Zip",
-                "Corporate_Customer_Phone",
-                "Corporate_Customer_Email",
-                "Corporate_Customer_Email_2",
-            ]
-
-            if len(header_fields) == 0:
-                raise CustomerLookupError(f"Cannot Find Order {header_a_record['invoice_number']} In History.")
-            header_fields_dict = dict(zip(header_fields_list, header_fields[0]))
-
-            csv_file.writerow(["Invoice Details"])
-            csv_file.writerow([""])
-            csv_file.writerow(
-                ["Delivery Date", "Terms", "Invoice Number", "Due Date", "PO Number"]
-            )
-            csv_file.writerow(
-                [
-                    prettify_dates(header_fields_dict["Invoice_Date"]),
-                    header_fields_dict["Terms_Code"],
-                    header_a_record["invoice_number"],
-                    prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration'], -1),
-                ]
-            )
-            if header_fields_dict["Corporate_Customer_Number"] is not None:
-                bill_to_segment = [
-                    str(header_fields_dict['Corporate_Customer_Number']) + "\n" + \
-                    header_fields_dict['Corporate_Customer_Name'] + "\n" + \
-                    header_fields_dict['Corporate_Customer_Address'] + "\n" + \
-                    header_fields_dict['Corporate_Customer_Town'] + ", " + header_fields_dict['Corporate_Customer_State'] + ", " + header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
-                "US",
-                ]
-            else:
-                bill_to_segment = [
-                    str(header_fields_dict['Customer_Number']) + "\n" + \
-                    header_fields_dict['Customer_Name'] + "\n" + \
-                    header_fields_dict['Customer_Address'] + "\n" + \
-                    header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
-                    "US",
-                ]
-            csv_file.writerow(
-                ["Ship To:",
-                str(header_fields_dict['Customer_Number']) + " " + str(header_fields_dict["Customer_Store_Number"]) + "\n" + \
-                header_fields_dict['Customer_Name'] + "\n" + \
-                header_fields_dict['Customer_Address'] + "\n" + \
-                header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
-                "US",
-                "Bill To:"] + bill_to_segment
-            )
-            csv_file.writerow([""])
-            csv_file.writerow(["Invoice Number", "Store Number", "Item Number", "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
-
-            uom_lookup_list = query_object.run_arbitrary_query(f"""
+        )
+        
+        if len(header_fields) == 0:
+            raise CustomerLookupError(f"Cannot Find Order {invoice_number} In History.")
+        
+        header_fields_list = [
+            "Salesperson_Name",
+            "Invoice_Date",
+            "Terms_Code",
+            "Terms_Duration",
+            "Customer_Status",
+            "Customer_Number",
+            "Customer_Name",
+            "Customer_Store_Number",
+            "Customer_Address",
+            "Customer_Town",
+            "Customer_State",
+            "Customer_Zip",
+            "Customer_Phone",
+            "Customer_Email",
+            "Customer_Email_2",
+            "Corporate_Customer_Status",
+            "Corporate_Customer_Number",
+            "Corporate_Customer_Name",
+            "Corporate_Customer_Address",
+            "Corporate_Customer_Town",
+            "Corporate_Customer_State",
+            "Corporate_Customer_Zip",
+            "Corporate_Customer_Phone",
+            "Corporate_Customer_Email",
+            "Corporate_Customer_Email_2",
+        ]
+        
+        return dict(zip(header_fields_list, header_fields[0]))
+    
+    def _get_uom_lookup(self, invoice_number: str) -> List[Tuple]:
+        """Fetch UOM lookup list from database.
+        
+        Args:
+            invoice_number: The invoice number to look up
+            
+        Returns:
+            List of tuples containing (itemno, uom_mult, uom_code)
+        """
+        return self.query_object.run_arbitrary_query(f"""
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
-            where odhst.buhhnb = {header_a_record['invoice_number']}
+            where odhst.buhhnb = {invoice_number}
             """)
+    
+    def _get_uom(self, item_number: str, packsize: str) -> str:
+        """Get UOM (Unit of Measure) for an item.
+        
+        Args:
+            item_number: The vendor item number
+            packsize: The unit multiplier/pack size
+            
+        Returns:
+            UOM code string (e.g., 'EA', 'CS') or '?' if not found
+        """
+        stage_1_list = []
+        stage_2_list = []
+        for entry in self.uom_lookup_list:
+            if int(entry[0]) == int(item_number):
+                stage_1_list.append(entry)
+        for entry in stage_1_list:
+            try:
+                if int(entry[1]) == int(packsize):
+                    stage_2_list.append(entry)
+            except Exception:
+                stage_2_list.append(entry)
+                break
+        try:
+            return stage_2_list[0][2]
+        except IndexError:
+            return '?'
+    
+    def _convert_to_item_total(self, unit_cost: str, qty: str) -> Tuple[decimal.Decimal, int]:
+        """Calculate item total from unit cost and quantity.
+        
+        Args:
+            unit_cost: The unit cost string
+            qty: The quantity string (may be negative)
+            
+        Returns:
+            Tuple of (item_total, qty_as_int)
+        """
+        if qty.startswith('-'):
+            wrkqty = int(qty[1:])
+            wrkqtyint = wrkqty - (wrkqty * 2)
+        else:
+            try:
+                wrkqtyint = int(qty)
+            except ValueError:
+                wrkqtyint = 0
+        try:
+            item_total = decimal.Decimal(utils.convert_to_price(unit_cost)) * wrkqtyint
+        except ValueError:
+            item_total = decimal.Decimal()
+        except decimal.InvalidOperation:
+            item_total = decimal.Decimal()
+        return item_total, wrkqtyint
+    
+    def _generate_full_upc(self, input_upc: str) -> str:
+        """Generate a full 12-digit UPC from input.
+        
+        Args:
+            input_upc: The input UPC string (may be 8 or 11 digits)
+            
+        Returns:
+            Full 12-digit UPC string or empty string if invalid
+        """
+        input_upc = input_upc.strip()
+        upc_string = ""
+        blank_upc = False
+        try:
+            _ = int(input_upc)
+        except ValueError:
+            blank_upc = True
 
-            def get_uom(item_number, packsize):
-                stage_1_list = []
-                stage_2_list = []
-                for entry in uom_lookup_list:
-                    if int(entry[0]) == int(item_number):
-                        stage_1_list.append(entry)
-                for entry in stage_1_list:
-                    try:
-                        if int(entry[1]) == int(packsize):
-                            stage_2_list.append(entry)
-                    except:
-                        stage_2_list.append(entry)
-                        break
-                try:
-                    retval = stage_2_list[0][2]
-                except IndexError:
-                    retval = '?'
-                return(retval)
+        if blank_upc is False:
+            proposed_upc = input_upc
+            if len(str(proposed_upc)) == 11:
+                upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
+            else:
+                if len(str(proposed_upc)) == 8:
+                    upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
+        return upc_string
+    
+    def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process an A record (header), writing invoice header to CSV.
+        
+        Args:
+            record: The A record
+            context: The conversion context
+        """
+        super().process_a_record(record, context)
+        self.header_a_record = record.fields
+        
+        # Fetch customer data from database
+        self.header_fields_dict = self._get_customer_header_fields(
+            record.fields['invoice_number']
+        )
+        
+        # Fetch UOM lookup data
+        self.uom_lookup_list = self._get_uom_lookup(record.fields['invoice_number'])
+        
+        csv_writer = context.csv_writer
+        
+        # Write invoice header section
+        csv_writer.writerow(["Invoice Details"])
+        csv_writer.writerow([""])
+        csv_writer.writerow(
+            ["Delivery Date", "Terms", "Invoice Number", "Due Date", "PO Number"]
+        )
+        csv_writer.writerow(
+            [
+                prettify_dates(self.header_fields_dict["Invoice_Date"]),
+                self.header_fields_dict["Terms_Code"],
+                record.fields["invoice_number"],
+                prettify_dates(self.header_fields_dict["Invoice_Date"], 
+                              self.header_fields_dict['Terms_Duration'], -1),
+            ]
+        )
+        
+        # Build bill-to segment
+        if self.header_fields_dict["Corporate_Customer_Number"] is not None:
+            bill_to_segment = [
+                str(self.header_fields_dict['Corporate_Customer_Number']) + "\n" + \
+                self.header_fields_dict['Corporate_Customer_Name'] + "\n" + \
+                self.header_fields_dict['Corporate_Customer_Address'] + "\n" + \
+                self.header_fields_dict['Corporate_Customer_Town'] + ", " + 
+                self.header_fields_dict['Corporate_Customer_State'] + ", " + 
+                self.header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
+                "US",
+            ]
+        else:
+            bill_to_segment = [
+                str(self.header_fields_dict['Customer_Number']) + "\n" + \
+                self.header_fields_dict['Customer_Name'] + "\n" + \
+                self.header_fields_dict['Customer_Address'] + "\n" + \
+                self.header_fields_dict['Customer_Town'] + ", " + 
+                self.header_fields_dict['Customer_State'] + ", " + 
+                self.header_fields_dict['Customer_Zip'] + ", " + "\n" + \
+                "US",
+            ]
+        
+        # Write ship-to/bill-to section
+        csv_writer.writerow(
+            ["Ship To:",
+            str(self.header_fields_dict['Customer_Number']) + " " + 
+            str(self.header_fields_dict["Customer_Store_Number"]) + "\n" + \
+            self.header_fields_dict['Customer_Name'] + "\n" + \
+            self.header_fields_dict['Customer_Address'] + "\n" + \
+            self.header_fields_dict['Customer_Town'] + ", " + 
+            self.header_fields_dict['Customer_State'] + ", " + 
+            self.header_fields_dict['Customer_Zip'] + ", " + "\n" + \
+            "US",
+            "Bill To:"] + bill_to_segment
+        )
+        csv_writer.writerow([""])
+        csv_writer.writerow(["Invoice Number", "Store Number", "Item Number", 
+                            "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
+    
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process a B record (line item), writing to CSV.
+        
+        Args:
+            record: The B record
+            context: The conversion context
+        """
+        total_price, qtyint = self._convert_to_item_total(
+            record.fields['unit_cost'], 
+            record.fields['qty_of_units']
+        )
+        context.csv_writer.writerow([
+            self.header_a_record["invoice_number"],
+            self.header_fields_dict["Customer_Store_Number"],
+            record.fields['vendor_item'],
+            record.fields['description'],
+            self._generate_full_upc(record.fields['upc_number']),
+            qtyint,
+            self._get_uom(record.fields['vendor_item'], record.fields['unit_multiplier']),
+            "$" + str(utils.convert_to_price(record.fields['unit_cost'])),
+            "$" + str(total_price)
+        ])
+    
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process a C record (charge/tax), writing to CSV.
+        
+        Args:
+            record: The C record
+            context: The conversion context
+        """
+        context.csv_writer.writerow([
+            record.fields['description'],
+            '000000000000',
+            1,
+            'EA',
+            "$" + str(utils.convert_to_price(record.fields['amount'])),
+            "$" + str(utils.convert_to_price(record.fields['amount']))
+        ])
+    
+    def _finalize_output(self, context: ConversionContext) -> None:
+        """Finalize output by writing total row and closing file.
+        
+        Args:
+            context: The conversion context
+        """
+        # Write total row
+        if self.header_a_record:
+            context.csv_writer.writerow([
+                "", "", "", "", "", "", "", "Total:",
+                "$" + str(utils.convert_to_price(
+                    self.header_a_record['invoice_total']
+                ).lstrip("0"))
+            ])
+        
+        # Close the output file
+        if context.output_file is not None:
+            context.output_file.close()
+            context.output_file = None
 
-            def convert_to_item_total(unit_cost, qty):
-                if qty.startswith('-'):
-                    wrkqty = int(qty[1:])
-                    wrkqtyint = wrkqty - (wrkqty * 2)
-                else:
-                    try:
-                        wrkqtyint = int(qty)
-                    except ValueError:
-                        wrkqtyint = 0
-                try:
-                    item_total = decimal.Decimal(utils.convert_to_price(unit_cost)) * wrkqtyint
-                except ValueError:
-                    item_total = decimal.Decimal()
-                except decimal.InvalidOperation:
-                    item_total = decimal.Decimal()
-                return item_total, wrkqtyint
 
-            def generate_full_upc(input_upc):
-                input_upc = input_upc.strip()
-                upc_string = ""
-                blank_upc = False
-                try:
-                    _ = int(input_upc)
-                except ValueError:
-                    blank_upc = True
+# =============================================================================
+# Backward Compatibility Wrapper
+# =============================================================================
 
-                if blank_upc is False:
-                    proposed_upc = input_upc
-                    if len(str(proposed_upc)) == 11:
-                        upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
-                    else:
-                        if len(str(proposed_upc)) == 8:
-                            upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
-                return upc_string
-
-            for line_num, line in enumerate(
-                work_file_lined
-            ):  # iterate over work file contents
-                input_edi_dict = utils.capture_records(line)
-                if input_edi_dict is not None:
-                    if input_edi_dict['record_type'] == 'B':
-                        total_price, qtyint = convert_to_item_total(input_edi_dict['unit_cost'], input_edi_dict['qty_of_units'])
-                        csv_file.writerow([
-                            header_a_record["invoice_number"],
-                            header_fields_dict["Customer_Store_Number"],
-                            input_edi_dict['vendor_item'],
-                            input_edi_dict['description'],
-                            generate_full_upc(input_edi_dict['upc_number']),
-                            qtyint,
-                            get_uom(input_edi_dict['vendor_item'], input_edi_dict['unit_multiplier']),
-                            "$"+str(utils.convert_to_price(input_edi_dict['unit_cost'])),
-                            "$"+str(total_price)
-                        ])
-                    if input_edi_dict['record_type'] == 'C':
-                        csv_file.writerow([
-                            input_edi_dict['description'],
-                            '000000000000',
-                            1,
-                            'EA',
-                            "$"+str(utils.convert_to_price(input_edi_dict['amount'])),
-                            "$"+str(utils.convert_to_price(input_edi_dict['amount']))
-                        ])
-            csv_file.writerow(["","","","","","","","Total:","$"+str(utils.convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
-    return(output_filename + ".csv")
+def edi_convert(
+    edi_process: str,
+    output_filename: str,
+    settings_dict: dict,
+    parameters_dict: dict,
+    upc_dict: dict
+) -> str:
+    """Convert EDI file to Stewarts Custom CSV format with database lookups.
+    
+    This is the original function signature maintained for backward compatibility.
+    It simply creates a StewartsCustomConverter instance and delegates to it.
+    
+    Args:
+        edi_process: Path to the input EDI file
+        output_filename: Base path for output file (without extension)
+        settings_dict: Application settings dictionary with DB credentials
+        parameters_dict: Conversion parameters (Stewarts has no specific params)
+        upc_dict: UPC lookup table (not used in this converter)
+    
+    Returns:
+        Path to the generated CSV file
+    
+    Example:
+        >>> result = edi_convert(
+        ...     "input.edi",
+        ...     "output",
+        ...     {'as400_username': 'user', 'as400_password': 'pass', ...},
+        ...     {},
+        ...     {}
+        ... )
+        >>> print(result)
+        'output.csv'
+    """
+    converter = StewartsCustomConverter()
+    return converter.edi_convert(
+        edi_process,
+        output_filename,
+        settings_dict,
+        parameters_dict,
+        upc_dict
+    )

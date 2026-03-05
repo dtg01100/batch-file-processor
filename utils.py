@@ -1,6 +1,22 @@
+"""Utility functions for batch file processing.
+
+This module provides common utilities used across the application.
+Many functions are now migrated to core modules for better organization:
+- Boolean utilities: core.utils.bool_utils
+- Date utilities: core.utils.date_utils
+- EDI parsing: core.edi.edi_parser
+- UPC utilities: core.edi.upc_utils
+- Invoice fetching: core.edi.inv_fetcher
+
+For backward compatibility, this module re-exports functions from core modules.
+New code should import directly from the core modules.
+"""
+
 from datetime import datetime
+from decimal import Decimal
 import os
 from typing import Any
+import warnings
 
 try:
     from query_runner import query_runner
@@ -10,213 +26,109 @@ except (ImportError, RuntimeError):
     HAS_QUERY_RUNNER = False
     query_runner = None
 
+# Import from core modules for backward compatibility
+from core.utils.bool_utils import normalize_bool, to_db_bool, from_db_bool
+from core.utils.date_utils import (
+    dactime_from_datetime,
+    datetime_from_dactime,
+    datetime_from_invtime,
+    dactime_from_invtime,
+    prettify_dates,
+)
+from core.edi.edi_parser import capture_records, _get_default_parser
+from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
+
 
 # ============================================================================
-# Boolean Normalization Utilities (native boolean migration support)
+# Backward Compatibility Re-exports
 # ============================================================================
+# These imports allow existing code to continue importing from utils.py
+# New code should import directly from core modules
+
+# Note: normalize_bool, to_db_bool, from_db_bool are imported above
+# Note: date functions are imported above
+# Note: capture_records, _get_default_parser are imported above
+# Note: calc_check_digit, convert_UPCE_to_UPCA are imported above
 
 
-def normalize_bool(value: Any) -> bool:
-    """Convert any value to Python boolean.
-
-    Accepts:
-    - bool: True/False (returned as-is)
-    - str: "true"/"false" (case-insensitive), "1"/"0", "yes"/"no"
-    - int: 1/0, any non-zero is True
-    - None: False
-    - list/dict: bool(value) checks if non-empty
-
-    Args:
-        value: Any value to normalize
-
-    Returns:
-        Python bool (True or False)
-
-    Examples:
-        normalize_bool("True") → True
-        normalize_bool("false") → False
-        normalize_bool(1) → True
-        normalize_bool(0) → False
-        normalize_bool(None) → False
-        normalize_bool("") → False
-    """
-    if isinstance(value, bool):
-        return value
-
-    if isinstance(value, str):
-        # Handle string booleans (legacy tkinter storage)
-        lower_val = value.strip().lower()
-        if lower_val in ("true", "1", "yes", "on"):
-            return True
-        if lower_val in ("false", "0", "no", "off", ""):
-            return False
-        # Default: non-empty string is truthy
-        return bool(value.strip())
-
-    if value is None:
-        return False
-
-    # For int/float: 0 is False, non-zero is True
-    return bool(value)
-
-
-def to_db_bool(value: Any) -> int:
-    """Convert any value to SQLite integer (0 or 1).
-
-    Used when writing boolean values to database.
-
-    Args:
-        value: Any value to convert
-
-    Returns:
-        1 for truthy values, 0 for falsy values
-
-    Examples:
-        to_db_bool(True) → 1
-        to_db_bool("True") → 1
-        to_db_bool(False) → 0
-        to_db_bool(None) → 0
-    """
-    return 1 if normalize_bool(value) else 0
-
-
-def from_db_bool(value: Any) -> bool:
-    """Convert SQLite value to Python boolean.
-
-    Handles both legacy string booleans ("True"/"False") and new
-    integer booleans (0/1). Used when reading boolean values from
-    database or older code that stores strings.
-
-    Args:
-        value: Database value (could be int, str, bool, or None)
-
-    Returns:
-        Python bool
-
-    Examples:
-        from_db_bool("True") → True   # Legacy string format
-        from_db_bool(1) → True         # New integer format
-        from_db_bool("1") → True
-        from_db_bool(0) → False
-        from_db_bool("False") → False
-    """
-    return normalize_bool(value)
-
+# ============================================================================
+# Legacy invFetcher Adapter (deprecated - use core.edi.inv_fetcher.InvFetcher)
+# ============================================================================
 
 class invFetcher:
+    """Legacy invFetcher adapter for backward compatibility.
+    
+    .. deprecated:: 1.0
+        Use `InvFetcher` from `core.edi.inv_fetcher` instead.
+        This class delegates to the core implementation.
+    """
+    
     def __init__(self, settings_dict):
-        self.query_object = None
-        self.settings = settings_dict
-        self.last_invoice_number = 0
-        self.uom_lut = {0: "N/A"}
-        self.last_invno = 0
-        self.po = ""
-        self.custname = ""
-        self.custno = 0
-
-    def _db_connect(self):
-        self.query_object = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
+        """Initialize with settings dictionary."""
+        warnings.warn(
+            "utils.invFetcher is deprecated. Use core.edi.inv_fetcher.InvFetcher instead.",
+            DeprecationWarning,
+            stacklevel=2
         )
-
-    def _run_qry(self, qry_str):
-        if self.query_object is None:
-            self._db_connect()
-        qry_return = self.query_object.run_arbitrary_query(qry_str)
-        return qry_return
+        from core.database import query_runner
+        from core.edi.inv_fetcher import InvFetcher
+        
+        self.settings = settings_dict
+        self._legacy_runner = query_runner(
+            settings_dict["as400_username"],
+            settings_dict["as400_password"],
+            settings_dict["as400_address"],
+            f"{settings_dict['odbc_driver']}",
+        )
+        self._fetcher = InvFetcher(self._legacy_runner, settings_dict)
+    
+    @property
+    def last_invoice_number(self):
+        return self._fetcher.last_invoice_number
+    
+    @property
+    def uom_lut(self):
+        return self._fetcher.uom_lut
+    
+    @property
+    def last_invno(self):
+        return self._fetcher.last_invno
+    
+    @property
+    def po(self):
+        return self._fetcher.po
+    
+    @property
+    def custname(self):
+        return self._fetcher.custname
+    
+    @property
+    def custno(self):
+        return self._fetcher.custno
+    
+    # Legacy aliases
+    @property
+    def cust(self):
+        return self._fetcher.custname
 
     def fetch_po(self, invoice_number):
-        if invoice_number == self.last_invoice_number:
-            return self.po
-        else:
-            # Try to convert invoice_number to int, use 0 if it fails
-            try:
-                invoice_number_int = int(invoice_number)
-            except ValueError:
-                invoice_number_int = 0
-            qry_ret = self._run_qry(
-                f"""
-                SELECT
-            trim(ohhst.bte4cd),
-                trim(ohhst.bthinb),
-                ohhst.btabnb
-            --PO Number
-                FROM
-            dacdata.ohhst ohhst
-                WHERE
-            ohhst.BTHHNB = {str(invoice_number_int)}
-            """
-            )
-            self.last_invoice_number = invoice_number
-            try:
-                self.po = qry_ret[0][0]
-                self.custname = qry_ret[0][1]
-                self.custno = qry_ret[0][2]
-            except IndexError:
-                self.po = ""
-            return self.po
+        return self._fetcher.fetch_po(int(invoice_number))
 
     def fetch_cust_name(self, invoice_number):
-        self.fetch_po(invoice_number)
-        return self.custname
+        return self._fetcher.fetch_cust_name(int(invoice_number))
 
     def fetch_cust_no(self, invoice_number):
-        self.fetch_po(invoice_number)
-        return self.custno
+        return self._fetcher.fetch_cust_no(int(invoice_number))
 
     def fetch_uom_desc(self, itemno, uommult, lineno, invno):
-        if invno != self.last_invno:
-            self.uom_lut = {0: "N/A"}
-            # Try to convert invno to int, use 0 if it fails
-            try:
-                invno_int = int(invno)
-            except ValueError:
-                invno_int = 0
-            qry = f"""
-                SELECT
-                    BUHUNB,
-                    --lineno
-                    BUHXTX
-                    -- u/m desc
-                FROM
-                    dacdata.odhst odhst
-                WHERE
-                    odhst.BUHHNB = {str(invno_int)}
-            """
-            qry_ret = self._run_qry(qry)
-            self.uom_lut = dict(qry_ret)
-            self.last_invno = invno
-        try:
-            return self.uom_lut[lineno + 1]
-        except KeyError as error:
-            try:
-                # Try to convert itemno to int, use 0 if it fails
-                try:
-                    itemno_int = int(itemno)
-                except ValueError:
-                    itemno_int = 0
-                if int(uommult) > 1:
-                    qry = f"""select dsanrep.ANB9TX
-                            from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {str(itemno_int)}"""
-                else:
-                    qry = f"""select dsanrep.ANB8TX
-                            from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {str(itemno_int)}"""
-                uomqry_ret = self._run_qry(qry)
-                return uomqry_ret[0][0]
-            except Exception as error:
-                try:
-                    if int(uommult) > 1:
-                        return "HI"
-                    else:
-                        return "LO"
-                except ValueError:
-                    return "NA"
+        return self._fetcher.fetch_uom_desc(
+            int(itemno), int(uommult), lineno, int(invno)
+        )
 
+
+# ============================================================================
+# Data Transformation Functions (not yet migrated to core)
+# ============================================================================
 
 def dac_str_int_to_int(dacstr: str) -> int:
     if dacstr.strip() == "":
@@ -238,31 +150,25 @@ def convert_to_price(value):
     )
 
 
-def dactime_from_datetime(date_time: datetime) -> str:
-    dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
-    dactime_date = dactime_date_century_digit + str(
-        datetime.strftime(date_time.date(), "%y%m%d")
+def convert_to_price_decimal(value):
+    retprice = (
+        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
+        + "."
+        + value[-2:]
     )
-    return dactime_date
+    try:
+        return Decimal(retprice)
+    except Exception:
+        return 0
 
 
-def datetime_from_dactime(dac_time: int) -> datetime:
-    dac_time_int = int(dac_time)
-    return datetime.strptime(str(dac_time_int + 19000000), "%Y%m%d")
-
-
-def datetime_from_invtime(invtime: str) -> datetime:
-    return datetime.strptime(invtime, "%m%d%y")
-
-
-def dactime_from_invtime(inv_no: str):
-    datetime_obj = datetime_from_invtime(inv_no)
-    dactime = dactime_from_datetime(datetime_obj)
-    return dactime
+# Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime, 
+# dactime_from_invtime are now imported from core.utils.date_utils
 
 
 def detect_invoice_is_credit(edi_process):
-    with open(edi_process, encoding="utf-8") as work_file:  # open input file
+    """Detect if an invoice is a credit memo based on negative total."""
+    with open(edi_process, encoding="utf-8") as work_file:
         fields = capture_records(work_file.readline())
         if fields["record_type"] != "A":
             raise ValueError(
@@ -274,130 +180,16 @@ def detect_invoice_is_credit(edi_process):
             return True
 
 
-_default_parser = None
+# Note: _get_default_parser and capture_records are now imported from core.edi.edi_parser
 
-
-def _get_default_parser():
-    global _default_parser
-    if _default_parser is None:
-        try:
-            from edi_format_parser import EDIFormatParser
-
-            _default_parser = EDIFormatParser.get_default_parser()
-        except Exception:
-            _default_parser = False
-    return _default_parser if _default_parser is not False else None
-
-
-def capture_records(line, parser=None):
-    if parser is None:
-        parser = _get_default_parser()
-
-    if parser is not None:
-        result = parser.parse_line(line)
-        if result is None and line and line.strip() != "":
-            # Ignore standard EOF marker (Ctrl+Z)
-            if line.strip() == "\x1a":
-                return None
-            raise Exception("Not An EDI")
-        return result
-
-    if line.startswith("A"):
-        fields = {
-            "record_type": line[0],
-            "cust_vendor": line[1:7],
-            "invoice_number": line[7:17],
-            "invoice_date": line[17:23],
-            "invoice_total": line[23:33],
-        }
-        return fields
-    elif line.startswith("B"):
-        fields = {
-            "record_type": line[0],
-            "upc_number": line[1:12],
-            "description": line[12:37],
-            "vendor_item": line[37:43],
-            "unit_cost": line[43:49],
-            "combo_code": line[49:51],
-            "unit_multiplier": line[51:57],
-            "qty_of_units": line[57:62],
-            "suggested_retail_price": line[62:67],
-            "price_multi_pack": line[67:70],
-            "parent_item_number": line[70:76],
-        }
-        return fields
-    elif line.startswith("C"):
-        fields = {
-            "record_type": line[0],
-            "charge_type": line[1:4],
-            "description": line[4:29],
-            "amount": line[29:38],
-        }
-        return fields
-    elif line.startswith(""):
-        return None
-    else:
-        raise Exception("Not An EDI")
-
-
-def calc_check_digit(value):
-    """calculate check digit, they are the same for both UPCA and UPCE
-    Code in this module is from: http://code.activestate.com/recipes/528911-barcodes-convert-upc-e-to-upc-a/
-    Author's handle is: greg p
-    This code is GPL3"""
-    check_digit = 0
-    odd_pos = True
-    for char in str(value)[::-1]:
-        if odd_pos:
-            check_digit += int(char) * 3
-        else:
-            check_digit += int(char)
-        odd_pos = not odd_pos  # alternate
-    check_digit = check_digit % 10
-    check_digit = 10 - check_digit
-    check_digit = check_digit % 10
-    return check_digit
-
-
-def convert_UPCE_to_UPCA(upce_value):
-    """Test value 04182635 -> 041800000265
-    Code in this module is from: http://code.activestate.com/recipes/528911-barcodes-convert-upc-e-to-upc-a/
-    Author's handle is: greg p
-    This code is GPL3"""
-    if len(upce_value) == 6:
-        middle_digits = upce_value  # assume we're getting just middle 6 digits
-    elif len(upce_value) == 7:
-        # truncate last digit, assume it is just check digit
-        middle_digits = upce_value[:6]
-    elif len(upce_value) == 8:
-        # truncate first and last digit,
-        # assume first digit is number system digit
-        # last digit is check digit
-        middle_digits = upce_value[1:7]
-    else:
-        return False
-    d1, d2, d3, d4, d5, d6 = list(middle_digits)
-    if d6 in ["0", "1", "2"]:
-        mfrnum = d1 + d2 + d6 + "00"
-        itemnum = "00" + d3 + d4 + d5
-    elif d6 == "3":
-        mfrnum = d1 + d2 + d3 + "00"
-        itemnum = "000" + d4 + d5
-    elif d6 == "4":
-        mfrnum = d1 + d2 + d3 + d4 + "0"
-        itemnum = "0000" + d5
-    else:
-        mfrnum = d1 + d2 + d3 + d4 + d5
-        itemnum = "0000" + d6
-    newmsg = "0" + mfrnum + itemnum
-    # calculate check digit, they are the same for both UPCA and UPCE
-    check_digit = calc_check_digit(newmsg)
-    return newmsg + str(check_digit)
+# Note: calc_check_digit and convert_UPCE_to_UPCA are now imported from core.edi.upc_utils
 
 
 def do_split_edi(edi_process, work_directory, parameters_dict):
-    """credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642"""
-
+    """Split a multi-invoice EDI file into individual invoice files.
+    
+    Credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642
+    """
     def col_to_excel(col):  # col is 1 based
         excel_col = str()
         div = col
@@ -482,6 +274,41 @@ def do_clear_old_files(folder_path, maximum_files):
                 ),
             )
         )
+
+
+def qty_to_int(qty: str) -> int:
+    """Convert a quantity string to an integer, handling negative values.
+
+    Args:
+        qty: A string representing a quantity, may start with '-' for negative values.
+
+    Returns:
+        The integer value of the quantity, or 0 if conversion fails.
+
+    Examples:
+        qty_to_int("5") → 5
+        qty_to_int("-3") → -3
+        qty_to_int("invalid") → 0
+    """
+    try:
+        if qty.startswith("-"):
+            return -int(qty[1:])
+        return int(qty)
+    except ValueError:
+        return 0
+
+
+def add_row(csv_writer, rowdict: dict):
+    """Write a dictionary row to a CSV file.
+
+    Args:
+        csv_writer: A csv.writer object to write to.
+        rowdict: A dictionary whose values will be written as a row.
+    """
+    column_list = []
+    for cell in rowdict.values():
+        column_list.append(cell)
+    csv_writer.writerow(column_list)
 
 
 class cRecGenerator:
@@ -676,3 +503,175 @@ def apply_upc_override(
     except (KeyError, ValueError, IndexError):
         record["upc_number"] = ""
         return False
+
+
+def filter_b_records_by_category(
+    b_records: list[str],
+    upc_dict: dict,
+    filter_categories: str,
+    filter_mode: str
+) -> list[str]:
+    """Filter B records based on item category.
+    
+    Args:
+        b_records: List of B record lines to filter
+        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: String of comma-separated categories or "ALL"
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        
+    Returns:
+        List of filtered B record lines
+    """
+    if filter_categories == "ALL":
+        return b_records
+    
+    if not upc_dict:
+        return b_records
+    
+    categories_list = [c.strip().lower() for c in filter_categories.split(",")]
+    filtered_records = []
+    
+    for record in b_records:
+        try:
+            b_rec_dict = capture_records(record)
+            if b_rec_dict is None:
+                # Include unparsable records in output
+                filtered_records.append(record)
+                continue
+            vendor_item = int(b_rec_dict['vendor_item'].strip())
+            
+            if vendor_item in upc_dict:
+                item_category = str(upc_dict[vendor_item][0]).lower()
+                category_in_list = item_category in categories_list
+                
+                if filter_mode == "include":
+                    if category_in_list:
+                        filtered_records.append(record)
+                else:  # exclude mode
+                    if not category_in_list:
+                        filtered_records.append(record)
+            else:
+                # Item not in upc_dict - include by default (fail-open)
+                filtered_records.append(record)
+        except (ValueError, KeyError):
+            # On error, include the record (fail-open)
+            filtered_records.append(record)
+    
+    return filtered_records
+
+
+def filter_edi_file_by_category(
+    input_file: str,
+    output_file: str,
+    upc_dict: dict,
+    filter_categories: str,
+    filter_mode: str = "include"
+) -> bool:
+    """Filter EDI file by item category, dropping invoices without matching B records.
+    
+    Reads an EDI file, filters B records based on category, and writes the result
+    to an output file. Invoices (A + B + C records) that have no B records after
+    filtering are completely removed.
+    
+    Args:
+        input_file: Path to input EDI file
+        output_file: Path to output EDI file
+        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        filter_categories: Comma-separated categories or "ALL"
+        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        
+    Returns:
+        True if any filtering was applied, False if no filtering occurred
+    """
+    # Handle ALL mode - no filtering needed
+    if filter_categories == "ALL":
+        # Just copy file unchanged
+        try:
+            with open(input_file, 'r') as infile:
+                content = infile.read()
+            with open(output_file, 'w') as outfile:
+                outfile.write(content)
+            return False
+        except (IOError, OSError) as e:
+            raise ValueError(f"Failed to copy file: {e}")
+    
+    # Read input file
+    try:
+        with open(input_file, 'r') as infile:
+            lines = infile.readlines()
+    except (IOError, OSError) as e:
+        raise ValueError(f"Failed to read input file: {e}")
+    
+    if not lines:
+        # Empty file - just copy it
+        try:
+            with open(output_file, 'w') as outfile:
+                pass
+        except (IOError, OSError) as e:
+            raise ValueError(f"Failed to create output file: {e}")
+        return False
+    
+    # Group lines into invoices (each starts with 'A' record)
+    invoices = []
+    current_invoice = []
+    
+    for line in lines:
+        if line.startswith('A'):
+            # Start of new invoice - save previous if exists
+            if current_invoice:
+                invoices.append(current_invoice)
+            current_invoice = [line]
+        elif line.strip():  # Non-empty line
+            current_invoice.append(line)
+    
+    # Don't forget last invoice
+    if current_invoice:
+        invoices.append(current_invoice)
+    
+    # Process each invoice
+    filtered_invoices = []
+    any_filtered = False
+    
+    for invoice_lines in invoices:
+        # Separate A, B, and C records
+        a_record = None
+        b_records = []
+        c_record = None
+        
+        for line in invoice_lines:
+            if line.startswith('A'):
+                a_record = line
+            elif line.startswith('B'):
+                b_records.append(line)
+            elif line.startswith('C'):
+                c_record = line
+        
+        # Filter B records by category
+        filtered_b_records = filter_b_records_by_category(
+            b_records, upc_dict, filter_categories, filter_mode
+        )
+        
+        # Check if any B records were filtered out
+        if len(filtered_b_records) != len(b_records):
+            any_filtered = True
+        
+        # Only keep invoice if it has at least one B record after filtering
+        if filtered_b_records:
+            # Rebuild invoice with filtered B records
+            filtered_invoice = [a_record] + filtered_b_records
+            if c_record:
+                filtered_invoice.append(c_record)
+            filtered_invoices.append(filtered_invoice)
+        else:
+            # Invoice dropped because no matching B records
+            any_filtered = True
+    
+    # Write output file
+    try:
+        with open(output_file, 'w') as outfile:
+            for invoice in filtered_invoices:
+                outfile.writelines(invoice)
+    except (IOError, OSError) as e:
+        raise ValueError(f"Failed to write output file: {e}")
+    
+    return any_filtered

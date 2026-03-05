@@ -178,6 +178,23 @@ class ProgressServiceProtocol(Protocol):
         """
         ...
 
+    def update_detailed_progress(self, 
+                                 folder_num: int, 
+                                 folder_total: int, 
+                                 file_num: int, 
+                                 file_total: int, 
+                                 footer: str = "") -> None:
+        """Update the detailed progress information.
+
+        Args:
+            folder_num: Current folder index (1-based)
+            folder_total: Total number of folders to process
+            file_num: Current file index (1-based)
+            file_total: Total number of files to process
+            footer: Optional footer text
+        """
+        ...
+
     def is_visible(self) -> bool:
         """Return whether the progress indicator is currently visible.
 

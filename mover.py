@@ -8,7 +8,7 @@ import os
 import threading
 from typing import Any, Callable, Optional
 
-import dataset
+from interface.database import sqlite_wrapper
 
 import backup_increment
 import folders_database_migrator
@@ -51,12 +51,12 @@ class DbMigrationThing:
         def database_preimport_operations():
             global new_database_connection
             global modified_new_folder_path
-            original_database_connection_for_migrate = dataset.connect('sqlite:///' + original_database_path)
+            original_database_connection_for_migrate = sqlite_wrapper.Database.connect(original_database_path)
             backup_increment.do_backup(self.original_folder_path)
             modified_new_folder_path = backup_increment.do_backup(self.new_folder_path)
             original_db_version = original_database_connection_for_migrate['version']
             original_db_version_dict = original_db_version.find_one(id=1)
-            new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
+            new_database_connection = sqlite_wrapper.Database.connect(modified_new_folder_path)
             new_db_version = new_database_connection['version']
             new_db_version_dict = new_db_version.find_one(id=1)
             if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
@@ -82,40 +82,23 @@ class DbMigrationThing:
         if progress_callback:
             progress_callback(0, 100)
 
-        new_database_connection = dataset.connect('sqlite:///' + modified_new_folder_path)
+        new_database_connection = sqlite_wrapper.Database.connect(modified_new_folder_path)
         new_folders_table = new_database_connection['folders']
-        original_database_connection = dataset.connect('sqlite:///' + original_database_path)
+        original_database_connection = sqlite_wrapper.Database.connect(original_database_path)
         old_folders_table = original_database_connection['folders']
 
         # Count folders for progress
-        active_folders = list(new_folders_table.find(folder_is_active="True"))
-        active_folders.extend(list(new_folders_table.find(folder_is_active=1)))
-        # Deduplicate by id
-        seen_ids = set()
-        unique_folders = []
-        for folder in active_folders:
-            if folder['id'] not in seen_ids:
-                seen_ids.add(folder['id'])
-                unique_folders.append(folder)
-
-        self.number_of_folders = len(unique_folders)
+        active_folders = list(new_folders_table.find(folder_is_active=1))
+        
+        self.number_of_folders = len(active_folders)
         self.progress_of_folders = 0
 
         if progress_callback and self.number_of_folders > 0:
             progress_callback(0, self.number_of_folders)
 
         def _get_active_folders(table):
-            """Get active folders handling both string and integer boolean formats."""
-            results = list(table.find(folder_is_active="True"))
-            results.extend(list(table.find(folder_is_active=1)))
-            # Deduplicate by id
-            seen_ids = set()
-            unique_results = []
-            for row in results:
-                if row['id'] not in seen_ids:
-                    seen_ids.add(row['id'])
-                    unique_results.append(row)
-            return unique_results
+            """Get active folders."""
+            return list(table.find(folder_is_active=1))
 
         def test_line_for_match(line):
             line_match = False

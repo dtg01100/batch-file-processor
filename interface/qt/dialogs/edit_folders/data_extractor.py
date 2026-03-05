@@ -103,35 +103,65 @@ class QtFolderDataExtractor:
 
     def _get_text(self, key: str) -> str:
         widget = self.fields.get(key)
-        if isinstance(widget, QLineEdit):
-            return widget.text().strip()
+        if widget is None:
+            return ""
+        try:
+            if isinstance(widget, QLineEdit):
+                return widget.text().strip()
+        except RuntimeError:
+            # Widget has been deleted
+            return ""
         return ""
 
     def _get_bool(self, key: str) -> bool:
         widget = self.fields.get(key)
-        if isinstance(widget, (QCheckBox, QPushButton)):
-            return widget.isChecked()
+        if widget is None:
+            return False
+        try:
+            if isinstance(widget, (QCheckBox, QPushButton)):
+                return widget.isChecked()
+        except RuntimeError:
+            # Widget has been deleted
+            return False
         return False
 
     def _get_check_str(self, key: str) -> str:
         widget = self.fields.get(key)
-        if isinstance(widget, (QCheckBox, QPushButton)):
-            return "True" if widget.isChecked() else "False"
+        if widget is None:
+            return "False"
+        try:
+            if isinstance(widget, (QCheckBox, QPushButton)):
+                return "True" if widget.isChecked() else "False"
+        except RuntimeError:
+            # Widget has been deleted
+            return "False"
         return "False"
 
     def _get_int(self, key: str, default: int = 0) -> int:
         widget = self.fields.get(key)
-        if isinstance(widget, QSpinBox):
-            return widget.value()
-        elif isinstance(widget, QLineEdit):
-            try:
-                return int(widget.text().strip())
-            except (TypeError, ValueError):
-                pass
+        if widget is None:
+            return default
+        try:
+            if isinstance(widget, QSpinBox):
+                return widget.value()
+            elif isinstance(widget, QLineEdit):
+                try:
+                    return int(widget.text().strip())
+                except (TypeError, ValueError):
+                    pass
+        except RuntimeError:
+            # Widget has been deleted
+            pass
         return default
 
     def _get_combo(self, key: str) -> str:
         widget = self.fields.get(key)
-        if isinstance(widget, QComboBox):
-            return widget.currentText().strip()
+        if widget is None:
+            return ""
+        try:
+            if isinstance(widget, QComboBox):
+                return widget.currentText().strip()
+        except RuntimeError:
+            # Widget has been deleted
+            return ""
         return ""

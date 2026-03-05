@@ -1,225 +1,353 @@
+"""EStore E-Invoice CSV EDI Converter - Refactored to use Template Method Pattern.
+
+This module converts EDI files to EStore E-Invoice CSV format with support for
+complex "shipper mode" handling. It has been refactored to use the BaseEDIConverter
+base class while maintaining the exact same behavior and output format.
+
+The converter features:
+- Shipper mode: Parent items with child components
+- Row buffering with deferred writing
+- Trailer records with invoice totals
+- UPC lookup from the provided lookup table
+- Date formatting
+
+Shipper Mode Logic:
+    When parent_item_number == vendor_item, the item is a "shipper" parent.
+    Child items (sharing the same parent_item_number) are marked with Detail Type "C".
+    The parent item is marked with Detail Type "D" and its quantity is set to
+    the count of child items when leaving shipper mode.
+
+Output Format:
+    Header records (H) with store/vendor/invoice info
+    Detail records (D) for regular items and shipper parents
+    Component records (C) for shipper children
+    Trailer records (T) with invoice totals
+
+Backward Compatibility:
+    The module-level edi_convert() function maintains the same signature
+    as before: edi_convert(edi_process, output_filename_initial, settings_dict,
+    parameters_dict, upc_lookup)
+"""
+
 import csv
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import List
+from typing import Any, Dict, List
 
 import utils
+from convert_base import (
+    BaseEDIConverter,
+    ConversionContext,
+    EDIRecord,
+)
 
 
-def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
-
-
-    def qty_to_int(qty):
-        if qty.startswith("-"):
-            wrkqty = int(qty[1:])
-            wrkqtyint = wrkqty - (wrkqty * 2)
-        else:
-            try:
-                wrkqtyint = int(qty)
-            except ValueError:
-                wrkqtyint = 0
-        return wrkqtyint
-
-    def add_row(rowdict: dict):
-        column_list = []
-        for cell in rowdict.values():
-            column_list.append(cell)
-        csv_file.writerow(column_list)
-
-    def leave_shipper_mode(
-        shipper_mode, row_dict_list, shipper_line_number, shipper_accum
-    ):
-        if shipper_mode:
-            # write out shipper
-            # row_dict_list[shipper_line_number]['Unit Cost'] = sum(shipper_accum)
-            row_dict_list[shipper_line_number - 1]["QTY"] = len(shipper_accum)
-            shipper_accum.clear()
+class EStoreEInvoiceConverter(BaseEDIConverter):
+    """Converter for EStore E-Invoice CSV format with shipper mode support.
+    
+    This class implements the hook methods required by BaseEDIConverter
+    to produce EStore-compatible CSV output. It features:
+    - Shipper mode handling for parent/child item relationships
+    - Row buffering with deferred writing
+    - Invoice trailer records with totals
+    - UPC lookup from the provided lookup table
+    """
+    
+    def _initialize_output(self, context: ConversionContext) -> None:
+        """Initialize CSV output file, writer, and state.
+        
+        Args:
+            context: The conversion context
+        """
+        # Get parameters
+        params = context.parameters_dict
+        self.store_number = params['estore_store_number']
+        self.vendor_oid = params['estore_Vendor_OId']
+        self.vendor_name = params['estore_vendor_NameVendorOID']
+        self.upc_lookup = context.upc_lut
+        
+        # Initialize state
+        self.row_dict_list: List[dict] = []
+        self.shipper_mode = False
+        self.shipper_parent_item = False
+        self.shipper_accum: List[Decimal] = []
+        self.invoice_accum: List[Decimal] = []
+        self.shipper_line_number = 0
+        self.invoice_index = 0
+        self.output_filename = ""
+        
+        # Generate output filename with timestamp
+        self.output_filename = os.path.join(
+            os.path.dirname(context.output_filename),
+            f'eInv{self.vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
+        )
+        
+        # Open output file and create CSV writer
+        context.output_file = open(
+            self.output_filename,
+            "w",
+            newline="",
+            encoding="utf-8"
+        )
+        context.csv_writer = csv.writer(
+            context.output_file,
+            dialect="excel",
+            lineterminator="\r\n"
+        )
+    
+    def _leave_shipper_mode(self) -> None:
+        """Exit shipper mode and update parent item quantity."""
+        if self.shipper_mode:
+            # Update the parent item's quantity to the count of children
+            self.row_dict_list[self.shipper_line_number - 1]["QTY"] = len(self.shipper_accum)
+            self.shipper_accum.clear()
             print("leave shipper mode")
-            shipper_mode = False
-        return shipper_mode, row_dict_list, shipper_line_number, shipper_accum
-
-    def flush_write_queue(
-        rowlist: List[dict],
-        invoice_total,
-        shipper_line_number,
-        shipper_accum,
-        shipper_mode,
-    ):
-        shipper_mode, rowlist, shipper_line_number, shipper_accum = leave_shipper_mode(
-            shipper_mode, rowlist, shipper_line_number, shipper_accum
+            self.shipper_mode = False
+    
+    def _flush_write_queue(self) -> None:
+        """Flush buffered rows to CSV and write trailer."""
+        self._leave_shipper_mode()
+        
+        for row in self.row_dict_list:
+            utils.add_row(self._csv_file, row)
+        
+        # Add trailer record if there are invoice totals
+        if len(self.invoice_accum) > 0:
+            trailer_row = {"Record Type": "T", "Invoice Cost": sum(self.invoice_accum)}
+            utils.add_row(self._csv_file, trailer_row)
+        
+        self.row_dict_list.clear()
+        self.invoice_accum.clear()
+    
+    @property
+    def _csv_file(self):
+        """Get the CSV writer from context."""
+        # This is needed for utils.add_row which expects a csv writer
+        from convert_base import ConversionContext
+        # Access through the converter's internal state
+        return self._context.csv_writer if hasattr(self, '_context') else None
+    
+    def edi_convert(
+        self,
+        edi_process: str,
+        output_filename: str,
+        settings_dict: Dict[str, Any],
+        parameters_dict: Dict[str, Any],
+        upc_lut: Dict[int, tuple]
+    ) -> str:
+        """Override to store context reference for _csv_file property."""
+        # Create context to hold shared state
+        from convert_base import ConversionContext
+        context = ConversionContext(
+            edi_filename=edi_process,
+            output_filename=output_filename,
+            settings_dict=settings_dict,
+            parameters_dict=parameters_dict,
+            upc_lut=upc_lut
         )
-        for row in rowlist:
-            add_row(row)
-        # Add trailer
-        if len(invoice_total) > 0:
-            trailer_row = {"Record Type": "T", "Invoice Cost": sum(invoice_total)}
-            add_row(trailer_row)
-        rowlist.clear()
-        invoice_total.clear()
-        return (rowlist, shipper_mode, shipper_accum, shipper_line_number)
-
-    store_number = parameters_dict['estore_store_number']
-    vendor_oid = parameters_dict['estore_Vendor_OId']
-    vendor_name = parameters_dict['estore_vendor_NameVendorOID']
-
-    with open(edi_process, encoding="utf-8") as work_file:  # open input file
-        work_file_lined = list(work_file.readlines())  # make list of lines
-        output_filename = os.path.join(
-            os.path.dirname(output_filename_initial),
-            f'eInv{vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
-        )
-        with open(
-            output_filename, "w", newline="", encoding="utf-8"
-        ) as f:  # open work file, overwriting old file
-            csv_file = csv.writer(f, dialect="excel", lineterminator="\r\n")
-
-            row_dict_list: List[dict] = []
-            shipper_mode = False
-            shipper_parent_item = False
-            shipper_accum = []
-            invoice_accum = []
-            shipper_line_number = 0
-
-            invoice_index = 0
-            for line_num, line in enumerate(
-                work_file_lined
-            ):  # iterate over work file contents
-                input_edi_dict = utils.capture_records(line)
-                if input_edi_dict is not None:
-                    if input_edi_dict["record_type"] == "A":
-                        (
-                            shipper_mode,
-                            row_dict_list,
-                            shipper_line_number,
-                            shipper_accum,
-                        ) = leave_shipper_mode(
-                            shipper_mode,
-                            row_dict_list,
-                            shipper_line_number,
-                            shipper_accum,
-                        )
-                        if len(invoice_accum) > 0:
-                            trailer_row = {
-                                "Record Type": "T",
-                                "Invoice Cost": sum(invoice_accum),
-                            }
-                            row_dict_list.append(trailer_row)
-                            invoice_index += 1
-                            invoice_accum.clear()
-                        if not input_edi_dict["invoice_date"] == "000000":
-                            invoice_date = datetime.strptime(
-                                input_edi_dict["invoice_date"], "%m%d%y"
-                            )
-                            write_invoice_date = datetime.strftime(
-                                invoice_date, "%Y%m%d"
-                            )
-                        else:
-                            write_invoice_date = "00000000"
-                        row_dict = {
-                            "Record Type": "H",
-                            "Store Number": store_number,
-                            "Vendor OId": vendor_oid,
-                            "Invoice Number": input_edi_dict["invoice_number"],
-                            "Purchase Order": "",
-                            "Invoice Date": write_invoice_date,
-                        }
-                        row_dict_list.append(row_dict)
-                        invoice_index += 1
-                    if input_edi_dict["record_type"] == "B":
-                        try:
-                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
-                        except KeyError:
-                            print("cannot find each upc")
-                            upc_entry = input_edi_dict["upc_number"]
-                        row_dict = {
-                            "Record Type": "D",
-                            "Detail Type": "I",
-                            "Subcategory OId": "",
-                            "Vendor Item": input_edi_dict["vendor_item"],
-                            "Vendor Pack": input_edi_dict["unit_multiplier"],
-                            "Item Description": input_edi_dict["description"].strip(),
-                            "Item Pack": "",
-                            "GTIN": upc_entry.strip(),
-                            "GTIN Type": "",
-                            "QTY": qty_to_int(input_edi_dict["qty_of_units"]),
-                            "Unit Cost": utils.convert_to_price_decimal(input_edi_dict["unit_cost"]),
-                            "Unit Retail": utils.convert_to_price_decimal(
-                                input_edi_dict["suggested_retail_price"]
-                            ),
-                            "Extended Cost": utils.convert_to_price_decimal(
-                                input_edi_dict["unit_cost"]
-                            )
-                            * qty_to_int(input_edi_dict["qty_of_units"]),
-                            "NULL": "",
-                            "Extended Retail": "",
-                        }
-
-                        if (
-                            input_edi_dict["parent_item_number"]
-                            == input_edi_dict["vendor_item"]
-                        ):
-                            (
-                                shipper_mode,
-                                row_dict_list,
-                                shipper_line_number,
-                                shipper_accum,
-                            ) = leave_shipper_mode(
-                                shipper_mode,
-                                row_dict_list,
-                                shipper_line_number,
-                                shipper_accum,
-                            )
-                            print("enter shipper mode")
-                            shipper_mode = True
-                            shipper_parent_item = True
-                            row_dict["Detail Type"] = "D"
-                            shipper_line_number = invoice_index
-                        if shipper_mode:
-                            if input_edi_dict["parent_item_number"] not in [
-                                "000000",
-                                "\n",
-                            ]:
-                                if shipper_parent_item:
-                                    shipper_parent_item = False
-                                else:
-                                    row_dict["Detail Type"] = "C"
-                                    shipper_accum.append(
-                                        utils.convert_to_price_decimal(input_edi_dict["unit_cost"])
-                                        * qty_to_int(input_edi_dict["qty_of_units"])
-                                    )
-                            else:
-                                try:
-                                    (
-                                        shipper_mode,
-                                        row_dict_list,
-                                        shipper_line_number,
-                                        shipper_accum,
-                                    ) = leave_shipper_mode(
-                                        shipper_mode,
-                                        row_dict_list,
-                                        shipper_line_number,
-                                        shipper_accum,
-                                    )
-                                except Exception as error:
-                                    print(error)
-
-                        row_dict_list.append(row_dict)
-                        invoice_index += 1
-
-                        invoice_accum.append(row_dict["Extended Cost"])
-
-            (
-                row_dict_list,
-                shipper_mode,
-                shipper_accum,
-                shipper_line_number,
-            ) = flush_write_queue(
-                row_dict_list,
-                invoice_accum,
-                shipper_line_number,
-                shipper_accum,
-                shipper_mode,
+        self._context = context
+        
+        # Step 1: Initialize output (hook method)
+        self._initialize_output(context)
+        
+        try:
+            # Step 2: Process EDI file line by line
+            self._process_edi_file(context)
+            
+            # Step 3: Finalize output (hook method)
+            self._finalize_output(context)
+            
+        except Exception as e:
+            # Ensure cleanup on error
+            self._cleanup_on_error(context, e)
+            raise
+        
+        return self._get_return_value(context)
+    
+    def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process an A record (header), handling shipper mode and creating header row.
+        
+        Args:
+            record: The A record
+            context: The conversion context
+        """
+        super().process_a_record(record, context)
+        
+        # Leave shipper mode if active
+        self._leave_shipper_mode()
+        
+        # Write trailer for previous invoice if exists
+        if len(self.invoice_accum) > 0:
+            trailer_row = {
+                "Record Type": "T",
+                "Invoice Cost": sum(self.invoice_accum),
+            }
+            self.row_dict_list.append(trailer_row)
+            self.invoice_index += 1
+            self.invoice_accum.clear()
+        
+        # Format invoice date
+        if not record.fields["invoice_date"] == "000000":
+            invoice_date = datetime.strptime(
+                record.fields["invoice_date"], "%m%d%y"
             )
+            write_invoice_date = datetime.strftime(invoice_date, "%Y%m%d")
+        else:
+            write_invoice_date = "00000000"
+        
+        # Create header row
+        row_dict = {
+            "Record Type": "H",
+            "Store Number": self.store_number,
+            "Vendor OId": self.vendor_oid,
+            "Invoice Number": record.fields["invoice_number"],
+            "Purchase Order": "",
+            "Invoice Date": write_invoice_date,
+        }
+        self.row_dict_list.append(row_dict)
+        self.invoice_index += 1
+    
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process a B record (line item), handling shipper mode.
+        
+        Args:
+            record: The B record
+            context: The conversion context
+        """
+        # Lookup UPC from the lookup table
+        try:
+            upc_entry = self.upc_lookup[int(record.fields["vendor_item"])][1]
+        except KeyError:
+            print("cannot find each upc")
+            upc_entry = record.fields["upc_number"]
+        
+        # Create detail row
+        row_dict = {
+            "Record Type": "D",
+            "Detail Type": "I",
+            "Subcategory OId": "",
+            "Vendor Item": record.fields["vendor_item"],
+            "Vendor Pack": record.fields["unit_multiplier"],
+            "Item Description": record.fields["description"].strip(),
+            "Item Pack": "",
+            "GTIN": upc_entry.strip(),
+            "GTIN Type": "",
+            "QTY": utils.qty_to_int(record.fields["qty_of_units"]),
+            "Unit Cost": utils.convert_to_price_decimal(record.fields["unit_cost"]),
+            "Unit Retail": utils.convert_to_price_decimal(
+                record.fields["suggested_retail_price"]
+            ),
+            "Extended Cost": utils.convert_to_price_decimal(
+                record.fields["unit_cost"]
+            ) * utils.qty_to_int(record.fields["qty_of_units"]),
+            "NULL": "",
+            "Extended Retail": "",
+        }
+        
+        # Check if this is a shipper parent item
+        if record.fields["parent_item_number"] == record.fields["vendor_item"]:
+            self._leave_shipper_mode()
+            print("enter shipper mode")
+            self.shipper_mode = True
+            self.shipper_parent_item = True
+            row_dict["Detail Type"] = "D"
+            self.shipper_line_number = self.invoice_index
+        
+        # Handle shipper mode logic
+        if self.shipper_mode:
+            if record.fields["parent_item_number"] not in ["000000", "\n"]:
+                if self.shipper_parent_item:
+                    self.shipper_parent_item = False
+                else:
+                    row_dict["Detail Type"] = "C"
+                    self.shipper_accum.append(
+                        utils.convert_to_price_decimal(record.fields["unit_cost"])
+                        * utils.qty_to_int(record.fields["qty_of_units"])
+                    )
+            else:
+                try:
+                    self._leave_shipper_mode()
+                except Exception as error:
+                    print(error)
+        
+        self.row_dict_list.append(row_dict)
+        self.invoice_index += 1
+        self.invoice_accum.append(row_dict["Extended Cost"])
+    
+    def _finalize_output(self, context: ConversionContext) -> None:
+        """Finalize output by flushing remaining rows and closing file.
+        
+        Args:
+            context: The conversion context
+        """
+        # Flush any remaining rows
+        self._flush_write_queue()
+        
+        # Close the output file
+        if context.output_file is not None:
+            context.output_file.close()
+            context.output_file = None
+    
+    def _get_return_value(self, context: ConversionContext) -> str:
+        """Get the return value - the generated filename.
+        
+        Args:
+            context: The conversion context
+            
+        Returns:
+            Path to the generated CSV file
+        """
+        return self.output_filename
 
-    return output_filename
+
+# =============================================================================
+# Backward Compatibility Wrapper
+# =============================================================================
+
+def edi_convert(
+    edi_process: str,
+    output_filename_initial: str,
+    settings_dict: dict,
+    parameters_dict: dict,
+    upc_lookup: dict
+) -> str:
+    """Convert EDI file to EStore E-Invoice CSV format with shipper mode support.
+    
+    This is the original function signature maintained for backward compatibility.
+    It simply creates an EStoreEInvoiceConverter instance and delegates to it.
+    
+    Args:
+        edi_process: Path to the input EDI file
+        output_filename_initial: Base path for output file (directory used for output)
+        settings_dict: Application settings dictionary
+        parameters_dict: Conversion parameters with estore_store_number,
+                         estore_Vendor_OId, and estore_vendor_NameVendorOID
+        upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
+    
+    Returns:
+        Path to the generated CSV file with eInv prefix and timestamp
+    
+    Example:
+        >>> result = edi_convert(
+        ...     "input.edi",
+        ...     "/output/path/prefix",
+        ...     {},
+        ...     {
+        ...         'estore_store_number': '001',
+        ...         'estore_Vendor_OId': 'VENDOR123',
+        ...         'estore_vendor_NameVendorOID': 'TestVendor'
+        ...     },
+        ...     {123456: ('CAT1', '012345678905', '012345678900')}
+        ... )
+        >>> print(result)
+        '/output/path/eInvTestVendor.20240101120000.csv'
+    """
+    converter = EStoreEInvoiceConverter()
+    return converter.edi_convert(
+        edi_process,
+        output_filename_initial,
+        settings_dict,
+        parameters_dict,
+        upc_lookup
+    )

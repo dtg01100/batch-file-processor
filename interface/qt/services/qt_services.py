@@ -196,9 +196,12 @@ class QtProgressService(QObject):
         super().__init__(parent)
         self._parent = parent
         self._overlay = self._build_overlay(parent)
-        self._label = self._build_label(self._overlay)
+        self._title_label = self._build_title_label(self._overlay)
         self._throbber = self._build_throbber(self._overlay)
         self._progress_bar = self._build_progress_bar(self._overlay)
+        self._folder_label = self._build_detail_label(self._overlay)
+        self._file_label = self._build_detail_label(self._overlay)
+        self._footer_label = self._build_footer_label(self._overlay)
         self._setup_layout()
         self._overlay.hide()
         parent.installEventFilter(self)
@@ -222,13 +225,29 @@ class QtProgressService(QObject):
         return overlay
 
     @staticmethod
-    def _build_label(parent: QWidget) -> QLabel:
-        """Create the centred message label."""
+    def _build_title_label(parent: QWidget) -> QLabel:
+        """Create the centred title label (main message)."""
         label = QLabel(parent)
-        label.setAlignment(
-            Qt.AlignmentFlag.AlignCenter,
-        )
-        label.setStyleSheet("color: white; font-size: 14pt;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet("color: white; font-size: 16pt; font-weight: bold;")
+        label.setWordWrap(True)
+        return label
+
+    @staticmethod
+    def _build_detail_label(parent: QWidget) -> QLabel:
+        """Create a label for detailed progress information."""
+        label = QLabel(parent)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet("color: #cccccc; font-size: 12pt;")
+        label.setWordWrap(True)
+        return label
+
+    @staticmethod
+    def _build_footer_label(parent: QWidget) -> QLabel:
+        """Create the footer label for additional context."""
+        label = QLabel(parent)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet("color: #999999; font-size: 11pt; font-style: italic;")
         label.setWordWrap(True)
         return label
 
@@ -300,7 +319,13 @@ class QtProgressService(QObject):
         layout.addStretch()
         layout.addWidget(self._throbber)
         layout.addWidget(self._progress_bar)
-        layout.addWidget(self._label)
+        layout.addSpacing(15)
+        layout.addWidget(self._title_label)
+        layout.addSpacing(10)
+        layout.addWidget(self._folder_label)
+        layout.addWidget(self._file_label)
+        layout.addSpacing(15)
+        layout.addWidget(self._footer_label)
         layout.addStretch()
         self._overlay.setLayout(layout)
 
@@ -312,7 +337,7 @@ class QtProgressService(QObject):
         Resizes to cover the parent, sets the text, and raises the overlay
         above sibling widgets.
         """
-        self._label.setText(message)
+        self._title_label.setText(message)
         self._sync_geometry()
         self._overlay.setVisible(True)
         self._overlay.raise_()
@@ -326,9 +351,42 @@ class QtProgressService(QObject):
 
         If the overlay is not currently visible it is shown automatically.
         """
-        self._label.setText(message)
+        self._title_label.setText(message)
         if not self._overlay.isVisible():
             self.show(message)
+
+    def update_detailed_progress(self, 
+                                 folder_num: int, 
+                                 folder_total: int, 
+                                 file_num: int, 
+                                 file_total: int, 
+                                 footer: str = "") -> None:
+        """Update the detailed progress information.
+
+        Args:
+            folder_num: Current folder index (1-based)
+            folder_total: Total number of folders to process
+            file_num: Current file index (1-based)
+            file_total: Total number of files to process
+            footer: Optional footer text
+        """
+        if folder_total > 0:
+            self._folder_label.setText(f"Folder {folder_num} of {folder_total}")
+            self._folder_label.show()
+        else:
+            self._folder_label.hide()
+            
+        if file_total > 0:
+            self._file_label.setText(f"File {file_num} of {file_total}")
+            self._file_label.show()
+        else:
+            self._file_label.hide()
+            
+        if footer:
+            self._footer_label.setText(footer)
+            self._footer_label.show()
+        else:
+            self._footer_label.hide()
 
     def is_visible(self) -> bool:
         """Return whether the overlay is currently visible."""

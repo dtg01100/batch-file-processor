@@ -4,6 +4,13 @@ import smtplib
 from email.message import EmailMessage
 from pathlib import Path
 
+# Ensure the project root is in sys.path so we can import 'interface' package
+# when running as a script without installation
+import sys
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+
 from interface.services.progress_service import ProgressCallback, NullProgressCallback
 
 

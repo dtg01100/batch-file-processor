@@ -35,6 +35,10 @@ class UIProgressReporter:
         self.update_overlay(
             parent=self._parent,
             overlay_text=message,
+            folder_num=folder_num,
+            folder_total=folder_total,
+            file_num=file_num,
+            file_total=file_total,
             footer=footer,
             overlay_height=self._overlay_height,
         )
@@ -43,6 +47,10 @@ class UIProgressReporter:
         self,
         parent,
         overlay_text: str,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
         footer: str,
         overlay_height: int,
     ) -> None:

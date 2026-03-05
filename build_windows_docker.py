@@ -38,50 +38,52 @@ RUN ls -la /src/main_interface.spec
 
 # Set environment variable for the original entrypoint
 ENV SPECFILE=/src/main_interface.spec
-
-# Install Python dependencies
-RUN pip install -r requirements.txt
-
-# Run PyInstaller and copy output to /src/dist
-RUN pyinstaller main_interface.spec --noconfirm --clean
 '''
     
     with open(project_root / "Dockerfile.windows.build", "w") as f:
         f.write(dockerfile_content)
     
-    print("Building Docker image (this includes running PyInstaller)...")
+    print("Building Docker image...")
     try:
-        # Build the Docker image (this runs PyInstaller as part of the build)
+        # Build the Docker image
         subprocess.run([
-            "docker", "build", 
+            "sudo", "docker", "build", 
             "-f", "Dockerfile.windows.build",
             "-t", "batch-file-processor-windows-build",
             "."
         ], cwd=project_root, check=True)
         
-        print("Extracting built executable from container...")
+        print("Running build container...")
+        # Run the container to build the executable
+        subprocess.run([
+            "sudo", "docker", "run", 
+            "--rm", 
+            "batch-file-processor-windows-build"
+        ], cwd=project_root, check=True)
+        
+        print("Extracting built executable...")
         # Create a temporary container to extract files
         container_id = subprocess.check_output([
-            "docker", "create", 
+            "sudo", "docker", "create", 
             "batch-file-processor-windows-build"
         ], cwd=project_root, text=True).strip()
         
         try:
             # Copy the dist directory from the container
             subprocess.run([
-                "docker", "cp", 
+                "sudo", "docker", "cp", 
                 f"{container_id}:/src/dist",
                 str(project_root)
             ], cwd=project_root, check=True)
             
             print("Cleaning up...")
             subprocess.run([
-                "docker", "rm", container_id
+                "sudo", "docker", "rm", container_id
             ], cwd=project_root, check=True)
             
         except Exception as e:
             subprocess.run([
-                "docker", "rm", container_id
+                "sudo", "docker", "rm", container_id
             ], cwd=project_root, check=False)
             raise e
         

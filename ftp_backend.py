@@ -71,6 +71,23 @@ def do(
                             process_parameters['ftp_password']
                         )
                         print("Sending File...")
+                        
+                        # Ensure remote directory exists
+                        remote_dir = process_parameters['ftp_folder']
+                        if remote_dir and remote_dir != '/':
+                            # Normalize path separators and remove leading/trailing slashes for processing
+                            path_parts = [part for part in remote_dir.replace('\\', '/').strip('/').split('/') if part]
+                            current_path = ""
+                            
+                            for part in path_parts:
+                                current_path += "/" + part
+                                try:
+                                    client.cwd(current_path)
+                                except:
+                                    # Directory doesn't exist, create it
+                                    client.mkd(current_path)
+                                    client.cwd(current_path)
+                        
                         client.storbinary(
                             "stor " + process_parameters['ftp_folder'] + filename_no_path,
                             send_file
