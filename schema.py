@@ -6,8 +6,6 @@ statements with permissive types (TEXT/INTEGER) so it can be applied
 against older databases without failing.
 """
 
-import typing
-
 
 def ensure_schema(database_connection) -> None:
     """Ensure core tables and columns exist. Uses database_connection.query()."""

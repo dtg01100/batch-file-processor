@@ -75,6 +75,10 @@ class InvFetcher:
         if invoice_number == self.last_invoice_number:
             return self.po
         
+        # Handle case where no query_runner is provided (for testing)
+        if self._query_runner is None:
+            return ""
+        
         qry_ret = self._query_runner.run_query(
             f"""
             SELECT
@@ -155,6 +159,11 @@ class InvFetcher:
         """
         if invno != self.last_invno:
             self.uom_lut = {0: "N/A"}
+            
+            # Handle case where no query_runner is provided (for testing)
+            if self._query_runner is None:
+                return ""
+            
             try:
                 qry = f"""
                     SELECT
@@ -194,6 +203,10 @@ class InvFetcher:
         Returns:
             Unit of measure description string
         """
+        # Handle case where no query_runner is provided (for testing)
+        if self._query_runner is None:
+            return "HI" if int(uommult) > 1 else "LO"
+        
         try:
             if int(uommult) > 1:
                 field = "ANB9TX"

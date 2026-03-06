@@ -15,16 +15,6 @@ New code should import directly from the core modules.
 from datetime import datetime
 from decimal import Decimal
 import os
-from typing import Any
-import warnings
-
-try:
-    from query_runner import query_runner
-
-    HAS_QUERY_RUNNER = True
-except (ImportError, RuntimeError):
-    HAS_QUERY_RUNNER = False
-    query_runner = None
 
 # Import from core modules for backward compatibility
 from core.utils.bool_utils import normalize_bool, to_db_bool, from_db_bool
@@ -37,6 +27,7 @@ from core.utils.date_utils import (
 )
 from core.edi.edi_parser import capture_records, _get_default_parser
 from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
+from core.edi.inv_fetcher import InvFetcher as invFetcher  # Backward compatibility re-export
 
 
 # ============================================================================
@@ -49,81 +40,6 @@ from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert
 # Note: date functions are imported above
 # Note: capture_records, _get_default_parser are imported above
 # Note: calc_check_digit, convert_UPCE_to_UPCA are imported above
-
-
-# ============================================================================
-# Legacy invFetcher Adapter (deprecated - use core.edi.inv_fetcher.InvFetcher)
-# ============================================================================
-
-class invFetcher:
-    """Legacy invFetcher adapter for backward compatibility.
-    
-    .. deprecated:: 1.0
-        Use `InvFetcher` from `core.edi.inv_fetcher` instead.
-        This class delegates to the core implementation.
-    """
-    
-    def __init__(self, settings_dict):
-        """Initialize with settings dictionary."""
-        warnings.warn(
-            "utils.invFetcher is deprecated. Use core.edi.inv_fetcher.InvFetcher instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        from core.database import query_runner
-        from core.edi.inv_fetcher import InvFetcher
-        
-        self.settings = settings_dict
-        self._legacy_runner = query_runner(
-            settings_dict["as400_username"],
-            settings_dict["as400_password"],
-            settings_dict["as400_address"],
-            f"{settings_dict['odbc_driver']}",
-        )
-        self._fetcher = InvFetcher(self._legacy_runner, settings_dict)
-    
-    @property
-    def last_invoice_number(self):
-        return self._fetcher.last_invoice_number
-    
-    @property
-    def uom_lut(self):
-        return self._fetcher.uom_lut
-    
-    @property
-    def last_invno(self):
-        return self._fetcher.last_invno
-    
-    @property
-    def po(self):
-        return self._fetcher.po
-    
-    @property
-    def custname(self):
-        return self._fetcher.custname
-    
-    @property
-    def custno(self):
-        return self._fetcher.custno
-    
-    # Legacy aliases
-    @property
-    def cust(self):
-        return self._fetcher.custname
-
-    def fetch_po(self, invoice_number):
-        return self._fetcher.fetch_po(int(invoice_number))
-
-    def fetch_cust_name(self, invoice_number):
-        return self._fetcher.fetch_cust_name(int(invoice_number))
-
-    def fetch_cust_no(self, invoice_number):
-        return self._fetcher.fetch_cust_no(int(invoice_number))
-
-    def fetch_uom_desc(self, itemno, uommult, lineno, invno):
-        return self._fetcher.fetch_uom_desc(
-            int(itemno), int(uommult), lineno, int(invno)
-        )
 
 
 # ============================================================================

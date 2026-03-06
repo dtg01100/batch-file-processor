@@ -6,7 +6,7 @@ base class, eliminating ~60 lines of duplicated code while maintaining the
 exact same behavior and output format.
 
 The converter features:
-- Database lookups via query_runner for customer information
+- Database lookups via QueryRunner for customer information
 - Corporate customer fallback logic for ship-to addresses
 - UPC code generation with check digit calculation
 - UOM (Unit of Measure) lookup from database
@@ -39,7 +39,7 @@ from convert_base import (
     ConversionContext,
     EDIRecord,
 )
-from core.database import query_runner
+import core.database
 from core.exceptions import CustomerLookupError
 from core.utils import prettify_dates
 
@@ -64,11 +64,11 @@ class JolleyCustomConverter(BaseEDIConverter):
         """
         # Initialize database connection
         settings_dict = context.settings_dict
-        self.query_object = query_runner(
-            settings_dict["as400_username"],
-            settings_dict["as400_password"],
-            settings_dict["as400_address"],
-            f"{settings_dict['odbc_driver']}",
+        self.query_object = core.database.create_query_runner(
+            username=settings_dict["as400_username"],
+            password=settings_dict["as400_password"],
+            dsn=settings_dict["as400_address"],
+            database=settings_dict.get('odbc_driver', 'QGPL'),  # Use get() with default to prevent KeyError
         )
         
         # Initialize state
@@ -395,6 +395,14 @@ class JolleyCustomConverter(BaseEDIConverter):
         if context.output_file is not None:
             context.output_file.close()
             context.output_file = None
+        
+        # Close database connection if it exists
+        if hasattr(self, 'query_object') and self.query_object is not None:
+            try:
+                self.query_object.close()
+            except AttributeError:
+                # query_object might not have a close method in some implementations
+                pass
 
 
 # =============================================================================

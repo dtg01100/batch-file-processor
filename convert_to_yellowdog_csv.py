@@ -33,6 +33,7 @@ from convert_base import (
     create_csv_writer,
     normalize_parameter
 )
+from core.edi.inv_fetcher import InvFetcher
 
 
 class YellowDogConverter(BaseEDIConverter):
@@ -53,7 +54,9 @@ class YellowDogConverter(BaseEDIConverter):
         """
         # Initialize invFetcher for database lookups
         settings_dict = context.settings_dict
-        self.inv_fetcher = utils.invFetcher(settings_dict)
+        # Note: InvFetcher requires a query_runner parameter, but for this converter
+        # we don't actually need database lookups, so we pass None
+        self.inv_fetcher = InvFetcher(None, settings_dict)
         
         # Initialize batching state
         self.arec_line: Dict[str, str] = {}

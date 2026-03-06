@@ -204,6 +204,19 @@ class QueryRunner:
         results = self.run_query(query, params)
         return results[0] if results else None
     
+    # Legacy alias for backward compatibility
+    def run_arbitrary_query(self, query: str, params: tuple = None) -> list[dict]:
+        """Legacy alias for run_query to maintain backward compatibility.
+        
+        Args:
+            query: SQL query string
+            params: Optional query parameters
+            
+        Returns:
+            List of dictionaries representing query results
+        """
+        return self.run_query(query, params)
+    
     def close(self) -> None:
         """Close the underlying connection."""
         self.connection.close()

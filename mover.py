@@ -5,6 +5,7 @@ It has been refactored to remove tkinter dependencies.
 """
 
 import os
+import logging
 import threading
 from typing import Any, Callable, Optional
 
@@ -60,7 +61,7 @@ class DbMigrationThing:
             new_db_version = new_database_connection['version']
             new_db_version_dict = new_db_version.find_one(id=1)
             if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
-                print("db needs upgrading")
+                logger.info("db needs upgrading")
                 folders_database_migrator.upgrade_database(new_database_connection, None, "Null")
 
         preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
@@ -120,16 +121,16 @@ class DbMigrationThing:
         for line in _get_active_folders(new_folders_table):
             try:
                 line_match, new_db_line = test_line_for_match(line)
-                print(str(line_match))
+                logger.debug("line_match=%s", line_match)
                 if line_match is True:
                     update_db_line = new_db_line
                     if new_db_line.get('process_backend_copy') in (True, 1, "True"):
-                        print("merging copy backend settings")
+                        logger.info("merging copy backend settings")
                         update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
                                                    copy_to_directory=new_db_line['copy_to_directory'],
                                                    id=line['id']))
                     if new_db_line.get('process_backend_ftp') in (True, 1, "True"):
-                        print("merging ftp backend settings")
+                        logger.info("merging ftp backend settings")
                         update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
                                                    ftp_folder=new_db_line['ftp_folder'],
                                                    ftp_username=new_db_line['ftp_username'],
@@ -137,19 +138,19 @@ class DbMigrationThing:
                                                    ftp_port=new_db_line['ftp_port'],
                                                    id=line['id']))
                     if new_db_line.get('process_backend_email') in (True, 1, "True"):
-                        print("merging email backend settings")
+                        logger.info("merging email backend settings")
                         update_db_line.update(dict(email_to=new_db_line['email_to'],
                                                    email_subject_line=new_db_line['email_subject_line'],
                                                    id=line['id']))
                     old_folders_table.update(update_db_line, ['id'])
 
                 else:
-                    print("adding line")
+                    logger.info("adding line")
+                    logger.debug("line data: %s", line)
                     del line['id']
-                    print(line)
                     old_folders_table.insert(line)
             except Exception as error:
-                print("import of folder failed with " + str(error))
+                logger.error("import of folder failed with %s", error)
 
             self.progress_of_folders += 1
             if progress_callback:

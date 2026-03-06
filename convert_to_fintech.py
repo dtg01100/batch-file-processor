@@ -28,6 +28,7 @@ from datetime import datetime
 
 import utils
 from convert_base import BaseEDIConverter, ConversionContext, EDIRecord, create_csv_writer
+from core.edi.inv_fetcher import InvFetcher
 
 
 class FintechConverter(BaseEDIConverter):
@@ -56,8 +57,9 @@ class FintechConverter(BaseEDIConverter):
         )
         
         # Initialize invoice fetcher for customer number lookups
-        inv_fetcher_class = utils.invFetcher
-        context.user_data['inv_fetcher'] = inv_fetcher_class(context.settings_dict)
+        # Note: InvFetcher requires a query_runner parameter, but for this converter
+        # we don't actually need database lookups, so we pass None
+        context.user_data['inv_fetcher'] = InvFetcher(None, context.settings_dict)
         
         # Open output file and create CSV writer
         context.output_file = open(

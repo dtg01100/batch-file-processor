@@ -41,7 +41,7 @@ from PIL import Image as pil_Image
 from PIL import ImageOps as pil_ImageOps
 
 import utils
-from core.database import query_runner
+import core.database
 
 
 class ScanSheetTypeAConverter:
@@ -130,11 +130,11 @@ class ScanSheetTypeAConverter:
         Args:
             settings_dict: Application settings with DB credentials
         """
-        self.query_object = query_runner(
-            settings_dict["as400_username"],
-            settings_dict["as400_password"],
-            settings_dict["as400_address"],
-            f"{settings_dict['odbc_driver']}",
+        self.query_object = core.database.create_query_runner(
+            username=settings_dict["as400_username"],
+            password=settings_dict["as400_password"],
+            dsn=settings_dict["as400_address"],
+            database=settings_dict.get('odbc_driver', 'QGPL'),  # Use get() with default to prevent KeyError
         )
     
     def _initialize_workbook(self, output_filename: str) -> None:
@@ -264,6 +264,20 @@ class ScanSheetTypeAConverter:
             print("saving workbook to file")
             self.output_spreadsheet.save(self.output_spreadsheet_name)
             print("success")
+    
+    def _finalize_output(self, context) -> None:
+        """Finalize output by closing database connection.
+        
+        Args:
+            context: The conversion context (not used in this converter)
+        """
+        # Close database connection if it exists
+        if hasattr(self, 'query_object') and self.query_object is not None:
+            try:
+                self.query_object.close()
+            except AttributeError:
+                # query_object might not have a close method in some implementations
+                pass
     
     def _generate_barcode(self, input_string: str, tempdir: str) -> Tuple[str, int, int]:
         """Generate a barcode image for the given UPC string.

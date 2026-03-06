@@ -7,6 +7,10 @@ Reference:
     Author: greg p (GPL3)
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def calc_check_digit(value: str | int) -> int:
     """Calculate check digit for UPC codes.
@@ -148,7 +152,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
             raise ValueError("unit_multiplier cannot be zero")
         int(record["qty_of_units"].strip())
     except Exception:
-        print("cannot parse b record field, skipping")
+        logger.warning("cannot parse b record field, skipping")
         return False
 
     # Get the each-level UPC from lookup
@@ -176,7 +180,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         record["unit_multiplier"] = "000001"
         return True
     except Exception as error:
-        print(error)
+        logger.warning("UPC transformation failed: %s", error)
         return False
 
 
