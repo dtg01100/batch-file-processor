@@ -401,7 +401,7 @@ class TestConverterEmptyFileHandling:
         """convert_to_stewarts_custom raises IndexError on empty file (no first line)."""
         import convert_to_stewarts_custom
 
-        with patch("convert_to_stewarts_custom.query_runner") as mock_qr_class:
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
@@ -424,7 +424,7 @@ class TestConverterEmptyFileHandling:
         output_base = str(tmp_path / "output_stewarts")
         
         # Mock the query_runner to return valid data
-        with patch("convert_to_stewarts_custom.query_runner") as mock_qr_class:
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # Return valid header query result
             mock_qr_instance.run_arbitrary_query.return_value = [
@@ -470,7 +470,7 @@ class TestConverterEmptyFileHandling:
 
         missing = str(tmp_path / "does_not_exist.edi")
         
-        with patch("convert_to_stewarts_custom.query_runner"):
+        with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_stewarts_custom.edi_convert(
                     missing,
@@ -486,7 +486,7 @@ class TestConverterEmptyFileHandling:
         """convert_to_jolley_custom raises IndexError on empty file (no first line)."""
         import convert_to_jolley_custom
 
-        with patch("convert_to_jolley_custom.query_runner") as mock_qr_class:
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
@@ -509,7 +509,7 @@ class TestConverterEmptyFileHandling:
         output_base = str(tmp_path / "output_jolley")
         
         # Mock the query_runner to return valid data
-        with patch("convert_to_jolley_custom.query_runner") as mock_qr_class:
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # Return valid header query result
             mock_qr_instance.run_arbitrary_query.return_value = [
@@ -565,7 +565,7 @@ class TestConverterEmptyFileHandling:
 
         missing = str(tmp_path / "does_not_exist.edi")
         
-        with patch("convert_to_jolley_custom.query_runner"):
+        with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_jolley_custom.edi_convert(
                     missing,
@@ -581,7 +581,7 @@ class TestConverterEmptyFileHandling:
         """convert_to_scansheet_type_a with empty input completes without crash."""
         import convert_to_scansheet_type_a
 
-        with patch("convert_to_scansheet_type_a.query_runner") as mock_qr_class:
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance

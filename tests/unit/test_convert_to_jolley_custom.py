@@ -159,7 +159,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
         assert hasattr(convert_to_jolley_custom, 'edi_convert')
         assert hasattr(convert_to_jolley_custom, 'CustomerLookupError')
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_edi_convert_returns_csv_filename(self, mock_query_runner, complete_edi_content,
                                              default_parameters, default_settings,
                                              mock_customer_data, mock_uom_lookup, tmp_path):
@@ -185,7 +185,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
         assert result == output_file + ".csv"
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_creates_csv_file(self, mock_query_runner, complete_edi_content,
                                default_parameters, default_settings,
                                mock_customer_data, mock_uom_lookup, tmp_path):
@@ -213,7 +213,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
     """Test customer lookup functionality."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_customer_lookup_error_when_not_found(self, mock_query_runner, sample_header_record,
                                                    default_parameters, default_settings, tmp_path):
         """Test that CustomerLookupError is raised when customer not found."""
@@ -242,7 +242,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
 
         assert "Cannot Find Order" in str(exc_info.value)
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_customer_data_used_in_output(self, mock_query_runner, complete_edi_content,
                                           default_parameters, default_settings,
                                           mock_customer_data, mock_uom_lookup, tmp_path):
@@ -293,7 +293,7 @@ class TestJolleyCustomPrettifyDates(TestJolleyCustomFixtures):
 class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
     """Test address formatting in output."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_bill_to_address_format(self, mock_query_runner, complete_edi_content,
                                     default_parameters, default_settings,
                                     mock_customer_data, mock_uom_lookup, tmp_path):
@@ -320,7 +320,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should contain formatted address
             assert "Bill To:" in content or "12345" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_ship_to_address_format(self, mock_query_runner, complete_edi_content,
                                     default_parameters, default_settings,
                                     mock_customer_data, mock_uom_lookup, tmp_path):
@@ -347,7 +347,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should contain ship to
             assert "Ship To:" in content or "12345" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_corporate_customer_address(self, mock_query_runner, complete_edi_content,
                                         default_parameters, default_settings,
                                         mock_customer_data, mock_uom_lookup, tmp_path):
@@ -374,7 +374,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should use corporate address when available
             assert "Corporate Customer" in content or "456 Corporate Ave" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_no_corporate_fallback_to_regular(self, mock_query_runner, complete_edi_content,
                                                 default_parameters, default_settings,
                                                 mock_customer_data_no_corporate, mock_uom_lookup, tmp_path):
@@ -405,7 +405,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
     """Test item total calculation."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_item_total_calculation(self, mock_query_runner, sample_header_record,
                                     default_parameters, default_settings,
                                     mock_customer_data, mock_uom_lookup, tmp_path):
@@ -438,7 +438,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             # Should calculate correct total
             assert "$" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_negative_quantity(self, mock_query_runner, sample_header_record,
                                default_parameters, default_settings,
                                mock_customer_data, mock_uom_lookup, tmp_path):
@@ -472,7 +472,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
 class TestJolleyCustomUOM(TestJolleyCustomFixtures):
     """Test UOM (Unit of Measure) handling."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_uom_lookup(self, mock_query_runner, sample_header_record,
                         default_parameters, default_settings,
                         mock_customer_data, mock_uom_lookup, tmp_path):
@@ -506,7 +506,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
 class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
     """Test UPC generation."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_upc_11_digit_with_check_digit(self, mock_query_runner, sample_header_record,
                                              default_parameters, default_settings,
                                              mock_customer_data, mock_uom_lookup, tmp_path):
@@ -537,7 +537,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         # Should add check digit to make 12-digit UPC
         assert os.path.exists(result)
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_upc_8_digit_conversion(self, mock_query_runner, sample_header_record,
                                     default_parameters, default_settings,
                                     mock_customer_data, mock_uom_lookup, tmp_path):
@@ -568,7 +568,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         # Should convert UPC-E to UPC-A
         assert os.path.exists(result)
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_empty_upc_handling(self, mock_query_runner, sample_header_record,
                                  default_parameters, default_settings,
                                  mock_customer_data, mock_uom_lookup, tmp_path):
@@ -603,7 +603,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
 class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
     """Test edge cases and error conditions."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_empty_edi_file(self, mock_query_runner, default_parameters,
                              default_settings, mock_customer_data, mock_uom_lookup, tmp_path):
         """Test handling of empty EDI file.
@@ -635,7 +635,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         assert os.path.exists(result)
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_only_header_record(self, mock_query_runner, sample_header_record,
                                  default_parameters, default_settings,
                                  mock_customer_data, tmp_path):
@@ -661,7 +661,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         assert os.path.exists(result)
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_multiple_detail_records(self, mock_query_runner, sample_header_record,
                                       default_parameters, default_settings,
                                       mock_customer_data, mock_uom_lookup, tmp_path):
@@ -697,7 +697,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             # Should have multiple data rows
             assert len(rows) > 3  # Header rows + data rows
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_c_record_charges(self, mock_query_runner, sample_header_record,
                               default_parameters, default_settings,
                               mock_customer_data, mock_uom_lookup, tmp_path):
@@ -734,7 +734,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
     """Test output structure and formatting."""
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_invoice_details_header(self, mock_query_runner, complete_edi_content,
                                     default_parameters, default_settings,
                                     mock_customer_data, mock_uom_lookup, tmp_path):
@@ -761,7 +761,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             content = f.read()
             assert "Invoice Details" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_invoice_total(self, mock_query_runner, complete_edi_content,
                            default_parameters, default_settings,
                            mock_customer_data, mock_uom_lookup, tmp_path):
@@ -789,7 +789,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             # Invoice total from header = 0000010000 = $100.00
             assert "Total:" in content
 
-    @patch('convert_to_jolley_custom.query_runner')
+    @patch('core.database.create_query_runner')
     def test_column_headers(self, mock_query_runner, complete_edi_content,
                             default_parameters, default_settings,
                             mock_customer_data, mock_uom_lookup, tmp_path):

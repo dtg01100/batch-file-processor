@@ -12,6 +12,7 @@ from interface.operations.folder_manager import (
     DatabaseProtocol,
     TableProtocol,
 )
+from tests.fakes import FakeDatabaseObj, FakeTable
 
 
 class TestFolderManager:
@@ -377,25 +378,16 @@ class TestFolderManagerProtocolCompliance:
     """Tests for protocol compliance."""
     
     def test_database_protocol_compliance(self):
-        """Verify mock database implements DatabaseProtocol."""
-        mock_db = MagicMock()
-        mock_db.folders_table = MagicMock()
-        mock_db.oversight_and_defaults = MagicMock()
+        """Verify fake database implements DatabaseProtocol."""
+        fake_db = FakeDatabaseObj()
         
-        assert isinstance(mock_db, DatabaseProtocol)
+        assert isinstance(fake_db, DatabaseProtocol)
     
     def test_table_protocol_compliance(self):
-        """Verify mock table implements TableProtocol."""
-        mock_table = MagicMock()
-        mock_table.find_one = MagicMock()
-        mock_table.find = MagicMock()
-        mock_table.all = MagicMock()
-        mock_table.insert = MagicMock()
-        mock_table.update = MagicMock()
-        mock_table.delete = MagicMock()
-        mock_table.count = MagicMock()
+        """Verify fake table implements TableProtocol."""
+        fake_table = FakeTable()
         
-        assert isinstance(mock_table, TableProtocol)
+        assert isinstance(fake_table, TableProtocol)
 
 
 class TestFolderManagerSkipList:

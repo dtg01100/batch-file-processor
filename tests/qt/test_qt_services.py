@@ -176,7 +176,7 @@ class TestQtProgressService:
 
         service = QtProgressService(parent)
         service.show("Loading...")
-        assert service._label.text() == "Loading..."
+        assert service._title_label.text() == "Loading..."
 
     def test_hide_makes_invisible(self, qtbot):
         parent = QWidget()
@@ -197,7 +197,7 @@ class TestQtProgressService:
         service = QtProgressService(parent)
         service.show("Initial")
         service.update_message("Updated")
-        assert service._label.text() == "Updated"
+        assert service._title_label.text() == "Updated"
 
     def test_update_message_auto_shows(self, qtbot):
         parent = QWidget()
@@ -208,7 +208,7 @@ class TestQtProgressService:
         assert service.is_visible() is False
         service.update_message("Auto-show")
         assert service.is_visible() is True
-        assert service._label.text() == "Auto-show"
+        assert service._title_label.text() == "Auto-show"
 
     def test_is_visible_reflects_state(self, qtbot):
         parent = QWidget()

@@ -207,10 +207,10 @@ class TestConversionContext:
 
 
 # =============================================================================
-# Concrete Test Converter Implementation
+# Concrete Mock Converter Implementation
 # =============================================================================
 
-class TestConverter(BaseEDIConverter):
+class MockConverter(BaseEDIConverter):
     """Concrete implementation of BaseEDIConverter for testing."""
     
     def __init__(self):
@@ -250,7 +250,7 @@ class TestConverter(BaseEDIConverter):
         self.unknown_records.append(record)
 
 
-class FilteringTestConverter(TestConverter):
+class FilteringTestConverter(MockConverter):
     """Test converter with record type filtering."""
     
     def _should_process_record_type(self, record_type, context):
@@ -272,7 +272,7 @@ class TestBaseEDIConverter(TestFixtures):
     
     def test_concrete_class_can_be_instantiated(self):
         """Test that a concrete implementation can be instantiated."""
-        converter = TestConverter()
+        converter = MockConverter()
         assert converter is not None
     
     @patch('convert_base.utils')
@@ -316,7 +316,7 @@ class TestBaseEDIConverter(TestFixtures):
         output_file = tmp_path / "output"
         
         # Execute
-        converter = TestConverter()
+        converter = MockConverter()
         result = converter.edi_convert(
             str(input_file),
             str(output_file),
@@ -346,7 +346,7 @@ class TestBaseEDIConverter(TestFixtures):
         input_file = tmp_path / "test.edi"
         input_file.write_text("A...\nB...\nC...")
         
-        converter = TestConverter()
+        converter = MockConverter()
         converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
         
         assert len(converter.a_records) == 1
@@ -386,7 +386,7 @@ class TestBaseEDIConverter(TestFixtures):
         input_file = tmp_path / "test.edi"
         input_file.write_text("A...\nB...")
         
-        converter = TestConverter()
+        converter = MockConverter()
         context = ConversionContext(
             edi_filename=str(input_file),
             output_filename=str(tmp_path / "out"),
@@ -409,7 +409,7 @@ class TestBaseEDIConverter(TestFixtures):
         input_file = tmp_path / "test.edi"
         input_file.write_text("invalid")
         
-        converter = TestConverter()
+        converter = MockConverter()
         
         with pytest.raises(Exception, match="Parse error"):
             converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
@@ -487,7 +487,7 @@ class TestEdgeCases(TestFixtures):
         input_file = tmp_path / "empty.edi"
         input_file.write_text("")
         
-        converter = TestConverter()
+        converter = MockConverter()
         result = converter.edi_convert(
             str(input_file),
             str(tmp_path / "out"),
@@ -511,7 +511,7 @@ class TestEdgeCases(TestFixtures):
         input_file = tmp_path / "test.edi"
         input_file.write_text("X...")
         
-        converter = TestConverter()
+        converter = MockConverter()
         converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
         
         assert len(converter.unknown_records) == 1

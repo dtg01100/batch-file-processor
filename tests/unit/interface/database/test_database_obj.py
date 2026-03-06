@@ -177,23 +177,47 @@ class TestDatabaseObjProtocolCompliance:
     
     def test_connection_protocol_compliance(self):
         """Verify mock connection implements DatabaseConnectionProtocol."""
-        mock_conn = MagicMock()
-        mock_conn.__getitem__ = MagicMock(return_value=MagicMock())
-        mock_conn.close = MagicMock()
+        # Create a proper mock class that satisfies the protocol
+        class MockConnection:
+            def __getitem__(self, key):
+                return MagicMock()
+            
+            def close(self):
+                pass
         
+        mock_conn = MockConnection()
         assert isinstance(mock_conn, DatabaseConnectionProtocol)
     
     def test_table_protocol_compliance(self):
         """Verify mock table implements TableProtocol."""
-        mock_table = MagicMock()
-        mock_table.find_one = MagicMock()
-        mock_table.find = MagicMock()
-        mock_table.all = MagicMock()
-        mock_table.insert = MagicMock()
-        mock_table.update = MagicMock()
-        mock_table.delete = MagicMock()
-        mock_table.count = MagicMock()
+        # Create a proper mock class that satisfies the protocol
+        # Note: MagicMock doesn't work with @runtime_checkable protocols in Python 3.12+
+        class MockTable:
+            def find_one(self, **kwargs):
+                return None
+            
+            def find(self, **kwargs):
+                return []
+            
+            def all(self):
+                return []
+            
+            def insert(self, record):
+                return 1
+            
+            def update(self, record, keys):
+                pass
+            
+            def delete(self, **kwargs):
+                pass
+            
+            def count(self, **kwargs):
+                return 0
+            
+            def upsert(self, record, keys):
+                pass
         
+        mock_table = MockTable()
         assert isinstance(mock_table, TableProtocol)
 
 
@@ -285,8 +309,10 @@ class TestDatabaseObjVersionChecking:
     
     def test_os_mismatch_raises_system_exit(self, mock_tables):
         """Test that OS mismatch raises SystemExit when no connection injected."""
+        # Set version to match database_version so only OS mismatch is checked
+        # (version 41 matches the database_version in the test)
         mock_tables["version"].find_one.return_value = {
-            "version": "33",
+            "version": "41",
             "os": "Windows"
         }
         

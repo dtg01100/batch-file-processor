@@ -25,7 +25,7 @@ class TestUIServiceProtocol:
 
     def test_protocol_is_runtime_checkable(self):
         """Test that UIServiceProtocol is runtime checkable."""
-        assert isinstance(UIServiceProtocol, type) and hasattr(UIServiceProtocol, '__is_protocol__')
+        assert isinstance(UIServiceProtocol, type) and hasattr(UIServiceProtocol, '_is_protocol')
 
     def test_null_service_satisfies_protocol(self):
         """Test that NullUIService satisfies the protocol."""
@@ -44,7 +44,7 @@ class TestProgressServiceProtocol:
 
     def test_protocol_is_runtime_checkable(self):
         """Test that ProgressServiceProtocol is runtime checkable."""
-        assert isinstance(ProgressServiceProtocol, type) and hasattr(ProgressServiceProtocol, '__is_protocol__')
+        assert isinstance(ProgressServiceProtocol, type) and hasattr(ProgressServiceProtocol, '_is_protocol')
 
 
 class TestNullUIService:

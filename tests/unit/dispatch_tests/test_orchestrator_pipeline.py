@@ -52,7 +52,7 @@ class TestDispatchConfigPipelineFields:
         assert config.tweaker_step is None
         assert config.file_processor is None
         assert config.upc_dict == {}
-        assert config.use_pipeline is False
+        assert config.use_pipeline is True
     
     def test_set_pipeline_fields_in_constructor(self):
         """Test setting pipeline fields in constructor."""

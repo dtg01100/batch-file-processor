@@ -8,52 +8,41 @@ Configuration in pytest.ini:
 """
 import os
 import pytest
-from unittest.mock import MagicMock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from tests.fakes import (
+    FakeDatabaseObj,
+    FakeUIService,
+    FakeProgressService,
+    FakeMaintenanceFunctions,
+    FakeResendService,
+    FakeTable,
+)
 
 
 @pytest.fixture
 def mock_database_obj():
-    """Create a mock DatabaseObj with all required table attributes."""
-    db = MagicMock()
-    db.folders_table = MagicMock()
-    db.emails_table = MagicMock()
-    db.emails_table_batch = MagicMock()
-    db.sent_emails_removal_queue = MagicMock()
-    db.oversight_and_defaults = MagicMock()
-    db.processed_files = MagicMock()
-    db.settings = MagicMock()
-    db.session_database = MagicMock()
-    db.database_connection = MagicMock()
-    return db
+    """Create a fake DatabaseObj with all required table attributes."""
+    return FakeDatabaseObj()
+
+
+@pytest.fixture
+def fake_database_obj():
+    """Create a fake DatabaseObj with a more descriptive name."""
+    return FakeDatabaseObj()
 
 
 @pytest.fixture
 def mock_ui_service():
-    """Create a mock UIServiceProtocol."""
-    service = MagicMock()
-    service.show_info = MagicMock()
-    service.show_error = MagicMock()
-    service.show_warning = MagicMock()
-    service.ask_yes_no = MagicMock(return_value=False)
-    service.ask_ok_cancel = MagicMock(return_value=False)
-    service.ask_directory = MagicMock(return_value="")
-    service.ask_open_filename = MagicMock(return_value="")
-    service.ask_save_filename = MagicMock(return_value="")
-    service.pump_events = MagicMock()
-    return service
+    """Create a fake UI service."""
+    return FakeUIService()
 
 
 @pytest.fixture
 def mock_progress_service():
-    """Create a mock ProgressServiceProtocol."""
-    service = MagicMock()
-    service.show = MagicMock()
-    service.hide = MagicMock()
-    service.update_message = MagicMock()
-    service.is_visible = MagicMock(return_value=False)
-    return service
+    """Create a fake progress service."""
+    return FakeProgressService()
 
 
 @pytest.fixture
@@ -120,17 +109,17 @@ def sample_folder_config():
 
 @pytest.fixture
 def mock_folders_table():
-    """Create a mock folders table for FolderListWidget tests."""
-    return MagicMock()
+    """Create a fake folders table for FolderListWidget tests."""
+    return FakeTable()
 
 
 @pytest.fixture
 def mock_resend_service():
-    """Create a mock ResendService."""
-    return MagicMock()
+    """Create a fake ResendService."""
+    return FakeResendService()
 
 
 @pytest.fixture
 def mock_maintenance_functions():
-    """Create a mock MaintenanceFunctions."""
-    return MagicMock()
+    """Create a fake MaintenanceFunctions."""
+    return FakeMaintenanceFunctions()

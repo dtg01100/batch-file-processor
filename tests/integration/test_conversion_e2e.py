@@ -749,8 +749,8 @@ class TestConvertToStewartsCustom:
         
         output_path = str(tmp_path / "output_stewarts")
         
-        # Mock the query_runner to avoid database dependency
-        with patch('convert_to_stewarts_custom.query_runner') as mock_qr_class:
+        # Mock the QueryRunner at the source to avoid database dependency
+        with patch('core.database.query_runner.QueryRunner') as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_arbitrary_query.side_effect = [
@@ -791,8 +791,8 @@ class TestConvertToScansheetTypeA:
         
         output_path = str(tmp_path / "output_scansheet")
         
-        # Mock the query_runner to avoid database dependency
-        with patch('convert_to_scansheet_type_a.query_runner') as mock_qr:
+        # Mock the QueryRunner at the source to avoid database dependency
+        with patch('core.database.query_runner.QueryRunner') as mock_qr:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = [
                 ['012345678901', '123456', 'Test Item', '12', 'EA', '10', '1.00', '1.99']
@@ -825,8 +825,8 @@ class TestConvertToJolleyCustom:
         
         output_path = str(tmp_path / "output_jolley")
         
-        # Mock the query_runner to avoid database dependency
-        with patch('convert_to_jolley_custom.query_runner') as mock_qr_class:
+        # Mock the QueryRunner at the source to avoid database dependency
+        with patch('core.database.query_runner.QueryRunner') as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_arbitrary_query.side_effect = [
