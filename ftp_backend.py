@@ -5,14 +5,14 @@ injectable client support for testing.
 """
 
 import os
-from typing import Optional, Any
+import logging
+from typing import Optional
 
 from backend.protocols import FTPClientProtocol
 from backend.ftp_client import RealFTPClient, create_ftp_client
 
 
-# this module sends the file specified in filename to the address specified in the dict process_parameters via ftp
-# note: process_parameters is a dict from a row in the database, passed into this module
+logger = logging.getLogger(__name__)
 
 
 def do(
@@ -60,17 +60,17 @@ def do(
                         client = create_ftp_client(use_tls=use_tls)
                     
                     try:
-                        print(f"Connecting to ftp server: {str(process_parameters['ftp_server'])}")
+                        logger.info("Connecting to ftp server: %s", process_parameters['ftp_server'])
                         client.connect(
                             str(process_parameters['ftp_server']),
                             process_parameters['ftp_port']
                         )
-                        print(f"Logging in to {str(process_parameters['ftp_server'])}")
+                        logger.info("Logging in to %s", process_parameters['ftp_server'])
                         client.login(
                             process_parameters['ftp_username'],
                             process_parameters['ftp_password']
                         )
-                        print("Sending File...")
+                        logger.info("Sending File...")
                         
                         # Ensure remote directory exists
                         remote_dir = process_parameters['ftp_folder']
@@ -83,7 +83,7 @@ def do(
                                 current_path += "/" + part
                                 try:
                                     client.cwd(current_path)
-                                except:
+                                except Exception:
                                     # Directory doesn't exist, create it
                                     client.mkd(current_path)
                                     client.cwd(current_path)
@@ -92,25 +92,24 @@ def do(
                             "stor " + process_parameters['ftp_folder'] + filename_no_path,
                             send_file
                         )
-                        print("Success")
+                        logger.info("Success")
                         client.close()
                         file_pass = True
                         break
                     except Exception as error:
-                        print(error)
+                        logger.warning("FTP error: %s", error)
                         if provider_index + 1 == len(use_tls_options):
                             raise
-                        print("Falling back to non-TLS...")
+                        logger.info("Falling back to non-TLS...")
                         # Reset file pointer for retry
                         send_file.seek(0)
 
         except Exception as ftp_error:
             if counter == 10:
-                print("Retried 10 times, passing exception to dispatch")
+                logger.error("Retried 10 times, passing exception to dispatch")
                 raise
             counter += 1
-            print("Encountered an error. Retry number " + str(counter))
-            print("Error is :" + str(ftp_error))
+            logger.warning("Encountered an error. Retry number %d: %s", counter, ftp_error)
     
     return file_pass
 

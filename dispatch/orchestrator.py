@@ -6,7 +6,7 @@ coordinating validation, conversion, and sending of files.
 
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Optional
 
 from dispatch.interfaces import (
     DatabaseInterface,
@@ -18,8 +18,7 @@ from dispatch.interfaces import (
 from dispatch.edi_validator import EDIValidator
 from dispatch.send_manager import SendManager
 from dispatch.error_handler import ErrorHandler
-from dispatch.hash_utils import generate_match_lists, generate_file_hash
-from dispatch.file_utils import filter_files_by_checksum
+from dispatch.hash_utils import generate_file_hash
 
 
 @dataclass
@@ -722,7 +721,7 @@ class DispatchOrchestrator:
             database=folders_database,
             settings=settings,
             version=version,
-            use_pipeline=False,
+            use_pipeline=True,
         )
         
         orchestrator = DispatchOrchestrator(config)

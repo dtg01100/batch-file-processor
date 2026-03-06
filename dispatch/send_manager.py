@@ -6,9 +6,7 @@ using dependency injection for testability.
 
 import importlib
 import logging
-from typing import Optional, Protocol, runtime_checkable
-
-logger = logging.getLogger(__name__)
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 

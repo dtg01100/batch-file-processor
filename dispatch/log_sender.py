@@ -7,8 +7,6 @@ using Protocol interfaces for dependency injection.
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable, Optional, Any
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from email.message import EmailMessage
 import mimetypes
 import os

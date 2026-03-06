@@ -25,7 +25,6 @@ Usage:
 """
 
 import os
-from typing import Optional
 
 
 def is_legacy_mode() -> bool:
