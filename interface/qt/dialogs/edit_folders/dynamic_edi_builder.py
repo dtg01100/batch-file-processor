@@ -337,7 +337,7 @@ class DynamicEDIBuilder:
         if self.tweak_arec_padding_field:
             self.tweak_arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
         if self.tweak_arec_padding_length:
-            pad_len = str(cfg.get("a_record_padding_length", 6))
+            pad_len = str(cfg.get("a_record_padding_length") if cfg.get("a_record_padding_length") is not None else 6)
             idx = self.tweak_arec_padding_length.findText(pad_len)
             if idx >= 0:
                 self.tweak_arec_padding_length.setCurrentIndex(idx)
@@ -346,20 +346,21 @@ class DynamicEDIBuilder:
                 str(cfg.get("append_a_records", "False")) == "True"
             )
         if self.tweak_arec_append_field:
-            self.tweak_arec_append_field.setText(str(cfg.get("a_record_append_text", "")))
+            self.tweak_arec_append_field.setText(str(cfg.get("a_record_append_text") or ""))
         if self.tweak_force_txt_check:
             self.tweak_force_txt_check.setChecked(
                 str(cfg.get("force_txt_file_ext", "False")) == "True"
             )
         if self.tweak_invoice_offset:
-            self.tweak_invoice_offset.setValue(int(cfg.get("invoice_date_offset", 0)))
+            offset = cfg.get("invoice_date_offset")
+            self.tweak_invoice_offset.setValue(int(offset) if offset is not None else 0)
         if self.tweak_custom_date_check:
             self.tweak_custom_date_check.setChecked(
                 bool(cfg.get("invoice_date_custom_format", False))
             )
         if self.tweak_custom_date_field:
             self.tweak_custom_date_field.setText(
-                str(cfg.get("invoice_date_custom_format_string", ""))
+                str(cfg.get("invoice_date_custom_format_string") or "")
             )
         if self.tweak_retail_uom_check:
             self.tweak_retail_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
@@ -368,19 +369,20 @@ class DynamicEDIBuilder:
                 bool(cfg.get("override_upc_bool", False))
             )
         if self.tweak_override_upc_level:
-            lvl = str(cfg.get("override_upc_level", 1))
+            lvl = str(cfg.get("override_upc_level") if cfg.get("override_upc_level") is not None else 1)
             idx = self.tweak_override_upc_level.findText(lvl)
             if idx >= 0:
                 self.tweak_override_upc_level.setCurrentIndex(idx)
         if self.tweak_override_upc_cat_filter:
             self.tweak_override_upc_cat_filter.setText(
-                str(cfg.get("override_upc_category_filter", ""))
+                str(cfg.get("override_upc_category_filter") or "")
             )
         if self.tweak_upc_target_length:
-            self.tweak_upc_target_length.setText(str(cfg.get("upc_target_length", 11)))
+            val = cfg.get("upc_target_length")
+            self.tweak_upc_target_length.setText(str(val if val is not None else 11))
         if self.tweak_upc_padding_pattern:
             self.tweak_upc_padding_pattern.setText(
-                str(cfg.get("upc_padding_pattern", "           "))
+                str(cfg.get("upc_padding_pattern") or "           ")
             )
         if self.tweak_split_sales_tax_check:
             self.tweak_split_sales_tax_check.setChecked(

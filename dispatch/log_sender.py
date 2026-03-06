@@ -469,9 +469,14 @@ def create_log_sender_from_settings(settings: dict,
     Returns:
         Configured LogSender instance
     """
+    # Safely convert smtp_port to int, handling None or empty strings
+    smtp_port_val = settings.get('smtp_port')
+    if smtp_port_val is None or smtp_port_val == '':
+        smtp_port_val = 587
+    
     config = EmailConfig(
         smtp_server=settings.get('email_smtp_server', ''),
-        smtp_port=int(settings.get('smtp_port', 587)),
+        smtp_port=int(smtp_port_val),
         smtp_username=settings.get('email_username', ''),
         smtp_password=settings.get('email_password', ''),
         from_address=settings.get('email_address', ''),

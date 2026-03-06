@@ -90,7 +90,11 @@ def edi_tweak(
     override_upc_level = parameters_dict['override_upc_level']
     override_upc_category_filter = parameters_dict['override_upc_category_filter']
     split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
-    upc_target_length = int(parameters_dict.get('upc_target_length', 11))
+    
+    # Safely convert upc_target_length to int, handling None
+    val = parameters_dict.get('upc_target_length')
+    upc_target_length = int(val) if val is not None else 11
+    
     upc_padding_pattern = parameters_dict.get('upc_padding_pattern', '           ')
 
     work_file = None
