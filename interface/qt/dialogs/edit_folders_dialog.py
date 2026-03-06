@@ -665,26 +665,34 @@ class EditFoldersDialog(BaseDialog):
         cfg = self._folder_config
         self._tweak_upc_check.setChecked(str(cfg.get("calculate_upc_check_digit", "False")) == "True")
         self._tweak_pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
-        self._tweak_arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
-        pad_len = str(cfg.get("a_record_padding_length", 6))
+        self._tweak_arec_padding_field.setText(str(cfg.get("a_record_padding") or ""))
+        
+        pad_len = str(cfg.get("a_record_padding_length") if cfg.get("a_record_padding_length") is not None else 6)
         idx = self._tweak_arec_padding_length.findText(pad_len)
         if idx >= 0:
             self._tweak_arec_padding_length.setCurrentIndex(idx)
+            
         self._tweak_append_arec_check.setChecked(str(cfg.get("append_a_records", "False")) == "True")
-        self._tweak_arec_append_field.setText(str(cfg.get("a_record_append_text", "")))
+        self._tweak_arec_append_field.setText(str(cfg.get("a_record_append_text") or ""))
         self._tweak_force_txt_check.setChecked(str(cfg.get("force_txt_file_ext", "False")) == "True")
-        self._tweak_invoice_offset.setValue(int(cfg.get("invoice_date_offset", 0)))
+        
+        # Safely convert offset to int, defaulting to 0 if None
+        offset = cfg.get("invoice_date_offset")
+        self._tweak_invoice_offset.setValue(int(offset) if offset is not None else 0)
+        
         self._tweak_custom_date_check.setChecked(bool(cfg.get("invoice_date_custom_format", False)))
-        self._tweak_custom_date_field.setText(str(cfg.get("invoice_date_custom_format_string", "")))
+        self._tweak_custom_date_field.setText(str(cfg.get("invoice_date_custom_format_string") or ""))
         self._tweak_retail_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
         self._tweak_override_upc_check.setChecked(bool(cfg.get("override_upc_bool", False)))
-        lvl = str(cfg.get("override_upc_level", 1))
+        
+        lvl = str(cfg.get("override_upc_level") if cfg.get("override_upc_level") is not None else 1)
         idx = self._tweak_override_upc_level.findText(lvl)
         if idx >= 0:
             self._tweak_override_upc_level.setCurrentIndex(idx)
-        self._tweak_override_upc_cat_filter.setText(str(cfg.get("override_upc_category_filter", "")))
-        self._tweak_upc_target_length.setText(str(cfg.get("upc_target_length", 11)))
-        self._tweak_upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern", "           ")))
+            
+        self._tweak_override_upc_cat_filter.setText(str(cfg.get("override_upc_category_filter") or ""))
+        self._tweak_upc_target_length.setText(str(cfg.get("upc_target_length") if cfg.get("upc_target_length") is not None else 11))
+        self._tweak_upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern") or "           "))
         self._tweak_split_sales_tax_check.setChecked(bool(cfg.get("split_prepaid_sales_tax_crec", False)))
 
     # ------------------------------------------------------------------
@@ -1084,47 +1092,54 @@ class EditFoldersDialog(BaseDialog):
     # Field population
     # ------------------------------------------------------------------
     def _populate_fields(self, config: Dict[str, Any]):
-        self._active_checkbox.setChecked(str(config.get("folder_is_active", "False")) == "True")
+        def to_bool(val, default=False):
+            if val is None:
+                return default
+            if isinstance(val, bool):
+                return val
+            return str(val).lower() == "true"
 
-        self._copy_backend_check.setChecked(bool(config.get("process_backend_copy", False)))
-        self._ftp_backend_check.setChecked(bool(config.get("process_backend_ftp", False)))
-        self._email_backend_check.setChecked(bool(config.get("process_backend_email", False)))
+        self._active_checkbox.setChecked(to_bool(config.get("folder_is_active"), False))
+
+        self._copy_backend_check.setChecked(to_bool(config.get("process_backend_copy")))
+        self._ftp_backend_check.setChecked(to_bool(config.get("process_backend_ftp")))
+        self._email_backend_check.setChecked(to_bool(config.get("process_backend_email")))
 
         if hasattr(self, "_folder_alias_field"):
-            self._folder_alias_field.setText(str(config.get("alias", "")))
+            self._folder_alias_field.setText(str(config.get("alias") or ""))
 
-        self._ftp_server_field.setText(str(config.get("ftp_server", "")))
-        self._ftp_port_field.setText(str(config.get("ftp_port", "")))
-        self._ftp_folder_field.setText(str(config.get("ftp_folder", "")))
-        self._ftp_username_field.setText(str(config.get("ftp_username", "")))
-        self._ftp_password_field.setText(str(config.get("ftp_password", "")))
+        self._ftp_server_field.setText(str(config.get("ftp_server") or ""))
+        self._ftp_port_field.setText(str(config.get("ftp_port") or ""))
+        self._ftp_folder_field.setText(str(config.get("ftp_folder") or ""))
+        self._ftp_username_field.setText(str(config.get("ftp_username") or ""))
+        self._ftp_password_field.setText(str(config.get("ftp_password") or ""))
 
-        self._email_recipient_field.setText(str(config.get("email_to", "")))
-        self._email_subject_field.setText(str(config.get("email_subject_line", "")))
+        self._email_recipient_field.setText(str(config.get("email_to") or ""))
+        self._email_subject_field.setText(str(config.get("email_subject_line") or ""))
 
-        self._force_edi_check.setChecked(bool(config.get("force_edi_validation", False)))
+        self._force_edi_check.setChecked(to_bool(config.get("force_edi_validation")))
 
-        self._split_edi_check.setChecked(bool(config.get("split_edi", False)))
-        self._send_invoices_check.setChecked(bool(config.get("split_edi_include_invoices", False)))
-        self._send_credits_check.setChecked(bool(config.get("split_edi_include_credits", False)))
-        self._prepend_dates_check.setChecked(bool(config.get("prepend_date_files", False)))
-        self._rename_file_field.setText(str(config.get("rename_file", "")))
-        self._filter_categories_field.setText(str(config.get("split_edi_filter_categories", "ALL")))
+        self._split_edi_check.setChecked(to_bool(config.get("split_edi")))
+        self._send_invoices_check.setChecked(to_bool(config.get("split_edi_include_invoices")))
+        self._send_credits_check.setChecked(to_bool(config.get("split_edi_include_credits")))
+        self._prepend_dates_check.setChecked(to_bool(config.get("prepend_date_files")))
+        self._rename_file_field.setText(str(config.get("rename_file") or ""))
+        self._filter_categories_field.setText(str(config.get("split_edi_filter_categories") or "ALL"))
 
-        filter_mode = config.get("split_edi_filter_mode", "include")
+        filter_mode = config.get("split_edi_filter_mode") or "include"
         idx = self._filter_mode_combo.findText(str(filter_mode))
         if idx >= 0:
             self._filter_mode_combo.setCurrentIndex(idx)
 
-        if config.get("process_edi") == "True":
+        if str(config.get("process_edi")).lower() == "true":
             self._edi_options_combo.setCurrentText("Convert EDI")
-        elif config.get("tweak_edi") is True:
+        elif to_bool(config.get("tweak_edi")):
             self._edi_options_combo.setCurrentText("Tweak EDI")
         else:
             self._edi_options_combo.setCurrentText("Do Nothing")
 
         self._fields["folder_name_value"] = self._make_hidden_line_edit(
-            str(config.get("folder_name", ""))
+            str(config.get("folder_name") or "")
         )
 
     def _populate_fields_from_config(self, config: Dict[str, Any]):
