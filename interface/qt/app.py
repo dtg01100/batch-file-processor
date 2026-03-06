@@ -531,26 +531,37 @@ class QtBatchFileSenderApp:
         # Navigation buttons with improved spacing
         add_dir_btn = QPushButton("Add Directory...")
         add_dir_btn.setObjectName("sidebar")
+        add_dir_btn.setProperty("class", "sidebar")
+        add_dir_btn.clicked.connect(self._select_folder)
         options_layout.addWidget(add_dir_btn)
 
         batch_add_btn = QPushButton("Batch Add Directories...")
         batch_add_btn.setObjectName("sidebar")
+        batch_add_btn.setProperty("class", "sidebar")
+        batch_add_btn.clicked.connect(self._batch_add_folders)
         options_layout.addWidget(batch_add_btn)
 
         defaults_btn = QPushButton("Set Defaults...")
         defaults_btn.setObjectName("sidebar")
+        defaults_btn.setProperty("class", "sidebar")
+        defaults_btn.clicked.connect(self._set_defaults_popup)
         options_layout.addWidget(defaults_btn)
 
         edit_settings_btn = QPushButton("Edit Settings...")
         edit_settings_btn.setObjectName("sidebar")
+        edit_settings_btn.setProperty("class", "sidebar")
+        edit_settings_btn.clicked.connect(self._show_edit_settings_dialog)
         options_layout.addWidget(edit_settings_btn)
 
         maintenance_btn = QPushButton("Maintenance...")
         maintenance_btn.setObjectName("sidebar")
+        maintenance_btn.setProperty("class", "sidebar")
+        maintenance_btn.clicked.connect(self._show_maintenance_dialog_wrapper)
         options_layout.addWidget(maintenance_btn)
 
         self._processed_files_button = QPushButton("Processed Files Report...")
         self._processed_files_button.setObjectName("sidebar")
+        self._processed_files_button.setProperty("class", "sidebar")
         self._processed_files_button.clicked.connect(self._show_processed_files_dialog_wrapper)
         options_layout.addWidget(self._processed_files_button)
 
@@ -562,15 +573,16 @@ class QtBatchFileSenderApp:
         # Bottom action buttons
         self._allow_resend_button = QPushButton("Enable Resend...")
         self._allow_resend_button.setObjectName("sidebar")
+        self._allow_resend_button.setProperty("class", "sidebar")
         self._allow_resend_button.clicked.connect(self._show_resend_dialog)
         options_layout.addWidget(self._allow_resend_button)
 
         # Modern separator with improved styling
         separator = QFrame()
         separator.setFixedHeight(1)
-        separator.setObjectName("separator")
+        separator.setObjectName("sidebar_separator")
         separator.setStyleSheet(f"""
-            QFrame[frame="separator"] {{
+            QFrame#sidebar_separator {{
                 background-color: {Theme.SIDEBAR_OUTLINE};
                 margin: {Theme.SPACING_MD} 0;
             }}
@@ -579,16 +591,17 @@ class QtBatchFileSenderApp:
 
         # Primary action button with enhanced prominence
         self._process_folder_button = QPushButton("Process All Folders")
-        self._process_folder_button.setObjectName("primary")
+        self._process_folder_button.setProperty("class", "primary")
         self._process_folder_button.clicked.connect(
             lambda: self._graphical_process_directories(self._database.folders_table)
         )
         options_layout.addWidget(self._process_folder_button)
 
-        # Modern sidebar styling with subtle gradient
+        # Modern sidebar styling
         options_widget.setStyleSheet(f"""
-            #sidebar {{
+            QWidget#sidebar {{
                 background-color: {Theme.SIDEBAR_BACKGROUND};
+                border-right: 1px solid {Theme.SIDEBAR_OUTLINE};
             }}
         """)
 
