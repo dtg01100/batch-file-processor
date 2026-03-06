@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
+from interface.qt.theme import Theme
 from interface.services.reporting_service import ReportingService
 
 import batch_log_sender
@@ -411,6 +412,7 @@ class QtBatchFileSenderApp:
             return
 
         self._app = QApplication.instance() or QApplication(sys.argv)
+        self._app.setStyleSheet(Theme.get_stylesheet())
         self._window = QMainWindow()
         self._window.setWindowTitle(f"{self._appname} {self._version}")
 
@@ -497,6 +499,8 @@ class QtBatchFileSenderApp:
         self._window.setFixedWidth(self._window.size().width())
 
     def _build_main_window(self) -> None:
+        from PyQt6.QtWidgets import QLabel
+
         central = QWidget()
         self._window.setCentralWidget(central)
 
@@ -504,66 +508,102 @@ class QtBatchFileSenderApp:
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
+        # Sidebar with modern styling
         options_widget = QWidget()
-        options_widget.setFixedWidth(200)
+        options_widget.setFixedWidth(260)
+        options_widget.setObjectName("sidebar")
         options_layout = QVBoxLayout(options_widget)
-        options_layout.setContentsMargins(4, 4, 4, 4)
-        options_layout.setSpacing(2)
+        options_layout.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_XL_INT, Theme.SPACING_LG_INT, Theme.SPACING_XL_INT)
+        options_layout.setSpacing(Theme.SPACING_SM_INT)
 
+        # Modern header with enhanced typography
+        header_label = QLabel("Batch File Sender")
+        header_label.setObjectName("sidebar")
+        header_label.setStyleSheet(f"""
+            font-size: {Theme.FONT_SIZE_XL};
+            font-weight: 700;
+            color: {Theme.TEXT_ON_SIDEBAR};
+            padding-bottom: {Theme.SPACING_LG};
+            letter-spacing: 0.5px;
+        """)
+        options_layout.addWidget(header_label)
+
+        # Navigation buttons with improved spacing
         add_dir_btn = QPushButton("Add Directory...")
-        add_dir_btn.clicked.connect(self._select_folder)
+        add_dir_btn.setObjectName("sidebar")
         options_layout.addWidget(add_dir_btn)
 
         batch_add_btn = QPushButton("Batch Add Directories...")
-        batch_add_btn.clicked.connect(self._batch_add_folders)
+        batch_add_btn.setObjectName("sidebar")
         options_layout.addWidget(batch_add_btn)
 
         defaults_btn = QPushButton("Set Defaults...")
-        defaults_btn.clicked.connect(self._set_defaults_popup)
+        defaults_btn.setObjectName("sidebar")
         options_layout.addWidget(defaults_btn)
 
         edit_settings_btn = QPushButton("Edit Settings...")
-        edit_settings_btn.clicked.connect(self._show_edit_settings_dialog)
+        edit_settings_btn.setObjectName("sidebar")
         options_layout.addWidget(edit_settings_btn)
 
         maintenance_btn = QPushButton("Maintenance...")
-        maintenance_btn.clicked.connect(self._show_maintenance_dialog_wrapper)
+        maintenance_btn.setObjectName("sidebar")
         options_layout.addWidget(maintenance_btn)
 
         self._processed_files_button = QPushButton("Processed Files Report...")
+        self._processed_files_button.setObjectName("sidebar")
         self._processed_files_button.clicked.connect(self._show_processed_files_dialog_wrapper)
         options_layout.addWidget(self._processed_files_button)
 
+        # Flexible spacer
         options_layout.addItem(
             QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         )
 
+        # Bottom action buttons
         self._allow_resend_button = QPushButton("Enable Resend...")
+        self._allow_resend_button.setObjectName("sidebar")
         self._allow_resend_button.clicked.connect(self._show_resend_dialog)
         options_layout.addWidget(self._allow_resend_button)
 
-        sep_h = QFrame()
-        sep_h.setFrameShape(QFrame.Shape.HLine)
-        sep_h.setFrameShadow(QFrame.Shadow.Sunken)
-        options_layout.addWidget(sep_h)
+        # Modern separator with improved styling
+        separator = QFrame()
+        separator.setFixedHeight(1)
+        separator.setObjectName("separator")
+        separator.setStyleSheet(f"""
+            QFrame[frame="separator"] {{
+                background-color: {Theme.SIDEBAR_OUTLINE};
+                margin: {Theme.SPACING_MD} 0;
+            }}
+        """)
+        options_layout.addWidget(separator)
 
+        # Primary action button with enhanced prominence
         self._process_folder_button = QPushButton("Process All Folders")
+        self._process_folder_button.setObjectName("primary")
         self._process_folder_button.clicked.connect(
             lambda: self._graphical_process_directories(self._database.folders_table)
         )
         options_layout.addWidget(self._process_folder_button)
 
+        # Modern sidebar styling with subtle gradient
+        options_widget.setStyleSheet(f"""
+            #sidebar {{
+                background-color: {Theme.SIDEBAR_BACKGROUND};
+            }}
+        """)
+
         main_layout.addWidget(options_widget)
 
-        sep_v = QFrame()
-        sep_v.setFrameShape(QFrame.Shape.VLine)
-        sep_v.setFrameShadow(QFrame.Shadow.Sunken)
-        main_layout.addWidget(sep_v)
-
+        # Right panel with modern card-like appearance
         self._right_panel_widget = QWidget()
+        self._right_panel_widget.setStyleSheet(f"""
+            QWidget {{
+                background-color: {Theme.BACKGROUND};
+            }}
+        """)
         right_layout = QVBoxLayout(self._right_panel_widget)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(0)
+        right_layout.setContentsMargins(Theme.SPACING_XXL_INT, Theme.SPACING_XL_INT, Theme.SPACING_XXL_INT, Theme.SPACING_XL_INT)
+        right_layout.setSpacing(Theme.SPACING_LG_INT)
 
         self._build_folder_list(right_layout)
 

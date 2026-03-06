@@ -281,12 +281,17 @@ class EditSettingsDialog(BaseDialog):
             elif not validate_email_format(self._email_address.text()):
                 errors.append("Invalid Email Origin Address")
 
-            success, error_msg = self._smtp_service.test_connection(
-                smtp_server=self._email_smtp_server.text(),
-                smtp_port=self._email_smtp_port.text(),
-                username=self._email_username.text(),
-                password=self._email_password.text(),
-            )
+            try:
+                success, error_msg = self._smtp_service.test_connection(
+                    smtp_server=self._email_smtp_server.text(),
+                    smtp_port=self._email_smtp_port.text(),
+                    username=self._email_username.text(),
+                    password=self._email_password.text(),
+                )
+            except Exception as e:
+                # Handle any unexpected exceptions gracefully
+                success = False
+                error_msg = str(e)
             if not success:
                 errors.append("Test Login Failed With Error\n" + (error_msg or ""))
 

@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence
 
+from interface.qt.theme import Theme
+
 
 class SearchWidget(QWidget):
     """Search/filter widget with text entry and apply button.
@@ -80,14 +82,44 @@ class SearchWidget(QWidget):
         self._button.setEnabled(enabled)
 
     def _build_ui(self) -> None:
+        self.setStyleSheet(f"""
+            SearchWidget {{
+                background-color: transparent;
+                border-radius: {Theme.RADIUS_LG};
+                padding: {Theme.SPACING_SM};
+            }}
+        """)
+
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(Theme.SPACING_SM_INT)
 
         self._entry = QLineEdit()
-        self._entry.setPlaceholderText("Filter...")
+        self._entry.setPlaceholderText("\U0001F50D Search folders...")
+        self._entry.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {Theme.INPUT_BACKGROUND};
+                color: {Theme.TEXT_PRIMARY};
+                border: 1px solid {Theme.INPUT_BORDER};
+                border-radius: {Theme.RADIUS_MD};
+                padding: {Theme.SPACING_SM} {Theme.SPACING_MD};
+                font-size: {Theme.FONT_SIZE_BASE};
+                selection-background-color: {Theme.PRIMARY_CONTAINER};
+                selection-color: {Theme.ON_PRIMARY_CONTAINER};
+            }}
+            QLineEdit:hover {{
+                border-color: {Theme.INPUT_HOVER_BORDER};
+            }}
+            QLineEdit:focus {{
+                border: 2px solid {Theme.INPUT_FOCUS_BORDER};
+                padding: calc({Theme.SPACING_SM} - 1px) calc({Theme.SPACING_MD} - 1px);
+                background-color: {Theme.BACKGROUND};
+            }}
+        """)
         self._entry.returnPressed.connect(self._on_return_pressed)
 
-        self._button = QPushButton("Update Filter")
+        self._button = QPushButton("Filter")
+        self._button.setObjectName("primary")
         self._button.clicked.connect(self._on_button_clicked)
 
         layout.addWidget(self._entry, stretch=1)

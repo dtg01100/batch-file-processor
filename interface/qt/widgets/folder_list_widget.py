@@ -27,6 +27,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.qt.theme import Theme
+
 
 class FolderTableProtocol(Protocol):
     """Protocol describing the expected interface for a folder data table.
@@ -140,14 +142,11 @@ class FolderListWidget(QWidget):
         """Build the complete folder list widget."""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-
-        separator_top = QFrame()
-        separator_top.setFrameShape(QFrame.Shape.HLine)
-        separator_top.setFrameShadow(QFrame.Shadow.Sunken)
-        main_layout.addWidget(separator_top)
+        main_layout.setSpacing(Theme.SPACING_LG_INT)
 
         columns_layout = QHBoxLayout()
         columns_layout.setContentsMargins(0, 0, 0, 0)
+        columns_layout.setSpacing(Theme.SPACING_LG_INT)
 
         active_folder_dict_list: List[Dict[str, Any]] = list(
             self._folders_table.find(folder_is_active="True")
@@ -213,31 +212,71 @@ class FolderListWidget(QWidget):
             A :class:`QWidget` containing the titled, scrollable column.
         """
         container = QWidget()
+        container.setObjectName("card")
+        container.setStyleSheet(f"""
+            #card {{
+                background-color: {Theme.CARD_BACKGROUND};
+                border: 1px solid {Theme.CARD_BORDER};
+                border-radius: {Theme.RADIUS_LG};
+                padding: {Theme.SPACING_LG};
+            }}
+        """)
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_LG_INT, Theme.SPACING_LG_INT, Theme.SPACING_LG_INT)
+        container_layout.setSpacing(Theme.SPACING_MD_INT)
 
+        # Modern header with enhanced typography
         header = QLabel(title)
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet(f"""
+            font-size: {Theme.FONT_SIZE_XL};
+            font-weight: 600;
+            color: {Theme.TEXT_PRIMARY};
+            padding-bottom: {Theme.SPACING_MD};
+            letter-spacing: 0.25px;
+        """)
         container_layout.addWidget(header)
 
+        # Modern separator
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setFrameShadow(QFrame.Shadow.Plain)
+        separator.setObjectName("separator")
+        separator.setStyleSheet(f"""
+            QFrame[frame="separator"] {{
+                background-color: {Theme.OUTLINE_VARIANT};
+                border: none;
+                height: 1px;
+            }}
+        """)
         container_layout.addWidget(separator)
 
+        # Scroll area with modern styling
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setStyleSheet(f"""
+            QScrollArea {{
+                border: none;
+                background-color: transparent;
+            }}
+        """)
 
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setContentsMargins(3, 3, 3, 3)
-        scroll_layout.setSpacing(2)
+        scroll_layout.setContentsMargins(Theme.SPACING_SM_INT, Theme.SPACING_MD_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT)
+        scroll_layout.setSpacing(Theme.SPACING_SM_INT)
 
         if not all_filtered or not folder_list:
             empty_label = QLabel(f"No {title}")
-            empty_label.setContentsMargins(10, 0, 10, 0)
+            empty_label.setStyleSheet(f"""
+                color: {Theme.TEXT_TERTIARY};
+                font-size: {Theme.FONT_SIZE_SM};
+                font-style: italic;
+            """)
+            empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty_label.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_XXL_INT, Theme.SPACING_LG_INT, Theme.SPACING_XXL_INT)
             scroll_layout.addWidget(empty_label)
 
         max_alias_length = self._calculate_max_alias_length(folder_list)
@@ -272,28 +311,47 @@ class FolderListWidget(QWidget):
             A :class:`QWidget` representing the folder row.
         """
         row_widget = QWidget()
+        row_widget.setObjectName("folderCard")
+        row_widget.setStyleSheet(f"""
+            #folderCard {{
+                background-color: {Theme.CARD_SURFACE};
+                border: 1px solid {Theme.CARD_BORDER};
+                border-radius: {Theme.RADIUS_MD};
+                padding: {Theme.SPACING_SM};
+            }}
+            #folderCard:hover {{
+                background-color: {Theme.SURFACE_VARIANT};
+                border-color: {Theme.PRIMARY};
+            }}
+        """)
         row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0, 1, 0, 1)
-        row_layout.setSpacing(2)
+        row_layout.setContentsMargins(Theme.SPACING_SM_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT)
+        row_layout.setSpacing(Theme.SPACING_SM_INT)
 
         folder_id: int = folder["id"]
         alias: str = folder["alias"]
 
-        edit_text = f"Edit: {alias}..."
+        edit_text = "Edit"
         target_char_width = max_alias_length + 6
 
         if is_active:
-            disable_btn = QPushButton("<-")
+            disable_btn = QPushButton("⏽")
+            disable_btn.setFixedWidth(40)
             disable_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            disable_btn.setToolTip("Move to inactive")
+            self._style_action_button(disable_btn)
             disable_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_disable(fid))
 
             edit_btn = QPushButton(edit_text)
             edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
+            self._style_action_button(edit_btn)
             edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
 
             send_btn = QPushButton("Send")
+            send_btn.setFixedWidth(64)
             send_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            self._style_action_button(send_btn, "primary")
             send_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_send(fid))
 
             row_layout.addWidget(disable_btn)
@@ -303,10 +361,13 @@ class FolderListWidget(QWidget):
             edit_btn = QPushButton(edit_text)
             edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
+            self._style_action_button(edit_btn)
             edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
 
             delete_btn = QPushButton("Delete")
+            delete_btn.setFixedWidth(74)
             delete_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            self._style_action_button(delete_btn, "danger")
             delete_btn.clicked.connect(
                 lambda _checked, fid=folder_id, a=alias: self._on_delete(fid, a)
             )
@@ -387,6 +448,16 @@ class FolderListWidget(QWidget):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _style_action_button(self, btn: QPushButton, variant: str = "default") -> None:
+        """Apply modern styling to an action button."""
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        if variant == "primary":
+            btn.setObjectName("primary")
+        elif variant == "danger":
+            btn.setObjectName("danger")
+        elif variant == "sidebar":
+            btn.setObjectName("sidebar")
 
     @staticmethod
     def _calculate_max_alias_length(folder_list: List[Dict[str, Any]]) -> int:
