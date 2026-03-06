@@ -12,6 +12,7 @@ __pycache__/
 .Python
 env/
 build/
+build_wine/
 develop-eggs/
 dist/
 dist_windows/
@@ -73,15 +74,16 @@ setup.py
 /backups
 setup.bat
 /build.bat
-/.vscode
 /*venv*/
 .venv/
-.gitignore
 /.mypy_cache
 plugin_test.py
 
 # Wine prefix for Windows builds
 .wine/
+
+# opencode metadata
+.opencode/
 
 # containerhome is mounted to project dir
 containerhome/
@@ -108,6 +110,7 @@ winvenv/
 
 # Executables
 *.exe
+wine_build.exit
 
 # Coverage reports
 coverage_*/
