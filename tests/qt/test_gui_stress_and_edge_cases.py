@@ -1103,6 +1103,80 @@ class TestQtUIServiceStress:
 
 
 # ---------------------------------------------------------------------------
+# EditFoldersDialog - Stress and Edge Cases
+# ---------------------------------------------------------------------------
+@pytest.mark.qt
+class TestEditFoldersDialogStress:
+    """Stress tests for EditFoldersDialog to find robustness issues."""
+
+    def test_sparse_config_tweak_edi_crash_prevention(self, qtbot):
+        """Test that switching to Tweak EDI with missing config keys doesn't crash.
+        
+        This test specifically targets the TypeError: int() argument must be a 
+        string... not 'NoneType' that occurred when invoice_date_offset was None.
+        """
+        from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
+        
+        # Minimal config with missing keys and some keys set to None
+        sparse_config = {
+            "folder_name": "/tmp/test_folder",
+            "alias": "Test Folder",
+            "invoice_date_offset": None,  # This caused the crash
+            "a_record_padding_length": None,
+            "upc_target_length": None,
+            "override_upc_level": None,
+        }
+        
+        dialog = EditFoldersDialog(
+            None, 
+            sparse_config,
+            settings_provider=lambda: {"enable_email": False},
+            alias_provider=lambda: []
+        )
+        qtbot.addWidget(dialog)
+        
+        # Switching to Tweak EDI triggers _build_tweak_edi_area -> _populate_tweak_fields
+        # Before the fix, this would raise TypeError
+        dialog._edi_options_combo.setCurrentText("Tweak EDI")
+        
+        # Verify it didn't crash and fields have safe defaults
+        assert dialog._tweak_invoice_offset.value() == 0
+        assert dialog._tweak_arec_padding_length.currentText() == "6"
+        assert dialog._tweak_upc_target_length.text() == "11"
+        assert dialog._tweak_override_upc_level.currentText() == "1"
+
+    def test_malformed_types_in_config(self, qtbot):
+        """Test that malformed data types in config are handled gracefully."""
+        from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
+        
+        # Config with "wrong" types for certain fields
+        malformed_config = {
+            "folder_name": "/tmp/test_folder",
+            "folder_is_active": "NotABool",
+            "process_backend_copy": "TrueString",
+            "ftp_port": "NotAnInt",
+            "invoice_date_offset": "5", # String instead of int
+            "tweak_edi": "Yes",
+        }
+        
+        dialog = EditFoldersDialog(
+            None, 
+            malformed_config,
+            settings_provider=lambda: {"enable_email": False},
+            alias_provider=lambda: []
+        )
+        qtbot.addWidget(dialog)
+        
+        # Verify robust boolean/int conversion
+        # "TrueString" -> str().lower() == "true" is False, but it shouldn't crash
+        # "NotABool" -> False
+        assert dialog._active_checkbox.isChecked() is False
+        
+        # Switch to Tweak EDI to check string-to-int conversion for offset
+        dialog._edi_options_combo.setCurrentText("Tweak EDI")
+        assert dialog._tweak_invoice_offset.value() == 5
+
+# ---------------------------------------------------------------------------
 # MaintenanceDialog - Stress and Edge Cases
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
