@@ -1,0 +1,77 @@
+# Container build exclusions
+# This file prevents unnecessary files from being copied into the container
+
+# Wine directory (contains Windows files that shouldn't be in the build)
+.wine/
+
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+dist_windows/
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Database files
+*.db
+*.db.backup*
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation that's not needed for build
+*.md
+!README.md
+
+# Archive
+archive/
+
+# Backups
+backups/
+
+# Node modules (if any)
+node_modules/
+
+# Container files themselves
+Dockerfile*
+.containerignore
+
+# Build scripts (not needed in container)
+build_*.py
+build_*.sh
+*.spec
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

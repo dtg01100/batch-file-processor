@@ -1,8 +1,11 @@
-
 FROM docker.io/batonogov/pyinstaller-windows:v4.0.1
 
-# Install git (needed for some dependencies)
-RUN apt-get update && apt-get install -y git
+# Install git and Python 3.11 with pip
+RUN apt-get update && apt-get install -y git software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.11 python3.11-venv python3.11-dev python3.11-distutils && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Copy all project files
 COPY . /src/
@@ -10,14 +13,13 @@ COPY . /src/
 # Set working directory
 WORKDIR /src
 
+# Ensure Python 3.11 is used and install dependencies
+RUN python3.11 -m pip install --upgrade pip && \
+    python3.11 -m pip install pyinstaller && \
+    python3.11 -m pip install -r requirements.txt
+
 # Ensure spec file exists
 RUN ls -la /src/main_interface.spec
 
-# Set environment variable for the original entrypoint
-ENV SPECFILE=/src/main_interface.spec
-
-# Install Python dependencies
-RUN pip install -r requirements.txt
-
-# Run PyInstaller and keep output in /src/dist
-RUN pyinstaller main_interface.spec --noconfirm --clean
+# Run PyInstaller with Python 3.11
+RUN python3.11 -m PyInstaller main_interface.spec --clean --noconfirm

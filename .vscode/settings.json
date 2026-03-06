@@ -1,0 +1,53 @@
+{
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.wine": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/backups": true,
+        "**/dist_windows": true,
+        "**/.kilocode": true,
+        "**/.opencode": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/.git": true,
+        "**/.wine": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/backups": true,
+        "**/dist_windows": true,
+        "**/.kilocode": true,
+        "**/.opencode": true
+    },
+    "python.analysis.exclude": [
+        "**/.wine",
+        "**/__pycache__",
+        "**/backups",
+        "**/dist_windows",
+        "**/.kilocode",
+        "**/.opencode"
+    ],
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/.wine/**": true,
+        "**/backups/**": true,
+        "**/dist_windows/**": true,
+        "**/.opencode/**": true
+    },
+    "search.followSymlinks": false
+}
