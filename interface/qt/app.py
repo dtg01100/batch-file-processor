@@ -495,8 +495,8 @@ class QtBatchFileSenderApp:
 
     def _configure_window(self) -> None:
         self._window.adjustSize()
-        self._window.setMinimumSize(self._window.size())
-        self._window.setFixedWidth(self._window.size().width())
+        # Set a reasonable minimum size but allow full resizing
+        self._window.setMinimumSize(800, 600)
 
     def _build_main_window(self) -> None:
         from PyQt6.QtWidgets import QLabel
@@ -631,7 +631,7 @@ class QtBatchFileSenderApp:
             folders_table=self._database.folders_table,
             on_send=self._send_single,
             on_edit=self._edit_folder_selector,
-            on_disable=self._disable_folder,
+            on_toggle=self._toggle_folder,
             on_delete=self._delete_folder_entry_wrapper,
             filter_value=self._folder_filter,
             total_count_callback=self._update_filter_count_label,
@@ -812,6 +812,34 @@ class QtBatchFileSenderApp:
     def _disable_folder(self, folder_id: int) -> None:
         self._folder_manager.disable_folder(folder_id)
         self._refresh_users_list()
+
+    def _toggle_folder(self, folder_id: int) -> None:
+        """Toggle a folder between active and inactive states."""
+        folder = self._folder_manager.get_folder_by_id(folder_id)
+        if folder:
+            if folder["folder_is_active"] == "True":
+                # Disable folder (no validation needed)
+                self._folder_manager.disable_folder(folder_id)
+            else:
+                # Enable folder - validate that at least one backend is configured
+                has_backend = (
+                    folder.get("process_backend_email") or
+                    folder.get("process_backend_ftp") or
+                    folder.get("process_backend_copy")
+                )
+                if not has_backend:
+                    self._ui_service.show_error(
+                        "Cannot Enable Folder",
+                        f"Folder '{folder.get('alias', 'Unknown')}' has no backends configured.\n\n"
+                        "Please edit the folder and enable at least one backend:\n"
+                        "• Email\n"
+                        "• FTP\n"
+                        "• Copy to Directory"
+                    )
+                    return
+                self._folder_manager.enable_folder(folder_id)
+            self._refresh_users_list()
+            self._set_main_button_states()
 
     def _set_folders_filter(self, filter_field_contents: str) -> None:
         self._folder_filter = filter_field_contents

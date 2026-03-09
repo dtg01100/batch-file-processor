@@ -1,11 +1,10 @@
 """Folder list widget for displaying and managing folder configurations.
 
-This module provides a Qt widget for displaying active and inactive folders
-with action buttons for send, edit, disable, and delete operations.
+This module provides a Qt widget for displaying folders with inline status indicators
+and action buttons for send, edit, enable/disable, and delete operations.
 
-The widget creates two side-by-side scrollable columns: inactive folders on
-the left and active folders on the right. Each folder row contains action
-buttons with uniform width based on the longest alias in its column.
+The widget creates a single scrollable list with each folder showing its active/inactive
+status inline. Each folder row contains action buttons appropriate to its status.
 
 Fuzzy matching via the ``thefuzz`` library is used to filter folders by alias
 when a filter value is provided.
@@ -73,11 +72,11 @@ class FolderTableProtocol(Protocol):
 
 
 class FolderListWidget(QWidget):
-    """A widget displaying active and inactive folder lists with actions.
+    """A widget displaying folders in a single list with inline status indicators.
 
-    This widget creates scrollable lists of folders separated into active
-    and inactive sections arranged side-by-side.  Each folder has action
-    buttons for common operations such as send, edit, disable, and delete.
+    This widget creates a scrollable list of folders with each row showing the
+    folder's active/inactive status inline.  Each folder has action buttons for
+    common operations such as send, edit, enable/disable, and delete.
 
     The widget supports fuzzy filtering of folders by alias name using the
     ``thefuzz`` library with a score cutoff of 80.
@@ -87,7 +86,7 @@ class FolderListWidget(QWidget):
         folders_table: The database table containing folder configurations.
         on_send: Callback for the *Send* button (receives folder ID).
         on_edit: Callback for the *Edit* button (receives folder ID).
-        on_disable: Callback for the *Disable* (``<-``) button (receives folder ID).
+        on_toggle: Callback for the *Enable/Disable* button (receives folder ID).
         on_delete: Callback for the *Delete* button (receives folder ID and alias).
         filter_value: Current filter value for fuzzy matching.  An empty
             string disables filtering.
@@ -98,7 +97,7 @@ class FolderListWidget(QWidget):
 
         >>> def on_send(folder_id: int) -> None: ...
         >>> def on_edit(folder_id: int) -> None: ...
-        >>> def on_disable(folder_id: int) -> None: ...
+        >>> def on_toggle(folder_id: int) -> None: ...
         >>> def on_delete(folder_id: int, alias: str) -> None: ...
         >>>
         >>> widget = FolderListWidget(
@@ -106,7 +105,7 @@ class FolderListWidget(QWidget):
         ...     folders_table=database.folders_table,
         ...     on_send=on_send,
         ...     on_edit=on_edit,
-        ...     on_disable=on_disable,
+        ...     on_toggle=on_toggle,
         ...     on_delete=on_delete,
         ...     filter_value="",
         ... )
@@ -118,7 +117,7 @@ class FolderListWidget(QWidget):
         folders_table: FolderTableProtocol,
         on_send: Callable[[int], None],
         on_edit: Callable[[int], None],
-        on_disable: Callable[[int], None],
+        on_toggle: Callable[[int], None],
         on_delete: Callable[[int, str], None],
         filter_value: str = "",
         total_count_callback: Optional[Callable[[int, int], None]] = None,
@@ -127,7 +126,7 @@ class FolderListWidget(QWidget):
         self._folders_table = folders_table
         self._on_send = on_send
         self._on_edit = on_edit
-        self._on_disable = on_disable
+        self._on_toggle = on_toggle
         self._on_delete = on_delete
         self._filter_value = filter_value
         self._total_count_callback = total_count_callback
@@ -144,29 +143,13 @@ class FolderListWidget(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(Theme.SPACING_LG_INT)
 
-        columns_layout = QHBoxLayout()
-        columns_layout.setContentsMargins(0, 0, 0, 0)
-        columns_layout.setSpacing(Theme.SPACING_LG_INT)
-
-        active_folder_dict_list: List[Dict[str, Any]] = list(
-            self._folders_table.find(folder_is_active="True")
-        )
-        inactive_folder_dict_list: List[Dict[str, Any]] = list(
-            self._folders_table.find(folder_is_active="False")
-        )
+        # Get all folders sorted by alias
         folders_dict_list: List[Dict[str, Any]] = list(
             self._folders_table.find(order_by="alias")
         )
 
-        (
-            filtered_folder_dict_list,
-            filtered_active_folder_dict_list,
-            filtered_inactive_folder_dict_list,
-        ) = self._apply_filter(
-            folders_dict_list,
-            active_folder_dict_list,
-            inactive_folder_dict_list,
-        )
+        # Apply filter to the combined list
+        filtered_folder_dict_list = self._apply_filter(folders_dict_list)
 
         if self._total_count_callback is not None:
             self._total_count_callback(
@@ -174,39 +157,24 @@ class FolderListWidget(QWidget):
                 self._folders_table.count(),
             )
 
-        inactive_column = self._build_column(
-            title="Inactive Folders",
-            folder_list=filtered_inactive_folder_dict_list,
-            all_filtered=filtered_folder_dict_list,
-            is_active=False,
-        )
-        active_column = self._build_column(
-            title="Active Folders",
-            folder_list=filtered_active_folder_dict_list,
-            all_filtered=filtered_folder_dict_list,
-            is_active=True,
+        # Build single column with all folders
+        folder_column = self._build_column(
+            title="Folders",
+            folder_list=filtered_folder_dict_list,
         )
 
-        columns_layout.addWidget(inactive_column, stretch=1)
-        columns_layout.addWidget(active_column, stretch=1)
-
-        main_layout.addLayout(columns_layout, stretch=1)
+        main_layout.addWidget(folder_column, stretch=1)
 
     def _build_column(
         self,
         title: str,
         folder_list: List[Dict[str, Any]],
-        all_filtered: List[Dict[str, Any]],
-        is_active: bool,
     ) -> QWidget:
-        """Build a single scrollable column for active or inactive folders.
+        """Build a scrollable column for all folders.
 
         Args:
-            title: The column header text (e.g. ``"Active Folders"``).
-            folder_list: The filtered folders belonging to this column.
-            all_filtered: All filtered folders (used to determine whether
-                "no folders" labels should be shown).
-            is_active: ``True`` when building the active column.
+            title: The column header text (e.g. ``"Folders"``).
+            folder_list: The filtered folders to display.
 
         Returns:
             A :class:`QWidget` containing the titled, scrollable column.
@@ -268,7 +236,7 @@ class FolderListWidget(QWidget):
         scroll_layout.setContentsMargins(Theme.SPACING_SM_INT, Theme.SPACING_MD_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT)
         scroll_layout.setSpacing(Theme.SPACING_SM_INT)
 
-        if not all_filtered or not folder_list:
+        if not folder_list:
             empty_label = QLabel(f"No {title}")
             empty_label.setStyleSheet(f"""
                 color: {Theme.TEXT_TERTIARY};
@@ -282,9 +250,7 @@ class FolderListWidget(QWidget):
         max_alias_length = self._calculate_max_alias_length(folder_list)
 
         for folder in folder_list:
-            row = self._build_folder_row(
-                folder, is_active, max_alias_length
-            )
+            row = self._build_folder_row(folder, max_alias_length)
             scroll_layout.addWidget(row)
 
         scroll_layout.addStretch(1)
@@ -296,16 +262,14 @@ class FolderListWidget(QWidget):
     def _build_folder_row(
         self,
         folder: Dict[str, Any],
-        is_active: bool,
         max_alias_length: int,
     ) -> QWidget:
-        """Build a single folder row with its action buttons.
+        """Build a single folder row with status indicator and action buttons.
 
         Args:
-            folder: A folder dictionary with ``id`` and ``alias`` keys.
-            is_active: ``True`` if this is an active-folder row.
-            max_alias_length: The maximum alias character length in the
-                column, used to set a uniform edit-button width.
+            folder: A folder dictionary with ``id``, ``alias``, and ``folder_is_active`` keys.
+            max_alias_length: The maximum alias character length, used to set
+                a uniform edit-button width.
 
         Returns:
             A :class:`QWidget` representing the folder row.
@@ -330,40 +294,68 @@ class FolderListWidget(QWidget):
 
         folder_id: int = folder["id"]
         alias: str = folder["alias"]
+        is_active: bool = folder["folder_is_active"] == "True"
 
+        # Status badge
+        status_badge = QLabel("●")
+        status_badge.setFixedWidth(24)
+        status_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        if is_active:
+            status_badge.setStyleSheet(f"""
+                color: {Theme.PRIMARY};
+                font-size: 18px;
+                font-weight: bold;
+            """)
+            status_badge.setToolTip("Active")
+        else:
+            status_badge.setStyleSheet(f"""
+                color: {Theme.TEXT_DISABLED};
+                font-size: 18px;
+                font-weight: bold;
+            """)
+            status_badge.setToolTip("Inactive")
+        
+        row_layout.addWidget(status_badge)
+
+        # Edit button (always present, expands to show folder alias)
         edit_text = "Edit"
         target_char_width = max_alias_length + 6
+        edit_btn = QPushButton(edit_text)
+        edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
+        self._style_action_button(edit_btn)
+        edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
+        row_layout.addWidget(edit_btn, stretch=1)
 
+        # Action buttons based on status
         if is_active:
-            disable_btn = QPushButton("⏽")
-            disable_btn.setFixedWidth(40)
-            disable_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            disable_btn.setToolTip("Move to inactive")
-            self._style_action_button(disable_btn)
-            disable_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_disable(fid))
+            # Disable button
+            toggle_btn = QPushButton("⏸")
+            toggle_btn.setFixedWidth(40)
+            toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            toggle_btn.setToolTip("Disable folder")
+            self._style_action_button(toggle_btn)
+            toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
+            row_layout.addWidget(toggle_btn)
 
-            edit_btn = QPushButton(edit_text)
-            edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
-            self._style_action_button(edit_btn)
-            edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
-
+            # Send button
             send_btn = QPushButton("Send")
             send_btn.setFixedWidth(64)
             send_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             self._style_action_button(send_btn, "primary")
             send_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_send(fid))
-
-            row_layout.addWidget(disable_btn)
-            row_layout.addWidget(edit_btn, stretch=1)
             row_layout.addWidget(send_btn)
         else:
-            edit_btn = QPushButton(edit_text)
-            edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
-            self._style_action_button(edit_btn)
-            edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
+            # Enable button
+            toggle_btn = QPushButton("▶")
+            toggle_btn.setFixedWidth(40)
+            toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            toggle_btn.setToolTip("Enable folder")
+            self._style_action_button(toggle_btn)
+            toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
+            row_layout.addWidget(toggle_btn)
 
+            # Delete button
             delete_btn = QPushButton("Delete")
             delete_btn.setFixedWidth(74)
             delete_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -371,8 +363,6 @@ class FolderListWidget(QWidget):
             delete_btn.clicked.connect(
                 lambda _checked, fid=folder_id, a=alias: self._on_delete(fid, a)
             )
-
-            row_layout.addWidget(edit_btn, stretch=1)
             row_layout.addWidget(delete_btn)
 
         return row_widget
@@ -384,30 +374,21 @@ class FolderListWidget(QWidget):
     def _apply_filter(
         self,
         folders_dict_list: List[Dict[str, Any]],
-        active_folder_dict_list: List[Dict[str, Any]],
-        inactive_folder_dict_list: List[Dict[str, Any]],
-    ) -> tuple:
-        """Apply fuzzy filtering to the folder lists.
+    ) -> List[Dict[str, Any]]:
+        """Apply fuzzy filtering to the folder list.
 
-        When :attr:`_filter_value` is empty the lists are returned unchanged.
+        When :attr:`_filter_value` is empty the list is returned unchanged.
         Otherwise, ``thefuzz.process.extractWithoutOrder`` is used with a
         ``score_cutoff`` of **80** to match folder aliases.
 
         Args:
             folders_dict_list: All folders ordered by alias.
-            active_folder_dict_list: Active folders.
-            inactive_folder_dict_list: Inactive folders.
 
         Returns:
-            A tuple of ``(filtered_all, filtered_active, filtered_inactive)``
-            lists.
+            A list of filtered folders.
         """
         if self._filter_value == "":
-            return (
-                list(folders_dict_list),
-                list(active_folder_dict_list),
-                list(inactive_folder_dict_list),
-            )
+            return list(folders_dict_list)
 
         folder_alias_list = [folder["alias"] for folder in folders_dict_list]
 
@@ -419,31 +400,14 @@ class FolderListWidget(QWidget):
         fuzzy_filter.sort(key=itemgetter(1), reverse=True)
         fuzzy_filtered_alias = [fuzzy_alias for fuzzy_alias, _ in fuzzy_filter]
 
-        def _copy_matching(
-            dictlist: List[Dict[str, Any]], key: str, value: Any
-        ) -> List[Dict[str, Any]]:
-            return [d for d in dictlist if d[key] == value]
+        # Match folders by alias in the order of fuzzy match scores
+        filtered_folders: List[Dict[str, Any]] = []
+        for alias in fuzzy_filtered_alias:
+            matching = [f for f in folders_dict_list if f["alias"] == alias]
+            if matching:
+                filtered_folders.append(matching[0])
 
-        pre_filtered_all: List[List[Dict[str, Any]]] = []
-        pre_filtered_active: List[List[Dict[str, Any]]] = []
-        pre_filtered_inactive: List[List[Dict[str, Any]]] = []
-
-        for entry in fuzzy_filtered_alias:
-            pre_filtered_all.append(
-                _copy_matching(folders_dict_list, "alias", entry)
-            )
-            pre_filtered_active.append(
-                _copy_matching(active_folder_dict_list, "alias", entry)
-            )
-            pre_filtered_inactive.append(
-                _copy_matching(inactive_folder_dict_list, "alias", entry)
-            )
-
-        filtered_all = [i[0] for i in pre_filtered_all if i]
-        filtered_active = [i[0] for i in pre_filtered_active if i]
-        filtered_inactive = [i[0] for i in pre_filtered_inactive if i]
-
-        return filtered_all, filtered_active, filtered_inactive
+        return filtered_folders
 
     # ------------------------------------------------------------------
     # Helpers

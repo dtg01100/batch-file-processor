@@ -241,7 +241,7 @@ class TestResendDialogSelection:
 class TestResendDialogApply:
     """Tests for applying resend flags."""
 
-    def test_resend_button_disabled_without_folder(self, qtbot, mock_database_obj):
+    def test_resend_button_toggled_without_folder(self, qtbot, mock_database_obj):
         """Test resend button is disabled when no folder selected."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 

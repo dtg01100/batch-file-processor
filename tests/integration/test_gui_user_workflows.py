@@ -308,7 +308,7 @@ class TestProcessedFilesWorkflow:
 
             # Verify dialog was created with correct parameters
 
-    def test_processed_files_button_disabled_when_empty(self, initialized_app):
+    def test_processed_files_button_toggled_when_empty(self, initialized_app):
         """Test that processed files button is disabled when no files processed."""
         app = initialized_app
     
@@ -365,7 +365,7 @@ class TestResendWorkflow:
             # Verify dialog was created
             mock_dialog.exec.assert_called_once()
 
-    def test_resend_button_disabled_when_no_processed_files(self, initialized_app):
+    def test_resend_button_toggled_when_no_processed_files(self, initialized_app):
         """Test that resend button is disabled when no files processed."""
         app = initialized_app
     

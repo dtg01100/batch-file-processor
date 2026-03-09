@@ -124,7 +124,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -139,7 +139,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -155,7 +155,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -171,7 +171,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
             filter_value="Test",
         )
@@ -194,7 +194,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
             total_count_callback=count_callback,
         )
@@ -216,7 +216,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=on_send,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -241,7 +241,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=on_edit,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -258,7 +258,7 @@ class TestFolderListWidgetComprehensive:
         """Test that disable button triggers callback with correct folder ID."""
         disable_calls = []
         
-        def on_disable(folder_id):
+        def on_toggle(folder_id):
             disable_calls.append(folder_id)
         
         widget = FolderListWidget(
@@ -266,7 +266,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=on_disable,
+            on_toggle=on_toggle,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -291,7 +291,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=on_delete,
         )
         qtbot.addWidget(widget)
@@ -316,7 +316,7 @@ class TestFolderListWidgetComprehensive:
             empty_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -331,7 +331,7 @@ class TestFolderListWidgetComprehensive:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -980,7 +980,7 @@ class TestUIThreadSafetyAndState:
             mock_folder_table,
             on_send=lambda x: None,
             on_edit=lambda x: None,
-            on_disable=lambda x: None,
+            on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
         )
         qtbot.addWidget(widget)
@@ -1026,7 +1026,7 @@ class TestUIErrorHandlingEdgeCases:
                 mock_table,
                 on_send=lambda x: None,
                 on_edit=lambda x: None,
-                on_disable=lambda x: None,
+                on_toggle=lambda x: None,
                 on_delete=lambda x, y: None,
             )
             qtbot.addWidget(widget)

@@ -141,7 +141,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=callbacks[0], on_edit=callbacks[1],
-            on_disable=callbacks[2], on_delete=callbacks[3],
+            on_toggle=callbacks[2], on_delete=callbacks[3],
         )
         qtbot.addWidget(widget)
 
@@ -152,7 +152,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
@@ -168,7 +168,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
@@ -186,7 +186,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=on_send, on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -203,7 +203,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=on_edit,
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -214,20 +214,20 @@ class TestFolderListWidget:
 
     def test_disable_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
-        on_disable = MagicMock()
+        on_toggle = MagicMock()
         active = [{"id": 42, "alias": "Target", "folder_is_active": "True"}]
         table = self._make_table(active=active)
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=on_disable, on_delete=MagicMock(),
+            on_toggle=on_toggle, on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
             if btn.text() == "<-":
                 qtbot.mouseClick(btn, Qt.MouseButton.LeftButton)
                 break
-        on_disable.assert_called_once_with(42)
+        on_toggle.assert_called_once_with(42)
 
     def test_delete_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
@@ -237,7 +237,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=on_delete,
+            on_toggle=MagicMock(), on_delete=on_delete,
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -259,7 +259,7 @@ class TestFolderListWidget:
             widget = FolderListWidget(
                 parent=None, folders_table=table,
                 on_send=MagicMock(), on_edit=MagicMock(),
-                on_disable=MagicMock(), on_delete=MagicMock(),
+                on_toggle=MagicMock(), on_delete=MagicMock(),
                 filter_value="Alp",
             )
         qtbot.addWidget(widget)
@@ -277,7 +277,7 @@ class TestFolderListWidget:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
             total_count_callback=count_cb,
         )
         qtbot.addWidget(widget)

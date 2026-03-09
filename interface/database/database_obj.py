@@ -13,6 +13,7 @@ import sys
 import datetime
 import traceback
 from interface.database import sqlite_wrapper
+import schema
 
 
 @runtime_checkable
@@ -177,6 +178,8 @@ class DatabaseObj:
             )
             self.session_database = sqlite_wrapper.Database.connect("")
             self._check_version()
+            # Ensure all schema migrations are applied (idempotent operation)
+            schema.ensure_schema(self.database_connection)
             self._initialize_tables()
         except Exception as connect_error:
             self._handle_connection_error(connect_error)

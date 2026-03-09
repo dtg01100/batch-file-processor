@@ -237,7 +237,7 @@ class TestQtAppButtonConnections:
 class TestQtAppButtonStates:
     """Test button state management."""
 
-    def test_process_button_disabled_when_no_folders(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_process_button_toggled_when_no_folders(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
         """Test Process button is disabled when there are no folders."""
         mock_database.folders_table.count.return_value = 0
 
@@ -265,7 +265,7 @@ class TestQtAppButtonStates:
 
         assert app._process_folder_button.isEnabled() is True
 
-    def test_processed_files_button_disabled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_processed_files_button_toggled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
         """Test Processed Files button is disabled when no files processed."""
         mock_database.processed_files.count.return_value = 0
 
@@ -293,7 +293,7 @@ class TestQtAppButtonStates:
 
         assert app._processed_files_button.isEnabled() is True
 
-    def test_resend_button_disabled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_resend_button_toggled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
         """Test Enable Resend button is disabled when no files processed."""
         mock_database.processed_files.count.return_value = 0
 
@@ -629,8 +629,8 @@ class TestQtAppWindowConfiguration:
         assert app._window.minimumHeight() > 0
 
     @patch('sys.argv', ['test_app'])
-    def test_window_has_fixed_width(self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
-        """Test that window has fixed width set."""
+    def test_window_is_resizable(self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+        """Test that window is resizable."""
         app = _make_app(
             database_obj=mock_database,
             ui_service=mock_ui_service,
@@ -638,8 +638,10 @@ class TestQtAppWindowConfiguration:
         )
         app.initialize()
 
-        # After configuration, width should be fixed
-        assert app._window.width() == app._window.maximumWidth()
+        # Window should be resizable (not fixed width)
+        # Qt uses 16777215 as default maximum (effectively unlimited)
+        assert app._window.maximumWidth() > app._window.minimumWidth()
+        assert app._window.maximumHeight() > app._window.minimumHeight()
 
 
 class TestQtAppFilterFunctionality:

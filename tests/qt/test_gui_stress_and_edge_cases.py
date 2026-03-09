@@ -649,7 +649,7 @@ class TestFolderListWidgetStress:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         
@@ -671,7 +671,7 @@ class TestFolderListWidgetStress:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         
@@ -693,7 +693,7 @@ class TestFolderListWidgetStress:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         
@@ -716,7 +716,7 @@ class TestFolderListWidgetStress:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=MagicMock(), on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         
@@ -743,7 +743,7 @@ class TestFolderListWidgetStress:
             widget = FolderListWidget(
                 parent=None, folders_table=table,
                 on_send=MagicMock(), on_edit=MagicMock(),
-                on_disable=MagicMock(), on_delete=MagicMock(),
+                on_toggle=MagicMock(), on_delete=MagicMock(),
                 filter_value="[test]",
             )
         qtbot.addWidget(widget)
@@ -764,7 +764,7 @@ class TestFolderListWidgetStress:
         widget = FolderListWidget(
             parent=None, folders_table=table,
             on_send=failing_callback, on_edit=MagicMock(),
-            on_disable=MagicMock(), on_delete=MagicMock(),
+            on_toggle=MagicMock(), on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         
@@ -791,7 +791,7 @@ class TestFolderListWidgetStress:
             widget = FolderListWidget(
                 parent=None, folders_table=table,
                 on_send=MagicMock(), on_edit=MagicMock(),
-                on_disable=MagicMock(), on_delete=MagicMock(),
+                on_toggle=MagicMock(), on_delete=MagicMock(),
                 total_count_callback=failing_count,
             )
             qtbot.addWidget(widget)

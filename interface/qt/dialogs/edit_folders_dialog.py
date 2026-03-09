@@ -327,9 +327,9 @@ class EditFoldersDialog(BaseDialog):
         extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(
             self._fields, framework='qt'
         )
-        self.plugin_config_mapper.update_folder_configuration_from_dict(
-            target, extracted_configs
-        )
+        # Note: Don't add plugin_configurations to target dict for database storage.
+        # The plugin configurations are managed separately and not persisted in the
+        # folders table yet. Only update internal state for UI.
         self.plugin_config_mapper.state_manager.mark_saved()
 
     def get_fields(self) -> Dict[str, QWidget]:

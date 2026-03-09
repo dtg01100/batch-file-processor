@@ -9,7 +9,7 @@ import os
 import logging
 from typing import Dict, Any, Optional, Callable, List
 
-from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QPushButton
+from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QPushButton, QCheckBox
 
 
 class EventHandlers:
@@ -60,7 +60,7 @@ class EventHandlers:
     def update_active_state(self):
         """Update the active state of the folder and all child widgets."""
         active_btn = self.fields.get("active_checkbutton")
-        if not isinstance(active_btn, QPushButton):
+        if not isinstance(active_btn, QCheckBox):
             return
 
         is_active = active_btn.isChecked()

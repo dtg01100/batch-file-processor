@@ -338,7 +338,7 @@ class TestConvertToCSVCRecords(TestConvertToCSVFixtures):
 class TestConvertToCSVUPCCalculation(TestConvertToCSVFixtures):
     """Test UPC calculation and check digit handling."""
 
-    def test_upc_check_digit_calculation_disabled(self, complete_edi_content, default_parameters,
+    def test_upc_check_digit_calculation_toggled(self, complete_edi_content, default_parameters,
                                                    default_settings, empty_upc_lut, tmp_path):
         """Test UPC check digit calculation when disabled."""
         default_parameters['calculate_upc_check_digit'] = "False"

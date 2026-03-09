@@ -713,7 +713,7 @@ class TestDatabaseImportDialog:
         assert dialog.windowTitle() == "folders.db merging utility"
         assert dialog.isModal() is True
     
-    def test_select_button_disabled_initially(self, qtbot, monkeypatch):
+    def test_select_button_toggled_initially(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
         dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
         qtbot.addWidget(dialog)
@@ -743,7 +743,7 @@ class TestDatabaseImportDialog:
         assert dialog._db_label.text() == "/test.db"
         assert dialog._import_button.isEnabled() is True
     
-    def test_import_button_disabled_when_no_file_selected(self, qtbot, monkeypatch):
+    def test_import_button_toggled_when_no_file_selected(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
         dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
         qtbot.addWidget(dialog)
