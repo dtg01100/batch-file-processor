@@ -1014,3 +1014,72 @@ def upgrade_database(
         update_version = dict(id=1, version="41", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("40", "41")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if db_version_dict["version"] == "41":
+        # Normalize string boolean values (True/False) to integer values (1/0)
+        boolean_fields = [
+            'folder_is_active',
+            'process_edi',
+            'calculate_upc_check_digit',
+            'include_a_records',
+            'include_c_records',
+            'include_headers',
+            'filter_ampersand',
+            'pad_a_records',
+            'tweak_edi',
+            'split_edi',
+            'force_edi_validation',
+            'append_a_records',
+            'force_txt_file_ext',
+            'prepend_date_files',
+            'override_upc_bool',
+            'split_edi_include_invoices',
+            'split_edi_include_credits',
+            'process_backend_copy',
+            'process_edi_output',
+            'process_backend_email',
+            'process_backend_ftp',
+        ]
+        
+        # Normalize folders table
+        for field in boolean_fields:
+            try:
+                # Replace True with 1
+                database_connection.query(f"UPDATE folders SET {field} = 1 WHERE {field} = 'True'")
+                # Replace False with 0
+                database_connection.query(f"UPDATE folders SET {field} = 0 WHERE {field} = 'False'")
+            except Exception as e:
+                print(f"Error normalizing field {field} in folders: {e}")
+                # Skip fields that don't exist in this version
+                
+        # Normalize administrative table
+        for field in boolean_fields:
+            try:
+                # Replace True with 1
+                database_connection.query(f"UPDATE administrative SET {field} = 1 WHERE {field} = 'True'")
+                # Replace False with 0
+                database_connection.query(f"UPDATE administrative SET {field} = 0 WHERE {field} = 'False'")
+            except Exception as e:
+                print(f"Error normalizing field {field} in administrative: {e}")
+                # Skip fields that don't exist in this version
+                
+        # Normalize settings table
+        try:
+            database_connection.query("UPDATE settings SET enable_email = 1 WHERE enable_email = 'True'")
+            database_connection.query("UPDATE settings SET enable_email = 0 WHERE enable_email = 'False'")
+            database_connection.query("UPDATE settings SET enable_interval_backups = 1 WHERE enable_interval_backups = 'True'")
+            database_connection.query("UPDATE settings SET enable_interval_backups = 0 WHERE enable_interval_backups = 'False'")
+        except Exception as e:
+            print(f"Error normalizing settings table: {e}")
+
+        update_version = dict(id=1, version="42", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("41", "42")

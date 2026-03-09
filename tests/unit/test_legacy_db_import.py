@@ -306,7 +306,7 @@ class TestOldV33DatabaseMigration:
 
         folder = db['folders'].find_one(id=1)
         assert 'plugin_config' in folder
-        assert folder['plugin_config'] == ""
+        assert folder['plugin_config'] == {}
 
         admin = db['administrative'].find_one(id=1)
         assert 'plugin_config' in admin
@@ -426,7 +426,7 @@ class TestV32DatabaseMigration:
         assert 'split_edi_filter_mode' in folder
         assert folder['split_edi_filter_mode'] == "include"
         assert 'plugin_config' in folder
-        assert folder['plugin_config'] == ""
+        assert folder['plugin_config'] == {}
 
         admin = db['administrative'].find_one(id=1)
         assert 'split_edi_filter_categories' in admin
