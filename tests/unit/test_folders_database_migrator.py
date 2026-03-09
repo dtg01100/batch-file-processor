@@ -9,6 +9,8 @@ Tests cover:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 import tempfile
 import os
 from io import StringIO

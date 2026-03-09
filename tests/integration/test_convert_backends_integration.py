@@ -11,6 +11,10 @@ Tests:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.backend, pytest.mark.conversion]
+
+import sys
 import sys
 import os
 import tempfile

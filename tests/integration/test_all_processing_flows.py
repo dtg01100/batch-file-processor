@@ -9,6 +9,10 @@ This test suite covers:
 6. Folder configuration CRUD flow - Create, read, update, delete folder configs
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow, pytest.mark.slow]
+
 import os
 import tempfile
 import shutil

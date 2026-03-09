@@ -11,6 +11,8 @@ Tests:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.database]
 import sys
 import os
 import tempfile

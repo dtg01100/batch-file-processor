@@ -22,7 +22,111 @@ Deprecation Timeline:
 """
 
 import warnings
-from typing import Any
+from typing import Any, Dict, Optional
+
+
+def parse_legacy_process_edi_flag(value: Any) -> bool:
+    """Parse legacy process_edi flag to boolean.
+    
+    Args:
+        value: Legacy value (string "True"/"False", boolean, etc.)
+        
+    Returns:
+        Boolean value
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() == "true"
+    return bool(value)
+
+
+def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Convert legacy backend configuration to modern nested format.
+    
+    Args:
+        legacy_config: Legacy flat configuration dict
+        
+    Returns:
+        Modern nested configuration dict with 'copy', 'ftp', 'email' keys
+    """
+    return {
+        'copy': {
+            'enabled': bool(legacy_config.get('process_backend_copy', False)),
+            'directory': legacy_config.get('copy_to_directory', ''),
+        },
+        'ftp': {
+            'enabled': bool(legacy_config.get('process_backend_ftp', False)),
+            'server': legacy_config.get('ftp_server', ''),
+            'port': legacy_config.get('ftp_port', 21),
+            'username': legacy_config.get('ftp_username', ''),
+            'password': legacy_config.get('ftp_password', ''),
+            'folder': legacy_config.get('ftp_folder', ''),
+        },
+        'email': {
+            'enabled': bool(legacy_config.get('process_backend_email', False)),
+            'to': legacy_config.get('email_to', ''),
+            'subject': legacy_config.get('email_subject_line', ''),
+        },
+    }
+
+
+def modern_config_to_legacy(modern_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert modern backend configuration to legacy flat format.
+    
+    Args:
+        modern_config: Modern nested configuration dict
+        
+    Returns:
+        Legacy flat configuration dict
+    """
+    legacy = {}
+    
+    # Copy backend
+    copy_cfg = modern_config.get('copy', {})
+    legacy['process_backend_copy'] = copy_cfg.get('enabled', False)
+    legacy['copy_to_directory'] = copy_cfg.get('directory', '')
+    
+    # FTP backend
+    ftp_cfg = modern_config.get('ftp', {})
+    legacy['process_backend_ftp'] = ftp_cfg.get('enabled', False)
+    legacy['ftp_server'] = ftp_cfg.get('server', '')
+    legacy['ftp_port'] = ftp_cfg.get('port', 21)
+    legacy['ftp_username'] = ftp_cfg.get('username', '')
+    legacy['ftp_password'] = ftp_cfg.get('password', '')
+    legacy['ftp_folder'] = ftp_cfg.get('folder', '')
+    
+    # Email backend
+    email_cfg = modern_config.get('email', {})
+    legacy['process_backend_email'] = email_cfg.get('enabled', False)
+    legacy['email_to'] = email_cfg.get('to', '')
+    legacy['email_subject_line'] = email_cfg.get('subject', '')
+    
+    return legacy
+
+
+def legacy_config_to_modern(legacy_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert legacy folder configuration to modern format.
+    
+    Args:
+        legacy_config: Legacy folder configuration dict
+        
+    Returns:
+        Modern configuration dict with nested 'edi' and 'backends' sections
+    """
+    modern = {
+        'id': legacy_config.get('id'),
+        'name': legacy_config.get('folder_name', ''),
+        'alias': legacy_config.get('alias', ''),
+        'edi': {
+            'enabled': parse_legacy_process_edi_flag(legacy_config.get('process_edi')),
+            'force_validation': legacy_config.get('force_edi_validation', False),
+        },
+        'backends': convert_backend_config(legacy_config),
+    }
+    return modern
 
 # Module-level deprecation message
 _DEPRECATION_MSG = (

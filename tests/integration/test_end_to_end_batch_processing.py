@@ -10,6 +10,10 @@ This test exercises the complete batch processing flow from start to finish:
 Uses real file system and refactored components for realistic testing.
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.dispatch, pytest.mark.workflow]
+
 import os
 import tempfile
 import shutil

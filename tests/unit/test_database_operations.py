@@ -19,6 +19,8 @@ Database tables tested:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.database]
 from unittest.mock import patch, MagicMock
 import tempfile
 import os

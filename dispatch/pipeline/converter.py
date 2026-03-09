@@ -408,23 +408,48 @@ class EDIConverterStep:
             error_source="EDIConverter"
         )
     
-    def execute(self, file_path: str, folder: dict) -> str | None:
+    def execute(self, file_path: str, folder: dict, settings: Optional[dict] = None, upc_dict: Optional[dict] = None) -> str | None:
         """Execute convert step (wrapper for pipeline compatibility).
         
         Args:
             file_path: Path to the file to convert
             folder: Folder configuration dictionary
+            settings: Global settings dictionary
+            upc_dict: UPC dictionary for lookups
             
         Returns:
             Path to converted file, or None if conversion failed/not needed
         """
+        import os
         import tempfile
+        import shutil
         
-        settings = folder.get('settings', {})
-        upc_dict = folder.get('upc_dict', {})
+        effective_settings = settings if settings is not None else folder.get('settings', {})
+        effective_upc_dict = upc_dict if upc_dict is not None else folder.get('upc_dict', {})
         
-        with tempfile.TemporaryDirectory() as temp_dir:
-            result = self.convert(file_path, temp_dir, folder, settings, upc_dict)
-            if result.success and result.output_path != file_path:
+        # Create a TEMPORARY directory for intermediate processing
+        temp_dir = tempfile.mkdtemp(prefix="edi_converter_")
+        
+        # Register with folder so orchestrator can clean up later
+        if '_pipeline_temp_dirs' not in folder:
+            folder['_pipeline_temp_dirs'] = []
+        folder['_pipeline_temp_dirs'].append(temp_dir)
+        
+        try:
+            result = self.convert(file_path, temp_dir, folder, effective_settings, effective_upc_dict)
+            if result.success and result.output_path != file_path and os.path.exists(result.output_path):
+                # Return the output path directly while temp_dir still exists
+                # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
+            
+            # Cleanup if conversion didn't produce output
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            if temp_dir in folder['_pipeline_temp_dirs']:
+                folder['_pipeline_temp_dirs'].remove(temp_dir)
             return None
+        except Exception as e:
+            # Cleanup on exception
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            if temp_dir in folder['_pipeline_temp_dirs']:
+                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            raise

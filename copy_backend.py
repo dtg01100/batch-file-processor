@@ -45,7 +45,7 @@ def do(
     
     # Ensure destination directory exists
     dest_dir = process_parameters['copy_to_directory']
-    if not file_ops.dir_exists(dest_dir):
+    if not file_ops.exists(dest_dir):
         try:
             file_ops.makedirs(dest_dir)
         except Exception as e:

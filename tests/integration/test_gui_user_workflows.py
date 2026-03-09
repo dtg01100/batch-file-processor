@@ -9,6 +9,10 @@ Tests cover end-to-end user interactions with the GUI:
 6. Resend workflow (mark and resend files)
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.qt, pytest.mark.gui, pytest.mark.workflow, pytest.mark.slow]
+
 import os
 import tempfile
 from pathlib import Path

@@ -17,6 +17,10 @@ Converters tested:
 - convert_to_jolley_custom.py
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
+
 import csv
 import os
 import pytest

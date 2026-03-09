@@ -5,6 +5,10 @@ Docker image (which uses Wine + Windows Python inside Ubuntu) and verify
 the real artifact works correctly via --self-test and --help under Wine.
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.pyinstaller, pytest.mark.slow, pytest.mark.build]
+
 import os
 import shutil
 import subprocess

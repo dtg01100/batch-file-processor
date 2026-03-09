@@ -7,6 +7,10 @@ These tests verify that the dispatch orchestrator correctly integrates with:
 Tests use real convert/send modules with mocked file system and network operations.
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.dispatch, pytest.mark.backend]
+
 import os
 import tempfile
 import hashlib

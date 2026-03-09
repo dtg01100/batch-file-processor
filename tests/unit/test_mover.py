@@ -8,6 +8,10 @@ Tests:
 - Thread safety
 """
 
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
+
 import os
 import tempfile
 from pathlib import Path

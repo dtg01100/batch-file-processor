@@ -81,8 +81,17 @@ class UILayoutBuilder:
 
     def build_ui(self):
         """Build the complete dialog UI layout."""
-        # Create outer layout with scroll area
-        outer_layout = QVBoxLayout(self.dialog)
+        # Use existing layout from BaseDialog if available, otherwise create new
+        if hasattr(self.dialog, "_main_layout"):
+            outer_layout = self.dialog._main_layout
+            # Clear any existing widgets from the dialog's standard body/button box
+            # as we are taking over complete layout management for this complex dialog
+            if hasattr(self.dialog, "_body_widget"):
+                self.dialog._body_widget.setVisible(False)
+            if hasattr(self.dialog, "_button_box"):
+                self.dialog._button_box.setVisible(False)
+        else:
+            outer_layout = QVBoxLayout(self.dialog)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)

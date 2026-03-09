@@ -1103,6 +1103,86 @@ class TestQtUIServiceStress:
 
 
 # ---------------------------------------------------------------------------
+# QtBatchFileSenderApp - Smoke and Crash Tests
+# ---------------------------------------------------------------------------
+@pytest.mark.qt
+class TestAppSmokeActions:
+    """Smoke tests for common app actions to ensure they don't crash."""
+
+    @pytest.fixture
+    def app(self, qtbot, tmp_path, monkeypatch):
+        """Create a functional app instance for testing."""
+        from interface.qt.app import QtBatchFileSenderApp
+        from interface.database.database_obj import DatabaseObj
+        import create_database
+        import platform
+        import appdirs
+        
+        # Mock appdirs to return tmp_path
+        monkeypatch.setattr(appdirs, "user_data_dir", lambda name: str(tmp_path / name))
+        
+        # Use name matching appdirs mock
+        appname = "Test App"
+        config_folder = str(tmp_path / appname)
+        os.makedirs(config_folder, exist_ok=True)
+        db_path = os.path.join(config_folder, "folders.db")
+        
+        # Create real database file at the expected location
+        create_database.do("41", db_path, config_folder, platform.system())
+        
+        db_obj = DatabaseObj(
+            database_path=db_path,
+            database_version="41",
+            config_folder=config_folder,
+            running_platform=platform.system()
+        )
+        
+        app = QtBatchFileSenderApp(
+            appname=appname,
+            version="1.0",
+            database_obj=db_obj
+        )
+        return app
+
+    def test_set_defaults_action_no_crash(self, app, qtbot, monkeypatch):
+        """Test that clicking 'Set Defaults' doesn't crash (fixes recent NameError/QLayout issues)."""
+        app.initialize([])
+        
+        # Mock QDialog.exec to avoid blocking
+        monkeypatch.setattr("PyQt6.QtWidgets.QDialog.exec", lambda self: 1)
+        
+        # This triggered the crash reported by user
+        app._set_defaults_popup()
+        
+        # If we reached here without exception, the test passed
+
+    def test_add_directory_action_no_crash(self, app, qtbot, monkeypatch, tmp_path):
+        """Test that 'Add Directory' action doesn't crash."""
+        app.initialize([])
+        
+        # Mock QFileDialog
+        monkeypatch.setattr(
+            "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
+            lambda *args, **kwargs: str(tmp_path)
+        )
+        # Mock QMessageBox.question to avoid blocking
+        from PyQt6.QtWidgets import QMessageBox
+        monkeypatch.setattr(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            lambda *args, **kwargs: QMessageBox.StandardButton.Yes
+        )
+        # Mock dialog exec
+        monkeypatch.setattr("PyQt6.QtWidgets.QDialog.exec", lambda self: 1)
+        
+        app._select_folder()
+
+    def test_maintenance_action_no_crash(self, app, qtbot, monkeypatch):
+        """Test that 'Maintenance' action doesn't crash."""
+        app.initialize([])
+        monkeypatch.setattr("PyQt6.QtWidgets.QDialog.exec", lambda self: 1)
+        app._show_maintenance_dialog_wrapper()
+
+# ---------------------------------------------------------------------------
 # EditFoldersDialog - Stress and Edge Cases
 # ---------------------------------------------------------------------------
 @pytest.mark.qt

@@ -1,5 +1,7 @@
 """Tests for QtBatchFileSenderApp using pytest-qt."""
 import pytest
+
+pytestmark = [pytest.mark.qt, pytest.mark.gui, pytest.mark.slow]
 from unittest.mock import MagicMock
 import os
 import argparse
@@ -690,7 +692,7 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._parse_arguments = MagicMock()
-        app._args = argparse.Namespace(self_test=False, automatic=True)
+        app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=True)
         app._automatic_process_directories = MagicMock()
 
         monkeypatch.setattr("interface.qt.app.multiprocessing.freeze_support", lambda: None)
@@ -1244,7 +1246,7 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._parse_arguments = MagicMock()
-        app._args = argparse.Namespace(self_test=False, automatic=False)
+        app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=False)
         app._setup_config_directories = MagicMock()
         app._build_main_window = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -1260,11 +1262,21 @@ class TestQtBatchFileSenderApp:
         mock_qapp.instance.return_value = None
         mock_qapp.return_value = mock_qapp_instance
 
+        class _FakeUIService:
+            def __init__(self, parent=None):
+                self.parent = parent
+
+        class _FakeProgressService:
+            def __init__(self, parent=None):
+                self.parent = parent
+
         monkeypatch.setattr("interface.qt.app.multiprocessing.freeze_support", lambda: None)
         monkeypatch.setattr("interface.qt.app.DatabaseObj", lambda *a, **kw: mock_db)
         monkeypatch.setattr("interface.qt.app.FolderManager", lambda *_: MagicMock())
         monkeypatch.setattr("interface.qt.app.ReportingService", lambda **_: MagicMock())
         monkeypatch.setattr("interface.qt.app.QApplication", mock_qapp)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtUIService", _FakeUIService)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtProgressService", _FakeProgressService)
 
         app.initialize()
 
@@ -1285,7 +1297,7 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp(database_obj=mock_db)
         app._parse_arguments = MagicMock()
-        app._args = argparse.Namespace(self_test=False, automatic=False)
+        app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=False)
         app._setup_config_directories = MagicMock()
         app._build_main_window = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -1296,19 +1308,28 @@ class TestQtBatchFileSenderApp:
         mock_qapp.instance.return_value = None
         mock_qapp.return_value = mock_qapp_instance
 
+        class _FakeUIService:
+            def __init__(self, parent=None):
+                self.parent = parent
+
+        class _FakeProgressService:
+            def __init__(self, parent=None):
+                self.parent = parent
+
         monkeypatch.setattr("interface.qt.app.multiprocessing.freeze_support", lambda: None)
         monkeypatch.setattr("interface.qt.app.FolderManager", lambda *_: MagicMock())
         monkeypatch.setattr("interface.qt.app.ReportingService", lambda **_: MagicMock())
         monkeypatch.setattr("interface.qt.app.QApplication", mock_qapp)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtUIService", _FakeUIService)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtProgressService", _FakeProgressService)
 
         app.initialize()
 
         assert app._database is mock_db
 
-    def test_initialize_creates_ui_and_progress_services(self, monkeypatch, qtbot):
+    def test_initialize_creates_ui_and_progress_services(self, monkeypatch):
         """Test initialize creates UI and progress services."""
         from interface.qt.app import QtBatchFileSenderApp
-        from PyQt6.QtWidgets import QMainWindow
 
         mock_db = MagicMock()
         mock_db.folders_table = MagicMock()
@@ -1317,7 +1338,7 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp(database_obj=mock_db)
         app._parse_arguments = MagicMock()
-        app._args = argparse.Namespace(self_test=False, automatic=False)
+        app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=False)
         app._setup_config_directories = MagicMock()
         app._build_main_window = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -1328,15 +1349,20 @@ class TestQtBatchFileSenderApp:
         mock_qapp.instance.return_value = None
         mock_qapp.return_value = mock_qapp_instance
 
-        # Use a real QMainWindow for QtProgressService parent
-        real_window = QMainWindow()
-        qtbot.addWidget(real_window)
+        class _FakeUIService:
+            def __init__(self, parent=None):
+                self.parent = parent
+
+        class _FakeProgressService:
+            def __init__(self, parent=None):
+                self.parent = parent
 
         monkeypatch.setattr("interface.qt.app.multiprocessing.freeze_support", lambda: None)
         monkeypatch.setattr("interface.qt.app.FolderManager", lambda *_: MagicMock())
         monkeypatch.setattr("interface.qt.app.ReportingService", lambda **_: MagicMock())
         monkeypatch.setattr("interface.qt.app.QApplication", mock_qapp)
-        monkeypatch.setattr("interface.qt.app.QMainWindow", lambda: real_window)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtUIService", _FakeUIService)
+        monkeypatch.setattr("interface.qt.services.qt_services.QtProgressService", _FakeProgressService)
 
         app.initialize()
 
@@ -1461,3 +1487,504 @@ class TestQtBatchFileSenderApp:
             assert app._args.self_test is False
         finally:
             sys.argv = original_argv
+
+
+@pytest.mark.qt
+class TestQtAppInteractionWorkflows:
+    """Focused interaction tests for app <-> dialog <-> folder manager paths."""
+
+    def test_open_edit_dialog_apply_success_persists_and_refreshes(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+
+        class _FakeEditFoldersDialog:
+            def __init__(self, parent, folder_config, on_apply_success=None, **kwargs):
+                self.folder_config = dict(folder_config)
+                self.on_apply_success = on_apply_success
+
+            def exec(self):
+                updated = dict(self.folder_config)
+                updated["id"] = 42
+                updated["alias"] = "Updated Alias"
+                self.on_apply_success(updated)
+                return 1
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.edit_folders_dialog.EditFoldersDialog",
+            _FakeEditFoldersDialog,
+        )
+
+        app._open_edit_folders_dialog({"id": 42, "alias": "Before"})
+
+        db.folders_table.update.assert_called_once_with(
+            {"id": 42, "alias": "Updated Alias"},
+            ["id"],
+        )
+        app._refresh_users_list.assert_called_once()
+        app._set_main_button_states.assert_called_once()
+
+    def test_open_edit_dialog_cancel_does_not_refresh(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+
+        class _FakeEditFoldersDialog:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def exec(self):
+                return 0
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.edit_folders_dialog.EditFoldersDialog",
+            _FakeEditFoldersDialog,
+        )
+
+        app._open_edit_folders_dialog({"id": 42, "alias": "Before"})
+
+        db.folders_table.update.assert_not_called()
+        app._refresh_users_list.assert_not_called()
+        app._set_main_button_states.assert_not_called()
+
+    def test_edit_folder_selector_existing_opens_dialog(self):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._database.folders_table.find_one.return_value = {"id": 12, "folder_name": "/tmp/f"}
+        app._open_edit_folders_dialog = MagicMock()
+
+        app._edit_folder_selector(12)
+
+        app._open_edit_folders_dialog.assert_called_once_with({"id": 12, "folder_name": "/tmp/f"})
+
+    def test_select_folder_existing_user_declines_no_dialog(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._ui_service = MagicMock()
+        app._progress_service = MagicMock()
+        app._folder_manager = MagicMock()
+        app._open_edit_folders_dialog = MagicMock()
+
+        app._database.get_oversight_or_default.return_value = {"single_add_folder_prior": ""}
+        app._ui_service.ask_directory.return_value = "/tmp/existing"
+        app._folder_manager.check_folder_exists.return_value = {
+            "truefalse": True,
+            "matched_folder": {"id": 55, "folder_name": "/tmp/existing"},
+        }
+        app._ui_service.ask_ok_cancel.return_value = False
+
+        monkeypatch.setattr("interface.qt.app.os.path.exists", lambda *_: True)
+
+        app._select_folder()
+
+        app._open_edit_folders_dialog.assert_not_called()
+
+    def test_select_folder_new_user_skips_mark_processed(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._ui_service = MagicMock()
+        app._progress_service = MagicMock()
+        app._folder_manager = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._mark_active_as_processed_wrapper = MagicMock()
+
+        selected = "/tmp/new-folder"
+        app._database.get_oversight_or_default.return_value = {"single_add_folder_prior": ""}
+        app._ui_service.ask_directory.return_value = selected
+        app._folder_manager.check_folder_exists.return_value = {"truefalse": False}
+        app._ui_service.ask_yes_no.return_value = False
+
+        monkeypatch.setattr("interface.qt.app.os.path.exists", lambda *_: True)
+
+        app._select_folder()
+
+        app._folder_manager.add_folder.assert_called_once_with(selected)
+        app._mark_active_as_processed_wrapper.assert_not_called()
+        app._refresh_users_list.assert_called_once()
+        app._progress_service.show.assert_called_once_with("Adding Folder...")
+        app._progress_service.hide.assert_called_once()
+
+    def test_batch_add_folders_cancelled_confirmation_skips_manager_calls(self, tmp_path):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        root = tmp_path / "parent"
+        root.mkdir()
+        (root / "new1").mkdir()
+        (root / "new2").mkdir()
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._ui_service = MagicMock()
+        app._progress_service = MagicMock()
+        app._folder_manager = MagicMock()
+        app._refresh_users_list = MagicMock()
+
+        app._database.get_oversight_or_default.return_value = {"batch_add_folder_prior": ""}
+        app._ui_service.ask_directory.return_value = str(root)
+        app._ui_service.ask_ok_cancel.return_value = False
+
+        app._batch_add_folders()
+
+        app._database.oversight_and_defaults.update.assert_called_once()
+        app._folder_manager.add_folder.assert_not_called()
+        app._progress_service.show.assert_not_called()
+        app._refresh_users_list.assert_not_called()
+
+    def test_delete_folder_confirmed_triggers_refresh_and_button_state(self):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._ui_service = MagicMock()
+        app._folder_manager = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+
+        app._ui_service.ask_yes_no.return_value = True
+
+        app._delete_folder_entry_wrapper(42, "alias-42")
+
+        app._folder_manager.delete_folder_with_related.assert_called_once_with(42)
+        app._refresh_users_list.assert_called_once()
+        app._set_main_button_states.assert_called_once()
+
+    def test_show_processed_files_dialog_wrapper_wires_dependencies(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._window = MagicMock()
+        app._database = MagicMock()
+        app._ui_service = MagicMock()
+
+        captured = {}
+
+        class _FakeProcessedFilesDialog:
+            def __init__(self, parent=None, database_obj=None, ui_service=None):
+                captured["parent"] = parent
+                captured["database_obj"] = database_obj
+                captured["ui_service"] = ui_service
+
+            def exec(self):
+                captured["executed"] = True
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.processed_files_dialog.ProcessedFilesDialog",
+            _FakeProcessedFilesDialog,
+        )
+
+        app._show_processed_files_dialog_wrapper()
+
+        assert captured["parent"] is app._window
+        assert captured["database_obj"] is app._database
+        assert captured["ui_service"] is app._ui_service
+        assert captured.get("executed") is True
+
+    def test_show_resend_dialog_skips_exec_when_dialog_not_ready(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._window = MagicMock()
+        app._database = MagicMock()
+        app._database.database_connection = MagicMock()
+
+        exec_called = MagicMock()
+
+        class _FakeResendDialog:
+            def __init__(self, parent=None, database_connection=None):
+                self._should_show = False
+                self._parent = parent
+                self._db = database_connection
+
+            def exec(self):
+                exec_called()
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendDialog",
+            _FakeResendDialog,
+        )
+
+        app._show_resend_dialog()
+
+        exec_called.assert_not_called()
+
+    def test_show_edit_settings_dialog_callback_wiring(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        db.get_oversight_or_default.return_value = {"id": 1}
+        db.get_settings_or_default.return_value = {"id": 2}
+        db.settings = MagicMock()
+        db.oversight_and_defaults = MagicMock()
+        db.folders_table.count.return_value = 3
+
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._update_reporting = MagicMock()
+        app._disable_all_email_backends = MagicMock()
+        app._disable_folders_without_backends = MagicMock()
+
+        captured_kwargs = {}
+
+        class _FakeEditSettingsDialog:
+            def __init__(self, *args, **kwargs):
+                captured_kwargs.update(kwargs)
+
+            def exec(self):
+                return 1
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.edit_settings_dialog.EditSettingsDialog",
+            _FakeEditSettingsDialog,
+        )
+
+        app._show_edit_settings_dialog()
+
+        # Invoke wired callbacks to verify interaction plumbing
+        captured_kwargs["update_settings"]({"id": 9})
+        captured_kwargs["update_oversight"]({"id": 8})
+        captured_kwargs["on_apply"]({"enable_reporting": True})
+        captured_kwargs["refresh_callback"]()
+        captured_kwargs["disable_email_backends"]()
+        captured_kwargs["disable_folders_without_backends"]()
+
+        db.settings.update.assert_called_once_with({"id": 9}, ["id"])
+        db.oversight_and_defaults.update.assert_called_once_with({"id": 8}, ["id"])
+        app._update_reporting.assert_called_once_with({"enable_reporting": True})
+        app._refresh_users_list.assert_called_once()
+        app._disable_all_email_backends.assert_called_once()
+        app._disable_folders_without_backends.assert_called_once()
+
+    def test_show_maintenance_dialog_wrapper_callback_wiring(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        db.folders_table = MagicMock()
+        db.processed_files = MagicMock()
+
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._database_path = "/tmp/folders.db"
+        app._running_platform = "Linux"
+        app._database_version = "42"
+        app._folder_manager = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+        app._progress_service = MagicMock()
+        app._ui_service = MagicMock()
+        app._ui_service.ask_ok_cancel.return_value = True
+
+        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", lambda *_: None)
+
+        captured = {}
+
+        class _FakeMaintenanceFunctions:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        open_dialog_called = MagicMock()
+
+        monkeypatch.setattr(
+            "interface.operations.maintenance_functions.MaintenanceFunctions",
+            _FakeMaintenanceFunctions,
+        )
+        monkeypatch.setattr(
+            "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",
+            lambda **kwargs: open_dialog_called(**kwargs),
+        )
+
+        app._show_maintenance_dialog_wrapper()
+
+        # Verify callback wiring into maintenance functions
+        assert captured["delete_folder_callback"] is app._folder_manager.delete_folder_with_related
+        assert captured["refresh_callback"] is app._refresh_users_list
+        assert captured["set_button_states_callback"] is app._set_main_button_states
+        # confirm_callback delegates to UI service
+        assert captured["confirm_callback"]("Proceed?") is True
+        app._ui_service.ask_ok_cancel.assert_called_once_with("Confirm", "Proceed?")
+        assert open_dialog_called.call_count == 1
+
+    def test_mark_active_as_processed_wrapper_wires_delete_callback(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._folder_manager = MagicMock()
+        app._database_path = "/tmp/folders.db"
+        app._running_platform = "Linux"
+        app._database_version = "41"
+        app._progress_service = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+
+        captured = {}
+
+        class _FakeMaintenanceFunctions:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+            def mark_active_as_processed(self, selected_folder=None):
+                captured["selected_folder"] = selected_folder
+
+        monkeypatch.setattr(
+            "interface.operations.maintenance_functions.MaintenanceFunctions",
+            _FakeMaintenanceFunctions,
+        )
+
+        app._mark_active_as_processed_wrapper(selected_folder=99)
+
+        assert captured["delete_folder_callback"] is app._folder_manager.delete_folder_with_related
+        assert captured["selected_folder"] == 99
+
+    def test_set_defaults_popup_populates_advanced_defaults(self):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        db.get_oversight_or_default.return_value = {"id": 1}
+
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._open_edit_folders_dialog = MagicMock()
+
+        app._set_defaults_popup()
+
+        defaults = app._open_edit_folders_dialog.call_args[0][0]
+        assert defaults["folder_name"] == "template"
+        assert defaults["upc_target_length"] == 11
+        assert defaults["invoice_date_offset"] == 0
+        assert defaults["split_edi_filter_mode"] == "include"
+        assert defaults["convert_to_format"] == "csv"
+
+    def test_show_edit_settings_dialog_count_callbacks_query_expected_filters(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        db.get_oversight_or_default.return_value = {"id": 1}
+        db.get_settings_or_default.return_value = {"id": 2}
+        db.settings = MagicMock()
+        db.oversight_and_defaults = MagicMock()
+
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._update_reporting = MagicMock()
+        app._disable_all_email_backends = MagicMock()
+        app._disable_folders_without_backends = MagicMock()
+
+        captured_kwargs = {}
+
+        class _FakeEditSettingsDialog:
+            def __init__(self, *args, **kwargs):
+                captured_kwargs.update(kwargs)
+
+            def exec(self):
+                return 1
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.edit_settings_dialog.EditSettingsDialog",
+            _FakeEditSettingsDialog,
+        )
+
+        app._show_edit_settings_dialog()
+
+        _ = captured_kwargs["count_email_backends"]()
+        _ = captured_kwargs["count_disabled_folders"]()
+
+        assert db.folders_table.count.call_count == 2
+        db.folders_table.count.assert_any_call(process_backend_email=True)
+        db.folders_table.count.assert_any_call(
+            process_backend_email=True,
+            process_backend_ftp=False,
+            process_backend_copy=False,
+            folder_is_active="True",
+        )
+
+    def test_show_maintenance_dialog_database_import_callback_branches(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        db = MagicMock()
+        db.folders_table = MagicMock()
+        db.processed_files = MagicMock()
+
+        app = QtBatchFileSenderApp(database_obj=db)
+        app._database = db
+        app._window = MagicMock()
+        app._database_path = "/tmp/folders.db"
+        app._running_platform = "Linux"
+        app._database_version = "42"
+        app._folder_manager = MagicMock()
+        app._refresh_users_list = MagicMock()
+        app._set_main_button_states = MagicMock()
+        app._progress_service = MagicMock()
+        app._ui_service = MagicMock()
+
+        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", lambda *_: None)
+
+        captured = {}
+
+        class _FakeMaintenanceFunctions:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        monkeypatch.setattr(
+            "interface.operations.maintenance_functions.MaintenanceFunctions",
+            _FakeMaintenanceFunctions,
+        )
+        monkeypatch.setattr(
+            "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",
+            lambda **kwargs: None,
+        )
+
+        # Success path
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.show_database_import_dialog",
+            lambda **kwargs: None,
+        )
+
+        app._show_maintenance_dialog_wrapper()
+        assert captured["database_import_callback"]("/tmp/backup.db") is True
+
+        # Failure path
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.show_database_import_dialog",
+            lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        app._show_maintenance_dialog_wrapper()
+        assert captured["database_import_callback"]("/tmp/backup.db") is False
+
+    def test_select_folder_ignores_nonexistent_selection(self, monkeypatch):
+        from interface.qt.app import QtBatchFileSenderApp
+
+        app = QtBatchFileSenderApp()
+        app._database = MagicMock()
+        app._ui_service = MagicMock()
+        app._progress_service = MagicMock()
+        app._folder_manager = MagicMock()
+
+        app._database.get_oversight_or_default.return_value = {"single_add_folder_prior": ""}
+        app._ui_service.ask_directory.return_value = "/tmp/does-not-exist"
+
+        monkeypatch.setattr("interface.qt.app.os.path.exists", lambda *_: False)
+
+        app._select_folder()
+
+        app._database.oversight_and_defaults.update.assert_not_called()
+        app._folder_manager.add_folder.assert_not_called()

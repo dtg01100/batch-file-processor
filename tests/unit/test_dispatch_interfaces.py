@@ -16,6 +16,8 @@ Tests cover:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 from unittest.mock import MagicMock, PropertyMock
 from typing import Any, Optional
 

@@ -211,6 +211,7 @@ def ensure_schema(database_connection) -> None:
         CREATE TABLE IF NOT EXISTS processed_files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_name TEXT,
+            folder_alias TEXT,
             md5 TEXT,
             file_checksum TEXT,
             resend_flag INTEGER,

@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QCheckBox,
     QLineEdit,
+    QComboBox,
 )
 from PyQt6.QtCore import Qt
 

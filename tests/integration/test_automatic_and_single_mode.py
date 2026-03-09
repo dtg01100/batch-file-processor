@@ -8,6 +8,10 @@ Note: The send_single and automatic_process_directories functions are nested ins
 create_GUI() in main_interface.py, so we test the underlying components and flows.
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.dispatch, pytest.mark.workflow]
+
 import os
 import tempfile
 import pytest

@@ -75,21 +75,22 @@ def edi_tweak(
     Returns:
         Path to the output file
     """
-    pad_arec = parameters_dict['pad_a_records']
+    pad_arec = utils.normalize_bool(parameters_dict['pad_a_records'])
     arec_padding = parameters_dict['a_record_padding']
     arec_padding_len = parameters_dict['a_record_padding_length']
-    append_arec = parameters_dict['append_a_records']
+    append_arec = utils.normalize_bool(parameters_dict['append_a_records'])
     append_arec_text = parameters_dict['a_record_append_text']
-    invoice_date_custom_format = parameters_dict['invoice_date_custom_format']
+    invoice_date_custom_format = utils.normalize_bool(parameters_dict['invoice_date_custom_format'])
     invoice_date_custom_format_string = parameters_dict['invoice_date_custom_format_string']
-    force_txt_file_ext = parameters_dict['force_txt_file_ext']
-    calc_upc = parameters_dict['calculate_upc_check_digit']
-    invoice_date_offset = parameters_dict['invoice_date_offset']
-    retail_uom = parameters_dict['retail_uom']
-    override_upc = parameters_dict['override_upc_bool']
+    force_txt_file_ext = utils.normalize_bool(parameters_dict['force_txt_file_ext'])
+    calc_upc = utils.normalize_bool(parameters_dict['calculate_upc_check_digit'])
+    invoice_date_offset = parameters_dict.get('invoice_date_offset')
+    invoice_date_offset = int(invoice_date_offset) if invoice_date_offset is not None else 0
+    retail_uom = utils.normalize_bool(parameters_dict['retail_uom'])
+    override_upc = utils.normalize_bool(parameters_dict['override_upc_bool'])
     override_upc_level = parameters_dict['override_upc_level']
     override_upc_category_filter = parameters_dict['override_upc_category_filter']
-    split_prepaid_sales_tax_crec = parameters_dict['split_prepaid_sales_tax_crec']
+    split_prepaid_sales_tax_crec = utils.normalize_bool(parameters_dict['split_prepaid_sales_tax_crec'])
     
     # Safely convert upc_target_length to int, handling None
     val = parameters_dict.get('upc_target_length')
@@ -112,7 +113,7 @@ def edi_tweak(
                 raise
     # work_file = open(edi_process)  # open input file
     work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-    if force_txt_file_ext == "True":
+    if force_txt_file_ext:
         output_filename = output_filename + ".txt"
 
     f = None
@@ -147,7 +148,6 @@ def edi_tweak(
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
                 if not invoice_date_string == "000000":
                     invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
-                    print(invoice_date_offset)
                     offset_invoice_date = invoice_date + timedelta(
                         days=invoice_date_offset
                     )
@@ -159,7 +159,7 @@ def edi_tweak(
                     a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, invoice_date_custom_format_string)
                 except ValueError:
                     a_rec_edi_dict['invoice_date'] = "ERROR"
-            if pad_arec == "True":
+            if pad_arec:
                 padding = arec_padding
                 fill = ' '
                 align = '<'
@@ -170,7 +170,7 @@ def edi_tweak(
                     a_rec_edi_dict['invoice_number'],
                     a_rec_edi_dict['invoice_date'],
                     a_rec_edi_dict['invoice_total']]
-            if append_arec == "True":
+            if append_arec:
                 if "%po_str%" in append_arec_text:
                     append_arec_text = append_arec_text.replace("%po_str%", po_fetcher.fetch_po_number(a_rec_edi_dict['invoice_number']))
                 a_rec_line_builder.append(append_arec_text)
@@ -218,7 +218,7 @@ def edi_tweak(
                         b_rec_edi_dict['unit_multiplier'] = '000001'
                     except Exception as error:
                         print(error)
-            if calc_upc == "True":
+            if calc_upc:
                 blank_upc = False
                 try:
                     _ = int(b_rec_edi_dict["upc_number"].rstrip())
@@ -228,9 +228,8 @@ def edi_tweak(
                 if blank_upc is False:
                     proposed_upc = b_rec_edi_dict["upc_number"].strip()
                     if len(str(proposed_upc)) == upc_target_length:
-                        b_rec_edi_dict['upc_number'] = str(proposed_upc) + str(
-                            utils.calc_check_digit(proposed_upc)
-                        )
+                        check_digit = utils.calc_check_digit(proposed_upc)
+                        b_rec_edi_dict['upc_number'] = str(proposed_upc) + str(check_digit)
                     else:
                         if len(str(proposed_upc)) == 8:
                             b_rec_edi_dict['upc_number'] = str(

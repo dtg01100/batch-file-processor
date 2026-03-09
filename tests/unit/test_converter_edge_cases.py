@@ -22,6 +22,10 @@ EDI record formats (fixed-width):
 - C record (38 chars): "C" + charge_type(3) + description(25) + amount(9)
 """
 
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.conversion]
+
 import csv
 import os
 import sys

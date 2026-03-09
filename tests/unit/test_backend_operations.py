@@ -10,6 +10,10 @@ Tests:
 - Error handling and retry logic
 """
 
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.backend]
+
 import io
 import os
 import tempfile

@@ -9,6 +9,10 @@ file from a legacy Windows installation. This database contains:
 The database is at version 32 with the Windows platform marker.
 """
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.database, pytest.mark.upgrade, pytest.mark.slow]
+
 import os
 import shutil
 import sqlite3

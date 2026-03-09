@@ -29,6 +29,8 @@ Tables tested:
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.database]
 from unittest.mock import MagicMock, patch
 import tempfile
 from pathlib import Path

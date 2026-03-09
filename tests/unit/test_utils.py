@@ -13,6 +13,10 @@ Tests cover:
 - do_clear_old_files() - removes oldest files when folder exceeds maximum count
 """
 
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.fast]
+
 import os
 import tempfile
 from datetime import datetime

@@ -363,7 +363,7 @@ class QtBatchFileSenderApp:
         # Run the event loop
         return self._app.exec()
 
-    def initialize(self) -> None:
+    def initialize(self, args: Optional[list[str]] = None) -> None:
         multiprocessing.freeze_support()
         
         # Fix Qt platform plugin issues: force X11 when Wayland is misconfigured
@@ -372,7 +372,7 @@ class QtBatchFileSenderApp:
         print(f"{self._appname} Version {self._version}")
         print(f"Running on {self._running_platform}")
 
-        self._parse_arguments()
+        self._parse_arguments(args)
         
         # Run self-test if requested
         if self._args.self_test:
@@ -474,12 +474,12 @@ class QtBatchFileSenderApp:
     # Argument parsing / config
     # ------------------------------------------------------------------
 
-    def _parse_arguments(self) -> None:
+    def _parse_arguments(self, args: Optional[list[str]] = None) -> None:
         launch_options = argparse.ArgumentParser()
         launch_options.add_argument("-a", "--automatic", action="store_true")
         launch_options.add_argument("-s", "--self-test", action="store_true", help="Run self-test and exit")
         launch_options.add_argument("-g", "--gui-test", action="store_true", help="Run GUI self-test (opens and closes main window)")
-        self._args = launch_options.parse_args()
+        self._args = launch_options.parse_args(args)
 
     def _setup_config_directories(self) -> None:
         self._config_folder = appdirs.user_data_dir(self._appname)

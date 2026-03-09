@@ -20,20 +20,23 @@ PYINSTALLER_VERSION = "6.11.0"
 BUILD_DIR = Path(__file__).parent.absolute() / "build_wine"
 DIST_DIR = Path(__file__).parent.absolute() / "dist_windows"
 PYINSTALLER_LOG = BUILD_DIR / "pyinstaller_wine.log"
+WINE_PREFIX = Path(
+    os.environ.get("BFP_WINEPREFIX", str(BUILD_DIR / "wineprefix"))
+).expanduser().resolve()
 
 
-def ensure_build_dir() -> None:
-    """Ensure build directory exists."""
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Using build directory: {BUILD_DIR}")
+def ensure_wine_prefix() -> None:
+    """Ensure Wine prefix directory exists and show location used for build."""
+    WINE_PREFIX.mkdir(parents=True, exist_ok=True)
+    print(f"Using WINEPREFIX: {WINE_PREFIX}")
 
 def run_wine(cmd, cwd=None, check=True, timeout=None):
     """Run a command through Wine."""
     wine_cmd = ["wine"] + cmd
     env = os.environ.copy()
-    # Use system Wine prefix (don't override with custom prefix)
+    env["WINEPREFIX"] = str(WINE_PREFIX)
     env["WINEDEBUG"] = "-all"  # Suppress wine debug output
-
+    
     result = subprocess.run(
         wine_cmd,
         cwd=cwd,
@@ -48,47 +51,33 @@ def run_wine(cmd, cwd=None, check=True, timeout=None):
 def setup_python():
     """Download and set up Python for Windows (embeddable)."""
     print("Setting up Python 3.11 for Windows...")
-
+    
     python_dir = BUILD_DIR / "python"
     python_zip = BUILD_DIR / "python.zip"
-
-    if python_dir.exists() and (python_dir / "python.exe").exists():
+    
+    if python_dir.exists():
         print("Python already downloaded.")
         return python_dir
-
+    
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
-
+    
     # Download Python embeddable
     if not python_zip.exists():
         print(f"Downloading Python {PYTHON_VERSION}...")
         urllib.request.urlretrieve(PYTHON_URL, python_zip)
-
-    # Extract Python - handle case where files extract to root
-    print("Extracting Python...")
-    if python_dir.exists():
-        shutil.rmtree(python_dir)
-    python_dir.mkdir(parents=True, exist_ok=True)
     
+    # Extract Python
+    print("Extracting Python...")
     with zipfile.ZipFile(python_zip, 'r') as zip_ref:
-        # Extract to temp location first
-        temp_extract_dir = BUILD_DIR / "python_temp"
-        if temp_extract_dir.exists():
-            shutil.rmtree(temp_extract_dir)
-        temp_extract_dir.mkdir(parents=True, exist_ok=True)
-        zip_ref.extractall(temp_extract_dir)
-        
-        # Move all files to python_dir (handles flat structure)
-        for item in temp_extract_dir.iterdir():
-            shutil.move(str(item), str(python_dir / item.name))
-        shutil.rmtree(temp_extract_dir)
-
+        zip_ref.extractall(python_dir)
+    
     # Enable site-packages by modifying python311._pth
     pth_file = python_dir / "python311._pth"
     if pth_file.exists():
         content = pth_file.read_text()
         content = content.replace("#import site", "import site")
         pth_file.write_text(content)
-
+    
     print("Python setup complete.")
     return python_dir
 
@@ -182,12 +171,13 @@ def install_dependencies(python_dir):
 def build_executable(python_dir):
     """Build the Windows executable using PyInstaller."""
     print("Building Windows executable...")
-
+    
     python_exe = python_dir / "python.exe"
     project_root = Path(__file__).parent.absolute()
 
     # Ensure no stale wine processes are holding file handles.
     env = os.environ.copy()
+    env["WINEPREFIX"] = str(WINE_PREFIX)
     env["WINEDEBUG"] = "-all"
     wineserver = shutil.which("wineserver")
     if wineserver:
@@ -195,17 +185,17 @@ def build_executable(python_dir):
         time.sleep(1)
     else:
         print("wineserver not found on PATH; continuing without explicit server reset.")
-
+    
     DIST_DIR.mkdir(parents=True, exist_ok=True)
 
     # Build to staging directory first; this avoids wine-side delete/permission
     # issues when PyInstaller tries to clean pre-existing dist folders.
     run_staging_dir = BUILD_DIR / f"dist_windows_staging_{int(time.time())}"
     run_staging_dir.mkdir(parents=True, exist_ok=True)
-
+    
     # Run PyInstaller
     spec_file = project_root / "main_interface.spec"
-
+    
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     with open(PYINSTALLER_LOG, "w", encoding="utf-8", errors="replace") as log_file:
         result = subprocess.run(
@@ -241,7 +231,7 @@ def build_executable(python_dir):
     if final_bundle.exists():
         shutil.rmtree(final_bundle, ignore_errors=True)
     shutil.copytree(staged_bundle, final_bundle)
-
+    
     print("Build completed!")
     return True
 
@@ -279,26 +269,26 @@ def main():
     print("Building Windows Executable with Wine")
     print("=" * 60)
     print()
-
+    
     try:
-        ensure_build_dir()
+        ensure_wine_prefix()
 
         # Setup Python
         python_dir = setup_python()
-
+        
         # Install pip
         install_pip(python_dir)
-
+        
         # Install dependencies
         install_dependencies(python_dir)
-
+        
         # Build executable
         if build_executable(python_dir):
             verify_build()
         else:
             print("Build failed!")
             sys.exit(1)
-
+            
     except subprocess.CalledProcessError as e:
         print(f"❌ Command failed: {e}")
         if e.stdout:

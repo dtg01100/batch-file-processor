@@ -5,6 +5,7 @@ coordinating validation, conversion, and sending of files.
 """
 
 from dataclasses import dataclass, field
+import datetime
 from io import StringIO
 from typing import Any, Optional
 
@@ -41,7 +42,6 @@ class DispatchConfig:
         tweaker_step: Pipeline tweaker step
         file_processor: File processor service
         upc_dict: Cached UPC dictionary
-        use_pipeline: Whether to use the new pipeline
     """
     database: Optional[DatabaseInterface] = None
     file_system: Optional[FileSystemInterface] = None
@@ -58,7 +58,6 @@ class DispatchConfig:
     tweaker_step: Optional[Any] = None
     file_processor: Optional[Any] = None
     upc_dict: dict = field(default_factory=dict)
-    use_pipeline: bool = True
 
 
 @dataclass
@@ -133,7 +132,7 @@ class DispatchOrchestrator:
         run_log: Any,
         processed_files: Optional[DatabaseInterface] = None
     ) -> FolderResult:
-        """Process a single folder.
+        """Process a single folder using the pipeline.
         
         Args:
             folder: Folder configuration dictionary
@@ -143,74 +142,8 @@ class DispatchOrchestrator:
         Returns:
             FolderResult with processing outcome
         """
-        if self.config.use_pipeline and self._is_pipeline_ready():
-            upc_dict = self._get_upc_dictionary(self.config.settings)
-            return self.process_folder_with_pipeline(folder, run_log, processed_files, upc_dict)
-        
-        return self._process_folder_legacy(folder, run_log, processed_files)
-    
-    def _process_folder_legacy(
-        self,
-        folder: dict,
-        run_log: Any,
-        processed_files: Optional[DatabaseInterface] = None
-    ) -> FolderResult:
-        """Process folder using legacy method.
-        
-        Args:
-            folder: Folder configuration dictionary
-            run_log: Run log for recording processing activity
-            processed_files: Optional database of already processed files
-            
-        Returns:
-            FolderResult with processing outcome
-        """
-        result = FolderResult(
-            folder_name=folder.get('folder_name', ''),
-            alias=folder.get('alias', '')
-        )
-        
-        folder_path = folder.get('folder_name', '')
-        if not self._folder_exists(folder_path):
-            error_msg = f"Folder not found: {folder_path}"
-            result.errors.append(error_msg)
-            result.success = False
-            result.files_failed = 1
-            self._log_error(run_log, error_msg)
-            return result
-        
-        files = self._get_files_in_folder(folder_path)
-        
-        if not files:
-            self._log_message(run_log, f"No files in directory: {folder_path}")
-            return result
-        
-        if processed_files:
-            files = self._filter_processed_files(files, processed_files, folder)
-        
-        if not files:
-            self._log_message(run_log, f"No new files in directory: {folder_path}")
-            return result
-        
-        self._log_message(run_log, f"Processing {len(files)} files in {folder_path}")
-        
-        for file_path in files:
-            file_result = self.process_file(file_path, folder)
-            
-            if file_result.sent:
-                result.files_processed += 1
-                self.processed_count += 1
-            else:
-                result.files_failed += 1
-                self.error_count += 1
-                result.errors.extend(file_result.errors)
-        
-        result.success = result.files_failed == 0
-        
-        if self.config.progress_reporter:
-            self.config.progress_reporter.complete_folder(result.success)
-        
-        return result
+        upc_dict = self._get_upc_dictionary(self.config.settings)
+        return self.process_folder_with_pipeline(folder, run_log, processed_files, upc_dict)
     
     def process_folder_with_pipeline(
         self,
@@ -274,6 +207,8 @@ class DispatchOrchestrator:
             if file_result.sent:
                 result.files_processed += 1
                 self.processed_count += 1
+                if processed_files:
+                    self._record_processed_file(processed_files, folder, file_result)
             else:
                 result.files_failed += 1
                 self.error_count += 1
@@ -285,20 +220,6 @@ class DispatchOrchestrator:
             self.config.progress_reporter.complete_folder(result.success)
         
         return result
-    
-    def _is_pipeline_ready(self) -> bool:
-        """Check if pipeline steps are ready for use.
-        
-        Returns:
-            True if pipeline is configured and ready
-        """
-        return (
-            self.config.validator_step is not None or
-            self.config.splitter_step is not None or
-            self.config.converter_step is not None or
-            self.config.tweaker_step is not None or
-            self.config.file_processor is not None
-        )
     
     def _get_upc_dictionary(self, settings: dict) -> dict:
         """Get or fetch UPC dictionary.
@@ -323,15 +244,6 @@ class DispatchOrchestrator:
         
         return {}
     
-    def _initialize_pipeline_steps(self) -> None:
-        """Initialize pipeline steps if enabled."""
-        if not self.config.use_pipeline:
-            return
-        
-        if self.config.file_processor:
-            if hasattr(self.config.file_processor, 'initialize'):
-                self.config.file_processor.initialize()
-    
     def _process_file_with_pipeline(
         self,
         file_path: str,
@@ -348,10 +260,14 @@ class DispatchOrchestrator:
         Returns:
             FileResult with processing outcome
         """
+        import os
+        import shutil
         result = FileResult(
             file_name=file_path,
             checksum=self._calculate_checksum(file_path)
         )
+        temp_files_created = []  # Track temporary files for cleanup
+        pipeline_temp_dirs = []  # Track temporary directories from pipeline steps
         
         try:
             current_file = file_path
@@ -407,21 +323,31 @@ class DispatchOrchestrator:
             
             if self.config.converter_step and folder.get('convert_edi', False):
                 # Ensure process_edi flag is also set for the converter to work correctly
-                updated_folder = folder.copy()
-                if 'process_edi' not in updated_folder:
-                    updated_folder['process_edi'] = True
-                converted_file = self.config.converter_step.execute(current_file, updated_folder)
+                if 'process_edi' not in folder:
+                    folder['process_edi'] = True
+                if '_pipeline_temp_dirs' not in folder:
+                    folder['_pipeline_temp_dirs'] = []
+                
+                converted_file = self.config.converter_step.execute(current_file, folder, self.config.settings, upc_dict)
                 if converted_file:
+                    # Track temp files created by converter (mkstemp persistent files)
+                    if converted_file != file_path:
+                        temp_files_created.append(converted_file)
                     current_file = converted_file
                     result.converted = True
             
             if self.config.tweaker_step and folder.get('tweak_edi', False):
                 # Ensure process_edi flag is also set for the tweaker to work correctly
-                updated_folder = folder.copy()
-                if 'process_edi' not in updated_folder:
-                    updated_folder['process_edi'] = True
-                tweaked_file = self.config.tweaker_step.execute(current_file, updated_folder, upc_dict)
+                if 'process_edi' not in folder:
+                    folder['process_edi'] = True
+                if '_pipeline_temp_dirs' not in folder:
+                    folder['_pipeline_temp_dirs'] = []
+                
+                tweaked_file = self.config.tweaker_step.execute(current_file, folder, upc_dict, self.config.settings)
                 if tweaked_file:
+                    # Track temp files created by tweaker (mkstemp)
+                    if tweaked_file != file_path:
+                        temp_files_created.append(tweaked_file)
                     current_file = tweaked_file
             
             if self.config.file_processor:
@@ -442,6 +368,27 @@ class DispatchOrchestrator:
                 error=e,
                 context={'folder_config': folder, 'pipeline_mode': True}
             )
+        
+        finally:
+            # Collect any pipeline temp dirs that were tracked by pipeline steps
+            if '_pipeline_temp_dirs' in folder:
+                pipeline_temp_dirs.extend(folder['_pipeline_temp_dirs'])
+            
+            # Clean up temporary directories from pipeline steps (mkdtemp)
+            for temp_dir in pipeline_temp_dirs:
+                try:
+                    if os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir, ignore_errors=True)
+                except Exception:
+                    pass  # Best effort cleanup
+            
+            # Clean up temporary files created by pipeline steps (mkstemp)
+            for temp_file in temp_files_created:
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                except Exception:
+                    pass  # Best effort cleanup
         
         return result
     
@@ -468,7 +415,7 @@ class DispatchOrchestrator:
         return all(send_results.values())
     
     def process_file(self, file_path: str, folder: dict) -> FileResult:
-        """Process a single file.
+        """Process a single file using the pipeline.
         
         Args:
             file_path: Path to the file to process
@@ -477,73 +424,8 @@ class DispatchOrchestrator:
         Returns:
             FileResult with processing outcome
         """
-        if self.config.use_pipeline and self._is_pipeline_ready():
-            upc_dict = self._get_upc_dictionary(self.config.settings)
-            return self._process_file_with_pipeline(file_path, folder, upc_dict)
-        
-        return self._process_file_legacy(file_path, folder)
-    
-    def _process_file_legacy(self, file_path: str, folder: dict) -> FileResult:
-        """Process a single file using legacy method.
-        
-        Args:
-            file_path: Path to the file to process
-            folder: Folder configuration dictionary
-            
-        Returns:
-            FileResult with processing outcome
-        """
-        result = FileResult(
-            file_name=file_path,
-            checksum=self._calculate_checksum(file_path)
-        )
-        
-        try:
-            if self._should_validate(folder):
-                is_valid, errors = self.validator.validate(file_path)
-                result.validated = is_valid
-                
-                if not is_valid:
-                    result.errors.extend(errors)
-                    if not folder.get('force_edi_validation', False):
-                        return result
-            
-            enabled_backends = self.send_manager.get_enabled_backends(folder)
-            
-            if not enabled_backends:
-                result.errors.append("No backends enabled")
-                return result
-            
-            settings = self.config.settings
-            send_results = self.send_manager.send_all(
-                enabled_backends, file_path, folder, settings
-            )
-            
-            result.sent = all(send_results.values())
-            
-            if not result.sent:
-                failed_backends = [
-                    name for name, success in send_results.items()
-                    if not success
-                ]
-                # Include original error messages for better debugging
-                backend_errors = self.send_manager.get_errors()
-                for backend_name in failed_backends:
-                    if backend_name in backend_errors:
-                        result.errors.append(f"{backend_name}: {backend_errors[backend_name]}")
-                    else:
-                        result.errors.append(f"Failed backend: {backend_name}")
-        
-        except Exception as e:
-            result.errors.append(str(e))
-            self.error_handler.record_error(
-                folder=folder.get('folder_name', ''),
-                filename=file_path,
-                error=e,
-                context={'folder_config': folder}
-            )
-        
-        return result
+        upc_dict = self._get_upc_dictionary(self.config.settings)
+        return self._process_file_with_pipeline(file_path, folder, upc_dict)
     
     def _folder_exists(self, path: str) -> bool:
         """Check if a folder exists.
@@ -588,7 +470,7 @@ class DispatchOrchestrator:
         processed_files: DatabaseInterface,
         folder: dict
     ) -> list[str]:
-        """Filter out already processed files.
+        """Filter out already processed files, unless marked for resend.
         
         Args:
             files: List of file paths
@@ -596,19 +478,76 @@ class DispatchOrchestrator:
             folder: Folder configuration
             
         Returns:
-            List of unprocessed file paths
+            List of unprocessed or resend-marked file paths
         """
         folder_id = folder.get('id') or folder.get('old_id')
         processed = processed_files.find(folder_id=folder_id)
         
-        processed_checksums = {
+        # Files that should be SKIPPED (already processed AND NOT marked for resend)
+        skipped_checksums = {
             f.get('file_checksum') for f in processed
+            if not f.get('resend_flag')
         }
         
         return [
             f for f in files
-            if self._calculate_checksum(f) not in processed_checksums
+            if self._calculate_checksum(f) not in skipped_checksums
         ]
+
+    def _record_processed_file(
+        self,
+        processed_files: DatabaseInterface,
+        folder: dict,
+        file_result: FileResult
+    ) -> None:
+        """Record a successfully processed file in the database.
+        
+        Args:
+            processed_files: Database interface for processed files
+            folder: Folder configuration
+            file_result: Result of file processing
+        """
+        folder_id = folder.get('id') or folder.get('old_id')
+        
+        # Check if it was marked for resend (match by name and folder)
+        existing_resend = processed_files.find_one(
+            file_name=file_result.file_name,
+            folder_id=folder_id,
+            resend_flag=1
+        )
+        
+        # Construct sent_to string for the database
+        sent_to = []
+        if folder.get('process_backend_copy'):
+            sent_to.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
+        if folder.get('process_backend_ftp'):
+            sent_to.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
+        if folder.get('process_backend_email'):
+            sent_to.append(f"Email: {folder.get('email_to', 'N/A')}")
+        sent_to_str = ", ".join(sent_to) if sent_to else "N/A"
+        
+        if existing_resend:
+            # Clear resend flag for this specific record
+            processed_files.update({
+                "id": existing_resend["id"],
+                "resend_flag": 0,
+                "processed_at": datetime.datetime.now().isoformat(),
+                "sent_to": sent_to_str,
+                "status": "processed"
+            }, ["id"])
+        else:
+            # Insert new record
+            processed_files.insert({
+                "file_name": file_result.file_name,
+                "folder_id": folder_id,
+                "folder_alias": folder.get('alias', ''),
+                "file_checksum": file_result.checksum,
+                "md5": file_result.checksum,
+                "processed_at": datetime.datetime.now().isoformat(),
+                "resend_flag": 0,
+                "sent_to": sent_to_str,
+                "status": "processed"
+            })
     
     def _calculate_checksum(self, file_path: str) -> str:
         """Calculate MD5 checksum of a file.

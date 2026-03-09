@@ -6,6 +6,8 @@ Tests for the dynamic form generator system.
 
 import pytest
 
+pytestmark = [pytest.mark.unit, pytest.mark.gui]
+
 from interface.form import FormGeneratorFactory, FormGenerator
 from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition, FieldType
 from interface.plugins.validation_framework import Validator

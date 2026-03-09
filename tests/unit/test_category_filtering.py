@@ -5,6 +5,8 @@ based on item category from the upc_dict.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 from core.edi.edi_splitter import filter_b_records_by_category
 from utils import capture_records
 

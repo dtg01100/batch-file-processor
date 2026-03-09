@@ -5,6 +5,10 @@ Uses pytest-qt (qtbot fixture) for proper widget lifecycle management.
 Dialogs are tested via show() + direct widget manipulation, never exec().
 """
 
+import pytest
+
+pytestmark = [pytest.mark.qt, pytest.mark.gui]
+
 from unittest.mock import MagicMock, patch
 
 import pytest

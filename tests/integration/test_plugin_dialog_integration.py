@@ -5,6 +5,8 @@ into the edit folders dialogs.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.gui]
 from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, Any
 

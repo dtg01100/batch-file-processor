@@ -305,24 +305,48 @@ class EDITweakerStep:
             error_source="EDITweaker"
         )
     
-    def execute(self, file_path: str, folder: dict, upc_dict: dict) -> str | None:
+    def execute(self, file_path: str, folder: dict, upc_dict: dict, settings: Optional[dict] = None) -> str | None:
         """Execute tweak step (wrapper for pipeline compatibility).
         
         Args:
             file_path: Path to the file to tweak
             folder: Folder configuration dictionary
             upc_dict: UPC dictionary for lookups
+            settings: Global settings dictionary
             
         Returns:
             Path to tweaked file, or None if tweaking failed/not needed
         """
         import os
         import tempfile
+        import shutil
         
-        settings = folder.get('settings', {})
+        effective_settings = settings if settings is not None else folder.get('settings', {})
         
-        with tempfile.TemporaryDirectory() as temp_dir:
-            result = self.tweak(file_path, temp_dir, folder, settings, upc_dict)
-            if result.success and result.output_path != file_path:
+        # Create a TEMPORARY directory for intermediate processing
+        temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
+        
+        # Register with folder so orchestrator can clean up later
+        if '_pipeline_temp_dirs' not in folder:
+            folder['_pipeline_temp_dirs'] = []
+        folder['_pipeline_temp_dirs'].append(temp_dir)
+        
+        try:
+            result = self.tweak(file_path, temp_dir, folder, effective_settings, upc_dict)
+            
+            if result.success and result.output_path != file_path and os.path.exists(result.output_path):
+                # Return the output path directly while temp_dir still exists
+                # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
+            
+            # Cleanup if tweaking didn't produce output
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            if temp_dir in folder['_pipeline_temp_dirs']:
+                folder['_pipeline_temp_dirs'].remove(temp_dir)
             return None
+        except Exception as e:
+            # Cleanup on exception
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            if temp_dir in folder['_pipeline_temp_dirs']:
+                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            raise
