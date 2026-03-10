@@ -13,10 +13,11 @@ from operator import itemgetter
 from typing import Any, List, Optional, Tuple
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
+    QDialogButtonBox,
     QFileDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.theme import Theme
 
 from interface.ports import UIServiceProtocol
 from interface.operations.processed_files import export_processed_report
@@ -41,7 +43,7 @@ class ProcessedFilesDialog(BaseDialog):
         database_obj: Any,
         ui_service: Optional[UIServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent, "Processed Files Report")
+        super().__init__(parent, "Processed Files Report", action_mode="close_only")
         self._database_obj = database_obj
         self._ui_service = ui_service
 
@@ -53,23 +55,21 @@ class ProcessedFilesDialog(BaseDialog):
         self._output_folder = prior.get("export_processed_folder_prior", "")
 
         self.setWindowTitle("Processed Files Report")
-        self.setModal(True)
 
         self._button_group = QButtonGroup(self)
         self._button_group.setExclusive(True)
 
         self.setMinimumSize(600, 450)
         self._build_ui()
+        if self._button_box is not None:
+            close_btn = self._button_box.button(QDialogButtonBox.StandardButton.Close)
+            if close_btn is not None:
+                close_btn.setText("&Close")
+                close_btn.setAccessibleName("Close processed files report")
+                close_btn.setAccessibleDescription("Close this dialog")
 
     def _build_ui(self) -> None:
-        # Use the main layout from BaseDialog instead of creating a new one
-        root_layout = self._main_layout
-
-        # Clear default widgets from BaseDialog
-        while root_layout.count() > 0:
-            item = root_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        root_layout = self._body_layout
 
         body_layout = QHBoxLayout()
         root_layout.addLayout(body_layout, stretch=1)
@@ -82,14 +82,6 @@ class ProcessedFilesDialog(BaseDialog):
         self._actions_layout.addWidget(QLabel("Select a Folder."))
         body_layout.addWidget(self._actions_container)
 
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        root_layout.addWidget(separator)
-
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.close)
-        root_layout.addWidget(close_btn)
 
     def _build_folder_list(self) -> QScrollArea:
         scroll_area = QScrollArea()
@@ -103,14 +95,23 @@ class ProcessedFilesDialog(BaseDialog):
 
         content = QWidget()
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(3, 3, 3, 3)
-        layout.setSpacing(2)
+        layout.setContentsMargins(
+            Theme.SPACING_XS_INT,
+            Theme.SPACING_XS_INT,
+            Theme.SPACING_XS_INT,
+            Theme.SPACING_XS_INT,
+        )
+        layout.setSpacing(Theme.SPACING_XS_INT)
 
         folder_tuples = self._get_folder_tuples()
 
         if not folder_tuples:
             label = QLabel("No Folders With Processed Files")
-            label.setContentsMargins(10, 0, 10, 0)
+            label.setContentsMargins(Theme.SPACING_MD_INT, 0, Theme.SPACING_MD_INT, 0)
+            label.setAccessibleName("No folders with processed files")
+            label.setAccessibleDescription(
+                "No processed files are available for export"
+            )
             layout.addWidget(label)
         else:
             for folder_id, alias in folder_tuples:
@@ -122,6 +123,10 @@ class ProcessedFilesDialog(BaseDialog):
                     QSizePolicy.Policy.Fixed,
                 )
                 self._button_group.addButton(btn, folder_id)
+                btn.setAccessibleName(f"Folder {alias}")
+                btn.setAccessibleDescription(
+                    f"Select folder '{alias}' for report export"
+                )
                 btn.clicked.connect(
                     lambda _checked, fid=folder_id: self._on_folder_selected(fid),
                 )
@@ -173,13 +178,21 @@ class ProcessedFilesDialog(BaseDialog):
 
         _clear_layout(self._actions_layout)
 
-        choose_btn = QPushButton("Choose Output Folder")
+        choose_btn = QPushButton("&Choose Output Folder")
         choose_btn.clicked.connect(self._choose_output_folder)
+        choose_btn.setAccessibleName("Choose output folder")
+        choose_btn.setAccessibleDescription(
+            "Choose a destination folder for the processed files report"
+        )
         self._actions_layout.addWidget(choose_btn)
 
-        self._export_btn = QPushButton("Export Processed Report")
+        self._export_btn = QPushButton("E&xport Processed Report")
         self._export_btn.setEnabled(self._output_folder_confirmed)
         self._export_btn.clicked.connect(self._do_export)
+        self._export_btn.setAccessibleName("Export processed files report")
+        self._export_btn.setAccessibleDescription(
+            "Export a CSV report for the selected folder"
+        )
         self._actions_layout.addWidget(self._export_btn)
 
     def _choose_output_folder(self) -> None:
@@ -222,8 +235,8 @@ class ProcessedFilesDialog(BaseDialog):
             self._database_obj,
         )
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         if event.key() == Qt.Key.Key_Escape:
-            self.close()
+            self.reject()
         else:
             super().keyPressEvent(event)

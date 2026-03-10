@@ -5,7 +5,7 @@ field name -> QWidget mappings and produces an ExtractedDialogFields dataclass,
 mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 
 from interface.operations.folder_data_extractor import ExtractedDialogFields
 from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 
 
 class QtFolderDataExtractor:
@@ -28,8 +29,13 @@ class QtFolderDataExtractor:
     FolderDataExtractor but operating on PyQt6 widgets.
     """
 
-    def __init__(self, fields: Dict[str, QWidget]):
+    def __init__(
+        self,
+        fields: Dict[str, Any],
+        plugin_manager: Optional[PluginManager] = None,
+    ):
         self.fields = fields
+        self._plugin_manager = plugin_manager or get_shared_plugin_manager()
 
     def extract_all(self) -> ExtractedDialogFields:
         # Extract plugin configurations
@@ -38,7 +44,7 @@ class QtFolderDataExtractor:
         return ExtractedDialogFields(
             folder_name=self._get_text("folder_name_value"),
             alias=self._get_text("folder_alias_field"),
-            folder_is_active=self._get_check_str("active_checkbutton"),
+            folder_is_active=self._get_bool("active_checkbutton"),
             process_backend_copy=self._get_bool("process_backend_copy_check"),
             process_backend_ftp=self._get_bool("process_backend_ftp_check"),
             process_backend_email=self._get_bool("process_backend_email_check"),
@@ -49,7 +55,7 @@ class QtFolderDataExtractor:
             ftp_password=self._get_text("ftp_password_field"),
             email_to=self._get_text("email_recipient_field"),
             email_subject_line=self._get_text("email_sender_subject_field"),
-            process_edi=self._get_check_str("process_edi"),
+            process_edi=self._get_bool("process_edi"),
             convert_to_format=self._get_combo("convert_formats_var"),
             tweak_edi=self._get_bool("tweak_edi"),
             split_edi=self._get_bool("split_edi"),
@@ -61,18 +67,18 @@ class QtFolderDataExtractor:
                 "split_edi_filter_categories_entry"
             ),
             split_edi_filter_mode=self._get_combo("split_edi_filter_mode"),
-            calculate_upc_check_digit=self._get_check_str("upc_var_check"),
-            include_a_records=self._get_check_str("a_rec_var_check"),
-            include_c_records=self._get_check_str("c_rec_var_check"),
-            include_headers=self._get_check_str("headers_check"),
-            filter_ampersand=self._get_check_str("ampersand_check"),
+            calculate_upc_check_digit=self._get_bool("upc_var_check"),
+            include_a_records=self._get_bool("a_rec_var_check"),
+            include_c_records=self._get_bool("c_rec_var_check"),
+            include_headers=self._get_bool("headers_check"),
+            filter_ampersand=self._get_bool("ampersand_check"),
             force_edi_validation=self._get_bool("force_edi_check_var"),
-            pad_a_records=self._get_check_str("pad_arec_check"),
+            pad_a_records=self._get_bool("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
             a_record_padding_length=self._get_int("a_record_padding_length", 6),
-            append_a_records=self._get_check_str("append_arec_check"),
+            append_a_records=self._get_bool("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
-            force_txt_file_ext=self._get_check_str("force_txt_file_ext_check"),
+            force_txt_file_ext=self._get_bool("force_txt_file_ext_check"),
             invoice_date_offset=self._get_int("invoice_date_offset", 0),
             invoice_date_custom_format=self._get_bool("invoice_date_custom_format"),
             invoice_date_custom_format_string=self._get_text(
@@ -94,12 +100,7 @@ class QtFolderDataExtractor:
         """Extract plugin configurations from the form."""
         plugin_configs = {}
 
-        # Get all configuration plugins
-        plugin_manager = PluginManager()
-        plugin_manager.discover_plugins()
-        plugin_manager.initialize_plugins()
-
-        for plugin in plugin_manager.get_configuration_plugins():
+        for plugin in self._plugin_manager.get_configuration_plugins():
             # Check if we have a form generator for this plugin
             plugin_key = f"plugin_config_{plugin.get_identifier()}"
             generator_key = f"{plugin_key}_generator"
@@ -107,8 +108,9 @@ class QtFolderDataExtractor:
             if generator_key in self.fields:
                 try:
                     form_generator = self.fields[generator_key]
-                    config_values = form_generator.get_values()
-                    plugin_configs[plugin.get_format_name().lower()] = config_values
+                    get_values = getattr(form_generator, "get_values", None)
+                    if callable(get_values):
+                        plugin_configs[plugin.get_format_name().lower()] = get_values()
                 except Exception as e:
                     print(
                         f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}"
@@ -139,18 +141,6 @@ class QtFolderDataExtractor:
             # Widget has been deleted
             return False
         return False
-
-    def _get_check_str(self, key: str) -> str:
-        widget = self.fields.get(key)
-        if widget is None:
-            return "False"
-        try:
-            if isinstance(widget, (QCheckBox, QPushButton)):
-                return "True" if widget.isChecked() else "False"
-        except RuntimeError:
-            # Widget has been deleted
-            return "False"
-        return "False"
 
     def _get_int(self, key: str, default: int = 0) -> int:
         widget = self.fields.get(key)

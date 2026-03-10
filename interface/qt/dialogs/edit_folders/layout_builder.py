@@ -41,6 +41,7 @@ class UILayoutBuilder:
         on_show_path: Optional[Callable] = None,
         on_update_backend_states: Optional[Callable] = None,
         on_convert_format_changed: Optional[Callable] = None,
+        on_dynamic_form_changed: Optional[Callable] = None,
         on_ok: Optional[Callable] = None,
         on_cancel: Optional[Callable] = None,
     ):
@@ -68,6 +69,7 @@ class UILayoutBuilder:
         self.on_show_path = on_show_path
         self.on_update_backend_states = on_update_backend_states
         self.on_convert_format_changed = on_convert_format_changed
+        self.on_dynamic_form_changed = on_dynamic_form_changed
         self.on_ok = on_ok
         self.on_cancel = on_cancel
 
@@ -132,11 +134,11 @@ class UILayoutBuilder:
         columns_layout = QHBoxLayout()
 
         columns_layout.addWidget(self.column_builders.build_others_column())
-        columns_layout.addSpacing(10)
+        columns_layout.addSpacing(Theme.SPACING_MD_INT)
         columns_layout.addWidget(self.column_builders.build_folder_column())
-        columns_layout.addSpacing(10)
+        columns_layout.addSpacing(Theme.SPACING_MD_INT)
         columns_layout.addWidget(self.column_builders.build_backend_column())
-        columns_layout.addSpacing(10)
+        columns_layout.addSpacing(Theme.SPACING_MD_INT)
 
         # Build EDI column with dynamic content container
         edi_column = self.column_builders.build_edi_column()
@@ -165,6 +167,7 @@ class UILayoutBuilder:
             dynamic_container=self.dynamic_edi_container,
             dynamic_layout=self.dynamic_edi_layout,
             on_convert_format_changed=self.on_convert_format_changed,
+            on_dynamic_form_changed=self.on_dynamic_form_changed,
         )
 
         # Add EDI options combo to EDI column

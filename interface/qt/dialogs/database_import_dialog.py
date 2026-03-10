@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -24,8 +24,10 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.theme import Theme
 
 from interface.database import sqlite_wrapper
+from core.utils.bool_utils import normalize_bool
 
 import backup_increment
 import folders_database_migrator
@@ -42,7 +44,7 @@ class DatabaseImportDialog(BaseDialog):
         backup_path: str,
         current_db_version: str,
     ) -> None:
-        super().__init__(parent, "folders.db merging utility")
+        super().__init__(parent, "folders.db merging utility", action_mode="none")
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._original_database_path = original_database_path
@@ -56,29 +58,35 @@ class DatabaseImportDialog(BaseDialog):
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        # Use the main layout from BaseDialog instead of creating a new one
-        main_layout = self._main_layout
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
-
-        # Clear default widgets from BaseDialog
-        while main_layout.count() > 0:
-            item = main_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        main_layout = self._body_layout
+        main_layout.setContentsMargins(
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+        )
+        main_layout.setSpacing(Theme.SPACING_MD_INT)
 
         # Database file selection frame
         db_file_frame = QFrame()
         db_file_layout = QVBoxLayout(db_file_frame)
         db_file_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._select_button = QPushButton("Select New Database File")
+        self._select_button = QPushButton("Select &New Database File")
         self._select_button.clicked.connect(self._select_database)
+        self._select_button.setAccessibleName("Select new database file")
+        self._select_button.setAccessibleDescription(
+            "Choose a database file to import active folder settings from"
+        )
         db_file_layout.addWidget(self._select_button)
 
         self._db_label = QLabel("No File Selected")
         self._db_label.setFrameShape(QFrame.Shape.Box)
         self._db_label.setFrameShadow(QFrame.Shadow.Sunken)
+        self._db_label.setAccessibleName("Selected database file")
+        self._db_label.setAccessibleDescription(
+            "Displays the currently selected database file path"
+        )
         db_file_layout.addWidget(self._db_label)
 
         main_layout.addWidget(db_file_frame)
@@ -86,6 +94,10 @@ class DatabaseImportDialog(BaseDialog):
         # Progress bar
         self._progress_bar = QProgressBar()
         self._progress_bar.setVisible(False)
+        self._progress_bar.setAccessibleName("Import progress")
+        self._progress_bar.setAccessibleDescription(
+            "Shows progress of active folders import"
+        )
         main_layout.addWidget(self._progress_bar)
 
         # Button frame
@@ -93,15 +105,21 @@ class DatabaseImportDialog(BaseDialog):
         button_layout = QHBoxLayout(button_frame)
         button_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._import_button = QPushButton("Import Active Folders")
+        self._import_button = QPushButton("&Import Active Folders")
         self._import_button.setEnabled(False)
         self._import_button.clicked.connect(self._start_import)
+        self._import_button.setAccessibleName("Import active folders")
+        self._import_button.setAccessibleDescription(
+            "Start importing active folders from selected database"
+        )
         button_layout.addWidget(self._import_button)
 
         button_layout.addStretch()
 
-        self._close_button = QPushButton("Close")
-        self._close_button.clicked.connect(self.accept)
+        self._close_button = QPushButton("&Close")
+        self._close_button.clicked.connect(self.reject)
+        self._close_button.setAccessibleName("Close database import dialog")
+        self._close_button.setAccessibleDescription("Close this dialog")
         button_layout.addWidget(self._close_button)
 
         main_layout.addWidget(button_frame)
@@ -165,9 +183,9 @@ class DatabaseImportDialog(BaseDialog):
 
         if success:
             self._db_label.setText("Import Completed")
-            QMessageBox.information(self, "Import Complete", message)
+            self.show_info("Import Complete", message)
         else:
-            QMessageBox.critical(self, "Import Failed", message)
+            self.show_error("Import Failed", message)
 
         # Re-enable buttons
         self._import_button.setEnabled(True)
@@ -175,7 +193,7 @@ class DatabaseImportDialog(BaseDialog):
 
     def _on_error(self, error_message: str) -> None:
         """Handle import error."""
-        QMessageBox.critical(self, "Import Error", error_message)
+        self.show_error("Import Error", error_message)
         self._import_button.setEnabled(True)
         self._select_button.setEnabled(True)
 
@@ -183,15 +201,8 @@ class DatabaseImportDialog(BaseDialog):
         self, title: str, message: str, result_event: threading.Event
     ) -> None:
         """Handle confirmation request from background thread."""
-        reply = QMessageBox.question(
-            self,
-            title,
-            message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
         # Store result in the thread's result container via the event's dict
-        result_event.result = reply == QMessageBox.StandardButton.Yes
+        setattr(result_event, "result", self.confirm_yes_no(title, message))
         result_event.set()
 
 
@@ -222,15 +233,27 @@ class ImportThread(QThread):
 
     def _confirm(self, title: str, message: str) -> bool:
         """Request confirmation from main thread using signals/slots."""
+        # Support direct run() calls in tests where this QThread is not started.
+        if QThread.currentThread() == self.thread():
+            reply = QMessageBox.question(
+                None,
+                title,
+                message,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            return reply == QMessageBox.StandardButton.Yes
+
         result_event = threading.Event()
-        result_event.result = False  # type: ignore[attr-defined]
+        setattr(result_event, "result", False)
 
         # Emit signal to main thread - handler will set result_event.result and call result_event.set()
         self.confirm_required.emit(title, message, result_event)
 
         # Wait for result
-        result_event.wait()
-        return result_event.result  # type: ignore[attr-defined]
+        if not result_event.wait(timeout=300):
+            return False
+        return bool(getattr(result_event, "result", False))
 
     def run(self) -> None:
         """Run the import process."""
@@ -238,7 +261,9 @@ class ImportThread(QThread):
             # Validate database version
             new_db_connection = sqlite_wrapper.Database.connect(self._new_db_path)
             new_db_version_table = new_db_connection["version"]
-            new_db_version_dict = new_db_version_table.find_one(id=1)
+            new_db_version_dict = cast(Optional[dict[str, Any]], new_db_version_table.find_one(id=1))
+            if new_db_version_dict is None:
+                raise KeyError("version")
             new_db_version = new_db_version_dict["version"]
 
             # Check version compatibility
@@ -292,8 +317,6 @@ class ImportThread(QThread):
             self.error.emit(f"Database file not found: {e}")
         except PermissionError as e:
             self.error.emit(f"Permission denied accessing database: {e}")
-        except sqlite_wrapper.DatabaseError as e:
-            self.error.emit(f"Database error: {e}")
         except KeyError as e:
             self.error.emit(f"Database schema error (missing field): {e}")
         except ValueError as e:
@@ -322,11 +345,15 @@ class DbMigrationJob:
         modified_new_path = backup_increment.do_backup(self.new_folder_path)
 
         original_db_version = original_db["version"]
-        original_db_version_dict = original_db_version.find_one(id=1)
+        original_db_version_dict = cast(Optional[dict[str, Any]], original_db_version.find_one(id=1))
+        if original_db_version_dict is None:
+            raise KeyError("version")
 
         new_db = sqlite_wrapper.Database.connect(modified_new_path)
         new_db_version = new_db["version"]
-        new_db_version_dict = new_db_version.find_one(id=1)
+        new_db_version_dict = cast(Optional[dict[str, Any]], new_db_version.find_one(id=1))
+        if new_db_version_dict is None:
+            raise KeyError("version")
 
         if int(new_db_version_dict["version"]) < int(
             original_db_version_dict["version"]
@@ -345,6 +372,8 @@ class DbMigrationJob:
 
         # Migrate folders
         for i, folder in enumerate(active_new_folders):
+            if not isinstance(folder, dict):
+                continue
             self._migrate_folder(folder, old_folders, new_db)
             thread.progress.emit(
                 i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders"
@@ -373,7 +402,7 @@ class DbMigrationJob:
             update_data = {"id": folder["id"]}
 
             # Merge backend settings
-            if match.get("process_backend_copy") in (True, 1, "True"):
+            if normalize_bool(match.get("process_backend_copy")):
                 update_data.update(
                     {
                         "process_backend_copy": match["process_backend_copy"],
@@ -381,7 +410,7 @@ class DbMigrationJob:
                     }
                 )
 
-            if match.get("process_backend_ftp") in (True, 1, "True"):
+            if normalize_bool(match.get("process_backend_ftp")):
                 update_data.update(
                     {
                         "ftp_server": match["ftp_server"],
@@ -391,7 +420,7 @@ class DbMigrationJob:
                     }
                 )
 
-            if match.get("process_backend_email") in (True, 1, "True"):
+            if normalize_bool(match.get("process_backend_email")):
                 update_data.update(
                     {
                         "process_backend_email": match["process_backend_email"],

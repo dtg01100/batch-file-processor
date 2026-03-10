@@ -5,15 +5,18 @@ Provides a common base class for all Qt dialogs, replacing the tkinter Dialog cl
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QMessageBox,
     QVBoxLayout,
     QWidget,
 )
+
+from interface.qt.theme import Theme
 
 
 class BaseDialog(QDialog):
@@ -44,9 +47,11 @@ class BaseDialog(QDialog):
         self,
         parent: Optional[QWidget] = None,
         title: Optional[str] = None,
+        action_mode: Literal["ok_cancel", "close_only", "none"] = "ok_cancel",
     ) -> None:
         super().__init__(parent)
-        self.result = None
+        self.dialog_result = None
+        self._action_mode = action_mode
 
         if title:
             self.setWindowTitle(title)
@@ -57,7 +62,12 @@ class BaseDialog(QDialog):
 
         # Create main layout
         self._main_layout = QVBoxLayout(self)
-        self._main_layout.setContentsMargins(5, 5, 5, 5)
+        self._main_layout.setContentsMargins(
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+        )
 
         # Create body container
         self._body_widget = QWidget()
@@ -70,7 +80,8 @@ class BaseDialog(QDialog):
 
         # Add button box
         self._button_box = self._create_button_box()
-        self._main_layout.addWidget(self._button_box)
+        if self._button_box is not None:
+            self._main_layout.addWidget(self._button_box)
 
         # Set initial focus
         if self.initial_focus:
@@ -94,8 +105,16 @@ class BaseDialog(QDialog):
             Widget that should have initial focus, or None
         """
 
-    def _create_button_box(self) -> QDialogButtonBox:
-        """Create standard OK/Cancel button box."""
+    def _create_button_box(self) -> Optional[QDialogButtonBox]:
+        """Create dialog action buttons according to configured mode."""
+        if self._action_mode == "none":
+            return None
+
+        if self._action_mode == "close_only":
+            button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+            button_box.rejected.connect(self.reject)
+            return button_box
+
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -125,3 +144,37 @@ class BaseDialog(QDialog):
         Override this method to process dialog data.
         Called after validation succeeds.
         """
+
+    def show_info(self, title: str, message: str) -> None:
+        """Show an informational message box."""
+        QMessageBox.information(self, title, message)
+
+    def show_error(self, title: str, message: str) -> None:
+        """Show an error message box."""
+        QMessageBox.critical(self, title, message)
+
+    def show_warning(self, title: str, message: str) -> None:
+        """Show a warning message box."""
+        QMessageBox.warning(self, title, message)
+
+    def confirm_yes_no(self, title: str, message: str) -> bool:
+        """Ask a Yes/No question and return True when Yes is selected."""
+        reply = QMessageBox.question(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def confirm_ok_cancel(self, title: str, message: str) -> bool:
+        """Ask an OK/Cancel question and return True when OK is selected."""
+        reply = QMessageBox.question(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        return reply == QMessageBox.StandardButton.Ok

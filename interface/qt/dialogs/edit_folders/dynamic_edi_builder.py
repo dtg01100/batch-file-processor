@@ -24,6 +24,7 @@ from PyQt6 import QtCore
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.form.form_generator import FormGeneratorFactory
+from core.utils.bool_utils import normalize_bool
 
 
 class DynamicEDIBuilder:
@@ -42,6 +43,7 @@ class DynamicEDIBuilder:
         dynamic_container: QWidget,
         dynamic_layout: QVBoxLayout,
         on_convert_format_changed: Optional[Callable[[str], None]] = None,
+        on_dynamic_form_changed: Optional[Callable[[], None]] = None,
     ):
         """Initialize the dynamic EDI builder.
 
@@ -57,6 +59,7 @@ class DynamicEDIBuilder:
         self.dynamic_container = dynamic_container
         self.dynamic_layout = dynamic_layout
         self.on_convert_format_changed = on_convert_format_changed
+        self.on_dynamic_form_changed = on_dynamic_form_changed
 
         # Initialize plugin manager
         self.plugin_manager = PluginManager()
@@ -101,7 +104,12 @@ class DynamicEDIBuilder:
         """Build and configure the EDI options dropdown."""
         self.edi_options_combo = QComboBox()
         self.edi_options_combo.addItems(self.EDI_OPTIONS)
+        self.edi_options_combo.setAccessibleName("EDI options")
+        self.edi_options_combo.setAccessibleDescription(
+            "Choose whether to convert EDI, tweak EDI, or send as is"
+        )
         self.edi_options_combo.currentTextChanged.connect(self._on_edi_option_changed)
+        self.fields["edi_options_combo"] = self.edi_options_combo
         return self.edi_options_combo
 
     def _clear_dynamic_edi(self):
@@ -191,6 +199,8 @@ class DynamicEDIBuilder:
                 self._build_convert_edi_area()
             elif option == "Tweak EDI":
                 self._build_tweak_edi_area()
+            if self.on_dynamic_form_changed:
+                self.on_dynamic_form_changed()
         finally:
             from PyQt6.QtCore import QTimer
 
@@ -227,6 +237,10 @@ class DynamicEDIBuilder:
         fmt_row.addWidget(QLabel("Convert To:"))
         self.convert_format_combo = QComboBox()
         self.convert_format_combo.addItems(self._get_convert_formats())
+        self.convert_format_combo.setAccessibleName("Convert format")
+        self.convert_format_combo.setAccessibleDescription(
+            "Select output format when Convert EDI is enabled"
+        )
         self.fields["convert_formats_var"] = self.convert_format_combo
         fmt_row.addWidget(self.convert_format_combo)
         wrapper_layout.addLayout(fmt_row)
@@ -274,6 +288,8 @@ class DynamicEDIBuilder:
 
         if self.on_convert_format_changed:
             self.on_convert_format_changed(fmt)
+        if self.on_dynamic_form_changed:
+            self.on_dynamic_form_changed()
 
     def _clear_convert_sub(self):
         """Clear convert sub-widgets and clean up field references."""
@@ -324,7 +340,8 @@ class DynamicEDIBuilder:
             plugin_key = f"plugin_config_{plugin.get_identifier()}"
             self.fields[plugin_key] = form_widget
             self.fields[f"{plugin_key}_generator"] = form_generator
-            self.convert_sub_layout.addWidget(form_widget)
+            if self.convert_sub_layout is not None:
+                self.convert_sub_layout.addWidget(form_widget)
 
     def _build_csv_sub(self):
         wrapper = QWidget()
@@ -332,6 +349,7 @@ class DynamicEDIBuilder:
         layout.setContentsMargins(0, 0, 0, 0)
 
         upc_check = QCheckBox("Calculate UPC Check Digit")
+        upc_check.setAccessibleName("Calculate UPC check digit")
         self.fields["upc_var_check"] = upc_check
         layout.addWidget(upc_check)
 
@@ -427,6 +445,7 @@ class DynamicEDIBuilder:
         sort_row = QHBoxLayout()
         sort_row.addWidget(QLabel("CSV Column Sort:"))
         column_sort_field = QLineEdit()
+        column_sort_field.setAccessibleName("CSV column sort")
         self.fields["simple_csv_column_sorter"] = column_sort_field
         sort_row.addWidget(column_sort_field)
         layout.addLayout(sort_row)
@@ -451,7 +470,8 @@ class DynamicEDIBuilder:
             include_item_desc_check,
             column_sort_field,
         )
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _populate_csv_sub_fields(
         self,
@@ -476,13 +496,13 @@ class DynamicEDIBuilder:
     ):
         cfg = self.folder_config
         upc_check.setChecked(
-            str(cfg.get("calculate_upc_check_digit", "False")) == "True"
+            normalize_bool(cfg.get("calculate_upc_check_digit", False))
         )
-        a_rec_check.setChecked(str(cfg.get("include_a_records", "False")) == "True")
-        c_rec_check.setChecked(str(cfg.get("include_c_records", "False")) == "True")
-        headers_check.setChecked(str(cfg.get("include_headers", "False")) == "True")
-        ampersand_check.setChecked(str(cfg.get("filter_ampersand", "False")) == "True")
-        pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
+        a_rec_check.setChecked(normalize_bool(cfg.get("include_a_records", False)))
+        c_rec_check.setChecked(normalize_bool(cfg.get("include_c_records", False)))
+        headers_check.setChecked(normalize_bool(cfg.get("include_headers", False)))
+        ampersand_check.setChecked(normalize_bool(cfg.get("filter_ampersand", False)))
+        pad_arec_check.setChecked(normalize_bool(cfg.get("pad_a_records", False)))
         arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
 
         pad_len = str(
@@ -494,7 +514,9 @@ class DynamicEDIBuilder:
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
 
-        override_upc_check.setChecked(bool(cfg.get("override_upc_bool", False)))
+        override_upc_check.setChecked(
+            normalize_bool(cfg.get("override_upc_bool", False))
+        )
 
         lvl = str(
             cfg.get("override_upc_level")
@@ -516,15 +538,15 @@ class DynamicEDIBuilder:
             )
         )
         upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern", "           ")))
-        each_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
+        each_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
         split_sales_tax_check.setChecked(
-            bool(cfg.get("split_prepaid_sales_tax_crec", False))
+            normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
         )
         include_item_numbers_check.setChecked(
-            bool(cfg.get("include_item_numbers", False))
+            normalize_bool(cfg.get("include_item_numbers", False))
         )
         include_item_desc_check.setChecked(
-            bool(cfg.get("include_item_description", False))
+            normalize_bool(cfg.get("include_item_description", False))
         )
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
@@ -567,7 +589,7 @@ class DynamicEDIBuilder:
         layout.addWidget(arec_group)
 
         cfg = self.folder_config
-        pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
+        pad_arec_check.setChecked(normalize_bool(cfg.get("pad_a_records", False)))
         arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
         pad_len = str(
             cfg.get("a_record_padding_length")
@@ -577,12 +599,11 @@ class DynamicEDIBuilder:
         idx = arec_padding_length.findText(pad_len)
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
-        append_arec_check.setChecked(
-            str(cfg.get("append_a_records", "False")) == "True"
-        )
+        append_arec_check.setChecked(normalize_bool(cfg.get("append_a_records", False)))
         arec_append_field.setText(str(cfg.get("a_record_append_text", "")))
 
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _build_simplified_csv_sub(self):
         wrapper = QWidget()
@@ -613,17 +634,18 @@ class DynamicEDIBuilder:
         layout.addLayout(sort_row)
 
         cfg = self.folder_config
-        headers_check.setChecked(str(cfg.get("include_headers", "False")) == "True")
+        headers_check.setChecked(normalize_bool(cfg.get("include_headers", False)))
         include_item_numbers_check.setChecked(
-            bool(cfg.get("include_item_numbers", False))
+            normalize_bool(cfg.get("include_item_numbers", False))
         )
         include_item_desc_check.setChecked(
-            bool(cfg.get("include_item_description", False))
+            normalize_bool(cfg.get("include_item_description", False))
         )
-        each_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
+        each_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _build_estore_sub(self, fmt: str):
         wrapper = QWidget()
@@ -642,6 +664,7 @@ class DynamicEDIBuilder:
         self.fields["estore_vendor_namevendoroid_field"] = estore_vendor_name_field
         layout.addRow("Estore Vendor Name OId:", estore_vendor_name_field)
 
+        estore_c_record_oid_field = None
         if fmt == "Estore eInvoice Generic":
             estore_c_record_oid_field = QLineEdit()
             self.fields["estore_c_record_oid_field"] = estore_c_record_oid_field
@@ -653,10 +676,11 @@ class DynamicEDIBuilder:
         estore_vendor_name_field.setText(
             str(cfg.get("estore_vendor_NameVendorOID", ""))
         )
-        if fmt == "Estore eInvoice Generic":
+        if fmt == "Estore eInvoice Generic" and estore_c_record_oid_field is not None:
             estore_c_record_oid_field.setText(str(cfg.get("estore_c_record_OID", "")))
 
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _build_fintech_sub(self):
         wrapper = QWidget()
@@ -670,14 +694,16 @@ class DynamicEDIBuilder:
         fintech_division_field.setText(
             str(self.folder_config.get("fintech_division_id", ""))
         )
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _build_basic_options_sub(self):
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(QLabel("No additional options for this format."))
-        self.convert_sub_layout.addWidget(wrapper)
+        if self.convert_sub_layout is not None:
+            self.convert_sub_layout.addWidget(wrapper)
 
     def _build_tweak_edi_area(self):
         """Build the 'Tweak EDI' configuration section."""
@@ -728,6 +754,7 @@ class DynamicEDIBuilder:
         wrapper_layout.addWidget(arec_group)
 
         tweak_force_txt_check = QCheckBox("Force .txt file extension")
+        tweak_force_txt_check.setAccessibleName("Force txt file extension")
         self.fields["force_txt_file_ext_check"] = tweak_force_txt_check
         wrapper_layout.addWidget(tweak_force_txt_check)
 
@@ -735,6 +762,7 @@ class DynamicEDIBuilder:
         offset_row.addWidget(QLabel("Invoice Offset (Days):"))
         tweak_invoice_offset = QSpinBox()
         tweak_invoice_offset.setRange(-14, 14)
+        tweak_invoice_offset.setAccessibleName("Invoice offset days")
         self.fields["invoice_date_offset"] = tweak_invoice_offset
         offset_row.addWidget(tweak_invoice_offset)
         wrapper_layout.addLayout(offset_row)
@@ -745,6 +773,7 @@ class DynamicEDIBuilder:
         custom_date_row.addWidget(tweak_custom_date_check)
         tweak_custom_date_field = QLineEdit()
         tweak_custom_date_field.setMaximumWidth(100)
+        tweak_custom_date_field.setAccessibleName("Custom invoice date format string")
         self.fields["invoice_date_custom_format_field"] = tweak_custom_date_field
         custom_date_row.addWidget(tweak_custom_date_field)
         wrapper_layout.addLayout(custom_date_row)
@@ -838,9 +867,9 @@ class DynamicEDIBuilder:
     ):
         cfg = self.folder_config
         upc_check.setChecked(
-            str(cfg.get("calculate_upc_check_digit", "False")) == "True"
+            normalize_bool(cfg.get("calculate_upc_check_digit", False))
         )
-        pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
+        pad_arec_check.setChecked(normalize_bool(cfg.get("pad_a_records", False)))
         arec_padding_field.setText(str(cfg.get("a_record_padding") or ""))
 
         pad_len = str(
@@ -852,23 +881,23 @@ class DynamicEDIBuilder:
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
 
-        append_arec_check.setChecked(
-            str(cfg.get("append_a_records", "False")) == "True"
-        )
+        append_arec_check.setChecked(normalize_bool(cfg.get("append_a_records", False)))
         arec_append_field.setText(str(cfg.get("a_record_append_text") or ""))
-        force_txt_check.setChecked(
-            str(cfg.get("force_txt_file_ext", "False")) == "True"
-        )
+        force_txt_check.setChecked(normalize_bool(cfg.get("force_txt_file_ext", False)))
 
         offset = cfg.get("invoice_date_offset")
         invoice_offset.setValue(int(offset) if offset is not None else 0)
 
-        custom_date_check.setChecked(bool(cfg.get("invoice_date_custom_format", False)))
+        custom_date_check.setChecked(
+            normalize_bool(cfg.get("invoice_date_custom_format", False))
+        )
         custom_date_field.setText(
             str(cfg.get("invoice_date_custom_format_string") or "")
         )
-        retail_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
-        override_upc_check.setChecked(bool(cfg.get("override_upc_bool", False)))
+        retail_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
+        override_upc_check.setChecked(
+            normalize_bool(cfg.get("override_upc_bool", False))
+        )
 
         lvl = str(
             cfg.get("override_upc_level")
@@ -893,5 +922,5 @@ class DynamicEDIBuilder:
             str(cfg.get("upc_padding_pattern") or "           ")
         )
         split_sales_tax_check.setChecked(
-            bool(cfg.get("split_prepaid_sales_tax_crec", False))
+            normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
         )

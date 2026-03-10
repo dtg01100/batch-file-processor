@@ -15,15 +15,19 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
     QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.theme import Theme
 
 from interface.services.resend_service import ResendService
 
@@ -44,9 +48,9 @@ class ResendDialog(BaseDialog):
 
         self._database_connection = database_connection
         self._service: Optional[ResendService] = None
-        self._folder_id: Optional[int] = None
-        self._file_checkboxes: Dict[int, QCheckBox] = {}
-        self._folder_buttons: Dict[int, QPushButton] = {}
+        self._all_files: List[Dict[str, Any]] = []
+        self._filtered_files: List[Dict[str, Any]] = []
+        self._selected_files: set = set()
         self._should_show = True  # Flag to control if dialog should be shown
 
         self._setup_ui()
@@ -56,8 +60,13 @@ class ResendDialog(BaseDialog):
         """Set up the dialog UI."""
         # Use the main layout from BaseDialog instead of creating a new one
         main_layout = self._main_layout
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_MD_INT,
+        )
+        main_layout.setSpacing(Theme.SPACING_MD_INT)
 
         # Clear default widgets from BaseDialog
         while main_layout.count() > 0:
@@ -66,187 +75,227 @@ class ResendDialog(BaseDialog):
                 item.widget().deleteLater()
 
         # Set minimum size for comfortable viewing
-        self.setMinimumSize(700, 500)
+        self.setMinimumSize(900, 600)
 
-        # Files and folders frame
-        files_folders_frame = QFrame()
-        files_folders_layout = QHBoxLayout(files_folders_frame)
-        files_folders_layout.setContentsMargins(0, 0, 0, 0)
+        # Search bar
+        search_layout = QHBoxLayout()
+        search_label = QLabel("&Search:")
+        self._search_input = QLineEdit()
+        self._search_input.setPlaceholderText("Filter files by name...")
+        self._search_input.textChanged.connect(self._on_search_changed)
+        self._search_input.setAccessibleName("Search files")
+        self._search_input.setAccessibleDescription("Filter the file list by file name")
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self._search_input)
+        main_layout.addLayout(search_layout)
 
-        # Folders frame (left) with scrolling
-        folders_frame = QGroupBox("Folders")
-        folders_frame_layout = QVBoxLayout(folders_frame)
-        folders_frame_layout.setContentsMargins(0, 0, 0, 0)
+        # Table
+        self._table = QTableWidget()
+        self._table.setColumnCount(5)
+        self._table.setHorizontalHeaderLabels([
+            "", "Folder", "File Name", "Sent Date", "Resend"
+        ])
+        self._table.setAlternatingRowColors(True)
+        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setSortingEnabled(True)
+        self._table.horizontalHeader().setStretchLastSection(True)
+        self._table.setAccessibleName("Files table")
+        self._table.setAccessibleDescription("Table of processed files with resend options")
+        main_layout.addWidget(self._table)
 
-        self._folders_scroll = QScrollArea()
-        self._folders_scroll.setWidgetResizable(True)
-        self._folders_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self._folders_content = QWidget()
-        self._folders_layout = QVBoxLayout(self._folders_content)
-        self._folders_layout.setSpacing(5)
-        self._folders_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._folders_scroll.setWidget(self._folders_content)
-        folders_frame_layout.addWidget(self._folders_scroll)
+        # Status bar
+        self._status_label = QLabel()
+        self._status_label.setAccessibleName("Status information")
+        main_layout.addWidget(self._status_label)
 
-        # Files frame (right)
-        files_frame = QGroupBox("Files")
-        files_layout = QVBoxLayout(files_frame)
+        # Bulk action bar (initially hidden)
+        self._bulk_action_frame = QFrame()
+        self._bulk_action_frame.setFrameStyle(QFrame.Shape.Box)
+        self._bulk_action_frame.setVisible(False)
+        bulk_layout = QHBoxLayout(self._bulk_action_frame)
 
-        # File count control
-        file_count_frame = QHBoxLayout()
-        file_count_label = QLabel("Show:")
-        file_count_frame.addWidget(file_count_label)
+        self._bulk_select_all = QPushButton("&Select All")
+        self._bulk_select_all.clicked.connect(self._select_all_files)
+        bulk_layout.addWidget(self._bulk_select_all)
 
-        self._file_count_spinbox = QSpinBox()
-        self._file_count_spinbox.setMinimum(5)
-        self._file_count_spinbox.setMaximum(1000)
-        self._file_count_spinbox.setValue(10)
-        self._file_count_spinbox.setSingleStep(5)
-        self._file_count_spinbox.setEnabled(False)
-        self._file_count_spinbox.valueChanged.connect(self._on_file_count_changed)
-        file_count_frame.addWidget(self._file_count_spinbox)
+        self._bulk_clear_selection = QPushButton("&Clear Selection")
+        self._bulk_clear_selection.clicked.connect(self._clear_selection)
+        bulk_layout.addWidget(self._bulk_clear_selection)
 
-        file_count_frame.addStretch()
-        files_layout.addLayout(file_count_frame)
+        bulk_layout.addStretch()
 
-        # Scrollable file list
-        self._files_scroll = QScrollArea()
-        self._files_scroll.setWidgetResizable(True)
-        self._files_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self._files_content = QWidget()
-        self._files_content_layout = QVBoxLayout(self._files_content)
-        self._files_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._files_scroll.setWidget(self._files_content)
-        files_layout.addWidget(self._files_scroll)
+        self._bulk_mark_resend = QPushButton("&Mark Selected for Resend")
+        self._bulk_mark_resend.clicked.connect(self._mark_selected_for_resend)
+        self._bulk_mark_resend.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; }")
+        bulk_layout.addWidget(self._bulk_mark_resend)
 
-        # Assemble
-        files_folders_layout.addWidget(folders_frame, stretch=1)
-        files_folders_layout.addWidget(files_frame, stretch=2)
-        main_layout.addWidget(files_folders_frame)
+        self._bulk_clear_resend = QPushButton("&Clear Resend Flags")
+        self._bulk_clear_resend.clicked.connect(self._clear_selected_resend_flags)
+        bulk_layout.addWidget(self._bulk_clear_resend)
+
+        main_layout.addWidget(self._bulk_action_frame)
 
         # Close button
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         button_box.rejected.connect(self.reject)
+        close_btn = button_box.button(QDialogButtonBox.StandardButton.Close)
+        if close_btn is not None:
+            close_btn.setText("&Close")
+            close_btn.setAccessibleName("Close resend dialog")
+            close_btn.setAccessibleDescription("Close this dialog")
         main_layout.addWidget(button_box)
 
     def _load_data(self) -> None:
         """Load data from database."""
-        # Clear existing folder buttons to prevent duplicates
-        for button in self._folder_buttons.values():
-            button.deleteLater()
-        self._folder_buttons.clear()
-
         try:
             self._service = ResendService(self._database_connection)
             if not self._service.has_processed_files():
-                from PyQt6.QtWidgets import QMessageBox
-
-                QMessageBox.information(
-                    self, "Nothing To Configure", "No processed files found."
-                )
+                self.show_info("Nothing To Configure", "No processed files found.")
                 self._should_show = False
                 return
         except Exception as e:
-            from PyQt6.QtWidgets import QMessageBox
-
-            QMessageBox.critical(self, "Database Error", f"Database error: {e}")
+            self.show_error("Database Error", f"Database error: {e}")
             self._should_show = False
             return
 
-        # Load folders (get_folder_list returns list of (folder_id, alias) tuples)
-        folders = self._service.get_folder_list()
-        for folder_id, folder_alias in folders:
-            folder_info = {"id": folder_id, "folder_name": folder_alias}
-            self._add_folder_button(folder_info)
+        # Load all files
+        self._all_files = self._service.get_all_files_for_resend()
+        self._filtered_files = self._all_files.copy()
+        self._populate_table()
+        self._update_status()
 
-    def _add_folder_button(self, folder_info: Dict[str, Any]) -> None:
-        """Add a folder button to the folders list."""
-        folder_id = folder_info["id"]
-        folder_name = folder_info["folder_name"]
+    def _populate_table(self) -> None:
+        """Populate the table with filtered files."""
+        self._table.setRowCount(len(self._filtered_files))
 
-        button = QPushButton(folder_name)
-        button.setCheckable(True)
-        button.setMinimumHeight(35)
-        button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        button.clicked.connect(lambda checked: self._on_folder_selected(folder_id))
-        self._folder_buttons[folder_id] = button
-        self._folders_layout.addWidget(button)
-
-    def _on_folder_selected(self, folder_id: int) -> None:
-        """Handle folder selection."""
-        # Update button states
-        for fid, button in self._folder_buttons.items():
-            button.setChecked(fid == folder_id)
-
-        self._folder_id = folder_id
-
-        # Load files for this folder
-        self._load_files_for_folder(folder_id)
-
-    def _load_files_for_folder(self, folder_id: int) -> None:
-        """Load and display files for the selected folder."""
-        # Clear existing checkboxes and layout items
-        while self._files_content_layout.count():
-            item = self._files_content_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        self._file_checkboxes.clear()
-
-        # Get file count and update spinbox
-        number_of_files = self._service.count_files_for_folder(folder_id)
-        self._file_count_spinbox.setEnabled(True)
-        self._file_count_spinbox.setMaximum(max(1000, number_of_files))
-        if number_of_files > 10:
-            self._file_count_spinbox.setValue(((number_of_files + 4) // 5) * 5)
-        else:
-            self._file_count_spinbox.setValue(10)
-
-        # Load files
-        self._populate_file_checkboxes()
-
-    def _populate_file_checkboxes(self) -> None:
-        """Populate the file checkboxes."""
-        if self._folder_id is None:
-            return
-
-        limit = int(self._file_count_spinbox.value())
-        files = self._service.get_files_for_folder(self._folder_id, limit=limit)
-
-        # Calculate max filename length for alignment
-        if files:
-            max_name_length = max(len(f["file_name"]) for f in files)
-        else:
-            max_name_length = 0
-
-        for file_info in files:
-            checkbox = QCheckBox(self._files_content)
-            checkbox.setText(file_info["file_name"])
-            checkbox.setChecked(file_info["resend_flag"])
-            checkbox.toggled.connect(
-                lambda checked, fid=file_info["id"]: self._on_file_toggled(fid, checked)
+        for row, file_info in enumerate(self._filtered_files):
+            # Checkbox column
+            checkbox = QCheckBox()
+            checkbox.setChecked(file_info["id"] in self._selected_files)
+            checkbox.stateChanged.connect(
+                lambda state, fid=file_info["id"]: self._on_file_selected(fid, state == 2)
             )
-            self._file_checkboxes[file_info["id"]] = checkbox
-            self._files_content_layout.addWidget(checkbox)
+            self._table.setCellWidget(row, 0, checkbox)
 
-        self._files_content_layout.addStretch()
+            # Folder column
+            folder_item = QTableWidgetItem(file_info["folder_alias"])
+            folder_item.setFlags(folder_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._table.setItem(row, 1, folder_item)
 
-    def _on_file_count_changed(self, value: int) -> None:
-        """Handle file count spinbox change."""
-        if self._folder_id is not None:
-            self._populate_file_checkboxes()
+            # File name column
+            file_item = QTableWidgetItem(file_info["file_name"])
+            file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._table.setItem(row, 2, file_item)
 
-    def _on_file_toggled(self, file_id: int, checked: bool) -> None:
-        """Handle file checkbox toggle."""
+            # Sent date column
+            from datetime import datetime
+            sent_date = datetime.fromisoformat(file_info["sent_date_time"]).strftime("%Y-%m-%d %H:%M")
+            date_item = QTableWidgetItem(sent_date)
+            date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._table.setItem(row, 3, date_item)
+
+            # Resend status column
+            status = "Yes" if file_info["resend_flag"] else "No"
+            status_item = QTableWidgetItem(status)
+            status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._table.setItem(row, 4, status_item)
+
+        self._table.resizeColumnsToContents()
+        # Set minimum widths for better readability
+        self._table.setColumnWidth(0, 50)  # Checkbox column
+        self._table.setColumnWidth(1, 150)  # Folder column
+        self._table.setColumnWidth(3, 120)  # Date column
+        self._table.setColumnWidth(4, 80)   # Status column
+        self._table.horizontalHeader().setStretchLastSection(True)
+
+    def _on_search_changed(self, text: str) -> None:
+        """Handle search input changes."""
+        if not text:
+            self._filtered_files = self._all_files.copy()
+        else:
+            self._filtered_files = [
+                f for f in self._all_files
+                if text.lower() in f["file_name"].lower()
+            ]
+        self._populate_table()
+        self._update_status()
+
+    def _on_file_selected(self, file_id: int, selected: bool) -> None:
+        """Handle file selection in table."""
+        if selected:
+            self._selected_files.add(file_id)
+        else:
+            self._selected_files.discard(file_id)
+        self._update_bulk_actions()
+
+    def _update_bulk_actions(self) -> None:
+        """Update bulk action bar visibility and state."""
+        has_selection = bool(self._selected_files)
+        self._bulk_action_frame.setVisible(has_selection)
+
+    def _update_status(self) -> None:
+        """Update the status label."""
+        total_files = len(self._all_files)
+        filtered_files = len(self._filtered_files)
+        selected_files = len(self._selected_files)
+        resend_count = sum(1 for f in self._all_files if f["resend_flag"])
+
+        if filtered_files < total_files:
+            status = f"Showing {filtered_files} of {total_files} files"
+        else:
+            status = f"{total_files} files total"
+
+        if selected_files > 0:
+            status += f" • {selected_files} selected"
+
+        if resend_count > 0:
+            status += f" • {resend_count} marked for resend"
+
+        self._status_label.setText(status)
+
+    def _select_all_files(self) -> None:
+        """Select all visible files."""
+        self._selected_files.update(f["id"] for f in self._filtered_files)
+        self._populate_table()
+        self._update_bulk_actions()
+        self._update_status()
+
+    def _clear_selection(self) -> None:
+        """Clear all selections."""
+        self._selected_files.clear()
+        self._populate_table()
+        self._update_bulk_actions()
+        self._update_status()
+
+    def _mark_selected_for_resend(self) -> None:
+        """Mark selected files for resend."""
         try:
-            self._service.set_resend_flag(file_id, checked)
+            for file_id in self._selected_files:
+                self._service.set_resend_flag(file_id, True)
+            # Update local data
+            for file_info in self._all_files:
+                if file_info["id"] in self._selected_files:
+                    file_info["resend_flag"] = True
+            self._populate_table()
+            self._update_status()
+            self.show_info("Success", f"Marked {len(self._selected_files)} files for resend.")
         except Exception as e:
-            from PyQt6.QtWidgets import QMessageBox
+            self.show_error("Database Error", f"Database error: {e}")
 
-            QMessageBox.critical(self, "Database Error", f"Database error: {e}")
+    def _clear_selected_resend_flags(self) -> None:
+        """Clear resend flags for selected files."""
+        try:
+            for file_id in self._selected_files:
+                self._service.set_resend_flag(file_id, False)
+            # Update local data
+            for file_info in self._all_files:
+                if file_info["id"] in self._selected_files:
+                    file_info["resend_flag"] = False
+            self._populate_table()
+            self._update_status()
+            self.show_info("Success", f"Cleared resend flags for {len(self._selected_files)} files.")
+        except Exception as e:
+            self.show_error("Database Error", f"Database error: {e}")
 
 
 def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:

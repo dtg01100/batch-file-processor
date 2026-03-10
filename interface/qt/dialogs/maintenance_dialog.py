@@ -46,7 +46,6 @@ class MaintenanceDialog(BaseDialog):
         self._buttons: list[QPushButton] = []
         super().__init__(parent, "Maintenance Functions")
 
-        self.setModal(True)
         self.setMinimumSize(600, 400)
 
         # Maintenance dialog shouldn't have OK/Cancel buttons
@@ -70,6 +69,8 @@ class MaintenanceDialog(BaseDialog):
         for text, slot in buttons:
             btn = QPushButton(text)
             btn.clicked.connect(slot)
+            btn.setAccessibleName(text)
+            btn.setAccessibleDescription(f"Run maintenance operation: {text}")
             button_layout.addWidget(btn)
             self._buttons.append(btn)
 
@@ -127,9 +128,10 @@ class MaintenanceDialog(BaseDialog):
         if path:
             self._mf.database_import_wrapper(path)
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802
+    def keyPressEvent(self, a0) -> None:  # noqa: N802
+        event = a0
         if event.key() == Qt.Key.Key_Escape:
-            self.close()
+            self.reject()
             return
         super().keyPressEvent(event)
 

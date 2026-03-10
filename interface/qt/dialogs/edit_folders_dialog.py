@@ -16,7 +16,9 @@ from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 from interface.services.ftp_service import FTPServiceProtocol
 from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
+from core.utils.bool_utils import normalize_bool
 
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
@@ -34,6 +36,7 @@ class EditFoldersDialog(BaseDialog):
         parent: Optional[QWidget],
         folder_config: Dict[str, Any],
         title: str = "Edit Folder",
+        plugin_manager: Optional[PluginManager] = None,
         ftp_service: Optional[FTPServiceProtocol] = None,
         validator: Optional[FolderSettingsValidator] = None,
         settings_provider: Optional[Callable] = None,
@@ -53,11 +56,11 @@ class EditFoldersDialog(BaseDialog):
         self.copy_to_directory: str = folder_config.get("copy_to_directory", "")
         self._settings = self._load_settings()
 
-        # Initialize plugin management
-        self.plugin_manager = PluginManager()
-        self.plugin_manager.discover_plugins()
-        self.plugin_manager.initialize_plugins()
-        self.plugin_config_mapper = PluginConfigurationMapper()
+        # Shared plugin management
+        self.plugin_manager = plugin_manager or get_shared_plugin_manager()
+        self.plugin_config_mapper = PluginConfigurationMapper(
+            plugin_manager=self.plugin_manager
+        )
 
         # Initialize Handlers
         self.handlers = EventHandlers(
@@ -69,7 +72,9 @@ class EditFoldersDialog(BaseDialog):
             settings_provider=self._settings_provider,
             alias_provider=self._alias_provider,
             on_apply_success=self._on_apply_success,
-            data_extractor=QtFolderDataExtractor(self._fields),
+            data_extractor=QtFolderDataExtractor(
+                self._fields, plugin_manager=self.plugin_manager
+            ),
             ftp_service=self._ftp_service,
         )
 
@@ -84,6 +89,7 @@ class EditFoldersDialog(BaseDialog):
             on_show_path=self.handlers.show_folder_path,
             on_update_backend_states=self.handlers.update_active_state,
             on_convert_format_changed=None,  # Will be set by DynamicEDIBuilder
+            on_dynamic_form_changed=self._refresh_tab_order,
             on_ok=self._on_ok,
             on_cancel=self.reject,
         )
@@ -106,6 +112,10 @@ class EditFoldersDialog(BaseDialog):
 
         # Link dynamic EDI builder back to dialog for population if needed
         self.dynamic_edi_builder = self.ui_builder.get_dynamic_edi_builder()
+        if self.dynamic_edi_builder and self.dynamic_edi_builder.edi_options_combo:
+            self.dynamic_edi_builder.edi_options_combo.currentTextChanged.connect(
+                lambda _text: self._refresh_tab_order()
+            )
 
     def _populate_fields(self, config: Dict[str, Any]):
         """Populate UI fields from configuration."""
@@ -115,7 +125,7 @@ class EditFoldersDialog(BaseDialog):
                 return default
             if isinstance(val, bool):
                 return val
-            return str(val).lower() == "true"
+            return normalize_bool(val)
 
         # Active state
         active_btn = self._fields.get("active_checkbutton")
@@ -174,7 +184,7 @@ class EditFoldersDialog(BaseDialog):
         # EDI Options combo
         edi_combo = self.dynamic_edi_builder.edi_options_combo
         if edi_combo:
-            if str(config.get("process_edi")).lower() == "true":
+            if normalize_bool(config.get("process_edi")):
                 edi_combo.setCurrentText("Convert EDI")
             elif to_bool(config.get("tweak_edi")):
                 edi_combo.setCurrentText("Tweak EDI")
@@ -186,6 +196,88 @@ class EditFoldersDialog(BaseDialog):
         self._folder_config.update(config)
         self._populate_fields(self._folder_config)
         self.handlers.update_active_state()
+        self._refresh_tab_order()
+
+    def _refresh_tab_order(self) -> None:
+        ordered_keys = [
+            "active_checkbutton",
+            "folder_alias_field",
+            "process_backend_copy_check",
+            "process_backend_ftp_check",
+            "process_backend_email_check",
+            "copy_dest_btn",
+            "ftp_server_field",
+            "ftp_port_field",
+            "ftp_folder_field",
+            "ftp_username_field",
+            "ftp_password_field",
+            "email_recipient_field",
+            "email_sender_subject_field",
+            "force_edi_check_var",
+            "split_edi",
+            "split_edi_send_invoices",
+            "split_edi_send_credits",
+            "prepend_file_dates",
+            "rename_file_field",
+            "split_edi_filter_categories_entry",
+            "split_edi_filter_mode",
+            "convert_formats_var",
+            "upc_var_check",
+            "a_rec_var_check",
+            "c_rec_var_check",
+            "headers_check",
+            "ampersand_check",
+            "pad_arec_check",
+            "a_record_padding_field",
+            "a_record_padding_length",
+            "append_arec_check",
+            "a_record_append_field",
+            "force_txt_file_ext_check",
+            "invoice_date_offset",
+            "invoice_date_custom_format",
+            "invoice_date_custom_format_field",
+            "override_upc_bool",
+            "override_upc_level",
+            "override_upc_category_filter_entry",
+            "upc_target_length_entry",
+            "upc_padding_pattern_entry",
+        ]
+
+        widgets = [
+            self._fields.get(key)
+            for key in ordered_keys
+            if self._fields.get(key) is not None
+            and hasattr(self._fields.get(key), "setFocus")
+            and hasattr(self._fields.get(key), "isVisible")
+            and self._fields.get(key).isVisible()
+        ]
+
+        for idx in range(len(widgets) - 1):
+            self.setTabOrder(widgets[idx], widgets[idx + 1])
+
+    def _focus_widget(self, widget: Optional[QWidget]) -> None:
+        if widget is None:
+            return
+        widget.setFocus()
+        if hasattr(widget, "selectAll"):
+            widget.selectAll()
+
+    def _widget_for_validation_field(self, field: str) -> Optional[QWidget]:
+        field_map = {
+            "alias": "folder_alias_field",
+            "ftp_server": "ftp_server_field",
+            "ftp_port": "ftp_port_field",
+            "ftp_folder": "ftp_folder_field",
+            "ftp_username": "ftp_username_field",
+            "ftp_password": "ftp_password_field",
+            "email_recipient": "email_recipient_field",
+            "copy_destination": "copy_dest_btn",
+            "backends": "process_backend_copy_check",
+        }
+        key = field_map.get(field)
+        if not key:
+            return None
+        return self._fields.get(key)
 
     def _set_check(self, key: str, value: bool):
         widget = self._fields.get(key)
@@ -209,7 +301,9 @@ class EditFoldersDialog(BaseDialog):
         if active_btn and not active_btn.isChecked():
             return True
 
-        extractor = QtFolderDataExtractor(self._fields)
+        extractor = QtFolderDataExtractor(
+            self._fields, plugin_manager=self.plugin_manager
+        )
         extracted = extractor.extract_all()
         extracted.copy_to_directory = self.handlers.copy_to_directory
 
@@ -218,8 +312,49 @@ class EditFoldersDialog(BaseDialog):
         result = validator.validate_extracted_fields(extracted, current_alias)
 
         if not result.is_valid:
-            error_messages = [e.message for e in result.errors]
-            QMessageBox.critical(self, "Validation Error", "\n".join(error_messages))
+            first_invalid_widget = None
+            grouped: Dict[str, list[str]] = {
+                "Folder": [],
+                "Backends": [],
+                "FTP": [],
+                "Email": [],
+                "Copy": [],
+                "Other": [],
+            }
+
+            def section_for_field(field_name: str) -> str:
+                if field_name.startswith("ftp_"):
+                    return "FTP"
+                if field_name.startswith("email_"):
+                    return "Email"
+                if field_name.startswith("copy_"):
+                    return "Copy"
+                if field_name in {"alias"}:
+                    return "Folder"
+                if field_name in {"backends"}:
+                    return "Backends"
+                return "Other"
+
+            for error in result.errors:
+                grouped[section_for_field(error.field)].append(error.message)
+                if first_invalid_widget is None:
+                    first_invalid_widget = self._widget_for_validation_field(
+                        error.field
+                    )
+
+            lines = []
+            for section, messages in grouped.items():
+                if not messages:
+                    continue
+                lines.append(f"{section}:")
+                for msg in messages:
+                    lines.append(f"- {msg}")
+                lines.append("")
+            while lines and not lines[-1]:
+                lines.pop()
+
+            self._focus_widget(first_invalid_widget)
+            QMessageBox.critical(self, "Validation Error", "\n".join(lines))
             return False
 
         return True
@@ -239,11 +374,13 @@ class EditFoldersDialog(BaseDialog):
 
     def apply(self):
         """Extract data from UI and update the configuration dictionary."""
-        extractor = QtFolderDataExtractor(self._fields)
+        extractor = QtFolderDataExtractor(
+            self._fields, plugin_manager=self.plugin_manager
+        )
         extracted = extractor.extract_all()
 
         target = self._folder_config
-        target["folder_is_active"] = extracted.folder_is_active
+        target["folder_is_active"] = normalize_bool(extracted.folder_is_active)
 
         if target.get("folder_name") != "template":
             alias = extracted.alias
@@ -269,13 +406,15 @@ class EditFoldersDialog(BaseDialog):
         target["email_subject_line"] = extracted.email_subject_line
 
         # EDI settings
-        target["process_edi"] = extracted.process_edi
+        target["process_edi"] = normalize_bool(extracted.process_edi)
         target["convert_to_format"] = extracted.convert_to_format
-        target["calculate_upc_check_digit"] = extracted.calculate_upc_check_digit
-        target["include_a_records"] = extracted.include_a_records
-        target["include_c_records"] = extracted.include_c_records
-        target["include_headers"] = extracted.include_headers
-        target["filter_ampersand"] = extracted.filter_ampersand
+        target["calculate_upc_check_digit"] = normalize_bool(
+            extracted.calculate_upc_check_digit
+        )
+        target["include_a_records"] = normalize_bool(extracted.include_a_records)
+        target["include_c_records"] = normalize_bool(extracted.include_c_records)
+        target["include_headers"] = normalize_bool(extracted.include_headers)
+        target["filter_ampersand"] = normalize_bool(extracted.filter_ampersand)
         target["force_edi_validation"] = extracted.force_edi_validation
         target["tweak_edi"] = extracted.tweak_edi
         target["split_edi"] = extracted.split_edi
@@ -285,15 +424,15 @@ class EditFoldersDialog(BaseDialog):
         target["split_edi_filter_categories"] = extracted.split_edi_filter_categories
         target["split_edi_filter_mode"] = extracted.split_edi_filter_mode
         target["rename_file"] = extracted.rename_file
-        target["pad_a_records"] = extracted.pad_a_records
+        target["pad_a_records"] = normalize_bool(extracted.pad_a_records)
         target["a_record_padding"] = extracted.a_record_padding
         try:
             target["a_record_padding_length"] = int(extracted.a_record_padding_length)
         except (ValueError, TypeError):
             target["a_record_padding_length"] = 6
-        target["append_a_records"] = extracted.append_a_records
+        target["append_a_records"] = normalize_bool(extracted.append_a_records)
         target["a_record_append_text"] = extracted.a_record_append_text
-        target["force_txt_file_ext"] = extracted.force_txt_file_ext
+        target["force_txt_file_ext"] = normalize_bool(extracted.force_txt_file_ext)
         try:
             target["invoice_date_offset"] = int(extracted.invoice_date_offset)
         except (ValueError, TypeError):

@@ -1,7 +1,7 @@
 """Qt implementation of the search/filter widget."""
 
 from typing import Optional, Callable
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence
 
@@ -9,9 +9,9 @@ from interface.qt.theme import Theme
 
 
 class SearchWidget(QWidget):
-    """Search/filter widget with text entry and apply button.
+    """Search/filter widget with real-time text filtering.
 
-    Emits filter_changed signal when the filter text is applied.
+    Emits filter_changed signal as the user types.
     Supports Escape key to clear the filter when active.
 
     Args:
@@ -47,10 +47,7 @@ class SearchWidget(QWidget):
         """Get the search entry field."""
         return self._entry
 
-    @property
-    def button(self) -> QPushButton:
-        """Get the filter button."""
-        return self._button
+
 
     @property
     def value(self) -> str:
@@ -77,7 +74,6 @@ class SearchWidget(QWidget):
             enabled: True to enable, False to disable
         """
         self._entry.setEnabled(enabled)
-        self._button.setEnabled(enabled)
 
     def _build_ui(self) -> None:
         self.setStyleSheet(
@@ -96,17 +92,13 @@ class SearchWidget(QWidget):
 
         self._entry = QLineEdit()
         self._entry.setPlaceholderText("\U0001F50D Search folders...")
-        self._entry.setToolTip("Type folder name text and press Enter to filter")
+        self._entry.setToolTip("Type folder name text to filter folders as you type")
+        self._entry.setAccessibleName("Folder search")
+        self._entry.setAccessibleDescription("Search folders by alias text (filters automatically as you type)")
         self._entry.setStyleSheet(Theme.get_input_stylesheet())
-        self._entry.returnPressed.connect(self._on_return_pressed)
-
-        self._button = QPushButton("Filter")
-        self._button.setObjectName("primary")
-        self._button.setToolTip("Apply folder filter")
-        self._button.clicked.connect(self._on_button_clicked)
+        self._entry.textChanged.connect(self._on_text_changed)
 
         layout.addWidget(self._entry, stretch=1)
-        layout.addWidget(self._button)
         self.setLayout(layout)
 
     def _setup_shortcuts(self) -> None:
@@ -114,11 +106,8 @@ class SearchWidget(QWidget):
         self._escape_shortcut.setEnabled(False)
         self._escape_shortcut.activated.connect(self._on_escape_pressed)
 
-    def _on_button_clicked(self) -> None:
-        self._on_filter_applied(self._entry.text().strip())
-
-    def _on_return_pressed(self) -> None:
-        self._on_filter_applied(self._entry.text().strip())
+    def _on_text_changed(self, text: str) -> None:
+        self._on_filter_applied(text.strip())
 
     def _on_escape_pressed(self) -> None:
         self.clear()

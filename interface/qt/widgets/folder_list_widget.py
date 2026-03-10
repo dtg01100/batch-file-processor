@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 import thefuzz.process  # type: ignore
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.qt.theme import Theme
+from core.utils.bool_utils import normalize_bool
 
 
 class FolderTableProtocol(Protocol):
@@ -41,7 +43,7 @@ class FolderTableProtocol(Protocol):
         """Return folders matching the given criteria.
 
         Args:
-            **kwargs: Filter criteria, e.g. ``folder_is_active="True"``.
+            **kwargs: Filter criteria, e.g. ``folder_is_active=True``.
 
         Returns:
             An iterator of folder dictionaries.
@@ -272,10 +274,10 @@ class FolderListWidget(QWidget):
             )
             scroll_layout.addWidget(empty_label)
 
-        max_alias_length = self._calculate_max_alias_length(folder_list)
+        edit_button_min_width = self._calculate_edit_button_min_width(folder_list)
 
         for folder in folder_list:
-            row = self._build_folder_row(folder, max_alias_length)
+            row = self._build_folder_row(folder, edit_button_min_width)
             scroll_layout.addWidget(row)
 
         scroll_layout.addStretch(1)
@@ -287,14 +289,13 @@ class FolderListWidget(QWidget):
     def _build_folder_row(
         self,
         folder: Dict[str, Any],
-        max_alias_length: int,
+        edit_button_min_width: int,
     ) -> QWidget:
         """Build a single folder row with status indicator and action buttons.
 
         Args:
             folder: A folder dictionary with ``id``, ``alias``, and ``folder_is_active`` keys.
-            max_alias_length: The maximum alias character length, used to set
-                a uniform edit-button width.
+            edit_button_min_width: Minimum width used for edit buttons in the list.
 
         Returns:
             A :class:`QWidget` representing the folder row.
@@ -326,7 +327,7 @@ class FolderListWidget(QWidget):
 
         folder_id: int = folder["id"]
         alias: str = folder["alias"]
-        is_active: bool = folder["folder_is_active"] == "True"
+        is_active: bool = normalize_bool(folder.get("folder_is_active"))
 
         # Status badge
         status_badge = QLabel("●")
@@ -350,16 +351,23 @@ class FolderListWidget(QWidget):
             """
             )
             status_badge.setToolTip("Inactive")
+        status_badge.setAccessibleName("Folder status")
+        status_badge.setAccessibleDescription(
+            f"Folder '{alias}' is {'active' if is_active else 'inactive'}"
+        )
 
         row_layout.addWidget(status_badge)
 
         # Edit button (always present, shows folder alias for quick scanning)
         edit_text = f"Edit: {alias}" if alias else "Edit"
-        target_char_width = max_alias_length + 6
         edit_btn = QPushButton(edit_text)
         edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
+        edit_btn.setMinimumWidth(edit_button_min_width)
         edit_btn.setToolTip(f"Edit folder settings for '{alias}'" if alias else "Edit folder settings")
+        edit_btn.setAccessibleName(f"Edit folder {alias}" if alias else "Edit folder")
+        edit_btn.setAccessibleDescription(
+            f"Open settings for folder '{alias}'" if alias else "Open folder settings"
+        )
         self._style_action_button(edit_btn)
         edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
         row_layout.addWidget(edit_btn, stretch=1)
@@ -371,6 +379,8 @@ class FolderListWidget(QWidget):
             toggle_btn.setFixedWidth(40)
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Disable folder")
+            toggle_btn.setAccessibleName(f"Disable folder {alias}" if alias else "Disable folder")
+            toggle_btn.setAccessibleDescription("Disable this folder")
             self._style_action_button(toggle_btn)
             toggle_btn.clicked.connect(
                 lambda _checked, fid=folder_id: self._on_toggle(fid)
@@ -382,6 +392,10 @@ class FolderListWidget(QWidget):
             send_btn.setFixedWidth(64)
             send_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             send_btn.setToolTip(f"Process only '{alias}'")
+            send_btn.setAccessibleName(f"Send folder {alias}" if alias else "Send folder")
+            send_btn.setAccessibleDescription(
+                f"Process only folder '{alias}'" if alias else "Process this folder"
+            )
             self._style_action_button(send_btn, "primary")
             send_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_send(fid))
             row_layout.addWidget(send_btn)
@@ -391,6 +405,8 @@ class FolderListWidget(QWidget):
             toggle_btn.setFixedWidth(40)
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Enable folder")
+            toggle_btn.setAccessibleName(f"Enable folder {alias}" if alias else "Enable folder")
+            toggle_btn.setAccessibleDescription("Enable this folder")
             self._style_action_button(toggle_btn)
             toggle_btn.clicked.connect(
                 lambda _checked, fid=folder_id: self._on_toggle(fid)
@@ -402,6 +418,14 @@ class FolderListWidget(QWidget):
             delete_btn.setFixedWidth(74)
             delete_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             delete_btn.setToolTip(f"Remove '{alias}' from configured folders")
+            delete_btn.setAccessibleName(
+                f"Delete folder {alias}" if alias else "Delete folder"
+            )
+            delete_btn.setAccessibleDescription(
+                f"Remove folder '{alias}' from configured folders"
+                if alias
+                else "Remove this folder from configured folders"
+            )
             self._style_action_button(delete_btn, "danger")
             delete_btn.clicked.connect(
                 lambda _checked, fid=folder_id, a=alias: self._on_delete(fid, a)
@@ -441,7 +465,7 @@ class FolderListWidget(QWidget):
             )
         )
         fuzzy_filter.sort(key=itemgetter(1), reverse=True)
-        fuzzy_filtered_alias = [fuzzy_alias for fuzzy_alias, _ in fuzzy_filter]
+        fuzzy_filtered_alias = [match[0] for match in fuzzy_filter]
 
         # Match folders by alias in the order of fuzzy match scores
         filtered_folders: List[Dict[str, Any]] = []
@@ -460,42 +484,22 @@ class FolderListWidget(QWidget):
         """Apply modern styling to an action button."""
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if variant == "primary":
-            btn.setObjectName("primary")
+            btn.setProperty("class", "primary")
         elif variant == "danger":
-            btn.setObjectName("danger")
+            btn.setProperty("class", "danger")
         elif variant == "sidebar":
-            btn.setObjectName("sidebar")
+            btn.setProperty("class", "sidebar")
+        else:
+            btn.setProperty("class", "")
 
-    @staticmethod
-    def _calculate_max_alias_length(folder_list: List[Dict[str, Any]]) -> int:
-        """Return the character length of the longest alias in *folder_list*.
+    def _calculate_edit_button_min_width(self, folder_list: List[Dict[str, Any]]) -> int:
+        """Calculate a robust minimum width for edit buttons using font metrics."""
+        edit_texts = [f"Edit: {entry.get('alias') or ''}".rstrip() for entry in folder_list]
+        if not edit_texts:
+            edit_texts = ["Edit"]
 
-        Args:
-            folder_list: A list of folder dictionaries.
-
-        Returns:
-            The maximum alias length, or ``0`` if the list is empty or
-            contains no aliases.
-        """
-        aliases = [
-            entry["alias"] for entry in folder_list if entry.get("alias") is not None
-        ]
-        if aliases:
-            return len(max(aliases, key=len))
-        return 0
-
-    @staticmethod
-    def _char_width_to_pixels(char_count: int, avg_char_px: int = 8) -> int:
-        """Convert a character count to an approximate pixel width.
-
-        This is a rough heuristic used to give edit buttons a uniform
-        minimum width comparable to the Tkinter ``width`` parameter.
-
-        Args:
-            char_count: The number of characters.
-            avg_char_px: Approximate pixel width per character.
-
-        Returns:
-            The estimated pixel width.
-        """
-        return char_count * avg_char_px
+        metrics = QFontMetrics(self.font())
+        max_text_width = max(metrics.horizontalAdvance(text) for text in edit_texts)
+        horizontal_padding = Theme.SPACING_XL_INT * 2
+        border_allowance = 6
+        return max_text_width + horizontal_padding + border_allowance

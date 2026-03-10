@@ -66,10 +66,9 @@ class EditSettingsDialog(BaseDialog):
         self._logs_directory = self._settings_data.get("logs_directory", "")
 
         super().__init__(parent, title)
-        self.setModal(True)
 
         # Set minimum size for comfortable viewing of all form fields
-        self.setMinimumSize(550, 500)
+        self.setMinimumSize(700, 700)
 
     def _get_settings(self) -> Dict[str, Any]:
         if self._settings_provider:
@@ -102,6 +101,7 @@ class EditSettingsDialog(BaseDialog):
     def _build_as400_section(self) -> QGroupBox:
         group = QGroupBox("AS400 Database Connection")
         form = QFormLayout(group)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         self._odbc_driver_combo = QComboBox()
         try:
@@ -115,11 +115,25 @@ class EditSettingsDialog(BaseDialog):
         self._as400_username = QLineEdit()
         self._as400_password = QLineEdit()
         self._as400_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self._as400_address.setMinimumWidth(260)
+        self._as400_username.setMinimumWidth(260)
+        self._as400_password.setMinimumWidth(260)
 
-        form.addRow("ODBC Driver:", self._odbc_driver_combo)
-        form.addRow("AS400 Address:", self._as400_address)
-        form.addRow("AS400 Username:", self._as400_username)
-        form.addRow("AS400 Password:", self._as400_password)
+        self._odbc_driver_combo.setAccessibleName("ODBC driver")
+        self._odbc_driver_combo.setAccessibleDescription(
+            "ODBC driver for AS400 database connection"
+        )
+        self._as400_address.setAccessibleName("AS400 address")
+        self._as400_address.setAccessibleDescription("Hostname or IP of AS400 server")
+        self._as400_username.setAccessibleName("AS400 username")
+        self._as400_username.setAccessibleDescription("Username for AS400 login")
+        self._as400_password.setAccessibleName("AS400 password")
+        self._as400_password.setAccessibleDescription("Password for AS400 login")
+
+        form.addRow("ODBC &Driver:", self._odbc_driver_combo)
+        form.addRow("AS400 &Address:", self._as400_address)
+        form.addRow("AS400 &Username:", self._as400_username)
+        form.addRow("AS400 &Password:", self._as400_password)
 
         return group
 
@@ -127,12 +141,17 @@ class EditSettingsDialog(BaseDialog):
         group = QGroupBox("Email Settings")
         outer = QVBoxLayout(group)
 
-        self._enable_email_cb = QCheckBox("Enable Email")
+        self._enable_email_cb = QCheckBox("Enable &Email")
+        self._enable_email_cb.setAccessibleName("Enable email")
+        self._enable_email_cb.setAccessibleDescription(
+            "Enable outbound email backend configuration"
+        )
         outer.addWidget(self._enable_email_cb)
 
         self._email_fields_widget = QWidget()
         form = QFormLayout(self._email_fields_widget)
         form.setContentsMargins(0, 0, 0, 0)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         self._email_address = QLineEdit()
         self._email_username = QLineEdit()
@@ -140,12 +159,35 @@ class EditSettingsDialog(BaseDialog):
         self._email_password.setEchoMode(QLineEdit.EchoMode.Password)
         self._email_smtp_server = QLineEdit()
         self._email_smtp_port = QLineEdit()
+        self._email_address.setMinimumWidth(260)
+        self._email_username.setMinimumWidth(260)
+        self._email_password.setMinimumWidth(260)
+        self._email_smtp_server.setMinimumWidth(260)
+        self._email_smtp_port.setMinimumWidth(260)
 
-        form.addRow("Email Address:", self._email_address)
-        form.addRow("Email Username:", self._email_username)
-        form.addRow("Email Password:", self._email_password)
-        form.addRow("Email SMTP Server:", self._email_smtp_server)
-        form.addRow("Email SMTP Port:", self._email_smtp_port)
+        self._email_address.setAccessibleName("Email address")
+        self._email_address.setAccessibleDescription("From address for outgoing email")
+        self._email_username.setAccessibleName("Email username")
+        self._email_username.setAccessibleDescription("SMTP account username")
+        self._email_password.setAccessibleName("Email password")
+        self._email_password.setAccessibleDescription("SMTP account password")
+        self._email_smtp_server.setAccessibleName("SMTP server")
+        self._email_smtp_server.setAccessibleDescription("SMTP server hostname")
+        self._email_smtp_port.setAccessibleName("SMTP port")
+        self._email_smtp_port.setAccessibleDescription("SMTP server port")
+
+        form.addRow("Email &Address:", self._email_address)
+        form.addRow("Email &Username:", self._email_username)
+        form.addRow("Email &Password:", self._email_password)
+        form.addRow("Email S&MTP Server:", self._email_smtp_server)
+        form.addRow("Email SMTP &Port:", self._email_smtp_port)
+
+        self._test_connection_btn = QPushButton("&Test Connection")
+        self._test_connection_btn.setAccessibleName("Test SMTP connection")
+        self._test_connection_btn.setAccessibleDescription(
+            "Tests SMTP server connectivity using current email settings"
+        )
+        form.addRow("", self._test_connection_btn)
 
         outer.addWidget(self._email_fields_widget)
         return group
@@ -154,25 +196,51 @@ class EditSettingsDialog(BaseDialog):
         self._reporting_group = QGroupBox("Reporting")
         outer = QVBoxLayout(self._reporting_group)
 
-        self._enable_reporting_cb = QCheckBox("Enable Report Sending")
-        self._report_edi_warnings_cb = QCheckBox("Report EDI Validator Warnings")
+        self._enable_reporting_cb = QCheckBox("Enable &Report Sending")
+        self._report_edi_warnings_cb = QCheckBox("Report EDI Validator &Warnings")
+        self._enable_reporting_cb.setAccessibleName("Enable report sending")
+        self._enable_reporting_cb.setAccessibleDescription(
+            "Enable sending processing reports by email"
+        )
+        self._report_edi_warnings_cb.setAccessibleName("Report EDI validator warnings")
+        self._report_edi_warnings_cb.setAccessibleDescription(
+            "Include EDI validator warnings in reporting"
+        )
         outer.addWidget(self._enable_reporting_cb)
         outer.addWidget(self._report_edi_warnings_cb)
 
         self._reporting_fields_widget = QWidget()
         form = QFormLayout(self._reporting_fields_widget)
         form.setContentsMargins(0, 0, 0, 0)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         self._email_destination = QLineEdit()
-        self._enable_report_printing_cb = QCheckBox("Enable Report Printing Fallback")
+        self._email_destination.setMinimumWidth(260)
+        self._enable_report_printing_cb = QCheckBox(
+            "Enable Report Printing &Fallback"
+        )
+        self._email_destination.setAccessibleName("Report email destination")
+        self._email_destination.setAccessibleDescription(
+            "Comma-separated recipient addresses for reports"
+        )
+        self._enable_report_printing_cb.setAccessibleName(
+            "Enable report printing fallback"
+        )
+        self._enable_report_printing_cb.setAccessibleDescription(
+            "Print reports when email sending is unavailable"
+        )
 
-        form.addRow("Email Destination:", self._email_destination)
+        form.addRow("Email &Destination:", self._email_destination)
         form.addRow(self._enable_report_printing_cb)
 
         outer.addWidget(self._reporting_fields_widget)
 
-        self._select_log_folder_btn = QPushButton("Select Log Folder...")
+        self._select_log_folder_btn = QPushButton("Select &Log Folder...")
         self._select_log_folder_btn.clicked.connect(self._select_log_directory)
+        self._select_log_folder_btn.setAccessibleName("Select log folder")
+        self._select_log_folder_btn.setAccessibleDescription(
+            "Choose directory where report logs are stored"
+        )
         outer.addWidget(self._select_log_folder_btn)
 
         return self._reporting_group
@@ -181,10 +249,18 @@ class EditSettingsDialog(BaseDialog):
         group = QGroupBox("Backup")
         layout = QHBoxLayout(group)
 
-        self._enable_backup_cb = QCheckBox("Enable Interval Backup")
+        self._enable_backup_cb = QCheckBox("Enable Interval &Backup")
         self._backup_interval_spin = QSpinBox()
         self._backup_interval_spin.setRange(1, 5000)
         self._backup_interval_spin.setValue(100)
+        self._enable_backup_cb.setAccessibleName("Enable interval backup")
+        self._enable_backup_cb.setAccessibleDescription(
+            "Enable periodic backup creation"
+        )
+        self._backup_interval_spin.setAccessibleName("Backup interval")
+        self._backup_interval_spin.setAccessibleDescription(
+            "Number of cycles before automatic backup"
+        )
 
         layout.addWidget(self._enable_backup_cb)
         layout.addStretch()
@@ -240,10 +316,12 @@ class EditSettingsDialog(BaseDialog):
         self._enable_email_cb.toggled.connect(self._on_enable_email_toggled)
         self._enable_reporting_cb.toggled.connect(self._on_enable_reporting_toggled)
         self._enable_backup_cb.toggled.connect(self._on_enable_backup_toggled)
+        self._test_connection_btn.clicked.connect(self._test_smtp_connection)
 
     def _on_enable_email_toggled(self) -> None:
         email_on = self._enable_email_cb.isChecked()
         self._email_fields_widget.setEnabled(email_on)
+        self._test_connection_btn.setEnabled(email_on)
         if not email_on:
             self._enable_reporting_cb.setChecked(False)
         self._enable_reporting_cb.setEnabled(email_on)
@@ -270,54 +348,143 @@ class EditSettingsDialog(BaseDialog):
         if chosen:
             self._logs_directory = chosen
 
+    def _focus_invalid_field(self, widget: Optional[QWidget]) -> None:
+        if widget is None:
+            return
+        widget.setFocus()
+        if isinstance(widget, QLineEdit):
+            widget.selectAll()
+
+    def _format_grouped_errors(self, errors_by_section: Dict[str, list[str]]) -> str:
+        lines: list[str] = []
+        for section, messages in errors_by_section.items():
+            if not messages:
+                continue
+            lines.append(f"{section}:")
+            for message in messages:
+                lines.append(f"- {message}")
+            lines.append("")
+        while lines and not lines[-1]:
+            lines.pop()
+        return "\n".join(lines)
+
+    def _test_smtp_connection(self) -> None:
+        if not self._enable_email_cb.isChecked():
+            QMessageBox.information(
+                self,
+                "SMTP Test",
+                "Enable Email before testing SMTP connection.",
+            )
+            return
+
+        try:
+            success, error_msg = self._smtp_service.test_connection(
+                smtp_server=self._email_smtp_server.text(),
+                smtp_port=self._email_smtp_port.text(),
+                username=self._email_username.text(),
+                password=self._email_password.text(),
+            )
+        except Exception as e:
+            success = False
+            error_msg = str(e)
+
+        if success:
+            QMessageBox.information(
+                self,
+                "SMTP Test",
+                "SMTP connection test succeeded.",
+            )
+            return
+
+        QMessageBox.critical(
+            self,
+            "SMTP Test Failed",
+            "Test Login Failed With Error\n" + (error_msg or ""),
+        )
+
     def validate(self) -> bool:
-        errors: list[str] = []
+        errors_by_section: Dict[str, list[str]] = {
+            "Email Settings": [],
+            "Reporting": [],
+            "Backup": [],
+        }
+        first_invalid_widget: Optional[QWidget] = None
+
+        def add_error(section: str, message: str, widget: Optional[QWidget] = None) -> None:
+            nonlocal first_invalid_widget
+            errors_by_section[section].append(message)
+            if first_invalid_widget is None and widget is not None:
+                first_invalid_widget = widget
 
         if self._enable_email_cb.isChecked():
             if not self._email_address.text():
-                errors.append("Email Address Is A Required Field")
-            elif not validate_email_format(self._email_address.text()):
-                errors.append("Invalid Email Origin Address")
-
-            try:
-                success, error_msg = self._smtp_service.test_connection(
-                    smtp_server=self._email_smtp_server.text(),
-                    smtp_port=self._email_smtp_port.text(),
-                    username=self._email_username.text(),
-                    password=self._email_password.text(),
+                add_error(
+                    "Email Settings",
+                    "Email Address Is A Required Field",
+                    self._email_address,
                 )
-            except Exception as e:
-                # Handle any unexpected exceptions gracefully
-                success = False
-                error_msg = str(e)
-            if not success:
-                errors.append("Test Login Failed With Error\n" + (error_msg or ""))
+            elif not validate_email_format(self._email_address.text()):
+                add_error(
+                    "Email Settings",
+                    "Invalid Email Origin Address",
+                    self._email_address,
+                )
 
             if not self._email_username.text() and self._email_password.text():
-                errors.append("Email Username Required If Password Is Set")
+                add_error(
+                    "Email Settings",
+                    "Email Username Required If Password Is Set",
+                    self._email_username,
+                )
             if not self._email_password.text() and self._email_username.text():
-                errors.append("Email Username Without Password Is Not Supported")
+                add_error(
+                    "Email Settings",
+                    "Email Username Without Password Is Not Supported",
+                    self._email_password,
+                )
             if not self._email_smtp_server.text():
-                errors.append("SMTP Server Address Is A Required Field")
+                add_error(
+                    "Email Settings",
+                    "SMTP Server Address Is A Required Field",
+                    self._email_smtp_server,
+                )
             if not self._email_smtp_port.text():
-                errors.append("SMTP Port Is A Required Field")
+                add_error(
+                    "Email Settings",
+                    "SMTP Port Is A Required Field",
+                    self._email_smtp_port,
+                )
 
         if self._enable_reporting_cb.isChecked():
             if not self._email_destination.text():
-                errors.append("Reporting Email Destination Is A Required Field")
+                add_error(
+                    "Reporting",
+                    "Reporting Email Destination Is A Required Field",
+                    self._email_destination,
+                )
             else:
                 for addr in self._email_destination.text().split(", "):
                     if not validate_email_format(addr.strip()):
-                        errors.append("Invalid Email Destination Address")
+                        add_error(
+                            "Reporting",
+                            "Invalid Email Destination Address",
+                            self._email_destination,
+                        )
                         break
 
         if self._enable_backup_cb.isChecked():
             val = self._backup_interval_spin.value()
             if val < 1 or val > 5000:
-                errors.append("Backup Interval Needs To Be A Number Between 1 and 5000")
+                add_error(
+                    "Backup",
+                    "Backup Interval Needs To Be A Number Between 1 and 5000",
+                    self._backup_interval_spin,
+                )
 
-        if errors:
-            QMessageBox.critical(self, "Validation Error", "\n".join(errors))
+        grouped_errors = self._format_grouped_errors(errors_by_section)
+        if grouped_errors:
+            self._focus_invalid_field(first_invalid_widget)
+            QMessageBox.critical(self, "Validation Error", grouped_errors)
             return False
 
         if not self._enable_email_cb.isChecked():
@@ -342,15 +509,13 @@ class EditSettingsDialog(BaseDialog):
         return True
 
     def apply(self) -> None:
-        self._settings_data["enable_reporting"] = str(
-            self._enable_reporting_cb.isChecked()
-        )
+        self._settings_data["enable_reporting"] = self._enable_reporting_cb.isChecked()
         self._settings_data["logs_directory"] = self._logs_directory
         self._settings_data["report_email_destination"] = self._email_destination.text()
         self._settings_data["report_edi_errors"] = (
             self._report_edi_warnings_cb.isChecked()
         )
-        self._settings_data["report_printing_fallback"] = str(
+        self._settings_data["report_printing_fallback"] = (
             self._enable_report_printing_cb.isChecked()
         )
 
@@ -372,7 +537,7 @@ class EditSettingsDialog(BaseDialog):
                 self._disable_email_backends()
             if self._disable_folders_without_backends:
                 self._disable_folders_without_backends()
-            self._settings_data["folder_is_active"] = "False"
+            self._settings_data["folder_is_active"] = False
             self._settings_data["process_backend_email"] = False
 
         if self._update_settings:
