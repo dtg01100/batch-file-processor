@@ -1,6 +1,5 @@
 """Pytest configuration for the test suite."""
 
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -158,13 +157,14 @@ def temp_database(tmp_path):
         DatabaseObj: Temporary database object
     """
     from interface.database.database_obj import DatabaseObj
+    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
     db_path = tmp_path / "test_folders.db"
 
     # Create database with current schema
     db = DatabaseObj(
         database_path=str(db_path),
-        database_version="42",
+        database_version=CURRENT_DATABASE_VERSION,
         config_folder=str(tmp_path),
         running_platform="Linux",
     )

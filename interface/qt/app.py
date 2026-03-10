@@ -18,7 +18,8 @@ import traceback
 from typing import Any, Optional
 
 import appdirs
-from PyQt6.QtCore import Qt
+
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -56,7 +57,7 @@ class QtBatchFileSenderApp:
         self,
         appname: str = "Batch File Sender",
         version: str = "(Git Branch: Master)",
-        database_version: str = "41",
+        database_version: str = CURRENT_DATABASE_VERSION,
         database_obj: Optional[DatabaseObj] = None,
         ui_service: Optional[UIServiceProtocol] = None,
         progress_service: Optional[ProgressServiceProtocol] = None,
@@ -104,7 +105,9 @@ class QtBatchFileSenderApp:
     @property
     def folder_manager(self) -> FolderManager:
         if self._folder_manager is None:
-            raise RuntimeError("Folder manager not initialized - call initialize() first")
+            raise RuntimeError(
+                "Folder manager not initialized - call initialize() first"
+            )
         return self._folder_manager
 
     @property
@@ -122,45 +125,81 @@ class QtBatchFileSenderApp:
         print(f"Running self-test for {self._appname} Version {self._version}")
         print(f"Platform: {self._running_platform}")
         print("=" * 50)
-        
+
         failures = 0
-        
+
         # Check 1: Verify required modules can be imported
         print("\n1. Checking module imports...")
         required_modules = [
-            "argparse", "datetime", "multiprocessing", "os", "platform", "sys", 
-            "time", "traceback", "appdirs", "PyQt6.QtCore", "PyQt6.QtWidgets",
-            "PyQt6.QtGui", "PyQt6.QtPrintSupport", "PyQt6.QtSvg", "PyQt6.QtXml",
+            "argparse",
+            "datetime",
+            "multiprocessing",
+            "os",
+            "platform",
+            "sys",
+            "time",
+            "traceback",
+            "appdirs",
+            "PyQt6.QtCore",
+            "PyQt6.QtWidgets",
+            "PyQt6.QtGui",
+            "PyQt6.QtPrintSupport",
+            "PyQt6.QtSvg",
+            "PyQt6.QtXml",
             "PyQt6.QtNetwork",
-            "interface.database.database_obj", "interface.operations.folder_manager",
-            "interface.ports", "interface.services.reporting_service",
-            "interface.qt.app", "interface.qt.dialogs.edit_folders_dialog",
+            "interface.database.database_obj",
+            "interface.operations.folder_manager",
+            "interface.ports",
+            "interface.services.reporting_service",
+            "interface.qt.app",
+            "interface.qt.dialogs.edit_folders_dialog",
             "interface.qt.dialogs.edit_folders.data_extractor",
-            "batch_log_sender", "print_run_log", "utils", "backup_increment",
+            "batch_log_sender",
+            "print_run_log",
+            "utils",
+            "backup_increment",
             # Core business logic modules
-            "core.edi.edi_parser", "core.edi.edi_splitter", "core.edi.inv_fetcher", "core.edi.po_fetcher",
-            "dispatch", "dispatch.orchestrator", "dispatch.send_manager",
-            "backend.ftp_client", "backend.smtp_client",
-            "record_error", "folders_database_migrator",
-            "mover", "clear_old_files", "rclick_menu",
+            "core.edi.edi_parser",
+            "core.edi.edi_splitter",
+            "core.edi.inv_fetcher",
+            "core.edi.po_fetcher",
+            "dispatch",
+            "dispatch.orchestrator",
+            "dispatch.send_manager",
+            "backend.ftp_client",
+            "backend.smtp_client",
+            "record_error",
+            "folders_database_migrator",
+            "mover",
+            "clear_old_files",
+            "rclick_menu",
             # Convert backends
-            "convert_to_csv", "convert_to_fintech", "convert_to_simplified_csv",
-            "convert_to_stewarts_custom", "convert_to_yellowdog_csv",
-            "convert_to_estore_einvoice", "convert_to_estore_einvoice_generic",
-            "convert_to_scannerware", "convert_to_scansheet_type_a", "convert_to_jolley_custom",
+            "convert_to_csv",
+            "convert_to_fintech",
+            "convert_to_simplified_csv",
+            "convert_to_stewarts_custom",
+            "convert_to_yellowdog_csv",
+            "convert_to_estore_einvoice",
+            "convert_to_estore_einvoice_generic",
+            "convert_to_scannerware",
+            "convert_to_scansheet_type_a",
+            "convert_to_jolley_custom",
             # Backend modules
-            "copy_backend", "ftp_backend", "email_backend",
+            "copy_backend",
+            "ftp_backend",
+            "email_backend",
             # Third-party dependencies
-            "lxml", "lxml.etree",
+            "lxml",
+            "lxml.etree",
         ]
-        
+
         # pyodbc is only bundled on Windows builds (excluded from Linux native builds)
         optional_modules = []
         if sys.platform != "win32":
             optional_modules = ["pyodbc", "PIL"]
         else:
             required_modules.extend(["pyodbc", "PIL"])
-        
+
         for module in required_modules:
             try:
                 __import__(module)
@@ -168,22 +207,21 @@ class QtBatchFileSenderApp:
             except ImportError as e:
                 print(f"  [FAIL] {module}: {e}")
                 failures += 1
-        
+
         for module in optional_modules:
             try:
                 __import__(module)
                 print(f"  [OK] {module} (optional)")
             except ImportError as e:
                 print(f"  [?] {module} (optional, not bundled on this platform): {e}")
-        
+
         # Check for sip which is required by PyQt6 but imported differently
         try:
-            import PyQt6.sip
             print(f"  [OK] PyQt6.sip")
         except ImportError as e:
             print(f"  [FAIL] PyQt6.sip: {e}")
             failures += 1
-        
+
         # Check 2: Validate configuration directory setup
         print("\n2. Checking configuration directories...")
         try:
@@ -196,7 +234,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] Failed to setup config directories: {e}")
             failures += 1
-        
+
         # Check 3: Test appdirs module functionality
         print("\n3. Checking appdirs functionality...")
         try:
@@ -205,7 +243,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] appdirs module error: {e}")
             failures += 1
-        
+
         # Check 4: Verify file system access
         print("\n4. Checking file system access...")
         try:
@@ -220,53 +258,59 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] File system access error: {e}")
             failures += 1
-        
+
         # Check 5: Validate essential local modules
         print("\n5. Checking local module availability...")
         local_modules = [
             ("batch_log_sender", "batch_log_sender"),
-            ("print_run_log", "print_run_log"), 
-            ("utils", "utils"), 
-            ("backup_increment", "backup_increment")
+            ("print_run_log", "print_run_log"),
+            ("utils", "utils"),
+            ("backup_increment", "backup_increment"),
         ]
-        
+
         for module_name, import_name in local_modules:
             try:
                 module = __import__(import_name)
                 if hasattr(module, "__file__"):
                     print(f"  [OK] {module_name}")
                 else:
-                    print(f"  [FAIL] {module_name}: Module imported but no __file__ attribute")
+                    print(
+                        f"  [FAIL] {module_name}: Module imported but no __file__ attribute"
+                    )
                     failures += 1
             except Exception as e:
                 print(f"  [FAIL] {module_name}: {e}")
                 failures += 1
-        
+
         print("\n" + "=" * 50)
         if failures == 0:
-            print(f"[PASS] Self-test passed - all {len(required_modules) + len(local_modules) + 3} checks successful")
+            print(
+                f"[PASS] Self-test passed - all {len(required_modules) + len(local_modules) + 3} checks successful"
+            )
             return 0
         else:
-            print(f"[FAIL] Self-test failed - {failures} out of {len(required_modules) + len(local_modules) + 3} checks failed")
+            print(
+                f"[FAIL] Self-test failed - {failures} out of {len(required_modules) + len(local_modules) + 3} checks failed"
+            )
             return 1
 
     def _run_gui_self_test(self) -> int:
         """Run GUI self-test: verify Qt widgets can be created and displayed.
-        
+
         This test creates the main window, verifies all widgets are properly
         initialized, shows the window briefly, then closes it.
-        
+
         Returns:
             0 for success, 1 for failures
         """
         from PyQt6.QtCore import QTimer
-        
+
         print(f"\n{'=' * 50}")
         print("GUI Self-Test")
         print("=" * 50)
-        
+
         failures = 0
-        
+
         # Step 1: Create QApplication
         print("\n1. Creating QApplication...")
         try:
@@ -275,7 +319,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] QApplication creation failed: {e}")
             return 1
-        
+
         # Step 2: Create main window
         print("\n2. Creating main window...")
         try:
@@ -285,7 +329,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] QMainWindow creation failed: {e}")
             return 1
-        
+
         # Step 3: Initialize database and services
         print("\n3. Initializing database and services...")
         try:
@@ -301,14 +345,14 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] Database initialization failed: {e}")
             failures += 1
-        
+
         try:
             self._folder_manager = FolderManager(self._database)
             print("  [OK] FolderManager initialized")
         except Exception as e:
             print(f"  [FAIL] FolderManager initialization failed: {e}")
             failures += 1
-        
+
         # Step 4: Build UI
         print("\n4. Building UI components...")
         try:
@@ -317,7 +361,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] Main window build failed: {e}")
             failures += 1
-        
+
         # Step 5: Verify widgets exist
         print("\n5. Verifying widgets...")
         widgets_to_check = [
@@ -328,14 +372,14 @@ class QtBatchFileSenderApp:
             ("Processed files button", self._processed_files_button),
             ("Allow resend button", self._allow_resend_button),
         ]
-        
+
         for widget_name, widget in widgets_to_check:
             if widget is not None:
                 print(f"  [OK] {widget_name}")
             else:
                 print(f"  [FAIL] {widget_name} is None")
                 failures += 1
-        
+
         # Step 6: Show window and schedule close
         print("\n6. Displaying window (will auto-close in 2 seconds)...")
         try:
@@ -344,7 +388,7 @@ class QtBatchFileSenderApp:
         except Exception as e:
             print(f"  [FAIL] Window display failed: {e}")
             failures += 1
-        
+
         # Schedule window close and app quit
         def close_and_quit():
             print("\n7. Closing window...")
@@ -357,33 +401,33 @@ class QtBatchFileSenderApp:
             else:
                 print(f"[FAIL] GUI self-test failed with {failures} errors")
             print("=" * 50)
-        
+
         QTimer.singleShot(2000, close_and_quit)
-        
+
         # Run the event loop
         return self._app.exec()
 
     def initialize(self, args: Optional[list[str]] = None) -> None:
         multiprocessing.freeze_support()
-        
+
         # Fix Qt platform plugin issues: force X11 when Wayland is misconfigured
         self._configure_qt_platform()
-        
+
         print(f"{self._appname} Version {self._version}")
         print(f"Running on {self._running_platform}")
 
         self._parse_arguments(args)
-        
+
         # Run self-test if requested
         if self._args.self_test:
             exit_code = self._run_self_test()
             sys.exit(exit_code)
-        
+
         # Run GUI self-test if requested
         if self._args.gui_test:
             exit_code = self._run_gui_self_test()
             sys.exit(exit_code)
-            
+
         self._setup_config_directories()
 
         if self._database is None:
@@ -418,10 +462,12 @@ class QtBatchFileSenderApp:
 
         if self._ui_service is None:
             from interface.qt.services.qt_services import QtUIService
+
             self._ui_service = QtUIService(self._window)
 
         if self._progress_service is None:
             from interface.qt.services.qt_services import QtProgressService
+
             self._progress_service = QtProgressService(self._window)
 
         self._build_main_window()
@@ -446,28 +492,28 @@ class QtBatchFileSenderApp:
 
     def _configure_qt_platform(self) -> None:
         """Configure Qt platform plugin to avoid Wayland issues.
-        
+
         When both WAYLAND_DISPLAY and DISPLAY are set, Qt may try to use
         Wayland but fail to connect. This forces Qt to use X11 (xcb) in
         such cases.
-        
-        Note: Windows builds running under Wine should use the 'windows' 
+
+        Note: Windows builds running under Wine should use the 'windows'
         platform plugin, not xcb.
         """
         import os
-        
+
         # Don't override platform for Windows builds (even under Wine)
         if sys.platform == "win32":
             return
-        
-        wayland_display = os.environ.get('WAYLAND_DISPLAY')
-        x11_display = os.environ.get('DISPLAY')
-        qpa_platform = os.environ.get('QT_QPA_PLATFORM')
-        
+
+        wayland_display = os.environ.get("WAYLAND_DISPLAY")
+        x11_display = os.environ.get("DISPLAY")
+        qpa_platform = os.environ.get("QT_QPA_PLATFORM")
+
         # If Wayland is set but QT_QPA_PLATFORM is not explicitly set,
         # and we have X11 available, force X11 to avoid Wayland connection issues
         if wayland_display and x11_display and not qpa_platform:
-            os.environ['QT_QPA_PLATFORM'] = 'xcb'
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
             print(f"Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence")
 
     # ------------------------------------------------------------------
@@ -477,8 +523,15 @@ class QtBatchFileSenderApp:
     def _parse_arguments(self, args: Optional[list[str]] = None) -> None:
         launch_options = argparse.ArgumentParser()
         launch_options.add_argument("-a", "--automatic", action="store_true")
-        launch_options.add_argument("-s", "--self-test", action="store_true", help="Run self-test and exit")
-        launch_options.add_argument("-g", "--gui-test", action="store_true", help="Run GUI self-test (opens and closes main window)")
+        launch_options.add_argument(
+            "-s", "--self-test", action="store_true", help="Run self-test and exit"
+        )
+        launch_options.add_argument(
+            "-g",
+            "--gui-test",
+            action="store_true",
+            help="Run GUI self-test (opens and closes main window)",
+        )
         self._args = launch_options.parse_args(args)
 
     def _setup_config_directories(self) -> None:
@@ -513,19 +566,26 @@ class QtBatchFileSenderApp:
         options_widget.setFixedWidth(260)
         options_widget.setObjectName("sidebar")
         options_layout = QVBoxLayout(options_widget)
-        options_layout.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_XL_INT, Theme.SPACING_LG_INT, Theme.SPACING_XL_INT)
+        options_layout.setContentsMargins(
+            Theme.SPACING_LG_INT,
+            Theme.SPACING_XL_INT,
+            Theme.SPACING_LG_INT,
+            Theme.SPACING_XL_INT,
+        )
         options_layout.setSpacing(Theme.SPACING_SM_INT)
 
         # Modern header with enhanced typography
         header_label = QLabel("Batch File Sender")
         header_label.setObjectName("sidebar")
-        header_label.setStyleSheet(f"""
+        header_label.setStyleSheet(
+            f"""
             font-size: {Theme.FONT_SIZE_XL};
             font-weight: 700;
             color: {Theme.TEXT_ON_SIDEBAR};
             padding-bottom: {Theme.SPACING_LG};
             letter-spacing: 0.5px;
-        """)
+        """
+        )
         options_layout.addWidget(header_label)
 
         # Navigation buttons with improved spacing
@@ -562,7 +622,9 @@ class QtBatchFileSenderApp:
         self._processed_files_button = QPushButton("Processed Files Report...")
         self._processed_files_button.setObjectName("sidebar")
         self._processed_files_button.setProperty("class", "sidebar")
-        self._processed_files_button.clicked.connect(self._show_processed_files_dialog_wrapper)
+        self._processed_files_button.clicked.connect(
+            self._show_processed_files_dialog_wrapper
+        )
         options_layout.addWidget(self._processed_files_button)
 
         # Flexible spacer
@@ -581,12 +643,14 @@ class QtBatchFileSenderApp:
         separator = QFrame()
         separator.setFixedHeight(1)
         separator.setObjectName("sidebar_separator")
-        separator.setStyleSheet(f"""
+        separator.setStyleSheet(
+            f"""
             QFrame#sidebar_separator {{
                 background-color: {Theme.SIDEBAR_OUTLINE};
                 margin: {Theme.SPACING_MD} 0;
             }}
-        """)
+        """
+        )
         options_layout.addWidget(separator)
 
         # Primary action button with enhanced prominence
@@ -598,24 +662,33 @@ class QtBatchFileSenderApp:
         options_layout.addWidget(self._process_folder_button)
 
         # Modern sidebar styling
-        options_widget.setStyleSheet(f"""
+        options_widget.setStyleSheet(
+            f"""
             QWidget#sidebar {{
                 background-color: {Theme.SIDEBAR_BACKGROUND};
                 border-right: 1px solid {Theme.SIDEBAR_OUTLINE};
             }}
-        """)
+        """
+        )
 
         main_layout.addWidget(options_widget)
 
         # Right panel with modern card-like appearance
         self._right_panel_widget = QWidget()
-        self._right_panel_widget.setStyleSheet(f"""
+        self._right_panel_widget.setStyleSheet(
+            f"""
             QWidget {{
                 background-color: {Theme.BACKGROUND};
             }}
-        """)
+        """
+        )
         right_layout = QVBoxLayout(self._right_panel_widget)
-        right_layout.setContentsMargins(Theme.SPACING_XXL_INT, Theme.SPACING_XL_INT, Theme.SPACING_XXL_INT, Theme.SPACING_XL_INT)
+        right_layout.setContentsMargins(
+            Theme.SPACING_XXL_INT,
+            Theme.SPACING_XL_INT,
+            Theme.SPACING_XXL_INT,
+            Theme.SPACING_XL_INT,
+        )
         right_layout.setSpacing(Theme.SPACING_LG_INT)
 
         self._build_folder_list(right_layout)
@@ -823,9 +896,9 @@ class QtBatchFileSenderApp:
             else:
                 # Enable folder - validate that at least one backend is configured
                 has_backend = (
-                    folder.get("process_backend_email") or
-                    folder.get("process_backend_ftp") or
-                    folder.get("process_backend_copy")
+                    folder.get("process_backend_email")
+                    or folder.get("process_backend_ftp")
+                    or folder.get("process_backend_copy")
                 )
                 if not has_backend:
                     self._ui_service.show_error(
@@ -834,7 +907,7 @@ class QtBatchFileSenderApp:
                         "Please edit the folder and enable at least one backend:\n"
                         "• Email\n"
                         "• FTP\n"
-                        "• Copy to Directory"
+                        "• Copy to Directory",
                     )
                     return
                 self._folder_manager.enable_folder(folder_id)
@@ -845,7 +918,9 @@ class QtBatchFileSenderApp:
         self._folder_filter = filter_field_contents
         self._refresh_users_list()
 
-    def _delete_folder_entry_wrapper(self, folder_to_be_removed: int, alias: str) -> None:
+    def _delete_folder_entry_wrapper(
+        self, folder_to_be_removed: int, alias: str
+    ) -> None:
         if self._ui_service.ask_yes_no(
             "Confirm Delete",
             f"Are you sure you want to remove the folder {alias}?",
@@ -883,7 +958,8 @@ class QtBatchFileSenderApp:
 
         if (
             settings_dict["enable_interval_backups"]
-            and settings_dict["backup_counter"] >= settings_dict["backup_counter_maximum"]
+            and settings_dict["backup_counter"]
+            >= settings_dict["backup_counter_maximum"]
         ):
             backup_increment.do_backup(self._database_path)
             settings_dict["backup_counter"] = 0
@@ -893,7 +969,9 @@ class QtBatchFileSenderApp:
         log_folder_creation_error = False
         start_time = str(datetime.datetime.now())
         reporting = self._database.get_oversight_or_default()
-        run_log_name_constructor = "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+        run_log_name_constructor = (
+            "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+        )
 
         if not os.path.isdir(self._logs_directory["logs_directory"]):
             try:
@@ -1090,7 +1168,9 @@ class QtBatchFileSenderApp:
             settings_provider=lambda: self._database.get_settings_or_default(),
             oversight_provider=lambda: self._database.get_oversight_or_default(),
             update_settings=lambda s: self._database.settings.update(s, ["id"]),
-            update_oversight=lambda o: self._database.oversight_and_defaults.update(o, ["id"]),
+            update_oversight=lambda o: self._database.oversight_and_defaults.update(
+                o, ["id"]
+            ),
             on_apply=self._update_reporting,
             refresh_callback=self._refresh_users_list,
             count_email_backends=lambda: self._database.folders_table.count(
@@ -1108,7 +1188,9 @@ class QtBatchFileSenderApp:
 
     def _show_maintenance_dialog_wrapper(self) -> None:
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
-        from interface.qt.dialogs.database_import_dialog import show_database_import_dialog
+        from interface.qt.dialogs.database_import_dialog import (
+            show_database_import_dialog,
+        )
         from interface.operations.maintenance_functions import MaintenanceFunctions
 
         backup_increment.do_backup(self._database_path)
@@ -1160,7 +1242,9 @@ class QtBatchFileSenderApp:
     def _show_resend_dialog(self) -> None:
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        dlg = ResendDialog(parent=self._window, database_connection=self._database.database_connection)
+        dlg = ResendDialog(
+            parent=self._window, database_connection=self._database.database_connection
+        )
         # Only show if data loaded successfully
         if dlg._should_show:
             dlg.exec()
@@ -1191,7 +1275,9 @@ class QtBatchFileSenderApp:
     # Mark-as-processed helper
     # ------------------------------------------------------------------
 
-    def _mark_active_as_processed_wrapper(self, selected_folder: Optional[int] = None) -> None:
+    def _mark_active_as_processed_wrapper(
+        self, selected_folder: Optional[int] = None
+    ) -> None:
         from interface.operations.maintenance_functions import MaintenanceFunctions
 
         maintenance = MaintenanceFunctions(
@@ -1229,7 +1315,9 @@ class QtBatchFileSenderApp:
             with open("critical_error.log", "a", encoding="utf-8") as critical_log:
                 critical_log.write(f"program version is {self._version}")
                 critical_log.write(f"{datetime.datetime.now()}{error}\r\n")
-            raise SystemExit from error if isinstance(error, Exception) else SystemExit(str(error))
+            raise SystemExit from (
+                error if isinstance(error, Exception) else SystemExit(str(error))
+            )
         except SystemExit:
             raise
         except Exception as big_error:
@@ -1241,7 +1329,7 @@ def main() -> None:
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",
         version="(Git Branch: Master)",
-        database_version="41",
+        database_version=CURRENT_DATABASE_VERSION,
     )
     app.initialize()
     app.run()

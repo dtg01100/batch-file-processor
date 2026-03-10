@@ -11,31 +11,32 @@ Tests cover end-to-end user interactions with the GUI:
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.qt, pytest.mark.gui, pytest.mark.workflow, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.qt,
+    pytest.mark.gui,
+    pytest.mark.workflow,
+    pytest.mark.slow,
+]
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from datetime import datetime
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QDialog, QPushButton
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QDialog
 
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
-from interface.qt.dialogs.resend_dialog import ResendDialog
-from interface.database import sqlite_wrapper
-from schema import ensure_schema
 
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def qt_app():
@@ -76,11 +77,11 @@ C00000001000010000
         db_path = workspace / "test.db"
 
         yield {
-            'workspace': workspace,
-            'input_folder': input_folder,
-            'output_folder': output_folder,
-            'processed_folder': processed_folder,
-            'db_path': db_path,
+            "workspace": workspace,
+            "input_folder": input_folder,
+            "output_folder": output_folder,
+            "processed_folder": processed_folder,
+            "db_path": db_path,
         }
 
 
@@ -94,14 +95,14 @@ def initialized_app(qt_app, temp_workspace):
     progress_parent = QWidget()
 
     # Patch the config folder to use temp workspace
-    with patch('appdirs.user_data_dir', return_value=str(temp_workspace['workspace'])):
+    with patch("appdirs.user_data_dir", return_value=str(temp_workspace["workspace"])):
         app = QtBatchFileSenderApp(
             database_obj=None,
             ui_service=QtUIService(None),
             progress_service=QtProgressService(progress_parent),
         )
 
-        with patch('sys.argv', ['test']):
+        with patch("sys.argv", ["test"]):
             app.initialize()
 
         yield app
@@ -113,17 +114,20 @@ def initialized_app(qt_app, temp_workspace):
 # Folder Configuration Workflow Tests
 # =============================================================================
 
+
 class TestFolderConfigurationWorkflow:
     """Test complete folder configuration workflow."""
 
     def test_add_folder_through_workflow(self, initialized_app, temp_workspace):
         """Test adding a folder through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Mock the folder selection dialog
-        with patch.object(app, '_select_folder') as mock_select:
-            mock_select.side_effect = lambda: app._folder_manager.add_folder(input_folder)
+        with patch.object(app, "_select_folder") as mock_select:
+            mock_select.side_effect = lambda: app._folder_manager.add_folder(
+                input_folder
+            )
 
             # Select folder
             mock_select()
@@ -134,60 +138,61 @@ class TestFolderConfigurationWorkflow:
 
             # Find the added folder
             added_folder = next(
-                (f for f in folders if f['folder_name'] == input_folder),
-                None
+                (f for f in folders if f["folder_name"] == input_folder), None
             )
             assert added_folder is not None
 
     def test_edit_folder_workflow(self, initialized_app, temp_workspace):
         """Test editing a folder through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # First add a folder
         app._folder_manager.add_folder(input_folder)
         folder = app._database.folders_table.find_one(folder_name=input_folder)
 
         # Mock edit dialog
-        with patch.object(EditFoldersDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditFoldersDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             # Edit folder
-            app._edit_folder_selector(folder['id'])
+            app._edit_folder_selector(folder["id"])
 
             # Verify folder still exists
-            edited_folder = app._database.folders_table.find_one(id=folder['id'])
+            edited_folder = app._database.folders_table.find_one(id=folder["id"])
             assert edited_folder is not None
 
     def test_disable_folder_workflow(self, initialized_app, temp_workspace):
         """Test disabling a folder through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder
         app._folder_manager.add_folder(input_folder)
         folder = app._database.folders_table.find_one(folder_name=input_folder)
 
         # Disable folder
-        app._disable_folder(folder['id'])
+        app._disable_folder(folder["id"])
 
         # Verify folder is disabled
-        disabled_folder = app._database.folders_table.find_one(id=folder['id'])
-        assert disabled_folder['folder_is_active'] == "False"
+        disabled_folder = app._database.folders_table.find_one(id=folder["id"])
+        assert disabled_folder["folder_is_active"] == "False"
 
     def test_delete_folder_workflow(self, initialized_app, temp_workspace):
         """Test deleting a folder through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder
         app._folder_manager.add_folder(input_folder)
         folder = app._database.folders_table.find_one(folder_name=input_folder)
 
         # Delete folder
-        with patch.object(app._ui_service, 'ask_yes_no', return_value=True):
-            app._delete_folder_entry_wrapper(folder['id'], input_folder)
+        with patch.object(app._ui_service, "ask_yes_no", return_value=True):
+            app._delete_folder_entry_wrapper(folder["id"], input_folder)
 
         # Verify folder is deleted
-        deleted_folder = app._database.folders_table.find_one(id=folder['id'])
+        deleted_folder = app._database.folders_table.find_one(id=folder["id"])
         assert deleted_folder is None
 
 
@@ -197,20 +202,25 @@ class TestSettingsConfigurationWorkflow:
     def test_edit_email_settings_workflow(self, initialized_app):
         """Test editing email settings through the complete workflow."""
         app = initialized_app
-    
+
         # Mock the settings dialog
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             # Show edit settings dialog
             app._show_edit_settings_dialog()
-    
+
             # Verify dialog was shown without error
             assert True
+
     def test_edit_reporting_settings_workflow(self, initialized_app):
         """Test editing reporting settings through the complete workflow."""
         app = initialized_app
 
         # Mock the settings dialog with reporting enabled
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_edit_settings_dialog()
 
             # Verify callbacks exist
@@ -220,12 +230,15 @@ class TestSettingsConfigurationWorkflow:
     def test_edit_backup_settings_workflow(self, initialized_app):
         """Test editing backup settings through the complete workflow."""
         app = initialized_app
-    
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_edit_settings_dialog()
-    
+
             # Verify dialog was shown without error
             assert True
+
 
 class TestProcessingWorkflow:
     """Test file processing workflow."""
@@ -233,14 +246,14 @@ class TestProcessingWorkflow:
     def test_process_single_folder_workflow(self, initialized_app, temp_workspace):
         """Test processing a single folder through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder
         app._folder_manager.add_folder(input_folder)
         folder = app._database.folders_table.find_one(folder_name=input_folder)
 
         # Mock processing
-        with patch.object(app, '_graphical_process_directories') as mock_process:
+        with patch.object(app, "_graphical_process_directories") as mock_process:
             # Process folder
             app._graphical_process_directories(app._database.folders_table)
 
@@ -250,17 +263,17 @@ class TestProcessingWorkflow:
     def test_process_all_folders_workflow(self, initialized_app, temp_workspace):
         """Test processing all folders through the complete workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add multiple folders
         app._folder_manager.add_folder(input_folder)
-        app._folder_manager.add_folder(str(temp_workspace['output_folder']))
+        app._folder_manager.add_folder(str(temp_workspace["output_folder"]))
 
         # Get folders table
         folders_table = app._database.folders_table
 
         # Mock processing
-        with patch.object(app, '_graphical_process_directories') as mock_process:
+        with patch.object(app, "_graphical_process_directories") as mock_process:
             # Process all folders
             app._graphical_process_directories(folders_table)
 
@@ -276,7 +289,7 @@ class TestMaintenanceWorkflow:
         app = initialized_app
 
         # Mock the maintenance dialog
-        with patch.object(MaintenanceDialog, 'open_dialog', return_value=None):
+        with patch.object(MaintenanceDialog, "open_dialog", return_value=None):
             # Show maintenance dialog
             app._show_maintenance_dialog_wrapper()
 
@@ -287,7 +300,7 @@ class TestMaintenanceWorkflow:
         """Test database import workflow."""
         app = initialized_app
 
-        with patch.object(MaintenanceDialog, 'open_dialog', return_value=None):
+        with patch.object(MaintenanceDialog, "open_dialog", return_value=None):
             app._show_maintenance_dialog_wrapper()
 
             # Verify database import callback exists
@@ -302,7 +315,9 @@ class TestProcessedFilesWorkflow:
         app = initialized_app
 
         # Mock the processed files dialog
-        with patch.object(ProcessedFilesDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            ProcessedFilesDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             # Show processed files dialog
             app._show_processed_files_dialog_wrapper()
 
@@ -311,40 +326,43 @@ class TestProcessedFilesWorkflow:
     def test_processed_files_button_toggled_when_empty(self, initialized_app):
         """Test that processed files button is disabled when no files processed."""
         app = initialized_app
-    
+
         # Verify no processed files exist
         count = app._database.processed_files.count()
         assert count == 0
-    
+
         # Update button states
         app._set_main_button_states()
-    
+
         # Verify button is disabled
         assert app._processed_files_button.isEnabled() is False
-    
+
     def test_processed_files_button_enabled_when_files_exist(self, initialized_app):
         """Test that processed files button is enabled when files are processed."""
         app = initialized_app
-    
+
         # Insert a processed file
-        app._database.processed_files.insert({
-            'file_name': 'test.edi',
-            'md5': 'abc123',
-            'file_checksum': 'def456',
-            'resend_flag': 0,
-            'folder_id': 1,
-            'created_at': '2024-01-01',
-        })
-    
+        app._database.processed_files.insert(
+            {
+                "file_name": "test.edi",
+                "md5": "abc123",
+                "file_checksum": "def456",
+                "resend_flag": 0,
+                "folder_id": 1,
+                "created_at": "2024-01-01",
+            }
+        )
+
         # Verify processed files exist
         count = app._database.processed_files.count()
         assert count > 0
-    
+
         # Update button states
         app._set_main_button_states()
-    
+
         # Verify button is enabled
         assert app._processed_files_button.isEnabled() is True
+
 
 class TestResendWorkflow:
     """Test resend workflow."""
@@ -358,7 +376,9 @@ class TestResendWorkflow:
         mock_dialog._should_show = True
         mock_dialog.exec = MagicMock(return_value=QDialog.DialogCode.Accepted)
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendDialog', return_value=mock_dialog):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendDialog", return_value=mock_dialog
+        ):
             # Show resend dialog
             app._show_resend_dialog()
 
@@ -368,40 +388,43 @@ class TestResendWorkflow:
     def test_resend_button_toggled_when_no_processed_files(self, initialized_app):
         """Test that resend button is disabled when no files processed."""
         app = initialized_app
-    
+
         # Verify no processed files exist
         count = app._database.processed_files.count()
         assert count == 0
-    
+
         # Update button states
         app._set_main_button_states()
-    
+
         # Verify button is disabled
         assert app._allow_resend_button.isEnabled() is False
-    
+
     def test_resend_button_enabled_when_files_exist(self, initialized_app):
         """Test that resend button is enabled when files are processed."""
         app = initialized_app
-    
+
         # Insert a processed file
-        app._database.processed_files.insert({
-            'file_name': 'test.edi',
-            'md5': 'abc123',
-            'file_checksum': 'def456',
-            'resend_flag': 0,
-            'folder_id': 1,
-            'created_at': '2024-01-01',
-        })
-    
+        app._database.processed_files.insert(
+            {
+                "file_name": "test.edi",
+                "md5": "abc123",
+                "file_checksum": "def456",
+                "resend_flag": 0,
+                "folder_id": 1,
+                "created_at": "2024-01-01",
+            }
+        )
+
         # Verify processed files exist
         count = app._database.processed_files.count()
         assert count > 0
-    
+
         # Update button states
         app._set_main_button_states()
-    
+
         # Verify button is enabled
         assert app._allow_resend_button.isEnabled() is True
+
 
 class TestCompleteUserWorkflow:
     """Test complete end-to-end user workflow."""
@@ -409,11 +432,13 @@ class TestCompleteUserWorkflow:
     def test_complete_add_process_view_workflow(self, initialized_app, temp_workspace):
         """Test complete workflow: add folder → process → view results."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Step 1: Add folder
-        with patch.object(app, '_select_folder') as mock_select:
-            mock_select.side_effect = lambda: app._folder_manager.add_folder(input_folder)
+        with patch.object(app, "_select_folder") as mock_select:
+            mock_select.side_effect = lambda: app._folder_manager.add_folder(
+                input_folder
+            )
             mock_select()
 
         # Verify folder added
@@ -421,11 +446,13 @@ class TestCompleteUserWorkflow:
         assert folder is not None
 
         # Step 2: Mock processing files
-        with patch.object(app, '_graphical_process_directories'):
+        with patch.object(app, "_graphical_process_directories"):
             app._graphical_process_directories(app._database.folders_table)
 
         # Step 3: Mock viewing processed files
-        with patch.object(ProcessedFilesDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            ProcessedFilesDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_processed_files_dialog_wrapper()
 
         # Verify workflow completed
@@ -436,7 +463,9 @@ class TestCompleteUserWorkflow:
         app = initialized_app
 
         # Step 1: Edit settings
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_edit_settings_dialog()
 
         # Step 2: Verify refresh was called
@@ -449,36 +478,41 @@ class TestCompleteUserWorkflow:
 class TestButtonStateManagement:
     """Test button state management during workflow."""
 
-    def test_button_states_update_after_folder_add(self, initialized_app, temp_workspace):
+    def test_button_states_update_after_folder_add(
+        self, initialized_app, temp_workspace
+    ):
         """Test button states update after adding a folder."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
-    
+        input_folder = str(temp_workspace["input_folder"])
+
         # Initially no folders
         app._set_main_button_states()
         assert app._process_folder_button.isEnabled() is False
-    
+
         # Add folder
         app._folder_manager.add_folder(input_folder)
         # Enable the folder
         folder = app._folder_manager.get_folder_by_name(input_folder)
         if folder:
-            app._folder_manager.enable_folder(folder['id'])
+            app._folder_manager.enable_folder(folder["id"])
         app._refresh_users_list()
-    
+
         # Verify button states updated
         assert app._process_folder_button.isEnabled() is True
-    def test_button_states_update_after_folder_disable(self, initialized_app, temp_workspace):
+
+    def test_button_states_update_after_folder_disable(
+        self, initialized_app, temp_workspace
+    ):
         """Test button states update after disabling a folder."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder
         app._folder_manager.add_folder(input_folder)
         folder = app._database.folders_table.find_one(folder_name=input_folder)
 
         # Disable folder
-        app._disable_folder(folder['id'])
+        app._disable_folder(folder["id"])
         app._set_main_button_states()
 
         # Verify button states updated
@@ -487,32 +521,35 @@ class TestButtonStateManagement:
     def test_button_states_update_after_files_processed(self, initialized_app):
         """Test button states update after files are processed."""
         app = initialized_app
-    
+
         # Initially no processed files
         app._set_main_button_states()
         assert app._processed_files_button.isEnabled() is False
         assert app._allow_resend_button.isEnabled() is False
-    
+
         # Insert processed files
-        app._database.processed_files.insert({
-            'file_name': 'test.edi',
-            'md5': 'abc123',
-            'file_checksum': 'def456',
-            'resend_flag': 0,
-            'folder_id': 1,
-            'created_at': '2024-01-01',
-        })
-    
+        app._database.processed_files.insert(
+            {
+                "file_name": "test.edi",
+                "md5": "abc123",
+                "file_checksum": "def456",
+                "resend_flag": 0,
+                "folder_id": 1,
+                "created_at": "2024-01-01",
+            }
+        )
+
         # Verify processed files exist
         count = app._database.processed_files.count()
         assert count > 0
-    
+
         # Update button states
         app._set_main_button_states()
-    
+
         # Verify button states updated
         assert app._processed_files_button.isEnabled() is True
         assert app._allow_resend_button.isEnabled() is True
+
 
 class TestSearchAndFilterWorkflow:
     """Test search and filter workflow."""
@@ -522,16 +559,16 @@ class TestSearchAndFilterWorkflow:
         app = initialized_app
 
         # Verify search widget exists
-        assert hasattr(app, '_search_widget')
-        assert hasattr(app, '_folder_filter')
-        assert hasattr(app, '_set_folders_filter')
+        assert hasattr(app, "_search_widget")
+        assert hasattr(app, "_folder_filter")
+        assert hasattr(app, "_set_folders_filter")
 
     def test_filter_updates_folder_list(self, initialized_app):
         """Test that filter updates the folder list."""
         app = initialized_app
 
         # Mock filter change
-        with patch.object(app, '_refresh_users_list'):
+        with patch.object(app, "_refresh_users_list"):
             app._set_folders_filter("test")
 
             # Verify refresh was called
@@ -544,7 +581,7 @@ class TestErrorHandlingWorkflow:
     def test_folder_already_exists_workflow(self, initialized_app, temp_workspace):
         """Test workflow when folder already exists."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder first time
         app._folder_manager.add_folder(input_folder)
@@ -553,7 +590,7 @@ class TestErrorHandlingWorkflow:
         result = app._folder_manager.check_folder_exists(input_folder)
 
         # Verify folder already exists
-        assert result['truefalse'] is True
+        assert result["truefalse"] is True
 
     def test_folder_not_found_workflow(self, initialized_app):
         """Test workflow when folder is not found."""
@@ -569,7 +606,9 @@ class TestErrorHandlingWorkflow:
         app = initialized_app
 
         # Mock database error
-        with patch.object(app._database.folders_table, 'count', side_effect=Exception("DB Error")):
+        with patch.object(
+            app._database.folders_table, "count", side_effect=Exception("DB Error")
+        ):
             try:
                 app._set_main_button_states()
             except Exception:
@@ -588,7 +627,9 @@ class TestPersistenceWorkflow:
         initial_settings = app._database.get_settings_or_default()
 
         # Edit settings
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_edit_settings_dialog()
 
         # Verify settings still accessible
@@ -598,7 +639,7 @@ class TestPersistenceWorkflow:
     def test_folder_config_persists_workflow(self, initialized_app, temp_workspace):
         """Test that folder configuration persists through the workflow."""
         app = initialized_app
-        input_folder = str(temp_workspace['input_folder'])
+        input_folder = str(temp_workspace["input_folder"])
 
         # Add folder
         app._folder_manager.add_folder(input_folder)
@@ -609,7 +650,9 @@ class TestPersistenceWorkflow:
 
         # Refresh and verify still exists
         app._refresh_users_list()
-        folder_after_refresh = app._database.folders_table.find_one(folder_name=input_folder)
+        folder_after_refresh = app._database.folders_table.find_one(
+            folder_name=input_folder
+        )
         assert folder_after_refresh is not None
 
 
@@ -632,7 +675,9 @@ class TestCleanupWorkflow:
         app = initialized_app
 
         # Mock dialog creation and cleanup
-        with patch.object(EditSettingsDialog, 'exec', return_value=QDialog.DialogCode.Accepted):
+        with patch.object(
+            EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
+        ):
             app._show_edit_settings_dialog()
 
         # Dialog should be cleaned up properly
@@ -647,9 +692,9 @@ class TestPerformanceWorkflow:
 
         # Add multiple folders
         folders_to_add = [
-            str(temp_workspace['input_folder']),
-            str(temp_workspace['output_folder']),
-            str(temp_workspace['processed_folder']),
+            str(temp_workspace["input_folder"]),
+            str(temp_workspace["output_folder"]),
+            str(temp_workspace["processed_folder"]),
         ]
 
         for folder in folders_to_add:
@@ -666,7 +711,7 @@ class TestPerformanceWorkflow:
     def test_large_dataset_workflow(self, initialized_app):
         """Test workflow with large dataset."""
         app = initialized_app
-    
+
         # Verify workflow completes with real database
         app._set_main_button_states()
         assert True

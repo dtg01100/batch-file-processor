@@ -5,7 +5,6 @@ and verify the real artifact works correctly via --self-test and --help.
 """
 
 import os
-import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -30,7 +29,14 @@ def built_executable(tmp_path_factory):
         pytest.skip("PyInstaller is not installed")
 
     result = subprocess.run(
-        [sys.executable, "-m", "PyInstaller", "main_interface.spec", "--clean", "--noconfirm"],
+        [
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "main_interface.spec",
+            "--clean",
+            "--noconfirm",
+        ],
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
@@ -41,9 +47,9 @@ def built_executable(tmp_path_factory):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert EXECUTABLE_PATH.exists(), (
-        f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
-    )
+    assert (
+        EXECUTABLE_PATH.exists()
+    ), f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
 
     return EXECUTABLE_PATH
 
@@ -51,6 +57,7 @@ def built_executable(tmp_path_factory):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.pyinstaller
 @pytest.mark.slow
@@ -80,12 +87,12 @@ def test_self_test_passes(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert "Self-test passed" in result.stdout, (
-        f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
-    )
-    assert "Failed to extract" not in result.stderr, (
-        f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
-    )
+    assert (
+        "Self-test passed" in result.stdout
+    ), f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
+    assert (
+        "Failed to extract" not in result.stderr
+    ), f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
 
 
 @pytest.mark.pyinstaller
@@ -132,9 +139,9 @@ def test_help_flag(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert "--self-test" in result.stdout, (
-        f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
-    )
-    assert "--automatic" in result.stdout, (
-        f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
-    )
+    assert (
+        "--self-test" in result.stdout
+    ), f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
+    assert (
+        "--automatic" in result.stdout
+    ), f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"

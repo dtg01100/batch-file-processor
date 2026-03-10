@@ -6,10 +6,9 @@ Tests:
 - Text wrapping for page width
 """
 
-import io
 import platform
 import textwrap
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -52,7 +51,7 @@ class TestPrintRunLog:
         # Create a long line that needs wrapping
         long_line = "A" * 200
         wrapped = '\r\n'.join(textwrap.wrap(long_line, width=75, replace_whitespace=False))
-        
+
         # Each line should be at most 75 chars (except the last which might be shorter)
         lines = wrapped.split('\r\n')
         for line in lines:
@@ -166,7 +165,7 @@ class TestPrintRunLogWindows:
     def test_windows_branch_detection(self, mock_system):
         """Test that Windows branch is taken on Windows."""
         mock_system.return_value = 'Windows'
-        
+
         # This would trigger the Windows branch in the actual code
         is_windows = platform.system() == 'Windows'
         assert is_windows is True
@@ -175,12 +174,12 @@ class TestPrintRunLogWindows:
         """Test that data is encoded as bytes for Python 3."""
         import sys
         test_string = "Test log content"
-        
+
         if sys.version_info >= (3,):
             raw_data = bytes(test_string, 'utf-8')
         else:
             raw_data = test_string
-        
+
         assert isinstance(raw_data, bytes)
 
     def test_printer_workflow_sequence(self, mock_win32print):
@@ -188,14 +187,14 @@ class TestPrintRunLogWindows:
         # Simulate the Windows printing workflow
         printer_name = mock_win32print.GetDefaultPrinter()
         h_printer = mock_win32print.OpenPrinter(printer_name)
-        
+
         mock_win32print.StartDocPrinter(h_printer, 1, ("Log File Printout", None, "RAW"))
         mock_win32print.StartPagePrinter(h_printer)
         mock_win32print.WritePrinter(h_printer, b"test data")
         mock_win32print.EndPagePrinter(h_printer)
         mock_win32print.EndDocPrinter(h_printer)
         mock_win32print.ClosePrinter(h_printer)
-        
+
         # Verify the sequence
         mock_win32print.GetDefaultPrinter.assert_called_once()
         mock_win32print.OpenPrinter.assert_called_once()
@@ -213,26 +212,26 @@ class TestPrintRunLogUnix:
         mock_process = MagicMock()
         mock_process.stdin = MagicMock()
         mock_popen.return_value = mock_process
-        
+
         import subprocess
         lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
-        
+
         mock_popen.assert_called_with("/usr/bin/lpr", stdin=subprocess.PIPE)
 
     def test_data_written_to_stdin(self):
         """Test that formatted data is written to lpr stdin."""
         mock_stdin = MagicMock()
         test_data = "Test log content"
-        
+
         mock_stdin.write(test_data.encode())
-        
+
         mock_stdin.write.assert_called_once_with(test_data.encode())
 
     @patch('platform.system')
     def test_unix_branch_not_windows(self, mock_system):
         """Test that Unix branch is taken on non-Windows systems."""
         mock_system.return_value = 'Linux'
-        
+
         # This would trigger the Unix branch in the actual code
         is_unix = platform.system() != 'Windows'
         assert is_unix is True

@@ -5,22 +5,12 @@ Uses a decomposed architecture with dedicated builders and handlers.
 """
 
 import os
-import logging
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, Optional, Callable
 
 from PyQt6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
     QWidget,
-    QScrollArea,
-    QDialogButtonBox,
     QMessageBox,
-    QFileDialog,
-    QSizePolicy,
 )
-from PyQt6.QtCore import Qt
-from PyQt6 import QtCore
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.validation.folder_settings_validator import FolderSettingsValidator
@@ -80,7 +70,7 @@ class EditFoldersDialog(BaseDialog):
             alias_provider=self._alias_provider,
             on_apply_success=self._on_apply_success,
             data_extractor=QtFolderDataExtractor(self._fields),
-            ftp_service=self._ftp_service
+            ftp_service=self._ftp_service,
         )
 
         # Initialize UI Builder
@@ -93,15 +83,15 @@ class EditFoldersDialog(BaseDialog):
             on_select_copy_dir=self.handlers.select_copy_directory,
             on_show_path=self.handlers.show_folder_path,
             on_update_backend_states=self.handlers.update_active_state,
-            on_convert_format_changed=None, # Will be set by DynamicEDIBuilder
+            on_convert_format_changed=None,  # Will be set by DynamicEDIBuilder
             on_ok=self._on_ok,
-            on_cancel=self.reject
+            on_cancel=self.reject,
         )
 
         self.setMinimumSize(1000, 700)
         self._build_ui()
         self._populate_fields(self._folder_config)
-        
+
         # Initial state updates
         self.handlers.update_active_state()
 
@@ -113,15 +103,18 @@ class EditFoldersDialog(BaseDialog):
     def _build_ui(self):
         """Delegate UI building to the UILayoutBuilder."""
         self.ui_builder.build_ui()
-        
+
         # Link dynamic EDI builder back to dialog for population if needed
         self.dynamic_edi_builder = self.ui_builder.get_dynamic_edi_builder()
 
     def _populate_fields(self, config: Dict[str, Any]):
         """Populate UI fields from configuration."""
+
         def to_bool(val, default=False):
-            if val is None: return default
-            if isinstance(val, bool): return val
+            if val is None:
+                return default
+            if isinstance(val, bool):
+                return val
             return str(val).lower() == "true"
 
         # Active state
@@ -130,9 +123,15 @@ class EditFoldersDialog(BaseDialog):
             active_btn.setChecked(to_bool(config.get("folder_is_active"), False))
 
         # Backend checks
-        self._set_check("process_backend_copy_check", to_bool(config.get("process_backend_copy")))
-        self._set_check("process_backend_ftp_check", to_bool(config.get("process_backend_ftp")))
-        self._set_check("process_backend_email_check", to_bool(config.get("process_backend_email")))
+        self._set_check(
+            "process_backend_copy_check", to_bool(config.get("process_backend_copy"))
+        )
+        self._set_check(
+            "process_backend_ftp_check", to_bool(config.get("process_backend_ftp"))
+        )
+        self._set_check(
+            "process_backend_email_check", to_bool(config.get("process_backend_email"))
+        )
 
         # Text fields
         self._set_text("folder_alias_field", str(config.get("alias") or ""))
@@ -142,16 +141,27 @@ class EditFoldersDialog(BaseDialog):
         self._set_text("ftp_username_field", str(config.get("ftp_username") or ""))
         self._set_text("ftp_password_field", str(config.get("ftp_password") or ""))
         self._set_text("email_recipient_field", str(config.get("email_to") or ""))
-        self._set_text("email_sender_subject_field", str(config.get("email_subject_line") or ""))
+        self._set_text(
+            "email_sender_subject_field", str(config.get("email_subject_line") or "")
+        )
 
         # EDI base settings
-        self._set_check("force_edi_check_var", to_bool(config.get("force_edi_validation")))
+        self._set_check(
+            "force_edi_check_var", to_bool(config.get("force_edi_validation"))
+        )
         self._set_check("split_edi", to_bool(config.get("split_edi")))
-        self._set_check("split_edi_send_invoices", to_bool(config.get("split_edi_include_invoices")))
-        self._set_check("split_edi_send_credits", to_bool(config.get("split_edi_include_credits")))
+        self._set_check(
+            "split_edi_send_invoices", to_bool(config.get("split_edi_include_invoices"))
+        )
+        self._set_check(
+            "split_edi_send_credits", to_bool(config.get("split_edi_include_credits"))
+        )
         self._set_check("prepend_file_dates", to_bool(config.get("prepend_date_files")))
         self._set_text("rename_file_field", str(config.get("rename_file") or ""))
-        self._set_text("split_edi_filter_categories_entry", str(config.get("split_edi_filter_categories") or "ALL"))
+        self._set_text(
+            "split_edi_filter_categories_entry",
+            str(config.get("split_edi_filter_categories") or "ALL"),
+        )
 
         # Filter mode
         mode_combo = self._fields.get("split_edi_filter_mode")
@@ -231,7 +241,7 @@ class EditFoldersDialog(BaseDialog):
         """Extract data from UI and update the configuration dictionary."""
         extractor = QtFolderDataExtractor(self._fields)
         extracted = extractor.extract_all()
-        
+
         target = self._folder_config
         target["folder_is_active"] = extracted.folder_is_active
 
@@ -289,7 +299,9 @@ class EditFoldersDialog(BaseDialog):
         except (ValueError, TypeError):
             target["invoice_date_offset"] = 0
         target["invoice_date_custom_format"] = extracted.invoice_date_custom_format
-        target["invoice_date_custom_format_string"] = extracted.invoice_date_custom_format_string
+        target["invoice_date_custom_format_string"] = (
+            extracted.invoice_date_custom_format_string
+        )
         target["retail_uom"] = extracted.retail_uom
         target["override_upc_bool"] = extracted.override_upc_bool
         target["override_upc_level"] = extracted.override_upc_level
@@ -303,7 +315,7 @@ class EditFoldersDialog(BaseDialog):
         target["include_item_description"] = extracted.include_item_description
         target["simple_csv_sort_order"] = extracted.simple_csv_sort_order
         target["split_prepaid_sales_tax_crec"] = extracted.split_prepaid_sales_tax_crec
-        
+
         # Estore specific
         target["estore_store_number"] = extracted.estore_store_number
         target["estore_Vendor_OId"] = extracted.estore_vendor_oid
@@ -325,7 +337,7 @@ class EditFoldersDialog(BaseDialog):
 
     def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
         extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(
-            self._fields, framework='qt'
+            self._fields, framework="qt"
         )
         # Note: Don't add plugin_configurations to target dict for database storage.
         # The plugin configurations are managed separately and not persisted in the

@@ -12,10 +12,6 @@ Tests validation functions for:
 
 import os
 import pytest
-from unittest.mock import patch, MagicMock
-import tempfile
-import shutil
-import re
 
 # Import actual validation functions from the codebase
 from interface.validation.email_validator import validate_email
@@ -23,69 +19,69 @@ from interface.validation.email_validator import validate_email
 
 class TestEmailValidation:
     """Test suite for email validation functionality."""
-    
+
     def test_valid_email_simple(self):
         """Simple valid email should pass validation."""
         assert validate_email("user@example.com") is True
-    
+
     def test_valid_email_with_subdomain(self):
         """Email with subdomain should pass validation."""
         assert validate_email("user@mail.example.com") is True
-    
+
     def test_valid_email_with_plus(self):
         """Email with plus addressing should pass validation."""
         assert validate_email("user+tag@example.com") is True
-    
+
     def test_valid_email_with_dot(self):
         """Email with dots in local part should pass validation."""
         assert validate_email("first.last@example.com") is True
-    
+
     def test_valid_email_underscore(self):
         """Email with underscore in domain should pass validation."""
         # Underscore is not valid in domain names per the regex
         # Updated to match actual regex behavior
         assert validate_email("user@my_domain.com") is False
-    
+
     def test_valid_email_two_letter_tld(self):
         """Email with 2-letter TLD should pass validation."""
         assert validate_email("user@example.co") is True
-    
+
     def test_valid_email_long_tld(self):
         """Email with longer TLD (up to 7 chars) should pass validation."""
         assert validate_email("user@example.museum") is True
-    
+
     def test_invalid_email_no_at(self):
         """Email without @ should fail validation."""
         assert validate_email("userexample.com") is False
-    
+
     def test_invalid_email_no_domain(self):
         """Email without domain part should fail validation."""
         assert validate_email("user@") is False
-    
+
     def test_invalid_email_no_local(self):
         """Email without local part should fail validation."""
         assert validate_email("@example.com") is False
-    
+
     def test_invalid_email_no_tld(self):
         """Email without TLD should fail validation."""
         assert validate_email("user@example") is False
-    
+
     def test_invalid_email_double_at(self):
         """Email with double @ should fail validation."""
         assert validate_email("user@@example.com") is False
-    
+
     def test_invalid_email_space(self):
         """Email with spaces should fail validation."""
         assert validate_email("user @example.com") is False
-    
+
     def test_invalid_email_empty(self):
         """Empty email should fail validation."""
         assert validate_email("") is False
-    
+
     def test_invalid_email_special_chars(self):
         """Email with invalid special characters should fail validation."""
         assert validate_email("user@example.com!") is False
-    
+
     @pytest.mark.parametrize("email", [
         "test@valid.org",
         "another.user@company.co.uk",
@@ -95,7 +91,7 @@ class TestEmailValidation:
     def test_valid_emails_parametrized(self, email):
         """Parametrized test for valid emails."""
         assert validate_email(email) is True
-    
+
     @pytest.mark.parametrize("email", [
         "notanemail",
         "@nodomain.com",
@@ -109,18 +105,18 @@ class TestEmailValidation:
 
 class TestPathValidation:
     """Test suite for path validation functionality."""
-    
+
     def test_existing_directory_valid(self, tmp_path):
         """Existing directory should pass validation."""
         test_dir = tmp_path / "test_folder"
         test_dir.mkdir()
         assert os.path.exists(str(test_dir)) is True
-    
+
     def test_non_existing_directory_invalid(self, tmp_path):
         """Non-existing directory should fail path existence check."""
         non_existing = tmp_path / "does_not_exist"
         assert os.path.exists(str(non_existing)) is False
-    
+
     def test_directory_with_write_permission(self, tmp_path):
         """Directory should be writable."""
         test_dir = tmp_path / "writable_folder"
@@ -132,7 +128,7 @@ class TestPathValidation:
             assert test_file.exists()
         except IOError:
             pytest.fail("Directory should be writable")
-    
+
     def test_path_with_spaces(self):
         """Paths with spaces should be handled correctly."""
         path_with_spaces = "/path/with spaces/file.txt"
@@ -141,7 +137,7 @@ class TestPathValidation:
 
 class TestNumericRangeValidation:
     """Test suite for numeric range validation."""
-    
+
     @pytest.mark.parametrize("value,expected", [
         (0, True),
         (1, True),
@@ -160,9 +156,9 @@ class TestNumericRangeValidation:
                 return counter_int >= 0
             except (ValueError, TypeError):
                 return False
-        
+
         assert validate_backup_counter(value) == expected
-    
+
     @pytest.mark.parametrize("length,expected", [
         (11, True),
         (12, True),
@@ -184,13 +180,13 @@ class TestNumericRangeValidation:
                 return 8 <= length_int <= 14
             except (ValueError, TypeError):
                 return False
-        
+
         assert validate_upc_length(length) == expected
 
 
 class TestAS400SettingsValidation:
     """Test suite for AS/400 settings validation."""
-    
+
     def test_valid_username(self):
         """Valid AS/400 username should pass validation."""
         def validate_username(username):
@@ -199,12 +195,12 @@ class TestAS400SettingsValidation:
             if not isinstance(username, str):
                 return False
             return 1 <= len(username) <= 10
-        
+
         assert validate_username("testuser") is True
         assert validate_username("") is False
         assert validate_username("a") is True
         assert validate_username("toolongusername") is False
-    
+
     def test_valid_password(self):
         """Valid AS/400 password should pass validation."""
         def validate_password(password):
@@ -213,11 +209,11 @@ class TestAS400SettingsValidation:
             if not isinstance(password, str):
                 return False
             return len(password) > 0
-        
+
         assert validate_password("mypassword") is True
         assert validate_password("") is False
         assert validate_password(None) is False
-    
+
     def test_valid_address(self):
         """Valid AS/400 address should pass validation."""
         def validate_address(address):
@@ -226,7 +222,7 @@ class TestAS400SettingsValidation:
             if not isinstance(address, str):
                 return False
             return 1 <= len(address) <= 255
-        
+
         assert validate_address("as400.example.com") is True
         assert validate_address("192.168.1.100") is True
         assert validate_address("") is False
@@ -235,7 +231,7 @@ class TestAS400SettingsValidation:
 
 class TestSMTPSettingsValidation:
     """Test suite for SMTP settings validation."""
-    
+
     def test_valid_smtp_server(self):
         """Valid SMTP server should pass validation."""
         def validate_smtp_server(server):
@@ -244,11 +240,11 @@ class TestSMTPSettingsValidation:
             if not isinstance(server, str):
                 return False
             return len(server) > 0
-        
+
         assert validate_smtp_server("smtp.example.com") is True
         assert validate_smtp_server("") is False
         assert validate_smtp_server(None) is False
-    
+
     @pytest.mark.parametrize("port,expected", [
         (25, True),
         (465, True),
@@ -269,9 +265,9 @@ class TestSMTPSettingsValidation:
                 return 1 <= port_int <= 65535
             except (ValueError, TypeError):
                 return False
-        
+
         assert validate_smtp_port(port) == expected
-    
+
     def test_smtp_credentials_validation(self):
         """SMTP credentials should be validated correctly."""
         def validate_smtp_credentials(username, password):
@@ -282,7 +278,7 @@ class TestSMTPSettingsValidation:
             if password is not None and not isinstance(password, str):
                 return False
             return True
-        
+
         assert validate_smtp_credentials("user", "pass") is True
         assert validate_smtp_credentials("user", None) is True
         # Empty string is valid (non-None string)
@@ -291,7 +287,7 @@ class TestSMTPSettingsValidation:
 
 class TestFTPSettingsValidation:
     """Test suite for FTP settings validation."""
-    
+
     def test_valid_ftp_server(self):
         """Valid FTP server should pass validation."""
         def validate_ftp_server(server):
@@ -300,11 +296,11 @@ class TestFTPSettingsValidation:
             if not isinstance(server, str):
                 return False
             return len(server) > 0
-        
+
         assert validate_ftp_server("ftp.example.com") is True
         assert validate_ftp_server("") is False
         assert validate_ftp_server(None) is False
-    
+
     def test_valid_ftp_port(self):
         """Valid FTP port should pass validation."""
         def validate_ftp_port(port):
@@ -313,12 +309,12 @@ class TestFTPSettingsValidation:
                 return 1 <= port_int <= 65535
             except (ValueError, TypeError):
                 return False
-        
+
         assert validate_ftp_port(21) is True
         assert validate_ftp_port(990) is True
         assert validate_ftp_port("2121") is True
         assert validate_ftp_port(0) is False
-    
+
     def test_valid_ftp_username(self):
         """FTP username can be empty for anonymous access."""
         def validate_ftp_username(username):
@@ -327,11 +323,11 @@ class TestFTPSettingsValidation:
             if not isinstance(username, str):
                 return False
             return True
-        
+
         assert validate_ftp_username("anonymous") is True
         assert validate_ftp_username("") is True
         assert validate_ftp_username(None) is False
-    
+
     def test_valid_ftp_folder(self):
         """FTP folder path should be validated."""
         def validate_ftp_folder(folder):
@@ -340,7 +336,7 @@ class TestFTPSettingsValidation:
             if not isinstance(folder, str):
                 return False
             return True
-        
+
         assert validate_ftp_folder("/uploads") is True
         assert validate_ftp_folder("") is True
         assert validate_ftp_folder(None) is False
@@ -348,7 +344,7 @@ class TestFTPSettingsValidation:
 
 class TestODBCDriverValidation:
     """Test suite for ODBC driver validation."""
-    
+
     @pytest.mark.parametrize("driver,expected", [
         ("{ODBC Driver 17 for SQL Server}", True),
         ("{MySQL ODBC 8.0 Driver}", True),
@@ -364,13 +360,13 @@ class TestODBCDriverValidation:
             if not isinstance(driver, str):
                 return False
             return len(driver) > 0
-        
+
         assert validate_odbc_driver(driver) == expected
 
 
 class TestSettingsToggleValidation:
     """Test suite for settings toggle (boolean) validation."""
-    
+
     @pytest.mark.parametrize("value,expected", [
         ("True", True),
         ("False", False),
@@ -399,13 +395,13 @@ class TestSettingsToggleValidation:
             if isinstance(value, int):
                 return value != 0
             return False
-        
+
         assert validate_toggle(value) == expected
 
 
 class TestBackendToggleValidation:
     """Test suite for backend toggle settings validation."""
-    
+
     def test_copy_backend_toggle(self):
         """Copy backend toggle should be validated correctly."""
         def validate_copy_backend(setting):
@@ -416,12 +412,12 @@ class TestBackendToggleValidation:
             if isinstance(setting, str):
                 return setting.lower() in ("true", "false", "1", "0")
             return False
-        
+
         assert validate_copy_backend(True) is True
         assert validate_copy_backend("True") is True
         assert validate_copy_backend("False") is True
         assert validate_copy_backend(None) is False
-    
+
     def test_ftp_backend_toggle(self):
         """FTP backend toggle should be validated correctly."""
         def validate_ftp_backend(setting):
@@ -432,11 +428,11 @@ class TestBackendToggleValidation:
             if isinstance(setting, str):
                 return setting.lower() in ("true", "false", "1", "0")
             return False
-        
+
         assert validate_ftp_backend(True) is True
         assert validate_ftp_backend("1") is True
         assert validate_ftp_backend(None) is False
-    
+
     def test_email_backend_toggle(self):
         """Email backend toggle should be validated correctly."""
         def validate_email_backend(setting):
@@ -447,7 +443,7 @@ class TestBackendToggleValidation:
             if isinstance(setting, str):
                 return setting.lower() in ("true", "false", "1", "0")
             return False
-        
+
         assert validate_email_backend(False) is True
         assert validate_email_backend("0") is True
         assert validate_email_backend(None) is False

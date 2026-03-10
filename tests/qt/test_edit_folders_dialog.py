@@ -11,7 +11,7 @@ Uses pytest-qt's qtbot fixture for proper widget lifecycle management.
 Mocks file dialogs and message boxes.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,9 +21,12 @@ def create_dialog(qtbot, sample_folder_config, **kwargs):
     from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
     settings_provider = kwargs.pop(
-        "settings_provider", kwargs.pop("_settings_provider", lambda: {"enable_email": True})
+        "settings_provider",
+        kwargs.pop("_settings_provider", lambda: {"enable_email": True}),
     )
-    alias_provider = kwargs.pop("alias_provider", kwargs.pop("_alias_provider", lambda: ["Other1", "Other2"]))
+    alias_provider = kwargs.pop(
+        "alias_provider", kwargs.pop("_alias_provider", lambda: ["Other1", "Other2"])
+    )
 
     dialog = EditFoldersDialog(
         None,
@@ -43,7 +46,9 @@ def create_dialog(qtbot, sample_folder_config, **kwargs):
 class TestActiveCheckboxToggle:
     """Tests for active checkbox toggle interaction."""
 
-    def test_active_checkbox_unchecked_disables_backends(self, qtbot, sample_folder_config):
+    def test_active_checkbox_unchecked_disables_backends(
+        self, qtbot, sample_folder_config
+    ):
         """When unchecked, backend checkboxes should be disabled."""
         sample_folder_config["folder_is_active"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
@@ -54,7 +59,9 @@ class TestActiveCheckboxToggle:
         assert not dialog._ftp_backend_check.isEnabled()
         assert not dialog._email_backend_check.isEnabled()
 
-    def test_active_checkbox_checked_enables_backends(self, qtbot, sample_folder_config):
+    def test_active_checkbox_checked_enables_backends(
+        self, qtbot, sample_folder_config
+    ):
         """When checked, backend checkboxes should be enabled."""
         sample_folder_config["folder_is_active"] = "False"
         dialog = create_dialog(qtbot, sample_folder_config)
@@ -89,7 +96,9 @@ class TestActiveCheckboxToggle:
         assert not dialog._send_credits_check.isEnabled()
         assert not dialog._edi_options_combo.isEnabled()
 
-    def test_active_checkbox_enables_edi_when_backends_active(self, qtbot, sample_folder_config):
+    def test_active_checkbox_enables_edi_when_backends_active(
+        self, qtbot, sample_folder_config
+    ):
         """EDI fields should be enabled when folder is active AND a backend is selected."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
@@ -106,7 +115,9 @@ class TestActiveCheckboxToggle:
 class TestCopyBackendToggle:
     """Tests for copy backend checkbox toggle interaction."""
 
-    def test_copy_backend_unchecked_disables_copy_button(self, qtbot, sample_folder_config):
+    def test_copy_backend_unchecked_disables_copy_button(
+        self, qtbot, sample_folder_config
+    ):
         """Copy destination button should be disabled when copy backend is unchecked."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = False
@@ -116,7 +127,9 @@ class TestCopyBackendToggle:
 
         assert not dialog._copy_dest_btn.isEnabled()
 
-    def test_copy_backend_checked_enables_copy_button(self, qtbot, sample_folder_config):
+    def test_copy_backend_checked_enables_copy_button(
+        self, qtbot, sample_folder_config
+    ):
         """Copy destination button should be enabled when copy backend is checked."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = False
@@ -134,7 +147,9 @@ class TestCopyBackendToggle:
 class TestFTPBackendToggle:
     """Tests for FTP backend checkbox toggle interaction."""
 
-    def test_ftp_backend_unchecked_disables_ftp_fields(self, qtbot, sample_folder_config):
+    def test_ftp_backend_unchecked_disables_ftp_fields(
+        self, qtbot, sample_folder_config
+    ):
         """FTP fields should be disabled when FTP backend is unchecked."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_ftp"] = False
@@ -170,7 +185,9 @@ class TestFTPBackendToggle:
 class TestEmailBackendToggle:
     """Tests for email backend checkbox toggle interaction."""
 
-    def test_email_backend_unchecked_disables_email_fields(self, qtbot, sample_folder_config):
+    def test_email_backend_unchecked_disables_email_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Email fields should be disabled when email backend is unchecked."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_email"] = False
@@ -181,7 +198,9 @@ class TestEmailBackendToggle:
         assert not dialog._email_recipient_field.isEnabled()
         assert not dialog._email_subject_field.isEnabled()
 
-    def test_email_backend_checked_enables_email_fields(self, qtbot, sample_folder_config):
+    def test_email_backend_checked_enables_email_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Email fields should be enabled when email backend is checked."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_email"] = False
@@ -192,10 +211,16 @@ class TestEmailBackendToggle:
         assert dialog._email_recipient_field.isEnabled()
         assert dialog._email_subject_field.isEnabled()
 
-    def test_email_backend_disabled_when_email_not_enabled(self, qtbot, sample_folder_config):
+    def test_email_backend_disabled_when_email_not_enabled(
+        self, qtbot, sample_folder_config
+    ):
         """Email backend checkbox should be disabled when email is not enabled in settings."""
         sample_folder_config["folder_is_active"] = "True"
-        dialog = create_dialog(qtbot, sample_folder_config, settings_provider=lambda: {"enable_email": False})
+        dialog = create_dialog(
+            qtbot,
+            sample_folder_config,
+            settings_provider=lambda: {"enable_email": False},
+        )
 
         assert not dialog._email_backend_check.isEnabled()
 
@@ -226,7 +251,9 @@ class TestConvertFormatChange:
         assert hasattr(dialog, "_csv_headers_check")
         assert hasattr(dialog, "_csv_pad_arec_check")
 
-    def test_scannerware_format_shows_scannerware_fields(self, qtbot, sample_folder_config):
+    def test_scannerware_format_shows_scannerware_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting ScannerWare format should show ScannerWare-specific fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("ScannerWare")
@@ -234,7 +261,9 @@ class TestConvertFormatChange:
         assert hasattr(dialog, "_sw_pad_arec_check")
         assert hasattr(dialog, "_sw_arec_padding_field")
 
-    def test_simplified_csv_format_shows_simplified_fields(self, qtbot, sample_folder_config):
+    def test_simplified_csv_format_shows_simplified_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting simplified_csv format should show simplified CSV fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("simplified_csv")
@@ -250,7 +279,9 @@ class TestConvertFormatChange:
 
         assert hasattr(dialog, "_fintech_division_field")
 
-    def test_estore_einvoice_format_shows_estore_fields(self, qtbot, sample_folder_config):
+    def test_estore_einvoice_format_shows_estore_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting Estore eInvoice format should show estore fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("Estore eInvoice")
@@ -259,7 +290,9 @@ class TestConvertFormatChange:
         assert hasattr(dialog, "_estore_vendor_oid_field")
         assert hasattr(dialog, "_estore_vendor_name_field")
 
-    def test_estore_einvoice_generic_format_shows_extra_field(self, qtbot, sample_folder_config):
+    def test_estore_einvoice_generic_format_shows_extra_field(
+        self, qtbot, sample_folder_config
+    ):
         """Estore eInvoice Generic should show C Record OId field."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("Estore eInvoice Generic")
@@ -267,21 +300,27 @@ class TestConvertFormatChange:
         assert hasattr(dialog, "_estore_store_number_field")
         assert hasattr(dialog, "_estore_c_record_oid_field")
 
-    def test_jolley_custom_format_shows_basic_options(self, qtbot, sample_folder_config):
+    def test_jolley_custom_format_shows_basic_options(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting jolley_custom should show basic options."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("jolley_custom")
 
         assert hasattr(dialog, "_convert_sub_container")
 
-    def test_stewarts_custom_format_shows_basic_options(self, qtbot, sample_folder_config):
+    def test_stewarts_custom_format_shows_basic_options(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting stewarts_custom should show basic options."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("stewarts_custom")
 
         assert hasattr(dialog, "_convert_sub_container")
 
-    def test_yellowdog_csv_format_shows_basic_options(self, qtbot, sample_folder_config):
+    def test_yellowdog_csv_format_shows_basic_options(
+        self, qtbot, sample_folder_config
+    ):
         """Selecting YellowDog CSV should show basic options."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
         dialog._convert_format_combo.setCurrentText("YellowDog CSV")
@@ -353,7 +392,9 @@ class TestEDIOptionsChange:
         assert hasattr(dialog, "_tweak_override_upc_check")
         assert hasattr(dialog, "_tweak_override_upc_level")
 
-    def test_edi_option_change_clears_previous_fields(self, qtbot, sample_folder_config):
+    def test_edi_option_change_clears_previous_fields(
+        self, qtbot, sample_folder_config
+    ):
         """Changing EDI options should clear previous dynamic fields."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
@@ -384,7 +425,9 @@ class TestEDIOptionsChange:
 class TestShowFolderPathButton:
     """Tests for show folder path button click."""
 
-    def test_show_folder_path_displays_message(self, qtbot, sample_folder_config, monkeypatch):
+    def test_show_folder_path_displays_message(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         """Clicking show folder path should display a message box."""
         sample_folder_config["folder_name"] = "/test/path"
         mock_info = MagicMock()
@@ -415,7 +458,9 @@ class TestShowFolderPathButton:
 class TestSelectCopyDirectoryButton:
     """Tests for select copy directory button click."""
 
-    def test_select_copy_directory_opens_file_dialog(self, qtbot, sample_folder_config, monkeypatch):
+    def test_select_copy_directory_opens_file_dialog(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         """Clicking select copy directory should open file dialog."""
         mock_get_existing = MagicMock(return_value="/selected/directory")
         monkeypatch.setattr(
@@ -434,7 +479,9 @@ class TestSelectCopyDirectoryButton:
         mock_get_existing.assert_called_once()
         assert dialog.copy_to_directory == "/selected/directory"
 
-    def test_select_copy_directory_cancels_returns_empty(self, qtbot, sample_folder_config, monkeypatch):
+    def test_select_copy_directory_cancels_returns_empty(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         """Cancelling the dialog should not change copy directory."""
         mock_get_existing = MagicMock(return_value="")
         monkeypatch.setattr(
@@ -450,7 +497,9 @@ class TestSelectCopyDirectoryButton:
 
         assert dialog.copy_to_directory == "/original"
 
-    def test_select_copy_directory_uses_existing_as_initial(self, qtbot, sample_folder_config, monkeypatch):
+    def test_select_copy_directory_uses_existing_as_initial(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         """File dialog should use existing directory as initial path."""
         sample_folder_config["copy_to_directory"] = "/existing/copy/dir"
         sample_folder_config["folder_is_active"] = "True"
@@ -477,7 +526,9 @@ class TestSelectCopyDirectoryButton:
 class TestCopyConfigFromOtherButton:
     """Tests for copy config from other button click."""
 
-    def test_copy_config_with_no_selection_does_nothing(self, qtbot, sample_folder_config):
+    def test_copy_config_with_no_selection_does_nothing(
+        self, qtbot, sample_folder_config
+    ):
         """Clicking with no folder selected should do nothing."""
         sample_folder_config["folder_name"] = "/test/folder"
         dialog = create_dialog(qtbot, sample_folder_config)
@@ -701,85 +752,95 @@ class TestFilterModeAndCategories:
 @pytest.mark.qt
 class TestWidgetCleanupAndLifecycle:
     """Tests for widget cleanup to prevent crashes from stale references.
-    
+
     These tests verify that when widgets are cleared and recreated (e.g., when
     switching EDI options or convert formats), the old widget references are
     properly removed from self._fields to prevent crashes.
     """
 
-    def test_clear_dynamic_edi_removes_field_references(self, qtbot, sample_folder_config):
+    def test_clear_dynamic_edi_removes_field_references(
+        self, qtbot, sample_folder_config
+    ):
         """When dynamic EDI widgets are cleared, field references should be removed."""
         from PyQt6.QtWidgets import QComboBox
-        
+
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        
+
         # Switch to "Convert EDI" which creates widgets
         dialog._edi_options_combo.setCurrentText("Convert EDI")
         qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
-        
+
         # Verify widgets were created
         assert "process_edi" in dialog._fields
         assert "convert_formats_var" in dialog._fields
-        
+
         # Store reference to the widget and its type
         old_widget = dialog._fields.get("convert_formats_var")
         assert old_widget is not None
         assert isinstance(old_widget, QComboBox)
-        
+
         # Switch to "Tweak EDI" which clears convert widgets
         dialog._edi_options_combo.setCurrentText("Tweak EDI")
         qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
-        
+
         # The convert_formats_var key should be removed since it's part of Convert EDI
         # (Tweak EDI has different widgets)
-        assert "convert_formats_var" not in dialog._fields, \
-            "convert_formats_var should be removed when switching away from Convert EDI"
+        assert (
+            "convert_formats_var" not in dialog._fields
+        ), "convert_formats_var should be removed when switching away from Convert EDI"
 
-    def test_clear_convert_sub_removes_field_references(self, qtbot, sample_folder_config):
+    def test_clear_convert_sub_removes_field_references(
+        self, qtbot, sample_folder_config
+    ):
         """When convert sub-widgets are cleared, field references should be removed."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        
+
         # Switch to "Convert EDI" with CSV format
         dialog._edi_options_combo.setCurrentText("Convert EDI")
         qtbot.wait(200)
-        
+
         dialog._convert_format_combo.setCurrentText("csv")
         qtbot.wait(200)
-        
+
         # Verify CSV widgets were created
         assert "upc_var_check" in dialog._fields
-        
+
         # Store reference to widget that will be deleted
         old_widget = dialog._fields.get("upc_var_check")
         assert old_widget is not None
-        
+
         # Change to different format (ScannerWare doesn't have upc_var_check)
         dialog._convert_format_combo.setCurrentText("ScannerWare")
         qtbot.wait(200)
-        
-        # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
-        assert "upc_var_check" not in dialog._fields, \
-            "upc_var_check should be removed when switching from CSV format"
 
-    def test_data_extractor_handles_missing_widgets_gracefully(self, qtbot, sample_folder_config):
+        # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
+        assert (
+            "upc_var_check" not in dialog._fields
+        ), "upc_var_check should be removed when switching from CSV format"
+
+    def test_data_extractor_handles_missing_widgets_gracefully(
+        self, qtbot, sample_folder_config
+    ):
         """Data extractor should handle missing widgets gracefully without crashing."""
-        from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
-        
+        from interface.qt.dialogs.edit_folders.data_extractor import (
+            QtFolderDataExtractor,
+        )
+
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        
+
         # Create extractor with current fields
         extractor = QtFolderDataExtractor(dialog._fields)
-        
+
         # Simulate a deleted widget by removing it from fields
         if "convert_formats_var" in dialog._fields:
             del dialog._fields["convert_formats_var"]
-        
+
         # Should not crash, should return default value
         try:
             extracted = extractor.extract_all()
@@ -793,36 +854,44 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        
+
         # Rapidly switch EDI options (with proper debounce wait times)
-        options = ["Do Nothing", "Convert EDI", "Tweak EDI", "Convert EDI", "Do Nothing"]
+        options = [
+            "Do Nothing",
+            "Convert EDI",
+            "Tweak EDI",
+            "Convert EDI",
+            "Do Nothing",
+        ]
         for option in options:
             dialog._edi_options_combo.setCurrentText(option)
             qtbot.wait(200)  # Wait for debounce timer
-        
+
         # Should not crash - if we get here, test passes
         assert True
 
     def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
         """Data extractor should handle widgets that have been deleted with deleteLater()."""
-        from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
+        from interface.qt.dialogs.edit_folders.data_extractor import (
+            QtFolderDataExtractor,
+        )
         from PyQt6.QtWidgets import QLineEdit
-        
+
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        
+
         # Create a test widget and add it to fields
         test_widget = QLineEdit("test value")
         dialog._fields["test_field"] = test_widget
-        
+
         # Delete the widget (simulate what happens during clear operations)
         test_widget.deleteLater()
         qtbot.wait(50)  # Let Qt process the deletion
-        
+
         # Create extractor and try to extract - should handle gracefully
         extractor = QtFolderDataExtractor(dialog._fields)
-        
+
         try:
             # This should not crash even though widget is deleted
             result = extractor._get_text("test_field")
@@ -831,6 +900,8 @@ class TestWidgetCleanupAndLifecycle:
         except RuntimeError as e:
             # RuntimeError is expected when accessing deleted Qt widgets
             # but our fix should catch this
-            pytest.fail(f"Data extractor should catch RuntimeError for deleted widgets: {e}")
+            pytest.fail(
+                f"Data extractor should catch RuntimeError for deleted widgets: {e}"
+            )
         except Exception as e:
             pytest.fail(f"Data extractor crashed with deleted widget: {e}")

@@ -6,7 +6,7 @@ custom validation logic for their configuration fields.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Callable, Union
+from typing import Any, List, Callable, Union
 
 from dataclasses import dataclass
 
@@ -16,6 +16,7 @@ class ValidationResult:
     """
     Result of a validation operation.
     """
+
     success: bool
     errors: List[str]
 
@@ -40,7 +41,7 @@ class ValidationResult:
         self.success = False
         self.errors.append(error)
 
-    def merge(self, other: 'ValidationResult') -> 'ValidationResult':
+    def merge(self, other: "ValidationResult") -> "ValidationResult":
         """
         Merge this validation result with another one.
 
@@ -51,8 +52,7 @@ class ValidationResult:
             ValidationResult: Merged validation result
         """
         return ValidationResult(
-            success=self.success and other.success,
-            errors=self.errors + other.errors
+            success=self.success and other.success, errors=self.errors + other.errors
         )
 
 
@@ -75,7 +75,6 @@ class Validator(ABC):
         Returns:
             ValidationResult: Validation result
         """
-        pass
 
 
 class RegexValidator(Validator):
@@ -83,7 +82,9 @@ class RegexValidator(Validator):
     Validator that checks if a string matches a regular expression.
     """
 
-    def __init__(self, regex: str, message: str = "Value does not match expected format"):
+    def __init__(
+        self, regex: str, message: str = "Value does not match expected format"
+    ):
         """
         Initialize a regex validator.
 
@@ -99,6 +100,7 @@ class RegexValidator(Validator):
             return ValidationResult(success=False, errors=[self.message])
 
         import re
+
         if not re.match(self.regex, value):
             return ValidationResult(success=False, errors=[self.message])
 
@@ -115,9 +117,12 @@ class EmailValidator(Validator):
             return ValidationResult(success=False, errors=["Email must be a string"])
 
         import re
-        email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+
+        email_pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if not re.match(email_pattern, value):
-            return ValidationResult(success=False, errors=["Invalid email address format"])
+            return ValidationResult(
+                success=False, errors=["Invalid email address format"]
+            )
 
         return ValidationResult(success=True)
 
@@ -132,7 +137,8 @@ class URLValidator(Validator):
             return ValidationResult(success=False, errors=["URL must be a string"])
 
         import re
-        url_pattern = r'^(https?|ftp)://[^\s]+$'
+
+        url_pattern = r"^(https?|ftp)://[^\s]+$"
         if not re.match(url_pattern, value):
             return ValidationResult(success=False, errors=["Invalid URL format"])
 
@@ -146,11 +152,16 @@ class FilePathValidator(Validator):
 
     def validate(self, value: Any) -> ValidationResult:
         if not isinstance(value, str):
-            return ValidationResult(success=False, errors=["File path must be a string"])
+            return ValidationResult(
+                success=False, errors=["File path must be a string"]
+            )
 
         import os
+
         if not os.path.exists(value):
-            return ValidationResult(success=False, errors=["File or directory does not exist"])
+            return ValidationResult(
+                success=False, errors=["File or directory does not exist"]
+            )
 
         return ValidationResult(success=True)
 
@@ -160,8 +171,12 @@ class RangeValidator(Validator):
     Validator that checks if a numeric value falls within a specific range.
     """
 
-    def __init__(self, min_value: Union[int, float], max_value: Union[int, float],
-                 message: str = "Value must be between {min} and {max}"):
+    def __init__(
+        self,
+        min_value: Union[int, float],
+        max_value: Union[int, float],
+        message: str = "Value must be between {min} and {max}",
+    ):
         """
         Initialize a range validator.
 
@@ -179,9 +194,10 @@ class RangeValidator(Validator):
             return ValidationResult(success=False, errors=["Value must be a number"])
 
         if value < self.min_value or value > self.max_value:
-            return ValidationResult(success=False, errors=[
-                self.message.format(min=self.min_value, max=self.max_value)
-            ])
+            return ValidationResult(
+                success=False,
+                errors=[self.message.format(min=self.min_value, max=self.max_value)],
+            )
 
         return ValidationResult(success=True)
 
@@ -191,8 +207,12 @@ class LengthValidator(Validator):
     Validator that checks if a string or list has a specific length.
     """
 
-    def __init__(self, min_length: int = 0, max_length: int = None,
-                 message: str = "Value must be between {min} and {max} characters long"):
+    def __init__(
+        self,
+        min_length: int = 0,
+        max_length: int = None,
+        message: str = "Value must be between {min} and {max} characters long",
+    ):
         """
         Initialize a length validator.
 
@@ -207,20 +227,26 @@ class LengthValidator(Validator):
 
     def validate(self, value: Any) -> ValidationResult:
         if not isinstance(value, (str, list)):
-            return ValidationResult(success=False, errors=["Value must be a string or list"])
+            return ValidationResult(
+                success=False, errors=["Value must be a string or list"]
+            )
 
         length = len(value)
 
         if self.max_length is None:
             if length < self.min_length:
-                return ValidationResult(success=False, errors=[
-                    self.message.format(min=self.min_length, max="infinite")
-                ])
+                return ValidationResult(
+                    success=False,
+                    errors=[self.message.format(min=self.min_length, max="infinite")],
+                )
         else:
             if length < self.min_length or length > self.max_length:
-                return ValidationResult(success=False, errors=[
-                    self.message.format(min=self.min_length, max=self.max_length)
-                ])
+                return ValidationResult(
+                    success=False,
+                    errors=[
+                        self.message.format(min=self.min_length, max=self.max_length)
+                    ],
+                )
 
         return ValidationResult(success=True)
 
@@ -230,8 +256,11 @@ class CustomValidator(Validator):
     Validator that uses a custom validation function.
     """
 
-    def __init__(self, validation_func: Callable[[Any], ValidationResult],
-                 message: str = "Validation failed"):
+    def __init__(
+        self,
+        validation_func: Callable[[Any], ValidationResult],
+        message: str = "Validation failed",
+    ):
         """
         Initialize a custom validator.
 

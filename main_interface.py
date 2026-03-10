@@ -21,7 +21,6 @@ Or as a module (if installed):
 
 import sys
 import os
-import multiprocessing
 
 # Ensure the project root is in sys.path so we can import 'interface' package
 # when running as a script without installation
@@ -34,10 +33,12 @@ from interface.qt.app import QtBatchFileSenderApp
 
 def main() -> None:
     """Main entry point for the Batch File Sender application."""
+    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",
         version="(Git Branch: Master)",
-        database_version="41"
+        database_version=CURRENT_DATABASE_VERSION
     )
     app.initialize()
     try:

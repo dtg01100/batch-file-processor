@@ -18,9 +18,9 @@ from .event_handlers import EventHandlers
 from .layout_builder import UILayoutBuilder
 
 __all__ = [
-    'QtFolderDataExtractor',
-    'ColumnBuilders',
-    'DynamicEDIBuilder',
-    'EventHandlers',
-    'UILayoutBuilder'
+    "QtFolderDataExtractor",
+    "ColumnBuilders",
+    "DynamicEDIBuilder",
+    "EventHandlers",
+    "UILayoutBuilder",
 ]

@@ -1,7 +1,6 @@
 """Tests for dispatch/pipeline/tweaker.py - EDITweakerStep and TweakerResult classes."""
 
-import pytest
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 from dispatch.pipeline.tweaker import (
     TweakerResult,
     MockTweaker,
@@ -29,7 +28,7 @@ class TestTweakerResult:
             output_path="/path/to/output.edi",
             success=True,
             was_tweaked=True,
-            errors=errors
+            errors=errors,
         )
 
         assert result.output_path == "/path/to/output.edi"
@@ -61,7 +60,7 @@ class TestMockTweaker:
             output_path="/custom/output.edi",
             success=False,
             was_tweaked=False,
-            errors=["custom error"]
+            errors=["custom error"],
         )
         mock = MockTweaker(result=custom_result)
 
@@ -75,7 +74,7 @@ class TestMockTweaker:
             output_path="/test/output.edi",
             success=False,
             was_tweaked=False,
-            errors=["test error"]
+            errors=["test error"],
         )
 
         assert mock._result.output_path == "/test/output.edi"
@@ -92,11 +91,7 @@ class TestMockTweaker:
         upc_dict = {"upc1": "product1"}
 
         result = mock.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            settings,
-            upc_dict
+            "/input/file.edi", "/output/dir", params, settings, upc_dict
         )
 
         assert mock.call_count == 1
@@ -131,7 +126,7 @@ class TestMockTweaker:
             output_path="/new/output.edi",
             success=False,
             was_tweaked=False,
-            errors=["new error"]
+            errors=["new error"],
         )
         mock.set_result(new_result)
 
@@ -159,7 +154,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(
             tweak_function=mock_tweak_func,
             error_handler=mock_error_handler,
-            file_system=mock_file_system
+            file_system=mock_file_system,
         )
 
         assert step._tweak_function is mock_tweak_func
@@ -172,13 +167,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {"tweak_edi": False}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.output_path == "/input/file.edi"
         assert result.success is True
@@ -197,7 +186,7 @@ class TestEDITweakerStep:
             "/output/dir",
             params,
             {"setting": "value"},
-            {"upc": "product"}
+            {"upc": "product"},
         )
 
         assert result.output_path == "/output/dir/file.edi"
@@ -209,7 +198,7 @@ class TestEDITweakerStep:
             "/output/dir/file.edi",
             {"setting": "value"},
             params,
-            {"upc": "product"}
+            {"upc": "product"},
         )
 
     def test_tweak_handles_exception_from_tweak_function(self):
@@ -217,18 +206,11 @@ class TestEDITweakerStep:
         mock_tweak_func = Mock(side_effect=Exception("Tweak failed"))
         mock_error_handler = Mock()
         step = EDITweakerStep(
-            tweak_function=mock_tweak_func,
-            error_handler=mock_error_handler
+            tweak_function=mock_tweak_func, error_handler=mock_error_handler
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.output_path == "/input/file.edi"
         assert result.success is False
@@ -243,13 +225,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {"tweak_edi": "True"}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.was_tweaked is True
         mock_tweak_func.assert_called_once()
@@ -265,13 +241,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {"tweak_edi": "False"}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.was_tweaked is True
         mock_tweak_func.assert_called_once()
@@ -282,13 +252,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.was_tweaked is False
         assert result.output_path == "/input/file.edi"
@@ -304,13 +268,7 @@ class TestEDITweakerStep:
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {"process_edi": "True"}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.was_tweaked is False
         assert result.output_path == "/input/file.edi"
@@ -324,18 +282,11 @@ class TestEDITweakerStep:
         mock_file_system.makedirs.side_effect = Exception("Cannot create dir")
 
         step = EDITweakerStep(
-            error_handler=mock_error_handler,
-            file_system=mock_file_system
+            error_handler=mock_error_handler, file_system=mock_file_system
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.success is False
         assert "Failed to create output directory" in result.errors[0]
@@ -367,7 +318,10 @@ class TestIntegrationTests:
 
     def test_full_tweak_flow_with_mock_function(self):
         """Test full tweak flow with mock function."""
-        def mock_tweak(edi_process, output_filename, settings_dict, parameters_dict, upc_dict):
+
+        def mock_tweak(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_dict
+        ):
             return output_filename
 
         step = EDITweakerStep(tweak_function=mock_tweak)
@@ -378,7 +332,7 @@ class TestIntegrationTests:
             "/output",
             params,
             {"app_title": "Test App"},
-            {"123456789012": "Test Product"}
+            {"123456789012": "Test Product"},
         )
 
         assert result.success is True
@@ -392,18 +346,11 @@ class TestIntegrationTests:
 
         mock_tweak_func = Mock(return_value="/output/tweaked.edi")
         step = EDITweakerStep(
-            tweak_function=mock_tweak_func,
-            file_system=mock_file_system
+            tweak_function=mock_tweak_func, file_system=mock_file_system
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         mock_file_system.dir_exists.assert_called_with("/output/dir")
         mock_tweak_func.assert_called_once()
@@ -416,18 +363,11 @@ class TestIntegrationTests:
 
         mock_tweak_func = Mock(return_value="/output/dir/file.edi")
         step = EDITweakerStep(
-            tweak_function=mock_tweak_func,
-            file_system=mock_file_system
+            tweak_function=mock_tweak_func, file_system=mock_file_system
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {},
-            {}
-        )
+        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         mock_file_system.makedirs.assert_called_once_with("/output/dir")
         assert result.success is True

@@ -1,17 +1,15 @@
 """FTP Service tests for EditFoldersDialog refactoring."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-
 import sys
 import os
 
 # Add the project root to the path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 sys.path.insert(0, project_root)
 
 from interface.services.ftp_service import (
-    FTPService,
     MockFTPService,
     FTPConnectionResult,
 )
@@ -29,7 +27,7 @@ class TestMockFTPService:
             port=21,
             username="testuser",
             password="testpass",
-            folder="/uploads/"
+            folder="/uploads/",
         )
 
         assert result.success is True
@@ -40,7 +38,7 @@ class TestMockFTPService:
         mock_service = MockFTPService(
             should_succeed=False,
             fail_at="server",
-            error_message="FTP Server or Port Field Incorrect"
+            error_message="FTP Server or Port Field Incorrect",
         )
 
         result = mock_service.test_connection(
@@ -48,7 +46,7 @@ class TestMockFTPService:
             port=99999,
             username="testuser",
             password="testpass",
-            folder="/uploads/"
+            folder="/uploads/",
         )
 
         assert result.success is False
@@ -60,7 +58,7 @@ class TestMockFTPService:
         mock_service = MockFTPService(
             should_succeed=False,
             fail_at="login",
-            error_message="FTP Username or Password Incorrect"
+            error_message="FTP Username or Password Incorrect",
         )
 
         result = mock_service.test_connection(
@@ -68,7 +66,7 @@ class TestMockFTPService:
             port=21,
             username="wronguser",
             password="wrongpass",
-            folder="/uploads/"
+            folder="/uploads/",
         )
 
         assert result.success is False
@@ -79,7 +77,7 @@ class TestMockFTPService:
         mock_service = MockFTPService(
             should_succeed=False,
             fail_at="cwd",
-            error_message="FTP Folder Field Incorrect"
+            error_message="FTP Folder Field Incorrect",
         )
 
         result = mock_service.test_connection(
@@ -87,7 +85,7 @@ class TestMockFTPService:
             port=21,
             username="testuser",
             password="testpass",
-            folder="/nonexistent/"
+            folder="/nonexistent/",
         )
 
         assert result.success is False
@@ -103,7 +101,7 @@ class TestMockFTPService:
             port=21,
             username="testuser",
             password="testpass",
-            folder="/uploads/"
+            folder="/uploads/",
         )
 
         assert len(mock_service.connection_attempts) == 1
@@ -119,7 +117,7 @@ class TestMockFTPService:
             port=21,
             username="user1",
             password="pass1",
-            folder="/folder1/"
+            folder="/folder1/",
         )
 
         mock_service.test_connection(
@@ -127,7 +125,7 @@ class TestMockFTPService:
             port=21,
             username="user2",
             password="pass2",
-            folder="/folder2/"
+            folder="/folder2/",
         )
 
         assert len(mock_service.connection_attempts) == 2
@@ -149,9 +147,7 @@ class TestFTPConnectionResult:
     def test_failed_result(self):
         """Test failed result creation."""
         result = FTPConnectionResult(
-            success=False,
-            error_message="Connection refused",
-            error_type="server"
+            success=False, error_message="Connection refused", error_type="server"
         )
 
         assert result.success is False

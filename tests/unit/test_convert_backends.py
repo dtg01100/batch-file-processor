@@ -23,9 +23,7 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 from unittest.mock import patch, MagicMock
-import tempfile
 import os
-import csv
 
 
 # =============================================================================
@@ -205,7 +203,7 @@ class TestCaptureRecordsFunction:
         """Test that header record is parsed correctly."""
         from utils import capture_records
         fields = capture_records(sample_header_record)
-        
+
         assert fields["record_type"] == "A"
         assert fields["cust_vendor"] == "VENDOR"
         assert fields["invoice_number"] == "0000000001"
@@ -216,7 +214,7 @@ class TestCaptureRecordsFunction:
         """Test that detail record is parsed correctly."""
         from utils import capture_records
         fields = capture_records(sample_detail_record)
-        
+
         assert fields["record_type"] == "B"
         assert fields["upc_number"] == "01234567890"
         assert fields["description"] == "Test Item Description    "
@@ -233,7 +231,7 @@ class TestCaptureRecordsFunction:
         """Test that tax record is parsed correctly."""
         from utils import capture_records
         fields = capture_records(sample_tax_record)
-        
+
         assert fields["record_type"] == "C"
         assert fields["charge_type"] == "TAB"
         assert fields["description"] == "Sales Tax" + " " * 16
@@ -249,21 +247,21 @@ class TestCaptureRecordsFunction:
 
 class TestEDIIndexingConversion:
     """Test suite for EDI indexing conversion validation.
-    
+
     This test class validates that:
     1. PDF 1-indexed positions are correctly converted to code 0-indexed positions
     2. The conversion formula: code_position = pdf_position - 1
     3. Sample EDI data fixtures use correct 0-indexed positions
     """
-    
+
     def test_pdf_to_code_indexing_conversion_header(self):
         """Test PDF 1-indexed to code 0-indexed conversion for Header Record.
-        
+
         PDF positions are 1-indexed. Code uses 0-indexed positions.
         Formula: code_position = pdf_position - 1
         """
         from utils import capture_records
-        
+
         # Create a header record where we can verify each position
         # Code uses 0-indexed positions:
         # Position 0-1 (1 char): Record Type 'A'
@@ -272,25 +270,25 @@ class TestEDIIndexingConversion:
         # Position 17-23 (6 chars): Invoice Date '010125'
         # Position 23-33 (10 chars): Invoice Total '0000010000'
         header = "AVENDOR" + "0000000001" + "010125" + "0000010000"
-        
+
         # Verify length is 33 (not 32 as incorrectly stated in PDF)
         assert len(header) == 33, "Header must be 33 characters (PDF incorrectly states 32)"
-        
+
         fields = capture_records(header)
-        
+
         # Verify each field extracted with 0-indexed positions
         assert fields["record_type"] == "A", "Record type at code position 0 (PDF 1)"
         assert fields["cust_vendor"] == "VENDOR", "Cust vendor at code positions 1-7 (PDF 2-7)"
         assert fields["invoice_number"] == "0000000001", "Invoice number at code positions 7-17 (PDF 8-17)"
         assert fields["invoice_date"] == "010125", "Invoice date at code positions 17-23 (PDF 18-23)"
         assert fields["invoice_total"] == "0000010000", "Invoice total at code positions 23-33 (PDF incorrectly states 24-32 as 9 chars)"
-        
+
         # Verify invoice total is 10 chars (not 9 as stated in PDF)
         assert len(fields["invoice_total"]) == 10, "Invoice total must be 10 chars (PDF error: shows 9)"
-    
+
     def test_pdf_to_code_indexing_conversion_detail(self):
         """Test PDF 1-indexed to code 0-indexed conversion for Detail Record.
-        
+
         PDF claims Detail Record is 80 chars but code uses 76 chars.
         Code positions vs PDF positions:
         # Position 0-1 (1 char): Record Type 'B'
@@ -306,16 +304,16 @@ class TestEDIIndexingConversion:
         # Position 70-76 (6 chars): Parent Item
         """
         from utils import capture_records
-        
+
         # Create a detail record with all fields (76 chars total)
         detail = ("B" + "01234567890" + "Test Item Description    " + "123456" + "000100" +
                   "01" + "000001" + "00010" + "00199" + "001" + "000000")
-        
+
         # Verify length is 76 (not 80 as incorrectly stated in PDF)
         assert len(detail) == 76, "Detail record must be 76 characters (PDF incorrectly states 80)"
-        
+
         fields = capture_records(detail)
-        
+
         # Verify key positions
         assert fields["record_type"] == "B", "Record type at code position 0 (PDF 1)"
         assert fields["upc_number"] == "01234567890", "UPC at code positions 1-12 (PDF 2-13)"
@@ -324,10 +322,10 @@ class TestEDIIndexingConversion:
         assert fields["unit_cost"] == "000100", "Unit cost at code positions 43-49 (PDF 44-50)"
         assert fields["qty_of_units"] == "00010", "Qty at code positions 57-62 (PDF 58-63)"
         assert fields["suggested_retail_price"] == "00199", "Retail at code positions 62-67 (PDF 63-68)"
-    
+
     def test_pdf_to_code_indexing_conversion_tax(self):
         """Test PDF 1-indexed to code 0-indexed conversion for Tax Record.
-        
+
         Sales Tax Record has correct length in both PDF and code (38 chars).
         Code positions vs PDF positions:
         # Position 0-1 (1 char): Record Type 'C'
@@ -336,30 +334,30 @@ class TestEDIIndexingConversion:
         # Position 29-38 (9 chars): Amount
         """
         from utils import capture_records
-        
+
         # Create a tax record (38 chars)
         tax = "CTAB" + "Sales Tax" + " " * 16 + "000010000"
-        
+
         # Verify length is 38
         assert len(tax) == 38, "Tax record must be 38 characters"
-        
+
         fields = capture_records(tax)
-        
+
         assert fields["record_type"] == "C", "Record type at code position 0 (PDF 1)"
         assert fields["charge_type"] == "TAB", "Charge type at code positions 1-4 (PDF 2-4)"
         assert fields["description"] == "Sales Tax" + " " * 16, "Description at code positions 4-29 (PDF 5-29)"
         assert fields["amount"] == "000010000", "Amount at code positions 29-38 (PDF 30-38)"
-    
+
     def test_code_positions_match_capture_records(self):
         """Test that sample fixture data produces correct fields in capture_records."""
         from utils import capture_records
-        
+
         # Use the sample fixtures from TestEDISampleDataFixtures
         header = "AVENDOR0000000001" + "010125" + "0000010000"
         detail = ("B01234567890" + "Test Item Description    " + "123456" + "000100" +
                   "01" + "000001" + "00010" + "00199" + "001" + "000000")
         tax = "CTAB" + "Sales Tax" + " " * 16 + "000010000"
-        
+
         # Test header
         header_fields = capture_records(header)
         assert header_fields["record_type"] == "A"
@@ -367,14 +365,14 @@ class TestEDIIndexingConversion:
         assert header_fields["invoice_number"] == "0000000001"
         assert header_fields["invoice_date"] == "010125"
         assert len(header_fields["invoice_total"]) == 10, "Invoice total must be 10 chars (not 9 as in PDF)"
-        
+
         # Test detail
         detail_fields = capture_records(detail)
         assert detail_fields["record_type"] == "B"
         assert detail_fields["upc_number"] == "01234567890"
         assert detail_fields["description"] == "Test Item Description    "
         assert len(detail_fields["description"]) == 25
-        
+
         # Test tax
         tax_fields = capture_records(tax)
         assert tax_fields["record_type"] == "C"
@@ -385,7 +383,7 @@ class TestEDIIndexingConversion:
 
 class TestConvertModuleImportability:
     """Test suite for conversion module importability."""
-    
+
     def test_import_convert_to_fintech(self):
         """Test that convert_to_fintech module can be imported."""
         try:
@@ -393,7 +391,7 @@ class TestConvertModuleImportability:
             assert convert_to_fintech is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_fintech: {e}")
-    
+
     def test_import_convert_to_simplified_csv(self):
         """Test that convert_to_simplified_csv module can be imported."""
         try:
@@ -401,7 +399,7 @@ class TestConvertModuleImportability:
             assert convert_to_simplified_csv is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_simplified_csv: {e}")
-    
+
     def test_import_convert_to_stewarts_custom(self):
         """Test that convert_to_stewarts_custom module can be imported."""
         try:
@@ -409,7 +407,7 @@ class TestConvertModuleImportability:
             assert convert_to_stewarts_custom is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_stewarts_custom: {e}")
-    
+
     def test_import_convert_to_yellowdog_csv(self):
         """Test that convert_to_yellowdog_csv module can be imported."""
         try:
@@ -417,7 +415,7 @@ class TestConvertModuleImportability:
             assert convert_to_yellowdog_csv is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_yellowdog_csv: {e}")
-    
+
     def test_import_convert_to_estore_einvoice(self):
         """Test that convert_to_estore_einvoice module can be imported."""
         try:
@@ -425,7 +423,7 @@ class TestConvertModuleImportability:
             assert convert_to_estore_einvoice is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_estore_einvoice: {e}")
-    
+
     def test_import_convert_to_estore_einvoice_generic(self):
         """Test that convert_to_estore_einvoice_generic module can be imported."""
         try:
@@ -433,7 +431,7 @@ class TestConvertModuleImportability:
             assert convert_to_estore_einvoice_generic is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_estore_einvoice_generic: {e}")
-    
+
     def test_import_convert_to_csv(self):
         """Test that convert_to_csv module can be imported."""
         try:
@@ -441,7 +439,7 @@ class TestConvertModuleImportability:
             assert convert_to_csv is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_csv: {e}")
-    
+
     def test_import_convert_to_scannerware(self):
         """Test that convert_to_scannerware module can be imported."""
         try:
@@ -449,7 +447,7 @@ class TestConvertModuleImportability:
             assert convert_to_scannerware is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_scannerware: {e}")
-    
+
     def test_import_convert_to_scansheet_type_a(self):
         """Test that convert_to_scansheet_type_a module can be imported."""
         try:
@@ -457,7 +455,7 @@ class TestConvertModuleImportability:
             assert convert_to_scansheet_type_a is not None
         except ImportError as e:
             pytest.fail(f"Failed to import convert_to_scansheet_type_a: {e}")
-    
+
     def test_import_convert_to_jolley_custom(self):
         """Test that convert_to_jolley_custom module can be imported."""
         try:
@@ -469,19 +467,19 @@ class TestConvertModuleImportability:
 
 class TestConvertToFintech:
     """Test suite for convert_to_fintech conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths.
-        
+
         A Record (33 chars): A + cust_vendor(6) + invoice_number(10) + invoice_date(6) + invoice_total(10)
-        B Record (76 chars): B + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) + 
+        B Record (76 chars): B + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) +
                              unit_multiplier(6) + qty(5) + retail(5) + multi_pack(3) + parent_item(6)
         C Record (38 chars): C + charge_type(3) + description(25) + amount(9)
         """
         # A record: A + VENDOR(6) + 0000000001(10) + 010125(6) + 0000100000(10) = 33 chars
         a_record = "AVENDOR00000000010101250000100000"
-        # B record: B(1) + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) + 
+        # B record: B(1) + upc(11) + description(25) + vendor_item(6) + unit_cost(6) + combo_code(2) +
         #           unit_multiplier(6) + qty(5) + retail(5) + multi_pack(3) + parent_item(6) = 76 chars
         # vendor_item = "123456" which matches the upc_dict key
         # Description is exactly 25 chars: "Test Item Description    " (21 chars + 4 spaces)
@@ -489,7 +487,7 @@ class TestConvertToFintech:
         # C record: C(1) + charge_type(3) + description(25) + amount(9) = 38 chars
         c_record = "CTABSales Tax                      000010000"
         return f"{a_record}\n{b_record}\n{c_record}\n"
-    
+
     @pytest.fixture
     def sample_settings_dict(self):
         """Create sample settings dictionary."""
@@ -499,46 +497,46 @@ class TestConvertToFintech:
             "as400_address": "test.as400.local",
             "odbc_driver": "{ODBC Driver 17 for SQL Server}",
         }
-    
+
     @pytest.fixture
     def sample_parameters_dict(self):
         """Create sample parameters dictionary."""
         return {
             "fintech_division_id": "123",
         }
-    
+
     @pytest.fixture
     def sample_upc_dict(self):
         """Create sample UPC lookup dictionary.
-        
+
         Key is vendor_item (int), value is list of UPCs at different levels.
         """
         return {
             123456: ["1", "01234567890", "012345678901", "012345678902", "012345678903"],
         }
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists in the module."""
         import convert_to_fintech
         assert hasattr(convert_to_fintech, 'edi_convert')
         assert callable(convert_to_fintech.edi_convert)
-    
+
     def test_edi_convert_with_valid_data(self, tmp_path, sample_edi_content, sample_settings_dict, sample_parameters_dict, sample_upc_dict):
         """Test conversion with valid EDI data."""
         import convert_to_fintech
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text(sample_edi_content)
         output_file = tmp_path / "output"
-        
+
         # Create a mock invFetcher instance
         mock_inv_fetcher = MagicMock()
         mock_inv_fetcher.fetch_cust_no.return_value = "12345"
-        
+
         # Mock the invFetcher class to return our mock instance
         with patch.object(convert_to_fintech.utils, 'invFetcher', autospec=True) as mock_inv_fetcher_class:
             mock_inv_fetcher_class.return_value = mock_inv_fetcher
-            
+
             result = convert_to_fintech.edi_convert(
                 str(input_file),
                 str(output_file),
@@ -550,11 +548,11 @@ class TestConvertToFintech:
             expected_csv = str(output_file) + ".csv"
             assert os.path.exists(expected_csv), f"Output CSV should exist at {expected_csv}"
             assert result == expected_csv
-    
+
     def test_fintech_csv_structure(self, tmp_path, sample_settings_dict, sample_upc_dict):
         """Test that fintech CSV has correct structure."""
         import convert_to_fintech
-        
+
         expected_headers = [
             "Division_id",
             "invoice_number",
@@ -568,7 +566,7 @@ class TestConvertToFintech:
             "product_description",
             "unit_price"
         ]
-        
+
         # Verify headers are defined in the module
         # The actual CSV is generated dynamically, so we check the function signature
         assert callable(convert_to_fintech.edi_convert)
@@ -576,7 +574,7 @@ class TestConvertToFintech:
 
 class TestConvertToSimplifiedCSV:
     """Test suite for convert_to_simplified_csv conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -588,7 +586,7 @@ class TestConvertToSimplifiedCSV:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     @pytest.fixture
     def sample_parameters_dict(self):
         """Create sample parameters dictionary."""
@@ -599,28 +597,28 @@ class TestConvertToSimplifiedCSV:
             "include_item_description": "True",
             "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,description,vendor_item",
         }
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_simplified_csv
         assert hasattr(convert_to_simplified_csv, 'edi_convert')
         assert callable(convert_to_simplified_csv.edi_convert)
-    
+
     def test_customer_lookup_error_exists(self):
         """Test that CustomerLookupError exception exists."""
         import convert_to_simplified_csv
         assert hasattr(convert_to_simplified_csv, 'CustomerLookupError')
         assert issubclass(convert_to_simplified_csv.CustomerLookupError, Exception)
-    
+
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
         from utils import convert_to_price
-        
+
         assert convert_to_price("000100") == "1.00"
         assert convert_to_price("001000") == "10.00"
         assert convert_to_price("000050") == "0.50"
         assert convert_to_price("000001") == "0.01"
-    
+
     def test_qty_to_int_function(self):
         """Test the qty_to_int helper function."""
         def qty_to_int(qty):
@@ -633,7 +631,7 @@ class TestConvertToSimplifiedCSV:
                 except ValueError:
                     wrkqtyint = 0
             return wrkqtyint
-        
+
         assert qty_to_int("00010") == 10
         assert qty_to_int("-00010") == -10
         assert qty_to_int("invalid") == 0
@@ -641,7 +639,7 @@ class TestConvertToSimplifiedCSV:
 
 class TestConvertToYellowdogCSV:
     """Test suite for convert_to_yellowdog_csv conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -653,13 +651,13 @@ class TestConvertToYellowdogCSV:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_yellowdog_csv
         assert hasattr(convert_to_yellowdog_csv, 'edi_convert')
         assert callable(convert_to_yellowdog_csv.edi_convert)
-    
+
     def test_ydog_writer_class_exists(self):
         """Test that YDogWriter class exists or is implemented differently."""
         import convert_to_yellowdog_csv
@@ -667,7 +665,7 @@ class TestConvertToYellowdogCSV:
         # Check for any class that handles yellowdog conversion
         has_converter = hasattr(convert_to_yellowdog_csv, 'edi_convert')
         assert has_converter is True
-    
+
     def test_yellowdog_csv_headers(self):
         """Test that yellowdog CSV has expected headers."""
         expected_headers = [
@@ -683,14 +681,14 @@ class TestConvertToYellowdogCSV:
             "Customer PO Number",
             "UPC",
         ]
-        
+
         # Verify headers are defined correctly
         assert len(expected_headers) == 11
 
 
 class TestConvertToEstoreEinvoice:
     """Test suite for convert_to_estore_einvoice conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -702,21 +700,20 @@ class TestConvertToEstoreEinvoice:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_estore_einvoice
         assert hasattr(convert_to_estore_einvoice, 'edi_convert')
         assert callable(convert_to_estore_einvoice.edi_convert)
-    
+
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
-        from decimal import Decimal
         from utils import convert_to_price
-        
+
         result = convert_to_price("000100")
         assert result == "1.00", f"Expected '1.00', got '{result}'"
-    
+
     def test_qty_to_int_function(self):
         """Test the qty_to_int helper function."""
         def qty_to_int(qty):
@@ -729,10 +726,10 @@ class TestConvertToEstoreEinvoice:
                 except ValueError:
                     wrkqtyint = 0
             return wrkqtyint
-        
+
         assert qty_to_int("00010") == 10
         assert qty_to_int("-00010") == -10
-    
+
     def test_estore_parameters_validation(self):
         """Test estore-specific parameter validation."""
         def validate_estore_params(params):
@@ -741,26 +738,26 @@ class TestConvertToEstoreEinvoice:
                 if param not in params or params[param] is None:
                     return False
             return True
-        
+
         valid_params = {
             'estore_store_number': '123',
             'estore_Vendor_OId': '456',
             'estore_vendor_NameVendorOID': 'TestVendor',
         }
-        
+
         invalid_params = {
             'estore_store_number': '123',
             'estore_Vendor_OId': None,
             'estore_vendor_NameVendorOID': 'TestVendor',
         }
-        
+
         assert validate_estore_params(valid_params) is True
         assert validate_estore_params(invalid_params) is False
 
 
 class TestConvertToEstoreEinvoiceGeneric:
     """Test suite for convert_to_estore_einvoice_generic conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -772,22 +769,22 @@ class TestConvertToEstoreEinvoiceGeneric:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_estore_einvoice_generic
         assert hasattr(convert_to_estore_einvoice_generic, 'edi_convert')
         assert callable(convert_to_estore_einvoice_generic.edi_convert)
-    
+
     def test_inv_fetcher_class_exists(self):
         """Test that invFetcher class exists."""
         import convert_to_estore_einvoice_generic
         assert hasattr(convert_to_estore_einvoice_generic, 'invFetcher')
-    
+
     def test_inv_fetcher_methods(self):
         """Test invFetcher has expected methods."""
         import convert_to_estore_einvoice_generic
-        
+
         # Check invFetcher has required methods
         required_methods = ['fetch_po', 'fetch_cust', 'fetch_uom_desc']
         for method in required_methods:
@@ -796,7 +793,7 @@ class TestConvertToEstoreEinvoiceGeneric:
 
 class TestConvertToCSV:
     """Test suite for convert_to_csv conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -808,7 +805,7 @@ class TestConvertToCSV:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_csv
@@ -818,7 +815,7 @@ class TestConvertToCSV:
 
 class TestConvertToScannerware:
     """Test suite for convert_to_scannerware conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -830,7 +827,7 @@ class TestConvertToScannerware:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_scannerware
@@ -840,7 +837,7 @@ class TestConvertToScannerware:
 
 class TestConvertToScansheetTypeA:
     """Test suite for convert_to_scansheet_type_a conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -852,7 +849,7 @@ class TestConvertToScansheetTypeA:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_scansheet_type_a
@@ -862,7 +859,7 @@ class TestConvertToScansheetTypeA:
 
 class TestConvertToJolleyCustom:
     """Test suite for convert_to_jolley_custom conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -874,7 +871,7 @@ class TestConvertToJolleyCustom:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_jolley_custom
@@ -884,7 +881,7 @@ class TestConvertToJolleyCustom:
 
 class TestConvertToStewartsCustom:
     """Test suite for convert_to_stewarts_custom conversion."""
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI content with accurate field widths."""
@@ -896,7 +893,7 @@ class TestConvertToStewartsCustom:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-    
+
     def test_edi_convert_function_exists(self):
         """Test that edi_convert function exists."""
         import convert_to_stewarts_custom
@@ -906,7 +903,7 @@ class TestConvertToStewartsCustom:
 
 class TestConvertFormatConfiguration:
     """Test suite for format configuration validation."""
-    
+
     def test_supported_formats(self):
         """Test that all supported formats are defined."""
         supported_formats = [
@@ -921,7 +918,7 @@ class TestConvertFormatConfiguration:
             'scansheet_type_a',
             'jolley_custom',
         ]
-        
+
         # Verify all formats have corresponding modules
         for format_name in supported_formats:
             module_name = f"convert_to_{format_name}"
@@ -929,7 +926,7 @@ class TestConvertFormatConfiguration:
                 __import__(module_name)
             except ImportError:
                 pytest.fail(f"Missing module for format: {format_name}")
-    
+
     def test_format_to_module_mapping(self):
         """Test that format names map to correct modules."""
         format_mapping = {
@@ -944,7 +941,7 @@ class TestConvertFormatConfiguration:
             'scansheet_type_a': 'convert_to_scansheet_type_a',
             'jolley_custom': 'convert_to_jolley_custom',
         }
-        
+
         for format_name, module_name in format_mapping.items():
             try:
                 __import__(module_name)
@@ -954,49 +951,49 @@ class TestConvertFormatConfiguration:
 
 class TestEDIEdgeCases:
     """Test suite for EDI edge cases."""
-    
+
     def test_zero_values_in_numeric_fields(self):
         """Test that zero values are properly zero-padded."""
         from utils import capture_records
-        
+
         # Header with zero invoice total
         zero_header = "AVENDOR 0000000000000000000000000000"
         fields = capture_records(zero_header)
         assert fields["invoice_total"] == "0000000000", "Zero invoice total should be 10 zero-padded chars"
-    
+
     def test_empty_description_field(self):
         """Test that empty description fields are handled."""
         from utils import capture_records
-        
+
         # Detail with empty description
         empty_desc_detail = "B01234567890                           1234560001000100000100010991001000000"
         fields = capture_records(empty_desc_detail)
         assert len(fields["description"]) == 25, "Description field should be exactly 25 chars"
         assert fields["description"] == " " * 25, "Empty description should be 25 spaces"
-    
+
     def test_max_numeric_values(self):
         """Test that max numeric values are properly formatted."""
         from utils import capture_records
-        
+
         # Header with max invoice total (9999999999)
         max_header = "AVENDOR00000000010101259999999999"
         fields = capture_records(max_header)
         assert fields["invoice_total"] == "9999999999", "Max invoice total should be 10 nines"
-    
+
     def test_negative_invoice_total(self):
         """Test that negative invoice totals are handled (credit invoices)."""
         from utils import capture_records
-        
+
         # Header with negative invoice total (represented as negative in DAC format)
         # DAC uses two's complement style for negatives
         neg_header = "AVENDOR 0000000001010125" + "9" * 10
         fields = capture_records(neg_header)
         assert len(fields["invoice_total"]) == 10, "Invoice total field must be 10 chars"
-    
+
     def test_b_record_with_all_numeric_max_values(self):
         """Test B record with max numeric values."""
         from utils import capture_records
-        
+
         max_detail = "B99999999999ZZZ Item Description Max    999999999999999999999999999990000099999999999999000000"
         fields = capture_records(max_detail)
         assert fields["unit_cost"] == "999999", "Max unit cost should be 6 nines"
@@ -1006,31 +1003,31 @@ class TestEDIEdgeCases:
 
 class TestEDINegativeValuesAndSpecialChars:
     """Test suite for EDI negative values (credits) and special characters.
-    
+
     Tests:
     - Negative value parsing for credit memos, returns, and adjustments
     - Special character handling in description and other non-decimal fields
     - Combined edge cases with negative values and special characters
     - filter_ampersand setting behavior
     """
-    
+
     # =========================================================================
     # FIXTURES FOR CREDIT MEMO EDI DATA
     # =========================================================================
-    
+
     @pytest.fixture
     def credit_memo_header(self):
         """Create header record for credit memo with negative invoice total.
-        
+
         Negative values in EDI use a leading minus sign.
         Invoice total: -100.00 represented as "-000010000"
         """
         return "A" + "VENDOR" + "0000000001" + "010125" + "-000010000"
-    
+
     @pytest.fixture
     def negative_unit_cost_detail(self):
         """Create detail record with negative unit cost (credit line item).
-        
+
         Unit cost: -1.00 represented as "-00100"
         Description must be exactly 25 chars.
         """
@@ -1039,11 +1036,11 @@ class TestEDINegativeValuesAndSpecialChars:
         assert len(desc) == 25, f"Description is {len(desc)} chars, expected 25"
         return ("B" + "01234567890" + desc + "123456" + "-00100" +
                 "01" + "000001" + "00010" + "00199" + "001" + "000000")
-    
+
     @pytest.fixture
     def negative_quantity_detail(self):
         """Create detail record with negative quantity (return).
-        
+
         Qty of units: -10 represented as "-0010"
         Description must be exactly 25 chars.
         """
@@ -1052,11 +1049,11 @@ class TestEDINegativeValuesAndSpecialChars:
         assert len(desc) == 25, f"Description is {len(desc)} chars, expected 25"
         return ("B" + "01234567890" + desc + "123456" + "000100" +
                 "01" + "000001" + "-0010" + "00199" + "001" + "000000")
-    
+
     @pytest.fixture
     def negative_retail_price_detail(self):
         """Create detail record with negative suggested retail price.
-        
+
         Suggested retail: -1.99 represented as "-0199"
         Description must be exactly 25 chars.
         """
@@ -1065,19 +1062,19 @@ class TestEDINegativeValuesAndSpecialChars:
         assert len(desc) == 25, f"Description is {len(desc)} chars, expected 25"
         return ("B" + "01234567890" + desc + "123456" + "000100" +
                 "01" + "000001" + "00010" + "-0199" + "001" + "000000")
-    
+
     @pytest.fixture
     def negative_tax_record(self):
         """Create tax record with negative amount (tax refund/adjustment).
-        
+
         Amount: -100.00 represented as "-00010000"
         """
         return "C" + "TAB" + "Tax Adjustment" + " " * 11 + "-00010000"
-    
+
     @pytest.fixture
     def special_chars_description_detail(self):
         """Create detail record with special characters in description.
-        
+
         Description contains: ampersand (&), hyphen (-), apostrophe ('),
         parentheses (), and slash (/).
         """
@@ -1086,11 +1083,11 @@ class TestEDINegativeValuesAndSpecialChars:
         assert len(desc) == 25, f"Description is {len(desc)} chars, expected 25"
         return ("B" + "01234567890" + desc + "123456" + "000100" +
                 "01" + "000001" + "00010" + "00199" + "001" + "000000")
-    
+
     @pytest.fixture
     def international_chars_description_detail(self):
         """Create detail record with international characters in description.
-        
+
         Description contains: é, ñ, ü, and other common international characters.
         """
         # Description: exactly 25 chars
@@ -1098,12 +1095,12 @@ class TestEDINegativeValuesAndSpecialChars:
         assert len(desc) == 25, f"Description is {len(desc)} chars, expected 25"
         return ("B" + "01234567890" + desc + "123456" + "000100" +
                 "01" + "000001" + "00010" + "00199" + "001" + "000000")
-    
+
     @pytest.fixture
     def complete_credit_memo_edi(self, credit_memo_header, negative_unit_cost_detail, negative_tax_record):
         """Create complete credit memo EDI content."""
         return credit_memo_header + "\n" + negative_unit_cost_detail + "\n" + negative_tax_record + "\n"
-    
+
     @pytest.fixture
     def mixed_invoice_edi(self):
         """Create EDI with mix of positive and negative line items."""
@@ -1116,259 +1113,259 @@ class TestEDINegativeValuesAndSpecialChars:
                           "01" + "000001" + "-0005" + "00099" + "001" + "000000")
         tax_record = "C" + "TAB" + "Sales Tax" + " " * 16 + "000002500"
         return header + "\n" + positive_detail + "\n" + negative_detail + "\n" + tax_record + "\n"
-    
+
     # =========================================================================
     # NEGATIVE VALUE TESTS (CREDITS)
     # =========================================================================
-    
+
     def test_negative_invoice_total_parsing(self, credit_memo_header):
         """Test that negative invoice total is properly parsed."""
         from utils import capture_records
-        
+
         fields = capture_records(credit_memo_header)
-        
+
         assert fields["record_type"] == "A"
         assert fields["invoice_total"] == "-000010000", "Negative sign should be preserved"
         assert fields["invoice_total"].startswith("-"), "Invoice total should start with minus sign"
-    
+
     def test_negative_invoice_total_conversion(self, credit_memo_header):
         """Test that negative invoice total is converted to negative integer."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(credit_memo_header)
         total_int = dac_str_int_to_int(fields["invoice_total"])
-        
+
         assert total_int == -10000, f"Expected -10000, got {total_int}"
         assert total_int < 0, "Credit memo total should be negative"
-    
+
     def test_negative_unit_cost_parsing(self, negative_unit_cost_detail):
         """Test that negative unit cost is properly parsed."""
         from utils import capture_records
-        
+
         fields = capture_records(negative_unit_cost_detail)
-        
+
         assert fields["unit_cost"] == "-00100", "Negative sign should be preserved in unit cost"
         assert fields["unit_cost"].startswith("-"), "Unit cost should start with minus sign"
-    
+
     def test_negative_unit_cost_conversion(self, negative_unit_cost_detail):
         """Test that negative unit cost is converted correctly."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(negative_unit_cost_detail)
         cost_int = dac_str_int_to_int(fields["unit_cost"])
-        
+
         assert cost_int == -100, f"Expected -100, got {cost_int}"
         assert cost_int < 0, "Credit line item cost should be negative"
-    
+
     def test_negative_quantity_parsing(self, negative_quantity_detail):
         """Test that negative quantity is properly parsed."""
         from utils import capture_records
-        
+
         fields = capture_records(negative_quantity_detail)
-        
+
         assert fields["qty_of_units"] == "-0010", "Negative sign should be preserved in quantity"
         assert fields["qty_of_units"].startswith("-"), "Quantity should start with minus sign"
-    
+
     def test_negative_quantity_conversion(self, negative_quantity_detail):
         """Test that negative quantity is converted correctly."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(negative_quantity_detail)
         qty_int = dac_str_int_to_int(fields["qty_of_units"])
-        
+
         assert qty_int == -10, f"Expected -10, got {qty_int}"
         assert qty_int < 0, "Return quantity should be negative"
-    
+
     def test_negative_suggested_retail_parsing(self, negative_retail_price_detail):
         """Test that negative suggested retail price is properly parsed."""
         from utils import capture_records
-        
+
         fields = capture_records(negative_retail_price_detail)
-        
+
         assert fields["suggested_retail_price"] == "-0199", "Negative sign should be preserved in retail price"
         assert fields["suggested_retail_price"].startswith("-"), "Retail price should start with minus sign"
-    
+
     def test_negative_suggested_retail_conversion(self, negative_retail_price_detail):
         """Test that negative suggested retail price is converted correctly."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(negative_retail_price_detail)
         retail_int = dac_str_int_to_int(fields["suggested_retail_price"])
-        
+
         assert retail_int == -199, f"Expected -199, got {retail_int}"
         assert retail_int < 0, "Price adjustment should be negative"
-    
+
     def test_negative_tax_amount_parsing(self, negative_tax_record):
         """Test that negative tax amount is properly parsed."""
         from utils import capture_records
-        
+
         fields = capture_records(negative_tax_record)
-        
+
         assert fields["amount"] == "-00010000", "Negative sign should be preserved in tax amount"
         assert fields["amount"].startswith("-"), "Tax amount should start with minus sign"
-    
+
     def test_negative_tax_amount_conversion(self, negative_tax_record):
         """Test that negative tax amount is converted correctly."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(negative_tax_record)
         amount_int = dac_str_int_to_int(fields["amount"])
-        
+
         assert amount_int == -10000, f"Expected -10000, got {amount_int}"
         assert amount_int < 0, "Tax refund should be negative"
-    
+
     def test_absolute_value_calculation(self, credit_memo_header):
         """Test that absolute values are calculated correctly from negative values."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         fields = capture_records(credit_memo_header)
         total_int = dac_str_int_to_int(fields["invoice_total"])
-        
+
         abs_value = abs(total_int)
         assert abs_value == 10000, f"Absolute value should be 10000, got {abs_value}"
-    
+
     # =========================================================================
     # SPECIAL CHARACTER TESTS
     # =========================================================================
-    
+
     def test_ampersand_in_description(self, special_chars_description_detail):
         """Test that ampersand (&) is preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert "&" in fields["description"], "Ampersand should be preserved in description"
         assert "A&B" in fields["description"], "Ampersand within text should be preserved"
-    
+
     def test_hyphen_in_description(self, special_chars_description_detail):
         """Test that hyphen (-) is preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert "-" in fields["description"], "Hyphen should be preserved in description"
-    
+
     def test_apostrophe_in_description(self, special_chars_description_detail):
         """Test that apostrophe (') is preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert "'" in fields["description"], "Apostrophe should be preserved in description"
         assert "Tom's" in fields["description"], "Apostrophe within word should be preserved"
-    
+
     def test_parentheses_in_description(self, special_chars_description_detail):
         """Test that parentheses () are preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert "(" in fields["description"], "Opening parenthesis should be preserved"
         assert ")" in fields["description"], "Closing parenthesis should be preserved"
         assert "(A&B)" in fields["description"], "Parentheses with content should be preserved"
-    
+
     def test_slash_in_description(self, special_chars_description_detail):
         """Test that slash (/) is preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert "/" in fields["description"], "Slash should be preserved in description"
         assert "1/2" in fields["description"], "Slash within fraction should be preserved"
-    
+
     def test_international_characters_in_description(self, international_chars_description_detail):
         """Test that international characters are preserved in description field."""
         from utils import capture_records
-        
+
         fields = capture_records(international_chars_description_detail)
-        
+
         # Check for specific international characters
         assert "é" in fields["description"], "Accented e should be preserved"
         assert "ñ" in fields["description"], "Tilde n should be preserved"
         assert "ü" in fields["description"], "Umlaut u should be preserved"
-    
+
     def test_description_field_length_with_special_chars(self, special_chars_description_detail):
         """Test that description field maintains correct length with special characters."""
         from utils import capture_records
-        
+
         fields = capture_records(special_chars_description_detail)
-        
+
         assert len(fields["description"]) == 25, "Description should be exactly 25 characters"
-    
+
     # =========================================================================
     # FILTER AMPERSAND SETTING TESTS
     # =========================================================================
-    
+
     def test_filter_ampersand_replaces_with_and(self):
         """Test that filter_ampersand setting replaces & with AND."""
         # Simulate the logic from convert_to_csv.py
         description = "Tom's Item (A&B) - 1/2   "
         filter_ampersand = "True"
-        
+
         description_processed = (
             description.replace("&", "AND").rstrip(" ")
             if filter_ampersand != "False" else
             description.rstrip(" ")
         )
-        
+
         assert "&" not in description_processed, "Ampersand should be replaced"
         assert "AND" in description_processed, "Ampersand should be replaced with AND"
         assert "AANDB" in description_processed, "A&B should become AANDB"
-    
+
     def test_filter_ampersand_disabled_preserves_ampersand(self):
         """Test that filter_ampersand=False preserves ampersand."""
         # Simulate the logic from convert_to_csv.py
         description = "Tom's Item (A&B) - 1/2   "
         filter_ampersand = "False"
-        
+
         description_processed = (
             description.replace("&", "AND").rstrip(" ")
             if filter_ampersand != "False" else
             description.rstrip(" ")
         )
-        
+
         assert "&" in description_processed, "Ampersand should be preserved when filter is disabled"
         assert "A&B" in description_processed, "A&B should remain unchanged"
-    
+
     def test_filter_ampersand_preserves_other_special_chars(self):
         """Test that filter_ampersand only affects ampersand, not other special chars."""
         description = "Tom's Item (A&B) - 1/2   "
         filter_ampersand = "True"
-        
+
         description_processed = (
             description.replace("&", "AND").rstrip(" ")
             if filter_ampersand != "False" else
             description.rstrip(" ")
         )
-        
+
         # Other special characters should be preserved
         assert "'" in description_processed, "Apostrophe should be preserved"
         assert "(" in description_processed, "Opening parenthesis should be preserved"
         assert ")" in description_processed, "Closing parenthesis should be preserved"
         assert "-" in description_processed, "Hyphen should be preserved"
         assert "/" in description_processed, "Slash should be preserved"
-    
+
     # =========================================================================
     # COMBINED EDGE CASES
     # =========================================================================
-    
+
     def test_negative_invoice_with_special_chars_description(self):
         """Test credit memo with special characters in description."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         # Create credit memo with special characters
         header = "A" + "VENDOR" + "0000000003" + "010125" + "-000025000"
         detail = ("B" + "01234567890" + "Return (Tom's) A&B - 1/2 " + "123456" + "-00250" +
                   "01" + "000001" + "-0010" + "-0199" + "001" + "000000")
-        
+
         header_fields = capture_records(header)
         detail_fields = capture_records(detail)
-        
+
         # Verify negative values
         assert dac_str_int_to_int(header_fields["invoice_total"]) == -25000
         assert dac_str_int_to_int(detail_fields["unit_cost"]) == -250
         assert dac_str_int_to_int(detail_fields["qty_of_units"]) == -10
-        
+
         # Verify special characters preserved
         assert "'" in detail_fields["description"]
         assert "&" in detail_fields["description"]
@@ -1376,11 +1373,11 @@ class TestEDINegativeValuesAndSpecialChars:
         assert ")" in detail_fields["description"]
         assert "-" in detail_fields["description"]
         assert "/" in detail_fields["description"]
-    
+
     def test_multiple_negative_line_items(self):
         """Test invoice with multiple negative line items."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         # Create details with multiple negative values
         # Description must be exactly 25 chars
         desc1 = "Credit Item 1            "  # 13 + 12 = 25
@@ -1392,110 +1389,110 @@ class TestEDINegativeValuesAndSpecialChars:
                    "01" + "000001" + "-0010" + "00199" + "001" + "000000")
         detail3 = ("B" + "33333333333" + desc3 + "789012" + "-00050" +
                    "01" + "000001" + "-0002" + "00049" + "001" + "000000")
-        
+
         fields1 = capture_records(detail1)
         fields2 = capture_records(detail2)
         fields3 = capture_records(detail3)
-        
+
         # Verify all are negative
         assert dac_str_int_to_int(fields1["unit_cost"]) == -100
         assert dac_str_int_to_int(fields2["unit_cost"]) == -200
         assert dac_str_int_to_int(fields3["unit_cost"]) == -50
-        
+
         assert dac_str_int_to_int(fields1["qty_of_units"]) == -5
         assert dac_str_int_to_int(fields2["qty_of_units"]) == -10
         assert dac_str_int_to_int(fields3["qty_of_units"]) == -2
-    
+
     def test_mixed_positive_negative_values(self, mixed_invoice_edi):
         """Test invoice with mix of positive and negative line items."""
         from utils import capture_records, dac_str_int_to_int
-        
+
         lines = mixed_invoice_edi.strip().split("\n")
-        
+
         header_fields = capture_records(lines[0])
         detail1_fields = capture_records(lines[1])
         detail2_fields = capture_records(lines[2])
         tax_fields = capture_records(lines[3])
-        
+
         # Header should be positive (net invoice)
         assert dac_str_int_to_int(header_fields["invoice_total"]) == 5000
-        
+
         # First detail should be positive
         assert dac_str_int_to_int(detail1_fields["unit_cost"]) == 100
         assert dac_str_int_to_int(detail1_fields["qty_of_units"]) == 10
-        
+
         # Second detail should be negative
         assert dac_str_int_to_int(detail2_fields["unit_cost"]) == -50
         assert dac_str_int_to_int(detail2_fields["qty_of_units"]) == -5
-        
+
         # Tax should be positive
         assert dac_str_int_to_int(tax_fields["amount"]) == 2500
-    
+
     def test_negative_value_record_length_preserved(self, negative_unit_cost_detail):
         """Test that negative values don't affect record length."""
         from utils import capture_records
-        
+
         fields = capture_records(negative_unit_cost_detail)
-        
+
         # Verify all fields maintain expected lengths
         assert len(fields["unit_cost"]) == 6, "Unit cost should be 6 chars including minus sign"
         assert len(fields["qty_of_units"]) == 5, "Qty should be 5 chars including minus sign"
         assert len(fields["suggested_retail_price"]) == 5, "Retail should be 5 chars"
-    
+
     def test_detect_invoice_is_credit(self, tmp_path, credit_memo_header):
         """Test that credit invoices are detected correctly."""
         from utils import detect_invoice_is_credit
-        
+
         # Create temp EDI file with credit memo
         edi_file = tmp_path / "credit.edi"
         edi_file.write_text(credit_memo_header + "\n")
-        
+
         is_credit = detect_invoice_is_credit(str(edi_file))
         assert is_credit is True, "Negative invoice total should be detected as credit"
-    
+
     def test_detect_invoice_is_not_credit(self, tmp_path):
         """Test that regular invoices are not detected as credits."""
         from utils import detect_invoice_is_credit
-        
+
         # Create temp EDI file with regular invoice
         header = "A" + "VENDOR" + "0000000001" + "010125" + "0000010000"
         edi_file = tmp_path / "invoice.edi"
         edi_file.write_text(header + "\n")
-        
+
         is_credit = detect_invoice_is_credit(str(edi_file))
         assert is_credit is False, "Positive invoice total should not be detected as credit"
-    
+
     def test_dac_str_int_to_int_with_negative(self):
         """Test dac_str_int_to_int function with negative values."""
         from utils import dac_str_int_to_int
-        
+
         # Test various negative value formats
         assert dac_str_int_to_int("-00010") == -10
         assert dac_str_int_to_int("-00100") == -100
         assert dac_str_int_to_int("-000010000") == -10000
         assert dac_str_int_to_int("-1") == -1
-    
+
     def test_dac_str_int_to_int_with_positive(self):
         """Test dac_str_int_to_int function with positive values."""
         from utils import dac_str_int_to_int
-        
+
         # Test various positive value formats
         assert dac_str_int_to_int("00010") == 10
         assert dac_str_int_to_int("00100") == 100
         assert dac_str_int_to_int("000010000") == 10000
         assert dac_str_int_to_int("1") == 1
-    
+
     def test_dac_str_int_to_int_with_empty_string(self):
         """Test dac_str_int_to_int function with empty string."""
         from utils import dac_str_int_to_int
-        
+
         assert dac_str_int_to_int("") == 0
         assert dac_str_int_to_int("   ") == 0
-    
+
     def test_convert_to_price_with_negative(self):
         """Test convert_to_price function with negative values."""
         from utils import convert_to_price
-        
+
         # Note: convert_to_price doesn't handle negative specially
         # It just formats the string value by inserting decimal point
         # For "-00100": value[:-2] = "-001", value[-2:] = "00" -> "-001.00"
@@ -1503,6 +1500,6 @@ class TestEDINegativeValuesAndSpecialChars:
         # The function doesn't strip leading zeros from negative values properly
         # It produces "-001.00" instead of "-1.00"
         assert result == "-001.00", f"Expected '-001.00', got '{result}'"
-        
+
         result = convert_to_price("000100")
         assert result == "1.00", f"Expected '1.00', got '{result}'"

@@ -1,4 +1,5 @@
 """Tests for Qt widget implementations using pytest-qt."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,6 +14,7 @@ pytestmark = pytest.mark.qt
 class TestSearchWidget:
     def test_initial_empty_filter(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         assert widget.value == ""
@@ -20,12 +22,14 @@ class TestSearchWidget:
 
     def test_initial_value_set(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget(initial_value="test")
         qtbot.addWidget(widget)
         assert widget.entry.text() == "test"
 
     def test_button_click_emits_signal(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.entry.setText("hello")
@@ -35,6 +39,7 @@ class TestSearchWidget:
 
     def test_return_key_emits_signal(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.entry.setText("world")
@@ -43,6 +48,7 @@ class TestSearchWidget:
 
     def test_same_value_does_not_emit(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.entry.setText("same")
@@ -53,6 +59,7 @@ class TestSearchWidget:
 
     def test_clear_emits_empty_string(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.entry.setText("test")
@@ -63,6 +70,7 @@ class TestSearchWidget:
 
     def test_set_value_updates_text(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.set_value("new text")
@@ -70,6 +78,7 @@ class TestSearchWidget:
 
     def test_set_enabled_false(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.set_enabled(False)
@@ -78,6 +87,7 @@ class TestSearchWidget:
 
     def test_set_enabled_true(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.set_enabled(False)
@@ -87,6 +97,7 @@ class TestSearchWidget:
 
     def test_callback_connected(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         received = []
         widget = SearchWidget(on_filter_change=lambda t: received.append(t))
         qtbot.addWidget(widget)
@@ -96,6 +107,7 @@ class TestSearchWidget:
 
     def test_escape_clears_active_filter(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
+
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.show()
@@ -107,13 +119,7 @@ class TestSearchWidget:
         assert widget.entry.text() == ""
 
 
-
-
-
-
-
-
-@ pytest.mark.qt
+@pytest.mark.qt
 class TestFolderListWidget:
     def _make_table(self, active=None, inactive=None):
         table = MagicMock()
@@ -136,23 +142,31 @@ class TestFolderListWidget:
 
     def test_empty_table(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         table = self._make_table()
         callbacks = MagicMock(), MagicMock(), MagicMock(), MagicMock()
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=callbacks[0], on_edit=callbacks[1],
-            on_toggle=callbacks[2], on_delete=callbacks[3],
+            parent=None,
+            folders_table=table,
+            on_send=callbacks[0],
+            on_edit=callbacks[1],
+            on_toggle=callbacks[2],
+            on_delete=callbacks[3],
         )
         qtbot.addWidget(widget)
 
     def test_active_folder_buttons(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         active = [{"id": 1, "alias": "FolderA", "folder_is_active": "True"}]
         table = self._make_table(active=active)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=MagicMock(),
-            on_toggle=MagicMock(), on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
@@ -163,12 +177,16 @@ class TestFolderListWidget:
 
     def test_inactive_folder_buttons(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         inactive = [{"id": 2, "alias": "FolderB", "folder_is_active": "False"}]
         table = self._make_table(inactive=inactive)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=MagicMock(),
-            on_toggle=MagicMock(), on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
@@ -180,13 +198,17 @@ class TestFolderListWidget:
 
     def test_send_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         on_send = MagicMock()
         active = [{"id": 7, "alias": "Sender", "folder_is_active": "True"}]
         table = self._make_table(active=active)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=on_send, on_edit=MagicMock(),
-            on_toggle=MagicMock(), on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=on_send,
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -197,13 +219,17 @@ class TestFolderListWidget:
 
     def test_edit_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         on_edit = MagicMock()
         active = [{"id": 55, "alias": "Editable", "folder_is_active": "True"}]
         table = self._make_table(active=active)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=on_edit,
-            on_toggle=MagicMock(), on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=on_edit,
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -214,13 +240,17 @@ class TestFolderListWidget:
 
     def test_disable_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         on_toggle = MagicMock()
         active = [{"id": 42, "alias": "Target", "folder_is_active": "True"}]
         table = self._make_table(active=active)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=MagicMock(),
-            on_toggle=on_toggle, on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=on_toggle,
+            on_delete=MagicMock(),
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -231,13 +261,17 @@ class TestFolderListWidget:
 
     def test_delete_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         on_delete = MagicMock()
         inactive = [{"id": 99, "alias": "ToDelete", "folder_is_active": "False"}]
         table = self._make_table(inactive=inactive)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=MagicMock(),
-            on_toggle=MagicMock(), on_delete=on_delete,
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=on_delete,
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
@@ -249,17 +283,23 @@ class TestFolderListWidget:
     def test_fuzzy_filter(self, qtbot):
         from unittest.mock import patch
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         active = [
             {"id": 1, "alias": "Alpha", "folder_is_active": "True"},
             {"id": 2, "alias": "Beta", "folder_is_active": "True"},
         ]
         table = self._make_table(active=active)
-        with patch("interface.qt.widgets.folder_list_widget.thefuzz.process") as mock_fuzzy:
+        with patch(
+            "interface.qt.widgets.folder_list_widget.thefuzz.process"
+        ) as mock_fuzzy:
             mock_fuzzy.extractWithoutOrder.return_value = [("Alpha", 95)]
             widget = FolderListWidget(
-                parent=None, folders_table=table,
-                on_send=MagicMock(), on_edit=MagicMock(),
-                on_toggle=MagicMock(), on_delete=MagicMock(),
+                parent=None,
+                folders_table=table,
+                on_send=MagicMock(),
+                on_edit=MagicMock(),
+                on_toggle=MagicMock(),
+                on_delete=MagicMock(),
                 filter_value="Alp",
             )
         qtbot.addWidget(widget)
@@ -270,14 +310,18 @@ class TestFolderListWidget:
 
     def test_total_count_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         count_cb = MagicMock()
         active = [{"id": 1, "alias": "A", "folder_is_active": "True"}]
         inactive = [{"id": 2, "alias": "B", "folder_is_active": "False"}]
         table = self._make_table(active=active, inactive=inactive)
         widget = FolderListWidget(
-            parent=None, folders_table=table,
-            on_send=MagicMock(), on_edit=MagicMock(),
-            on_toggle=MagicMock(), on_delete=MagicMock(),
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
             total_count_callback=count_cb,
         )
         qtbot.addWidget(widget)
@@ -285,11 +329,18 @@ class TestFolderListWidget:
 
     def test_calculate_max_alias_length(self):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         assert FolderListWidget._calculate_max_alias_length([]) == 0
         assert FolderListWidget._calculate_max_alias_length([{"alias": "abc"}]) == 3
-        assert FolderListWidget._calculate_max_alias_length([{"alias": "a"}, {"alias": "abcde"}]) == 5
+        assert (
+            FolderListWidget._calculate_max_alias_length(
+                [{"alias": "a"}, {"alias": "abcde"}]
+            )
+            == 5
+        )
 
     def test_char_width_to_pixels(self):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
+
         assert FolderListWidget._char_width_to_pixels(10) == 80
         assert FolderListWidget._char_width_to_pixels(10, 10) == 100

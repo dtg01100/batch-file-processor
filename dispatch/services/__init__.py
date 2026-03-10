@@ -28,19 +28,19 @@ from dispatch.services.file_processor import (
 
 __all__ = [
     # UPC Service
-    'QueryRunnerProtocol',
-    'UPCServiceResult',
-    'MockQueryRunner',
-    'UPCService',
+    "QueryRunnerProtocol",
+    "UPCServiceResult",
+    "MockQueryRunner",
+    "UPCService",
     # Progress Reporter
-    'ProgressReporter',
-    'UIProgressReporter',
-    'CLIProgressReporter',
-    'NullProgressReporter',
-    'LoggingProgressReporter',
+    "ProgressReporter",
+    "UIProgressReporter",
+    "CLIProgressReporter",
+    "NullProgressReporter",
+    "LoggingProgressReporter",
     # File Processor
-    'FileProcessorResult',
-    'FileProcessorInterface',
-    'MockFileProcessor',
-    'FileProcessor',
+    "FileProcessorResult",
+    "FileProcessorInterface",
+    "MockFileProcessor",
+    "FileProcessor",
 ]

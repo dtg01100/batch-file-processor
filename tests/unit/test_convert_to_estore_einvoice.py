@@ -11,12 +11,8 @@ Converter: convert_to_estore_einvoice.py (9668 chars)
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
 import os
 import csv
-from decimal import Decimal
-import re
 
 # Import the module to test
 import convert_to_estore_einvoice
@@ -434,7 +430,7 @@ class TestEstoreEinvoiceDateHandling(TestEstoreEinvoiceFixtures):
             # Should have date in YYYYMMDD format (20250125)
             assert "2025" in content or "20250125" in content
 
-    def test_zero_date_handling(self, default_parameters, default_settings, 
+    def test_zero_date_handling(self, default_parameters, default_settings,
                                  sample_upc_lut, tmp_path):
         """Test handling of zero date (000000)."""
         # Date: 000000 = zero/unknown
@@ -463,7 +459,7 @@ class TestEstoreEinvoiceDateHandling(TestEstoreEinvoiceFixtures):
 class TestEstoreEinvoiceEdgeCases(TestEstoreEinvoiceFixtures):
     """Test edge cases and error conditions."""
 
-    def test_empty_edi_file(self, default_parameters, default_settings, 
+    def test_empty_edi_file(self, default_parameters, default_settings,
                            sample_upc_lut, tmp_path):
         """Test handling of empty EDI file."""
         input_file = tmp_path / "input.edi"

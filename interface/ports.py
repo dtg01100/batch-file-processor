@@ -13,8 +13,6 @@ from __future__ import annotations
 
 from typing import Optional, Protocol, runtime_checkable
 
-from interface.services.progress_service import ProgressCallback
-
 
 @runtime_checkable
 class UIServiceProtocol(Protocol):
@@ -178,12 +176,14 @@ class ProgressServiceProtocol(Protocol):
         """
         ...
 
-    def update_detailed_progress(self, 
-                                 folder_num: int, 
-                                 folder_total: int, 
-                                 file_num: int, 
-                                 file_total: int, 
-                                 footer: str = "") -> None:
+    def update_detailed_progress(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        footer: str = "",
+    ) -> None:
         """Update the detailed progress information.
 
         Args:
@@ -205,9 +205,9 @@ class ProgressServiceProtocol(Protocol):
 
     def update_progress(self, progress: int) -> None:
         """Update the progress with a percentage value (0-100).
-        
+
         Shows a progress bar with the given percentage and hides the throbber.
-        
+
         Args:
             progress: Progress percentage from 0 to 100
         """
@@ -296,6 +296,7 @@ class QtUIService:
 
     def __init__(self, parent=None) -> None:
         from PyQt6.QtWidgets import QWidget
+
         self._parent: Optional[QWidget] = parent
 
     # -- informational dialogs ------------------------------------------------
@@ -303,16 +304,19 @@ class QtUIService:
     def show_info(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.information."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.information(self._parent, title, message)
 
     def show_error(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.critical."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.critical(self._parent, title, message)
 
     def show_warning(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.warning."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.warning(self._parent, title, message)
 
     # -- question dialogs -----------------------------------------------------
@@ -320,6 +324,7 @@ class QtUIService:
     def ask_yes_no(self, title: str, message: str) -> bool:
         """Delegates to QMessageBox.question."""
         from PyQt6.QtWidgets import QMessageBox
+
         result = QMessageBox.question(
             self._parent,
             title,
@@ -332,6 +337,7 @@ class QtUIService:
     def ask_ok_cancel(self, title: str, message: str) -> bool:
         """Delegates to QMessageBox.question."""
         from PyQt6.QtWidgets import QMessageBox
+
         result = QMessageBox.question(
             self._parent,
             title,
@@ -366,6 +372,7 @@ class QtUIService:
     ) -> str:
         """Delegates to QFileDialog.getExistingDirectory."""
         from PyQt6.QtWidgets import QFileDialog
+
         result = QFileDialog.getExistingDirectory(
             self._parent,
             title,
@@ -381,6 +388,7 @@ class QtUIService:
     ) -> str:
         """Delegates to QFileDialog.getOpenFileName."""
         from PyQt6.QtWidgets import QFileDialog
+
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getOpenFileName(
             self._parent,
@@ -399,6 +407,7 @@ class QtUIService:
     ) -> str:
         """Delegates to QFileDialog.getSaveFileName."""
         from PyQt6.QtWidgets import QFileDialog
+
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getSaveFileName(
             self._parent,
@@ -415,4 +424,5 @@ class QtUIService:
     def pump_events(self) -> None:
         """Delegates to QApplication.processEvents()."""
         from PyQt6.QtWidgets import QApplication
+
         QApplication.processEvents()

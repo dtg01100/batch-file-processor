@@ -13,14 +13,19 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
-from interface.plugins.scannerware_configuration_plugin import ScannerWareConfigurationPlugin
+from interface.plugins.scannerware_configuration_plugin import (
+    ScannerWareConfigurationPlugin,
+)
 from interface.plugins.fintech_configuration_plugin import FintechConfigurationPlugin
-from interface.plugins.estore_einvoice_configuration_plugin import EStoreEInvoiceConfigurationPlugin
-from interface.plugins.simplified_csv_configuration_plugin import SimplifiedCSVConfigurationPlugin
+from interface.plugins.estore_einvoice_configuration_plugin import (
+    EStoreEInvoiceConfigurationPlugin,
+)
+from interface.plugins.simplified_csv_configuration_plugin import (
+    SimplifiedCSVConfigurationPlugin,
+)
 from interface.plugins.validation_framework import ValidationResult
 
 
@@ -32,19 +37,28 @@ class TestCSVPluginOptionCombinations:
         """Get CSV plugin instance."""
         return CSVConfigurationPlugin()
 
-    @pytest.mark.parametrize("include_headers,filter_ampersand,include_item_numbers,include_item_description,split_prepaid", [
-        # All enabled
-        (True, True, True, True, True),
-        # All disabled
-        (False, False, False, False, False),
-        # Mixed combinations
-        (True, False, True, False, True),
-        (False, True, False, True, False),
-        (True, True, False, False, True),
-        (False, False, True, True, False),
-    ])
+    @pytest.mark.parametrize(
+        "include_headers,filter_ampersand,include_item_numbers,include_item_description,split_prepaid",
+        [
+            # All enabled
+            (True, True, True, True, True),
+            # All disabled
+            (False, False, False, False, False),
+            # Mixed combinations
+            (True, False, True, False, True),
+            (False, True, False, True, False),
+            (True, True, False, False, True),
+            (False, False, True, True, False),
+        ],
+    )
     def test_csv_boolean_combinations_validate(
-        self, csv_plugin, include_headers, filter_ampersand, include_item_numbers, include_item_description, split_prepaid
+        self,
+        csv_plugin,
+        include_headers,
+        filter_ampersand,
+        include_item_numbers,
+        include_item_description,
+        split_prepaid,
     ):
         """Test that various boolean combinations validate correctly."""
         config = {
@@ -53,7 +67,7 @@ class TestCSVPluginOptionCombinations:
             "include_item_numbers": include_item_numbers,
             "include_item_description": include_item_description,
             "split_prepaid_sales_tax_crec": split_prepaid,
-            "simple_csv_sort_order": "upc_number,qty_of_units"
+            "simple_csv_sort_order": "upc_number,qty_of_units",
         }
 
         result = csv_plugin.validate_config(config)
@@ -63,14 +77,19 @@ class TestCSVPluginOptionCombinations:
         # All these combinations should be valid
         assert result.success
 
-    @pytest.mark.parametrize("simple_csv_sort_order", [
-        "",
-        "upc_number",
-        "upc_number,qty_of_units",
-        "qty_of_units,unit_cost,description,vendor_item",
-        "description,vendor_item,upc_number,qty_of_units,unit_cost",
-    ])
-    def test_csv_sort_order_combinations_with_booleans(self, csv_plugin, simple_csv_sort_order):
+    @pytest.mark.parametrize(
+        "simple_csv_sort_order",
+        [
+            "",
+            "upc_number",
+            "upc_number,qty_of_units",
+            "qty_of_units,unit_cost,description,vendor_item",
+            "description,vendor_item,upc_number,qty_of_units,unit_cost",
+        ],
+    )
+    def test_csv_sort_order_combinations_with_booleans(
+        self, csv_plugin, simple_csv_sort_order
+    ):
         """Test sort order with various boolean settings."""
         config = {
             "include_headers": True,
@@ -78,7 +97,7 @@ class TestCSVPluginOptionCombinations:
             "include_item_numbers": True,
             "include_item_description": True,
             "split_prepaid_sales_tax_crec": False,
-            "simple_csv_sort_order": simple_csv_sort_order
+            "simple_csv_sort_order": simple_csv_sort_order,
         }
 
         result = csv_plugin.validate_config(config)
@@ -92,7 +111,7 @@ class TestCSVPluginOptionCombinations:
             "include_item_numbers": True,
             "include_item_description": True,
             "split_prepaid_sales_tax_crec": True,
-            "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,description,vendor_item"
+            "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,description,vendor_item",
         }
 
         result = csv_plugin.validate_config(config)
@@ -107,7 +126,10 @@ class TestCSVPluginOptionCombinations:
         assert serialized["include_item_numbers"] is True
         assert serialized["include_item_description"] is True
         assert serialized["split_prepaid_sales_tax_crec"] is True
-        assert serialized["simple_csv_sort_order"] == "upc_number,qty_of_units,unit_cost,description,vendor_item"
+        assert (
+            serialized["simple_csv_sort_order"]
+            == "upc_number,qty_of_units,unit_cost,description,vendor_item"
+        )
 
 
 class TestScannerWarePluginOptionCombinations:
@@ -118,17 +140,20 @@ class TestScannerWarePluginOptionCombinations:
         """Get ScannerWare plugin instance."""
         return ScannerWareConfigurationPlugin()
 
-    @pytest.mark.parametrize("append_a_records,force_txt_file_ext,retail_uom", [
-        # All enabled
-        (True, True, True),
-        # All disabled
-        (False, False, False),
-        # Mixed combinations
-        (True, False, True),
-        (False, True, False),
-        (True, True, False),
-        (False, False, True),
-    ])
+    @pytest.mark.parametrize(
+        "append_a_records,force_txt_file_ext,retail_uom",
+        [
+            # All enabled
+            (True, True, True),
+            # All disabled
+            (False, False, False),
+            # Mixed combinations
+            (True, False, True),
+            (False, True, False),
+            (True, True, False),
+            (False, False, True),
+        ],
+    )
     def test_scannerware_boolean_combinations_validate(
         self, scannerware_plugin, append_a_records, force_txt_file_ext, retail_uom
     ):
@@ -139,7 +164,7 @@ class TestScannerWarePluginOptionCombinations:
             "a_record_append_text": "APPEND" if append_a_records else "",
             "force_txt_file_ext": force_txt_file_ext,
             "invoice_date_offset": 0,
-            "retail_uom": retail_uom
+            "retail_uom": retail_uom,
         }
 
         result = scannerware_plugin.validate_config(config)
@@ -147,18 +172,23 @@ class TestScannerWarePluginOptionCombinations:
         assert isinstance(result, ValidationResult)
         assert result.success
 
-    @pytest.mark.parametrize("invoice_date_offset,expected_valid", [
-        (-14, True),
-        (-7, True),
-        (-1, True),
-        (0, True),
-        (1, True),
-        (7, True),
-        (14, True),
-        (-15, False),  # Below minimum
-        (15, False),   # Above maximum
-    ])
-    def test_scannerware_date_offset_with_booleans(self, scannerware_plugin, invoice_date_offset, expected_valid):
+    @pytest.mark.parametrize(
+        "invoice_date_offset,expected_valid",
+        [
+            (-14, True),
+            (-7, True),
+            (-1, True),
+            (0, True),
+            (1, True),
+            (7, True),
+            (14, True),
+            (-15, False),  # Below minimum
+            (15, False),  # Above maximum
+        ],
+    )
+    def test_scannerware_date_offset_with_booleans(
+        self, scannerware_plugin, invoice_date_offset, expected_valid
+    ):
         """Test date offset with various boolean settings."""
         config = {
             "a_record_padding": "TEST",
@@ -166,7 +196,7 @@ class TestScannerWarePluginOptionCombinations:
             "a_record_append_text": "APPEND",
             "force_txt_file_ext": False,
             "invoice_date_offset": invoice_date_offset,
-            "retail_uom": True
+            "retail_uom": True,
         }
 
         result = scannerware_plugin.validate_config(config)
@@ -180,7 +210,7 @@ class TestScannerWarePluginOptionCombinations:
             "a_record_append_text": "APPENDED",
             "force_txt_file_ext": True,
             "invoice_date_offset": 7,
-            "retail_uom": True
+            "retail_uom": True,
         }
 
         result = scannerware_plugin.validate_config(config)
@@ -207,16 +237,21 @@ class TestFintechPluginOptionCombinations:
         """Get Fintech plugin instance."""
         return FintechConfigurationPlugin()
 
-    @pytest.mark.parametrize("fintech_division_id,expected_valid", [
-        ("", False),  # Empty is invalid (min_length=1)
-        ("DIV001", True),
-        ("DIV-002", True),
-        ("12345", True),
-        ("A", True),
-        ("X" * 50, True),  # Max length
-        ("X" * 51, False),  # Exceeds max length
-    ])
-    def test_fintech_division_id_variations(self, fintech_plugin, fintech_division_id, expected_valid):
+    @pytest.mark.parametrize(
+        "fintech_division_id,expected_valid",
+        [
+            ("", False),  # Empty is invalid (min_length=1)
+            ("DIV001", True),
+            ("DIV-002", True),
+            ("12345", True),
+            ("A", True),
+            ("X" * 50, True),  # Max length
+            ("X" * 51, False),  # Exceeds max length
+        ],
+    )
+    def test_fintech_division_id_variations(
+        self, fintech_plugin, fintech_division_id, expected_valid
+    ):
         """Test various division ID values."""
         config = {"fintech_division_id": fintech_division_id}
 
@@ -242,22 +277,27 @@ class TestEStoreEInvoicePluginOptionCombinations:
         """Get eStore eInvoice plugin instance."""
         return EStoreEInvoiceConfigurationPlugin()
 
-    @pytest.mark.parametrize("store_number,vendor_oid,vendor_name", [
-        # All populated
-        ("STORE001", "VEND001", "MyVendor"),
-        # Only store and vendor OID
-        ("STORE002", "VEND002", ""),
-        # Empty values
-        ("", "", ""),
-        # Long values
-        ("S" * 50, "V" * 50, "N" * 50),
-    ])
-    def test_estore_field_combinations(self, estore_plugin, store_number, vendor_oid, vendor_name):
+    @pytest.mark.parametrize(
+        "store_number,vendor_oid,vendor_name",
+        [
+            # All populated
+            ("STORE001", "VEND001", "MyVendor"),
+            # Only store and vendor OID
+            ("STORE002", "VEND002", ""),
+            # Empty values
+            ("", "", ""),
+            # Long values
+            ("S" * 50, "V" * 50, "N" * 50),
+        ],
+    )
+    def test_estore_field_combinations(
+        self, estore_plugin, store_number, vendor_oid, vendor_name
+    ):
         """Test various field combinations."""
         config = {
             "estore_store_number": store_number,
             "estore_vendor_oid": vendor_oid,
-            "estore_vendor_namevendoroid": vendor_name
+            "estore_vendor_namevendoroid": vendor_name,
         }
 
         result = estore_plugin.validate_config(config)
@@ -269,7 +309,7 @@ class TestEStoreEInvoicePluginOptionCombinations:
         config = {
             "estore_store_number": "STORE123",
             "estore_vendor_oid": "VEND456",
-            "estore_vendor_namevendoroid": "AcmeInc"
+            "estore_vendor_namevendoroid": "AcmeInc",
         }
 
         config_obj = estore_plugin.create_config(config)
@@ -346,11 +386,21 @@ class TestPluginManagerCombinations:
             assert hasattr(plugin, "get_config_fields")
             assert hasattr(plugin, "get_format_name")
 
-    @pytest.mark.parametrize("format_name", [
-        "csv", "fintech", "scannerware", "estore_einvoice",
-        "simplified_csv", "stewarts_custom", "jolley_custom",
-        "scansheet_type_a", "yellowdog_csv", "estore_einvoice_generic"
-    ])
+    @pytest.mark.parametrize(
+        "format_name",
+        [
+            "csv",
+            "fintech",
+            "scannerware",
+            "estore_einvoice",
+            "simplified_csv",
+            "stewarts_custom",
+            "jolley_custom",
+            "scansheet_type_a",
+            "yellowdog_csv",
+            "estore_einvoice_generic",
+        ],
+    )
     def test_each_plugin_validates_default_config(self, plugin_manager, format_name):
         """Test that each plugin validates its default configuration."""
         plugin = plugin_manager.get_configuration_plugin_by_format_name(format_name)
@@ -368,7 +418,9 @@ class TestPluginManagerCombinations:
         if not result.success:
             # If default config is invalid, it's because required fields are empty
             # This is expected behavior - document the validation rules
-            assert result.errors, f"{format_name} validation failure should have error messages"
+            assert (
+                result.errors
+            ), f"{format_name} validation failure should have error messages"
 
     def test_multiple_plugins_can_be_validated(self, plugin_manager):
         """Test that multiple plugins can be validated in sequence."""
@@ -381,7 +433,9 @@ class TestPluginManagerCombinations:
             # Some plugins may have required fields that need values in default config
             if not result.success:
                 # Document which plugins require fields to be populated
-                assert result.errors, f"{plugin.get_format_name()} validation failure should have error messages"
+                assert (
+                    result.errors
+                ), f"{plugin.get_format_name()} validation failure should have error messages"
 
             # Test with all booleans set to True and strings with valid values
             fields = plugin.get_config_fields()
@@ -391,8 +445,8 @@ class TestPluginManagerCombinations:
                     all_true_config[field.name] = True
                 elif field.field_type.name == "STRING":
                     # Use appropriate length based on min_length constraint
-                    min_len = getattr(field, 'min_length', None) or 0
-                    max_len = getattr(field, 'max_length', None) or 50
+                    min_len = getattr(field, "min_length", None) or 0
+                    max_len = getattr(field, "max_length", None) or 50
                     if min_len > 0:
                         all_true_config[field.name] = "X" * min_len
                     else:
@@ -400,7 +454,9 @@ class TestPluginManagerCombinations:
 
             if all_true_config:  # Only test if there are boolean/string fields
                 result = plugin.validate_config(all_true_config)
-                assert result.success, f"{plugin.get_format_name()} all-true config should be valid: {result.errors if not result.success else ''}"
+                assert (
+                    result.success
+                ), f"{plugin.get_format_name()} all-true config should be valid: {result.errors if not result.success else ''}"
 
 
 class TestCrossPluginConfigurations:
@@ -417,7 +473,9 @@ class TestCrossPluginConfigurations:
     def test_csv_and_fintech_both_valid(self, plugin_manager):
         """Test that CSV and Fintech plugins can both have valid configs."""
         csv_plugin = plugin_manager.get_configuration_plugin_by_format_name("csv")
-        fintech_plugin = plugin_manager.get_configuration_plugin_by_format_name("fintech")
+        fintech_plugin = plugin_manager.get_configuration_plugin_by_format_name(
+            "fintech"
+        )
 
         assert csv_plugin is not None
         assert fintech_plugin is not None
@@ -428,12 +486,10 @@ class TestCrossPluginConfigurations:
             "include_item_numbers": True,
             "include_item_description": True,
             "split_prepaid_sales_tax_crec": False,
-            "simple_csv_sort_order": "upc_number,qty_of_units"
+            "simple_csv_sort_order": "upc_number,qty_of_units",
         }
 
-        fintech_config = {
-            "fintech_division_id": "DIV001"
-        }
+        fintech_config = {"fintech_division_id": "DIV001"}
 
         csv_result = csv_plugin.validate_config(csv_config)
         fintech_result = fintech_plugin.validate_config(fintech_config)
@@ -443,12 +499,14 @@ class TestCrossPluginConfigurations:
 
     def test_scannerware_and_estore_both_valid(self, plugin_manager):
         """Test that ScannerWare and eStore plugins can both have valid configs."""
-        scannerware_plugin = plugin_manager.get_configuration_plugin_by_format_name("scannerware")
+        scannerware_plugin = plugin_manager.get_configuration_plugin_by_format_name(
+            "scannerware"
+        )
         # Try different naming conventions for eStore
         estore_plugin = (
-            plugin_manager.get_configuration_plugin_by_format_name("estore_einvoice") or
-            plugin_manager.get_configuration_plugin_by_format_name("estore_eInvoice") or
-            plugin_manager.get_configuration_plugin_by_format_name("estore")
+            plugin_manager.get_configuration_plugin_by_format_name("estore_einvoice")
+            or plugin_manager.get_configuration_plugin_by_format_name("estore_eInvoice")
+            or plugin_manager.get_configuration_plugin_by_format_name("estore")
         )
 
         assert scannerware_plugin is not None
@@ -461,13 +519,13 @@ class TestCrossPluginConfigurations:
             "a_record_append_text": "APPEND",
             "force_txt_file_ext": False,
             "invoice_date_offset": 0,
-            "retail_uom": True
+            "retail_uom": True,
         }
 
         estore_config = {
             "estore_store_number": "STORE001",
             "estore_vendor_oid": "VEND001",
-            "estore_vendor_namevendoroid": "MyVendor"
+            "estore_vendor_namevendoroid": "MyVendor",
         }
 
         scannerware_result = scannerware_plugin.validate_config(scannerware_config)

@@ -109,7 +109,7 @@ class DynamicEDIBuilder:
         logging.debug("Clearing dynamic EDI widgets")
         try:
             keys_to_remove = []
-            
+
             # Store items to remove in a list to avoid modifying the layout during iteration
             items_to_remove = []
             for i in range(self.dynamic_layout.count()):
@@ -121,20 +121,22 @@ class DynamicEDIBuilder:
                     widget = item.widget()
                     if widget:
                         self._find_and_track_widget_keys(widget, keys_to_remove)
-                        if widget and not widget.testAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose):
+                        if widget and not widget.testAttribute(
+                            QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
+                        ):
                             widget.setParent(None)
                             widget.deleteLater()
-                    
+
                     sub_layout = item.layout()
                     if sub_layout:
                         self._find_and_track_layout_keys(sub_layout, keys_to_remove)
                         sub_layout.deleteLater()
-            
+
             # Remove all tracked keys from fields immediately
             for key in keys_to_remove:
                 if key in self.fields:
                     del self.fields[key]
-                
+
         except Exception as e:
             logging.error(f"Error in _clear_dynamic_edi: {e}")
 
@@ -145,14 +147,14 @@ class DynamicEDIBuilder:
                 if key not in keys_to_remove:
                     keys_to_remove.append(key)
                 break
-        
+
         for child in widget.findChildren(QWidget):
             for key, value in list(self.fields.items()):
                 if value is child:
                     if key not in keys_to_remove:
                         keys_to_remove.append(key)
                     break
-    
+
     def _find_and_track_layout_keys(self, layout, keys_to_remove):
         """Find all widgets in a layout and track their field keys."""
         for i in range(layout.count()):
@@ -179,7 +181,7 @@ class DynamicEDIBuilder:
         """Handle EDI option selection changes."""
         if self._edi_option_processing:
             return
-        
+
         self._edi_option_processing = True
         try:
             self._clear_dynamic_edi()
@@ -191,6 +193,7 @@ class DynamicEDIBuilder:
                 self._build_tweak_edi_area()
         finally:
             from PyQt6.QtCore import QTimer
+
             QTimer.singleShot(100, self._clear_edi_processing_flag)
 
     def _clear_edi_processing_flag(self):
@@ -233,7 +236,9 @@ class DynamicEDIBuilder:
         self.convert_sub_layout.setContentsMargins(0, 0, 0, 0)
         wrapper_layout.addWidget(self.convert_sub_container)
 
-        self.convert_format_combo.currentTextChanged.connect(self.handle_convert_format_changed)
+        self.convert_format_combo.currentTextChanged.connect(
+            self.handle_convert_format_changed
+        )
 
         current_fmt = self.folder_config.get("convert_to_format", "csv")
         idx = self.convert_format_combo.findText(current_fmt)
@@ -247,7 +252,7 @@ class DynamicEDIBuilder:
         """Handle convert format selection changes."""
         self._clear_convert_sub()
         fmt_lower = (fmt or "").lower()
-        
+
         if fmt_lower == "csv":
             self._build_csv_sub()
         elif fmt_lower == "scannerware":
@@ -266,7 +271,7 @@ class DynamicEDIBuilder:
             plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
             if plugin:
                 self._build_plugin_config_sub(plugin)
-        
+
         if self.on_convert_format_changed:
             self.on_convert_format_changed(fmt)
 
@@ -274,7 +279,7 @@ class DynamicEDIBuilder:
         """Clear convert sub-widgets and clean up field references."""
         if not self.convert_sub_layout:
             return
-            
+
         logging.debug("Clearing convert sub widgets")
         try:
             keys_to_remove = []
@@ -287,18 +292,20 @@ class DynamicEDIBuilder:
                     widget = item.widget()
                     if widget:
                         self._find_and_track_widget_keys(widget, keys_to_remove)
-                        if widget and not widget.testAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose):
+                        if widget and not widget.testAttribute(
+                            QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
+                        ):
                             widget.setParent(None)
                             widget.deleteLater()
                     sub_layout = item.layout()
                     if sub_layout:
                         self._find_and_track_layout_keys(sub_layout, keys_to_remove)
                         sub_layout.deleteLater()
-            
+
             for key in keys_to_remove:
                 if key in self.fields:
                     del self.fields[key]
-                
+
         except Exception as e:
             logging.error(f"Error in _clear_convert_sub: {e}")
 
@@ -306,10 +313,14 @@ class DynamicEDIBuilder:
         """Build plugin configuration sub-section."""
         schema = plugin.get_configuration_schema()
         if schema:
-            form_generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
-            plugin_config = self.folder_config.get('plugin_configurations', {}).get(plugin.get_format_name().lower(), {})
-            form_widget = form_generator.build_form(plugin_config, self.convert_sub_container)
-            
+            form_generator = FormGeneratorFactory.create_form_generator(schema, "qt")
+            plugin_config = self.folder_config.get("plugin_configurations", {}).get(
+                plugin.get_format_name().lower(), {}
+            )
+            form_widget = form_generator.build_form(
+                plugin_config, self.convert_sub_container
+            )
+
             plugin_key = f"plugin_config_{plugin.get_identifier()}"
             self.fields[plugin_key] = form_widget
             self.fields[f"{plugin_key}_generator"] = form_generator
@@ -421,51 +432,100 @@ class DynamicEDIBuilder:
         layout.addLayout(sort_row)
 
         self._populate_csv_sub_fields(
-            upc_check, a_rec_check, c_rec_check, headers_check, ampersand_check,
-            pad_arec_check, arec_padding_field, arec_padding_length,
-            override_upc_check, override_upc_level, override_upc_cat_filter,
-            upc_target_length, upc_padding_pattern, each_uom_check,
-            split_sales_tax_check, include_item_numbers_check,
-            include_item_desc_check, column_sort_field
+            upc_check,
+            a_rec_check,
+            c_rec_check,
+            headers_check,
+            ampersand_check,
+            pad_arec_check,
+            arec_padding_field,
+            arec_padding_length,
+            override_upc_check,
+            override_upc_level,
+            override_upc_cat_filter,
+            upc_target_length,
+            upc_padding_pattern,
+            each_uom_check,
+            split_sales_tax_check,
+            include_item_numbers_check,
+            include_item_desc_check,
+            column_sort_field,
         )
         self.convert_sub_layout.addWidget(wrapper)
 
-    def _populate_csv_sub_fields(self, upc_check, a_rec_check, c_rec_check, 
-                                 headers_check, ampersand_check, pad_arec_check, 
-                                 arec_padding_field, arec_padding_length,
-                                 override_upc_check, override_upc_level, 
-                                 override_upc_cat_filter, upc_target_length, 
-                                 upc_padding_pattern, each_uom_check,
-                                 split_sales_tax_check, include_item_numbers_check,
-                                 include_item_desc_check, column_sort_field):
+    def _populate_csv_sub_fields(
+        self,
+        upc_check,
+        a_rec_check,
+        c_rec_check,
+        headers_check,
+        ampersand_check,
+        pad_arec_check,
+        arec_padding_field,
+        arec_padding_length,
+        override_upc_check,
+        override_upc_level,
+        override_upc_cat_filter,
+        upc_target_length,
+        upc_padding_pattern,
+        each_uom_check,
+        split_sales_tax_check,
+        include_item_numbers_check,
+        include_item_desc_check,
+        column_sort_field,
+    ):
         cfg = self.folder_config
-        upc_check.setChecked(str(cfg.get("calculate_upc_check_digit", "False")) == "True")
+        upc_check.setChecked(
+            str(cfg.get("calculate_upc_check_digit", "False")) == "True"
+        )
         a_rec_check.setChecked(str(cfg.get("include_a_records", "False")) == "True")
         c_rec_check.setChecked(str(cfg.get("include_c_records", "False")) == "True")
         headers_check.setChecked(str(cfg.get("include_headers", "False")) == "True")
         ampersand_check.setChecked(str(cfg.get("filter_ampersand", "False")) == "True")
         pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
         arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
-        
-        pad_len = str(cfg.get("a_record_padding_length") if cfg.get("a_record_padding_length") is not None else 6)
+
+        pad_len = str(
+            cfg.get("a_record_padding_length")
+            if cfg.get("a_record_padding_length") is not None
+            else 6
+        )
         idx = arec_padding_length.findText(pad_len)
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
-            
+
         override_upc_check.setChecked(bool(cfg.get("override_upc_bool", False)))
-        
-        lvl = str(cfg.get("override_upc_level") if cfg.get("override_upc_level") is not None else 1)
+
+        lvl = str(
+            cfg.get("override_upc_level")
+            if cfg.get("override_upc_level") is not None
+            else 1
+        )
         idx = override_upc_level.findText(lvl)
         if idx >= 0:
             override_upc_level.setCurrentIndex(idx)
-            
-        override_upc_cat_filter.setText(str(cfg.get("override_upc_category_filter", "")))
-        upc_target_length.setText(str(cfg.get("upc_target_length") if cfg.get("upc_target_length") is not None else 11))
+
+        override_upc_cat_filter.setText(
+            str(cfg.get("override_upc_category_filter", ""))
+        )
+        upc_target_length.setText(
+            str(
+                cfg.get("upc_target_length")
+                if cfg.get("upc_target_length") is not None
+                else 11
+            )
+        )
         upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern", "           ")))
         each_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
-        split_sales_tax_check.setChecked(bool(cfg.get("split_prepaid_sales_tax_crec", False)))
-        include_item_numbers_check.setChecked(bool(cfg.get("include_item_numbers", False)))
-        include_item_desc_check.setChecked(bool(cfg.get("include_item_description", False)))
+        split_sales_tax_check.setChecked(
+            bool(cfg.get("split_prepaid_sales_tax_crec", False))
+        )
+        include_item_numbers_check.setChecked(
+            bool(cfg.get("include_item_numbers", False))
+        )
+        include_item_desc_check.setChecked(
+            bool(cfg.get("include_item_description", False))
+        )
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
     def _build_scannerware_sub(self):
@@ -509,11 +569,17 @@ class DynamicEDIBuilder:
         cfg = self.folder_config
         pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
         arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
-        pad_len = str(cfg.get("a_record_padding_length") if cfg.get("a_record_padding_length") is not None else 6)
+        pad_len = str(
+            cfg.get("a_record_padding_length")
+            if cfg.get("a_record_padding_length") is not None
+            else 6
+        )
         idx = arec_padding_length.findText(pad_len)
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
-        append_arec_check.setChecked(str(cfg.get("append_a_records", "False")) == "True")
+        append_arec_check.setChecked(
+            str(cfg.get("append_a_records", "False")) == "True"
+        )
         arec_append_field.setText(str(cfg.get("a_record_append_text", "")))
 
         self.convert_sub_layout.addWidget(wrapper)
@@ -548,8 +614,12 @@ class DynamicEDIBuilder:
 
         cfg = self.folder_config
         headers_check.setChecked(str(cfg.get("include_headers", "False")) == "True")
-        include_item_numbers_check.setChecked(bool(cfg.get("include_item_numbers", False)))
-        include_item_desc_check.setChecked(bool(cfg.get("include_item_description", False)))
+        include_item_numbers_check.setChecked(
+            bool(cfg.get("include_item_numbers", False))
+        )
+        include_item_desc_check.setChecked(
+            bool(cfg.get("include_item_description", False))
+        )
         each_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
@@ -580,7 +650,9 @@ class DynamicEDIBuilder:
         cfg = self.folder_config
         estore_store_number_field.setText(str(cfg.get("estore_store_number", "")))
         estore_vendor_oid_field.setText(str(cfg.get("estore_Vendor_OId", "")))
-        estore_vendor_name_field.setText(str(cfg.get("estore_vendor_NameVendorOID", "")))
+        estore_vendor_name_field.setText(
+            str(cfg.get("estore_vendor_NameVendorOID", ""))
+        )
         if fmt == "Estore eInvoice Generic":
             estore_c_record_oid_field.setText(str(cfg.get("estore_c_record_OID", "")))
 
@@ -640,7 +712,9 @@ class DynamicEDIBuilder:
         pad_row.addWidget(tweak_arec_padding_length)
         arec_layout.addLayout(pad_row)
 
-        tweak_append_arec_check = QCheckBox('Append to "A" Records (6 Characters) (Series2K)')
+        tweak_append_arec_check = QCheckBox(
+            'Append to "A" Records (6 Characters) (Series2K)'
+        )
         self.fields["append_arec_check"] = tweak_append_arec_check
         arec_layout.addWidget(tweak_append_arec_check)
 
@@ -694,7 +768,9 @@ class DynamicEDIBuilder:
         upc_row1.addWidget(QLabel("Category Filter:"))
         tweak_override_upc_cat_filter = QLineEdit()
         tweak_override_upc_cat_filter.setMaximumWidth(100)
-        self.fields["override_upc_category_filter_entry"] = tweak_override_upc_cat_filter
+        self.fields["override_upc_category_filter_entry"] = (
+            tweak_override_upc_cat_filter
+        )
         upc_row1.addWidget(tweak_override_upc_cat_filter)
         upc_layout.addLayout(upc_row1)
 
@@ -720,53 +796,102 @@ class DynamicEDIBuilder:
         wrapper_layout.addWidget(tweak_split_sales_tax_check)
 
         self._populate_tweak_fields_local(
-            tweak_upc_check, tweak_pad_arec_check, tweak_arec_padding_field,
-            tweak_arec_padding_length, tweak_append_arec_check, 
-            tweak_arec_append_field, tweak_force_txt_check, tweak_invoice_offset,
-            tweak_custom_date_check, tweak_custom_date_field, tweak_retail_uom_check,
-            tweak_override_upc_check, tweak_override_upc_level, 
-            tweak_override_upc_cat_filter, tweak_upc_target_length, 
-            tweak_upc_padding_pattern, tweak_split_sales_tax_check
+            tweak_upc_check,
+            tweak_pad_arec_check,
+            tweak_arec_padding_field,
+            tweak_arec_padding_length,
+            tweak_append_arec_check,
+            tweak_arec_append_field,
+            tweak_force_txt_check,
+            tweak_invoice_offset,
+            tweak_custom_date_check,
+            tweak_custom_date_field,
+            tweak_retail_uom_check,
+            tweak_override_upc_check,
+            tweak_override_upc_level,
+            tweak_override_upc_cat_filter,
+            tweak_upc_target_length,
+            tweak_upc_padding_pattern,
+            tweak_split_sales_tax_check,
         )
         self.dynamic_layout.addWidget(wrapper)
 
-    def _populate_tweak_fields_local(self, upc_check, pad_arec_check, 
-                                    arec_padding_field, arec_padding_length,
-                                    append_arec_check, arec_append_field, 
-                                    force_txt_check, invoice_offset,
-                                    custom_date_check, custom_date_field, 
-                                    retail_uom_check, override_upc_check, 
-                                    override_upc_level, override_upc_cat_filter, 
-                                    upc_target_length, upc_padding_pattern, 
-                                    split_sales_tax_check):
+    def _populate_tweak_fields_local(
+        self,
+        upc_check,
+        pad_arec_check,
+        arec_padding_field,
+        arec_padding_length,
+        append_arec_check,
+        arec_append_field,
+        force_txt_check,
+        invoice_offset,
+        custom_date_check,
+        custom_date_field,
+        retail_uom_check,
+        override_upc_check,
+        override_upc_level,
+        override_upc_cat_filter,
+        upc_target_length,
+        upc_padding_pattern,
+        split_sales_tax_check,
+    ):
         cfg = self.folder_config
-        upc_check.setChecked(str(cfg.get("calculate_upc_check_digit", "False")) == "True")
+        upc_check.setChecked(
+            str(cfg.get("calculate_upc_check_digit", "False")) == "True"
+        )
         pad_arec_check.setChecked(str(cfg.get("pad_a_records", "False")) == "True")
         arec_padding_field.setText(str(cfg.get("a_record_padding") or ""))
-        
-        pad_len = str(cfg.get("a_record_padding_length") if cfg.get("a_record_padding_length") is not None else 6)
+
+        pad_len = str(
+            cfg.get("a_record_padding_length")
+            if cfg.get("a_record_padding_length") is not None
+            else 6
+        )
         idx = arec_padding_length.findText(pad_len)
         if idx >= 0:
             arec_padding_length.setCurrentIndex(idx)
-            
-        append_arec_check.setChecked(str(cfg.get("append_a_records", "False")) == "True")
+
+        append_arec_check.setChecked(
+            str(cfg.get("append_a_records", "False")) == "True"
+        )
         arec_append_field.setText(str(cfg.get("a_record_append_text") or ""))
-        force_txt_check.setChecked(str(cfg.get("force_txt_file_ext", "False")) == "True")
-        
+        force_txt_check.setChecked(
+            str(cfg.get("force_txt_file_ext", "False")) == "True"
+        )
+
         offset = cfg.get("invoice_date_offset")
         invoice_offset.setValue(int(offset) if offset is not None else 0)
-        
+
         custom_date_check.setChecked(bool(cfg.get("invoice_date_custom_format", False)))
-        custom_date_field.setText(str(cfg.get("invoice_date_custom_format_string") or ""))
+        custom_date_field.setText(
+            str(cfg.get("invoice_date_custom_format_string") or "")
+        )
         retail_uom_check.setChecked(bool(cfg.get("retail_uom", False)))
         override_upc_check.setChecked(bool(cfg.get("override_upc_bool", False)))
-        
-        lvl = str(cfg.get("override_upc_level") if cfg.get("override_upc_level") is not None else 1)
+
+        lvl = str(
+            cfg.get("override_upc_level")
+            if cfg.get("override_upc_level") is not None
+            else 1
+        )
         idx = override_upc_level.findText(lvl)
         if idx >= 0:
             override_upc_level.setCurrentIndex(idx)
-            
-        override_upc_cat_filter.setText(str(cfg.get("override_upc_category_filter") or ""))
-        upc_target_length.setText(str(cfg.get("upc_target_length") if cfg.get("upc_target_length") is not None else 11))
-        upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern") or "           "))
-        split_sales_tax_check.setChecked(bool(cfg.get("split_prepaid_sales_tax_crec", False)))
+
+        override_upc_cat_filter.setText(
+            str(cfg.get("override_upc_category_filter") or "")
+        )
+        upc_target_length.setText(
+            str(
+                cfg.get("upc_target_length")
+                if cfg.get("upc_target_length") is not None
+                else 11
+            )
+        )
+        upc_padding_pattern.setText(
+            str(cfg.get("upc_padding_pattern") or "           ")
+        )
+        split_sales_tax_check.setChecked(
+            bool(cfg.get("split_prepaid_sales_tax_crec", False))
+        )

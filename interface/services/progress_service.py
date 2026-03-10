@@ -1,6 +1,7 @@
 """Toolkit-agnostic progress reporting service."""
+
 from __future__ import annotations
-from typing import Protocol, runtime_checkable, Optional
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -25,9 +26,9 @@ class ProgressCallback(Protocol):
 
     def update_progress(self, progress: int) -> None:
         """Update the progress with a percentage value (0-100).
-        
+
         Shows a progress bar with the given percentage and hides the throbber.
-        
+
         Args:
             progress: Progress percentage from 0 to 100
         """

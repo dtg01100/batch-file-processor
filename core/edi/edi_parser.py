@@ -73,7 +73,7 @@ def capture_records(line, parser=None):
 @dataclass
 class ARecord:
     """EDI A record (invoice header).
-    
+
     Attributes:
         record_type: Always 'A'
         cust_vendor: 6-character vendor code
@@ -81,6 +81,7 @@ class ARecord:
         invoice_date: 6-character date (MMDDYY)
         invoice_total: 10-character total (cents as integer, may be negative)
     """
+
     record_type: str
     cust_vendor: str
     invoice_number: str
@@ -91,7 +92,7 @@ class ARecord:
 @dataclass
 class BRecord:
     """EDI B record (line item).
-    
+
     Attributes:
         record_type: Always 'B'
         upc_number: 11-character UPC code
@@ -105,6 +106,7 @@ class BRecord:
         price_multi_pack: 3-character multi-pack price
         parent_item_number: 6-character parent item number
     """
+
     record_type: str
     upc_number: str
     description: str
@@ -121,13 +123,14 @@ class BRecord:
 @dataclass
 class CRecord:
     """EDI C record (charge/allowance).
-    
+
     Attributes:
         record_type: Always 'C'
         charge_type: 3-character charge type code
         description: 25-character description
         amount: 9-character amount
     """
+
     record_type: str
     charge_type: str
     description: str
@@ -136,16 +139,16 @@ class CRecord:
 
 def capture_records(line: str, parser=None) -> Optional[dict]:
     """Parse an EDI record line into a dictionary.
-    
+
     Args:
         line: Single EDI record line
-        
+
     Returns:
         Dictionary with record fields, or None for empty lines
-        
+
     Raises:
         ValueError: If line doesn't match known record type
-        
+
     Example:
         >>> capture_records("AVENDOR0000000001120240000000123\\n")
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
@@ -158,10 +161,10 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
                 return None
             raise Exception("Not An EDI")
         return result
-    
+
     if not line or line.startswith("\x1a") or line.strip() == "":
         return None
-    
+
     if line.startswith("A"):
         return {
             "record_type": line[0],
@@ -197,13 +200,13 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
 
 def parse_a_record(line: str) -> ARecord:
     """Parse an A record line into an ARecord dataclass.
-    
+
     Args:
         line: Single A record line
-        
+
     Returns:
         ARecord dataclass instance
-        
+
     Raises:
         ValueError: If line is not an A record
     """
@@ -215,13 +218,13 @@ def parse_a_record(line: str) -> ARecord:
 
 def parse_b_record(line: str) -> BRecord:
     """Parse a B record line into a BRecord dataclass.
-    
+
     Args:
         line: Single B record line
-        
+
     Returns:
         BRecord dataclass instance
-        
+
     Raises:
         ValueError: If line is not a B record
     """
@@ -233,13 +236,13 @@ def parse_b_record(line: str) -> BRecord:
 
 def parse_c_record(line: str) -> CRecord:
     """Parse a C record line into a CRecord dataclass.
-    
+
     Args:
         line: Single C record line
-        
+
     Returns:
         CRecord dataclass instance
-        
+
     Raises:
         ValueError: If line is not a C record
     """
@@ -254,17 +257,17 @@ def build_a_record(
     invoice_number: str,
     invoice_date: str,
     invoice_total: str,
-    append_text: str = ""
+    append_text: str = "",
 ) -> str:
     """Build an A record line from components.
-    
+
     Args:
         cust_vendor: 6-character vendor code
         invoice_number: 10-character invoice number
         invoice_date: 6-character date (MMDDYY)
         invoice_total: 10-character total
         append_text: Optional text to append
-        
+
     Returns:
         Complete A record line with newline
     """
@@ -282,10 +285,10 @@ def build_b_record(
     qty_of_units: str,
     suggested_retail_price: str,
     price_multi_pack: str = "   ",
-    parent_item_number: str = "      "
+    parent_item_number: str = "      ",
 ) -> str:
     """Build a B record line from components.
-    
+
     Args:
         upc_number: 11-character UPC code
         description: 25-character item description
@@ -297,7 +300,7 @@ def build_b_record(
         suggested_retail_price: 5-character retail price
         price_multi_pack: 3-character multi-pack price (default: spaces)
         parent_item_number: 6-character parent item number (default: spaces)
-        
+
     Returns:
         Complete B record line with newline
     """
@@ -308,18 +311,14 @@ def build_b_record(
     )
 
 
-def build_c_record(
-    charge_type: str,
-    description: str,
-    amount: str
-) -> str:
+def build_c_record(charge_type: str, description: str, amount: str) -> str:
     """Build a C record line from components.
-    
+
     Args:
         charge_type: 3-character charge type code
         description: 25-character description
         amount: 9-character amount
-        
+
     Returns:
         Complete C record line with newline
     """

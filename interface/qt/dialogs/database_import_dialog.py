@@ -11,7 +11,6 @@ from typing import Any, Optional
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -116,15 +115,17 @@ class DatabaseImportDialog(BaseDialog):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Database File",
-            os.path.expanduser('~'),
-            "Database Files (*.db);;All Files (*)"
+            os.path.expanduser("~"),
+            "Database Files (*.db);;All Files (*)",
         )
 
         if file_path and os.path.exists(file_path):
             self._new_database_path = file_path
             self._db_label.setText(file_path)
             self._import_button.setEnabled(True)
-            self._database_migrate_job = DbMigrationJob(self._original_database_path, file_path)
+            self._database_migrate_job = DbMigrationJob(
+                self._original_database_path, file_path
+            )
 
     def _start_import(self) -> None:
         """Start the import process."""
@@ -144,7 +145,7 @@ class DatabaseImportDialog(BaseDialog):
             self._original_database_path,
             self._running_platform,
             self._current_db_version,
-            self._backup_path
+            self._backup_path,
         )
         self._import_thread.progress.connect(self._on_progress)
         self._import_thread.finished.connect(self._on_finished)
@@ -178,17 +179,19 @@ class DatabaseImportDialog(BaseDialog):
         self._import_button.setEnabled(True)
         self._select_button.setEnabled(True)
 
-    def _on_confirm_required(self, title: str, message: str, result_event: threading.Event) -> None:
+    def _on_confirm_required(
+        self, title: str, message: str, result_event: threading.Event
+    ) -> None:
         """Handle confirmation request from background thread."""
         reply = QMessageBox.question(
             self,
             title,
             message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
         # Store result in the thread's result container via the event's dict
-        result_event.result = (reply == QMessageBox.StandardButton.Yes)
+        result_event.result = reply == QMessageBox.StandardButton.Yes
         result_event.set()
 
 
@@ -234,9 +237,9 @@ class ImportThread(QThread):
         try:
             # Validate database version
             new_db_connection = sqlite_wrapper.Database.connect(self._new_db_path)
-            new_db_version_table = new_db_connection['version']
+            new_db_version_table = new_db_connection["version"]
             new_db_version_dict = new_db_version_table.find_one(id=1)
-            new_db_version = new_db_version_dict['version']
+            new_db_version = new_db_version_dict["version"]
 
             # Check version compatibility
             if int(new_db_version) < 14:
@@ -245,7 +248,7 @@ class ImportThread(QThread):
                     "Database versions below 14 do not contain operating system "
                     "information.\nFolder paths are not portable between operating "
                     "systems.\nThere is no guarantee that the imported folders will "
-                    "work. Continue?"
+                    "work. Continue?",
                 ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
@@ -254,7 +257,7 @@ class ImportThread(QThread):
                 if not self._confirm(
                     "Version Warning",
                     "The proposed database version is newer than the version "
-                    "supported by this program.\nContinue?"
+                    "supported by this program.\nContinue?",
                 ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
@@ -262,27 +265,25 @@ class ImportThread(QThread):
                 if not self._confirm(
                     "Compatibility Warning",
                     "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
-                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path
+                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path,
                 ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
-            elif new_db_version_dict.get('os') != self._platform:
+            elif new_db_version_dict.get("os") != self._platform:
                 if not self._confirm(
                     "Platform Warning",
                     "The operating system specified in the configuration does "
                     "not match the currently running operating system.\n"
                     "There is no guarantee that the imported folders will work. "
-                    "Continue?"
+                    "Continue?",
                 ):
                     self.finished.emit(False, "Import cancelled by user")
                     return
 
             # Run the migration
             self._migrate_job.do_migrate(
-                self,
-                self._new_db_path,
-                self._original_db_path
+                self, self._new_db_path, self._original_db_path
             )
 
             self.finished.emit(True, "Import completed successfully")
@@ -320,30 +321,34 @@ class DbMigrationJob:
         backup_increment.do_backup(self.original_folder_path)
         modified_new_path = backup_increment.do_backup(self.new_folder_path)
 
-        original_db_version = original_db['version']
+        original_db_version = original_db["version"]
         original_db_version_dict = original_db_version.find_one(id=1)
 
         new_db = sqlite_wrapper.Database.connect(modified_new_path)
-        new_db_version = new_db['version']
+        new_db_version = new_db["version"]
         new_db_version_dict = new_db_version.find_one(id=1)
 
-        if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
+        if int(new_db_version_dict["version"]) < int(
+            original_db_version_dict["version"]
+        ):
             folders_database_migrator.upgrade_database(new_db, None, "Null")
 
         # Get active folders
-        new_folders = new_db['folders']
-        old_folders = original_db['folders']
+        new_folders = new_db["folders"]
+        old_folders = original_db["folders"]
 
         # Count folders for progress
         active_new_folders = list(new_folders.find(folder_is_active=1))
-        
+
         total_folders = len(active_new_folders)
         thread.progress.emit(0, total_folders, "Migrating folders...")
 
         # Migrate folders
         for i, folder in enumerate(active_new_folders):
             self._migrate_folder(folder, old_folders, new_db)
-            thread.progress.emit(i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders")
+            thread.progress.emit(
+                i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders"
+            )
 
     def _migrate_folder(
         self,
@@ -356,50 +361,53 @@ class DbMigrationJob:
         match = None
         for old_folder in old_folders.find(folder_is_active=1):
             try:
-                if os.path.samefile(
-                    old_folder['folder_name'],
-                    folder['folder_name']
-                ):
+                if os.path.samefile(old_folder["folder_name"], folder["folder_name"]):
                     match = old_folder
                     break
             except (OSError, TypeError, ValueError):
-                if old_folder['folder_name'] == folder['folder_name']:
+                if old_folder["folder_name"] == folder["folder_name"]:
                     match = old_folder
                     break
 
         if match:
-            update_data = {'id': folder['id']}
+            update_data = {"id": folder["id"]}
 
             # Merge backend settings
-            if match.get('process_backend_copy') in (True, 1, "True"):
-                update_data.update({
-                    'process_backend_copy': match['process_backend_copy'],
-                    'copy_to_directory': match['copy_to_directory'],
-                })
+            if match.get("process_backend_copy") in (True, 1, "True"):
+                update_data.update(
+                    {
+                        "process_backend_copy": match["process_backend_copy"],
+                        "copy_to_directory": match["copy_to_directory"],
+                    }
+                )
 
-            if match.get('process_backend_ftp') in (True, 1, "True"):
-                update_data.update({
-                    'ftp_server': match['ftp_server'],
-                    'ftp_folder': match['ftp_folder'],
-                    'ftp_username': match['ftp_username'],
-                    'ftp_password': match['ftp_password'],
-                })
+            if match.get("process_backend_ftp") in (True, 1, "True"):
+                update_data.update(
+                    {
+                        "ftp_server": match["ftp_server"],
+                        "ftp_folder": match["ftp_folder"],
+                        "ftp_username": match["ftp_username"],
+                        "ftp_password": match["ftp_password"],
+                    }
+                )
 
-            if match.get('process_backend_email') in (True, 1, "True"):
-                update_data.update({
-                    'process_backend_email': match['process_backend_email'],
-                    'email_recipients': match['email_recipients'],
-                    'email_subject': match['email_subject'],
-                    'email_from': match['email_from'],
-                    'smtp_server': match['smtp_server'],
-                    'smtp_port': match['smtp_port'],
-                    'smtp_username': match['smtp_username'],
-                    'smtp_password': match['smtp_password'],
-                    'smtp_use_tls': match['smtp_use_tls'],
-                })
+            if match.get("process_backend_email") in (True, 1, "True"):
+                update_data.update(
+                    {
+                        "process_backend_email": match["process_backend_email"],
+                        "email_recipients": match["email_recipients"],
+                        "email_subject": match["email_subject"],
+                        "email_from": match["email_from"],
+                        "smtp_server": match["smtp_server"],
+                        "smtp_port": match["smtp_port"],
+                        "smtp_username": match["smtp_username"],
+                        "smtp_password": match["smtp_password"],
+                        "smtp_use_tls": match["smtp_use_tls"],
+                    }
+                )
 
             if update_data:
-                new_db['folders'].update(update_data)
+                new_db["folders"].update(update_data)
 
 
 def show_database_import_dialog(

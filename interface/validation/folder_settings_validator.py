@@ -4,19 +4,14 @@ This module provides validation logic for folder settings, extracted
 from the EditDialog class to enable comprehensive unit testing.
 """
 
-from typing import List, Dict, Optional, Tuple, Any, TYPE_CHECKING
-from dataclasses import dataclass, field
-from enum import Enum
+from typing import List, Optional, TYPE_CHECKING
+from dataclasses import dataclass
 import re
 
 from interface.models.folder_configuration import (
     FolderConfiguration,
-    FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
 )
-from interface.services.ftp_service import FTPServiceProtocol, FTPConnectionResult
+from interface.services.ftp_service import FTPServiceProtocol
 
 if TYPE_CHECKING:
     from interface.operations.folder_data_extractor import ExtractedDialogFields
@@ -25,6 +20,7 @@ if TYPE_CHECKING:
 @dataclass
 class ValidationError:
     """Structured validation error."""
+
     field: str
     message: str
     severity: str = "error"  # "error", "warning"
@@ -63,7 +59,7 @@ class FolderSettingsValidator:
     def __init__(
         self,
         ftp_service: Optional[FTPServiceProtocol] = None,
-        existing_aliases: Optional[List[str]] = None
+        existing_aliases: Optional[List[str]] = None,
     ):
         """
         Initialize validator with optional dependencies.
@@ -82,7 +78,7 @@ class FolderSettingsValidator:
         folder: str,
         username: str,
         password: str,
-        enabled: bool
+        enabled: bool,
     ) -> ValidationResult:
         """
         Validate FTP settings.
@@ -128,7 +124,9 @@ class FolderSettingsValidator:
             try:
                 port_int = int(port)
                 if not (1 <= port_int <= 65535):
-                    result.add_error("ftp_port", "FTP Port Field Needs To Be A Valid Port Number")
+                    result.add_error(
+                        "ftp_port", "FTP Port Field Needs To Be A Valid Port Number"
+                    )
             except ValueError:
                 result.add_error("ftp_port", "FTP Port Field Needs To Be A Number")
 
@@ -139,7 +137,7 @@ class FolderSettingsValidator:
                 port=int(port),
                 username=username,
                 password=password,
-                folder=folder
+                folder=folder,
             )
             if not conn_result.success:
                 error_msg = conn_result.error_message or "FTP connection failed"
@@ -148,9 +146,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_email_settings(
-        self,
-        recipients: str,
-        enabled: bool
+        self, recipients: str, enabled: bool
     ) -> ValidationResult:
         """
         Validate email settings.
@@ -168,26 +164,28 @@ class FolderSettingsValidator:
             return result
 
         if not recipients:
-            result.add_error("email_recipient", "Email Destination Address Field Is Required")
+            result.add_error(
+                "email_recipient", "Email Destination Address Field Is Required"
+            )
             return result
 
         # Validate each recipient
-        emails = re.split(r'[;,]\s*', recipients.strip())
+        emails = re.split(r"[;,]\s*", recipients.strip())
         for email in emails:
             if not self._validate_email(email):
-                result.add_error("email_recipient", f"Invalid Email Destination Address: {email}")
+                result.add_error(
+                    "email_recipient", f"Invalid Email Destination Address: {email}"
+                )
 
         return result
 
     def _validate_email(self, email: str) -> bool:
         """Basic email validation."""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$'
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$"
         return bool(re.match(pattern, email))
 
     def validate_copy_settings(
-        self,
-        destination: str,
-        enabled: bool
+        self, destination: str, enabled: bool
     ) -> ValidationResult:
         """
         Validate copy backend settings.
@@ -205,15 +203,14 @@ class FolderSettingsValidator:
             return result
 
         if not destination:
-            result.add_error("copy_destination", "Copy Backend Destination Is Currently Unset")
+            result.add_error(
+                "copy_destination", "Copy Backend Destination Is Currently Unset"
+            )
 
         return result
 
     def validate_alias(
-        self,
-        alias: str,
-        folder_name: str,
-        current_alias: Optional[str] = None
+        self, alias: str, folder_name: str, current_alias: Optional[str] = None
     ) -> ValidationResult:
         """
         Validate folder alias.
@@ -255,7 +252,9 @@ class FolderSettingsValidator:
         result = ValidationResult()
 
         if offset not in range(-14, 15):
-            result.add_error("invoice_date_offset", "Invoice date offset not in valid range")
+            result.add_error(
+                "invoice_date_offset", "Invoice date offset not in valid range"
+            )
 
         return result
 
@@ -264,7 +263,7 @@ class FolderSettingsValidator:
         padding_text: str,
         padding_length: int,
         enabled: bool,
-        convert_format: Optional[str] = None
+        convert_format: Optional[str] = None,
     ) -> ValidationResult:
         """
         Validate A-record padding settings.
@@ -284,7 +283,7 @@ class FolderSettingsValidator:
         if convert_format == "ScannerWare" and not enabled:
             result.add_error(
                 "a_record_padding",
-                '"A" Record Padding Needs To Be Enabled For ScannerWare Backend'
+                '"A" Record Padding Needs To Be Enabled For ScannerWare Backend',
             )
             return result
 
@@ -294,18 +293,18 @@ class FolderSettingsValidator:
         if len(padding_text) > padding_length:
             result.add_error(
                 "a_record_padding",
-                f'"A" Record Padding Needs To Be At Most {padding_length} Characters'
+                f'"A" Record Padding Needs To Be At Most {padding_length} Characters',
             )
 
         if len(padding_text) != 6:
-            result.add_error("a_record_padding", '"A" Record Padding Needs To Be Six Characters')
+            result.add_error(
+                "a_record_padding", '"A" Record Padding Needs To Be Six Characters'
+            )
 
         return result
 
     def validate_upc_override(
-        self,
-        enabled: bool,
-        category_filter: str
+        self, enabled: bool, category_filter: str
     ) -> ValidationResult:
         """
         Validate UPC override settings.
@@ -324,8 +323,7 @@ class FolderSettingsValidator:
 
         if not category_filter:
             result.add_error(
-                "upc_category_filter",
-                "Override UPC Category Filter Is Required"
+                "upc_category_filter", "Override UPC Category Filter Is Required"
             )
             return result
 
@@ -337,20 +335,17 @@ class FolderSettingsValidator:
                     if cat_int not in range(1, 100):
                         result.add_error(
                             "upc_category_filter",
-                            "Override UPC Category Filter Is Invalid"
+                            "Override UPC Category Filter Is Invalid",
                         )
                 except ValueError:
                     result.add_error(
-                        "upc_category_filter",
-                        "Override UPC Category Filter Is Invalid"
+                        "upc_category_filter", "Override UPC Category Filter Is Invalid"
                     )
 
         return result
 
     def validate_backend_specific(
-        self,
-        convert_format: str,
-        division_id: Optional[str] = None
+        self, convert_format: str, division_id: Optional[str] = None
     ) -> ValidationResult:
         """
         Validate backend-specific settings.
@@ -370,18 +365,13 @@ class FolderSettingsValidator:
                     int(division_id)
                 except ValueError:
                     result.add_error(
-                        "fintech_division_id",
-                        "fintech divisionid needs to be a number"
+                        "fintech_division_id", "fintech divisionid needs to be a number"
                     )
 
         return result
 
     def validate_edi_split_requirements(
-        self,
-        convert_format: str,
-        split_edi: bool,
-        prepend_dates: bool,
-        tweak_edi: bool
+        self, convert_format: str, split_edi: bool, prepend_dates: bool, tweak_edi: bool
     ) -> ValidationResult:
         """
         Validate EDI split requirements.
@@ -403,14 +393,14 @@ class FolderSettingsValidator:
 
         # Jolley custom requires split EDI
         if convert_format == "jolley_custom" and not split_edi and not tweak_edi:
-            result.add_error("split_edi", "EDI needs to be split for jolley_custom backend")
+            result.add_error(
+                "split_edi", "EDI needs to be split for jolley_custom backend"
+            )
 
         return result
 
     def validate_complete(
-        self,
-        config: FolderConfiguration,
-        current_alias: Optional[str] = None
+        self, config: FolderConfiguration, current_alias: Optional[str] = None
     ) -> ValidationResult:
         """
         Validate complete folder configuration.
@@ -432,7 +422,7 @@ class FolderSettingsValidator:
                 folder=config.ftp.folder,
                 username=config.ftp.username,
                 password=config.ftp.password,
-                enabled=config.process_backend_ftp
+                enabled=config.process_backend_ftp,
             )
             for error in ftp_result.errors:
                 result.add_error(error.field, error.message)
@@ -440,8 +430,7 @@ class FolderSettingsValidator:
         # Validate Email
         if config.email:
             email_result = self.validate_email_settings(
-                recipients=config.email.recipients,
-                enabled=config.process_backend_email
+                recipients=config.email.recipients, enabled=config.process_backend_email
             )
             for error in email_result.errors:
                 result.add_error(error.field, error.message)
@@ -450,7 +439,7 @@ class FolderSettingsValidator:
         if config.copy:
             copy_result = self.validate_copy_settings(
                 destination=config.copy.destination_directory,
-                enabled=config.process_backend_copy
+                enabled=config.process_backend_copy,
             )
             for error in copy_result.errors:
                 result.add_error(error.field, error.message)
@@ -459,7 +448,7 @@ class FolderSettingsValidator:
         alias_result = self.validate_alias(
             alias=config.alias,
             folder_name=config.folder_name,
-            current_alias=current_alias
+            current_alias=current_alias,
         )
         for error in alias_result.errors:
             result.add_error(error.field, error.message)
@@ -476,7 +465,7 @@ class FolderSettingsValidator:
         if config.upc_override:
             upc_result = self.validate_upc_override(
                 enabled=config.upc_override.enabled,
-                category_filter=config.upc_override.category_filter
+                category_filter=config.upc_override.category_filter,
             )
             for error in upc_result.errors:
                 result.add_error(error.field, error.message)
@@ -485,17 +474,19 @@ class FolderSettingsValidator:
         if config.backend_specific and config.edi:
             backend_result = self.validate_backend_specific(
                 convert_format=config.edi.convert_to_format,
-                division_id=config.backend_specific.fintech_division_id
+                division_id=config.backend_specific.fintech_division_id,
             )
             for error in backend_result.errors:
                 result.add_error(error.field, error.message)
 
         # Backend count check
-        backend_count = sum([
-            config.process_backend_copy,
-            config.process_backend_ftp,
-            config.process_backend_email
-        ])
+        backend_count = sum(
+            [
+                config.process_backend_copy,
+                config.process_backend_ftp,
+                config.process_backend_email,
+            ]
+        )
         if backend_count == 0 and config.folder_is_active == "True":
             result.add_error("backends", "No Backend Is Selected")
 
@@ -504,7 +495,7 @@ class FolderSettingsValidator:
     def validate_extracted_fields(
         self,
         extracted_fields: "ExtractedDialogFields",
-        current_alias: Optional[str] = None
+        current_alias: Optional[str] = None,
     ) -> ValidationResult:
         """
         Validate extracted dialog fields.
@@ -526,7 +517,7 @@ class FolderSettingsValidator:
                 folder=extracted_fields.ftp_folder,
                 username=extracted_fields.ftp_username,
                 password=extracted_fields.ftp_password,
-                enabled=True
+                enabled=True,
             )
             for error in ftp_result.errors:
                 result.add_error(error.field, error.message)
@@ -534,8 +525,7 @@ class FolderSettingsValidator:
         # Validate Email settings
         if extracted_fields.process_backend_email:
             email_result = self.validate_email_settings(
-                recipients=extracted_fields.email_to,
-                enabled=True
+                recipients=extracted_fields.email_to, enabled=True
             )
             for error in email_result.errors:
                 result.add_error(error.field, error.message)
@@ -543,8 +533,7 @@ class FolderSettingsValidator:
         # Validate Copy settings
         if extracted_fields.process_backend_copy:
             copy_result = self.validate_copy_settings(
-                destination=extracted_fields.copy_to_directory,
-                enabled=True
+                destination=extracted_fields.copy_to_directory, enabled=True
             )
             for error in copy_result.errors:
                 result.add_error(error.field, error.message)
@@ -553,17 +542,19 @@ class FolderSettingsValidator:
         alias_result = self.validate_alias(
             alias=extracted_fields.alias,
             folder_name=extracted_fields.folder_name,
-            current_alias=current_alias
+            current_alias=current_alias,
         )
         for error in alias_result.errors:
             result.add_error(error.field, error.message)
 
         # Backend count check
-        backend_count = sum([
-            extracted_fields.process_backend_copy,
-            extracted_fields.process_backend_ftp,
-            extracted_fields.process_backend_email
-        ])
+        backend_count = sum(
+            [
+                extracted_fields.process_backend_copy,
+                extracted_fields.process_backend_ftp,
+                extracted_fields.process_backend_email,
+            ]
+        )
         if backend_count == 0 and extracted_fields.folder_is_active == "True":
             result.add_error("backends", "No Backend Is Selected")
 

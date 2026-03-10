@@ -181,28 +181,37 @@ class FolderListWidget(QWidget):
         """
         container = QWidget()
         container.setObjectName("card")
-        container.setStyleSheet(f"""
+        container.setStyleSheet(
+            f"""
             #card {{
                 background-color: {Theme.CARD_BACKGROUND};
                 border: 1px solid {Theme.CARD_BORDER};
                 border-radius: {Theme.RADIUS_LG};
                 padding: {Theme.SPACING_LG};
             }}
-        """)
+        """
+        )
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_LG_INT, Theme.SPACING_LG_INT, Theme.SPACING_LG_INT)
+        container_layout.setContentsMargins(
+            Theme.SPACING_LG_INT,
+            Theme.SPACING_LG_INT,
+            Theme.SPACING_LG_INT,
+            Theme.SPACING_LG_INT,
+        )
         container_layout.setSpacing(Theme.SPACING_MD_INT)
 
         # Modern header with enhanced typography
         header = QLabel(title)
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet(f"""
+        header.setStyleSheet(
+            f"""
             font-size: {Theme.FONT_SIZE_XL};
             font-weight: 600;
             color: {Theme.TEXT_PRIMARY};
             padding-bottom: {Theme.SPACING_MD};
             letter-spacing: 0.25px;
-        """)
+        """
+        )
         container_layout.addWidget(header)
 
         # Modern separator
@@ -210,13 +219,15 @@ class FolderListWidget(QWidget):
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Plain)
         separator.setObjectName("separator")
-        separator.setStyleSheet(f"""
+        separator.setStyleSheet(
+            f"""
             QFrame[frame="separator"] {{
                 background-color: {Theme.OUTLINE_VARIANT};
                 border: none;
                 height: 1px;
             }}
-        """)
+        """
+        )
         container_layout.addWidget(separator)
 
         # Scroll area with modern styling
@@ -224,27 +235,41 @@ class FolderListWidget(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setStyleSheet(f"""
+        scroll_area.setStyleSheet(
+            f"""
             QScrollArea {{
                 border: none;
                 background-color: transparent;
             }}
-        """)
+        """
+        )
 
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setContentsMargins(Theme.SPACING_SM_INT, Theme.SPACING_MD_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT)
+        scroll_layout.setContentsMargins(
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_MD_INT,
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+        )
         scroll_layout.setSpacing(Theme.SPACING_SM_INT)
 
         if not folder_list:
             empty_label = QLabel(f"No {title}")
-            empty_label.setStyleSheet(f"""
+            empty_label.setStyleSheet(
+                f"""
                 color: {Theme.TEXT_TERTIARY};
                 font-size: {Theme.FONT_SIZE_SM};
                 font-style: italic;
-            """)
+            """
+            )
             empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_label.setContentsMargins(Theme.SPACING_LG_INT, Theme.SPACING_XXL_INT, Theme.SPACING_LG_INT, Theme.SPACING_XXL_INT)
+            empty_label.setContentsMargins(
+                Theme.SPACING_LG_INT,
+                Theme.SPACING_XXL_INT,
+                Theme.SPACING_LG_INT,
+                Theme.SPACING_XXL_INT,
+            )
             scroll_layout.addWidget(empty_label)
 
         max_alias_length = self._calculate_max_alias_length(folder_list)
@@ -276,7 +301,8 @@ class FolderListWidget(QWidget):
         """
         row_widget = QWidget()
         row_widget.setObjectName("folderCard")
-        row_widget.setStyleSheet(f"""
+        row_widget.setStyleSheet(
+            f"""
             #folderCard {{
                 background-color: {Theme.CARD_SURFACE};
                 border: 1px solid {Theme.CARD_BORDER};
@@ -287,9 +313,15 @@ class FolderListWidget(QWidget):
                 background-color: {Theme.SURFACE_VARIANT};
                 border-color: {Theme.PRIMARY};
             }}
-        """)
+        """
+        )
         row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(Theme.SPACING_SM_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT, Theme.SPACING_SM_INT)
+        row_layout.setContentsMargins(
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+            Theme.SPACING_SM_INT,
+        )
         row_layout.setSpacing(Theme.SPACING_SM_INT)
 
         folder_id: int = folder["id"]
@@ -301,20 +333,24 @@ class FolderListWidget(QWidget):
         status_badge.setFixedWidth(24)
         status_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if is_active:
-            status_badge.setStyleSheet(f"""
+            status_badge.setStyleSheet(
+                f"""
                 color: {Theme.PRIMARY};
                 font-size: 18px;
                 font-weight: bold;
-            """)
+            """
+            )
             status_badge.setToolTip("Active")
         else:
-            status_badge.setStyleSheet(f"""
+            status_badge.setStyleSheet(
+                f"""
                 color: {Theme.TEXT_DISABLED};
                 font-size: 18px;
                 font-weight: bold;
-            """)
+            """
+            )
             status_badge.setToolTip("Inactive")
-        
+
         row_layout.addWidget(status_badge)
 
         # Edit button (always present, expands to show folder alias)
@@ -335,7 +371,9 @@ class FolderListWidget(QWidget):
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Disable folder")
             self._style_action_button(toggle_btn)
-            toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
+            toggle_btn.clicked.connect(
+                lambda _checked, fid=folder_id: self._on_toggle(fid)
+            )
             row_layout.addWidget(toggle_btn)
 
             # Send button
@@ -352,7 +390,9 @@ class FolderListWidget(QWidget):
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Enable folder")
             self._style_action_button(toggle_btn)
-            toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
+            toggle_btn.clicked.connect(
+                lambda _checked, fid=folder_id: self._on_toggle(fid)
+            )
             row_layout.addWidget(toggle_btn)
 
             # Delete button
@@ -435,9 +475,7 @@ class FolderListWidget(QWidget):
             contains no aliases.
         """
         aliases = [
-            entry["alias"]
-            for entry in folder_list
-            if entry.get("alias") is not None
+            entry["alias"] for entry in folder_list if entry.get("alias") is not None
         ]
         if aliases:
             return len(max(aliases, key=len))

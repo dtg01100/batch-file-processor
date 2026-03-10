@@ -1,4 +1,5 @@
 """Tests for Qt UI service implementations using pytest-qt."""
+
 import pytest
 
 from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog, QWidget
@@ -16,7 +17,8 @@ class TestQtUIService:
     def test_show_info(self, qtbot, monkeypatch):
         calls = []
         monkeypatch.setattr(
-            QMessageBox, "information",
+            QMessageBox,
+            "information",
             staticmethod(lambda *args: calls.append(args)),
         )
         service = QtUIService(parent=None)
@@ -27,7 +29,8 @@ class TestQtUIService:
     def test_show_error(self, qtbot, monkeypatch):
         calls = []
         monkeypatch.setattr(
-            QMessageBox, "critical",
+            QMessageBox,
+            "critical",
             staticmethod(lambda *args: calls.append(args)),
         )
         service = QtUIService(parent=None)
@@ -38,7 +41,8 @@ class TestQtUIService:
     def test_show_warning(self, qtbot, monkeypatch):
         calls = []
         monkeypatch.setattr(
-            QMessageBox, "warning",
+            QMessageBox,
+            "warning",
             staticmethod(lambda *args: calls.append(args)),
         )
         service = QtUIService(parent=None)
@@ -48,7 +52,8 @@ class TestQtUIService:
 
     def test_ask_yes_no_yes(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QMessageBox, "question",
+            QMessageBox,
+            "question",
             staticmethod(lambda *args, **kw: _StandardButton.Yes),
         )
         service = QtUIService(parent=None)
@@ -56,7 +61,8 @@ class TestQtUIService:
 
     def test_ask_yes_no_no(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QMessageBox, "question",
+            QMessageBox,
+            "question",
             staticmethod(lambda *args, **kw: _StandardButton.No),
         )
         service = QtUIService(parent=None)
@@ -64,7 +70,8 @@ class TestQtUIService:
 
     def test_ask_ok_cancel_ok(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QMessageBox, "question",
+            QMessageBox,
+            "question",
             staticmethod(lambda *args, **kw: _StandardButton.Ok),
         )
         service = QtUIService(parent=None)
@@ -72,7 +79,8 @@ class TestQtUIService:
 
     def test_ask_ok_cancel_cancel(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QMessageBox, "question",
+            QMessageBox,
+            "question",
             staticmethod(lambda *args, **kw: _StandardButton.Cancel),
         )
         service = QtUIService(parent=None)
@@ -86,15 +94,18 @@ class TestQtUIService:
         assert result == "Text Files (*.txt)"
 
     def test_convert_filetypes_multiple(self):
-        result = QtUIService._convert_filetypes([
-            ("Text Files", "*.txt"),
-            ("All Files", "*.*"),
-        ])
+        result = QtUIService._convert_filetypes(
+            [
+                ("Text Files", "*.txt"),
+                ("All Files", "*.*"),
+            ]
+        )
         assert result == "Text Files (*.txt);;All Files (*.*)"
 
     def test_ask_directory(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QFileDialog, "getExistingDirectory",
+            QFileDialog,
+            "getExistingDirectory",
             staticmethod(lambda *args, **kw: "/some/path"),
         )
         service = QtUIService(parent=None)
@@ -103,7 +114,8 @@ class TestQtUIService:
 
     def test_ask_directory_cancel(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QFileDialog, "getExistingDirectory",
+            QFileDialog,
+            "getExistingDirectory",
             staticmethod(lambda *args, **kw: ""),
         )
         service = QtUIService(parent=None)
@@ -112,7 +124,8 @@ class TestQtUIService:
 
     def test_ask_open_filename(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QFileDialog, "getOpenFileName",
+            QFileDialog,
+            "getOpenFileName",
             staticmethod(lambda *args, **kw: ("/file.txt", "")),
         )
         service = QtUIService(parent=None)
@@ -121,7 +134,8 @@ class TestQtUIService:
 
     def test_ask_save_filename_appends_ext(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QFileDialog, "getSaveFileName",
+            QFileDialog,
+            "getSaveFileName",
             staticmethod(lambda *args, **kw: ("/file", "")),
         )
         service = QtUIService(parent=None)
@@ -130,7 +144,8 @@ class TestQtUIService:
 
     def test_ask_save_filename_no_double_ext(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            QFileDialog, "getSaveFileName",
+            QFileDialog,
+            "getSaveFileName",
             staticmethod(lambda *args, **kw: ("/file.csv", "")),
         )
         service = QtUIService(parent=None)
@@ -140,7 +155,8 @@ class TestQtUIService:
     def test_pump_events(self, qtbot, monkeypatch):
         calls = []
         monkeypatch.setattr(
-            QApplication, "processEvents",
+            QApplication,
+            "processEvents",
             staticmethod(lambda *args: calls.append(True)),
         )
         service = QtUIService(parent=None)

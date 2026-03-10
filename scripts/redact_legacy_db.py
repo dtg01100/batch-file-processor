@@ -3,7 +3,9 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'tests', 'fixtures', 'legacy_v32_folders.db')
+DB_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "tests", "fixtures", "legacy_v32_folders.db"
+)
 
 
 def redact():
@@ -11,7 +13,8 @@ def redact():
     cursor = conn.cursor()
 
     # Redact folders table
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE folders SET
             email_origin_address = 'user' || id || '@example.com',
             email_origin_password = 'redacted_password',
@@ -44,11 +47,13 @@ def redact():
             edi_converter_scratch_folder = CASE WHEN edi_converter_scratch_folder IS NOT NULL AND edi_converter_scratch_folder != ''
                                            THEN 'C:/ProgramData/BatchFileSender/scratch' ELSE edi_converter_scratch_folder END,
             folder_name = 'D:/DATA/OUT/' || alias
-    """)
+    """
+    )
     print(f"Folders updated: {cursor.rowcount} rows")
 
     # Redact administrative table
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE administrative SET
             email_origin_address = 'admin@example.com',
             email_origin_password = 'redacted_password',
@@ -70,11 +75,13 @@ def redact():
             edi_converter_scratch_folder = 'C:/ProgramData/BatchFileSender/scratch',
             errors_folder = 'C:/ProgramData/BatchFileSender/errors',
             folder_name = 'template'
-    """)
+    """
+    )
     print(f"Administrative updated: {cursor.rowcount} rows")
 
     # Redact settings table
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE settings SET
             email_address = 'settings@example.com',
             email_username = '',
@@ -83,13 +90,15 @@ def redact():
             as400_username = 'as400_user',
             as400_password = 'as400_pass',
             as400_address = '10.0.0.100'
-    """)
+    """
+    )
     print(f"Settings updated: {cursor.rowcount} rows")
 
     # Redact processed_files table - replace path prefixes but keep structure
     # The file_name looks like "I:\MAILBOX\OUT\012258\012258.115"
     # Replace with "D:\DATA\OUT\{rest}"
-    cursor.execute(r"""
+    cursor.execute(
+        r"""
         UPDATE processed_files SET
             file_name = REPLACE(file_name, 'I:\MAILBOX\OUT\', 'D:\DATA\OUT\'),
             copy_destination = CASE WHEN copy_destination = 'N/A' THEN copy_destination
@@ -98,15 +107,20 @@ def redact():
                               ELSE 'ftp.example.com/redacted' END,
             email_destination = CASE WHEN email_destination = 'N/A' THEN email_destination
                                 ELSE 'redacted@example.com' END
-    """)
+    """
+    )
     print(f"Processed files updated: {cursor.rowcount} rows")
 
     # Redact email tables
     cursor.execute("UPDATE emails_to_send SET log = 'redacted' WHERE log IS NOT NULL")
     print(f"emails_to_send updated: {cursor.rowcount} rows")
-    cursor.execute("UPDATE working_batch_emails_to_send SET log = 'redacted' WHERE log IS NOT NULL")
+    cursor.execute(
+        "UPDATE working_batch_emails_to_send SET log = 'redacted' WHERE log IS NOT NULL"
+    )
     print(f"working_batch_emails_to_send updated: {cursor.rowcount} rows")
-    cursor.execute("UPDATE sent_emails_removal_queue SET log = 'redacted' WHERE log IS NOT NULL")
+    cursor.execute(
+        "UPDATE sent_emails_removal_queue SET log = 'redacted' WHERE log IS NOT NULL"
+    )
     print(f"sent_emails_removal_queue updated: {cursor.rowcount} rows")
 
     conn.commit()
@@ -126,5 +140,5 @@ def redact():
     print("Redaction complete!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     redact()

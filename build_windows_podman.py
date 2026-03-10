@@ -4,7 +4,6 @@ Windows build script that uses Podman to create a Windows executable.
 This version does not require sudo.
 """
 
-import os
 import sys
 import subprocess
 import shutil

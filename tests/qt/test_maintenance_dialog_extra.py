@@ -1,4 +1,5 @@
 """Additional tests for MaintenanceDialog to improve coverage."""
+
 import pytest
 from PyQt6.QtCore import Qt
 
@@ -43,7 +44,9 @@ class TestMaintenanceDialogUI:
 class TestMaintenanceDialogSetAllActive:
     """Tests for 'Set All Active' operation."""
 
-    def test_set_all_active_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_set_all_active_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Set All Active' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -61,7 +64,9 @@ class TestMaintenanceDialogSetAllActive:
 class TestMaintenanceDialogSetAllInactive:
     """Tests for 'Set All Inactive' operation."""
 
-    def test_set_all_inactive_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_set_all_inactive_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Set All Inactive' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -78,7 +83,9 @@ class TestMaintenanceDialogSetAllInactive:
 class TestMaintenanceDialogClearResendFlags:
     """Tests for 'Clear Resend Flags' operation."""
 
-    def test_clear_resend_flags_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_clear_resend_flags_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Clear Resend Flags' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -95,7 +102,9 @@ class TestMaintenanceDialogClearResendFlags:
 class TestMaintenanceDialogClearProcessedFiles:
     """Tests for 'Clear Processed Files Log' operation."""
 
-    def test_clear_processed_files_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_clear_processed_files_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Clear Processed Files Log' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -112,7 +121,9 @@ class TestMaintenanceDialogClearProcessedFiles:
 class TestMaintenanceDialogRemoveInactive:
     """Tests for 'Remove Inactive Folders' operation."""
 
-    def test_remove_inactive_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_remove_inactive_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Remove Inactive Folders' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -129,7 +140,9 @@ class TestMaintenanceDialogRemoveInactive:
 class TestMaintenanceDialogMarkActiveProcessed:
     """Tests for 'Mark Active as Processed' operation."""
 
-    def test_mark_active_processed_button_triggers_operation(self, qtbot, mock_maintenance_functions):
+    def test_mark_active_processed_button_triggers_operation(
+        self, qtbot, mock_maintenance_functions
+    ):
         """Test clicking 'Mark Active as Processed' button triggers the operation."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 

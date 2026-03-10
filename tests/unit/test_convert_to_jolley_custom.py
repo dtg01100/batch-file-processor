@@ -13,12 +13,9 @@ Converter: convert_to_jolley_custom.py (12225 chars)
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
+from unittest.mock import patch, MagicMock
 import os
 import csv
-import decimal
-from datetime import datetime, timedelta
 
 # Import the module to test
 import convert_to_jolley_custom
@@ -282,12 +279,10 @@ class TestJolleyCustomPrettifyDates(TestJolleyCustomFixtures):
     def test_prettify_dates_with_offset(self):
         """Test date prettification with offset."""
         # Date offset should adjust the date by the specified number of days
-        pass
 
     def test_prettify_dates_invalid_date(self):
         """Test date prettification with invalid date."""
         # Should return "Not Available" for invalid dates
-        pass
 
 
 class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
@@ -607,7 +602,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
     def test_empty_edi_file(self, mock_query_runner, default_parameters,
                              default_settings, mock_customer_data, mock_uom_lookup, tmp_path):
         """Test handling of empty EDI file.
-        
+
         Note: The current implementation requires at least an A record.
         This test provides valid content to ensure the test passes.
         """

@@ -38,7 +38,9 @@ class TestImportThread:
         )
 
         finished_events = []
-        thread.finished.connect(lambda success, message: finished_events.append((success, message)))
+        thread.finished.connect(
+            lambda success, message: finished_events.append((success, message))
+        )
 
         thread.run()
 
@@ -66,11 +68,15 @@ class TestImportThread:
         )
 
         finished_events = []
-        thread.finished.connect(lambda success, message: finished_events.append((success, message)))
+        thread.finished.connect(
+            lambda success, message: finished_events.append((success, message))
+        )
 
         thread.run()
 
-        migrate_job.do_migrate.assert_called_once_with(thread, "/tmp/new.db", "/tmp/original.db")
+        migrate_job.do_migrate.assert_called_once_with(
+            thread, "/tmp/new.db", "/tmp/original.db"
+        )
         assert finished_events == [(True, "Import completed successfully")]
 
     def test_run_emits_error_when_connect_fails(self, monkeypatch):
@@ -147,7 +153,9 @@ class TestDbMigrationJob:
         assert update_payload["email_recipients"] == "a@example.com"
         assert update_payload["smtp_use_tls"] is True
 
-    def test_migrate_folder_falls_back_to_string_match_when_samefile_errors(self, monkeypatch):
+    def test_migrate_folder_falls_back_to_string_match_when_samefile_errors(
+        self, monkeypatch
+    ):
         job = DbMigrationJob("/tmp/original.db", "/tmp/new.db")
 
         old_folder = {

@@ -10,10 +10,18 @@ Available services:
 - ResendService: File resend flag management
 """
 
-from interface.services.ftp_service import FTPService, FTPConnectionResult, MockFTPService
+from interface.services.ftp_service import (
+    FTPService,
+    FTPConnectionResult,
+    MockFTPService,
+)
 from interface.services.reporting_service import ReportingService
 from interface.services.resend_service import ResendService
-from interface.services.smtp_service import SMTPService, SMTPServiceProtocol, MockSMTPService
+from interface.services.smtp_service import (
+    SMTPService,
+    SMTPServiceProtocol,
+    MockSMTPService,
+)
 
 __all__ = [
     "FTPService",

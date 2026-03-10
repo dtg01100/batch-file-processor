@@ -21,10 +21,12 @@ from interface.qt.app import QtBatchFileSenderApp
 
 def main():
     """Initialize and run the Batch File Sender application with Qt UI."""
+    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",
         version="(Git Branch: Master)",
-        database_version="41",
+        database_version=CURRENT_DATABASE_VERSION,
     )
     app.initialize()
     try:

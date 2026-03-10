@@ -21,29 +21,31 @@ from .simplified_csv_configuration_plugin import SimplifiedCSVConfigurationPlugi
 from .fintech_configuration_plugin import FintechConfigurationPlugin
 from .scannerware_configuration_plugin import ScannerWareConfigurationPlugin
 from .estore_einvoice_configuration_plugin import EStoreEInvoiceConfigurationPlugin
-from .estore_einvoice_generic_configuration_plugin import EStoreEInvoiceGenericConfigurationPlugin
+from .estore_einvoice_generic_configuration_plugin import (
+    EStoreEInvoiceGenericConfigurationPlugin,
+)
 from .jolley_custom_configuration_plugin import JolleyCustomConfigurationPlugin
 from .stewarts_custom_configuration_plugin import StewartsCustomConfigurationPlugin
 from .yellowdog_csv_configuration_plugin import YellowDogCSVConfigurationPlugin
 from .scansheet_type_a_configuration_plugin import ScanSheetTypeAConfigurationPlugin
 
 __all__ = [
-    'PluginBase',
-    'PluginManager',
-    'ConfigurationPlugin',
-    'ConfigurationSchema',
-    'FieldType',
-    'FieldDefinition',
-    'ValidationResult',
-    'Validator',
-    'CSVConfigurationPlugin',
-    'SimplifiedCSVConfigurationPlugin',
-    'FintechConfigurationPlugin',
-    'ScannerWareConfigurationPlugin',
-    'EStoreEInvoiceConfigurationPlugin',
-    'EStoreEInvoiceGenericConfigurationPlugin',
-    'JolleyCustomConfigurationPlugin',
-    'StewartsCustomConfigurationPlugin',
-    'YellowDogCSVConfigurationPlugin',
-    'ScanSheetTypeAConfigurationPlugin'
+    "PluginBase",
+    "PluginManager",
+    "ConfigurationPlugin",
+    "ConfigurationSchema",
+    "FieldType",
+    "FieldDefinition",
+    "ValidationResult",
+    "Validator",
+    "CSVConfigurationPlugin",
+    "SimplifiedCSVConfigurationPlugin",
+    "FintechConfigurationPlugin",
+    "ScannerWareConfigurationPlugin",
+    "EStoreEInvoiceConfigurationPlugin",
+    "EStoreEInvoiceGenericConfigurationPlugin",
+    "JolleyCustomConfigurationPlugin",
+    "StewartsCustomConfigurationPlugin",
+    "YellowDogCSVConfigurationPlugin",
+    "ScanSheetTypeAConfigurationPlugin",
 ]

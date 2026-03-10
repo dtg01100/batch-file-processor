@@ -1,18 +1,21 @@
 """Folder Settings Validator tests for EditFoldersDialog refactoring."""
 
 import pytest
-from unittest.mock import MagicMock
 
 import sys
 import os
 
 # Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0,
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ),
+)
 
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
-    ValidationError,
 )
 from interface.services.ftp_service import MockFTPService
 
@@ -30,7 +33,7 @@ class TestFolderSettingsValidator:
         """Create validator with mock dependencies."""
         return FolderSettingsValidator(
             ftp_service=mock_ftp_service,
-            existing_aliases=["existing_alias", "another_alias"]
+            existing_aliases=["existing_alias", "another_alias"],
         )
 
     def test_validate_ftp_settings_valid(self, validator, mock_ftp_service):
@@ -41,7 +44,7 @@ class TestFolderSettingsValidator:
             folder="/uploads/",
             username="testuser",
             password="testpass",
-            enabled=True
+            enabled=True,
         )
 
         assert result.is_valid is True
@@ -55,7 +58,7 @@ class TestFolderSettingsValidator:
             folder="/uploads/",
             username="testuser",
             password="testpass",
-            enabled=True
+            enabled=True,
         )
 
         assert result.is_valid is False
@@ -69,7 +72,7 @@ class TestFolderSettingsValidator:
             folder="/uploads/",
             username="testuser",
             password="testpass",
-            enabled=True
+            enabled=True,
         )
 
         assert result.is_valid is False
@@ -83,21 +86,19 @@ class TestFolderSettingsValidator:
             folder="uploads",
             username="testuser",
             password="testpass",
-            enabled=True
+            enabled=True,
         )
 
         assert result.is_valid is False
-        assert any("end in" in e.message.lower() or "trailing" in e.message.lower() for e in result.errors)
+        assert any(
+            "end in" in e.message.lower() or "trailing" in e.message.lower()
+            for e in result.errors
+        )
 
     def test_validate_ftp_settings_disabled(self, validator):
         """Test validation passes when FTP is disabled."""
         result = validator.validate_ftp_settings(
-            server="",
-            port="",
-            folder="",
-            username="",
-            password="",
-            enabled=False
+            server="", port="", folder="", username="", password="", enabled=False
         )
 
         assert result.is_valid is True
@@ -108,11 +109,10 @@ class TestFolderSettingsValidator:
         mock_ftp_service = MockFTPService(
             should_succeed=False,
             fail_at="login",
-            error_message="FTP Username or Password Incorrect"
+            error_message="FTP Username or Password Incorrect",
         )
         validator = FolderSettingsValidator(
-            ftp_service=mock_ftp_service,
-            existing_aliases=[]
+            ftp_service=mock_ftp_service, existing_aliases=[]
         )
 
         result = validator.validate_ftp_settings(
@@ -121,18 +121,19 @@ class TestFolderSettingsValidator:
             folder="/uploads/",
             username="wronguser",
             password="wrongpass",
-            enabled=True
+            enabled=True,
         )
 
         assert result.is_valid is False
-        assert any("login" in e.message.lower() or "password" in e.message.lower()
-                   for e in result.errors)
+        assert any(
+            "login" in e.message.lower() or "password" in e.message.lower()
+            for e in result.errors
+        )
 
     def test_validate_email_valid(self, validator):
         """Test valid email settings pass validation."""
         result = validator.validate_email_settings(
-            recipients="test@example.com, another@example.com",
-            enabled=True
+            recipients="test@example.com, another@example.com", enabled=True
         )
 
         assert result.is_valid is True
@@ -140,8 +141,7 @@ class TestFolderSettingsValidator:
     def test_validate_email_invalid_address(self, validator):
         """Test validation fails for invalid email address."""
         result = validator.validate_email_settings(
-            recipients="invalid-email",
-            enabled=True
+            recipients="invalid-email", enabled=True
         )
 
         assert result.is_valid is False
@@ -149,10 +149,7 @@ class TestFolderSettingsValidator:
 
     def test_validate_email_disabled(self, validator):
         """Test validation passes when email is disabled."""
-        result = validator.validate_email_settings(
-            recipients="",
-            enabled=False
-        )
+        result = validator.validate_email_settings(recipients="", enabled=False)
 
         assert result.is_valid is True
 
@@ -162,7 +159,7 @@ class TestFolderSettingsValidator:
         result = validator.validate_alias(
             alias="existing_alias",
             folder_name="test_folder",
-            current_alias="different_alias"
+            current_alias="different_alias",
         )
 
         assert result.is_valid is False
@@ -173,7 +170,7 @@ class TestFolderSettingsValidator:
         result = validator.validate_alias(
             alias="existing_alias",
             folder_name="test_folder",
-            current_alias="existing_alias"  # Same as current
+            current_alias="existing_alias",  # Same as current
         )
 
         assert result.is_valid is True
@@ -181,8 +178,7 @@ class TestFolderSettingsValidator:
     def test_validate_alias_too_long(self, validator):
         """Test alias length validation."""
         result = validator.validate_alias(
-            alias="a" * 51,  # Max is 50
-            folder_name="test_folder"
+            alias="a" * 51, folder_name="test_folder"  # Max is 50
         )
 
         assert result.is_valid is False
@@ -191,8 +187,7 @@ class TestFolderSettingsValidator:
     def test_validate_alias_template(self, validator):
         """Test alias validation passes for template."""
         result = validator.validate_alias(
-            alias="template_alias",
-            folder_name="template"
+            alias="template_alias", folder_name="template"
         )
 
         assert result.is_valid is True
@@ -214,64 +209,49 @@ class TestFolderSettingsValidator:
     def test_validate_upc_override_valid(self, validator):
         """Test valid UPC override settings."""
         result = validator.validate_upc_override(
-            enabled=True,
-            category_filter="1,2,3,ALL"
+            enabled=True, category_filter="1,2,3,ALL"
         )
 
         assert result.is_valid is True
 
     def test_validate_upc_override_missing_filter(self, validator):
         """Test validation fails when category filter missing."""
-        result = validator.validate_upc_override(
-            enabled=True,
-            category_filter=""
-        )
+        result = validator.validate_upc_override(enabled=True, category_filter="")
 
         assert result.is_valid is False
         assert any("category filter" in e.message.lower() for e in result.errors)
 
     def test_validate_upc_override_disabled(self, validator):
         """Test validation passes when UPC override is disabled."""
-        result = validator.validate_upc_override(
-            enabled=False,
-            category_filter=""
-        )
+        result = validator.validate_upc_override(enabled=False, category_filter="")
 
         assert result.is_valid is True
 
     def test_validate_copy_settings_valid(self, validator):
         """Test valid copy settings pass validation."""
         result = validator.validate_copy_settings(
-            destination="/tmp/destination",
-            enabled=True
+            destination="/tmp/destination", enabled=True
         )
 
         assert result.is_valid is True
 
     def test_validate_copy_settings_missing_destination(self, validator):
         """Test validation fails when destination is missing."""
-        result = validator.validate_copy_settings(
-            destination="",
-            enabled=True
-        )
+        result = validator.validate_copy_settings(destination="", enabled=True)
 
         assert result.is_valid is False
         assert any("destination" in e.message.lower() for e in result.errors)
 
     def test_validate_copy_settings_disabled(self, validator):
         """Test validation passes when copy is disabled."""
-        result = validator.validate_copy_settings(
-            destination="",
-            enabled=False
-        )
+        result = validator.validate_copy_settings(destination="", enabled=False)
 
         assert result.is_valid is True
 
     def test_validate_backend_specific_fintech_valid(self, validator):
         """Test valid fintech settings pass validation."""
         result = validator.validate_backend_specific(
-            convert_format="fintech",
-            division_id="123"
+            convert_format="fintech", division_id="123"
         )
 
         assert result.is_valid is True
@@ -279,8 +259,7 @@ class TestFolderSettingsValidator:
     def test_validate_backend_specific_fintech_invalid(self, validator):
         """Test fintech division ID validation."""
         result = validator.validate_backend_specific(
-            convert_format="fintech",
-            division_id="abc"
+            convert_format="fintech", division_id="abc"
         )
 
         assert result.is_valid is False
@@ -289,8 +268,7 @@ class TestFolderSettingsValidator:
     def test_validate_backend_specific_other_format(self, validator):
         """Test other formats pass without fintech validation."""
         result = validator.validate_backend_specific(
-            convert_format="csv",
-            division_id="not-required"
+            convert_format="csv", division_id="not-required"
         )
 
         assert result.is_valid is True
@@ -298,10 +276,7 @@ class TestFolderSettingsValidator:
     def test_validate_edi_split_requirements_prepend_dates(self, validator):
         """Test EDI split validation for prepending dates."""
         result = validator.validate_edi_split_requirements(
-            convert_format="csv",
-            split_edi=False,
-            prepend_dates=True,
-            tweak_edi=False
+            convert_format="csv", split_edi=False, prepend_dates=True, tweak_edi=False
         )
 
         assert result.is_valid is False
@@ -313,7 +288,7 @@ class TestFolderSettingsValidator:
             convert_format="jolley_custom",
             split_edi=False,
             prepend_dates=False,
-            tweak_edi=False
+            tweak_edi=False,
         )
 
         assert result.is_valid is False

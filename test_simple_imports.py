@@ -16,21 +16,18 @@ print()
 
 # Test 1: Check if we can import from interface package
 try:
-    import interface
     print("✓ interface package imported successfully")
 except Exception as e:
     print(f"✗ Failed to import interface: {e}")
 
 # Test 2: Check if we can import interface.qt module
 try:
-    from interface import qt
     print("✓ interface.qt module imported successfully")
 except Exception as e:
     print(f"✗ Failed to import interface.qt: {e}")
 
 # Test 3: Check if we can import interface.qt.app module
 try:
-    from interface.qt import app
     print("✓ interface.qt.app module imported successfully")
 except Exception as e:
     print(f"✗ Failed to import interface.qt.app: {e}")

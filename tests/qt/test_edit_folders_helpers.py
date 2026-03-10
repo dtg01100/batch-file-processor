@@ -18,7 +18,9 @@ from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 @pytest.mark.qt
 class TestColumnBuilders:
 
-    def test_build_others_column_populates_sorted_aliases_and_copy_callback(self, qtbot):
+    def test_build_others_column_populates_sorted_aliases_and_copy_callback(
+        self, qtbot
+    ):
         fields = {}
         copy_cb = MagicMock()
 
@@ -129,7 +131,10 @@ class TestDynamicEDIBuilder:
         fields = {}
         builder = DynamicEDIBuilder(
             fields=fields,
-            folder_config={"calculate_upc_check_digit": "True", "invoice_date_offset": 2},
+            folder_config={
+                "calculate_upc_check_digit": "True",
+                "invoice_date_offset": 2,
+            },
             dynamic_container=container,
             dynamic_layout=layout,
         )
@@ -156,7 +161,9 @@ class TestDynamicEDIBuilder:
 
         builder.convert_sub_container = container
         builder.convert_sub_layout = layout
-        builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(return_value=None)
+        builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
+            return_value=None
+        )
 
         csv_cb = MagicMock()
         fintech_cb = MagicMock()
@@ -192,7 +199,9 @@ class TestDynamicEDIBuilder:
         builder.convert_sub_layout = layout
 
         plugin = MagicMock()
-        builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(return_value=plugin)
+        builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
+            return_value=plugin
+        )
         plugin_builder = MagicMock()
         builder._build_plugin_config_sub = plugin_builder
 

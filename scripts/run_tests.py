@@ -148,8 +148,7 @@ Examples:
 
     parser.add_argument(
         "suite",
-        choices=list(TEST_SUITES.keys())
-        + ["all", "quick", "ci", "list", "help"],
+        choices=list(TEST_SUITES.keys()) + ["all", "quick", "ci", "list", "help"],
         help="Test suite to run",
     )
 

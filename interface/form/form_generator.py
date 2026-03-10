@@ -9,12 +9,8 @@ through the existing UI abstraction layer.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition
-from interface.plugins.ui_abstraction import (
-    WidgetBase,
-    WidgetFactoryRegistry,
-    ConfigurationWidgetBuilder
-)
+from interface.plugins.config_schemas import ConfigurationSchema
+from interface.plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
 from interface.plugins.validation_framework import ValidationResult
 
 
@@ -26,7 +22,7 @@ class FormGenerator(ABC):
     from ConfigurationSchema definitions.
     """
 
-    def __init__(self, schema: ConfigurationSchema, framework: str = 'qt'):
+    def __init__(self, schema: ConfigurationSchema, framework: str = "qt"):
         """
         Initialize the form generator.
 
@@ -39,7 +35,7 @@ class FormGenerator(ABC):
         self.factory = WidgetFactoryRegistry.get_factory(framework)
         if self.factory is None:
             raise ValueError(f"No widget factory registered for framework: {framework}")
-        
+
         self.widgets: Dict[str, WidgetBase] = {}
         self.form_container: Any = None
         self._field_dependencies: Dict[str, List[str]] = {}
@@ -59,7 +55,6 @@ class FormGenerator(ABC):
         Returns:
             Any: Form container widget
         """
-        pass
 
     @abstractmethod
     def get_values(self) -> Dict[str, Any]:
@@ -69,7 +64,6 @@ class FormGenerator(ABC):
         Returns:
             Dict[str, Any]: Current field values
         """
-        pass
 
     @abstractmethod
     def set_values(self, config: Dict[str, Any]) -> None:
@@ -79,7 +73,6 @@ class FormGenerator(ABC):
         Args:
             config: Configuration values to set
         """
-        pass
 
     @abstractmethod
     def validate(self) -> ValidationResult:
@@ -89,7 +82,6 @@ class FormGenerator(ABC):
         Returns:
             ValidationResult: Validation result
         """
-        pass
 
     @abstractmethod
     def get_validation_errors(self) -> List[str]:
@@ -99,7 +91,6 @@ class FormGenerator(ABC):
         Returns:
             List[str]: List of validation error messages
         """
-        pass
 
     def set_field_visibility(self, field_name: str, visible: bool) -> None:
         """
@@ -170,8 +161,12 @@ class FormGenerator(ABC):
         if field_name in self.widgets:
             self.widgets[field_name].set_description(description)
 
-    def register_field_dependency(self, dependent_field: str, trigger_field: str, 
-                                 condition: Optional[callable] = None):
+    def register_field_dependency(
+        self,
+        dependent_field: str,
+        trigger_field: str,
+        condition: Optional[callable] = None,
+    ):
         """
         Register a field dependency where the visibility of a field depends on
         the value of another field.
@@ -198,7 +193,6 @@ class FormGenerator(ABC):
         """
         Setup field dependencies and dynamic visibility callbacks.
         """
-        pass
 
     def _update_dependent_fields(self, trigger_field: str):
         """
@@ -216,7 +210,7 @@ class FormGenerator(ABC):
             # Determine if field should be visible
             visible = True
             if trigger_field in self._visibility_callbacks:
-                for (dep_field, condition) in self._visibility_callbacks[trigger_field]:
+                for dep_field, condition in self._visibility_callbacks[trigger_field]:
                     if dep_field == dependent_field:
                         visible = condition(trigger_value)
                         break
@@ -227,7 +221,7 @@ class FormGenerator(ABC):
         self,
         section_id: str,
         schema: ConfigurationSchema,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Add a plugin configuration section to the form.
@@ -240,10 +234,7 @@ class FormGenerator(ABC):
         self._plugin_configs[section_id] = config or {}
         # This will be rendered in build_form when _render_plugin_sections is called
 
-    def add_plugin_sections(
-        self,
-        sections: List[Dict[str, Any]]
-    ) -> None:
+    def add_plugin_sections(self, sections: List[Dict[str, Any]]) -> None:
         """
         Add multiple plugin configuration sections to the form.
 
@@ -252,9 +243,9 @@ class FormGenerator(ABC):
         """
         for section in sections:
             self.add_plugin_section(
-                section.get('id', f'section_{len(self._plugin_sections)}'),
-                section.get('schema'),
-                section.get('config')
+                section.get("id", f"section_{len(self._plugin_sections)}"),
+                section.get("schema"),
+                section.get("config"),
             )
 
     def get_plugin_section_values(self) -> Dict[str, Dict[str, Any]]:
@@ -266,8 +257,8 @@ class FormGenerator(ABC):
         """
         values = {}
         for section in self._plugin_sections:
-            if hasattr(section, 'get_values'):
-                section_id = getattr(section, 'section_id', 'unknown')
+            if hasattr(section, "get_values"):
+                section_id = getattr(section, "section_id", "unknown")
                 values[section_id] = section.get_values()
         return values
 
@@ -279,7 +270,7 @@ class FormGenerator(ABC):
             configs: Dictionary mapping section IDs to their configuration values
         """
         for section in self._plugin_sections:
-            section_id = getattr(section, 'section_id', None)
+            section_id = getattr(section, "section_id", None)
             if section_id and section_id in configs:
                 section.set_values(configs[section_id])
 
@@ -292,13 +283,13 @@ class FormGenerator(ABC):
         """
         all_errors = []
         for section in self._plugin_sections:
-            if hasattr(section, 'validate'):
+            if hasattr(section, "validate"):
                 result = section.validate()
                 if not result.success:
                     all_errors.extend(result.errors)
-            elif hasattr(section, 'get_validation_errors'):
+            elif hasattr(section, "get_validation_errors"):
                 all_errors.extend(section.get_validation_errors())
-        
+
         return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
 
 
@@ -318,7 +309,7 @@ class QtFormGenerator(FormGenerator):
         Returns:
             Any: Qt form container widget
         """
-        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QFormLayout, QLabel
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLabel
 
         # Create main container widget
         self.form_container = QWidget(parent)
@@ -326,18 +317,18 @@ class QtFormGenerator(FormGenerator):
 
         # Create widget builder
         from interface.plugins.ui_abstraction import ConfigurationWidgetBuilder
-        
+
         class QtWidgetBuilder(ConfigurationWidgetBuilder):
             def _layout_widgets(self, widgets, schema, parent):
                 container = QWidget(parent)
                 form_layout = QFormLayout(container)
-                
+
                 for field in schema.fields:
                     widget = widgets[field.name]
                     native_widget = widget.get_widget()
-                    
+
                     # For checkboxes, we don't need a separate label
-                    if field.field_type == 'boolean':
+                    if field.field_type == "boolean":
                         form_layout.addRow(native_widget)
                     else:
                         # Create label with optional tooltip
@@ -345,11 +336,13 @@ class QtFormGenerator(FormGenerator):
                         if field.description:
                             label.setToolTip(field.description)
                         form_layout.addRow(label, native_widget)
-                
+
                 return container
 
-        builder = QtWidgetBuilder('qt')
-        widget_container = builder.build_configuration_panel(self.schema, config, parent)
+        builder = QtWidgetBuilder("qt")
+        widget_container = builder.build_configuration_panel(
+            self.schema, config, parent
+        )
         layout.addWidget(widget_container)
 
         # Store widget references
@@ -384,26 +377,22 @@ class QtFormGenerator(FormGenerator):
 
         try:
             section_layout = self.form_container.layout()
-            
+
             for section_id, schema in self._plugin_configs.items():
                 if schema is None:
                     continue
-                    
+
                 config = self._plugin_configs.get(section_id)
                 section_widget = SectionFactoryRegistry.create_section(
-                    'default',
-                    schema,
-                    self.framework,
-                    config,
-                    self.form_container
+                    "default", schema, self.framework, config, self.form_container
                 )
-                
+
                 if section_widget:
                     section_widget.section_id = section_id
                     self._plugin_sections.append(section_widget)
                     native_widget = section_widget.render(config)
                     section_layout.addWidget(native_widget)
-                    
+
         except Exception as e:
             print(f"Error rendering plugin sections: {e}")
 
@@ -441,7 +430,7 @@ class QtFormGenerator(FormGenerator):
         for field_name, widget in self.widgets.items():
             if not widget.validate():
                 all_errors.extend(widget.get_validation_errors())
-        
+
         return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
 
     def get_validation_errors(self) -> List[str]:
@@ -460,24 +449,23 @@ class QtFormGenerator(FormGenerator):
         """
         Setup field dependencies and dynamic visibility callbacks for Qt.
         """
-        from PyQt6.QtCore import pyqtSignal, QObject
 
         # For each field, check if it has dependencies
         for trigger_field in self._field_dependencies:
             if trigger_field in self.widgets:
                 widget = self.widgets[trigger_field]
                 native_widget = widget.get_widget()
-                
+
                 # Connect value change signals
-                if hasattr(native_widget, 'textChanged'):
+                if hasattr(native_widget, "textChanged"):
                     native_widget.textChanged.connect(
                         lambda: self._update_dependent_fields(trigger_field)
                     )
-                elif hasattr(native_widget, 'valueChanged'):
+                elif hasattr(native_widget, "valueChanged"):
                     native_widget.valueChanged.connect(
                         lambda: self._update_dependent_fields(trigger_field)
                     )
-                elif hasattr(native_widget, 'stateChanged'):
+                elif hasattr(native_widget, "stateChanged"):
                     native_widget.stateChanged.connect(
                         lambda: self._update_dependent_fields(trigger_field)
                     )
@@ -489,8 +477,9 @@ class FormGeneratorFactory:
     """
 
     @staticmethod
-    def create_form_generator(schema: ConfigurationSchema, 
-                             framework: str = 'qt') -> FormGenerator:
+    def create_form_generator(
+        schema: ConfigurationSchema, framework: str = "qt"
+    ) -> FormGenerator:
         """
         Create a form generator instance for the specified framework.
 
@@ -504,7 +493,7 @@ class FormGeneratorFactory:
         Raises:
             ValueError: If framework is not supported
         """
-        if framework == 'qt':
+        if framework == "qt":
             return QtFormGenerator(schema, framework)
         else:
             raise ValueError(f"Unsupported UI framework: {framework}")

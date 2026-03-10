@@ -1,4 +1,3 @@
-
 """Qt widget implementations."""
 
 from interface.qt.widgets.folder_list_widget import FolderListWidget

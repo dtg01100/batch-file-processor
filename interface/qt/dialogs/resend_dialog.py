@@ -5,12 +5,11 @@ Replaces the tkinter-based resend_interface.py with a Qt implementation.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QDialog,
     QDialogButtonBox,
     QFrame,
     QGroupBox,
@@ -78,10 +77,12 @@ class ResendDialog(BaseDialog):
         folders_frame = QGroupBox("Folders")
         folders_frame_layout = QVBoxLayout(folders_frame)
         folders_frame_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self._folders_scroll = QScrollArea()
         self._folders_scroll.setWidgetResizable(True)
-        self._folders_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._folders_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self._folders_content = QWidget()
         self._folders_layout = QVBoxLayout(self._folders_content)
         self._folders_layout.setSpacing(5)
@@ -113,7 +114,9 @@ class ResendDialog(BaseDialog):
         # Scrollable file list
         self._files_scroll = QScrollArea()
         self._files_scroll.setWidgetResizable(True)
-        self._files_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._files_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self._files_content = QWidget()
         self._files_content_layout = QVBoxLayout(self._files_content)
         self._files_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -136,16 +139,20 @@ class ResendDialog(BaseDialog):
         for button in self._folder_buttons.values():
             button.deleteLater()
         self._folder_buttons.clear()
-        
+
         try:
             self._service = ResendService(self._database_connection)
             if not self._service.has_processed_files():
                 from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.information(self, "Nothing To Configure", "No processed files found.")
+
+                QMessageBox.information(
+                    self, "Nothing To Configure", "No processed files found."
+                )
                 self._should_show = False
                 return
         except Exception as e:
             from PyQt6.QtWidgets import QMessageBox
+
             QMessageBox.critical(self, "Database Error", f"Database error: {e}")
             self._should_show = False
             return
@@ -153,13 +160,13 @@ class ResendDialog(BaseDialog):
         # Load folders (get_folder_list returns list of (folder_id, alias) tuples)
         folders = self._service.get_folder_list()
         for folder_id, folder_alias in folders:
-            folder_info = {'id': folder_id, 'folder_name': folder_alias}
+            folder_info = {"id": folder_id, "folder_name": folder_alias}
             self._add_folder_button(folder_info)
 
     def _add_folder_button(self, folder_info: Dict[str, Any]) -> None:
         """Add a folder button to the folders list."""
-        folder_id = folder_info['id']
-        folder_name = folder_info['folder_name']
+        folder_id = folder_info["id"]
+        folder_name = folder_info["folder_name"]
 
         button = QPushButton(folder_name)
         button.setCheckable(True)
@@ -211,18 +218,18 @@ class ResendDialog(BaseDialog):
 
         # Calculate max filename length for alignment
         if files:
-            max_name_length = max(len(f['file_name']) for f in files)
+            max_name_length = max(len(f["file_name"]) for f in files)
         else:
             max_name_length = 0
 
         for file_info in files:
             checkbox = QCheckBox(self._files_content)
-            checkbox.setText(file_info['file_name'])
-            checkbox.setChecked(file_info['resend_flag'])
+            checkbox.setText(file_info["file_name"])
+            checkbox.setChecked(file_info["resend_flag"])
             checkbox.toggled.connect(
-                lambda checked, fid=file_info['id']: self._on_file_toggled(fid, checked)
+                lambda checked, fid=file_info["id"]: self._on_file_toggled(fid, checked)
             )
-            self._file_checkboxes[file_info['id']] = checkbox
+            self._file_checkboxes[file_info["id"]] = checkbox
             self._files_content_layout.addWidget(checkbox)
 
         self._files_content_layout.addStretch()
@@ -238,6 +245,7 @@ class ResendDialog(BaseDialog):
             self._service.set_resend_flag(file_id, checked)
         except Exception as e:
             from PyQt6.QtWidgets import QMessageBox
+
             QMessageBox.critical(self, "Database Error", f"Database error: {e}")
 
 

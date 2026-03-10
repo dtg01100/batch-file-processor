@@ -12,29 +12,30 @@ from dispatch.interfaces import FileSystemInterface
 
 
 SUPPORTED_FORMATS = [
-    'csv',
-    'estore_einvoice',
-    'estore_einvoice_generic',
-    'fintech',
-    'jolley_custom',
-    'scannerware',
-    'scansheet_type_a',
-    'simplified_csv',
-    'stewarts_custom',
-    'yellowdog_csv',
+    "csv",
+    "estore_einvoice",
+    "estore_einvoice_generic",
+    "fintech",
+    "jolley_custom",
+    "scannerware",
+    "scansheet_type_a",
+    "simplified_csv",
+    "stewarts_custom",
+    "yellowdog_csv",
 ]
 
 
 @dataclass
 class ConverterResult:
     """Result of EDI conversion operation.
-    
+
     Attributes:
         output_path: Path to converted output file
         format_used: Format that was used for conversion
         success: True if conversion succeeded
         errors: List of error messages
     """
+
     output_path: str = ""
     format_used: str = ""
     success: bool = False
@@ -44,24 +45,24 @@ class ConverterResult:
 @runtime_checkable
 class ConverterInterface(Protocol):
     """Protocol for converter step implementations."""
-    
+
     def convert(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> ConverterResult:
         """Convert an EDI file to another format.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
             params: Folder parameters dictionary
             settings: Global settings dictionary
             upc_dict: UPC dictionary for lookups
-            
+
         Returns:
             ConverterResult with conversion outcome
         """
@@ -71,27 +72,27 @@ class ConverterInterface(Protocol):
 @runtime_checkable
 class ModuleLoaderProtocol(Protocol):
     """Protocol for module loading mechanism."""
-    
+
     def load_module(self, module_name: str) -> Any:
         """Load a module by name.
-        
+
         Args:
             module_name: Name of the module to load
-            
+
         Returns:
             The loaded module
-            
+
         Raises:
             ImportError: If module cannot be loaded
         """
         ...
-    
+
     def module_exists(self, module_name: str) -> bool:
         """Check if a module can be loaded.
-        
+
         Args:
             module_name: Name of the module to check
-            
+
         Returns:
             True if module can be loaded
         """
@@ -100,28 +101,29 @@ class ModuleLoaderProtocol(Protocol):
 
 class DefaultModuleLoader:
     """Default module loader using importlib."""
-    
+
     def load_module(self, module_name: str) -> Any:
         """Load a module by name using importlib.
-        
+
         Args:
             module_name: Name of the module to load
-            
+
         Returns:
             The loaded module
-            
+
         Raises:
             ImportError: If module cannot be loaded
         """
         import importlib
+
         return importlib.import_module(module_name)
-    
+
     def module_exists(self, module_name: str) -> bool:
         """Check if a module can be loaded.
-        
+
         Args:
             module_name: Name of the module to check
-            
+
         Returns:
             True if module can be loaded
         """
@@ -134,10 +136,10 @@ class DefaultModuleLoader:
 
 class MockConverter:
     """Mock converter for testing purposes.
-    
+
     This converter can be configured to return specific results
     and allows inspection of convert calls.
-    
+
     Attributes:
         result: The result to return from convert()
         call_count: Number of times convert was called
@@ -147,17 +149,17 @@ class MockConverter:
         last_settings: Last settings dict passed to convert
         last_upc_dict: Last upc_dict passed to convert
     """
-    
+
     def __init__(
         self,
         result: Optional[ConverterResult] = None,
         output_path: str = "",
         format_used: str = "",
         success: bool = True,
-        errors: Optional[list[str]] = None
+        errors: Optional[list[str]] = None,
     ):
         """Initialize the mock converter.
-        
+
         Args:
             result: Complete result to return (overrides other params)
             output_path: Output path to return
@@ -172,7 +174,7 @@ class MockConverter:
                 output_path=output_path,
                 format_used=format_used,
                 success=success,
-                errors=errors or []
+                errors=errors or [],
             )
         self.call_count: int = 0
         self.last_input_path: Optional[str] = None
@@ -180,24 +182,24 @@ class MockConverter:
         self.last_params: Optional[dict] = None
         self.last_settings: Optional[dict] = None
         self.last_upc_dict: Optional[dict] = None
-    
+
     def convert(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> ConverterResult:
         """Mock convert method.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
             params: Folder parameters dictionary
             settings: Global settings dictionary
             upc_dict: UPC dictionary
-            
+
         Returns:
             The configured ConverterResult
         """
@@ -208,7 +210,7 @@ class MockConverter:
         self.last_settings = settings
         self.last_upc_dict = upc_dict
         return self._result
-    
+
     def reset(self) -> None:
         """Reset the mock state."""
         self.call_count = 0
@@ -217,10 +219,10 @@ class MockConverter:
         self.last_params = None
         self.last_settings = None
         self.last_upc_dict = None
-    
+
     def set_result(self, result: ConverterResult) -> None:
         """Set the result to return.
-        
+
         Args:
             result: The ConverterResult to return
         """
@@ -229,25 +231,25 @@ class MockConverter:
 
 class EDIConverterStep:
     """EDI converter step for the dispatch pipeline.
-    
+
     This class handles format conversion using dynamically loaded
     modules and integrates with the error handler for pipeline-based
     processing.
-    
+
     Attributes:
         module_loader: Module loader for loading conversion modules
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
     """
-    
+
     def __init__(
         self,
         module_loader: Optional[ModuleLoaderProtocol] = None,
         error_handler: Optional[Any] = None,
-        file_system: Optional[FileSystemInterface] = None
+        file_system: Optional[FileSystemInterface] = None,
     ):
         """Initialize the converter step.
-        
+
         Args:
             module_loader: Module loader for loading conversion modules
             error_handler: Optional error handler for recording errors
@@ -256,17 +258,17 @@ class EDIConverterStep:
         self._module_loader = module_loader or DefaultModuleLoader()
         self._error_handler = error_handler
         self._file_system = file_system
-    
+
     def convert(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> ConverterResult:
         """Convert an EDI file to another format.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
@@ -275,34 +277,33 @@ class EDIConverterStep:
                 - process_edi: Whether to process (must be "True")
             settings: Global settings dictionary
             upc_dict: UPC dictionary for lookups
-            
+
         Returns:
             ConverterResult with conversion outcome
         """
         errors: list[str] = []
-        
-        convert_to_format = params.get('convert_to_format', '')
+
+        convert_to_format = params.get("convert_to_format", "")
         if not convert_to_format:
             return ConverterResult(
-                output_path=input_path,
-                format_used="",
-                success=True,
-                errors=errors
+                output_path=input_path, format_used="", success=True, errors=errors
             )
-        
-        process_edi = params.get('process_edi', False)
+
+        process_edi = params.get("process_edi", False)
         if isinstance(process_edi, str):
-            process_edi = process_edi.lower() == 'true'
+            process_edi = process_edi.lower() == "true"
         if not process_edi:
             return ConverterResult(
                 output_path=input_path,
                 format_used=convert_to_format,
                 success=True,
-                errors=errors
+                errors=errors,
             )
-        
-        format_normalized = convert_to_format.lower().replace(' ', '_').replace('-', '_')
-        
+
+        format_normalized = (
+            convert_to_format.lower().replace(" ", "_").replace("-", "_")
+        )
+
         if format_normalized not in SUPPORTED_FORMATS:
             error_msg = f"Unsupported conversion format: {convert_to_format}"
             errors.append(error_msg)
@@ -311,13 +312,13 @@ class EDIConverterStep:
                 output_path=input_path,
                 format_used=convert_to_format,
                 success=False,
-                errors=errors
+                errors=errors,
             )
-        
-        module_name = f'convert_to_{format_normalized}'
-        
+
+        module_name = f"convert_to_{format_normalized}"
+
         output_filename = os.path.join(output_dir, os.path.basename(input_path))
-        
+
         if self._file_system and not self._file_system.dir_exists(output_dir):
             try:
                 self._file_system.makedirs(output_dir)
@@ -329,13 +330,13 @@ class EDIConverterStep:
                     output_path=input_path,
                     format_used=convert_to_format,
                     success=False,
-                    errors=errors
+                    errors=errors,
                 )
-        
+
         try:
             module = self._module_loader.load_module(module_name)
-            
-            if not hasattr(module, 'edi_convert'):
+
+            if not hasattr(module, "edi_convert"):
                 error_msg = f"Module {module_name} does not have edi_convert function"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -343,24 +344,20 @@ class EDIConverterStep:
                     output_path=input_path,
                     format_used=convert_to_format,
                     success=False,
-                    errors=errors
+                    errors=errors,
                 )
-            
+
             converted_path = module.edi_convert(
-                input_path,
-                output_filename,
-                settings,
-                params,
-                upc_dict
+                input_path, output_filename, settings, params, upc_dict
             )
-            
+
             return ConverterResult(
                 output_path=converted_path,
                 format_used=convert_to_format,
                 success=True,
-                errors=errors
+                errors=errors,
             )
-            
+
         except ImportError as e:
             error_msg = f"Conversion module not found: {module_name} - {e}"
             errors.append(error_msg)
@@ -369,7 +366,7 @@ class EDIConverterStep:
                 output_path=input_path,
                 format_used=convert_to_format,
                 success=False,
-                errors=errors
+                errors=errors,
             )
         except Exception as e:
             error_msg = f"Conversion failed: {e}"
@@ -379,77 +376,88 @@ class EDIConverterStep:
                 output_path=input_path,
                 format_used=convert_to_format,
                 success=False,
-                errors=errors
+                errors=errors,
             )
-    
+
     def get_supported_formats(self) -> list[str]:
         """Get list of supported conversion formats.
-        
+
         Returns:
             List of supported format names
         """
         return SUPPORTED_FORMATS.copy()
-    
+
     def _record_error(self, filename: str, error_msg: str) -> None:
         """Record an error to the error handler.
-        
+
         Args:
             filename: Filename being processed
             error_msg: Error message
         """
         if self._error_handler is None:
             return
-        
+
         self._error_handler.record_error(
             folder="",
             filename=filename,
             error=Exception(error_msg),
-            context={'source': 'EDIConverterStep'},
-            error_source="EDIConverter"
+            context={"source": "EDIConverterStep"},
+            error_source="EDIConverter",
         )
-    
-    def execute(self, file_path: str, folder: dict, settings: Optional[dict] = None, upc_dict: Optional[dict] = None) -> str | None:
+
+    def execute(
+        self,
+        file_path: str,
+        folder: dict,
+        settings: Optional[dict] = None,
+        upc_dict: Optional[dict] = None,
+    ) -> str | None:
         """Execute convert step (wrapper for pipeline compatibility).
-        
+
         Args:
             file_path: Path to the file to convert
             folder: Folder configuration dictionary
             settings: Global settings dictionary
             upc_dict: UPC dictionary for lookups
-            
+
         Returns:
             Path to converted file, or None if conversion failed/not needed
         """
-        import os
         import tempfile
         import shutil
-        
-        effective_settings = settings if settings is not None else folder.get('settings', {})
-        effective_upc_dict = upc_dict if upc_dict is not None else folder.get('upc_dict', {})
-        
+
+        effective_settings = (
+            settings if settings is not None else folder.get("settings", {})
+        )
+        effective_upc_dict = (
+            upc_dict if upc_dict is not None else folder.get("upc_dict", {})
+        )
+
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_converter_")
-        
+
         # Register with folder so orchestrator can clean up later
-        if '_pipeline_temp_dirs' not in folder:
-            folder['_pipeline_temp_dirs'] = []
-        folder['_pipeline_temp_dirs'].append(temp_dir)
-        
+        if "_pipeline_temp_dirs" not in folder:
+            folder["_pipeline_temp_dirs"] = []
+        folder["_pipeline_temp_dirs"].append(temp_dir)
+
         try:
-            result = self.convert(file_path, temp_dir, folder, effective_settings, effective_upc_dict)
+            result = self.convert(
+                file_path, temp_dir, folder, effective_settings, effective_upc_dict
+            )
             if result.success and result.output_path != file_path:
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
-            
+
             # Cleanup if conversion didn't produce output
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder['_pipeline_temp_dirs']:
-                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            if temp_dir in folder["_pipeline_temp_dirs"]:
+                folder["_pipeline_temp_dirs"].remove(temp_dir)
             return None
         except Exception as e:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder['_pipeline_temp_dirs']:
-                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            if temp_dir in folder["_pipeline_temp_dirs"]:
+                folder["_pipeline_temp_dirs"].remove(temp_dir)
             raise

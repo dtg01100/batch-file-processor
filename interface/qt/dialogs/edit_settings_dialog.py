@@ -3,12 +3,9 @@
 import os
 from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -109,6 +106,7 @@ class EditSettingsDialog(BaseDialog):
         self._odbc_driver_combo = QComboBox()
         try:
             import pyodbc
+
             self._odbc_driver_combo.addItems(pyodbc.drivers())
         except ImportError:
             pass

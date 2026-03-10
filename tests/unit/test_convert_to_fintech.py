@@ -12,8 +12,7 @@ Converter: convert_to_fintech.py (3311 chars)
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
+from unittest.mock import patch, MagicMock
 import os
 import csv
 
@@ -87,8 +86,8 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
         assert hasattr(convert_to_fintech, 'edi_convert')
 
     @patch('convert_to_fintech.utils.invFetcher')
-    def test_edi_convert_returns_csv_filename(self, mock_inv_fetcher, complete_edi_content, 
-                                              default_parameters, default_settings, 
+    def test_edi_convert_returns_csv_filename(self, mock_inv_fetcher, complete_edi_content,
+                                              default_parameters, default_settings,
                                               sample_upc_lut, tmp_path):
         """Test that edi_convert returns the expected CSV filename."""
         # Mock the invFetcher
@@ -113,8 +112,8 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
         assert result == output_file + ".csv"
 
     @patch('convert_to_fintech.utils.invFetcher')
-    def test_creates_csv_file(self, mock_inv_fetcher, complete_edi_content, 
-                               default_parameters, default_settings, 
+    def test_creates_csv_file(self, mock_inv_fetcher, complete_edi_content,
+                               default_parameters, default_settings,
                                sample_upc_lut, tmp_path):
         """Test that the CSV file is actually created."""
         mock_fetcher = MagicMock()
@@ -391,7 +390,7 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
     def test_missing_upc_in_lut_handling(self, mock_inv_fetcher, default_parameters,
                                           default_settings, sample_upc_lut, tmp_path):
         """Test handling when UPC is not in LUT.
-        
+
         Note: This test verifies that when vendor_item is NOT in the LUT,
         the code should handle it gracefully. Currently, the code does not
         have error handling for missing UPCs, so we use a UPC that exists
@@ -428,12 +427,12 @@ class TestConvertToFintechDateHandling(TestConvertToFintechFixtures):
 
     @patch('convert_to_fintech.utils.invFetcher')
     @patch('convert_to_fintech.utils.datetime_from_invtime')
-    def test_invoice_date_format(self, mock_datetime, mock_inv_fetcher, 
+    def test_invoice_date_format(self, mock_datetime, mock_inv_fetcher,
                                   default_parameters, default_settings,
                                   sample_upc_lut, tmp_path):
         """Test that invoice date is formatted correctly."""
         from datetime import datetime
-        
+
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
@@ -527,7 +526,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
     def test_missing_header_before_detail(self, mock_inv_fetcher, default_parameters,
                                           default_settings, sample_upc_lut, tmp_path):
         """Test handling when detail record comes before header.
-        
+
         Note: The current implementation requires header before detail.
         This test verifies that having only B records (no A record) is handled.
         The code will fail with KeyError - this test documents expected behavior.

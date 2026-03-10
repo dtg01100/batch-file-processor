@@ -1,8 +1,7 @@
 """Additional tests for ResendDialog to improve coverage."""
-from unittest.mock import MagicMock, patch
+
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QCheckBox
 
 pytestmark = pytest.mark.qt
 
@@ -87,10 +86,12 @@ class TestResendDialogFolderDisplay:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": False},
-            {"id": 2, "file_name": "file2.txt", "resend": False},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": False},
+                {"id": 2, "file_name": "file2.txt", "resend": False},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
@@ -112,10 +113,12 @@ class TestResendDialogFileDisplay:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": False},
-            {"id": 2, "file_name": "file2.txt", "resend": True},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": False},
+                {"id": 2, "file_name": "file2.txt", "resend": True},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
@@ -133,10 +136,12 @@ class TestResendDialogFileDisplay:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": False},
-            {"id": 2, "file_name": "file2.txt", "resend": True},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": False},
+                {"id": 2, "file_name": "file2.txt", "resend": True},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
@@ -177,7 +182,7 @@ class TestResendDialogFileCount:
 
         # Change spinbox value
         dialog._file_count_spinbox.setValue(50)
-        
+
         # Should trigger reload of files
         # (actual behavior depends on implementation)
 
@@ -193,10 +198,12 @@ class TestResendDialogSelection:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": False},
-            {"id": 2, "file_name": "file2.txt", "resend": False},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": False},
+                {"id": 2, "file_name": "file2.txt", "resend": False},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
@@ -218,10 +225,12 @@ class TestResendDialogSelection:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": True},
-            {"id": 2, "file_name": "file2.txt", "resend": True},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": True},
+                {"id": 2, "file_name": "file2.txt", "resend": True},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
@@ -273,9 +282,11 @@ class TestResendDialogApply:
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1, "folder_name": "Test Folder"},
         ]
-        mock_database_obj.processed_files.find.return_value = iter([
-            {"id": 1, "file_name": "file1.txt", "resend": False},
-        ])
+        mock_database_obj.processed_files.find.return_value = iter(
+            [
+                {"id": 1, "file_name": "file1.txt", "resend": False},
+            ]
+        )
 
         dialog = ResendDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)

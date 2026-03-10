@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QComboBox,
 )
-from PyQt6.QtCore import Qt
 
 
 class ColumnBuilders:
@@ -73,7 +72,7 @@ class ColumnBuilders:
         others_list = QListWidget()
         others_list.setMaximumWidth(180)
         self.fields["others_list"] = others_list
-        
+
         aliases: List[str] = []
         if self.alias_provider:
             aliases = sorted(self.alias_provider() or [])
@@ -153,7 +152,7 @@ class ColumnBuilders:
 
         ftp_group = QGroupBox("FTP Backend Settings")
         ftp_layout = QFormLayout(ftp_group)
-        
+
         ftp_server_field = QLineEdit()
         self.fields["ftp_server_field"] = ftp_server_field
         ftp_layout.addRow("FTP Server:", ftp_server_field)
@@ -178,7 +177,7 @@ class ColumnBuilders:
 
         email_group = QGroupBox("Email Backend Settings")
         email_layout = QFormLayout(email_group)
-        
+
         email_recipient_field = QLineEdit()
         self.fields["email_recipient_field"] = email_recipient_field
         email_layout.addRow("Recipient Address:", email_recipient_field)

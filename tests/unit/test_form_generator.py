@@ -10,7 +10,6 @@ pytestmark = [pytest.mark.unit, pytest.mark.gui]
 
 from interface.form import FormGeneratorFactory, FormGenerator
 from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition, FieldType
-from interface.plugins.validation_framework import Validator
 
 
 class TestFormGenerator:
@@ -38,14 +37,14 @@ class TestFormGenerator:
     def test_register_field_dependency(self):
         """Test registering field dependencies."""
         generator = FormGeneratorFactory.create_form_generator(self.basic_schema, 'qt')
-        
+
         # Register a dependency
         generator.register_field_dependency(
             dependent_field='email',
             trigger_field='age',
             condition=lambda value: value > 21
         )
-        
+
         assert 'age' in generator._field_dependencies
         assert 'email' in generator._field_dependencies['age']
         assert len(generator._visibility_callbacks['age']) == 1
@@ -57,7 +56,7 @@ class TestFormGenerator:
             FieldDefinition('field2', FieldType.INTEGER, default=42),
             FieldDefinition('field3', FieldType.BOOLEAN, default=True),
         ])
-        
+
         defaults = schema.get_defaults()
         assert defaults['field1'] == 'test'
         assert defaults['field2'] == 42
@@ -69,16 +68,16 @@ class TestFormGenerator:
         generator = FormGeneratorFactory.create_form_generator(self.basic_schema, 'qt')
         form = generator.build_form()
         qtbot.addWidget(form)
-        
+
         test_values = {
             'name': 'Test User',
             'age': 30,
             'email': 'test@example.com'
         }
-        
+
         generator.set_values(test_values)
         values = generator.get_values()
-        
+
         assert values['name'] == 'Test User'
         assert values['age'] == 30
         assert values['email'] == 'test@example.com'
@@ -89,13 +88,13 @@ class TestFormGenerator:
         generator = FormGeneratorFactory.create_form_generator(self.basic_schema, 'qt')
         form = generator.build_form()
         qtbot.addWidget(form)
-        
+
         widget = generator.widgets['age']
         mock1 = __import__('unittest.mock', fromlist=['MagicMock']).MagicMock()
         widget.set_visible = mock1
         generator.set_field_visibility('age', False)
         mock1.assert_called_once_with(False)
-        
+
         mock2 = __import__('unittest.mock', fromlist=['MagicMock']).MagicMock()
         widget.set_visible = mock2
         generator.set_field_visibility('age', True)
@@ -107,16 +106,16 @@ class TestFormGenerator:
         generator = FormGeneratorFactory.create_form_generator(self.basic_schema, 'qt')
         form = generator.build_form()
         qtbot.addWidget(form)
-        
+
         # Initially, all fields should be enabled
         assert generator.widgets['name'].get_widget().isEnabled()
         assert generator.widgets['age'].get_widget().isEnabled()
         assert generator.widgets['email'].get_widget().isEnabled()
-        
+
         # Disable a field
         generator.set_field_enabled('age', False)
         assert not generator.widgets['age'].get_widget().isEnabled()
-        
+
         # Enable it again
         generator.set_field_enabled('age', True)
         assert generator.widgets['age'].get_widget().isEnabled()
@@ -167,11 +166,11 @@ class TestComplexFormGenerator:
                 default=['programming', 'reading']
             )
         ])
-        
+
         generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
         form = generator.build_form()
         qtbot.addWidget(form)
-        
+
         values = generator.get_values()
         assert set(values['interests']) == {'programming', 'reading'}
 
@@ -182,7 +181,7 @@ class TestComplexFormGenerator:
             FieldDefinition('employed', FieldType.BOOLEAN, label='Employed', default=True),
             FieldDefinition('salary', FieldType.FLOAT, label='Salary', min_value=0)
         ])
-        
+
         generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
         generator.register_field_dependency(
             'salary',
@@ -191,11 +190,11 @@ class TestComplexFormGenerator:
         )
         form = generator.build_form()
         qtbot.addWidget(form)
-        
+
         salary_widget = generator.widgets['salary']
         mock_set_visible = __import__('unittest.mock', fromlist=['MagicMock']).MagicMock()
         salary_widget.set_visible = mock_set_visible
-        
+
         generator.set_field_value('employed', False)
         generator._update_dependent_fields('employed')
         assert mock_set_visible.call_args_list[-1] == __import__('unittest.mock', fromlist=['call']).call(False)

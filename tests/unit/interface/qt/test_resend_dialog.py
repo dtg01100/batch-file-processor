@@ -11,12 +11,14 @@ class TestResendDialogInitialization:
     def test_dialog_class_exists(self):
         """Test that ResendDialog class exists."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
+
         assert ResendDialog is not None
 
     def test_dialog_inherits_from_base_dialog(self):
         """Test that ResendDialog inherits from BaseDialog."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         assert issubclass(ResendDialog, BaseDialog)
 
     def test_dialog_initialization_with_minimal_parameters(self, qtbot, monkeypatch):
@@ -28,8 +30,11 @@ class TestResendDialogInitialization:
         # Mock the ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.get_folders_with_processed_files.return_value = []
-        
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -42,7 +47,7 @@ class TestResendDialogInitialization:
 
         db_conn = MagicMock()
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService'):
+        with patch("interface.qt.dialogs.resend_dialog.ResendService"):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -55,7 +60,10 @@ class TestResendDialogInitialization:
         db_conn = MagicMock()
 
         mock_service = MagicMock()
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service) as mock_service_class:
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ) as mock_service_class:
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -70,7 +78,10 @@ class TestResendDialogInitialization:
         mock_service = MagicMock()
         mock_service.get_folders_with_processed_files.return_value = []
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -94,7 +105,10 @@ class TestResendDialogFolderSelection:
         ]
         mock_service.get_processed_files_for_folder.return_value = []
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -124,7 +138,10 @@ class TestResendDialogFileManagement:
             {"id": 11, "filename": "file2.txt", "allow_resend": 1},
         ]
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -143,7 +160,10 @@ class TestResendDialogFileManagement:
         mock_service = MagicMock()
         mock_service.get_folders_with_processed_files.return_value = []
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -155,7 +175,10 @@ class TestResendDialogFileManagement:
                 }
                 dialog._on_save_clicked()
                 # Service update methods should be called
-                assert mock_service.allow_resend.call_count >= 0 or mock_service.disallow_resend.call_count >= 0
+                assert (
+                    mock_service.allow_resend.call_count >= 0
+                    or mock_service.disallow_resend.call_count >= 0
+                )
 
 
 @pytest.mark.qt
@@ -169,9 +192,14 @@ class TestResendDialogEdgeCases:
         db_conn = MagicMock()
 
         mock_service = MagicMock()
-        mock_service.get_folders_with_processed_files.side_effect = Exception("Database error")
+        mock_service.get_folders_with_processed_files.side_effect = Exception(
+            "Database error"
+        )
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             # Dialog should handle error gracefully
             try:
                 dialog = ResendDialog(None, db_conn)
@@ -191,7 +219,10 @@ class TestResendDialogEdgeCases:
         mock_service = MagicMock()
         mock_service.get_folders_with_processed_files.return_value = []
 
-        with patch('interface.qt.dialogs.resend_dialog.ResendService', return_value=mock_service):
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 

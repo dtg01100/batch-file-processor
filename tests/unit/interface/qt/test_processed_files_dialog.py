@@ -1,7 +1,7 @@
 """Tests for ProcessedFilesDialog."""
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
 @pytest.mark.qt
@@ -11,12 +11,14 @@ class TestProcessedFilesDialogInitialization:
     def test_dialog_class_exists(self):
         """Test that ProcessedFilesDialog class exists."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+
         assert ProcessedFilesDialog is not None
 
     def test_dialog_inherits_from_base_dialog(self):
         """Test that ProcessedFilesDialog inherits from BaseDialog."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         assert issubclass(ProcessedFilesDialog, BaseDialog)
 
     def test_dialog_initialization_with_minimal_parameters(self, qtbot):
@@ -122,7 +124,10 @@ class TestProcessedFilesDialogExport:
 
         # Mock file dialog
         mock_file_dialog = MagicMock(return_value="/export/path")
-        monkeypatch.setattr("interface.qt.dialogs.processed_files_dialog.QFileDialog.getExistingDirectory", mock_file_dialog)
+        monkeypatch.setattr(
+            "interface.qt.dialogs.processed_files_dialog.QFileDialog.getExistingDirectory",
+            mock_file_dialog,
+        )
 
         # Trigger export if method exists
         if hasattr(dialog, "_select_output_folder"):

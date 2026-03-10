@@ -14,7 +14,6 @@ from .plugin_base import PluginBase
 from .configuration_plugin import ConfigurationPlugin
 from ..models.folder_configuration import ConvertFormat
 from .validation_framework import ValidationResult
-from .config_schemas import FieldDefinition
 
 
 class PluginManager:
@@ -43,7 +42,9 @@ class PluginManager:
         self._initialized = False
         # Configuration plugin specific storage
         self._configuration_plugins: Dict[ConvertFormat, ConfigurationPlugin] = {}
-        self._configuration_plugin_classes: Dict[ConvertFormat, Type[ConfigurationPlugin]] = {}
+        self._configuration_plugin_classes: Dict[
+            ConvertFormat, Type[ConfigurationPlugin]
+        ] = {}
 
     def add_plugin_directory(self, directory: str) -> None:
         """
@@ -70,11 +71,13 @@ class PluginManager:
                 self._discover_plugins_in_directory(directory, discovered)
 
         # Search in package
-        self._discover_plugins_in_package('interface.plugins', discovered)
+        self._discover_plugins_in_package("interface.plugins", discovered)
 
         return discovered
 
-    def _discover_plugins_in_directory(self, directory: str, discovered: List[str]) -> None:
+    def _discover_plugins_in_directory(
+        self, directory: str, discovered: List[str]
+    ) -> None:
         """
         Discover plugins in a specific directory.
 
@@ -84,14 +87,16 @@ class PluginManager:
         """
         for root, _, files in os.walk(directory):
             for file_name in files:
-                if file_name.endswith('.py') and not file_name.startswith('__'):
+                if file_name.endswith(".py") and not file_name.startswith("__"):
                     module_path = os.path.join(root, file_name)
                     try:
                         self._load_plugin_module(module_path, discovered)
                     except Exception as e:
                         print(f"Error loading plugin module {module_path}: {e}")
 
-    def _discover_plugins_in_package(self, package_name: str, discovered: List[str]) -> None:
+    def _discover_plugins_in_package(
+        self, package_name: str, discovered: List[str]
+    ) -> None:
         """
         Discover plugins in a Python package.
 
@@ -101,7 +106,7 @@ class PluginManager:
         """
         try:
             package = importlib.import_module(package_name)
-            if hasattr(package, '__path__'):
+            if hasattr(package, "__path__"):
                 for _, name, is_pkg in pkgutil.iter_modules(package.__path__):
                     if not is_pkg:
                         module_name = f"{package_name}.{name}"
@@ -127,7 +132,9 @@ class PluginManager:
             spec.loader.exec_module(module)
             self._extract_plugins_from_module(module, discovered)
 
-    def _load_plugin_module_by_name(self, module_name: str, discovered: List[str]) -> None:
+    def _load_plugin_module_by_name(
+        self, module_name: str, discovered: List[str]
+    ) -> None:
         """
         Load a plugin module by name.
 
@@ -148,24 +155,24 @@ class PluginManager:
         """
         for name, obj in module.__dict__.items():
             if (
-                isinstance(obj, type) and
-                issubclass(obj, PluginBase) and
-                obj is not PluginBase and
-                not obj.__name__.startswith('_') and
-                not inspect.isabstract(obj)
+                isinstance(obj, type)
+                and issubclass(obj, PluginBase)
+                and obj is not PluginBase
+                and not obj.__name__.startswith("_")
+                and not inspect.isabstract(obj)
             ):
                 plugin_id = obj.get_identifier()
                 if plugin_id not in self._plugin_classes:
                     self._plugin_classes[plugin_id] = obj
                     discovered.append(plugin_id)
-                
+
                 # If it's a ConfigurationPlugin, also store in configuration plugin maps
                 if (
-                    isinstance(obj, type) and
-                    issubclass(obj, ConfigurationPlugin) and
-                    obj is not ConfigurationPlugin and
-                    not obj.__name__.startswith('_') and
-                    not inspect.isabstract(obj)
+                    isinstance(obj, type)
+                    and issubclass(obj, ConfigurationPlugin)
+                    and obj is not ConfigurationPlugin
+                    and not obj.__name__.startswith("_")
+                    and not inspect.isabstract(obj)
                 ):
                     try:
                         format_enum = obj.get_format_enum()
@@ -183,10 +190,12 @@ class PluginManager:
         """
         if not self._initialized:
             self.initialize_plugins()
-        
+
         return list(self._configuration_plugins.values())
 
-    def get_configuration_plugin_by_format(self, format_enum: ConvertFormat) -> Optional[ConfigurationPlugin]:
+    def get_configuration_plugin_by_format(
+        self, format_enum: ConvertFormat
+    ) -> Optional[ConfigurationPlugin]:
         """
         Get configuration plugin by format enum.
 
@@ -198,10 +207,12 @@ class PluginManager:
         """
         if not self._initialized:
             self.initialize_plugins()
-        
+
         return self._configuration_plugins.get(format_enum)
 
-    def get_configuration_plugin_by_format_name(self, format_name: str) -> Optional[ConfigurationPlugin]:
+    def get_configuration_plugin_by_format_name(
+        self, format_name: str
+    ) -> Optional[ConfigurationPlugin]:
         """
         Get configuration plugin by format name.
 
@@ -213,14 +224,16 @@ class PluginManager:
         """
         if not self._initialized:
             self.initialize_plugins()
-        
+
         for plugin in self._configuration_plugins.values():
             if plugin.get_format_name().lower() == format_name.lower():
                 return plugin
-        
+
         return None
 
-    def create_configuration_widget(self, format_enum: ConvertFormat, parent: Any = None) -> Any:
+    def create_configuration_widget(
+        self, format_enum: ConvertFormat, parent: Any = None
+    ) -> Any:
         """
         Create a configuration widget for a specific format.
 
@@ -234,10 +247,12 @@ class PluginManager:
         plugin = self.get_configuration_plugin_by_format(format_enum)
         if plugin:
             return plugin.create_widget(parent)
-        
+
         return None
 
-    def validate_configuration(self, format_enum: ConvertFormat, config: Dict[str, Any]) -> ValidationResult:
+    def validate_configuration(
+        self, format_enum: ConvertFormat, config: Dict[str, Any]
+    ) -> ValidationResult:
         """
         Validate configuration data for a specific format.
 
@@ -251,11 +266,14 @@ class PluginManager:
         plugin = self.get_configuration_plugin_by_format(format_enum)
         if plugin:
             return plugin.validate_config(config)
-        
+
         from .validation_framework import ValidationResult
+
         return ValidationResult(success=False, errors=["Unsupported format"])
 
-    def create_configuration(self, format_enum: ConvertFormat, data: Dict[str, Any]) -> Any:
+    def create_configuration(
+        self, format_enum: ConvertFormat, data: Dict[str, Any]
+    ) -> Any:
         """
         Create a configuration instance for a specific format.
 
@@ -269,10 +287,12 @@ class PluginManager:
         plugin = self.get_configuration_plugin_by_format(format_enum)
         if plugin:
             return plugin.create_config(data)
-        
+
         return None
 
-    def serialize_configuration(self, format_enum: ConvertFormat, config: Any) -> Dict[str, Any]:
+    def serialize_configuration(
+        self, format_enum: ConvertFormat, config: Any
+    ) -> Dict[str, Any]:
         """
         Serialize a configuration instance for a specific format.
 
@@ -286,10 +306,12 @@ class PluginManager:
         plugin = self.get_configuration_plugin_by_format(format_enum)
         if plugin:
             return plugin.serialize_config(config)
-        
+
         return {}
 
-    def deserialize_configuration(self, format_enum: ConvertFormat, data: Dict[str, Any]) -> Any:
+    def deserialize_configuration(
+        self, format_enum: ConvertFormat, data: Dict[str, Any]
+    ) -> Any:
         """
         Deserialize configuration data for a specific format.
 
@@ -303,7 +325,7 @@ class PluginManager:
         plugin = self.get_configuration_plugin_by_format(format_enum)
         if plugin:
             return plugin.deserialize_config(data)
-        
+
         return None
 
     def get_configuration_fields(self, format_enum: ConvertFormat):
@@ -319,10 +341,12 @@ class PluginManager:
         plugin_class = self._configuration_plugin_classes.get(format_enum)
         if plugin_class:
             return plugin_class.get_config_fields()
-        
+
         return []
 
-    def initialize_plugins(self, config: Optional[Dict[str, Dict[str, Any]]] = None) -> List[str]:
+    def initialize_plugins(
+        self, config: Optional[Dict[str, Dict[str, Any]]] = None
+    ) -> List[str]:
         """
         Initialize all discovered plugins.
 
@@ -340,7 +364,7 @@ class PluginManager:
 
         # Resolve dependencies
         dependency_graph = self._build_dependency_graph()
-        
+
         # Initialize plugins
         for plugin_class in dependency_graph:
             try:
@@ -352,7 +376,7 @@ class PluginManager:
                 self._plugins[plugin_id] = plugin
                 self._configurations[plugin_id] = plugin_config
                 initialized.append(plugin_id)
-                
+
                 # If it's a ConfigurationPlugin, also store in configuration plugins map
                 if isinstance(plugin, ConfigurationPlugin):
                     try:
@@ -360,9 +384,9 @@ class PluginManager:
                         self._configuration_plugins[format_enum] = plugin
                     except Exception as e:
                         print(f"Error storing configuration plugin {plugin_id}: {e}")
-                        
+
             except Exception as e:
-                plugin_id = getattr(plugin_class, 'get_identifier', lambda: 'Unknown')()
+                plugin_id = getattr(plugin_class, "get_identifier", lambda: "Unknown")()
                 print(f"Error initializing plugin {plugin_id}: {e}")
 
         self._initialized = True
@@ -377,4 +401,3 @@ class PluginManager:
         """
         # For simplicity, return plugins in any order (no dependency resolution)
         return list(self._plugin_classes.values())
-

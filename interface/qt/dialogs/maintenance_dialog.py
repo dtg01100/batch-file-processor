@@ -10,7 +10,6 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -21,7 +20,9 @@ from PyQt6.QtWidgets import (
 from interface.qt.dialogs.base_dialog import BaseDialog
 
 from interface.ports import UIServiceProtocol
-from interface.operations.maintenance_functions import MaintenanceFunctions  # Toolkit-agnostic business logic
+from interface.operations.maintenance_functions import (
+    MaintenanceFunctions,
+)  # Toolkit-agnostic business logic
 
 
 class MaintenanceDialog(BaseDialog):

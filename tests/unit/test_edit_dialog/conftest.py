@@ -6,8 +6,7 @@ and related components (validator, extractor, FTP service).
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Callable
-from dataclasses import dataclass, field
+from typing import Dict, Any, Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -36,12 +35,10 @@ from interface.operations.folder_data_extractor import (
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
-    ValidationError,
 )
 from interface.services.ftp_service import (
     FTPServiceProtocol,
     FTPConnectionResult,
-    MockFTPService,
 )
 
 
@@ -73,9 +70,7 @@ def failing_ftp_service() -> MagicMock:
     mock = MagicMock(spec=FTPServiceProtocol)
     mock.test_connection = MagicMock(
         return_value=FTPConnectionResult(
-            success=False,
-            error_message="Connection failed",
-            error_type="server"
+            success=False, error_message="Connection failed", error_type="server"
         )
     )
     return mock
@@ -131,10 +126,7 @@ def validating_mock_validator(mock_ftp_service) -> FolderSettingsValidator:
     Returns:
         FolderSettingsValidator: Validator configured with mock dependencies
     """
-    return FolderSettingsValidator(
-        ftp_service=mock_ftp_service,
-        existing_aliases=[]
-    )
+    return FolderSettingsValidator(ftp_service=mock_ftp_service, existing_aliases=[])
 
 
 # =============================================================================
@@ -184,7 +176,7 @@ def sample_extracted_fields() -> ExtractedDialogFields:
         prepend_date_files=False,
         rename_file="",
         split_edi_filter_categories="ALL",
-        split_edi_filter_mode="include"
+        split_edi_filter_mode="include",
     )
 
 
@@ -213,15 +205,12 @@ def sample_folder_config() -> FolderConfiguration:
             port=21,
             username="testuser",
             password="testpass",
-            folder="/uploads/"
+            folder="/uploads/",
         ),
         email=EmailConfiguration(
-            recipients="recipient@example.com",
-            subject_line="Test Subject"
+            recipients="recipient@example.com", subject_line="Test Subject"
         ),
-        copy=CopyConfiguration(
-            destination_directory="/copy/destination"
-        ),
+        copy=CopyConfiguration(destination_directory="/copy/destination"),
         edi=EDIConfiguration(
             process_edi="True",
             tweak_edi=True,
@@ -233,14 +222,14 @@ def sample_folder_config() -> FolderConfiguration:
             force_edi_validation=False,
             rename_file="",
             split_edi_filter_categories="ALL",
-            split_edi_filter_mode="include"
+            split_edi_filter_mode="include",
         ),
         upc_override=UPCOverrideConfiguration(
             enabled=False,
             level=1,
             category_filter="",
             target_length=11,
-            padding_pattern="           "
+            padding_pattern="           ",
         ),
         a_record_padding=ARecordPaddingConfiguration(
             enabled=False,
@@ -248,19 +237,19 @@ def sample_folder_config() -> FolderConfiguration:
             padding_length=6,
             append_text="",
             append_enabled=False,
-            force_txt_extension=False
+            force_txt_extension=False,
         ),
         invoice_date=InvoiceDateConfiguration(
             offset=0,
             custom_format_enabled=False,
             custom_format_string="",
-            retail_uom=False
+            retail_uom=False,
         ),
         backend_specific=BackendSpecificConfiguration(
             estore_store_number="",
             estore_vendor_oid="",
             estore_vendor_namevendoroid="",
-            fintech_division_id=""
+            fintech_division_id="",
         ),
         csv=CSVConfiguration(
             include_headers=True,
@@ -268,8 +257,8 @@ def sample_folder_config() -> FolderConfiguration:
             include_item_numbers=False,
             include_item_description=False,
             simple_csv_sort_order="",
-            split_prepaid_sales_tax_crec=False
-        )
+            split_prepaid_sales_tax_crec=False,
+        ),
     )
 
 
@@ -292,11 +281,11 @@ def sample_ftp_folder_config() -> FolderConfiguration:
             port=21,
             username="ftpuser",
             password="ftppass",
-            folder="/incoming/"
+            folder="/incoming/",
         ),
         email=None,
         copy=None,
-        edi=EDIConfiguration(process_edi="False")
+        edi=EDIConfiguration(process_edi="False"),
     )
 
 
@@ -316,11 +305,11 @@ def sample_email_folder_config() -> FolderConfiguration:
         process_backend_copy=False,
         email=EmailConfiguration(
             recipients="test@example.com, other@example.com",
-            subject_line="Daily Report"
+            subject_line="Daily Report",
         ),
         ftp=None,
         copy=None,
-        edi=EDIConfiguration(process_edi="False")
+        edi=EDIConfiguration(process_edi="False"),
     )
 
 
@@ -345,8 +334,8 @@ def sample_edi_folder_config() -> FolderConfiguration:
             split_edi_include_credits=True,
             convert_to_format="CSV",
             prepend_date_files=True,
-            rename_file="processed_{filename}"
-        )
+            rename_file="processed_{filename}",
+        ),
     )
 
 
@@ -365,71 +354,71 @@ def sample_folder_dict() -> Dict[str, Any]:
         Dict[str, Any]: Folder configuration as dictionary
     """
     return {
-        'folder_name': '/test/folder',
-        'folder_is_active': 'True',
-        'alias': 'test-folder',
-        'is_template': False,
+        "folder_name": "/test/folder",
+        "folder_is_active": "True",
+        "alias": "test-folder",
+        "is_template": False,
         # Backend toggles
-        'process_backend_copy': True,
-        'process_backend_ftp': True,
-        'process_backend_email': False,
+        "process_backend_copy": True,
+        "process_backend_ftp": True,
+        "process_backend_email": False,
         # FTP fields
-        'ftp_server': 'ftp.example.com',
-        'ftp_port': 21,
-        'ftp_folder': '/uploads/',
-        'ftp_username': 'testuser',
-        'ftp_password': 'testpass',
+        "ftp_server": "ftp.example.com",
+        "ftp_port": 21,
+        "ftp_folder": "/uploads/",
+        "ftp_username": "testuser",
+        "ftp_password": "testpass",
         # Email fields
-        'email_to': 'recipient@example.com',
-        'email_subject_line': 'Test Subject',
+        "email_to": "recipient@example.com",
+        "email_subject_line": "Test Subject",
         # Copy fields
-        'copy_to_directory': '/copy/destination',
+        "copy_to_directory": "/copy/destination",
         # EDI fields
-        'process_edi': 'True',
-        'convert_to_format': 'CSV',
-        'tweak_edi': True,
-        'split_edi': False,
-        'split_edi_include_invoices': True,
-        'split_edi_include_credits': False,
-        'prepend_date_files': False,
-        'rename_file': '',
-        'split_edi_filter_categories': 'ALL',
-        'split_edi_filter_mode': 'include',
-        'force_edi_validation': False,
+        "process_edi": "True",
+        "convert_to_format": "CSV",
+        "tweak_edi": True,
+        "split_edi": False,
+        "split_edi_include_invoices": True,
+        "split_edi_include_credits": False,
+        "prepend_date_files": False,
+        "rename_file": "",
+        "split_edi_filter_categories": "ALL",
+        "split_edi_filter_mode": "include",
+        "force_edi_validation": False,
         # EDI options
-        'calculate_upc_check_digit': 'True',
-        'include_a_records': 'True',
-        'include_c_records': 'False',
-        'include_headers': 'True',
-        'filter_ampersand': 'False',
+        "calculate_upc_check_digit": "True",
+        "include_a_records": "True",
+        "include_c_records": "False",
+        "include_headers": "True",
+        "filter_ampersand": "False",
         # A-record
-        'pad_a_records': 'False',
-        'a_record_padding': '',
-        'a_record_padding_length': 6,
-        'append_a_records': 'False',
-        'a_record_append_text': '',
-        'force_txt_file_ext': 'False',
+        "pad_a_records": "False",
+        "a_record_padding": "",
+        "a_record_padding_length": 6,
+        "append_a_records": "False",
+        "a_record_append_text": "",
+        "force_txt_file_ext": "False",
         # Invoice date
-        'invoice_date_offset': 0,
-        'invoice_date_custom_format': False,
-        'invoice_date_custom_format_string': '',
-        'retail_uom': False,
+        "invoice_date_offset": 0,
+        "invoice_date_custom_format": False,
+        "invoice_date_custom_format_string": "",
+        "retail_uom": False,
         # UPC override
-        'override_upc_bool': False,
-        'override_upc_level': 1,
-        'override_upc_category_filter': '',
-        'upc_target_length': 11,
-        'upc_padding_pattern': '           ',
+        "override_upc_bool": False,
+        "override_upc_level": 1,
+        "override_upc_category_filter": "",
+        "upc_target_length": 11,
+        "upc_padding_pattern": "           ",
         # Backend-specific
-        'estore_store_number': '',
-        'estore_vendor_oid': '',
-        'estore_vendor_namevendoroid': '',
-        'fintech_division_id': '',
+        "estore_store_number": "",
+        "estore_vendor_oid": "",
+        "estore_vendor_namevendoroid": "",
+        "fintech_division_id": "",
         # CSV
-        'include_item_numbers': False,
-        'include_item_description': False,
-        'simple_csv_sort_order': '',
-        'split_prepaid_sales_tax_crec': False
+        "include_item_numbers": False,
+        "include_item_description": False,
+        "simple_csv_sort_order": "",
+        "split_prepaid_sales_tax_crec": False,
     }
 
 
@@ -441,13 +430,13 @@ def minimal_folder_dict() -> Dict[str, Any]:
         Dict[str, Any]: Minimal folder config with required fields only
     """
     return {
-        'folder_name': '/minimal/folder',
-        'folder_is_active': 'False',
-        'alias': 'minimal-folder',
-        'process_backend_copy': False,
-        'process_backend_ftp': False,
-        'process_backend_email': False,
-        'process_edi': 'False'
+        "folder_name": "/minimal/folder",
+        "folder_is_active": "False",
+        "alias": "minimal-folder",
+        "process_backend_copy": False,
+        "process_backend_ftp": False,
+        "process_backend_email": False,
+        "process_edi": "False",
     }
 
 
@@ -458,9 +447,7 @@ def minimal_folder_dict() -> Dict[str, Any]:
 
 @pytest.fixture
 def dialog_dependencies(
-    mock_ftp_service: MagicMock,
-    mock_validator: MagicMock,
-    mock_extractor: MagicMock
+    mock_ftp_service: MagicMock, mock_validator: MagicMock, mock_extractor: MagicMock
 ) -> Dict[str, Any]:
     """Provide all three dependencies for EditFoldersDialog testing.
 
@@ -486,16 +473,15 @@ def dialog_dependencies(
         ... )
     """
     return {
-        'ftp_service': mock_ftp_service,
-        'validator': mock_validator,
-        'extractor': mock_extractor
+        "ftp_service": mock_ftp_service,
+        "validator": mock_validator,
+        "extractor": mock_extractor,
     }
 
 
 @pytest.fixture
 def dialog_dependencies_with_real_validator(
-    mock_ftp_service: MagicMock,
-    sample_folder_dict: Dict[str, Any]
+    mock_ftp_service: MagicMock, sample_folder_dict: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Provide dependencies with a real FolderSettingsValidator.
 
@@ -507,15 +493,14 @@ def dialog_dependencies_with_real_validator(
         Dict containing dependencies with real validator
     """
     # Extract existing aliases from sample data
-    existing_aliases = [sample_folder_dict.get('alias', '')]
+    existing_aliases = [sample_folder_dict.get("alias", "")]
 
     return {
-        'ftp_service': mock_ftp_service,
-        'validator': FolderSettingsValidator(
-            ftp_service=mock_ftp_service,
-            existing_aliases=existing_aliases
+        "ftp_service": mock_ftp_service,
+        "validator": FolderSettingsValidator(
+            ftp_service=mock_ftp_service, existing_aliases=existing_aliases
         ),
-        'extractor': MagicMock(spec=FolderDataExtractor)
+        "extractor": MagicMock(spec=FolderDataExtractor),
     }
 
 
@@ -531,12 +516,14 @@ def mock_settings_provider() -> Callable:
     Returns:
         Callable: Function that returns mock settings dict
     """
+
     def provider():
         return {
-            'company_name': 'Test Company',
-            'email_sender': 'noreply@test.com',
-            'default_ftp_port': 21
+            "company_name": "Test Company",
+            "email_sender": "noreply@test.com",
+            "default_ftp_port": 21,
         }
+
     return provider
 
 
@@ -547,12 +534,10 @@ def mock_alias_provider() -> Callable:
     Returns:
         Callable: Function that returns list of existing aliases
     """
+
     def provider():
-        return [
-            'existing-folder-1',
-            'existing-folder-2',
-            'test-folder'
-        ]
+        return ["existing-folder-1", "existing-folder-2", "test-folder"]
+
     return provider
 
 

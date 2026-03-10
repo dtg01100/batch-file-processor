@@ -28,8 +28,6 @@ pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 
 import csv
 import os
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -330,7 +328,7 @@ class TestConverterEmptyFileHandling:
         import convert_to_yellowdog_csv
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
-        
+
         # For yellowdog_csv, an empty file leads to an empty arec_line dict
         # which causes flush_to_csv to fail when accessing arec_line['invoice_date']
         # This is a known limitation of the converter, so we expect this specific error
@@ -339,7 +337,7 @@ class TestConverterEmptyFileHandling:
             mock_utils.capture_records.return_value = None
             mock_utils.convert_to_price.return_value = "0.00"
             mock_utils.dac_str_int_to_int.return_value = 0
-            
+
             # The test is that it handles the empty file gracefully (doesn't crash with system errors)
             # We allow the specific KeyError that occurs due to empty arec_line
             try:
@@ -428,7 +426,7 @@ class TestConverterEmptyFileHandling:
         import convert_to_stewarts_custom
 
         output_base = str(tmp_path / "output_stewarts")
-        
+
         # Mock the query_runner to return valid data
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
@@ -475,7 +473,7 @@ class TestConverterEmptyFileHandling:
         import convert_to_stewarts_custom
 
         missing = str(tmp_path / "does_not_exist.edi")
-        
+
         with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_stewarts_custom.edi_convert(
@@ -515,7 +513,7 @@ class TestConverterEmptyFileHandling:
         import convert_to_jolley_custom
 
         output_base = str(tmp_path / "output_jolley")
-        
+
         # Mock the query_runner to return valid data
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
@@ -572,7 +570,7 @@ class TestConverterEmptyFileHandling:
         import convert_to_jolley_custom
 
         missing = str(tmp_path / "does_not_exist.edi")
-        
+
         with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_jolley_custom.edi_convert(
@@ -1537,7 +1535,7 @@ class TestEstoreEinvoiceGenericProcessing:
         edi_file.write_text(content, encoding="utf-8")
 
         output_filename_initial = str(tmp_path / "output_generic")
-        
+
         with patch.object(
             convert_to_estore_einvoice_generic, "invFetcher"
         ) as mock_fetcher_class:
@@ -1573,7 +1571,7 @@ class TestEstoreEinvoiceGenericProcessing:
         edi_file.write_text(content, encoding="utf-8")
 
         output_filename_initial = str(tmp_path / "output_generic_ac")
-        
+
         with patch.object(
             convert_to_estore_einvoice_generic, "invFetcher"
         ) as mock_fetcher_class:
@@ -1603,22 +1601,22 @@ class TestEstoreEinvoiceGenericProcessing:
         b2 = make_b_record(upc="01234567891", vendor_item="222222", unit_cost="000200")
         b3 = make_b_record(upc="01234567892", vendor_item="333333", unit_cost="000300")
         content = make_a_record() + "\n" + b1 + "\n" + b2 + "\n" + b3 + "\n"
-        
+
         edi_file = tmp_path / "multi_b.edi"
         edi_file.write_text(content, encoding="utf-8")
 
         output_filename_initial = str(tmp_path / "output_generic_multi")
-        
+
         with patch.object(
             convert_to_estore_einvoice_generic, "invFetcher"
         ) as mock_fetcher_class:
             mock_fetcher_instance = MagicMock()
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
             mock_fetcher_instance.fetch_cust.return_value = "CUST001"
-            
+
             def mock_uom_desc(itemno, uommult, lineno, invno):
                 return "CS"
-            
+
             mock_fetcher_instance.fetch_uom_desc.side_effect = mock_uom_desc
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -1645,12 +1643,12 @@ class TestEstoreEinvoiceGenericProcessing:
         # B record with negative quantity (starts with -)
         b1 = make_b_record(quantity="-00010", unit_cost="000100")
         content = make_a_record() + "\n" + b1 + "\n"
-        
+
         edi_file = tmp_path / "neg_qty.edi"
         edi_file.write_text(content, encoding="utf-8")
 
         output_filename_initial = str(tmp_path / "output_generic_neg")
-        
+
         with patch.object(
             convert_to_estore_einvoice_generic, "invFetcher"
         ) as mock_fetcher_class:
@@ -1684,12 +1682,12 @@ class TestEstoreEinvoiceGenericProcessing:
         edi_file.write_text(content, encoding="utf-8")
 
         output_filename_initial = str(tmp_path / "output_generic_lut")
-        
+
         # upc_lut with lookup data
         upc_lut = {
             123456: ("BEER", "01234567890", "01234567890"),
         }
-        
+
         with patch.object(
             convert_to_estore_einvoice_generic, "invFetcher"
         ) as mock_fetcher_class:

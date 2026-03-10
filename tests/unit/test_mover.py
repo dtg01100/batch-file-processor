@@ -15,7 +15,6 @@ pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
 
 import pytest
 
@@ -77,27 +76,27 @@ class TestDbMigrationThingMigration:
     def test_progress_callback_called(self):
         """Test that progress callback mechanism exists."""
         migrator = mover.DbMigrationThing("/original.db", "/new.db")
-        
+
         progress_calls = []
-        
+
         def track_progress(current, maximum):
             progress_calls.append((current, maximum))
-        
+
         # Verify callback mechanism exists and is callable
         assert callable(track_progress)
-        
+
         # Simulate progress callback
         track_progress(0, 100)
         track_progress(50, 100)
         track_progress(100, 100)
-        
+
         assert len(progress_calls) == 3
 
     def test_progress_callback_signature(self):
         """Test that progress callback has correct signature."""
         def sample_callback(progress: int, maximum: int) -> None:
             pass
-        
+
         # Should accept two integers and return None
         result = sample_callback(50, 100)
         assert result is None
@@ -105,7 +104,7 @@ class TestDbMigrationThingMigration:
     def test_original_database_path_override(self):
         """Test that original_database_path can be overridden."""
         migrator = mover.DbMigrationThing("/original.db", "/new.db")
-        
+
         # The migrator should accept an override path
         assert migrator.original_folder_path == "/original.db"
         # Override would be used in do_migrate
@@ -119,7 +118,7 @@ class TestFolderMatching:
         # Create a mock folder entry
         folder1 = {'folder_name': '/path/to/folder', 'id': 1}
         folder2 = {'folder_name': '/path/to/folder', 'id': 2}
-        
+
         # When paths exist on the filesystem, os.path.samefile would match them
         # For testing, we verify the comparison logic exists
         assert folder1['folder_name'] == folder2['folder_name']
@@ -129,7 +128,7 @@ class TestFolderMatching:
         # When paths don't exist, string comparison is used
         folder1 = {'folder_name': '/path/to/folder', 'id': 1}
         folder2 = {'folder_name': '/path/to/folder', 'id': 2}
-        
+
         # String comparison should work
         assert folder1['folder_name'] == folder2['folder_name']
 
@@ -137,7 +136,7 @@ class TestFolderMatching:
         """Test that different folders are not matched."""
         folder1 = {'folder_name': '/path/to/folder1', 'id': 1}
         folder2 = {'folder_name': '/path/to/folder2', 'id': 2}
-        
+
         assert folder1['folder_name'] != folder2['folder_name']
 
 
@@ -152,21 +151,21 @@ class TestBackendSettingsMerging:
             'process_backend_copy': True,
             'copy_to_directory': '/new/backup',
         }
-        
+
         old_line = {
             'id': 1,
             'folder_name': '/path/to/folder',
             'process_backend_copy': False,
             'copy_to_directory': '/old/backup',
         }
-        
+
         # When merging, new settings should override
         update_dict = {
             'process_backend_copy': new_line['process_backend_copy'],
             'copy_to_directory': new_line['copy_to_directory'],
             'id': old_line['id']
         }
-        
+
         assert update_dict['process_backend_copy'] is True
         assert update_dict['copy_to_directory'] == '/new/backup'
 
@@ -182,7 +181,7 @@ class TestBackendSettingsMerging:
             'ftp_password': 'newpass',
             'ftp_port': 2121,
         }
-        
+
         # When merging FTP settings
         update_dict = {
             'ftp_server': new_line['ftp_server'],
@@ -192,7 +191,7 @@ class TestBackendSettingsMerging:
             'ftp_port': new_line['ftp_port'],
             'id': new_line['id']
         }
-        
+
         assert update_dict['ftp_server'] == 'new.ftp.com'
         assert update_dict['ftp_port'] == 2121
 
@@ -205,27 +204,27 @@ class TestBackendSettingsMerging:
             'email_to': 'new@example.com',
             'email_subject_line': 'New Subject',
         }
-        
+
         update_dict = {
             'email_to': new_line['email_to'],
             'email_subject_line': new_line['email_subject_line'],
             'id': new_line['id']
         }
-        
+
         assert update_dict['email_to'] == 'new@example.com'
         assert update_dict['email_subject_line'] == 'New Subject'
 
     def test_backend_true_values(self):
         """Test various truthy values for backend flags."""
         truthy_values = [True, 1, "True"]
-        
+
         for value in truthy_values:
             assert value in (True, 1, "True")
 
     def test_backend_false_values(self):
         """Test various falsy values for backend flags."""
         falsy_values = [False, 0, "False", None, ""]
-        
+
         for value in falsy_values:
             # These should not match the truthy check
             assert value not in (True, 1, "True")
@@ -243,11 +242,11 @@ class TestNewFolderInsertion:
             'process_backend_copy': True,
             'copy_to_directory': '/backup',
         }
-        
+
         # When inserting, the ID should be removed
         folder_to_insert = new_folder.copy()
         del folder_to_insert['id']
-        
+
         assert 'id' not in folder_to_insert
         assert folder_to_insert['folder_name'] == '/path/to/new_folder'
 
@@ -257,12 +256,12 @@ class TestNewFolderInsertion:
             'folder_name': '/path/to/inactive',
             'folder_is_active': 0,
         }
-        
+
         active_folder = {
             'folder_name': '/path/to/active',
             'folder_is_active': 1,
         }
-        
+
         # Only active folders should be processed
         assert inactive_folder['folder_is_active'] != 1
         assert active_folder['folder_is_active'] == 1
@@ -274,7 +273,7 @@ class TestErrorHandling:
     def test_import_error_caught(self):
         """Test that import errors are caught and logged."""
         error_message = "import of folder failed with KeyError: 'missing_key'"
-        
+
         # The error handling should catch exceptions and continue
         assert "import of folder failed" in error_message
 
@@ -288,7 +287,7 @@ class TestErrorHandling:
         # When os.path.samefile fails, fall back to string comparison
         path1 = '/path/to/folder'
         path2 = '/path/to/folder'
-        
+
         result = path1 == path2
         assert result is True
 
@@ -299,7 +298,7 @@ class TestThreading:
     def test_thread_created_for_preimport(self):
         """Test that a thread is created for preimport operations."""
         import threading
-        
+
         # Verify threading module is available
         assert hasattr(threading, 'Thread')
         assert callable(threading.Thread)
@@ -308,19 +307,19 @@ class TestThreading:
         """Test that main thread waits for preimport thread."""
         import threading
         import time
-        
+
         thread_completed = []
-        
+
         def background_task():
             time.sleep(0.01)
             thread_completed.append(True)
-        
+
         thread = threading.Thread(target=background_task)
         thread.start()
-        
+
         while thread.is_alive():
             pass
-        
+
         assert len(thread_completed) == 1
 
 
@@ -330,25 +329,25 @@ class TestProgressTracking:
     def test_progress_counter_incremented(self):
         """Test that progress counter is incremented."""
         migrator = mover.DbMigrationThing("/original.db", "/new.db")
-        
+
         initial_progress = migrator.progress_of_folders
         migrator.progress_of_folders += 1
-        
+
         assert migrator.progress_of_folders == initial_progress + 1
 
     def test_total_folders_counted(self):
         """Test that total folder count is set."""
         migrator = mover.DbMigrationThing("/original.db", "/new.db")
-        
+
         migrator.number_of_folders = 5
-        
+
         assert migrator.number_of_folders == 5
 
     def test_progress_percentage_calculation(self):
         """Test progress percentage calculation."""
         current = 3
         maximum = 10
-        
+
         percentage = (current / maximum) * 100
-        
+
         assert percentage == 30.0

@@ -17,7 +17,11 @@ from dispatch.feature_flags import (
     get_feature_flags,
     set_feature_flag,
 )
-from dispatch.file_utils import build_output_filename, filter_files_by_checksum, do_clear_old_files
+from dispatch.file_utils import (
+    build_output_filename,
+    filter_files_by_checksum,
+    do_clear_old_files,
+)
 from dispatch.interfaces import (
     DatabaseInterface,
     FileSystemInterface,
@@ -52,50 +56,51 @@ from dispatch.processed_files_tracker import (
 
 # Import process function after modules are fully loaded to avoid circular imports
 from dispatch.orchestrator import DispatchOrchestrator
+
 process = DispatchOrchestrator.process
 
 __all__ = [
     # Hash utilities
-    'generate_match_lists',
-    'generate_file_hash',
+    "generate_match_lists",
+    "generate_file_hash",
     # File utilities
-    'build_output_filename',
-    'filter_files_by_checksum',
-    'do_clear_old_files',
+    "build_output_filename",
+    "filter_files_by_checksum",
+    "do_clear_old_files",
     # Interfaces
-    'DatabaseInterface',
-    'FileSystemInterface',
-    'BackendInterface',
+    "DatabaseInterface",
+    "FileSystemInterface",
+    "BackendInterface",
     # Components
-    'EDIValidator',
-    'SendManager',
-    'ErrorHandler',
-    'DispatchConfig',
-    'DispatchOrchestrator',
-    'process',
+    "EDIValidator",
+    "SendManager",
+    "ErrorHandler",
+    "DispatchConfig",
+    "DispatchOrchestrator",
+    "process",
     # Feature Flags
-    'is_legacy_mode',
-    'is_pipeline_enabled',
-    'get_debug_mode',
-    'get_feature_flags',
-    'set_feature_flag',
+    "is_legacy_mode",
+    "is_pipeline_enabled",
+    "get_debug_mode",
+    "get_feature_flags",
+    "set_feature_flag",
     # Log Sender
-    'EmailConfig',
-    'LogSender',
-    'LogEntry',
-    'SMTPEmailService',
-    'MockEmailService',
-    'MockUIService',
-    'NullUIService',
+    "EmailConfig",
+    "LogSender",
+    "LogEntry",
+    "SMTPEmailService",
+    "MockEmailService",
+    "MockUIService",
+    "NullUIService",
     # Print Service
-    'PrintServiceProtocol',
-    'WindowsPrintService',
-    'UnixPrintService',
-    'MockPrintService',
-    'NullPrintService',
-    'RunLogPrinter',
+    "PrintServiceProtocol",
+    "WindowsPrintService",
+    "UnixPrintService",
+    "MockPrintService",
+    "NullPrintService",
+    "RunLogPrinter",
     # Processed Files Tracker
-    'ProcessedFileRecord',
-    'InMemoryDatabase',
-    'ProcessedFilesTracker',
+    "ProcessedFileRecord",
+    "InMemoryDatabase",
+    "ProcessedFilesTracker",
 ]

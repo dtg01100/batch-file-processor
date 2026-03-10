@@ -12,8 +12,7 @@ class ProgressReporter(Protocol):
         file_num: int,
         file_total: int,
         footer: str,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class UIProgressReporter:

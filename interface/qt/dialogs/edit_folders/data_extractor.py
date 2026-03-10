@@ -7,7 +7,14 @@ mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 
 from typing import Dict, Any
 
-from PyQt6.QtWidgets import QWidget, QLineEdit, QCheckBox, QComboBox, QSpinBox, QPushButton
+from PyQt6.QtWidgets import (
+    QWidget,
+    QLineEdit,
+    QCheckBox,
+    QComboBox,
+    QSpinBox,
+    QPushButton,
+)
 
 from interface.operations.folder_data_extractor import ExtractedDialogFields
 from interface.plugins.plugin_manager import PluginManager
@@ -27,7 +34,7 @@ class QtFolderDataExtractor:
     def extract_all(self) -> ExtractedDialogFields:
         # Extract plugin configurations
         plugin_configs = self._extract_plugin_configurations()
-        
+
         return ExtractedDialogFields(
             folder_name=self._get_text("folder_name_value"),
             alias=self._get_text("folder_alias_field"),
@@ -50,7 +57,9 @@ class QtFolderDataExtractor:
             split_edi_include_credits=self._get_bool("split_edi_send_credits"),
             prepend_date_files=self._get_bool("prepend_file_dates"),
             rename_file=self._get_text("rename_file_field"),
-            split_edi_filter_categories=self._get_text("split_edi_filter_categories_entry"),
+            split_edi_filter_categories=self._get_text(
+                "split_edi_filter_categories_entry"
+            ),
             split_edi_filter_mode=self._get_combo("split_edi_filter_mode"),
             calculate_upc_check_digit=self._get_check_str("upc_var_check"),
             include_a_records=self._get_check_str("a_rec_var_check"),
@@ -66,39 +75,45 @@ class QtFolderDataExtractor:
             force_txt_file_ext=self._get_check_str("force_txt_file_ext_check"),
             invoice_date_offset=self._get_int("invoice_date_offset", 0),
             invoice_date_custom_format=self._get_bool("invoice_date_custom_format"),
-            invoice_date_custom_format_string=self._get_text("invoice_date_custom_format_field"),
+            invoice_date_custom_format_string=self._get_text(
+                "invoice_date_custom_format_field"
+            ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
             override_upc_bool=self._get_bool("override_upc_bool"),
             override_upc_level=self._get_int("override_upc_level", 1),
-            override_upc_category_filter=self._get_text("override_upc_category_filter_entry"),
+            override_upc_category_filter=self._get_text(
+                "override_upc_category_filter_entry"
+            ),
             upc_target_length=self._get_int("upc_target_length_entry", 11),
             upc_padding_pattern=self._get_text("upc_padding_pattern_entry"),
             include_item_numbers=self._get_bool("include_item_numbers"),
             plugin_configurations=plugin_configs,
         )
-    
+
     def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
         """Extract plugin configurations from the form."""
         plugin_configs = {}
-        
+
         # Get all configuration plugins
         plugin_manager = PluginManager()
         plugin_manager.discover_plugins()
         plugin_manager.initialize_plugins()
-        
+
         for plugin in plugin_manager.get_configuration_plugins():
             # Check if we have a form generator for this plugin
             plugin_key = f"plugin_config_{plugin.get_identifier()}"
             generator_key = f"{plugin_key}_generator"
-            
+
             if generator_key in self.fields:
                 try:
                     form_generator = self.fields[generator_key]
                     config_values = form_generator.get_values()
                     plugin_configs[plugin.get_format_name().lower()] = config_values
                 except Exception as e:
-                    print(f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}")
-                
+                    print(
+                        f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}"
+                    )
+
         return plugin_configs
 
     def _get_text(self, key: str) -> str:

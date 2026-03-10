@@ -24,7 +24,6 @@ Backward Compatibility:
 """
 
 import csv
-from datetime import datetime
 
 import utils
 from convert_base import BaseEDIConverter, ConversionContext, EDIRecord, create_csv_writer
@@ -33,21 +32,21 @@ from core.edi.inv_fetcher import InvFetcher
 
 class FintechConverter(BaseEDIConverter):
     """Converter for Fintech CSV format.
-    
+
     This class implements the hook methods required by BaseEDIConverter
     to produce Fintech-compatible CSV output.
-    
+
     The converter uses the following parameters from parameters_dict:
         - fintech_division_id: The division ID to include in output
-    
+
     It uses utils.invFetcher to look up customer numbers from the database.
     """
-    
+
     def _initialize_output(self, context: ConversionContext) -> None:
         """Initialize CSV output file and writer.
-        
+
         Creates the output CSV file with Fintech-specific headers.
-        
+
         Args:
             context: The conversion context with output_filename
         """
@@ -55,12 +54,12 @@ class FintechConverter(BaseEDIConverter):
         context.user_data['fintech_division_id'] = context.parameters_dict.get(
             'fintech_division_id', ''
         )
-        
+
         # Initialize invoice fetcher for customer number lookups
         # Note: InvFetcher requires a query_runner parameter, but for this converter
         # we don't actually need database lookups, so we pass None
         context.user_data['inv_fetcher'] = InvFetcher(None, context.settings_dict)
-        
+
         # Open output file and create CSV writer
         context.output_file = open(
             context.get_output_path(".csv"),
@@ -74,7 +73,7 @@ class FintechConverter(BaseEDIConverter):
             lineterminator="\r\n",
             quoting=csv.QUOTE_ALL
         )
-        
+
         # Write Fintech header row
         context.csv_writer.writerow([
             "Division_id",
@@ -89,13 +88,13 @@ class FintechConverter(BaseEDIConverter):
             "product_description",
             "unit_price"
         ])
-    
+
     def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item) for Fintech output.
-        
+
         Writes a CSV row with line item details including UPC lookup
         and customer number retrieval from the database.
-        
+
         Args:
             record: The B record containing line item fields
             context: The conversion context with arec_header and upc_lut
@@ -104,17 +103,17 @@ class FintechConverter(BaseEDIConverter):
         arec_header = context.arec_header
         if arec_header is None:
             return  # Can't process B without A
-        
+
         # Get required values
         fintech_division_id = context.user_data['fintech_division_id']
         inv_fetcher = context.user_data['inv_fetcher']
-        
+
         # Get UPC data from lookup table
         vendor_item = int(record.fields['vendor_item'])
         upc_data = context.upc_lut.get(vendor_item, ('', '', ''))
         upc_pack = upc_data[1] if len(upc_data) > 1 else ''
         upc_case = upc_data[2] if len(upc_data) > 2 else ''
-        
+
         # Write the CSV row
         context.csv_writer.writerow([
             fintech_division_id,
@@ -129,13 +128,13 @@ class FintechConverter(BaseEDIConverter):
             record.fields['description'],
             utils.convert_to_price(record.fields['unit_cost'])
         ])
-    
+
     def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge) for Fintech output.
-        
+
         Writes a CSV row with charge details. C records are treated as
         line items with item_number=0 and quantity=1.
-        
+
         Args:
             record: The C record containing charge fields
             context: The conversion context with arec_header
@@ -144,11 +143,11 @@ class FintechConverter(BaseEDIConverter):
         arec_header = context.arec_header
         if arec_header is None:
             return  # Can't process C without A
-        
+
         # Get required values
         fintech_division_id = context.user_data['fintech_division_id']
         inv_fetcher = context.user_data['inv_fetcher']
-        
+
         # Write the CSV row for charge
         context.csv_writer.writerow([
             fintech_division_id,
@@ -163,14 +162,14 @@ class FintechConverter(BaseEDIConverter):
             record.fields['description'],
             utils.convert_to_price(record.fields['amount'])
         ])
-    
+
     @staticmethod
     def _uomdesc(uommult: int) -> str:
         """Convert unit of measure multiplier to UOM description.
-        
+
         Args:
             uommult: The unit multiplier value
-        
+
         Returns:
             "EA" if multiplier > 1, "CS" otherwise
         """
@@ -178,14 +177,14 @@ class FintechConverter(BaseEDIConverter):
             return "EA"
         else:
             return "CS"
-    
+
     @staticmethod
     def _format_invoice_date(inv_date: str) -> str:
         """Format invoice date from MMDDYY to MM/DD/YYYY.
-        
+
         Args:
             inv_date: Date string in MMDDYY format
-        
+
         Returns:
             Formatted date string in MM/DD/YYYY format
         """
@@ -204,20 +203,20 @@ def edi_convert(
     upc_lut: dict
 ) -> str:
     """Convert EDI file to Fintech CSV format.
-    
+
     This is the original function signature maintained for backward compatibility.
     It simply creates a FintechConverter instance and delegates to it.
-    
+
     Args:
         edi_process: Path to the input EDI file
         output_filename: Base path for output file (without extension)
         settings_dict: Application settings dictionary
         parameters_dict: Conversion parameters (must include 'fintech_division_id')
         upc_lut: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-    
+
     Returns:
         Path to the generated CSV file
-    
+
     Example:
         >>> result = edi_convert(
         ...     "input.edi",

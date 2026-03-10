@@ -1,9 +1,7 @@
 """Qt implementation of the search/filter widget."""
 
 from typing import Optional, Callable
-from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QLineEdit, QPushButton
-)
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence
 
@@ -82,21 +80,24 @@ class SearchWidget(QWidget):
         self._button.setEnabled(enabled)
 
     def _build_ui(self) -> None:
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             SearchWidget {{
                 background-color: transparent;
                 border-radius: {Theme.RADIUS_LG};
                 padding: {Theme.SPACING_SM};
             }}
-        """)
+        """
+        )
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(Theme.SPACING_SM_INT)
 
         self._entry = QLineEdit()
-        self._entry.setPlaceholderText("\U0001F50D Search folders...")
-        self._entry.setStyleSheet(f"""
+        self._entry.setPlaceholderText("\U0001f50d Search folders...")
+        self._entry.setStyleSheet(
+            f"""
             QLineEdit {{
                 background-color: {Theme.INPUT_BACKGROUND};
                 color: {Theme.TEXT_PRIMARY};
@@ -115,7 +116,8 @@ class SearchWidget(QWidget):
                 padding: calc({Theme.SPACING_SM} - 1px) calc({Theme.SPACING_MD} - 1px);
                 background-color: {Theme.BACKGROUND};
             }}
-        """)
+        """
+        )
         self._entry.returnPressed.connect(self._on_return_pressed)
 
         self._button = QPushButton("Filter")

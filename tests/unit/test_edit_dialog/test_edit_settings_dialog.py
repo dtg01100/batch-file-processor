@@ -4,14 +4,18 @@ Dialogs are tested via direct widget manipulation, never exec() or show().
 Uses pytest-qt (qtbot fixture) for proper widget lifecycle management.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 import sys
 import os
 
 # Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0,
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ),
+)
 
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
@@ -38,6 +42,7 @@ class TestEditSettingsDialogInitialization:
     def test_dialog_inherits_from_base_dialog(self):
         """Test that EditSettingsDialog inherits from BaseDialog."""
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         assert issubclass(EditSettingsDialog, BaseDialog)
 
     def test_dialog_initialization_with_minimal_parameters(self, qtbot):
@@ -127,8 +132,13 @@ class TestEditSettingsDialogOpening:
         dialog = _make_dialog(qtbot)
 
         assert dialog._button_box is not None
-        assert dialog._button_box.button(dialog._button_box.StandardButton.Ok) is not None
-        assert dialog._button_box.button(dialog._button_box.StandardButton.Cancel) is not None
+        assert (
+            dialog._button_box.button(dialog._button_box.StandardButton.Ok) is not None
+        )
+        assert (
+            dialog._button_box.button(dialog._button_box.StandardButton.Cancel)
+            is not None
+        )
 
 
 class TestEditSettingsDialogFieldPopulation:
@@ -141,7 +151,9 @@ class TestEditSettingsDialogFieldPopulation:
             "as400_username": "user123",
             "as400_password": "password123",
         }
-        dialog = _make_dialog(qtbot, settings_provider=MagicMock(return_value=mock_settings))
+        dialog = _make_dialog(
+            qtbot, settings_provider=MagicMock(return_value=mock_settings)
+        )
 
         assert dialog._as400_address.text() == "AS400.example.com"
         assert dialog._as400_username.text() == "user123"
@@ -157,7 +169,9 @@ class TestEditSettingsDialogFieldPopulation:
             "email_smtp_server": "smtp.example.com",
             "smtp_port": "587",
         }
-        dialog = _make_dialog(qtbot, settings_provider=MagicMock(return_value=mock_settings))
+        dialog = _make_dialog(
+            qtbot, settings_provider=MagicMock(return_value=mock_settings)
+        )
 
         assert dialog._enable_email_cb.isChecked() is True
         assert dialog._email_address.text() == "sender@example.com"
@@ -198,7 +212,9 @@ class TestEditSettingsDialogFieldPopulation:
             "enable_interval_backups": True,
             "backup_counter_maximum": 200,
         }
-        dialog = _make_dialog(qtbot, settings_provider=MagicMock(return_value=mock_settings))
+        dialog = _make_dialog(
+            qtbot, settings_provider=MagicMock(return_value=mock_settings)
+        )
 
         assert dialog._enable_backup_cb.isChecked() is True
         assert dialog._backup_interval_spin.value() == 200
@@ -206,7 +222,9 @@ class TestEditSettingsDialogFieldPopulation:
     def test_odbc_driver_added_when_not_in_list(self, qtbot):
         """Test that a custom ODBC driver is added to the combo if not present."""
         mock_settings = {"odbc_driver": "My Custom ODBC Driver"}
-        dialog = _make_dialog(qtbot, settings_provider=MagicMock(return_value=mock_settings))
+        dialog = _make_dialog(
+            qtbot, settings_provider=MagicMock(return_value=mock_settings)
+        )
 
         assert dialog._odbc_driver_combo.currentText() == "My Custom ODBC Driver"
 
@@ -339,7 +357,10 @@ class TestEditSettingsDialogValidation:
         dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("smtp.example.com")
         dialog._email_smtp_port.setText("587")
-        dialog._smtp_service.test_connection.return_value = (False, "Connection refused")
+        dialog._smtp_service.test_connection.return_value = (
+            False,
+            "Connection refused",
+        )
 
         assert dialog.validate() is False
 
@@ -540,9 +561,11 @@ class TestEditSettingsDialogSaveFunctionality:
 
         dialog = _make_dialog(qtbot)
 
-        with patch.object(dialog, 'validate', return_value=True) as mock_validate:
-            with patch.object(dialog, 'apply') as mock_apply:
-                ok_button = dialog._button_box.button(dialog._button_box.StandardButton.Ok)
+        with patch.object(dialog, "validate", return_value=True) as mock_validate:
+            with patch.object(dialog, "apply") as mock_apply:
+                ok_button = dialog._button_box.button(
+                    dialog._button_box.StandardButton.Ok
+                )
                 qtbot.mouseClick(ok_button, Qt.MouseButton.LeftButton)
 
                 assert mock_validate.called
@@ -554,9 +577,11 @@ class TestEditSettingsDialogSaveFunctionality:
 
         dialog = _make_dialog(qtbot)
 
-        with patch.object(dialog, 'validate', return_value=False) as mock_validate:
-            with patch.object(dialog, 'apply') as mock_apply:
-                ok_button = dialog._button_box.button(dialog._button_box.StandardButton.Ok)
+        with patch.object(dialog, "validate", return_value=False) as mock_validate:
+            with patch.object(dialog, "apply") as mock_apply:
+                ok_button = dialog._button_box.button(
+                    dialog._button_box.StandardButton.Ok
+                )
                 qtbot.mouseClick(ok_button, Qt.MouseButton.LeftButton)
 
                 assert mock_validate.called
@@ -568,22 +593,23 @@ class TestEditSettingsDialogBaseDialogPattern:
 
     def test_has_body_method(self):
         """Test that dialog has required body() method."""
-        assert hasattr(EditSettingsDialog, 'body')
-        assert callable(getattr(EditSettingsDialog, 'body'))
+        assert hasattr(EditSettingsDialog, "body")
+        assert callable(getattr(EditSettingsDialog, "body"))
 
     def test_has_apply_method(self):
         """Test that dialog has required apply() method."""
-        assert hasattr(EditSettingsDialog, 'apply')
-        assert callable(getattr(EditSettingsDialog, 'apply'))
+        assert hasattr(EditSettingsDialog, "apply")
+        assert callable(getattr(EditSettingsDialog, "apply"))
 
     def test_has_validate_method(self):
         """Test that dialog has required validate() method."""
-        assert hasattr(EditSettingsDialog, 'validate')
-        assert callable(getattr(EditSettingsDialog, 'validate'))
+        assert hasattr(EditSettingsDialog, "validate")
+        assert callable(getattr(EditSettingsDialog, "validate"))
 
     def test_dialog_is_subclass_of_qdialog(self):
         """Test that dialog is ultimately a QDialog subclass."""
         from PyQt6.QtWidgets import QDialog
+
         assert issubclass(EditSettingsDialog, QDialog)
 
     def test_dialog_has_four_sections(self, qtbot):
@@ -591,7 +617,7 @@ class TestEditSettingsDialogBaseDialogPattern:
         dialog = _make_dialog(qtbot)
 
         # Verify all four section widgets exist
-        assert hasattr(dialog, '_odbc_driver_combo')       # AS400 section
-        assert hasattr(dialog, '_enable_email_cb')          # Email section
-        assert hasattr(dialog, '_enable_reporting_cb')      # Reporting section
-        assert hasattr(dialog, '_enable_backup_cb')         # Backup section
+        assert hasattr(dialog, "_odbc_driver_combo")  # AS400 section
+        assert hasattr(dialog, "_enable_email_cb")  # Email section
+        assert hasattr(dialog, "_enable_reporting_cb")  # Reporting section
+        assert hasattr(dialog, "_enable_backup_cb")  # Backup section

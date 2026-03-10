@@ -4,24 +4,24 @@ This module provides the InvFetcher class for fetching invoice-related
 data from the database using dependency injection for testability.
 """
 
-from typing import Protocol, runtime_checkable, Optional
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
 class QueryRunnerProtocol(Protocol):
     """Protocol for query runner operations.
-    
+
     This protocol defines the interface required by InvFetcher
     for database operations.
     """
-    
+
     def run_query(self, query: str, params: tuple = None) -> list[dict]:
         """Execute a query and return results.
-        
+
         Args:
             query: SQL query string
             params: Optional query parameters
-            
+
         Returns:
             List of dictionaries representing query results
         """
@@ -30,10 +30,10 @@ class QueryRunnerProtocol(Protocol):
 
 class InvFetcher:
     """Fetches invoice-related data from database.
-    
+
     Uses injectable query runner for database operations,
     enabling testing without actual database connections.
-    
+
     Attributes:
         query_runner: The injected query runner for database operations
         settings: Dictionary of settings (for backward compatibility)
@@ -44,10 +44,10 @@ class InvFetcher:
         custname: Cached customer name
         custno: Cached customer number
     """
-    
+
     def __init__(self, query_runner: QueryRunnerProtocol, settings: dict = None):
         """Initialize InvFetcher with query runner.
-        
+
         Args:
             query_runner: Query runner implementing QueryRunnerProtocol
             settings: Optional settings dictionary (for backward compatibility)
@@ -60,25 +60,25 @@ class InvFetcher:
         self.po = ""
         self.custname = ""
         self.custno = 0
-    
+
     def fetch_po(self, invoice_number: int) -> str:
         """Fetch PO number for invoice.
-        
+
         Uses caching to avoid repeated database queries for the same invoice.
-        
+
         Args:
             invoice_number: Invoice number to look up
-            
+
         Returns:
             PO number string, or empty string if not found
         """
         if invoice_number == self.last_invoice_number:
             return self.po
-        
+
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:
             return ""
-        
+
         qry_ret = self._query_runner.run_query(
             f"""
             SELECT
@@ -111,59 +111,53 @@ class InvFetcher:
         except (IndexError, KeyError):
             self.po = ""
         return self.po
-    
+
     def fetch_cust_name(self, invoice_number: int) -> str:
         """Fetch customer name for invoice.
-        
+
         Args:
             invoice_number: Invoice number to look up
-            
+
         Returns:
             Customer name string
         """
         self.fetch_po(invoice_number)
         return self.custname
-    
+
     def fetch_cust_no(self, invoice_number: int) -> int:
         """Fetch customer number for invoice.
-        
+
         Args:
             invoice_number: Invoice number to look up
-            
+
         Returns:
             Customer number
         """
         self.fetch_po(invoice_number)
         return self.custno
-    
-    def fetch_uom_desc(
-        self,
-        itemno: int,
-        uommult: int,
-        lineno: int,
-        invno: int
-    ) -> str:
+
+    def fetch_uom_desc(self, itemno: int, uommult: int, lineno: int, invno: int) -> str:
         """Fetch unit of measure description.
-        
+
         First tries to get UOM from invoice line items, then falls back
         to item master if not found.
-        
+
         Args:
             itemno: Item number
             uommult: Unit of measure multiplier
             lineno: Line number within invoice
             invno: Invoice number
-            
+
         Returns:
             Unit of measure description string
         """
         if invno != self.last_invno:
             self.uom_lut = {0: "N/A"}
-            
+
             # Handle case where no query_runner is provided (for testing)
             if self._query_runner is None:
                 return ""
-            
+
             try:
                 qry = f"""
                     SELECT
@@ -187,26 +181,26 @@ class InvFetcher:
                 # On error, keep default uom_lut
                 pass
             self.last_invno = invno
-        
+
         try:
             return self.uom_lut[lineno + 1]
         except KeyError:
             return self._fetch_uom_from_item(itemno, uommult)
-    
+
     def _fetch_uom_from_item(self, itemno: int, uommult: int) -> str:
         """Fetch UOM from item master.
-        
+
         Args:
             itemno: Item number
             uommult: Unit of measure multiplier
-            
+
         Returns:
             Unit of measure description string
         """
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:
             return "HI" if int(uommult) > 1 else "LO"
-        
+
         try:
             if int(uommult) > 1:
                 field = "ANB9TX"

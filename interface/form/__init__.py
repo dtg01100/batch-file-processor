@@ -41,36 +41,32 @@ Usage Example:
         print(f"Errors: {result.errors}")
 """
 
-from .form_generator import (
-    FormGenerator,
-    QtFormGenerator,
-    FormGeneratorFactory
-)
+from .form_generator import FormGenerator, QtFormGenerator, FormGeneratorFactory
 from .section_factory import (
     SectionFactory,
     QtSectionFactory,
     SectionFactoryRegistry,
-    PluginSectionFactory
+    PluginSectionFactory,
 )
 from .config_section_widgets import (
     ConfigSectionWidget,
     QtConfigSectionWidget,
     CollapsibleSectionWidget,
     QtCollapsibleSectionWidget,
-    TabbedSectionWidget
+    TabbedSectionWidget,
 )
 
 __all__ = [
-    'FormGenerator',
-    'QtFormGenerator',
-    'FormGeneratorFactory',
-    'SectionFactory',
-    'QtSectionFactory',
-    'SectionFactoryRegistry',
-    'PluginSectionFactory',
-    'ConfigSectionWidget',
-    'QtConfigSectionWidget',
-    'CollapsibleSectionWidget',
-    'QtCollapsibleSectionWidget',
-    'TabbedSectionWidget',
+    "FormGenerator",
+    "QtFormGenerator",
+    "FormGeneratorFactory",
+    "SectionFactory",
+    "QtSectionFactory",
+    "SectionFactoryRegistry",
+    "PluginSectionFactory",
+    "ConfigSectionWidget",
+    "QtConfigSectionWidget",
+    "CollapsibleSectionWidget",
+    "QtCollapsibleSectionWidget",
+    "TabbedSectionWidget",
 ]

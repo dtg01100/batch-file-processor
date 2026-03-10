@@ -18,7 +18,7 @@ from interface.operations.plugin_configuration_mapper import (
     QtPluginConfigExtractor,
     QtPluginWidgetPopulator,
     ExtractedPluginConfig,
-    PluginConfigPopulationResult
+    PluginConfigPopulationResult,
 )
 
 __all__ = [
@@ -28,5 +28,5 @@ __all__ = [
     "QtPluginConfigExtractor",
     "QtPluginWidgetPopulator",
     "ExtractedPluginConfig",
-    "PluginConfigPopulationResult"
+    "PluginConfigPopulationResult",
 ]

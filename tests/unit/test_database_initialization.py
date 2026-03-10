@@ -9,10 +9,8 @@ Tests cover:
 """
 
 import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
 
 class TestFreshInstall:
@@ -24,7 +22,7 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -47,7 +45,7 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -74,7 +72,7 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -101,7 +99,7 @@ class TestFreshInstall:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -129,7 +127,7 @@ class TestAfterFirstRun:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -150,7 +148,7 @@ class TestAfterFirstRun:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -181,7 +179,7 @@ class TestAfterFirstRun:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",
@@ -240,7 +238,7 @@ class TestSetDefaultsPopup:
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
-            database_version="41",
+            database_version=CURRENT_DATABASE_VERSION,
             database_path=db_path,
             config_folder=str(tmp_path),
             running_platform="test",

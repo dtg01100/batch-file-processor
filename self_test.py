@@ -88,10 +88,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             ok(mod_name)
         except Exception as exc:
             fail(mod_name, str(exc))
-    
+
     # Check for sip which is required by PyQt6 but imported differently
     try:
-        import PyQt6.sip
         ok("PyQt6.sip")
     except ImportError as exc:
         fail("PyQt6.sip", str(exc))

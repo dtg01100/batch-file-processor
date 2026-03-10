@@ -5,10 +5,13 @@ Tests the base plugin interface and lifecycle management.
 """
 
 import unittest
-from typing import Dict, Any, List
+from typing import Dict, Any
 from interface.plugins import PluginBase
-from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition, FieldType
-from interface.plugins.validation_framework import ValidationResult
+from interface.plugins.config_schemas import (
+    ConfigurationSchema,
+    FieldDefinition,
+    FieldType,
+)
 
 
 class TestPlugin(PluginBase):
@@ -59,7 +62,7 @@ class TestPluginWithConfig(TestPlugin):
                 label="Test Field",
                 description="A test configuration field",
                 default="default",
-                required=True
+                required=True,
             ),
             FieldDefinition(
                 name="numeric_field",
@@ -69,8 +72,8 @@ class TestPluginWithConfig(TestPlugin):
                 default=42,
                 required=False,
                 min_value=0,
-                max_value=100
-            )
+                max_value=100,
+            ),
         ]
         return ConfigurationSchema(fields)
 
@@ -89,7 +92,9 @@ class TestPluginBase(unittest.TestCase):
         """Test plugin static properties."""
         self.assertEqual(TestPlugin.get_name(), "Test Plugin")
         self.assertEqual(TestPlugin.get_identifier(), "test_plugin")
-        self.assertEqual(TestPlugin.get_description(), "A test plugin for testing purposes")
+        self.assertEqual(
+            TestPlugin.get_description(), "A test plugin for testing purposes"
+        )
         self.assertEqual(TestPlugin.get_version(), "1.0.0")
 
     def test_plugin_lifecycle(self):

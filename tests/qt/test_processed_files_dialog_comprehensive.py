@@ -10,8 +10,8 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
-from PyQt6.QtWidgets import QApplication, QPushButton
+from unittest.mock import patch
+from PyQt6.QtWidgets import QPushButton
 from PyQt6.QtCore import Qt
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
@@ -20,26 +20,30 @@ pytestmark = [pytest.mark.qt, pytest.mark.gui]
 @pytest.fixture
 def populated_database(mock_database_obj):
     """Create database with folders and processed files for testing.
-    
+
     The ProcessedFilesDialog only shows folders that have processed files,
     so we need to ensure folders have associated processed_files records.
     """
     # Add folders with processed files
     for i in range(3):
         folder_id = i + 1
-        mock_database_obj.folders_table.insert({
-            "id": folder_id,
-            "folder_name": f"/test/folder{i}",
-            "alias": f"Test Folder {i}",
-        })
+        mock_database_obj.folders_table.insert(
+            {
+                "id": folder_id,
+                "folder_name": f"/test/folder{i}",
+                "alias": f"Test Folder {i}",
+            }
+        )
         # Add at least one processed file per folder for dialog to show them
-        mock_database_obj.processed_files.insert({
-            "folder_id": folder_id,
-            "filename": f"file_{i}.edi",
-            "md5": f"hash_{i:04d}",
-            "processed_date": "2024-01-01",
-            "resend_flag": False,
-        })
+        mock_database_obj.processed_files.insert(
+            {
+                "folder_id": folder_id,
+                "filename": f"file_{i}.edi",
+                "md5": f"hash_{i:04d}",
+                "processed_date": "2024-01-01",
+                "resend_flag": False,
+            }
+        )
     return mock_database_obj
 
 
@@ -47,11 +51,13 @@ def populated_database(mock_database_obj):
 def empty_database(mock_database_obj):
     """Create database with folder but no processed files."""
     # Add a folder but no processed files
-    mock_database_obj.folders_table.insert({
-        "id": 1,
-        "folder_name": "/test/folder",
-        "alias": "Test Folder",
-    })
+    mock_database_obj.folders_table.insert(
+        {
+            "id": 1,
+            "folder_name": "/test/folder",
+            "alias": "Test Folder",
+        }
+    )
     return mock_database_obj
 
 
@@ -117,7 +123,7 @@ class TestProcessedFilesDialogEmptyState:
 
     def test_no_processed_files_for_folder(self, qtbot, empty_database):
         """Test dialog handles folder with no processed files.
-        
+
         The ProcessedFilesDialog only shows folders that have processed files.
         With no processed files, the folder list should be empty.
         """
@@ -138,7 +144,7 @@ class TestProcessedFilesDialogFolderSelection:
 
     def test_folder_list_populated(self, qtbot, populated_database):
         """Test folder list is populated correctly.
-        
+
         Only folders with processed files should be shown.
         """
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
@@ -165,10 +171,10 @@ class TestProcessedFilesDialogFolderSelection:
         # Get the folder buttons
         buttons = dialog._button_group.buttons()
         assert len(buttons) > 0
-        
+
         # Click the first folder button
         buttons[0].click()
-        
+
         # Should have selected folder id
         assert dialog._selected_folder_id is not None
 
@@ -182,7 +188,7 @@ class TestProcessedFilesDialogFolderSelection:
         # Click folder to select it
         buttons = dialog._button_group.buttons()
         buttons[0].click()
-        
+
         # Should have selected folder id
         assert dialog._selected_folder_id is not None
 
@@ -201,16 +207,18 @@ class TestProcessedFilesDialogOutputFolder:
         # Select a folder first
         buttons = dialog._button_group.buttons()
         buttons[0].click()
-        
+
         # Mock the file dialog
-        with patch('interface.qt.dialogs.processed_files_dialog.QFileDialog.getExistingDirectory') as mock_get_dir:
+        with patch(
+            "interface.qt.dialogs.processed_files_dialog.QFileDialog.getExistingDirectory"
+        ) as mock_get_dir:
             mock_get_dir.return_value = "/test/output"
-            
+
             # Find and click the choose output folder button
             choose_btn = dialog._actions_layout.itemAt(0).widget()
             if isinstance(choose_btn, QPushButton):
                 choose_btn.click()
-                
+
         # Output folder should be set
         assert dialog._output_folder == "/test/output"
         assert dialog._output_folder_confirmed is True
@@ -224,18 +232,22 @@ class TestProcessedFilesDialogBulkOperations:
         """Test dialog with multiple folders that have processed files."""
         # Add multiple folders, each with processed files
         for i in range(3):
-            mock_database_obj.folders_table.insert({
-                "id": i + 1,
-                "folder_name": f"/test/folder{i}",
-                "alias": f"Test Folder {i}",
-            })
-            mock_database_obj.processed_files.insert({
-                "folder_id": i + 1,
-                "filename": f"file_{i}.edi",
-                "md5": f"hash_{i}",
-                "processed_date": "2024-01-01",
-                "resend_flag": False,
-            })
+            mock_database_obj.folders_table.insert(
+                {
+                    "id": i + 1,
+                    "folder_name": f"/test/folder{i}",
+                    "alias": f"Test Folder {i}",
+                }
+            )
+            mock_database_obj.processed_files.insert(
+                {
+                    "folder_id": i + 1,
+                    "filename": f"file_{i}.edi",
+                    "md5": f"hash_{i}",
+                    "processed_date": "2024-01-01",
+                    "resend_flag": False,
+                }
+            )
 
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
@@ -261,12 +273,14 @@ class TestProcessedFilesDialogExport:
         # Select a folder first
         buttons = dialog._button_group.buttons()
         buttons[0].click()
-        
+
         # Export button should still be disabled (no output folder selected)
-        if hasattr(dialog, '_export_btn'):
+        if hasattr(dialog, "_export_btn"):
             assert dialog._export_btn.isEnabled() is False
 
-    def test_export_button_enabled_after_output_selected(self, qtbot, populated_database):
+    def test_export_button_enabled_after_output_selected(
+        self, qtbot, populated_database
+    ):
         """Test export button is enabled after output folder is selected."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
@@ -276,15 +290,15 @@ class TestProcessedFilesDialogExport:
         # Select a folder
         buttons = dialog._button_group.buttons()
         buttons[0].click()
-        
+
         # Manually trigger rebuild of actions to simulate what happens after
         # the user selects an output folder
         dialog._output_folder = "/test/output"
         dialog._output_folder_confirmed = True
         dialog._rebuild_actions()
-        
+
         # Export button should be enabled
-        if hasattr(dialog, '_export_btn'):
+        if hasattr(dialog, "_export_btn"):
             assert dialog._export_btn.isEnabled() is True
 
 
@@ -316,11 +330,13 @@ class TestProcessedFilesDialogErrorHandling:
     def test_invalid_folder_data(self, qtbot, mock_database_obj):
         """Test handling invalid folder data in database."""
         # Insert folder with None alias
-        mock_database_obj.folders_table.insert({
-            "id": 1,
-            "folder_name": None,
-            "alias": None,
-        })
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 1,
+                "folder_name": None,
+                "alias": None,
+            }
+        )
 
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
@@ -339,21 +355,25 @@ class TestProcessedFilesDialogLargeDataset:
         """Test dialog performance with 1000 files."""
         # Add a folder
         folder_id = 1
-        mock_database_obj.folders_table.insert({
-            "id": folder_id,
-            "folder_name": "/test/folder",
-            "alias": "Test Folder",
-        })
+        mock_database_obj.folders_table.insert(
+            {
+                "id": folder_id,
+                "folder_name": "/test/folder",
+                "alias": "Test Folder",
+            }
+        )
 
         # Add 1000 files
         for i in range(1000):
-            mock_database_obj.processed_files.insert({
-                "folder_id": folder_id,
-                "filename": f"file_{i:04d}.edi",
-                "md5": f"hash_{i:05d}",
-                "processed_date": "2024-01-01",
-                "resend_flag": False,
-            })
+            mock_database_obj.processed_files.insert(
+                {
+                    "folder_id": folder_id,
+                    "filename": f"file_{i:04d}.edi",
+                    "md5": f"hash_{i:05d}",
+                    "processed_date": "2024-01-01",
+                    "resend_flag": False,
+                }
+            )
 
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
@@ -372,18 +392,22 @@ class TestProcessedFilesDialogLargeDataset:
         # Add 50 folders, each with at least one processed file
         for i in range(50):
             folder_id = i + 1
-            mock_database_obj.folders_table.insert({
-                "id": folder_id,
-                "folder_name": f"/test/folder{i}",
-                "alias": f"Folder {i}",
-            })
-            mock_database_obj.processed_files.insert({
-                "folder_id": folder_id,
-                "filename": f"file_{i}.edi",
-                "md5": f"hash_{i}",
-                "processed_date": "2024-01-01",
-                "resend_flag": False,
-            })
+            mock_database_obj.folders_table.insert(
+                {
+                    "id": folder_id,
+                    "folder_name": f"/test/folder{i}",
+                    "alias": f"Folder {i}",
+                }
+            )
+            mock_database_obj.processed_files.insert(
+                {
+                    "folder_id": folder_id,
+                    "filename": f"file_{i}.edi",
+                    "md5": f"hash_{i}",
+                    "processed_date": "2024-01-01",
+                    "resend_flag": False,
+                }
+            )
 
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 

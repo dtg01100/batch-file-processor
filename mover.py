@@ -5,9 +5,8 @@ It has been refactored to remove tkinter dependencies.
 """
 
 import os
-import logging
 import threading
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from interface.database import sqlite_wrapper
 
@@ -90,7 +89,7 @@ class DbMigrationThing:
 
         # Count folders for progress
         active_folders = list(new_folders_table.find(folder_is_active=1))
-        
+
         self.number_of_folders = len(active_folders)
         self.progress_of_folders = 0
 

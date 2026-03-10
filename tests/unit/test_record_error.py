@@ -7,8 +7,7 @@ Tests:
 """
 
 import io
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -130,7 +129,7 @@ class TestRecordError:
         """Test that threaded mode appends messages to lists."""
         run_log = []
         errors_log = []
-        
+
         # Record multiple errors
         for i in range(3):
             record_error.do(
@@ -144,7 +143,7 @@ class TestRecordError:
 
         assert len(run_log) == 3
         assert len(errors_log) == 3
-        
+
         # Each message should be distinct
         for i in range(3):
             assert f"Error {i}" in run_log[i]
@@ -167,7 +166,7 @@ class TestRecordError:
         """Test that timestamp is included in error message."""
         with patch('record_error.time.ctime') as mock_ctime:
             mock_ctime.return_value = "Mon Mar  3 12:00:00 2026"
-            
+
             record_error.do(
                 sample_run_log,
                 sample_errors_log,
@@ -182,7 +181,7 @@ class TestRecordError:
     def test_special_characters_in_error_message(self, sample_run_log, sample_errors_log):
         """Test handling of special characters in error message."""
         special_message = "Error: 'file' not found\nLine 2\tTabbed"
-        
+
         record_error.do(
             sample_run_log,
             sample_errors_log,
@@ -199,7 +198,7 @@ class TestRecordError:
     def test_long_error_message(self, sample_run_log, sample_errors_log):
         """Test handling of very long error message."""
         long_message = "A" * 10000
-        
+
         record_error.do(
             sample_run_log,
             sample_errors_log,
@@ -216,7 +215,7 @@ class TestRecordError:
     def test_unicode_in_error_message(self, sample_run_log, sample_errors_log):
         """Test handling of unicode characters in error message."""
         unicode_message = "Error: 文件未找到 🚫"
-        
+
         record_error.do(
             sample_run_log,
             sample_errors_log,
@@ -289,7 +288,7 @@ class TestRecordError:
 
         sample_run_log.seek(0)
         run_content = sample_run_log.read().decode()
-        
+
         sample_errors_log.seek(0)
         errors_content = sample_errors_log.read()
 
@@ -311,7 +310,7 @@ class TestRecordError:
 
         sample_run_log.seek(0)
         content = sample_run_log.read()
-        
+
         # run_log should contain bytes (was encoded)
         assert isinstance(content, bytes)
 
@@ -328,7 +327,7 @@ class TestRecordError:
 
         sample_errors_log.seek(0)
         content = sample_errors_log.read()
-        
+
         # errors_log should contain string
         assert isinstance(content, str)
 
@@ -340,7 +339,7 @@ class TestRecordErrorEdgeCases:
         """Test that exception objects can be used as error messages."""
         run_log = []
         errors_log = []
-        
+
         try:
             raise ValueError("Test exception")
         except ValueError as e:
@@ -360,7 +359,7 @@ class TestRecordErrorEdgeCases:
         """Test handling of None error message."""
         run_log = []
         errors_log = []
-        
+
         record_error.do(
             run_log,
             errors_log,
@@ -378,7 +377,7 @@ class TestRecordErrorEdgeCases:
         """Test handling of numeric error message."""
         run_log = []
         errors_log = []
-        
+
         record_error.do(
             run_log,
             errors_log,
@@ -395,7 +394,7 @@ class TestRecordErrorEdgeCases:
         """Test handling of path with special characters."""
         run_log = []
         errors_log = []
-        
+
         record_error.do(
             run_log,
             errors_log,

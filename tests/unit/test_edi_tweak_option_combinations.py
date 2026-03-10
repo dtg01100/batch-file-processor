@@ -12,7 +12,7 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, Mock
 from pathlib import Path
 import tempfile
 
@@ -74,10 +74,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -85,7 +85,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             # Should not crash with any boolean combination
             assert result is not None
 
@@ -113,10 +113,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -124,7 +124,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     def test_all_options_disabled(self, base_parameters, base_settings):
@@ -135,10 +135,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -146,7 +146,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             # String 'False' should skip tweaking
             mock_tweak_func.assert_not_called()
             assert result.output_path == str(input_file)
@@ -161,10 +161,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -172,7 +172,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("upc_length", [0, 1, 5, 11, 12, 15, 20])
@@ -185,10 +185,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -196,7 +196,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("padding_pattern", ["", "0", "X", "12345", "0123456789", "ABCDEFGHIJ", "           "])
@@ -209,10 +209,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -220,7 +220,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("date_format", [
@@ -239,10 +239,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -250,7 +250,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("override_level", [0, 1, 2, 3, 5, 10])
@@ -263,12 +263,12 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             upc_dict = {"UPC1": "NEWUPC1"}
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -276,7 +276,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 upc_dict
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("category_filter", ["ALL", "CAT1", "CAT1,CAT2", "CAT1,CAT2,CAT3,CAT4"])
@@ -289,12 +289,12 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             upc_dict = {"CAT1:ITEM1": "NEWUPC1"}
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -302,7 +302,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 upc_dict
             )
-            
+
             assert result is not None
 
     @pytest.mark.parametrize("padding_length", [0, 1, 5, 10, 20, 50, 100])
@@ -316,10 +316,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -327,7 +327,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     def test_a_record_options_combination(self, base_parameters, base_settings):
@@ -342,10 +342,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -353,7 +353,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     def test_upc_options_combination(self, base_parameters, base_settings):
@@ -368,12 +368,12 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             upc_dict = {"ITEM1": "NEWUPC"}
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -381,7 +381,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 upc_dict
             )
-            
+
             assert result is not None
 
     def test_date_options_combination(self, base_parameters, base_settings):
@@ -394,10 +394,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -405,7 +405,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             assert result is not None
 
     def test_tweak_edi_false_skips_all_tweaks(self, base_parameters, base_settings):
@@ -420,10 +420,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -431,7 +431,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             # String 'False' should skip tweaking
             mock_tweak_func.assert_not_called()
             assert result.output_path == str(input_file)
@@ -447,12 +447,12 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             upc_dict = {}  # Empty UPC dict
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -460,7 +460,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 upc_dict
             )
-            
+
             # Should not crash with empty UPC dict
             assert result is not None
 
@@ -474,10 +474,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000010101250000100000\\n")
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -485,7 +485,7 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             # Should not crash with zero padding length
             assert result is not None
 
@@ -499,10 +499,10 @@ class TestEDITweakBooleanCombinations:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_file = Path(tmpdir) / "input.edi"
             input_file.write_text("AVENDOR00000000000000000000100000\\n")  # Date is 000000
-            
+
             mock_tweak_func = Mock(return_value=str(Path(tmpdir) / "output.edi"))
             tweaker = EDITweakerStep(tweak_function=mock_tweak_func)
-            
+
             result = tweaker.tweak(
                 str(input_file),
                 tmpdir,
@@ -510,6 +510,6 @@ class TestEDITweakBooleanCombinations:
                 base_settings(),
                 {}
             )
-            
+
             # Should handle invalid date gracefully
             assert result is not None

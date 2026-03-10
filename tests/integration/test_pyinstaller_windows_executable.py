@@ -7,12 +7,15 @@ the real artifact works correctly via --self-test and --help under Wine.
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.pyinstaller, pytest.mark.slow, pytest.mark.build]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.pyinstaller,
+    pytest.mark.slow,
+    pytest.mark.build,
+]
 
-import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -70,9 +73,12 @@ def windows_executable(docker_cmd):
     Does NOT clean dist/build directories so they can be inspected on failure.
     """
     build_cmd = docker_cmd + [
-        "run", "--rm",
-        "--volume", f"{PROJECT_ROOT}:/src/",
-        "--env", "SPECFILE=./main_interface.spec",
+        "run",
+        "--rm",
+        "--volume",
+        f"{PROJECT_ROOT}:/src/",
+        "--env",
+        "SPECFILE=./main_interface.spec",
         IMAGE,
     ]
 
@@ -90,9 +96,9 @@ def windows_executable(docker_cmd):
         f"--- stderr (last 2000 chars) ---\n{result.stderr[-2000:]}"
     )
 
-    assert EXECUTABLE_PATH.exists(), (
-        f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
-    )
+    assert (
+        EXECUTABLE_PATH.exists()
+    ), f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
 
     return EXECUTABLE_PATH
 
@@ -114,9 +120,7 @@ class TestWindowsExecutable:
         assert exe.is_file(), f"Executable path is not a regular file: {exe}"
 
         size_mb = exe.stat().st_size / (1024 * 1024)
-        assert size_mb > 1, (
-            f"Executable is suspiciously small: {size_mb:.2f} MB"
-        )
+        assert size_mb > 1, f"Executable is suspiciously small: {size_mb:.2f} MB"
 
     def test_windows_self_test_via_wine(self, windows_executable, docker_cmd):
         """Running --self-test on the .exe via Wine succeeds."""
@@ -125,8 +129,10 @@ class TestWindowsExecutable:
         )
 
         run_cmd = docker_cmd + [
-            "run", "--rm",
-            "--volume", f"{PROJECT_ROOT}:/src/",
+            "run",
+            "--rm",
+            "--volume",
+            f"{PROJECT_ROOT}:/src/",
             IMAGE,
             wine_cmd,
         ]
@@ -151,13 +157,13 @@ class TestWindowsExecutable:
 
     def test_windows_help_flag_via_wine(self, windows_executable, docker_cmd):
         """Running --help on the .exe via Wine shows expected flags."""
-        wine_cmd = (
-            "wine '/src/dist/Batch File Sender/Batch File Sender.exe' --help"
-        )
+        wine_cmd = "wine '/src/dist/Batch File Sender/Batch File Sender.exe' --help"
 
         run_cmd = docker_cmd + [
-            "run", "--rm",
-            "--volume", f"{PROJECT_ROOT}:/src/",
+            "run",
+            "--rm",
+            "--volume",
+            f"{PROJECT_ROOT}:/src/",
             IMAGE,
             wine_cmd,
         ]

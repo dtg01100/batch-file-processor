@@ -25,7 +25,6 @@ Backward Compatibility:
 
 from datetime import datetime, timedelta
 
-import utils
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -36,7 +35,7 @@ from convert_base import (
 
 class ScannerWareConverter(BaseEDIConverter):
     """Converter for ScannerWare fixed-width text format.
-    
+
     This class implements the hook methods required by BaseEDIConverter
     to produce fixed-width text output compatible with ScannerWare systems.
     It supports:
@@ -44,16 +43,16 @@ class ScannerWareConverter(BaseEDIConverter):
     - Invoice date offset handling
     - Fixed-width field formatting for all record types
     """
-    
+
     def _initialize_output(self, context: ConversionContext) -> None:
         """Initialize output file with parameters.
-        
+
         Args:
             context: The conversion context
         """
         # Extract and normalize parameters
         params = context.parameters_dict
-        
+
         context.user_data['arec_padding'] = params.get('a_record_padding', '')
         context.user_data['append_arec'] = normalize_parameter(
             params.get('append_a_records'), False
@@ -63,29 +62,29 @@ class ScannerWareConverter(BaseEDIConverter):
             params.get('force_txt_file_ext'), False
         )
         context.user_data['invoice_date_offset'] = params.get('invoice_date_offset', 0)
-        
+
         # Determine output file extension
         if context.user_data['force_txt_ext']:
             output_path = context.output_filename + ".txt"
         else:
             output_path = context.output_filename
-        
+
         # Store output path for later use
         context.user_data['output_path'] = output_path
-        
+
         # Open output file in binary mode (matching original behavior)
         context.output_file = open(output_path, 'wb')
-    
+
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
-        
+
         Args:
             record: The A record
             context: The conversion context
         """
         user_data = context.user_data
         fields = record.fields
-        
+
         # Build A record line
         line_builder_list = [
             fields['record_type'],
@@ -93,41 +92,41 @@ class ScannerWareConverter(BaseEDIConverter):
             fields['invoice_number'][-7:],
             '   '
         ]
-        
+
         # Handle invoice date with optional offset
         write_invoice_date = fields['invoice_date']
         invoice_date_offset = user_data['invoice_date_offset']
-        
+
         if invoice_date_offset != 0:
             invoice_date_string = fields['invoice_date']
             if invoice_date_string != '000000':
                 invoice_date = datetime.strptime(invoice_date_string, '%m%d%y')
                 offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
                 write_invoice_date = datetime.strftime(offset_invoice_date, '%m%d%y')
-        
+
         line_builder_list.append(write_invoice_date)
         line_builder_list.append(fields['invoice_total'])
-        
+
         # Append custom text if enabled
         if user_data['append_arec']:
             line_builder_list.append(user_data['append_arec_text'])
-        
+
         # Write the line
         writeable_line = "".join(line_builder_list)
         context.output_file.write((writeable_line + '\r\n').encode())
-        
+
         # Store header in context
         context.arec_header = fields
-    
+
     def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item) in fixed-width format.
-        
+
         Args:
             record: The B record
             context: The conversion context
         """
         fields = record.fields
-        
+
         line_builder_list = [
             fields['record_type'],
             fields['upc_number'].ljust(14),
@@ -141,37 +140,37 @@ class ScannerWareConverter(BaseEDIConverter):
             '001',
             '       '
         ]
-        
+
         writeable_line = "".join(line_builder_list)
         context.output_file.write((writeable_line + '\r\n').encode())
-    
+
     def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax) in fixed-width format.
-        
+
         Args:
             record: The C record
             context: The conversion context
         """
         fields = record.fields
-        
+
         line_builder_list = [
             fields['record_type'],
             fields['description'].ljust(25),
             '   ',
             fields['amount']
         ]
-        
+
         writeable_line = "".join(line_builder_list)
         context.output_file.write((writeable_line + '\r\n').encode())
-    
+
     def _get_return_value(self, context: ConversionContext) -> str:
         """Get the return value for edi_convert().
-        
+
         Returns the output file path (may be .txt or derived from input).
-        
+
         Args:
             context: The conversion context
-        
+
         Returns:
             The path to the generated output file
         """
@@ -190,20 +189,20 @@ def edi_convert(
     upc_lookup: dict
 ) -> str:
     """Convert EDI file to ScannerWare fixed-width text format.
-    
+
     This is the original function signature maintained for backward compatibility.
     It simply creates a ScannerWareConverter instance and delegates to it.
-    
+
     Args:
         edi_process: Path to the input EDI file
         output_filename: Base path for output file (without extension)
         settings_dict: Application settings dictionary
         parameters_dict: Conversion parameters (see module docstring for options)
         upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-    
+
     Returns:
         Path to the generated text file
-    
+
     Example:
         >>> result = edi_convert(
         ...     "input.edi",

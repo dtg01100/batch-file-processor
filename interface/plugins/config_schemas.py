@@ -7,7 +7,7 @@ with built-in validation support.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any, Dict, List, Optional, Union
 
 from .validation_framework import ValidationResult, Validator
 
@@ -16,6 +16,7 @@ class FieldType(Enum):
     """
     Configuration field types supported by the system.
     """
+
     STRING = "string"
     INTEGER = "integer"
     FLOAT = "float"
@@ -92,8 +93,7 @@ class FieldDefinition:
         # Check required field
         if self.required and value is None:
             return ValidationResult(
-                success=False,
-                errors=[f"Field '{self.name}' is required"]
+                success=False, errors=[f"Field '{self.name}' is required"]
             )
 
         if value is None:
@@ -118,25 +118,17 @@ class FieldDefinition:
             if not isinstance(value, int):
                 errors.append(f"Field '{self.name}' must be an integer")
             elif self.min_value is not None and value < self.min_value:
-                errors.append(
-                    f"Field '{self.name}' must be at least {self.min_value}"
-                )
+                errors.append(f"Field '{self.name}' must be at least {self.min_value}")
             elif self.max_value is not None and value > self.max_value:
-                errors.append(
-                    f"Field '{self.name}' must be at most {self.max_value}"
-                )
+                errors.append(f"Field '{self.name}' must be at most {self.max_value}")
 
         elif self.field_type == FieldType.FLOAT:
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 errors.append(f"Field '{self.name}' must be a number")
             elif self.min_value is not None and value < self.min_value:
-                errors.append(
-                    f"Field '{self.name}' must be at least {self.min_value}"
-                )
+                errors.append(f"Field '{self.name}' must be at least {self.min_value}")
             elif self.max_value is not None and value > self.max_value:
-                errors.append(
-                    f"Field '{self.name}' must be at most {self.max_value}"
-                )
+                errors.append(f"Field '{self.name}' must be at most {self.max_value}")
 
         elif self.field_type == FieldType.BOOLEAN:
             if not isinstance(value, bool):
@@ -155,9 +147,7 @@ class FieldDefinition:
                 errors.append(f"Field '{self.name}' must be a string")
             elif self.choices and value not in [c["value"] for c in self.choices]:
                 valid_choices = ", ".join([c["value"] for c in self.choices])
-                errors.append(
-                    f"Field '{self.name}' must be one of: {valid_choices}"
-                )
+                errors.append(f"Field '{self.name}' must be one of: {valid_choices}")
 
         elif self.field_type == FieldType.MULTI_SELECT:
             if not isinstance(value, list):
@@ -249,11 +239,7 @@ class ConfigurationSchema:
         Returns:
             List[str]: List of required field names
         """
-        return [
-            field.name
-            for field in self.fields
-            if field.required
-        ]
+        return [field.name for field in self.fields if field.required]
 
     def get_field_types(self) -> Dict[str, FieldType]:
         """
@@ -262,10 +248,7 @@ class ConfigurationSchema:
         Returns:
             Dict[str, FieldType]: Field name to type mapping
         """
-        return {
-            field.name: field.field_type
-            for field in self.fields
-        }
+        return {field.name: field.field_type for field in self.fields}
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -287,7 +270,7 @@ class ConfigurationSchema:
                     "min_value": field.min_value,
                     "max_value": field.max_value,
                     "min_length": field.min_length,
-                    "max_length": field.max_length
+                    "max_length": field.max_length,
                 }
                 for field in self.fields
             ]

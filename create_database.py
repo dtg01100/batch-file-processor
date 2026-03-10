@@ -1,7 +1,6 @@
 import os
 
 from interface.database import sqlite_wrapper
-import sqlalchemy
 import schema
 
 

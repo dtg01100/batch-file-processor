@@ -11,11 +11,8 @@ Converter: convert_to_csv.py (8685 chars)
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
 import os
 import csv
-from decimal import Decimal
 
 # Import the module to test
 import convert_to_csv
@@ -110,7 +107,7 @@ class TestConvertToCSVBasicFunctionality(TestConvertToCSVFixtures):
         assert convert_to_csv is not None
         assert hasattr(convert_to_csv, 'edi_convert')
 
-    def test_edi_convert_returns_csv_filename(self, complete_edi_content, default_parameters, 
+    def test_edi_convert_returns_csv_filename(self, complete_edi_content, default_parameters,
                                                default_settings, empty_upc_lut, tmp_path):
         """Test that edi_convert returns the expected CSV filename."""
         # Create temp input file
@@ -718,7 +715,7 @@ class TestConvertToCSVEdgeCases(TestConvertToCSVFixtures):
 
         assert os.path.exists(result)
 
-    def test_detail_with_missing_fields(self, default_parameters, default_settings, 
+    def test_detail_with_missing_fields(self, default_parameters, default_settings,
                                          empty_upc_lut, tmp_path):
         """Test handling of detail record with missing/short fields."""
         # Short B record (less than 76 chars)

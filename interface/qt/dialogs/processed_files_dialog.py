@@ -15,7 +15,6 @@ from typing import Any, List, Optional, Tuple
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
-    QDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -65,7 +64,7 @@ class ProcessedFilesDialog(BaseDialog):
     def _build_ui(self) -> None:
         # Use the main layout from BaseDialog instead of creating a new one
         root_layout = self._main_layout
-        
+
         # Clear default widgets from BaseDialog
         while root_layout.count() > 0:
             item = root_layout.takeAt(0)
@@ -119,7 +118,8 @@ class ProcessedFilesDialog(BaseDialog):
                 btn.setCheckable(True)
                 btn.setFlat(True)
                 btn.setSizePolicy(
-                    QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed,
+                    QSizePolicy.Policy.Expanding,
+                    QSizePolicy.Policy.Fixed,
                 )
                 self._button_group.addButton(btn, folder_id)
                 btn.clicked.connect(
@@ -194,7 +194,9 @@ class ProcessedFilesDialog(BaseDialog):
             )
         else:
             chosen = QFileDialog.getExistingDirectory(
-                self, "Select Output Folder", initial_dir,
+                self,
+                "Select Output Folder",
+                initial_dir,
             )
 
         if not chosen:
@@ -204,7 +206,8 @@ class ProcessedFilesDialog(BaseDialog):
         self._output_folder_confirmed = True
 
         self._database_obj.oversight_and_defaults.update(
-            dict(id=1, export_processed_folder_prior=chosen), ["id"],
+            dict(id=1, export_processed_folder_prior=chosen),
+            ["id"],
         )
 
         if hasattr(self, "_export_btn"):

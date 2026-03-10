@@ -8,7 +8,7 @@ from interface.database.sqlite_wrapper import connect
 
 def _create_table(db, table_name, columns):
     """Helper to create a simple table for testing.
-    
+
     Args:
         db: sqlite_wrapper.Database instance
         table_name: Name of table to create
@@ -18,7 +18,7 @@ def _create_table(db, table_name, columns):
     # Only add auto-increment id if not in the provided columns
     if "id" not in columns:
         col_defs.append("id INTEGER PRIMARY KEY AUTOINCREMENT")
-    
+
     for col_name, col_type in columns.items():
         col_defs.append(f'"{col_name}" {col_type}')
     sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(col_defs)})"
@@ -175,14 +175,14 @@ def test_serialization_failure_falls_back_to_str(monkeypatch):
     db = connect("sqlite:///")
     _create_table(db, "bad", {"x": "TEXT"})
     t = db["bad"]
-    
+
     # Create an unserializable object with str() => "bad"
     class UnserializableObject:
         def __str__(self):
             return "bad"
-    
+
     bad = UnserializableObject()
-    
+
     # monkeypatch json.dumps to raise
     monkeypatch.setattr(json, "dumps", lambda v: (_ for _ in ()).throw(ValueError("nope")))
     # now insert object that cannot be serialized; fallback to str should happen

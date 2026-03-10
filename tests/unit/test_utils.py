@@ -18,7 +18,6 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.fast]
 
 import os
-import tempfile
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
@@ -610,7 +609,6 @@ class TestDoClearOldFiles:
 
     def test_removes_oldest_file_by_ctime(self, tmp_path):
         """The oldest file (by ctime) should be removed first."""
-        import time
 
         # Create files with distinct ctimes by patching os.path.getctime
         file_a = tmp_path / "file_a.txt"

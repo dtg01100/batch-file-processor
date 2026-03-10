@@ -18,32 +18,32 @@ class Theme:
     PRIMARY_CONTAINER = "#EADDFF"
     ON_PRIMARY = "#FFFFFF"
     ON_PRIMARY_CONTAINER = "#21005D"
-    
+
     SECONDARY = "#625B71"
     SECONDARY_CONTAINER = "#E8DEF8"
     ON_SECONDARY = "#FFFFFF"
     ON_SECONDARY_CONTAINER = "#1D192B"
-    
+
     TERTIARY = "#7D5260"
     TERTIARY_CONTAINER = "#FFD8E4"
     ON_TERTIARY = "#FFFFFF"
     ON_TERTIARY_CONTAINER = "#31111D"
-    
+
     ERROR = "#B3261E"
     ERROR_CONTAINER = "#F9DEDC"
     ON_ERROR = "#FFFFFF"
     ON_ERROR_CONTAINER = "#410E0B"
-    
+
     SUCCESS = "#386A20"
     SUCCESS_CONTAINER = "#C7F0B6"
     ON_SUCCESS = "#FFFFFF"
     ON_SUCCESS_CONTAINER = "#072100"
-    
+
     WARNING = "#9C6500"
     WARNING_CONTAINER = "#FFDEA8"
     ON_WARNING = "#FFFFFF"
     ON_WARNING_CONTAINER = "#2E1D00"
-    
+
     # Background Colors
     BACKGROUND = "#FFFBFE"
     ON_BACKGROUND = "#1C1B1F"
@@ -53,26 +53,26 @@ class Theme:
     ON_SURFACE_VARIANT = "#49454F"
     OUTLINE = "#79747E"
     OUTLINE_VARIANT = "#CAC4D0"
-    
+
     # Sidebar Colors (Dark theme for sidebar)
     SIDEBAR_BACKGROUND = "#1C1B1F"
     SIDEBAR_SURFACE = "#2B2930"
     SIDEBAR_ON_SURFACE = "#E6E1E5"
     SIDEBAR_ON_SURFACE_VARIANT = "#CAC4D0"
     SIDEBAR_OUTLINE = "#49454F"
-    
+
     # Card Colors
     CARD_BACKGROUND = "#FFFFFF"
     CARD_SURFACE = "#F3EDF7"
     CARD_BORDER = "#E8DEF8"
     CARD_SHADOW = "rgba(29, 27, 32, 0.08)"
-    
+
     # Input Colors
     INPUT_BACKGROUND = "#F7F2FA"
     INPUT_BORDER = "#D9D2E9"
     INPUT_FOCUS_BORDER = "#6750A4"
     INPUT_HOVER_BORDER = "#E8DEF8"
-    
+
     # Text Colors
     TEXT_PRIMARY = "#1C1B1F"
     TEXT_SECONDARY = "#49454F"
@@ -81,14 +81,21 @@ class Theme:
     TEXT_ON_PRIMARY = "#FFFFFF"
     TEXT_ON_SIDEBAR = "#E6E1E5"
     TEXT_ON_SIDEBAR_HOVER = "#FFFFFF"
-    
+
     # Border Colors
     BORDER = "#D9D2E9"
     BORDER_FOCUS = "#6750A4"
     BORDER_HOVER = "#C4B5E0"
-    
+
     # Typography System
-    FONT_FAMILY = ("Segoe UI", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Roboto", "sans-serif")
+    FONT_FAMILY = (
+        "Segoe UI",
+        "SF Pro Display",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Roboto",
+        "sans-serif",
+    )
     FONT_SIZE_XS = "11px"
     FONT_SIZE_SM = "12px"
     FONT_SIZE_BASE = "14px"
@@ -98,7 +105,7 @@ class Theme:
     FONT_SIZE_XXL = "24px"
     FONT_SIZE_TITLE = "28px"
     FONT_SIZE_DISPLAY = "32px"
-    
+
     # Spacing System
     SPACING_XS = "4px"
     SPACING_SM = "8px"
@@ -108,7 +115,7 @@ class Theme:
     SPACING_XXL = "24px"
     SPACING_XXXL = "32px"
     SPACING_XXXXL = "40px"
-    
+
     # Border Radius
     RADIUS_XS = "4px"
     RADIUS_SM = "8px"
@@ -117,13 +124,17 @@ class Theme:
     RADIUS_XL = "24px"
     RADIUS_XXL = "28px"
     RADIUS_FULL = "9999px"
-    
+
     # Shadows
     SHADOW_SM = "0 1px 2px rgba(0, 0, 0, 0.05)"
     SHADOW_MD = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-    SHADOW_LG = "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
-    SHADOW_XL = "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-    
+    SHADOW_LG = (
+        "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+    )
+    SHADOW_XL = (
+        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+    )
+
     # Transitions
     TRANSITION_FAST = "150ms cubic-bezier(0.4, 0.0, 0.2, 1)"
     TRANSITION_BASE = "200ms cubic-bezier(0.4, 0.0, 0.2, 1)"
@@ -144,8 +155,8 @@ class Theme:
         """Convert a spacing string (e.g., '16px') to integer value."""
         if isinstance(spacing_str, int):
             return spacing_str
-        return int(spacing_str.replace('px', ''))
-    
+        return int(spacing_str.replace("px", ""))
+
     @staticmethod
     def get_button_stylesheet(variant="default"):
         base = f"""

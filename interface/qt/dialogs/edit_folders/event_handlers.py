@@ -7,9 +7,9 @@ checkbox toggles, and dropdown selections.
 
 import os
 import logging
-from typing import Dict, Any, Optional, Callable, List
+from typing import Dict, Any, Optional, Callable
 
-from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QPushButton, QCheckBox
+from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QCheckBox
 
 
 class EventHandlers:
@@ -94,7 +94,7 @@ class EventHandlers:
         """Update the enabled/disabled state of backend-specific widgets."""
         active_btn = self.fields.get("active_checkbutton")
         is_active = active_btn.isChecked() if active_btn else False
-        
+
         settings = self.settings_provider() if self.settings_provider else {}
         email_globally_enabled = settings.get("enable_email", False)
 
@@ -109,8 +109,11 @@ class EventHandlers:
         ftp_check = self.fields.get("process_backend_ftp_check")
         ftp_on = is_active and (ftp_check.isChecked() if ftp_check else False)
         for key in [
-            "ftp_server_field", "ftp_port_field", "ftp_folder_field",
-            "ftp_username_field", "ftp_password_field"
+            "ftp_server_field",
+            "ftp_port_field",
+            "ftp_folder_field",
+            "ftp_username_field",
+            "ftp_password_field",
         ]:
             widget = self.fields.get(key)
             if widget:
@@ -119,9 +122,9 @@ class EventHandlers:
         # Email backend
         email_check = self.fields.get("process_backend_email_check")
         email_on = (
-            is_active and 
-            (email_check.isChecked() if email_check else False) and 
-            email_globally_enabled
+            is_active
+            and (email_check.isChecked() if email_check else False)
+            and email_globally_enabled
         )
         for key in ["email_recipient_field", "email_sender_subject_field"]:
             widget = self.fields.get(key)
@@ -130,22 +133,27 @@ class EventHandlers:
 
         # EDI settings enabled if folder is active and ANY backend is selected
         any_backend = (
-            (copy_check.isChecked() if copy_check else False) or
-            (ftp_check.isChecked() if ftp_check else False) or
-            (email_check.isChecked() if email_check else False)
+            (copy_check.isChecked() if copy_check else False)
+            or (ftp_check.isChecked() if ftp_check else False)
+            or (email_check.isChecked() if email_check else False)
         )
         edi_enabled = is_active and any_backend
-        
+
         for key in [
-            "split_edi", "force_edi_check_var", "split_edi_send_invoices",
-            "split_edi_send_credits", "prepend_file_dates", "rename_file_field",
-            "split_edi_filter_categories_entry", "split_edi_filter_mode"
+            "split_edi",
+            "force_edi_check_var",
+            "split_edi_send_invoices",
+            "split_edi_send_credits",
+            "prepend_file_dates",
+            "rename_file_field",
+            "split_edi_filter_categories_entry",
+            "split_edi_filter_mode",
         ]:
             widget = self.fields.get(key)
             if widget:
                 widget.setEnabled(edi_enabled)
-        
-        # We don't have direct access to edi_options_combo here yet, 
+
+        # We don't have direct access to edi_options_combo here yet,
         # it's managed by DynamicEDIBuilder
 
     def copy_config_from_other(self):
@@ -153,14 +161,14 @@ class EventHandlers:
         others_list = self.fields.get("others_list")
         if not others_list:
             return
-            
+
         current_item = others_list.currentItem()
         if not current_item:
             return
-            
+
         selected_alias = current_item.text()
         other_config = None
-        
+
         if self.alias_provider and self.settings_provider:
             all_aliases = self.alias_provider() or []
             if selected_alias in all_aliases:
@@ -174,8 +182,11 @@ class EventHandlers:
         if other_config is None:
             try:
                 import database_import
-                other_config = database_import.database_obj_instance.folders_table.find_one(
-                    alias=selected_alias
+
+                other_config = (
+                    database_import.database_obj_instance.folders_table.find_one(
+                        alias=selected_alias
+                    )
                 )
             except Exception as e:
                 logging.error(f"Error finding config for {selected_alias}: {e}")
@@ -194,11 +205,9 @@ class EventHandlers:
         initial = self.copy_to_directory
         if not initial or not os.path.isdir(initial):
             initial = os.getcwd()
-            
+
         folder = QFileDialog.getExistingDirectory(
-            self.dialog,
-            "Select Copy Backend Destination Folder",
-            initial
+            self.dialog, "Select Copy Backend Destination Folder", initial
         )
         if folder:
             self.copy_to_directory = folder

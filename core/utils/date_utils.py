@@ -43,7 +43,9 @@ def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> st
             str(int(stripped_date_value[0]) + 19) + stripped_date_value[1:]
         )
         parsed_date_string = parser.isoparse(calculated_date_string).date()
-        corrected_date_string = parsed_date_string + timedelta(days=int(offset) + adj_offset)
+        corrected_date_string = parsed_date_string + timedelta(
+            days=int(offset) + adj_offset
+        )
         formatted_date_string = corrected_date_string.strftime("%m/%d/%y")
     except Exception:
         formatted_date_string = "Not Available"

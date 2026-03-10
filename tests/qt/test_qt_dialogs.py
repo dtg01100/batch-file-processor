@@ -9,7 +9,7 @@ import pytest
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
@@ -21,91 +21,98 @@ from PyQt6.QtWidgets import QPushButton
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestBaseDialog:
-    
+
     def test_construction(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         dialog = BaseDialog()
         qtbot.addWidget(dialog)
         assert dialog.windowTitle() == ""
         assert dialog.isModal() is True
-    
+
     def test_construction_with_title(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         dialog = BaseDialog(title="Test Dialog")
         qtbot.addWidget(dialog)
         assert dialog.windowTitle() == "Test Dialog"
-    
+
     def test_validate_returns_true(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         dialog = BaseDialog()
         qtbot.addWidget(dialog)
         assert dialog.validate() is True
-    
+
     def test_apply_does_nothing(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         dialog = BaseDialog()
         qtbot.addWidget(dialog)
         dialog.apply()  # Should not raise any errors
-    
+
     def test_ok_button_calls_validate_and_apply(self, qtbot, monkeypatch):
         from interface.qt.dialogs.base_dialog import BaseDialog
-        
+
         # Create a subclass to track method calls
         class TestDialog(BaseDialog):
             def __init__(self):
                 super().__init__()
                 self.validate_called = False
                 self.apply_called = False
-            
+
             def validate(self):
                 self.validate_called = True
                 return True
-            
+
             def apply(self):
                 self.apply_called = True
-        
+
         dialog = TestDialog()
         qtbot.addWidget(dialog)
-        
+
         # Find and click OK button
         ok_button = dialog._button_box.button(dialog._button_box.StandardButton.Ok)
         qtbot.mouseClick(ok_button, Qt.MouseButton.LeftButton)
-        
+
         assert dialog.validate_called is True
         assert dialog.apply_called is True
-    
+
     def test_ok_button_aborts_if_validate_returns_false(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
-        
+
         class TestDialog(BaseDialog):
             def __init__(self):
                 super().__init__()
                 self.validate_called = False
                 self.apply_called = False
-            
+
             def validate(self):
                 self.validate_called = True
                 return False
-            
+
             def apply(self):
                 self.apply_called = True
-        
+
         dialog = TestDialog()
         qtbot.addWidget(dialog)
-        
+
         ok_button = dialog._button_box.button(dialog._button_box.StandardButton.Ok)
         qtbot.mouseClick(ok_button, Qt.MouseButton.LeftButton)
-        
+
         assert dialog.validate_called is True
         assert dialog.apply_called is False
-    
+
     def test_cancel_button_rejects(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
+
         dialog = BaseDialog()
         qtbot.addWidget(dialog)
-        
+
         with qtbot.waitSignal(dialog.rejected, timeout=1000):
-            cancel_button = dialog._button_box.button(dialog._button_box.StandardButton.Cancel)
+            cancel_button = dialog._button_box.button(
+                dialog._button_box.StandardButton.Cancel
+            )
             qtbot.mouseClick(cancel_button, Qt.MouseButton.LeftButton)
 
 
@@ -202,159 +209,168 @@ class TestQtFolderDataExtractor:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestEditFoldersDialog:
-    
-    def test_enabled_folder_validation_fails_without_name(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_enabled_folder_validation_fails_without_name(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         # Mock QMessageBox to avoid blocking
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["folder_name_value"].setText("")
         assert dialog.validate() is False
-    
-    def test_enabled_folder_validation_fails_without_convert_format(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_enabled_folder_validation_fails_without_convert_format(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_edi"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["convert_formats_var"].setCurrentText("")
         assert dialog.validate() is False
-    
-    def test_ftp_validation_passes_with_all_fields(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_ftp_validation_passes_with_all_fields(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_edi"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_ftp_check"].setChecked(True)
         dialog._fields["ftp_server_field"].setText("ftp.example.com")
         dialog._fields["ftp_port_field"].setText("21")
         dialog._fields["ftp_folder_field"].setText("/upload/")
         dialog._fields["ftp_username_field"].setText("user")
         dialog._fields["ftp_password_field"].setText("password")
-        
+
         # Set a valid convert format (required field)
         dialog._fields["convert_formats_var"].setCurrentText("csv")
-        
+
         # Debug validator
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+
         extractor = QtFolderDataExtractor(dialog._fields)
         extracted = extractor.extract_all()
         print(f"Extracted fields: {extracted}")
-        
+
         validator = dialog._create_validator()
         current_alias = dialog._folder_config.get("alias", "")
         result = validator.validate_extracted_fields(extracted, current_alias)
         print(f"Validation errors: {[e.message for e in result.errors]}")
-        
+
         assert result.is_valid is True
-    
-    def test_ftp_validation_fails_without_server(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_ftp_validation_fails_without_server(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_ftp_check"].setChecked(True)
         dialog._fields["ftp_server_field"].setText("")
-        
+
         assert dialog.validate() is False
-    
-    def test_email_validation_passes_with_all_fields(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_email_validation_passes_with_all_fields(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_email_check"].setChecked(True)
         dialog._fields["email_recipient_field"].setText("test@example.com")
         dialog._fields["email_sender_subject_field"].setText("Test Subject")
-        
+
         assert dialog.validate() is True
-    
-    def test_email_validation_fails_without_recipient(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_email_validation_fails_without_recipient(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_email_check"].setChecked(True)
         dialog._fields["email_recipient_field"].setText("")
-        
+
         assert dialog.validate() is False
-    
-    def test_copy_validation_passes_with_folder(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_copy_validation_passes_with_folder(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_copy_check"].setChecked(True)
         dialog.copy_to_directory = "/destination"
-        
+
         assert dialog.validate() is True
-    
-    def test_copy_validation_fails_without_folder(self, qtbot, sample_folder_config, monkeypatch):
+
+    def test_copy_validation_fails_without_folder(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
-            MagicMock()
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical", MagicMock()
         )
-        
+
         sample_folder_config["folder_is_active"] = "True"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        
+
         dialog._fields["process_backend_copy_check"].setChecked(True)
         dialog.copy_to_directory = ""
-        
+
         assert dialog.validate() is False
 
     def test_construction(self, qtbot, sample_folder_config):
@@ -371,7 +387,11 @@ class TestEditFoldersDialog:
     def test_edi_options(self):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert EditFoldersDialog.EDI_OPTIONS == ["Do Nothing", "Convert EDI", "Tweak EDI"]
+        assert EditFoldersDialog.EDI_OPTIONS == [
+            "Do Nothing",
+            "Convert EDI",
+            "Tweak EDI",
+        ]
 
     def test_disabled_folder_validates(self, qtbot, sample_folder_config):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
@@ -395,7 +415,9 @@ class TestEditFoldersDialog:
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         callback = MagicMock()
-        dialog = EditFoldersDialog(None, sample_folder_config, on_apply_success=callback)
+        dialog = EditFoldersDialog(
+            None, sample_folder_config, on_apply_success=callback
+        )
         qtbot.addWidget(dialog)
         dialog.apply()
         callback.assert_called_once()
@@ -410,7 +432,9 @@ class TestEditFoldersDialog:
         dialog._active_checkbox.setChecked(False)
         assert "Disabled" in dialog._active_checkbox.text()
 
-    def test_show_validation_errors_calls_qmessagebox(self, qtbot, sample_folder_config, monkeypatch):
+    def test_show_validation_errors_calls_qmessagebox(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         dialog = EditFoldersDialog(None, sample_folder_config)
@@ -421,7 +445,10 @@ class TestEditFoldersDialog:
         )
         dialog._show_validation_errors(["Error 1", "Error 2"])
         from interface.qt.dialogs.edit_folders_dialog import QMessageBox
-        QMessageBox.critical.assert_called_once_with(dialog, "Validation Error", "Error 1\nError 2")
+
+        QMessageBox.critical.assert_called_once_with(
+            dialog, "Validation Error", "Error 1\nError 2"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -471,7 +498,9 @@ class TestEditSettingsDialog:
         on_apply.assert_called_once()
         refresh.assert_called_once()
 
-    def test_validate_empty_email_when_enabled_fails(self, qtbot, sample_folder_config, monkeypatch):
+    def test_validate_empty_email_when_enabled_fails(
+        self, qtbot, sample_folder_config, monkeypatch
+    ):
         dialog = self._make_dialog(qtbot, sample_folder_config)
         dialog._enable_email_cb.setChecked(True)
         dialog._email_address.setText("")
@@ -483,7 +512,9 @@ class TestEditSettingsDialog:
         result = dialog.validate()
         assert result is False
 
-    def test_apply_disables_email_backends_when_email_off(self, qtbot, sample_folder_config):
+    def test_apply_disables_email_backends_when_email_off(
+        self, qtbot, sample_folder_config
+    ):
         disable_email = MagicMock()
         disable_folders = MagicMock()
         dialog = self._make_dialog(
@@ -516,7 +547,11 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
         buttons = dialog.findChildren(QPushButton)
-        active_btn = [b for b in buttons if "active" in b.text().lower() and "inactive" not in b.text().lower()][0]
+        active_btn = [
+            b
+            for b in buttons
+            if "active" in b.text().lower() and "inactive" not in b.text().lower()
+        ][0]
         active_btn.click()
         mock_maintenance_functions.set_all_active.assert_called_once()
 
@@ -556,7 +591,9 @@ class TestMaintenanceDialog:
         dialog._clear_queued_emails()
         mock_maintenance_functions._database_obj.emails_table.delete.assert_called_once()
 
-    def test_import_old_configurations_returns_early_without_ui(self, qtbot, mock_maintenance_functions):
+    def test_import_old_configurations_returns_early_without_ui(
+        self, qtbot, mock_maintenance_functions
+    ):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
         dialog = MaintenanceDialog(None, mock_maintenance_functions, ui_service=None)
@@ -669,7 +706,9 @@ class TestProcessedFilesDialog:
         dialog._do_export()
         mock_export.assert_called_once_with(42, "/tmp/out", mock_database_obj)
 
-    def test_export_noop_when_no_folder_selected(self, qtbot, mock_database_obj, monkeypatch):
+    def test_export_noop_when_no_folder_selected(
+        self, qtbot, mock_database_obj, monkeypatch
+    ):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
         dialog = ProcessedFilesDialog(None, mock_database_obj)
@@ -684,7 +723,9 @@ class TestProcessedFilesDialog:
         dialog._do_export()
         mock_export.assert_not_called()
 
-    def test_export_noop_when_no_output_folder(self, qtbot, mock_database_obj, monkeypatch):
+    def test_export_noop_when_no_output_folder(
+        self, qtbot, mock_database_obj, monkeypatch
+    ):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
         dialog = ProcessedFilesDialog(None, mock_database_obj)
@@ -705,74 +746,87 @@ class TestProcessedFilesDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestDatabaseImportDialog:
-    
+
     def test_construction(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         assert dialog.windowTitle() == "folders.db merging utility"
         assert dialog.isModal() is True
-    
+
     def test_select_button_toggled_initially(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         assert dialog._import_button.isEnabled() is False
-    
+
     def test_select_database_file(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
-        
+
         # Mock file dialog
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",
-            lambda *args, **kwargs: ("/test.db", "")
+            lambda *args, **kwargs: ("/test.db", ""),
         )
-        
+
         # Mock os.path.exists
         monkeypatch.setattr(
-            "interface.qt.dialogs.database_import_dialog.os.path.exists",
-            lambda x: True
+            "interface.qt.dialogs.database_import_dialog.os.path.exists", lambda x: True
         )
-        
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
-        
+
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
-        
+
         assert dialog._new_database_path == "/test.db"
         assert dialog._db_label.text() == "/test.db"
         assert dialog._import_button.isEnabled() is True
-    
+
     def test_import_button_toggled_when_no_file_selected(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         assert dialog._import_button.isEnabled() is False
-    
+
     def test_import_button_enabled_when_file_selected(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",
-            lambda *args, **kwargs: ("/test.db", "")
+            lambda *args, **kwargs: ("/test.db", ""),
         )
-        
+
         monkeypatch.setattr(
-            "interface.qt.dialogs.database_import_dialog.os.path.exists",
-            lambda x: True
+            "interface.qt.dialogs.database_import_dialog.os.path.exists", lambda x: True
         )
-        
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
-        
+
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
-        
+
         assert dialog._import_button.isEnabled() is True
 
     def test_start_import_noop_without_selected_database(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
 
         class _ShouldNotConstruct:
@@ -821,7 +875,9 @@ class TestDatabaseImportDialog:
             _make_fake_thread,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         dialog._new_database_path = "/new.db"
         dialog._database_migrate_job = MagicMock()
@@ -842,7 +898,9 @@ class TestDatabaseImportDialog:
     def test_on_progress_updates_progress_bar(self, qtbot):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
 
         dialog._on_progress(3, 10, "working")
@@ -850,7 +908,9 @@ class TestDatabaseImportDialog:
         assert dialog._progress_bar.maximum() == 10
         assert dialog._progress_bar.value() == 3
 
-    def test_on_finished_success_updates_label_and_reenables_buttons(self, qtbot, monkeypatch):
+    def test_on_finished_success_updates_label_and_reenables_buttons(
+        self, qtbot, monkeypatch
+    ):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
         info_mock = MagicMock()
@@ -859,7 +919,9 @@ class TestDatabaseImportDialog:
             info_mock,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         dialog._import_button.setEnabled(False)
         dialog._select_button.setEnabled(False)
@@ -871,7 +933,9 @@ class TestDatabaseImportDialog:
         assert dialog._select_button.isEnabled() is True
         info_mock.assert_called_once_with(dialog, "Import Complete", "done")
 
-    def test_on_finished_failure_shows_error_and_reenables_buttons(self, qtbot, monkeypatch):
+    def test_on_finished_failure_shows_error_and_reenables_buttons(
+        self, qtbot, monkeypatch
+    ):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
         critical_mock = MagicMock()
@@ -880,7 +944,9 @@ class TestDatabaseImportDialog:
             critical_mock,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         dialog._import_button.setEnabled(False)
         dialog._select_button.setEnabled(False)
@@ -900,7 +966,9 @@ class TestDatabaseImportDialog:
             critical_mock,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Windows", "/backup/path", "33")
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
         qtbot.addWidget(dialog)
         dialog._import_button.setEnabled(False)
         dialog._select_button.setEnabled(False)
@@ -912,70 +980,72 @@ class TestDatabaseImportDialog:
         critical_mock.assert_called_once_with(dialog, "Import Error", "bad things")
 
 
-@ pytest.mark.qt
+@pytest.mark.qt
 class TestResendDialog:
 
     def test_construction(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
+
         mock_db = MagicMock()
-        
+
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = False
         mock_service.get_folders_with_files.return_value = []
         mock_service.count_files_for_folder.return_value = 0
         mock_service.get_files_for_folder.return_value = []
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
-            lambda *args: mock_service
+            lambda *args: mock_service,
         )
-        
+
         # Mock QMessageBox to avoid blocking
-        monkeypatch.setattr(
-            "PyQt6.QtWidgets.QMessageBox.information",
-            MagicMock()
-        )
-        
+        monkeypatch.setattr("PyQt6.QtWidgets.QMessageBox.information", MagicMock())
+
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
 
     def test_spinbox_initially_disabled(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
+
         mock_db = MagicMock()
-        
+
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
         mock_service.get_folders_with_files.return_value = []
         mock_service.count_files_for_folder.return_value = 0
         mock_service.get_files_for_folder.return_value = []
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
-            lambda *args: mock_service
+            lambda *args: mock_service,
         )
-        
+
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
         assert not dialog._file_count_spinbox.isEnabled()
 
     def test_folder_selection_enables_spinbox(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
+
         mock_db = MagicMock()
-        
+
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = [{"id": 5, "folder_name": "Test Folder"}]
+        mock_service.get_folders_with_files.return_value = [
+            {"id": 5, "folder_name": "Test Folder"}
+        ]
         mock_service.count_files_for_folder.return_value = 20
         mock_service.get_files_for_folder.return_value = []
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
-            lambda *args: mock_service
+            lambda *args: mock_service,
         )
-        
+
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
         dialog._on_folder_selected(5)
@@ -984,39 +1054,39 @@ class TestResendDialog:
 
     def test_folder_selection_updates_max(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
+
         mock_db = MagicMock()
-        
+
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = [{"id": 1, "folder_name": "Test Folder"}]
+        mock_service.get_folders_with_files.return_value = [
+            {"id": 1, "folder_name": "Test Folder"}
+        ]
         mock_service.count_files_for_folder.return_value = 23
         mock_service.get_files_for_folder.return_value = []
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
-            lambda *args: mock_service
+            lambda *args: mock_service,
         )
-        
+
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
         dialog._on_folder_selected(1)
         assert dialog._file_count_spinbox.maximum() == 1000  # Default max is 1000
 
     def test_no_selection_initially(self, qtbot, monkeypatch):
-        from interface.qt.dialogs.resend_dialog import ResendDialog
         mock_db = MagicMock()
-        
+
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
         mock_service.get_folders_with_files.return_value = []
         mock_service.count_files_for_folder.return_value = 0
         mock_service.get_files_for_folder.return_value = []
-        
+
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
-            lambda *args: mock_service
+            lambda *args: mock_service,
         )
-        
-

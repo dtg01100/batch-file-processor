@@ -2,6 +2,7 @@
 
 Provides toolkit-agnostic SMTP validation, decoupled from any UI framework.
 """
+
 from typing import Protocol, runtime_checkable, Optional, Tuple
 
 
@@ -42,6 +43,7 @@ class SMTPService:
     ) -> Tuple[bool, Optional[str]]:
         """Test SMTP server connection."""
         import smtplib
+
         try:
             server = smtplib.SMTP(smtp_server, smtp_port)
             server.ehlo()

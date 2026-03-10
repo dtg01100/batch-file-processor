@@ -3,9 +3,7 @@ from typing import Any
 
 
 def export_processed_report(
-    folder_id: int, 
-    output_folder: str,
-    database_obj: Any
+    folder_id: int, output_folder: str, database_obj: Any
 ) -> None:
     """Export a processed files report for a specific folder.
 
@@ -29,9 +27,7 @@ def export_processed_report(
             print(f"{file_name + file_extension} exists")
             i = 1
             while True:
-                potential_file_path = (
-                    file_name + " (" + str(i) + ")" + file_extension
-                )
+                potential_file_path = file_name + " (" + str(i) + ")" + file_extension
                 print(f"Checking if {potential_file_path} exists")
                 if not os.path.exists(potential_file_path):
                     print(f"{potential_file_path} does not exist")

@@ -30,7 +30,6 @@ class PluginBase(ABC):
         Returns:
             str: Plugin name for display purposes
         """
-        pass
 
     @classmethod
     @abstractmethod
@@ -44,7 +43,6 @@ class PluginBase(ABC):
         Returns:
             str: Unique plugin identifier
         """
-        pass
 
     @classmethod
     @abstractmethod
@@ -55,7 +53,6 @@ class PluginBase(ABC):
         Returns:
             str: Plugin description
         """
-        pass
 
     @classmethod
     @abstractmethod
@@ -66,7 +63,6 @@ class PluginBase(ABC):
         Returns:
             str: Plugin version string
         """
-        pass
 
     @classmethod
     def get_configuration_schema(cls) -> Optional[ConfigurationSchema]:
@@ -92,7 +88,6 @@ class PluginBase(ABC):
         Args:
             config: Optional configuration dictionary
         """
-        pass
 
     @abstractmethod
     def activate(self) -> None:
@@ -101,7 +96,6 @@ class PluginBase(ABC):
 
         Called when the plugin is activated for use.
         """
-        pass
 
     @abstractmethod
     def deactivate(self) -> None:
@@ -110,7 +104,6 @@ class PluginBase(ABC):
 
         Called when the plugin is deactivated or the application shuts down.
         """
-        pass
 
     def validate_configuration(self, config: Dict[str, Any]) -> ValidationResult:
         """
@@ -153,7 +146,6 @@ class PluginBase(ABC):
         Returns:
             Any: UI widget for plugin configuration
         """
-        pass
 
     def update_configuration(self, config: Dict[str, Any]) -> ValidationResult:
         """

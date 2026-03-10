@@ -133,9 +133,7 @@ class MaintenanceFunctions:
         users_refresh = False
         if self._database_obj.folders_table.count(folder_is_active="False") > 0:
             users_refresh = True
-        folders_total = self._database_obj.folders_table.count(
-            folder_is_active="False"
-        )
+        folders_total = self._database_obj.folders_table.count(folder_is_active="False")
         folders_count = 0
         self._progress.show(
             "removing " + str(folders_count) + " of " + str(folders_total)
@@ -171,9 +169,7 @@ class MaintenanceFunctions:
         folder_count = 0
         self._database_obj.folders_table_list = []
         if selected_folder is None:
-            for row in self._database_obj.folders_table.find(
-                folder_is_active="True"
-            ):
+            for row in self._database_obj.folders_table.find(folder_is_active="True"):
                 self._database_obj.folders_table_list.append(row)
         else:
             folder_dict = self._database_obj.folders_table.find_one(id=selected_folder)
@@ -185,9 +181,9 @@ class MaintenanceFunctions:
         folder_total = len(self._database_obj.folders_table_list)
         if selected_folder is None:
             self._progress.show("adding files to processed list...")
-        for parameters_dict in (
-            self._database_obj.folders_table_list
-        ):  # create list of active directories
+        for (
+            parameters_dict
+        ) in self._database_obj.folders_table_list:  # create list of active directories
             file_total = 0
             file_count = 0
             folder_count += 1
@@ -285,9 +281,7 @@ class MaintenanceFunctions:
             settings_dict = self._database_obj.get_settings_or_default()
             print(settings_dict["enable_email"])
             if not settings_dict["enable_email"]:
-                for (
-                    email_backend_to_disable
-                ) in self._database_obj.folders_table.find(
+                for email_backend_to_disable in self._database_obj.folders_table.find(
                     process_backend_email=True
                 ):
                     email_backend_to_disable["process_backend_email"] = False
@@ -301,9 +295,7 @@ class MaintenanceFunctions:
                     folder_is_active="True",
                 ):
                     folder_to_disable["folder_is_active"] = "False"
-                    self._database_obj.folders_table.update(
-                        folder_to_disable, ["id"]
-                    )
+                    self._database_obj.folders_table.update(folder_to_disable, ["id"])
             if self._refresh_callback:
                 self._refresh_callback()
             self._progress.hide()

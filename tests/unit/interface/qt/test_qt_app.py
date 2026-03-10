@@ -10,12 +10,10 @@ Tests cover:
 - Folder operations
 """
 
-import os
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from argparse import Namespace
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QPushButton
 
 from interface.qt.app import QtBatchFileSenderApp
 
@@ -81,7 +79,7 @@ def qt_app():
 def _make_app(**kwargs):
     """Helper to create a QtBatchFileSenderApp with minimal required parameters."""
     # Remove folder_manager from kwargs as it's not accepted by __init__
-    kwargs.pop('folder_manager', None)
+    kwargs.pop("folder_manager", None)
     app = QtBatchFileSenderApp(**kwargs)
     return app
 
@@ -94,11 +92,18 @@ class TestQtAppInitialization:
         app = _make_app()
 
         assert app is not None
-        assert hasattr(app, 'initialize')
-        assert hasattr(app, 'run')
-        assert hasattr(app, 'shutdown')
+        assert hasattr(app, "initialize")
+        assert hasattr(app, "run")
+        assert hasattr(app, "shutdown")
 
-    def test_app_initialization_with_dependencies(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_app_initialization_with_dependencies(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test initialization with injected dependencies."""
         app = _make_app(
             database_obj=mock_database,
@@ -130,7 +135,14 @@ class TestQtAppInitialization:
 class TestQtAppWindowCreation:
     """Test main window creation and UI building."""
 
-    def test_initialize_creates_window(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_initialize_creates_window(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test that initialize creates the main window."""
         app = _make_app(
             database_obj=mock_database,
@@ -139,12 +151,19 @@ class TestQtAppWindowCreation:
             progress_service=mock_progress_service,
         )
 
-        with patch.object(app, '_build_main_window') as mock_build:
+        with patch.object(app, "_build_main_window") as mock_build:
             app.initialize()
 
             mock_build.assert_called_once()
 
-    def test_main_buttons_created(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_main_buttons_created(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test that main action buttons are created."""
         app = _make_app(
             database_obj=mock_database,
@@ -155,11 +174,18 @@ class TestQtAppWindowCreation:
         app.initialize()
 
         # Check that key buttons exist
-        assert hasattr(app, '_process_folder_button')
-        assert hasattr(app, '_processed_files_button')
-        assert hasattr(app, '_allow_resend_button')
+        assert hasattr(app, "_process_folder_button")
+        assert hasattr(app, "_processed_files_button")
+        assert hasattr(app, "_allow_resend_button")
 
-    def test_folder_list_widget_created(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_folder_list_widget_created(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test that folder list widget is created."""
         app = _make_app(
             database_obj=mock_database,
@@ -169,14 +195,21 @@ class TestQtAppWindowCreation:
         )
         app.initialize()
 
-        assert hasattr(app, '_folder_list_widget')
-        assert hasattr(app, '_search_widget')
+        assert hasattr(app, "_folder_list_widget")
+        assert hasattr(app, "_search_widget")
 
 
 class TestQtAppButtonConnections:
     """Test button signal connections."""
 
-    def test_add_directory_button_connection(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_add_directory_button_connection(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Add Directory button is connected to handler."""
         app = _make_app(
             database_obj=mock_database,
@@ -190,10 +223,17 @@ class TestQtAppButtonConnections:
         add_button = app._window.findChild(QPushButton, None)
         if add_button and add_button.text() == "Add Directory...":
             # Verify it's connected by checking the handler exists
-            assert hasattr(app, '_select_folder')
+            assert hasattr(app, "_select_folder")
             assert callable(app._select_folder)
 
-    def test_edit_settings_button_connection(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_edit_settings_button_connection(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Edit Settings button is connected to handler."""
         app = _make_app(
             database_obj=mock_database,
@@ -204,10 +244,17 @@ class TestQtAppButtonConnections:
         app.initialize()
 
         # Verify handler exists
-        assert hasattr(app, '_show_edit_settings_dialog')
+        assert hasattr(app, "_show_edit_settings_dialog")
         assert callable(app._show_edit_settings_dialog)
 
-    def test_maintenance_button_connection(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_maintenance_button_connection(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Maintenance button is connected to handler."""
         app = _make_app(
             database_obj=mock_database,
@@ -217,10 +264,17 @@ class TestQtAppButtonConnections:
         )
         app.initialize()
 
-        assert hasattr(app, '_show_maintenance_dialog_wrapper')
+        assert hasattr(app, "_show_maintenance_dialog_wrapper")
         assert callable(app._show_maintenance_dialog_wrapper)
 
-    def test_process_folder_button_connection(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_process_folder_button_connection(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Process All Folders button is connected to handler."""
         app = _make_app(
             database_obj=mock_database,
@@ -230,14 +284,21 @@ class TestQtAppButtonConnections:
         )
         app.initialize()
 
-        assert hasattr(app, '_graphical_process_directories')
+        assert hasattr(app, "_graphical_process_directories")
         assert callable(app._graphical_process_directories)
 
 
 class TestQtAppButtonStates:
     """Test button state management."""
 
-    def test_process_button_toggled_when_no_folders(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_process_button_toggled_when_no_folders(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Process button is disabled when there are no folders."""
         mock_database.folders_table.count.return_value = 0
 
@@ -251,9 +312,18 @@ class TestQtAppButtonStates:
 
         assert app._process_folder_button.isEnabled() is False
 
-    def test_process_button_enabled_when_folders_exist(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_process_button_enabled_when_folders_exist(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Process button is enabled when there are active folders."""
-        mock_database.folders_table.count.side_effect = lambda **kwargs: 5 if kwargs.get('folder_is_active') == "True" else 0
+        mock_database.folders_table.count.side_effect = lambda **kwargs: (
+            5 if kwargs.get("folder_is_active") == "True" else 0
+        )
 
         app = _make_app(
             database_obj=mock_database,
@@ -265,7 +335,14 @@ class TestQtAppButtonStates:
 
         assert app._process_folder_button.isEnabled() is True
 
-    def test_processed_files_button_toggled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_processed_files_button_toggled_when_no_processed(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Processed Files button is disabled when no files processed."""
         mock_database.processed_files.count.return_value = 0
 
@@ -279,7 +356,14 @@ class TestQtAppButtonStates:
 
         assert app._processed_files_button.isEnabled() is False
 
-    def test_processed_files_button_enabled_when_files_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_processed_files_button_enabled_when_files_processed(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Processed Files button is enabled when files are processed."""
         mock_database.processed_files.count.return_value = 10
 
@@ -293,7 +377,14 @@ class TestQtAppButtonStates:
 
         assert app._processed_files_button.isEnabled() is True
 
-    def test_resend_button_toggled_when_no_processed(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_resend_button_toggled_when_no_processed(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Enable Resend button is disabled when no files processed."""
         mock_database.processed_files.count.return_value = 0
 
@@ -311,7 +402,14 @@ class TestQtAppButtonStates:
 class TestQtAppDialogMethods:
     """Test dialog showing methods."""
 
-    def test_show_edit_settings_dialog_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_show_edit_settings_dialog_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Edit Settings dialog method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -321,10 +419,17 @@ class TestQtAppDialogMethods:
         )
         app.initialize()
 
-        assert hasattr(app, '_show_edit_settings_dialog')
+        assert hasattr(app, "_show_edit_settings_dialog")
         assert callable(app._show_edit_settings_dialog)
 
-    def test_show_maintenance_dialog_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_show_maintenance_dialog_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Maintenance dialog method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -334,10 +439,17 @@ class TestQtAppDialogMethods:
         )
         app.initialize()
 
-        assert hasattr(app, '_show_maintenance_dialog_wrapper')
+        assert hasattr(app, "_show_maintenance_dialog_wrapper")
         assert callable(app._show_maintenance_dialog_wrapper)
 
-    def test_show_processed_files_dialog_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_show_processed_files_dialog_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Processed Files dialog method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -347,10 +459,17 @@ class TestQtAppDialogMethods:
         )
         app.initialize()
 
-        assert hasattr(app, '_show_processed_files_dialog_wrapper')
+        assert hasattr(app, "_show_processed_files_dialog_wrapper")
         assert callable(app._show_processed_files_dialog_wrapper)
 
-    def test_show_resend_dialog_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_show_resend_dialog_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test Resend dialog method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -360,14 +479,21 @@ class TestQtAppDialogMethods:
         )
         app.initialize()
 
-        assert hasattr(app, '_show_resend_dialog')
+        assert hasattr(app, "_show_resend_dialog")
         assert callable(app._show_resend_dialog)
 
 
 class TestQtAppFolderOperations:
     """Test folder operation methods."""
 
-    def test_select_folder_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_select_folder_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test select folder method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -377,10 +503,17 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_select_folder')
+        assert hasattr(app, "_select_folder")
         assert callable(app._select_folder)
 
-    def test_batch_add_folders_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_batch_add_folders_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test batch add folders method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -390,10 +523,17 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_batch_add_folders')
+        assert hasattr(app, "_batch_add_folders")
         assert callable(app._batch_add_folders)
 
-    def test_edit_folder_selector_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_edit_folder_selector_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test edit folder selector method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -403,10 +543,17 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_edit_folder_selector')
+        assert hasattr(app, "_edit_folder_selector")
         assert callable(app._edit_folder_selector)
 
-    def test_send_single_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_send_single_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test send single method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -416,10 +563,17 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_send_single')
+        assert hasattr(app, "_send_single")
         assert callable(app._send_single)
 
-    def test_disable_folder_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_disable_folder_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test disable folder method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -429,10 +583,17 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_disable_folder')
+        assert hasattr(app, "_disable_folder")
         assert callable(app._disable_folder)
 
-    def test_delete_folder_entry_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_delete_folder_entry_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test delete folder entry method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -442,14 +603,21 @@ class TestQtAppFolderOperations:
         )
         app.initialize()
 
-        assert hasattr(app, '_delete_folder_entry_wrapper')
+        assert hasattr(app, "_delete_folder_entry_wrapper")
         assert callable(app._delete_folder_entry_wrapper)
 
 
 class TestQtAppSettingsHelpers:
     """Test settings helper methods."""
 
-    def test_disable_all_email_backends_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_disable_all_email_backends_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test disable all email backends method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -459,10 +627,17 @@ class TestQtAppSettingsHelpers:
         )
         app.initialize()
 
-        assert hasattr(app, '_disable_all_email_backends')
+        assert hasattr(app, "_disable_all_email_backends")
         assert callable(app._disable_all_email_backends)
 
-    def test_disable_folders_without_backends_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_disable_folders_without_backends_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test disable folders without backends method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -472,14 +647,21 @@ class TestQtAppSettingsHelpers:
         )
         app.initialize()
 
-        assert hasattr(app, '_disable_folders_without_backends')
+        assert hasattr(app, "_disable_folders_without_backends")
         assert callable(app._disable_folders_without_backends)
 
 
 class TestQtAppRefresh:
     """Test refresh functionality."""
 
-    def test_refresh_users_list_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_refresh_users_list_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test refresh users list method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -489,10 +671,17 @@ class TestQtAppRefresh:
         )
         app.initialize()
 
-        assert hasattr(app, '_refresh_users_list')
+        assert hasattr(app, "_refresh_users_list")
         assert callable(app._refresh_users_list)
 
-    def test_update_filter_count_label_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_update_filter_count_label_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test update filter count label method exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -502,7 +691,7 @@ class TestQtAppRefresh:
         )
         app.initialize()
 
-        assert hasattr(app, '_update_filter_count_label')
+        assert hasattr(app, "_update_filter_count_label")
         assert callable(app._update_filter_count_label)
 
 
@@ -512,22 +701,29 @@ class TestQtAppLifecycle:
     def test_initialize_method_exists(self):
         """Test that initialize method exists."""
         app = _make_app()
-        assert hasattr(app, 'initialize')
+        assert hasattr(app, "initialize")
         assert callable(app.initialize)
 
     def test_run_method_exists(self):
         """Test that run method exists."""
         app = _make_app()
-        assert hasattr(app, 'run')
+        assert hasattr(app, "run")
         assert callable(app.run)
 
     def test_shutdown_method_exists(self):
         """Test that shutdown method exists."""
         app = _make_app()
-        assert hasattr(app, 'shutdown')
+        assert hasattr(app, "shutdown")
         assert callable(app.shutdown)
 
-    def test_shutdown_closes_database(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_shutdown_closes_database(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test that shutdown closes the database connection."""
         app = _make_app(
             database_obj=mock_database,
@@ -554,7 +750,7 @@ class TestQtAppSelfTest:
     def test_run_self_test_exists(self):
         """Test that the self-test method exists."""
         app = _make_app()
-        assert hasattr(app, '_run_self_test')
+        assert hasattr(app, "_run_self_test")
         assert callable(app._run_self_test)
 
 
@@ -570,7 +766,7 @@ class TestQtAppErrorHandling:
     def test_run_before_initialize_raises_error(self):
         """Test that run raises error if called before initialize."""
         app = _make_app()
-        with patch('sys.argv', ['test']):
+        with patch("sys.argv", ["test"]):
             app._args = Namespace(automatic=False)
             with pytest.raises(RuntimeError, match="Application not initialized"):
                 app.run()
@@ -594,7 +790,9 @@ class TestQtAppIntegration:
 class TestQtAppProperties:
     """Test property access after initialization."""
 
-    def test_properties_after_initialization(self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_properties_after_initialization(
+        self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service
+    ):
         """Test property access after proper initialization."""
         app = _make_app(
             database_obj=mock_database,
@@ -615,8 +813,10 @@ class TestQtAppProperties:
 class TestQtAppWindowConfiguration:
     """Test window configuration."""
 
-    @patch('sys.argv', ['test_app'])
-    def test_window_has_minimum_size(self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    @patch("sys.argv", ["test_app"])
+    def test_window_has_minimum_size(
+        self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service
+    ):
         """Test that window has minimum size set."""
         app = _make_app(
             database_obj=mock_database,
@@ -628,8 +828,10 @@ class TestQtAppWindowConfiguration:
         assert app._window.minimumWidth() > 0
         assert app._window.minimumHeight() > 0
 
-    @patch('sys.argv', ['test_app'])
-    def test_window_is_resizable(self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    @patch("sys.argv", ["test_app"])
+    def test_window_is_resizable(
+        self, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service
+    ):
         """Test that window is resizable."""
         app = _make_app(
             database_obj=mock_database,
@@ -647,7 +849,14 @@ class TestQtAppWindowConfiguration:
 class TestQtAppFilterFunctionality:
     """Test filter functionality."""
 
-    def test_folder_filter_exists(self, qt_app, mock_database, mock_folder_manager, mock_ui_service, mock_progress_service):
+    def test_folder_filter_exists(
+        self,
+        qt_app,
+        mock_database,
+        mock_folder_manager,
+        mock_ui_service,
+        mock_progress_service,
+    ):
         """Test that folder filter functionality exists."""
         app = _make_app(
             database_obj=mock_database,
@@ -657,6 +866,6 @@ class TestQtAppFilterFunctionality:
         )
         app.initialize()
 
-        assert hasattr(app, '_folder_filter')
-        assert hasattr(app, '_set_folders_filter')
+        assert hasattr(app, "_folder_filter")
+        assert hasattr(app, "_set_folders_filter")
         assert callable(app._set_folders_filter)

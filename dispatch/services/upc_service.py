@@ -3,8 +3,7 @@ from typing import Protocol, Optional
 
 
 class QueryRunnerProtocol(Protocol):
-    def execute(self, query: str, params: Optional[dict] = None) -> list[tuple]:
-        ...
+    def execute(self, query: str, params: Optional[dict] = None) -> list[tuple]: ...
 
 
 @dataclass
@@ -28,7 +27,7 @@ class UPCService:
         self._upc_cache: Optional[dict[int, list]] = None
 
     def fetch_upc_dictionary(self, settings: dict) -> UPCServiceResult:
-        query = """select 
+        query = """select
     dsanrep.anbacd,
     dsanrep.anbbcd,
     strip(dsanrep.anbgcd),

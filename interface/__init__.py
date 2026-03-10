@@ -12,7 +12,6 @@ Key components:
 """
 
 try:
-    from interface.qt.app import QtBatchFileSenderApp
     __all__ = ["QtBatchFileSenderApp"]
 except ImportError:
     __all__ = []

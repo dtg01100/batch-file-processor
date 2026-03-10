@@ -6,13 +6,14 @@ validation and serialization/deserialization methods.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from enum import Enum
 import re
 
 
 class BackendType(Enum):
     """Enum for backend types."""
+
     COPY = "copy"
     FTP = "ftp"
     EMAIL = "email"
@@ -20,6 +21,7 @@ class BackendType(Enum):
 
 class ConvertFormat(Enum):
     """Enum for EDI convert formats."""
+
     CSV = "csv"
     SCANNERWARE = "ScannerWare"
     SCANSHEET_A = "ScanSheet_Type_A"
@@ -36,6 +38,7 @@ class ConvertFormat(Enum):
 @dataclass
 class FTPConfiguration:
     """FTP connection configuration."""
+
     server: str = ""
     port: int = 21
     username: str = ""
@@ -67,6 +70,7 @@ class FTPConfiguration:
 @dataclass
 class EmailConfiguration:
     """Email backend configuration."""
+
     recipients: str = ""
     subject_line: str = ""
     sender_address: Optional[str] = None
@@ -85,13 +89,14 @@ class EmailConfiguration:
 
     def _validate_email(self, email: str) -> bool:
         """Basic email validation."""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         return bool(re.match(pattern, email))
 
 
 @dataclass
 class CopyConfiguration:
     """Copy backend configuration."""
+
     destination_directory: str = ""
 
     def validate(self) -> List[str]:
@@ -105,6 +110,7 @@ class CopyConfiguration:
 @dataclass
 class EDIConfiguration:
     """EDI processing configuration."""
+
     process_edi: str = "False"  # "True", "False"
     tweak_edi: bool = False
     split_edi: bool = False
@@ -128,6 +134,7 @@ class EDIConfiguration:
 @dataclass
 class UPCOverrideConfiguration:
     """UPC override configuration."""
+
     enabled: bool = False
     level: int = 1
     category_filter: str = ""
@@ -154,6 +161,7 @@ class UPCOverrideConfiguration:
 @dataclass
 class ARecordPaddingConfiguration:
     """A-record padding configuration."""
+
     enabled: bool = False
     padding_text: str = ""
     padding_length: int = 6
@@ -168,7 +176,7 @@ class ARecordPaddingConfiguration:
             if len(self.padding_text) > self.padding_length:
                 errors.append(
                     f'"A" Record Padding Needs To Be At Most '
-                    f'{self.padding_length} Characters'
+                    f"{self.padding_length} Characters"
                 )
             if len(self.padding_text) != 6:
                 errors.append('"A" Record Padding Needs To Be Six Characters')
@@ -180,6 +188,7 @@ class ARecordPaddingConfiguration:
 @dataclass
 class InvoiceDateConfiguration:
     """Invoice date configuration."""
+
     offset: int = 0
     custom_format_enabled: bool = False
     custom_format_string: str = ""
@@ -196,6 +205,7 @@ class InvoiceDateConfiguration:
 @dataclass
 class BackendSpecificConfiguration:
     """Backend-specific configuration fields."""
+
     # Estore
     estore_store_number: str = ""
     estore_vendor_oid: str = ""
@@ -209,6 +219,7 @@ class BackendSpecificConfiguration:
 @dataclass
 class CSVConfiguration:
     """CSV-specific configuration."""
+
     include_headers: bool = False
     filter_ampersand: bool = False
     include_item_numbers: bool = False
@@ -220,6 +231,7 @@ class CSVConfiguration:
 @dataclass
 class FolderConfiguration:
     """Complete folder configuration data model."""
+
     # Identity
     folder_name: str = ""
     folder_is_active: str = "False"
@@ -259,18 +271,20 @@ class FolderConfiguration:
 
     def get_plugin_configuration(self, format_name: str) -> Optional[Dict[str, Any]]:
         """Get plugin configuration for a specific format.
-        
+
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
-            
+
         Returns:
             Optional[Dict[str, Any]]: Plugin configuration for the format, or None if not found
         """
         return self.plugin_configurations.get(format_name.lower())
 
-    def set_plugin_configuration(self, format_name: str, config: Dict[str, Any]) -> None:
+    def set_plugin_configuration(
+        self, format_name: str, config: Dict[str, Any]
+    ) -> None:
         """Set plugin configuration for a specific format.
-        
+
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
             config: Plugin configuration to store
@@ -279,7 +293,7 @@ class FolderConfiguration:
 
     def remove_plugin_configuration(self, format_name: str) -> None:
         """Remove plugin configuration for a specific format.
-        
+
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
         """
@@ -288,10 +302,10 @@ class FolderConfiguration:
 
     def has_plugin_configuration(self, format_name: str) -> bool:
         """Check if plugin configuration exists for a specific format.
-        
+
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
-            
+
         Returns:
             bool: True if configuration exists, False otherwise
         """
@@ -299,32 +313,36 @@ class FolderConfiguration:
 
     def validate_plugin_configurations(self) -> List[str]:
         """Validate all plugin configurations.
-        
+
         Returns:
             List[str]: List of validation errors
         """
         errors = []
         from interface.plugins.plugin_manager import PluginManager
         from interface.plugins.validation_framework import ValidationResult
-        
+
         try:
             plugin_manager = PluginManager()
             plugin_manager.discover_plugins()
             plugin_manager.initialize_plugins()
-            
+
             for format_name, config in self.plugin_configurations.items():
                 # Find the plugin for this format
-                plugin = plugin_manager.get_configuration_plugin_by_format_name(format_name)
+                plugin = plugin_manager.get_configuration_plugin_by_format_name(
+                    format_name
+                )
                 if plugin:
                     validation: ValidationResult = plugin.validate_config(config)
                     if not validation.success:
                         for error in validation.errors:
                             errors.append(f"Plugin config for {format_name}: {error}")
                 else:
-                    errors.append(f"No configuration plugin found for format: {format_name}")
+                    errors.append(
+                        f"No configuration plugin found for format: {format_name}"
+                    )
         except Exception as e:
             errors.append(f"Error validating plugin configurations: {str(e)}")
-            
+
         return errors
 
     @classmethod
@@ -332,98 +350,109 @@ class FolderConfiguration:
         """Create FolderConfiguration from dictionary."""
         # Extract nested configurations
         ftp = None
-        if all(k in data for k in ['ftp_server', 'ftp_port', 'ftp_username', 'ftp_password', 'ftp_folder']):
+        if all(
+            k in data
+            for k in [
+                "ftp_server",
+                "ftp_port",
+                "ftp_username",
+                "ftp_password",
+                "ftp_folder",
+            ]
+        ):
             ftp = FTPConfiguration(
-                server=data.get('ftp_server', ''),
-                port=data.get('ftp_port', 21),
-                username=data.get('ftp_username', ''),
-                password=data.get('ftp_password', ''),
-                folder=data.get('ftp_folder', '')
+                server=data.get("ftp_server", ""),
+                port=data.get("ftp_port", 21),
+                username=data.get("ftp_username", ""),
+                password=data.get("ftp_password", ""),
+                folder=data.get("ftp_folder", ""),
             )
 
         email = None
-        if 'email_to' in data:
+        if "email_to" in data:
             email = EmailConfiguration(
-                recipients=data.get('email_to', ''),
-                subject_line=data.get('email_subject_line', '')
+                recipients=data.get("email_to", ""),
+                subject_line=data.get("email_subject_line", ""),
             )
 
         copy = None
-        if 'copy_to_directory' in data:
+        if "copy_to_directory" in data:
             copy = CopyConfiguration(
-                destination_directory=data.get('copy_to_directory', '')
+                destination_directory=data.get("copy_to_directory", "")
             )
 
         # EDI configuration
         edi = EDIConfiguration(
-            process_edi=data.get('process_edi', 'False'),
-            tweak_edi=data.get('tweak_edi', False),
-            split_edi=data.get('split_edi', False),
-            split_edi_include_invoices=data.get('split_edi_include_invoices', False),
-            split_edi_include_credits=data.get('split_edi_include_credits', False),
-            prepend_date_files=data.get('prepend_date_files', False),
-            convert_to_format=data.get('convert_to_format', ''),
-            force_edi_validation=data.get('force_edi_validation', False),
-            rename_file=data.get('rename_file', ''),
-            split_edi_filter_categories=data.get('split_edi_filter_categories', 'ALL'),
-            split_edi_filter_mode=data.get('split_edi_filter_mode', 'include')
+            process_edi=data.get("process_edi", "False"),
+            tweak_edi=data.get("tweak_edi", False),
+            split_edi=data.get("split_edi", False),
+            split_edi_include_invoices=data.get("split_edi_include_invoices", False),
+            split_edi_include_credits=data.get("split_edi_include_credits", False),
+            prepend_date_files=data.get("prepend_date_files", False),
+            convert_to_format=data.get("convert_to_format", ""),
+            force_edi_validation=data.get("force_edi_validation", False),
+            rename_file=data.get("rename_file", ""),
+            split_edi_filter_categories=data.get("split_edi_filter_categories", "ALL"),
+            split_edi_filter_mode=data.get("split_edi_filter_mode", "include"),
         )
 
         # UPC override
         upc_override = None
-        if data.get('override_upc_bool', False):
+        if data.get("override_upc_bool", False):
             upc_override = UPCOverrideConfiguration(
                 enabled=True,
-                level=data.get('override_upc_level', 1),
-                category_filter=data.get('override_upc_category_filter', ''),
-                target_length=data.get('upc_target_length', 11),
-                padding_pattern=data.get('upc_padding_pattern', '           ')
+                level=data.get("override_upc_level", 1),
+                category_filter=data.get("override_upc_category_filter", ""),
+                target_length=data.get("upc_target_length", 11),
+                padding_pattern=data.get("upc_padding_pattern", "           "),
             )
 
         # A-record padding
         a_record_padding = ARecordPaddingConfiguration(
-            enabled=data.get('pad_a_records') == "True",
-            padding_text=data.get('a_record_padding', ''),
-            padding_length=data.get('a_record_padding_length', 6),
-            append_text=data.get('a_record_append_text', ''),
-            append_enabled=data.get('append_a_records') == "True",
-            force_txt_extension=data.get('force_txt_file_ext') == "True"
+            enabled=data.get("pad_a_records") == "True",
+            padding_text=data.get("a_record_padding", ""),
+            padding_length=data.get("a_record_padding_length", 6),
+            append_text=data.get("a_record_append_text", ""),
+            append_enabled=data.get("append_a_records") == "True",
+            force_txt_extension=data.get("force_txt_file_ext") == "True",
         )
 
         # Invoice date
         invoice_date = InvoiceDateConfiguration(
-            offset=data.get('invoice_date_offset', 0),
-            custom_format_enabled=data.get('invoice_date_custom_format', False),
-            custom_format_string=data.get('invoice_date_custom_format_string', ''),
-            retail_uom=data.get('retail_uom', False)
+            offset=data.get("invoice_date_offset", 0),
+            custom_format_enabled=data.get("invoice_date_custom_format", False),
+            custom_format_string=data.get("invoice_date_custom_format_string", ""),
+            retail_uom=data.get("retail_uom", False),
         )
 
         # Backend-specific
         backend_specific = BackendSpecificConfiguration(
-            estore_store_number=data.get('estore_store_number', ''),
-            estore_vendor_oid=data.get('estore_Vendor_OId', ''),
-            estore_vendor_namevendoroid=data.get('estore_vendor_NameVendorOID', ''),
-            fintech_division_id=data.get('fintech_division_id', '')
+            estore_store_number=data.get("estore_store_number", ""),
+            estore_vendor_oid=data.get("estore_Vendor_OId", ""),
+            estore_vendor_namevendoroid=data.get("estore_vendor_NameVendorOID", ""),
+            fintech_division_id=data.get("fintech_division_id", ""),
         )
 
         # CSV configuration
         csv = CSVConfiguration(
-            include_headers=data.get('include_headers') == "True",
-            filter_ampersand=data.get('filter_ampersand') == "True",
-            include_item_numbers=data.get('include_item_numbers', False),
-            include_item_description=data.get('include_item_description', False),
-            simple_csv_sort_order=data.get('simple_csv_sort_order', ''),
-            split_prepaid_sales_tax_crec=data.get('split_prepaid_sales_tax_crec', False)
+            include_headers=data.get("include_headers") == "True",
+            filter_ampersand=data.get("filter_ampersand") == "True",
+            include_item_numbers=data.get("include_item_numbers", False),
+            include_item_description=data.get("include_item_description", False),
+            simple_csv_sort_order=data.get("simple_csv_sort_order", ""),
+            split_prepaid_sales_tax_crec=data.get(
+                "split_prepaid_sales_tax_crec", False
+            ),
         )
 
         return cls(
-            folder_name=data.get('folder_name', ''),
-            folder_is_active=data.get('folder_is_active', 'False'),
-            alias=data.get('alias', ''),
-            is_template=data.get('folder_name') == 'template',
-            process_backend_copy=data.get('process_backend_copy', False),
-            process_backend_ftp=data.get('process_backend_ftp', False),
-            process_backend_email=data.get('process_backend_email', False),
+            folder_name=data.get("folder_name", ""),
+            folder_is_active=data.get("folder_is_active", "False"),
+            alias=data.get("alias", ""),
+            is_template=data.get("folder_name") == "template",
+            process_backend_copy=data.get("process_backend_copy", False),
+            process_backend_ftp=data.get("process_backend_ftp", False),
+            process_backend_email=data.get("process_backend_email", False),
             ftp=ftp,
             email=email,
             copy=copy,
@@ -433,100 +462,118 @@ class FolderConfiguration:
             invoice_date=invoice_date,
             backend_specific=backend_specific,
             csv=csv,
-            plugin_configurations=data.get('plugin_configurations', {})
+            plugin_configurations=data.get("plugin_configurations", {}),
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert FolderConfiguration to dictionary for database."""
         data = {
-            'folder_name': self.folder_name,
-            'folder_is_active': self.folder_is_active,
-            'alias': self.alias,
-            'process_backend_copy': self.process_backend_copy,
-            'process_backend_ftp': self.process_backend_ftp,
-            'process_backend_email': self.process_backend_email,
+            "folder_name": self.folder_name,
+            "folder_is_active": self.folder_is_active,
+            "alias": self.alias,
+            "process_backend_copy": self.process_backend_copy,
+            "process_backend_ftp": self.process_backend_ftp,
+            "process_backend_email": self.process_backend_email,
         }
 
         if self.ftp:
-            data.update({
-                'ftp_server': self.ftp.server,
-                'ftp_port': self.ftp.port,
-                'ftp_username': self.ftp.username,
-                'ftp_password': self.ftp.password,
-                'ftp_folder': self.ftp.folder,
-            })
+            data.update(
+                {
+                    "ftp_server": self.ftp.server,
+                    "ftp_port": self.ftp.port,
+                    "ftp_username": self.ftp.username,
+                    "ftp_password": self.ftp.password,
+                    "ftp_folder": self.ftp.folder,
+                }
+            )
 
         if self.email:
-            data.update({
-                'email_to': self.email.recipients,
-                'email_subject_line': self.email.subject_line,
-            })
+            data.update(
+                {
+                    "email_to": self.email.recipients,
+                    "email_subject_line": self.email.subject_line,
+                }
+            )
 
         if self.copy:
-            data['copy_to_directory'] = self.copy.destination_directory
+            data["copy_to_directory"] = self.copy.destination_directory
 
         if self.edi:
-            data.update({
-                'process_edi': self.edi.process_edi,
-                'tweak_edi': self.edi.tweak_edi,
-                'split_edi': self.edi.split_edi,
-                'split_edi_include_invoices': self.edi.split_edi_include_invoices,
-                'split_edi_include_credits': self.edi.split_edi_include_credits,
-                'prepend_date_files': self.edi.prepend_date_files,
-                'convert_to_format': self.edi.convert_to_format,
-                'force_edi_validation': self.edi.force_edi_validation,
-                'rename_file': self.edi.rename_file,
-                'split_edi_filter_categories': self.edi.split_edi_filter_categories,
-                'split_edi_filter_mode': self.edi.split_edi_filter_mode,
-            })
+            data.update(
+                {
+                    "process_edi": self.edi.process_edi,
+                    "tweak_edi": self.edi.tweak_edi,
+                    "split_edi": self.edi.split_edi,
+                    "split_edi_include_invoices": self.edi.split_edi_include_invoices,
+                    "split_edi_include_credits": self.edi.split_edi_include_credits,
+                    "prepend_date_files": self.edi.prepend_date_files,
+                    "convert_to_format": self.edi.convert_to_format,
+                    "force_edi_validation": self.edi.force_edi_validation,
+                    "rename_file": self.edi.rename_file,
+                    "split_edi_filter_categories": self.edi.split_edi_filter_categories,
+                    "split_edi_filter_mode": self.edi.split_edi_filter_mode,
+                }
+            )
 
         if self.upc_override:
-            data.update({
-                'override_upc_bool': self.upc_override.enabled,
-                'override_upc_level': self.upc_override.level,
-                'override_upc_category_filter': self.upc_override.category_filter,
-                'upc_target_length': self.upc_override.target_length,
-                'upc_padding_pattern': self.upc_override.padding_pattern,
-            })
+            data.update(
+                {
+                    "override_upc_bool": self.upc_override.enabled,
+                    "override_upc_level": self.upc_override.level,
+                    "override_upc_category_filter": self.upc_override.category_filter,
+                    "upc_target_length": self.upc_override.target_length,
+                    "upc_padding_pattern": self.upc_override.padding_pattern,
+                }
+            )
 
         if self.a_record_padding:
-            data.update({
-                'pad_a_records': str(self.a_record_padding.enabled),
-                'a_record_padding': self.a_record_padding.padding_text,
-                'a_record_padding_length': self.a_record_padding.padding_length,
-                'append_a_records': str(self.a_record_padding.append_enabled),
-                'a_record_append_text': self.a_record_padding.append_text,
-                'force_txt_file_ext': str(self.a_record_padding.force_txt_extension),
-            })
+            data.update(
+                {
+                    "pad_a_records": str(self.a_record_padding.enabled),
+                    "a_record_padding": self.a_record_padding.padding_text,
+                    "a_record_padding_length": self.a_record_padding.padding_length,
+                    "append_a_records": str(self.a_record_padding.append_enabled),
+                    "a_record_append_text": self.a_record_padding.append_text,
+                    "force_txt_file_ext": str(
+                        self.a_record_padding.force_txt_extension
+                    ),
+                }
+            )
 
         if self.invoice_date:
-            data.update({
-                'invoice_date_offset': self.invoice_date.offset,
-                'invoice_date_custom_format': self.invoice_date.custom_format_enabled,
-                'invoice_date_custom_format_string': self.invoice_date.custom_format_string,
-                'retail_uom': self.invoice_date.retail_uom,
-            })
+            data.update(
+                {
+                    "invoice_date_offset": self.invoice_date.offset,
+                    "invoice_date_custom_format": self.invoice_date.custom_format_enabled,
+                    "invoice_date_custom_format_string": self.invoice_date.custom_format_string,
+                    "retail_uom": self.invoice_date.retail_uom,
+                }
+            )
 
         if self.backend_specific:
-            data.update({
-                'estore_store_number': self.backend_specific.estore_store_number,
-                'estore_Vendor_OId': self.backend_specific.estore_vendor_oid,
-                'estore_vendor_NameVendorOID': self.backend_specific.estore_vendor_namevendoroid,
-                'fintech_division_id': self.backend_specific.fintech_division_id,
-            })
+            data.update(
+                {
+                    "estore_store_number": self.backend_specific.estore_store_number,
+                    "estore_Vendor_OId": self.backend_specific.estore_vendor_oid,
+                    "estore_vendor_NameVendorOID": self.backend_specific.estore_vendor_namevendoroid,
+                    "fintech_division_id": self.backend_specific.fintech_division_id,
+                }
+            )
 
         if self.csv:
-            data.update({
-                'include_headers': str(self.csv.include_headers),
-                'filter_ampersand': str(self.csv.filter_ampersand),
-                'include_item_numbers': self.csv.include_item_numbers,
-                'include_item_description': self.csv.include_item_description,
-                'simple_csv_sort_order': self.csv.simple_csv_sort_order,
-                'split_prepaid_sales_tax_crec': self.csv.split_prepaid_sales_tax_crec,
-            })
+            data.update(
+                {
+                    "include_headers": str(self.csv.include_headers),
+                    "filter_ampersand": str(self.csv.filter_ampersand),
+                    "include_item_numbers": self.csv.include_item_numbers,
+                    "include_item_description": self.csv.include_item_description,
+                    "simple_csv_sort_order": self.csv.simple_csv_sort_order,
+                    "split_prepaid_sales_tax_crec": self.csv.split_prepaid_sales_tax_crec,
+                }
+            )
 
         # Plugin configurations
         if self.plugin_configurations:
-            data['plugin_configurations'] = self.plugin_configurations
+            data["plugin_configurations"] = self.plugin_configurations
 
         return data

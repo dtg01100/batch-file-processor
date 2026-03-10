@@ -5,7 +5,6 @@ was changed, ensuring old database files can be imported and upgraded to
 the current schema version (v42).
 """
 
-import pytest
 from interface.database import sqlite_wrapper
 
 import folders_database_migrator

@@ -6,6 +6,7 @@ pytest-qt is used for Qt widget testing. It automatically provides the
 Configuration in pytest.ini:
     qt_api = pyqt6
 """
+
 import os
 import pytest
 

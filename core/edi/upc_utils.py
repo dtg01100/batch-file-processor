@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 def calc_check_digit(value: str | int) -> int:
     """Calculate check digit for UPC codes.
-    
+
     Works for both UPC-A and UPC-E formats.
-    
+
     Args:
         value: UPC value without check digit
-        
+
     Returns:
         Calculated check digit (0-9)
-        
+
     Example:
         >>> calc_check_digit("04180000026")
         5
@@ -43,13 +43,13 @@ def calc_check_digit(value: str | int) -> int:
 
 def convert_upce_to_upca(upce_value: str) -> str:
     """Convert UPC-E to UPC-A format.
-    
+
     Args:
         upce_value: UPC-E value (6, 7, or 8 digits)
-        
+
     Returns:
         12-digit UPC-A value with check digit, or empty string if invalid
-        
+
     Example:
         >>> convert_upce_to_upca("04182635")
         '041800000265'
@@ -62,9 +62,9 @@ def convert_upce_to_upca(upce_value: str) -> str:
         middle_digits = upce_value[1:7]
     else:
         return False
-    
+
     d1, d2, d3, d4, d5, d6 = list(middle_digits)
-    
+
     if d6 in ["0", "1", "2"]:
         mfrnum = d1 + d2 + d6 + "00"
         itemnum = "00" + d3 + d4 + d5
@@ -77,20 +77,20 @@ def convert_upce_to_upca(upce_value: str) -> str:
     else:
         mfrnum = d1 + d2 + d3 + d4 + d5
         itemnum = "0000" + d6
-    
+
     newmsg = "0" + mfrnum + itemnum
     check_digit = calc_check_digit(newmsg)
     return newmsg + str(check_digit)
 
 
-def pad_upc(upc: str, target_length: int, fill_char: str = ' ') -> str:
+def pad_upc(upc: str, target_length: int, fill_char: str = " ") -> str:
     """Pad or truncate UPC to target length.
-    
+
     Args:
         upc: UPC value to pad
         target_length: Desired length
         fill_char: Character to use for padding
-        
+
     Returns:
         UPC padded/truncated to target length
     """
@@ -101,13 +101,13 @@ def pad_upc(upc: str, target_length: int, fill_char: str = ' ') -> str:
 
 def validate_upc(upc: str) -> bool:
     """Validate a UPC code's check digit.
-    
+
     Args:
         upc: Full UPC code including check digit
-        
+
     Returns:
         True if check digit is valid, False otherwise
-        
+
     Example:
         >>> validate_upc("041800000265")
         True
@@ -116,14 +116,14 @@ def validate_upc(upc: str) -> bool:
     """
     if not upc or not upc.isdigit():
         return False
-    
+
     if len(upc) < 12:
         return False
-    
+
     value = upc[:-1]
     expected_check = int(upc[-1])
     actual_check = calc_check_digit(value)
-    
+
     return expected_check == actual_check
 
 

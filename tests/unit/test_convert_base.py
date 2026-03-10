@@ -11,14 +11,11 @@ Tests:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
-import tempfile
-import os
+from unittest.mock import MagicMock, patch
 import csv
 from abc import ABC
 
 # Import the module under test
-import convert_base
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -34,7 +31,7 @@ from convert_base import (
 
 class TestFixtures:
     """Shared fixtures for all test classes."""
-    
+
     @pytest.fixture
     def sample_edi_record_a(self):
         """Create a sample A record."""
@@ -49,7 +46,7 @@ class TestFixtures:
                 "invoice_total": "0000010000"
             }
         )
-    
+
     @pytest.fixture
     def sample_edi_record_b(self):
         """Create a sample B record."""
@@ -70,7 +67,7 @@ class TestFixtures:
                 "parent_item_number": "000000"
             }
         )
-    
+
     @pytest.fixture
     def sample_edi_record_c(self):
         """Create a sample C record."""
@@ -84,7 +81,7 @@ class TestFixtures:
                 "amount": "000010000"
             }
         )
-    
+
     @pytest.fixture
     def sample_context(self):
         """Create a sample conversion context."""
@@ -95,7 +92,7 @@ class TestFixtures:
             parameters_dict={"test_param": "value"},
             upc_lut={123456: ("CAT1", "012345678905", "012345678900")}
         )
-    
+
     @pytest.fixture
     def sample_edi_content(self):
         """Create sample EDI file content."""
@@ -112,7 +109,7 @@ class TestFixtures:
 
 class TestEDIRecord:
     """Test suite for EDIRecord dataclass."""
-    
+
     def test_edi_record_creation(self):
         """Test that EDIRecord can be created with all fields."""
         record = EDIRecord(
@@ -120,11 +117,11 @@ class TestEDIRecord:
             raw_line="test line",
             fields={"key": "value"}
         )
-        
+
         assert record.record_type == "B"
         assert record.raw_line == "test line"
         assert record.fields == {"key": "value"}
-    
+
     def test_edi_record_immutable(self):
         """Test that EDIRecord fields can be modified (dataclass is not frozen)."""
         record = EDIRecord(
@@ -132,7 +129,7 @@ class TestEDIRecord:
             raw_line="test",
             fields={}
         )
-        
+
         # Should be able to modify
         record.record_type = "A"
         assert record.record_type == "A"
@@ -144,7 +141,7 @@ class TestEDIRecord:
 
 class TestConversionContext:
     """Test suite for ConversionContext dataclass."""
-    
+
     def test_context_creation(self):
         """Test that ConversionContext can be created with required fields."""
         context = ConversionContext(
@@ -154,7 +151,7 @@ class TestConversionContext:
             parameters_dict={},
             upc_lut={}
         )
-        
+
         assert context.edi_filename == "input.edi"
         assert context.output_filename == "output"
         assert context.arec_header is None
@@ -163,7 +160,7 @@ class TestConversionContext:
         assert context.output_file is None
         assert context.csv_writer is None
         assert context.user_data == {}
-    
+
     def test_get_output_path_default(self):
         """Test get_output_path with default extension."""
         context = ConversionContext(
@@ -173,9 +170,9 @@ class TestConversionContext:
             parameters_dict={},
             upc_lut={}
         )
-        
+
         assert context.get_output_path() == "/path/to/output.csv"
-    
+
     def test_get_output_path_custom(self):
         """Test get_output_path with custom extension."""
         context = ConversionContext(
@@ -185,10 +182,10 @@ class TestConversionContext:
             parameters_dict={},
             upc_lut={}
         )
-        
+
         assert context.get_output_path(".txt") == "/path/to/output.txt"
         assert context.get_output_path("") == "/path/to/output"
-    
+
     def test_user_data_storage(self):
         """Test that user_data can store arbitrary values."""
         context = ConversionContext(
@@ -198,10 +195,10 @@ class TestConversionContext:
             parameters_dict={},
             upc_lut={}
         )
-        
+
         context.user_data['custom_key'] = "custom_value"
         context.user_data['number'] = 42
-        
+
         assert context.user_data['custom_key'] == "custom_value"
         assert context.user_data['number'] == 42
 
@@ -212,7 +209,7 @@ class TestConversionContext:
 
 class MockConverter(BaseEDIConverter):
     """Concrete implementation of BaseEDIConverter for testing."""
-    
+
     def __init__(self):
         self.initialize_called = False
         self.finalize_called = False
@@ -220,31 +217,31 @@ class MockConverter(BaseEDIConverter):
         self.b_records = []
         self.c_records = []
         self.unknown_records = []
-    
+
     def _initialize_output(self, context):
         """Initialize test output."""
         self.initialize_called = True
         context.output_file = MagicMock()
         context.csv_writer = MagicMock()
         context.user_data['initialized'] = True
-    
+
     def process_a_record(self, record, context):
         """Process A record."""
         self.a_records.append(record)
         context.arec_header = record.fields
-    
+
     def process_b_record(self, record, context):
         """Process B record."""
         self.b_records.append(record)
-    
+
     def process_c_record(self, record, context):
         """Process C record."""
         self.c_records.append(record)
-    
+
     def _finalize_output(self, context):
         """Finalize test output."""
         self.finalize_called = True
-    
+
     def _handle_unknown_record(self, record, context):
         """Handle unknown record type."""
         self.unknown_records.append(record)
@@ -252,7 +249,7 @@ class MockConverter(BaseEDIConverter):
 
 class FilteringTestConverter(MockConverter):
     """Test converter with record type filtering."""
-    
+
     def _should_process_record_type(self, record_type, context):
         """Filter out C records."""
         return record_type != "C"
@@ -264,17 +261,17 @@ class FilteringTestConverter(MockConverter):
 
 class TestBaseEDIConverter(TestFixtures):
     """Test suite for BaseEDIConverter template method pattern."""
-    
+
     def test_base_class_is_abstract(self):
         """Test that BaseEDIConverter cannot be instantiated directly."""
         with pytest.raises(TypeError):
             BaseEDIConverter()
-    
+
     def test_concrete_class_can_be_instantiated(self):
         """Test that a concrete implementation can be instantiated."""
         converter = MockConverter()
         assert converter is not None
-    
+
     @patch('convert_base.utils')
     def test_edi_convert_full_workflow(self, mock_utils, tmp_path, sample_edi_content):
         """Test the complete edi_convert workflow."""
@@ -308,13 +305,13 @@ class TestBaseEDIConverter(TestFixtures):
             },
             None  # EOF
         ]
-        
+
         # Create input file
         input_file = tmp_path / "test.edi"
         input_file.write_text(sample_edi_content)
-        
+
         output_file = tmp_path / "output"
-        
+
         # Execute
         converter = MockConverter()
         result = converter.edi_convert(
@@ -324,7 +321,7 @@ class TestBaseEDIConverter(TestFixtures):
             {},
             {}
         )
-        
+
         # Verify
         assert converter.initialize_called is True
         assert converter.finalize_called is True
@@ -332,7 +329,7 @@ class TestBaseEDIConverter(TestFixtures):
         assert len(converter.b_records) == 1
         assert len(converter.c_records) == 1
         assert result == str(output_file) + ".csv"
-    
+
     @patch('convert_base.utils')
     def test_record_dispatching(self, mock_utils, tmp_path):
         """Test that records are dispatched to correct handlers."""
@@ -342,17 +339,17 @@ class TestBaseEDIConverter(TestFixtures):
             {"record_type": "C", "amount": "100"},
             None
         ]
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text("A...\nB...\nC...")
-        
+
         converter = MockConverter()
         converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
-        
+
         assert len(converter.a_records) == 1
         assert len(converter.b_records) == 1
         assert len(converter.c_records) == 1
-    
+
     @patch('convert_base.utils')
     def test_record_filtering(self, mock_utils, tmp_path):
         """Test that _should_process_record_type filters records."""
@@ -362,18 +359,18 @@ class TestBaseEDIConverter(TestFixtures):
             {"record_type": "C", "amount": "100"},
             None
         ]
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text("A...\nB...\nC...")
-        
+
         converter = FilteringTestConverter()
         converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
-        
+
         # A and B should be processed, C should be filtered
         assert len(converter.a_records) == 1
         assert len(converter.b_records) == 1
         assert len(converter.c_records) == 0  # Filtered out
-    
+
     @patch('convert_base.utils')
     def test_arec_header_storage(self, mock_utils, tmp_path):
         """Test that A record header is stored in context."""
@@ -382,10 +379,10 @@ class TestBaseEDIConverter(TestFixtures):
             {"record_type": "B", "vendor_item": "123"},
             None
         ]
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text("A...\nB...")
-        
+
         converter = MockConverter()
         context = ConversionContext(
             edi_filename=str(input_file),
@@ -394,26 +391,26 @@ class TestBaseEDIConverter(TestFixtures):
             parameters_dict={},
             upc_lut={}
         )
-        
+
         # Manually test process_a_record
         record = EDIRecord("A", "line", {"invoice_number": "INV001"})
         converter.process_a_record(record, context)
-        
+
         assert context.arec_header == {"invoice_number": "INV001"}
-    
+
     @patch('convert_base.utils')
     def test_error_cleanup(self, mock_utils, tmp_path):
         """Test that resources are cleaned up on error."""
         mock_utils.capture_records.side_effect = Exception("Parse error")
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text("invalid")
-        
+
         converter = MockConverter()
-        
+
         with pytest.raises(Exception, match="Parse error"):
             converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
-        
+
         # Initialize should have been called
         assert converter.initialize_called is True
 
@@ -424,14 +421,14 @@ class TestBaseEDIConverter(TestFixtures):
 
 class TestUtilityFunctions:
     """Test suite for utility functions."""
-    
+
     def test_create_csv_writer_default(self):
         """Test create_csv_writer with default parameters."""
         mock_file = MagicMock()
         writer = create_csv_writer(mock_file)
-        
+
         assert writer is not None
-    
+
     def test_create_csv_writer_custom_dialect(self):
         """Test create_csv_writer with custom dialect."""
         mock_file = MagicMock()
@@ -441,9 +438,9 @@ class TestUtilityFunctions:
             lineterminator="\n",
             quoting=csv.QUOTE_MINIMAL
         )
-        
+
         assert writer is not None
-    
+
     def test_normalize_parameter_true_values(self):
         """Test normalize_parameter with truthy string values."""
         assert normalize_parameter("True") is True
@@ -451,7 +448,7 @@ class TestUtilityFunctions:
         assert normalize_parameter("1") is True
         assert normalize_parameter("yes") is True
         assert normalize_parameter("on") is True
-    
+
     def test_normalize_parameter_false_values(self):
         """Test normalize_parameter with falsy string values."""
         assert normalize_parameter("False") is False
@@ -459,12 +456,12 @@ class TestUtilityFunctions:
         assert normalize_parameter("0") is False
         assert normalize_parameter("no") is False
         assert normalize_parameter("off") is False
-    
+
     def test_normalize_parameter_default(self):
         """Test normalize_parameter with default value."""
         assert normalize_parameter(None, default="default") == "default"
         assert normalize_parameter("", default="default") == "default"
-    
+
     def test_normalize_parameter_non_string(self):
         """Test normalize_parameter with non-string values."""
         assert normalize_parameter(123) == 123
@@ -478,15 +475,15 @@ class TestUtilityFunctions:
 
 class TestEdgeCases(TestFixtures):
     """Test suite for edge cases and error conditions."""
-    
+
     @patch('convert_base.utils')
     def test_empty_edi_file(self, mock_utils, tmp_path):
         """Test handling of empty EDI file."""
         mock_utils.capture_records.return_value = None
-        
+
         input_file = tmp_path / "empty.edi"
         input_file.write_text("")
-        
+
         converter = MockConverter()
         result = converter.edi_convert(
             str(input_file),
@@ -495,11 +492,11 @@ class TestEdgeCases(TestFixtures):
             {},
             {}
         )
-        
+
         assert converter.initialize_called is True
         assert converter.finalize_called is True
         assert len(converter.a_records) == 0
-    
+
     @patch('convert_base.utils')
     def test_unknown_record_type(self, mock_utils, tmp_path):
         """Test handling of unknown record types."""
@@ -507,15 +504,15 @@ class TestEdgeCases(TestFixtures):
             {"record_type": "X", "unknown": "data"},
             None
         ]
-        
+
         input_file = tmp_path / "test.edi"
         input_file.write_text("X...")
-        
+
         converter = MockConverter()
         converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
-        
+
         assert len(converter.unknown_records) == 1
-    
+
     @patch('convert_base.utils')
     def test_arec_header_default_storage(self, mock_utils, tmp_path, sample_edi_record_a):
         """Test that default process_a_record stores header in context."""
@@ -523,10 +520,10 @@ class TestEdgeCases(TestFixtures):
         class MinimalConverter(BaseEDIConverter):
             def _initialize_output(self, context):
                 context.output_file = MagicMock()
-            
+
             def process_b_record(self, record, context):
                 pass
-        
+
         converter = MinimalConverter()
         context = ConversionContext(
             edi_filename="test.edi",
@@ -535,12 +532,12 @@ class TestEdgeCases(TestFixtures):
             parameters_dict={},
             upc_lut={}
         )
-        
+
         # Default process_a_record should store header
         converter.process_a_record(sample_edi_record_a, context)
-        
+
         assert context.arec_header == sample_edi_record_a.fields
-    
+
     def test_context_user_data_isolation(self):
         """Test that user_data is isolated between contexts."""
         context1 = ConversionContext(
@@ -557,10 +554,10 @@ class TestEdgeCases(TestFixtures):
             parameters_dict={},
             upc_lut={}
         )
-        
+
         context1.user_data['key'] = "value1"
         context2.user_data['key'] = "value2"
-        
+
         assert context1.user_data['key'] == "value1"
         assert context2.user_data['key'] == "value2"
 
@@ -571,12 +568,12 @@ class TestEdgeCases(TestFixtures):
 
 class TestModuleImports:
     """Test suite for module-level imports and integration."""
-    
+
     def test_module_import(self):
         """Test that convert_base module can be imported."""
         import convert_base as cb
         assert cb is not None
-    
+
     def test_all_classes_importable(self):
         """Test that all public classes can be imported."""
         from convert_base import BaseEDIConverter
@@ -584,16 +581,16 @@ class TestModuleImports:
         from convert_base import EDIRecord
         from convert_base import create_csv_writer
         from convert_base import normalize_parameter
-        
+
         assert BaseEDIConverter is not None
         assert ConversionContext is not None
         assert EDIRecord is not None
         assert create_csv_writer is not None
         assert normalize_parameter is not None
-    
+
     def test_base_edi_converter_is_abc(self):
         """Test that BaseEDIConverter is an abstract base class."""
         from convert_base import BaseEDIConverter
-        
+
         # Check it's a subclass of ABC
         assert issubclass(BaseEDIConverter, ABC)

@@ -6,7 +6,7 @@ using the edi_tweaks module.
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, runtime_checkable, Any, Callable
+from typing import Optional, Protocol, runtime_checkable, Any
 
 from dispatch.interfaces import FileSystemInterface
 
@@ -14,13 +14,14 @@ from dispatch.interfaces import FileSystemInterface
 @dataclass
 class TweakerResult:
     """Result of EDI tweak operation.
-    
+
     Attributes:
         output_path: Path to tweaked output file
         success: True if tweaking succeeded
         was_tweaked: True if tweaking was actually applied
         errors: List of error messages
     """
+
     output_path: str = ""
     success: bool = False
     was_tweaked: bool = False
@@ -30,24 +31,24 @@ class TweakerResult:
 @runtime_checkable
 class TweakerInterface(Protocol):
     """Protocol for tweaker step implementations."""
-    
+
     def tweak(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> TweakerResult:
         """Apply EDI tweaks to a file.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
             params: Folder parameters dictionary
             settings: Global settings dictionary
             upc_dict: UPC dictionary for lookups
-            
+
         Returns:
             TweakerResult with tweak outcome
         """
@@ -57,24 +58,24 @@ class TweakerInterface(Protocol):
 @runtime_checkable
 class TweakFunctionProtocol(Protocol):
     """Protocol for the edi_tweak function."""
-    
+
     def __call__(
         self,
         edi_process: str,
         output_filename: str,
         settings_dict: dict,
         parameters_dict: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> str:
         """Apply EDI tweaks to a file.
-        
+
         Args:
             edi_process: Path to input EDI file
             output_filename: Path to output file
             settings_dict: Dictionary containing database and app settings
             parameters_dict: Dictionary containing processing parameters
             upc_dict: Dictionary containing UPC mappings
-            
+
         Returns:
             Path to the output file
         """
@@ -83,10 +84,10 @@ class TweakFunctionProtocol(Protocol):
 
 class MockTweaker:
     """Mock tweaker for testing purposes.
-    
+
     This tweaker can be configured to return specific results
     and allows inspection of tweak calls.
-    
+
     Attributes:
         result: The result to return from tweak()
         call_count: Number of times tweak was called
@@ -96,17 +97,17 @@ class MockTweaker:
         last_settings: Last settings dict passed to tweak
         last_upc_dict: Last upc_dict passed to tweak
     """
-    
+
     def __init__(
         self,
         result: Optional[TweakerResult] = None,
         output_path: str = "",
         success: bool = True,
         was_tweaked: bool = True,
-        errors: Optional[list[str]] = None
+        errors: Optional[list[str]] = None,
     ):
         """Initialize the mock tweaker.
-        
+
         Args:
             result: Complete result to return (overrides other params)
             output_path: Output path to return
@@ -121,7 +122,7 @@ class MockTweaker:
                 output_path=output_path,
                 success=success,
                 was_tweaked=was_tweaked,
-                errors=errors or []
+                errors=errors or [],
             )
         self.call_count: int = 0
         self.last_input_path: Optional[str] = None
@@ -129,24 +130,24 @@ class MockTweaker:
         self.last_params: Optional[dict] = None
         self.last_settings: Optional[dict] = None
         self.last_upc_dict: Optional[dict] = None
-    
+
     def tweak(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> TweakerResult:
         """Mock tweak method.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
             params: Folder parameters dictionary
             settings: Global settings dictionary
             upc_dict: UPC dictionary
-            
+
         Returns:
             The configured TweakerResult
         """
@@ -157,7 +158,7 @@ class MockTweaker:
         self.last_settings = settings
         self.last_upc_dict = upc_dict
         return self._result
-    
+
     def reset(self) -> None:
         """Reset the mock state."""
         self.call_count = 0
@@ -166,10 +167,10 @@ class MockTweaker:
         self.last_params = None
         self.last_settings = None
         self.last_upc_dict = None
-    
+
     def set_result(self, result: TweakerResult) -> None:
         """Set the result to return.
-        
+
         Args:
             result: The TweakerResult to return
         """
@@ -178,24 +179,24 @@ class MockTweaker:
 
 class EDITweakerStep:
     """EDI tweaker step for the dispatch pipeline.
-    
+
     This class handles applying EDI tweaks using the edi_tweaks module
     and integrates with the error handler for pipeline-based processing.
-    
+
     Attributes:
         tweak_function: Function for applying EDI tweaks
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
     """
-    
+
     def __init__(
         self,
         tweak_function: Optional[TweakFunctionProtocol] = None,
         error_handler: Optional[Any] = None,
-        file_system: Optional[FileSystemInterface] = None
+        file_system: Optional[FileSystemInterface] = None,
     ):
         """Initialize the tweaker step.
-        
+
         Args:
             tweak_function: Function for applying EDI tweaks (defaults to edi_tweak)
             error_handler: Optional error handler for recording errors
@@ -204,48 +205,51 @@ class EDITweakerStep:
         # Import from archive folder (legacy location)
         import sys
         import os
-        archive_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'archive')
+
+        archive_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "archive"
+        )
         if archive_path not in sys.path:
             sys.path.insert(0, archive_path)
         import edi_tweaks
-        self._tweak_function: TweakFunctionProtocol = tweak_function or edi_tweaks.edi_tweak
+
+        self._tweak_function: TweakFunctionProtocol = (
+            tweak_function or edi_tweaks.edi_tweak
+        )
         self._error_handler = error_handler
         self._file_system = file_system
-    
+
     def tweak(
         self,
         input_path: str,
         output_dir: str,
         params: dict,
         settings: dict,
-        upc_dict: dict
+        upc_dict: dict,
     ) -> TweakerResult:
         """Apply EDI tweaks to a file.
-        
+
         Args:
             input_path: Path to the input EDI file
             output_dir: Directory for output file
             params: Folder parameters dictionary with tweak_edi setting
             settings: Global settings dictionary
             upc_dict: UPC dictionary for lookups
-            
+
         Returns:
             TweakerResult with tweak outcome
         """
-        tweak_edi = params.get('tweak_edi', False)
-        
+        tweak_edi = params.get("tweak_edi", False)
+
         if not tweak_edi:
             return TweakerResult(
-                output_path=input_path,
-                success=True,
-                was_tweaked=False,
-                errors=[]
+                output_path=input_path, success=True, was_tweaked=False, errors=[]
             )
-        
+
         output_filename = os.path.join(output_dir, os.path.basename(input_path))
-        
+
         errors: list[str] = []
-        
+
         if self._file_system and not self._file_system.dir_exists(output_dir):
             try:
                 self._file_system.makedirs(output_dir)
@@ -257,96 +261,100 @@ class EDITweakerStep:
                     output_path=input_path,
                     success=False,
                     was_tweaked=False,
-                    errors=errors
+                    errors=errors,
                 )
-        
+
         try:
             tweaked_path = self._tweak_function(
-                input_path,
-                output_filename,
-                settings,
-                params,
-                upc_dict
+                input_path, output_filename, settings, params, upc_dict
             )
-            
+
             return TweakerResult(
-                output_path=tweaked_path,
-                success=True,
-                was_tweaked=True,
-                errors=errors
+                output_path=tweaked_path, success=True, was_tweaked=True, errors=errors
             )
-            
+
         except Exception as e:
             error_msg = f"Tweaking failed: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return TweakerResult(
-                output_path=input_path,
-                success=False,
-                was_tweaked=False,
-                errors=errors
+                output_path=input_path, success=False, was_tweaked=False, errors=errors
             )
-    
+
     def _record_error(self, filename: str, error_msg: str) -> None:
         """Record an error to the error handler.
-        
+
         Args:
             filename: Filename being processed
             error_msg: Error message
         """
         if self._error_handler is None:
             return
-        
+
         self._error_handler.record_error(
             folder="",
             filename=filename,
             error=Exception(error_msg),
-            context={'source': 'EDITweakerStep'},
-            error_source="EDITweaker"
+            context={"source": "EDITweakerStep"},
+            error_source="EDITweaker",
         )
-    
-    def execute(self, file_path: str, folder: dict, upc_dict: dict, settings: Optional[dict] = None) -> str | None:
+
+    def execute(
+        self,
+        file_path: str,
+        folder: dict,
+        upc_dict: dict,
+        settings: Optional[dict] = None,
+    ) -> str | None:
         """Execute tweak step (wrapper for pipeline compatibility).
-        
+
         Args:
             file_path: Path to the file to tweak
             folder: Folder configuration dictionary
             upc_dict: UPC dictionary for lookups
             settings: Global settings dictionary
-            
+
         Returns:
             Path to tweaked file, or None if tweaking failed/not needed
         """
         import os
         import tempfile
         import shutil
-        
-        effective_settings = settings if settings is not None else folder.get('settings', {})
-        
+
+        effective_settings = (
+            settings if settings is not None else folder.get("settings", {})
+        )
+
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
-        
+
         # Register with folder so orchestrator can clean up later
-        if '_pipeline_temp_dirs' not in folder:
-            folder['_pipeline_temp_dirs'] = []
-        folder['_pipeline_temp_dirs'].append(temp_dir)
-        
+        if "_pipeline_temp_dirs" not in folder:
+            folder["_pipeline_temp_dirs"] = []
+        folder["_pipeline_temp_dirs"].append(temp_dir)
+
         try:
-            result = self.tweak(file_path, temp_dir, folder, effective_settings, upc_dict)
-            
-            if result.success and result.output_path != file_path and os.path.exists(result.output_path):
+            result = self.tweak(
+                file_path, temp_dir, folder, effective_settings, upc_dict
+            )
+
+            if (
+                result.success
+                and result.output_path != file_path
+                and os.path.exists(result.output_path)
+            ):
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
-            
+
             # Cleanup if tweaking didn't produce output
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder['_pipeline_temp_dirs']:
-                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            if temp_dir in folder["_pipeline_temp_dirs"]:
+                folder["_pipeline_temp_dirs"].remove(temp_dir)
             return None
         except Exception as e:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder['_pipeline_temp_dirs']:
-                folder['_pipeline_temp_dirs'].remove(temp_dir)
+            if temp_dir in folder["_pipeline_temp_dirs"]:
+                folder["_pipeline_temp_dirs"].remove(temp_dir)
             raise

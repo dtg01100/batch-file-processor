@@ -11,8 +11,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QHBoxLayout,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -95,7 +93,6 @@ class BaseDialog(QDialog):
         Returns:
             Widget that should have initial focus, or None
         """
-        pass
 
     def _create_button_box(self) -> QDialogButtonBox:
         """Create standard OK/Cancel button box."""
@@ -128,4 +125,3 @@ class BaseDialog(QDialog):
         Override this method to process dialog data.
         Called after validation succeeds.
         """
-        pass

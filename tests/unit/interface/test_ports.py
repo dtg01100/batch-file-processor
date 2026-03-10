@@ -10,8 +10,7 @@ Tests:
 - QtUIService methods delegate to Qt classes correctly
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from interface.ports import (
     UIServiceProtocol,
     ProgressServiceProtocol,
@@ -25,7 +24,9 @@ class TestUIServiceProtocol:
 
     def test_protocol_is_runtime_checkable(self):
         """Test that UIServiceProtocol is runtime checkable."""
-        assert isinstance(UIServiceProtocol, type) and hasattr(UIServiceProtocol, '_is_protocol')
+        assert isinstance(UIServiceProtocol, type) and hasattr(
+            UIServiceProtocol, "_is_protocol"
+        )
 
     def test_null_service_satisfies_protocol(self):
         """Test that NullUIService satisfies the protocol."""
@@ -34,7 +35,7 @@ class TestUIServiceProtocol:
 
     def test_qt_service_satisfies_protocol(self):
         """Test that QtUIService satisfies the protocol."""
-        with patch('interface.ports.QApplication'):
+        with patch("interface.ports.QApplication"):
             qt_service = QtUIService()
             assert isinstance(qt_service, UIServiceProtocol)
 
@@ -44,7 +45,9 @@ class TestProgressServiceProtocol:
 
     def test_protocol_is_runtime_checkable(self):
         """Test that ProgressServiceProtocol is runtime checkable."""
-        assert isinstance(ProgressServiceProtocol, type) and hasattr(ProgressServiceProtocol, '_is_protocol')
+        assert isinstance(ProgressServiceProtocol, type) and hasattr(
+            ProgressServiceProtocol, "_is_protocol"
+        )
 
 
 class TestNullUIService:
@@ -95,7 +98,9 @@ class TestNullUIService:
     def test_ask_open_filename_returns_empty_string(self):
         """Test that ask_open_filename() returns empty string."""
         service = NullUIService()
-        result = service.ask_open_filename("Open File", "/home/user", [("Text", "*.txt")])
+        result = service.ask_open_filename(
+            "Open File", "/home/user", [("Text", "*.txt")]
+        )
         assert result == ""
 
     def test_ask_open_filename_with_defaults(self):
@@ -107,7 +112,9 @@ class TestNullUIService:
     def test_ask_save_filename_returns_empty_string(self):
         """Test that ask_save_filename() returns empty string."""
         service = NullUIService()
-        result = service.ask_save_filename("Save File", "/home/user", ".txt", [("Text", "*.txt")])
+        result = service.ask_save_filename(
+            "Save File", "/home/user", ".txt", [("Text", "*.txt")]
+        )
         assert result == ""
 
     def test_ask_save_filename_with_defaults(self):
@@ -128,19 +135,19 @@ class TestQtUIService:
 
     def test_initialization_with_parent(self):
         """Test QtUIService initialization with parent widget."""
-        with patch('interface.ports.QWidget'):
+        with patch("interface.ports.QWidget"):
             mock_parent = MagicMock()
-            with patch('interface.ports.QWidget', return_value=mock_parent):
+            with patch("interface.ports.QWidget", return_value=mock_parent):
                 service = QtUIService(parent=mock_parent)
                 assert service._parent == mock_parent
 
     def test_initialization_without_parent(self):
         """Test QtUIService initialization without parent widget."""
-        with patch('interface.ports.QApplication'):
+        with patch("interface.ports.QApplication"):
             service = QtUIService()
             assert service._parent is None
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_show_info_delegates_to_qmessagebox(self, mock_qmessagebox):
         """Test that show_info() delegates to QMessageBox.information."""
         service = QtUIService()
@@ -149,7 +156,7 @@ class TestQtUIService:
             service._parent, "Test Title", "Test Message"
         )
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_show_error_delegates_to_qmessagebox(self, mock_qmessagebox):
         """Test that show_error() delegates to QMessageBox.critical."""
         service = QtUIService()
@@ -158,7 +165,7 @@ class TestQtUIService:
             service._parent, "Test Title", "Test Error"
         )
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_show_warning_delegates_to_qmessagebox(self, mock_qmessagebox):
         """Test that show_warning() delegates to QMessageBox.warning."""
         service = QtUIService()
@@ -167,7 +174,7 @@ class TestQtUIService:
             service._parent, "Test Title", "Test Warning"
         )
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_ask_yes_no_returns_true_when_yes_clicked(self, mock_qmessagebox):
         """Test that ask_yes_no() returns True when Yes is clicked."""
         mock_qmessagebox.StandardButton = MagicMock()
@@ -181,7 +188,7 @@ class TestQtUIService:
         assert result is True
         mock_qmessagebox.question.assert_called_once()
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_ask_yes_no_returns_false_when_no_clicked(self, mock_qmessagebox):
         """Test that ask_yes_no() returns False when No is clicked."""
         mock_qmessagebox.StandardButton = MagicMock()
@@ -194,7 +201,7 @@ class TestQtUIService:
 
         assert result is False
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_ask_ok_cancel_returns_true_when_ok_clicked(self, mock_qmessagebox):
         """Test that ask_ok_cancel() returns True when OK is clicked."""
         mock_qmessagebox.StandardButton = MagicMock()
@@ -207,7 +214,7 @@ class TestQtUIService:
 
         assert result is True
 
-    @patch('interface.ports.QMessageBox')
+    @patch("interface.ports.QMessageBox")
     def test_ask_ok_cancel_returns_false_when_cancel_clicked(self, mock_qmessagebox):
         """Test that ask_ok_cancel() returns False when Cancel is clicked."""
         mock_qmessagebox.StandardButton = MagicMock()
@@ -220,7 +227,7 @@ class TestQtUIService:
 
         assert result is False
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_directory_returns_selected_path(self, mock_qfiledialog):
         """Test that ask_directory() returns selected directory path."""
         mock_qfiledialog.getExistingDirectory.return_value = "/selected/path"
@@ -233,7 +240,7 @@ class TestQtUIService:
             service._parent, "Select Directory", "/initial/path"
         )
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_directory_returns_empty_string_when_cancelled(self, mock_qfiledialog):
         """Test that ask_directory() returns empty string when cancelled."""
         mock_qfiledialog.getExistingDirectory.return_value = ""
@@ -243,7 +250,7 @@ class TestQtUIService:
 
         assert result == ""
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_directory_with_no_initial_dir(self, mock_qfiledialog):
         """Test ask_directory() with no initial directory."""
         mock_qfiledialog.getExistingDirectory.return_value = "/selected/path"
@@ -256,18 +263,22 @@ class TestQtUIService:
             service._parent, "Select Directory", ""
         )
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_open_filename_returns_selected_path(self, mock_qfiledialog):
         """Test that ask_open_filename() returns selected file path."""
         mock_qfiledialog.getOpenFileName.return_value = ("/selected/path.txt", "")
 
         service = QtUIService()
-        result = service.ask_open_filename("Open File", "/initial/path", [("Text", "*.txt")])
+        result = service.ask_open_filename(
+            "Open File", "/initial/path", [("Text", "*.txt")]
+        )
 
         assert result == "/selected/path.txt"
 
-    @patch('interface.ports.QFileDialog')
-    def test_ask_open_filename_returns_empty_string_when_cancelled(self, mock_qfiledialog):
+    @patch("interface.ports.QFileDialog")
+    def test_ask_open_filename_returns_empty_string_when_cancelled(
+        self, mock_qfiledialog
+    ):
         """Test that ask_open_filename() returns empty string when cancelled."""
         mock_qfiledialog.getOpenFileName.return_value = ("", "")
 
@@ -276,7 +287,7 @@ class TestQtUIService:
 
         assert result == ""
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_open_filename_with_no_filetypes(self, mock_qfiledialog):
         """Test ask_open_filename() with no filetypes."""
         mock_qfiledialog.getOpenFileName.return_value = ("/selected/path.txt", "")
@@ -286,18 +297,22 @@ class TestQtUIService:
 
         assert result == "/selected/path.txt"
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_save_filename_returns_selected_path(self, mock_qfiledialog):
         """Test that ask_save_filename() returns selected file path."""
         mock_qfiledialog.getSaveFileName.return_value = ("/selected/path.txt", "")
 
         service = QtUIService()
-        result = service.ask_save_filename("Save File", "/initial/path", ".txt", [("Text", "*.txt")])
+        result = service.ask_save_filename(
+            "Save File", "/initial/path", ".txt", [("Text", "*.txt")]
+        )
 
         assert result == "/selected/path.txt"
 
-    @patch('interface.ports.QFileDialog')
-    def test_ask_save_filename_returns_empty_string_when_cancelled(self, mock_qfiledialog):
+    @patch("interface.ports.QFileDialog")
+    def test_ask_save_filename_returns_empty_string_when_cancelled(
+        self, mock_qfiledialog
+    ):
         """Test that ask_save_filename() returns empty string when cancelled."""
         mock_qfiledialog.getSaveFileName.return_value = ("", "")
 
@@ -306,7 +321,7 @@ class TestQtUIService:
 
         assert result == ""
 
-    @patch('interface.ports.QFileDialog')
+    @patch("interface.ports.QFileDialog")
     def test_ask_save_filename_adds_extension_if_missing(self, mock_qfiledialog):
         """Test that ask_save_filename() adds extension if missing."""
         mock_qfiledialog.getSaveFileName.return_value = ("/selected/path", "")
@@ -318,8 +333,10 @@ class TestQtUIService:
 
         assert result == "/selected/path.txt"
 
-    @patch('interface.ports.QFileDialog')
-    def test_ask_save_filename_does_not_add_extension_if_present(self, mock_qfiledialog):
+    @patch("interface.ports.QFileDialog")
+    def test_ask_save_filename_does_not_add_extension_if_present(
+        self, mock_qfiledialog
+    ):
         """Test that ask_save_filename() doesn't add extension if already present."""
         mock_qfiledialog.getSaveFileName.return_value = ("/selected/path.txt", "")
 
@@ -330,7 +347,7 @@ class TestQtUIService:
 
         assert result == "/selected/path.txt"
 
-    @patch('interface.ports.QApplication')
+    @patch("interface.ports.QApplication")
     def test_pump_events_delegates_to_process_events(self, mock_qapplication):
         """Test that pump_events() delegates to QApplication.processEvents()."""
         service = QtUIService()
@@ -357,7 +374,7 @@ class TestQtUIServiceConvertFiletypes:
         filetypes = [
             ("Text files", "*.txt"),
             ("CSV files", "*.csv"),
-            ("All files", "*.*")
+            ("All files", "*.*"),
         ]
         result = QtUIService._convert_filetypes(filetypes)
         assert result == "Text files (*.txt);;CSV files (*.csv);;All files (*.*)"
@@ -378,9 +395,9 @@ class TestQtUIServiceConvertFiletypes:
 class TestQtUIServiceIntegration:
     """Integration tests for QtUIService."""
 
-    @patch('interface.ports.QMessageBox')
-    @patch('interface.ports.QFileDialog')
-    @patch('interface.ports.QApplication')
+    @patch("interface.ports.QMessageBox")
+    @patch("interface.ports.QFileDialog")
+    @patch("interface.ports.QApplication")
     def test_all_methods_callable(self, mock_qapp, mock_qfiledialog, mock_qmessagebox):
         """Test that all protocol methods are callable."""
         # Setup mocks
@@ -474,7 +491,7 @@ class TestProtocolCompliance:
 
     def test_qt_service_implements_all_protocol_methods(self):
         """Test that QtUIService implements all UIServiceProtocol methods."""
-        with patch('interface.ports.QApplication'):
+        with patch("interface.ports.QApplication"):
             service = QtUIService()
 
             # Check all methods exist and are callable
@@ -491,7 +508,7 @@ class TestProtocolCompliance:
     def test_services_satisfy_protocol_at_runtime(self):
         """Test that services satisfy UIServiceProtocol at runtime."""
         null_service = NullUIService()
-        with patch('interface.ports.QApplication'):
+        with patch("interface.ports.QApplication"):
             qt_service = QtUIService()
 
         # Both should satisfy the protocol

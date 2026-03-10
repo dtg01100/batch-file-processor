@@ -29,13 +29,13 @@ try:
         database_version="1"
     )
     print("✓ QtBatchFileSenderApp instance created successfully")
-    
+
     print("\nTest 5: Checking if main() function exists")
     if hasattr(main_interface, 'main') and callable(main_interface.main):
         print("✓ main() function is callable")
     else:
         print("✗ main() function not found or not callable")
-        
+
 except Exception as e:
     print(f"✗ Error creating QtBatchFileSenderApp instance: {e}")
     import traceback

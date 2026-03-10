@@ -12,6 +12,7 @@ import os
 @dataclass
 class ExtractedDialogFields:
     """Container for extracted dialog field values."""
+
     # Identity
     folder_name: str = ""
     alias: str = ""
@@ -90,9 +91,9 @@ class ExtractedDialogFields:
     estore_vendor_namevendoroid: str = ""
     fintech_division_id: str = ""
 
-     # Copy destination
+    # Copy destination
     copy_to_directory: str = ""
-    
+
     # Plugin configurations
     plugin_configurations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
@@ -117,29 +118,25 @@ class FolderDataExtractor:
     def extract_all(self) -> ExtractedDialogFields:
         """Extract all field values from the dialog."""
         plugin_configs = self._extract_plugin_configurations()
-        
+
         return ExtractedDialogFields(
             # Identity
             folder_name=self._get_text("foldersnameinput", "folder_name"),
             alias=self._get_text("folder_alias_field"),
             folder_is_active=self._get_value("active_checkbutton"),
-
             # Backend toggles
             process_backend_copy=self._get_bool("process_backend_copy_check"),
             process_backend_ftp=self._get_bool("process_backend_ftp_check"),
             process_backend_email=self._get_bool("process_backend_email_check"),
-
             # FTP
             ftp_server=self._get_text("ftp_server_field"),
             ftp_port=self._get_int("ftp_port_field"),
             ftp_folder=self._get_text("ftp_folder_field"),
             ftp_username=self._get_text("ftp_username_field"),
             ftp_password=self._get_text("ftp_password_field"),
-
             # Email
             email_to=self._get_text("email_recepient_field"),
             email_subject_line=self._get_text("email_sender_subject_field"),
-
             # EDI
             process_edi=self._get_value("process_edi"),
             convert_to_format=self._get_value("convert_formats_var"),
@@ -149,9 +146,10 @@ class FolderDataExtractor:
             split_edi_include_credits=self._get_bool("split_edi_send_credits"),
             prepend_date_files=self._get_bool("prepend_file_dates"),
             rename_file=self._get_text("rename_file_field"),
-            split_edi_filter_categories=self._get_text("split_edi_filter_categories_entry"),
+            split_edi_filter_categories=self._get_text(
+                "split_edi_filter_categories_entry"
+            ),
             split_edi_filter_mode=self._get_value("split_edi_filter_mode"),
-
             # EDI options
             calculate_upc_check_digit=self._get_value("upc_var_check"),
             include_a_records=self._get_value("a_rec_var_check"),
@@ -159,7 +157,6 @@ class FolderDataExtractor:
             include_headers=self._get_value("headers_check"),
             filter_ampersand=self._get_value("ampersand_check"),
             force_edi_validation=self._get_bool("force_edi_check_var"),
-
             # A-record
             pad_a_records=self._get_value("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
@@ -167,52 +164,50 @@ class FolderDataExtractor:
             append_a_records=self._get_value("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
             force_txt_file_ext=self._get_value("force_txt_file_ext_check"),
-
             # Invoice date
             invoice_date_offset=self._get_int("invoice_date_offset"),
             invoice_date_custom_format=self._get_bool("invoice_date_custom_format"),
-            invoice_date_custom_format_string=self._get_text("invoice_date_custom_format_field"),
+            invoice_date_custom_format_string=self._get_text(
+                "invoice_date_custom_format_field"
+            ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
-
             # UPC override
             override_upc_bool=self._get_bool("override_upc_bool"),
             override_upc_level=self._get_int("override_upc_level"),
-            override_upc_category_filter=self._get_text("override_upc_category_filter_entry"),
+            override_upc_category_filter=self._get_text(
+                "override_upc_category_filter_entry"
+            ),
             upc_target_length=self._get_int("upc_target_length_entry"),
             upc_padding_pattern=self._get_text("upc_padding_pattern_entry"),
-
             # Item fields
             include_item_numbers=self._get_bool("include_item_numbers"),
             include_item_description=self._get_bool("include_item_description"),
-
             # CSV sort
             simple_csv_sort_order=self._get_value("simple_csv_column_sorter"),
-
             # Tax
             split_prepaid_sales_tax_crec=self._get_bool("split_sales_tax_prepaid_var"),
-
             # Backend-specific
             estore_store_number=self._get_text("estore_store_number_field"),
             estore_vendor_oid=self._get_text("estore_Vendor_OId_field"),
-            estore_vendor_namevendoroid=self._get_text("estore_vendor_namevendoroid_field"),
+            estore_vendor_namevendoroid=self._get_text(
+                "estore_vendor_namevendoroid_field"
+            ),
             fintech_division_id=self._get_text("fintech_divisionid_field"),
+            # Copy destination
+            copy_to_directory=self._get_text("copy_to_directory_field"),
+            # Plugin configurations
+            plugin_configurations=plugin_configs,
+        )
 
-             # Copy destination
-             copy_to_directory=self._get_text("copy_to_directory_field"),
-             
-             # Plugin configurations
-             plugin_configurations=plugin_configs,
-         )
-    
     def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
         """Extract plugin configurations from the form."""
         plugin_configs = {}
-        
+
         # We need to find all form generators that might have been created
         # This is a bit tricky since they're stored in the builder, but we can
         # look for them in the fields dict or use the plugin manager to find
         # all available plugins and check if their widgets exist
-        
+
         return plugin_configs
 
     def _get_alias(self, extracted: ExtractedDialogFields) -> str:

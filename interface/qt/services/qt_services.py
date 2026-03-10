@@ -257,21 +257,21 @@ class QtProgressService(QObject):
         throbber = QLabel("◐", parent)
         throbber.setAlignment(Qt.AlignmentFlag.AlignCenter)
         throbber.setStyleSheet("color: white; font-size: 36pt; font-weight: bold;")
-        
+
         # Create pulsing animation for opacity (ping-pong effect)
         # Use QGraphicsOpacityEffect for proper opacity animation support
         from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
         from PyQt6.QtWidgets import QGraphicsOpacityEffect
-        
+
         opacity_effect = QGraphicsOpacityEffect(throbber)
         throbber.setGraphicsEffect(opacity_effect)
-        
+
         animation = QPropertyAnimation(opacity_effect, b"opacity")
         animation.setDuration(1000)
         animation.setStartValue(0.3)
         animation.setEndValue(1.0)
         animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        
+
         # Ping-pong effect: reverse direction when animation finishes
         def on_animation_finished():
             current_dir = animation.direction()
@@ -282,7 +282,7 @@ class QtProgressService(QObject):
             )
             animation.setDirection(new_dir)
             animation.start()
-        
+
         animation.finished.connect(on_animation_finished)
         animation.start()
         # Store animation and effect as attributes to prevent garbage collection
@@ -291,14 +291,16 @@ class QtProgressService(QObject):
         return throbber
 
     @staticmethod
-    def _build_progress_bar(parent: QWidget) -> 'QProgressBar':
+    def _build_progress_bar(parent: QWidget) -> "QProgressBar":
         """Create a QProgressBar for percentage-based progress."""
         from PyQt6.QtWidgets import QProgressBar
+
         progress_bar = QProgressBar(parent)
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(100)
         progress_bar.setValue(0)
-        progress_bar.setStyleSheet("""
+        progress_bar.setStyleSheet(
+            """
             QProgressBar {
                 border: 2px solid #666;
                 border-radius: 5px;
@@ -310,7 +312,8 @@ class QtProgressService(QObject):
                 background-color: #4CAF50;
                 border-radius: 3px;
             }
-        """)
+        """
+        )
         return progress_bar
 
     def _setup_layout(self) -> None:
@@ -355,12 +358,14 @@ class QtProgressService(QObject):
         if not self._overlay.isVisible():
             self.show(message)
 
-    def update_detailed_progress(self, 
-                                 folder_num: int, 
-                                 folder_total: int, 
-                                 file_num: int, 
-                                 file_total: int, 
-                                 footer: str = "") -> None:
+    def update_detailed_progress(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        footer: str = "",
+    ) -> None:
         """Update the detailed progress information.
 
         Args:
@@ -375,13 +380,13 @@ class QtProgressService(QObject):
             self._folder_label.show()
         else:
             self._folder_label.hide()
-            
+
         if file_total > 0:
             self._file_label.setText(f"File {file_num} of {file_total}")
             self._file_label.show()
         else:
             self._file_label.hide()
-            
+
         if footer:
             self._footer_label.setText(footer)
             self._footer_label.show()
@@ -394,9 +399,9 @@ class QtProgressService(QObject):
 
     def update_progress(self, progress: int) -> None:
         """Update the progress with a percentage value (0-100).
-        
+
         Shows a progress bar with the given percentage and hides the throbber.
-        
+
         Args:
             progress: Progress percentage from 0 to 100
         """

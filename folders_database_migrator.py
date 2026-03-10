@@ -905,62 +905,62 @@ def upgrade_database(
         cursor = database_connection.raw_connection.cursor()
         cursor.execute("PRAGMA table_info(folders)")
         columns = [row[1] for row in cursor.fetchall()]
-        
+
         if "id" not in columns:
             # SQLite doesn't support adding PRIMARY KEY via ALTER TABLE
             # We need to recreate the table with the id column
-            
+
             # Get current table info
             cursor.execute("PRAGMA table_info(folders)")
             old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
-            
+
             # Build column definitions
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-            
+
             columns_sql = ", ".join(col_defs)
-            
+
             # Create new table with id column
             cursor.execute(f"CREATE TABLE folders_new ({columns_sql})")
-            
+
             # Copy data (excluding any old id if it existed but was null)
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
             cursor.execute(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
-            
+
             # Drop old table and rename new one
             cursor.execute("DROP TABLE folders")
             cursor.execute("ALTER TABLE folders_new RENAME TO folders")
-            
+
             database_connection.raw_connection.commit()
-        
+
         # Also ensure administrative table has id column (for consistency)
         cursor.execute("PRAGMA table_info(administrative)")
         admin_columns = [row[1] for row in cursor.fetchall()]
-        
+
         if "id" not in admin_columns:
             # Get current table info
             cursor.execute("PRAGMA table_info(administrative)")
             old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
-            
+
             # Build column definitions
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-            
+
             columns_sql = ", ".join(col_defs)
-            
+
             # Create new table with id column
             cursor.execute(f"CREATE TABLE administrative_new ({columns_sql})")
-            
+
             # Copy data
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
             cursor.execute(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
-            
+
             # Drop old table and rename new one
             cursor.execute("DROP TABLE administrative")
             cursor.execute("ALTER TABLE administrative_new RENAME TO administrative")
-            
+
             database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="40", os=running_platform)
@@ -993,7 +993,7 @@ def upgrade_database(
         database_connection.query("UPDATE 'folders' SET 'ftp_username' = ''")
         database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_password' TEXT")
         database_connection.query("UPDATE 'folders' SET 'ftp_password' = ''")
-        
+
         database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_email' INTEGER")
         database_connection.query("UPDATE 'administrative' SET 'process_backend_email' = 0")
         database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_ftp' INTEGER")
@@ -1048,7 +1048,7 @@ def upgrade_database(
             'process_backend_email',
             'process_backend_ftp',
         ]
-        
+
         # Normalize folders table
         for field in boolean_fields:
             try:
@@ -1059,7 +1059,7 @@ def upgrade_database(
             except Exception as e:
                 print(f"Error normalizing field {field} in folders: {e}")
                 # Skip fields that don't exist in this version
-                
+
         # Normalize administrative table
         for field in boolean_fields:
             try:
@@ -1070,7 +1070,7 @@ def upgrade_database(
             except Exception as e:
                 print(f"Error normalizing field {field} in administrative: {e}")
                 # Skip fields that don't exist in this version
-                
+
         # Normalize settings table
         try:
             database_connection.query("UPDATE settings SET enable_email = 1 WHERE enable_email = 'True'")

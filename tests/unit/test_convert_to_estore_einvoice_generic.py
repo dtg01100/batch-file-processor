@@ -11,12 +11,9 @@ Converter: convert_to_estore_einvoice_generic.py (14225 chars)
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
+from unittest.mock import patch, MagicMock
 import os
 import csv
-from decimal import Decimal
-import re
 
 # Import the module to test
 import convert_to_estore_einvoice_generic
@@ -119,7 +116,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
-        
+
         # First call
         result1 = fetcher.fetch_po("0000000001")
         # Second call with same invoice
@@ -166,7 +163,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
-        
+
         # Should get from LUT - uses string args
         result = fetcher.fetch_uom_desc("123456", "1", 0, "1")
         assert result == 1 or result == "EA"
@@ -185,7 +182,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
-        
+
         # Should fall back to item lookup - uses string args
         result = fetcher.fetch_uom_desc("123456", "12", 0, "1")
         assert result == "HI"
@@ -203,7 +200,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
-        
+
         # Should return LO for multiplier <= 1 - uses string args
         result = fetcher.fetch_uom_desc("123456", "1", 0, "1")
         assert result == "LO"
@@ -221,7 +218,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
-        
+
         # Should return HI for multiplier > 1 - uses string args
         result = fetcher.fetch_uom_desc("123456", "12", 0, "1")
         assert result == "HI"
@@ -239,7 +236,7 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
 
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_edi_convert_returns_csv_filename(self, mock_query_runner, complete_edi_content,
-                                               default_parameters, default_settings, 
+                                               default_parameters, default_settings,
                                                sample_upc_lut, tmp_path):
         """Test that edi_convert returns the expected CSV filename."""
         # Setup mocks - run_query is used by core.edi.inv_fetcher.InvFetcher
@@ -317,7 +314,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
         with open(result, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             header_row = next(reader)
-            
+
             expected_columns = [
                 "Store #",
                 "Vendor (OID)",
@@ -339,7 +336,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
                 "Extended Cost",
                 "Extended Retail",
             ]
-            
+
             for col in expected_columns:
                 assert any(col in h for h in header_row), f"Column {col} not found in header"
 
@@ -443,7 +440,7 @@ class TestEstoreEinvoiceGenericCRecords(TestEstoreEinvoiceGenericFixtures):
         detail = ("B" + "01234567890" + "Test Item Description    " + "123456" + "000100" +
                   "01" + "000001" + "00010" + "00199" + "001" + "000000")
         tax = "C" + "TAB" + "Sales Tax" + " " * 16 + "0000100000"
-        
+
         edi_content = sample_header_record + "\n" + detail + "\n" + tax + "\n"
 
         input_file = tmp_path / "input.edi"
@@ -480,7 +477,7 @@ class TestEstoreEinvoiceGenericShipperMode(TestEstoreEinvoiceGenericFixtures):
         # Parent item (parent_item_number == vendor_item)
         parent = ("B" + "01234567890" + "Parent Pack Item        " + "123456" + "000100" +
                   "01" + "000005" + "00001" + "00199" + "001" + "000000")
-        
+
         edi_content = sample_header_record + "\n" + parent + "\n"
 
         input_file = tmp_path / "input.edi"
@@ -766,12 +763,10 @@ class TestEstoreEinvoiceGenericQtyToInt(TestEstoreEinvoiceGenericFixtures):
         """Test conversion of positive quantity string."""
         # The function is local, but we can test through edi_convert behavior
         # This tests the edge cases covered in the code
-        pass
 
     def test_qty_to_int_negative(self):
         """Test conversion of negative quantity string."""
         # Quantity starting with '-' should be made positive
-        pass
 
 
 class TestEstoreEinvoiceGenericPurchaseOrder(TestEstoreEinvoiceGenericFixtures):

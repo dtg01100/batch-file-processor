@@ -17,17 +17,87 @@ from decimal import Decimal
 import os
 
 # Import from core modules for backward compatibility
-from core.utils.bool_utils import normalize_bool, to_db_bool, from_db_bool
-from core.utils.date_utils import (
-    dactime_from_datetime,
-    datetime_from_dactime,
-    datetime_from_invtime,
-    dactime_from_invtime,
-    prettify_dates,
-)
-from core.edi.edi_parser import capture_records, _get_default_parser
-from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
+from core.edi.edi_parser import capture_records
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # Backward compatibility re-export
+
+from core.utils.date_utils import dactime_from_datetime
+from core.utils.date_utils import datetime_from_dactime
+from core.utils.date_utils import datetime_from_invtime
+from core.utils.date_utils import dactime_from_invtime
+
+from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
+
+
+def normalize_bool(value) -> bool:
+    """Convert any value to Python boolean.
+    
+    Args:
+        value: Value to convert to boolean
+        
+    Returns:
+        Boolean representation of the value
+        
+    Examples:
+        normalize_bool(True) → True
+        normalize_bool(False) → False
+        normalize_bool("true") → True
+        normalize_bool("1") → True
+        normalize_bool(0) → False
+        normalize_bool(None) → False
+    """
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes", "on", "y")
+    return bool(value)
+
+
+def to_db_bool(value) -> int:
+    """Convert value to SQLite boolean integer (0 or 1).
+    
+    Args:
+        value: Value to convert
+        
+    Returns:
+        1 for True, 0 for False
+        
+    Examples:
+        to_db_bool(True) → 1
+        to_db_bool(False) → 0
+        to_db_bool("yes") → 1
+        to_db_bool(None) → 0
+    """
+    return 1 if normalize_bool(value) else 0
+
+
+def from_db_bool(value) -> bool:
+    """Convert SQLite boolean integer to Python boolean.
+    
+    Args:
+        value: SQLite boolean value (0, 1, or similar)
+        
+    Returns:
+        Boolean representation
+        
+    Examples:
+        from_db_bool(1) → True
+        from_db_bool(0) → False
+        from_db_bool("1") → True
+        from_db_bool("0") → False
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value in ("1", "true", "yes", "on")
+    return bool(value)
 
 
 # ============================================================================
@@ -78,7 +148,7 @@ def convert_to_price_decimal(value):
         return 0
 
 
-# Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime, 
+# Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime,
 # dactime_from_invtime are now imported from core.utils.date_utils
 
 
@@ -103,7 +173,7 @@ def detect_invoice_is_credit(edi_process):
 
 def do_split_edi(edi_process, work_directory, parameters_dict):
     """Split a multi-invoice EDI file into individual invoice files.
-    
+
     Credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642
     """
     def col_to_excel(col):  # col is 1 based
@@ -428,25 +498,25 @@ def filter_b_records_by_category(
     filter_mode: str
 ) -> list[str]:
     """Filter B records based on item category.
-    
+
     Args:
         b_records: List of B record lines to filter
         upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
         filter_categories: String of comma-separated categories or "ALL"
         filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
-        
+
     Returns:
         List of filtered B record lines
     """
     if filter_categories == "ALL":
         return b_records
-    
+
     if not upc_dict:
         return b_records
-    
+
     categories_list = [c.strip().lower() for c in filter_categories.split(",")]
     filtered_records = []
-    
+
     for record in b_records:
         try:
             b_rec_dict = capture_records(record)
@@ -455,11 +525,11 @@ def filter_b_records_by_category(
                 filtered_records.append(record)
                 continue
             vendor_item = int(b_rec_dict['vendor_item'].strip())
-            
+
             if vendor_item in upc_dict:
                 item_category = str(upc_dict[vendor_item][0]).lower()
                 category_in_list = item_category in categories_list
-                
+
                 if filter_mode == "include":
                     if category_in_list:
                         filtered_records.append(record)
@@ -472,7 +542,7 @@ def filter_b_records_by_category(
         except (ValueError, KeyError):
             # On error, include the record (fail-open)
             filtered_records.append(record)
-    
+
     return filtered_records
 
 
@@ -484,18 +554,18 @@ def filter_edi_file_by_category(
     filter_mode: str = "include"
 ) -> bool:
     """Filter EDI file by item category, dropping invoices without matching B records.
-    
+
     Reads an EDI file, filters B records based on category, and writes the result
     to an output file. Invoices (A + B + C records) that have no B records after
     filtering are completely removed.
-    
+
     Args:
         input_file: Path to input EDI file
         output_file: Path to output EDI file
         upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
         filter_categories: Comma-separated categories or "ALL"
         filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
-        
+
     Returns:
         True if any filtering was applied, False if no filtering occurred
     """
@@ -510,14 +580,14 @@ def filter_edi_file_by_category(
             return False
         except (IOError, OSError) as e:
             raise ValueError(f"Failed to copy file: {e}")
-    
+
     # Read input file
     try:
         with open(input_file, 'r') as infile:
             lines = infile.readlines()
     except (IOError, OSError) as e:
         raise ValueError(f"Failed to read input file: {e}")
-    
+
     if not lines:
         # Empty file - just copy it
         try:
@@ -526,11 +596,11 @@ def filter_edi_file_by_category(
         except (IOError, OSError) as e:
             raise ValueError(f"Failed to create output file: {e}")
         return False
-    
+
     # Group lines into invoices (each starts with 'A' record)
     invoices = []
     current_invoice = []
-    
+
     for line in lines:
         if line.startswith('A'):
             # Start of new invoice - save previous if exists
@@ -539,21 +609,21 @@ def filter_edi_file_by_category(
             current_invoice = [line]
         elif line.strip():  # Non-empty line
             current_invoice.append(line)
-    
+
     # Don't forget last invoice
     if current_invoice:
         invoices.append(current_invoice)
-    
+
     # Process each invoice
     filtered_invoices = []
     any_filtered = False
-    
+
     for invoice_lines in invoices:
         # Separate A, B, and C records
         a_record = None
         b_records = []
         c_record = None
-        
+
         for line in invoice_lines:
             if line.startswith('A'):
                 a_record = line
@@ -561,16 +631,16 @@ def filter_edi_file_by_category(
                 b_records.append(line)
             elif line.startswith('C'):
                 c_record = line
-        
+
         # Filter B records by category
         filtered_b_records = filter_b_records_by_category(
             b_records, upc_dict, filter_categories, filter_mode
         )
-        
+
         # Check if any B records were filtered out
         if len(filtered_b_records) != len(b_records):
             any_filtered = True
-        
+
         # Only keep invoice if it has at least one B record after filtering
         if filtered_b_records:
             # Rebuild invoice with filtered B records
@@ -581,7 +651,7 @@ def filter_edi_file_by_category(
         else:
             # Invoice dropped because no matching B records
             any_filtered = True
-    
+
     # Write output file
     try:
         with open(output_file, 'w') as outfile:
@@ -589,5 +659,5 @@ def filter_edi_file_by_category(
                 outfile.writelines(invoice)
     except (IOError, OSError) as e:
         raise ValueError(f"Failed to write output file: {e}")
-    
+
     return any_filtered
