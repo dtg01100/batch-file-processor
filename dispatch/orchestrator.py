@@ -770,6 +770,7 @@ class DispatchOrchestrator:
             settings=settings,
             version=version,
             use_pipeline=True,
+            progress_reporter=progress_callback,
         )
 
         orchestrator = DispatchOrchestrator(config)
