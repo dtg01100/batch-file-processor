@@ -22,7 +22,7 @@ class TestQtBatchFileSenderApp:
         )
         assert app._appname == "Test"
         assert app._version == "1.0"
-        assert app._database_version == "41"
+        assert app._database_version == CURRENT_DATABASE_VERSION
 
     def test_database_property_raises_before_init(self):
         from interface.qt.app import QtBatchFileSenderApp

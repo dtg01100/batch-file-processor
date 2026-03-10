@@ -1,5 +1,6 @@
 """Pytest configuration for the test suite."""
 
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -13,6 +14,22 @@ from tests.fakes import FakeEvent
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+
+def pytest_configure(config):
+    """Configure timeout behavior per platform.
+
+    On POSIX, prefer ``signal`` so a timed-out test fails and pytest continues
+    running the remaining test cases. On Windows, fall back to ``thread``.
+    """
+    # pytest-timeout option is only present when the plugin is installed.
+    if not hasattr(config.option, "timeout_method"):
+        return
+
+    if os.name == "nt":
+        config.option.timeout_method = "thread"
+    else:
+        config.option.timeout_method = "signal"
 
 
 @pytest.fixture

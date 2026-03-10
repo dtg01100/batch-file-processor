@@ -132,9 +132,8 @@ class TestCompleteFolderLifecycle:
         result = orchestrator.process_folder(folders[0], run_log)
 
         # Step 5: Verify processing occurred
-        assert (
-            result.files_processed >= 0
-        ), f"Should process files, got {result.files_processed}"
+        assert result.success, "Folder processing should succeed"
+        assert result.files_processed == 1, "Should process the single input file"
 
         # Step 6: Verify output was created (check both EDI and CSV)
         # The copy backend copies the processed file (could be EDI or CSV depending on pipeline)
@@ -511,7 +510,8 @@ class TestMultiStepWorkflow:
         result = orchestrator.process_folder(folders[0], MagicMock())
 
         # Phase 5: Verify complete workflow
-        assert result.files_processed >= 0
+        assert result.success, "Complete setup workflow should succeed"
+        assert result.files_processed == 1, "Should process the single configured file"
 
         # Verify output created
         output_files = list((workspace / "output").glob("*"))

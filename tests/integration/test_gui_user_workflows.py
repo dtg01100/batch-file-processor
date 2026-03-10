@@ -206,12 +206,11 @@ class TestSettingsConfigurationWorkflow:
         # Mock the settings dialog
         with patch.object(
             EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
-        ):
+        ) as mock_exec:
             # Show edit settings dialog
             app._show_edit_settings_dialog()
 
-            # Verify dialog was shown without error
-            assert True
+            mock_exec.assert_called_once()
 
     def test_edit_reporting_settings_workflow(self, initialized_app):
         """Test editing reporting settings through the complete workflow."""
@@ -233,11 +232,10 @@ class TestSettingsConfigurationWorkflow:
 
         with patch.object(
             EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
-        ):
+        ) as mock_exec:
             app._show_edit_settings_dialog()
 
-            # Verify dialog was shown without error
-            assert True
+            mock_exec.assert_called_once()
 
 
 class TestProcessingWorkflow:
@@ -446,17 +444,16 @@ class TestCompleteUserWorkflow:
         assert folder is not None
 
         # Step 2: Mock processing files
-        with patch.object(app, "_graphical_process_directories"):
+        with patch.object(app, "_graphical_process_directories") as mock_process:
             app._graphical_process_directories(app._database.folders_table)
+            mock_process.assert_called_once_with(app._database.folders_table)
 
         # Step 3: Mock viewing processed files
         with patch.object(
             ProcessedFilesDialog, "exec", return_value=QDialog.DialogCode.Accepted
-        ):
+        ) as mock_exec:
             app._show_processed_files_dialog_wrapper()
-
-        # Verify workflow completed
-        assert True
+            mock_exec.assert_called_once()
 
     def test_complete_settings_apply_workflow(self, initialized_app):
         """Test complete workflow: edit settings → apply → verify."""
@@ -465,14 +462,11 @@ class TestCompleteUserWorkflow:
         # Step 1: Edit settings
         with patch.object(
             EditSettingsDialog, "exec", return_value=QDialog.DialogCode.Accepted
-        ):
+        ) as mock_exec:
             app._show_edit_settings_dialog()
 
-        # Step 2: Verify refresh was called
-        # (refresh is called after settings are applied)
-
-        # Verify workflow completed
-        assert True
+        mock_exec.assert_called_once()
+        assert app._database.get_settings_or_default() is not None
 
 
 class TestButtonStateManagement:
@@ -515,8 +509,7 @@ class TestButtonStateManagement:
         app._disable_folder(folder["id"])
         app._set_main_button_states()
 
-        # Verify button states updated
-        # (If all folders disabled, process button should be disabled)
+        assert app._process_folder_button.isEnabled() is False
 
     def test_button_states_update_after_files_processed(self, initialized_app):
         """Test button states update after files are processed."""
@@ -568,11 +561,11 @@ class TestSearchAndFilterWorkflow:
         app = initialized_app
 
         # Mock filter change
-        with patch.object(app, "_refresh_users_list"):
+        with patch.object(app, "_refresh_users_list") as mock_refresh:
             app._set_folders_filter("test")
 
-            # Verify refresh was called
-            # (actual filter happens in folder list widget)
+            mock_refresh.assert_called_once()
+            assert app._folder_filter == "test"
 
 
 class TestErrorHandlingWorkflow:
@@ -596,10 +589,14 @@ class TestErrorHandlingWorkflow:
         """Test workflow when folder is not found."""
         app = initialized_app
 
-        # Try to edit non-existent folder
-        app._edit_folder_selector(99999)
+        # Try to edit non-existent folder without opening a blocking error dialog
+        with patch.object(app._ui_service, "show_error") as mock_show_error:
+            app._edit_folder_selector(99999)
 
-        # Should handle gracefully (no exception)
+        # Should handle gracefully and notify user
+        mock_show_error.assert_called_once_with(
+            "Error", "Folder with id 99999 not found."
+        )
 
     def test_database_error_workflow(self, initialized_app):
         """Test workflow when database error occurs."""
@@ -609,11 +606,8 @@ class TestErrorHandlingWorkflow:
         with patch.object(
             app._database.folders_table, "count", side_effect=Exception("DB Error")
         ):
-            try:
+            with pytest.raises(Exception, match="DB Error"):
                 app._set_main_button_states()
-            except Exception:
-                # Should handle error gracefully
-                pass
 
 
 class TestPersistenceWorkflow:
@@ -706,7 +700,7 @@ class TestPerformanceWorkflow:
 
         # Verify workflow still responsive
         app._refresh_users_list()
-        assert True
+        assert app._database.folders_table.count() == len(folders_to_add)
 
     def test_large_dataset_workflow(self, initialized_app):
         """Test workflow with large dataset."""
@@ -714,4 +708,4 @@ class TestPerformanceWorkflow:
 
         # Verify workflow completes with real database
         app._set_main_button_states()
-        assert True
+        assert app._process_folder_button.isEnabled() is False

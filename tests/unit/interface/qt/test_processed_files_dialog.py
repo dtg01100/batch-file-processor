@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock
+from PyQt6.QtWidgets import QDialogButtonBox
 
 
 @pytest.mark.qt
@@ -77,6 +78,22 @@ class TestProcessedFilesDialogInitialization:
 
         # Should not crash, UI should be built
         assert dialog._button_group is not None
+
+    def test_dialog_uses_close_only_action_mode(self, qtbot):
+        """Test dialog uses BaseDialog close-only actions."""
+        from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+
+        db = MagicMock()
+        db.get_oversight_or_default.return_value = {}
+        db.folders_table.all.return_value = []
+
+        dialog = ProcessedFilesDialog(None, db)
+        qtbot.addWidget(dialog)
+
+        assert dialog._button_box is not None
+        assert (
+            dialog._button_box.button(QDialogButtonBox.StandardButton.Close) is not None
+        )
 
 
 @pytest.mark.qt

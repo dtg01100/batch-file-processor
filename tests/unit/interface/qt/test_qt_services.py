@@ -62,11 +62,12 @@ class TestQtProgressServiceInitialization:
         """Test that QtProgressService has required methods."""
         # These tests focus on the interface without instantiating
         assert hasattr(QtProgressService, "__init__")
+        assert hasattr(QtProgressService, "progress_dialog")
 
         # For documentation purposes, note the expected methods
         # This service requires a QWidget parent, which makes unit testing complex
         # The actual implementation would require more complex Qt testing
-        assert True
+        assert callable(QtProgressService.show)
 
 
 class TestQtServicesIntegration:

@@ -192,9 +192,9 @@ class TestBackendFailureScenarios:
 
         # Exception backend should fail, success backend should continue
         assert len(success_calls) == 3, "Success backend should process all files"
-        assert (
-            result.files_processed >= 0
-        )  # Depends on implementation, but should not crash
+        assert result.files_processed == 0, "File should fail if any backend fails"
+        assert result.files_failed == 3, "All files should be counted as failed"
+        assert result.success is False, "Overall result should indicate failure"
 
     def test_cascading_backend_failures(self, temp_workspace, folder_config):
         """Test processing when multiple backends fail in sequence."""

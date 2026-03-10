@@ -24,7 +24,7 @@ class TestFolderManager:
         db.oversight_and_defaults.find_one.return_value = {
             "id": 1,
             "default_setting": "value",
-            "folder_is_active": "True",
+            "folder_is_active": True,
         }
         return db
 
@@ -61,7 +61,7 @@ class TestFolderManager:
         custom_template = {
             "id": 1,
             "custom_setting": "custom_value",
-            "folder_is_active": "True",
+            "folder_is_active": True,
         }
 
         result = manager.add_folder("/path/to/folder", template_data=custom_template)
@@ -105,7 +105,7 @@ class TestFolderManager:
         """Test disabling a folder."""
         mock_db.folders_table.find_one.return_value = {
             "id": 1,
-            "folder_is_active": "True",
+            "folder_is_active": True,
         }
 
         result = manager.disable_folder(1)
@@ -114,7 +114,7 @@ class TestFolderManager:
         mock_db.folders_table.update.assert_called_once()
         # Check that folder_is_active was set to False
         call_args = mock_db.folders_table.update.call_args
-        assert call_args[0][0]["folder_is_active"] == "False"
+        assert call_args[0][0]["folder_is_active"] is False
 
     def test_disable_folder_not_found(self, manager, mock_db):
         """Test disabling non-existent folder."""
@@ -128,7 +128,7 @@ class TestFolderManager:
         """Test enabling a folder."""
         mock_db.folders_table.find_one.return_value = {
             "id": 1,
-            "folder_is_active": "False",
+            "folder_is_active": False,
         }
 
         result = manager.enable_folder(1)
@@ -137,7 +137,7 @@ class TestFolderManager:
         mock_db.folders_table.update.assert_called_once()
         # Check that folder_is_active was set to True
         call_args = mock_db.folders_table.update.call_args
-        assert call_args[0][0]["folder_is_active"] == "True"
+        assert call_args[0][0]["folder_is_active"] is True
 
     def test_enable_folder_not_found(self, manager, mock_db):
         """Test enabling non-existent folder."""
@@ -167,24 +167,24 @@ class TestFolderManager:
     def test_get_active_folders(self, manager, mock_db):
         """Test getting active folders."""
         mock_db.folders_table.find.return_value = [
-            {"id": 1, "folder_is_active": "True"}
+            {"id": 1, "folder_is_active": True}
         ]
 
         result = manager.get_active_folders()
 
         assert len(result) == 1
-        mock_db.folders_table.find.assert_called_once_with(folder_is_active="True")
+        mock_db.folders_table.find.assert_called_once_with(folder_is_active=True)
 
     def test_get_inactive_folders(self, manager, mock_db):
         """Test getting inactive folders."""
         mock_db.folders_table.find.return_value = [
-            {"id": 2, "folder_is_active": "False"}
+            {"id": 2, "folder_is_active": False}
         ]
 
         result = manager.get_inactive_folders()
 
         assert len(result) == 1
-        mock_db.folders_table.find.assert_called_once_with(folder_is_active="False")
+        mock_db.folders_table.find.assert_called_once_with(folder_is_active=False)
 
     def test_get_all_folders(self, manager, mock_db):
         """Test getting all folders."""
@@ -219,7 +219,7 @@ class TestFolderManager:
 
         result = manager.count_folders(active_only=True)
 
-        mock_db.folders_table.count.assert_called_with(folder_is_active="True")
+        mock_db.folders_table.count.assert_called_with(folder_is_active=True)
         assert result == 5
 
     def test_get_folder_by_id(self, manager, mock_db):
@@ -406,3 +406,95 @@ class TestFolderManagerSkipList:
 
         # This should be included
         assert result["valid_setting"] == "should_be_included"
+
+
+class TestFolderManagerCommunicationWiring:
+    """Communication-focused tests for FolderManager database interactions."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = MagicMock()
+        db.get_oversight_or_default.return_value = {
+            "id": 1,
+            "folder_is_active": True,
+            "process_backend_email": False,
+        }
+        return db
+
+    @pytest.fixture
+    def manager(self, mock_db):
+        return FolderManager(mock_db)
+
+    def test_add_folder_uses_oversight_defaults_provider(self, manager, mock_db):
+        """add_folder should pull template defaults through get_oversight_or_default."""
+        mock_db.folders_table.find_one.return_value = None
+
+        manager.add_folder("/tmp/comm-folder")
+
+        mock_db.get_oversight_or_default.assert_called_once()
+        mock_db.folders_table.insert.assert_called_once()
+
+    def test_delete_folder_with_related_deletes_all_related_records(
+        self, manager, mock_db
+    ):
+        """delete_folder_with_related should fan out delete calls to all related tables."""
+        mock_db.folders_table.find_one.return_value = {"id": 21}
+
+        result = manager.delete_folder_with_related(21)
+
+        assert result is True
+        mock_db.folders_table.delete.assert_called_once_with(id=21)
+        mock_db.processed_files.delete.assert_called_once_with(folder_id=21)
+        mock_db.emails_table.delete.assert_called_once_with(folder_id=21)
+
+    def test_delete_folder_with_related_missing_folder_no_side_effects(
+        self, manager, mock_db
+    ):
+        """No table delete calls should occur when folder does not exist."""
+        mock_db.folders_table.find_one.return_value = None
+
+        result = manager.delete_folder_with_related(404)
+
+        assert result is False
+        mock_db.folders_table.delete.assert_not_called()
+        mock_db.processed_files.delete.assert_not_called()
+        mock_db.emails_table.delete.assert_not_called()
+
+    def test_update_folder_by_name_preserves_existing_id_on_update(
+        self, manager, mock_db
+    ):
+        """update_folder_by_name should resolve ID by name and update using that ID."""
+        mock_db.folders_table.find_one.return_value = {
+            "id": 5,
+            "folder_name": "/tmp/original",
+        }
+
+        payload = {"folder_name": "/tmp/original", "alias": "renamed"}
+        result = manager.update_folder_by_name(payload)
+
+        assert result is True
+        mock_db.folders_table.update.assert_called_once()
+        updated_record, keys = mock_db.folders_table.update.call_args[0]
+        assert updated_record["id"] == 5
+        assert updated_record["alias"] == "renamed"
+        assert keys == ["id"]
+
+    def test_batch_add_folders_without_skip_adds_all_subfolders(
+        self, manager, tmp_path, monkeypatch
+    ):
+        """batch_add_folders(skip_existing=False) should always invoke add_folder."""
+        (tmp_path / "one").mkdir()
+        (tmp_path / "two").mkdir()
+
+        add_calls = []
+        monkeypatch.setattr(
+            manager,
+            "add_folder",
+            lambda folder_path: add_calls.append(folder_path),
+        )
+
+        result = manager.batch_add_folders(str(tmp_path), skip_existing=False)
+
+        assert result["added"] == 2
+        assert result["skipped"] == 0
+        assert len(add_calls) == 2

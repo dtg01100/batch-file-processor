@@ -5,6 +5,7 @@ Tests the base plugin interface and lifecycle management.
 """
 
 import unittest
+from unittest.mock import patch
 from typing import Dict, Any
 from interface.plugins import PluginBase
 from interface.plugins.config_schemas import (
@@ -161,6 +162,44 @@ class TestPluginBase(unittest.TestCase):
     def test_dependencies(self):
         """Test plugin dependencies."""
         self.assertEqual(TestPlugin.get_dependencies(), [])
+
+    def test_validate_configuration_without_schema_succeeds(self):
+        """Test validation succeeds when plugin does not define a schema."""
+        plugin = TestPlugin()
+
+        result = plugin.validate_configuration({"any": "value"})
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.errors, [])
+
+    def test_get_default_configuration_without_schema_returns_empty_dict(self):
+        """Test default configuration is empty when no schema is defined."""
+        plugin = TestPlugin()
+
+        defaults = plugin.get_default_configuration()
+
+        self.assertEqual(defaults, {})
+
+    def test_update_configuration_invalid_does_not_call_initialize(self):
+        """Test invalid update does not invoke initialize."""
+        plugin = TestPluginWithConfig()
+
+        with patch.object(plugin, "initialize") as mock_initialize:
+            result = plugin.update_configuration({"test_field": None})
+
+        self.assertFalse(result.success)
+        mock_initialize.assert_not_called()
+
+    def test_update_configuration_valid_calls_initialize_once(self):
+        """Test valid update invokes initialize exactly once."""
+        plugin = TestPluginWithConfig()
+        valid_config = {"test_field": "value", "numeric_field": 10}
+
+        with patch.object(plugin, "initialize") as mock_initialize:
+            result = plugin.update_configuration(valid_config)
+
+        self.assertTrue(result.success)
+        mock_initialize.assert_called_once_with(valid_config)
 
 
 if __name__ == "__main__":

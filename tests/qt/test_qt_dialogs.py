@@ -115,6 +115,38 @@ class TestBaseDialog:
             )
             qtbot.mouseClick(cancel_button, Qt.MouseButton.LeftButton)
 
+    def test_action_mode_close_only_shows_close_button(self, qtbot):
+        from interface.qt.dialogs.base_dialog import BaseDialog
+
+        dialog = BaseDialog(action_mode="close_only")
+        qtbot.addWidget(dialog)
+
+        assert dialog._button_box is not None
+        close_button = dialog._button_box.button(dialog._button_box.StandardButton.Close)
+        assert close_button is not None
+
+    def test_action_mode_none_has_no_button_box(self, qtbot):
+        from interface.qt.dialogs.base_dialog import BaseDialog
+
+        dialog = BaseDialog(action_mode="none")
+        qtbot.addWidget(dialog)
+
+        assert dialog._button_box is None
+
+    def test_confirm_yes_no_uses_question_box(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.base_dialog import BaseDialog
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            staticmethod(lambda *args, **kwargs: QMessageBox.StandardButton.Yes),
+        )
+        dialog = BaseDialog()
+        qtbot.addWidget(dialog)
+
+        assert dialog.confirm_yes_no("Title", "Body") is True
+
 
 # ---------------------------------------------------------------------------
 # TestQtFolderDataExtractor
@@ -224,7 +256,7 @@ class TestEditFoldersDialog:
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
 
-        dialog._fields["folder_name_value"].setText("")
+        dialog._fields["folder_alias_field"].setText("")
         assert dialog.validate() is False
 
     def test_enabled_folder_validation_fails_without_convert_format(
@@ -351,7 +383,7 @@ class TestEditFoldersDialog:
         qtbot.addWidget(dialog)
 
         dialog._fields["process_backend_copy_check"].setChecked(True)
-        dialog.copy_to_directory = "/destination"
+        dialog.handlers.copy_to_directory = "/destination"
 
         assert dialog.validate() is True
 
@@ -379,15 +411,27 @@ class TestEditFoldersDialog:
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
 
-    def test_convert_formats_count(self):
+    def test_convert_format_control_contains_expected_option(self, qtbot, sample_folder_config):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert len(EditFoldersDialog.CONVERT_FORMATS) == 10
+        dialog = EditFoldersDialog(None, sample_folder_config)
+        qtbot.addWidget(dialog)
 
-    def test_edi_options(self):
+        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(lambda: "convert_formats_var" in dialog._fields, timeout=1000)
+        convert_combo = dialog._fields["convert_formats_var"]
+        options = [convert_combo.itemText(i) for i in range(convert_combo.count())]
+        assert "CSV" in options
+
+    def test_edi_options_combo_contains_expected_values(self, qtbot, sample_folder_config):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert EditFoldersDialog.EDI_OPTIONS == [
+        dialog = EditFoldersDialog(None, sample_folder_config)
+        qtbot.addWidget(dialog)
+
+        edi_combo = dialog.dynamic_edi_builder.edi_options_combo
+        options = [edi_combo.itemText(i) for i in range(edi_combo.count())]
+        assert options == [
             "Do Nothing",
             "Convert EDI",
             "Tweak EDI",
@@ -399,7 +443,7 @@ class TestEditFoldersDialog:
         sample_folder_config["folder_is_active"] = "False"
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        dialog._active_checkbox.setChecked(False)
+        dialog._fields["active_checkbutton"].setChecked(False)
         assert dialog.validate() is True
 
     def test_apply_writes_to_config(self, qtbot, sample_folder_config):
@@ -407,7 +451,7 @@ class TestEditFoldersDialog:
 
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        dialog._ftp_server_field.setText("new.server.com")
+        dialog._fields["ftp_server_field"].setText("new.server.com")
         dialog.apply()
         assert sample_folder_config["ftp_server"] == "new.server.com"
 
@@ -427,15 +471,19 @@ class TestEditFoldersDialog:
 
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
-        dialog._active_checkbox.setChecked(True)
-        assert "Enabled" in dialog._active_checkbox.text()
-        dialog._active_checkbox.setChecked(False)
-        assert "Disabled" in dialog._active_checkbox.text()
+        active_checkbox = dialog._fields["active_checkbutton"]
+        active_checkbox.setChecked(True)
+        dialog.handlers.update_active_state()
+        assert "Enabled" in active_checkbox.text()
+        active_checkbox.setChecked(False)
+        dialog.handlers.update_active_state()
+        assert "Disabled" in active_checkbox.text()
 
-    def test_show_validation_errors_calls_qmessagebox(
+    def test_validate_invalid_state_calls_qmessagebox(
         self, qtbot, sample_folder_config, monkeypatch
     ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
+        from interface.validation.folder_settings_validator import ValidationResult
 
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
@@ -443,11 +491,20 @@ class TestEditFoldersDialog:
             "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical",
             MagicMock(),
         )
-        dialog._show_validation_errors(["Error 1", "Error 2"])
+        result = ValidationResult(is_valid=False)
+        result.add_error("ftp_server", "Error 1")
+        result.add_error("ftp_port", "Error 2")
+        validator = MagicMock()
+        validator.validate_extracted_fields.return_value = result
+        dialog._validator = validator
+        dialog._fields["active_checkbutton"].setChecked(True)
+
+        assert dialog.validate() is False
+
         from interface.qt.dialogs.edit_folders_dialog import QMessageBox
 
         QMessageBox.critical.assert_called_once_with(
-            dialog, "Validation Error", "Error 1\nError 2"
+            dialog, "Validation Error", "FTP:\n- Error 1\n- Error 2"
         )
 
 
@@ -553,7 +610,7 @@ class TestMaintenanceDialog:
             if "active" in b.text().lower() and "inactive" not in b.text().lower()
         ][0]
         active_btn.click()
-        mock_maintenance_functions.set_all_active.assert_called_once()
+        assert mock_maintenance_functions.was_called("set_all_active")
 
     def test_buttons_disabled_during_operation(self, qtbot, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
@@ -573,7 +630,7 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
         dialog._set_all_inactive()
-        mock_maintenance_functions.set_all_inactive.assert_called_once()
+        assert mock_maintenance_functions.was_called("set_all_inactive")
 
     def test_clear_resend_flags(self, qtbot, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
@@ -581,15 +638,16 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
         dialog._clear_resend_flags()
-        mock_maintenance_functions.clear_resend_flags.assert_called_once()
+        assert mock_maintenance_functions.was_called("clear_resend_flags")
 
     def test_clear_queued_emails(self, qtbot, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
+        mock_maintenance_functions._database_obj.emails_table.insert({"id": 1, "to": "a@b.com"})
         dialog._clear_queued_emails()
-        mock_maintenance_functions._database_obj.emails_table.delete.assert_called_once()
+        assert mock_maintenance_functions._database_obj.emails_table.count() == 0
 
     def test_import_old_configurations_returns_early_without_ui(
         self, qtbot, mock_maintenance_functions
@@ -599,7 +657,7 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions, ui_service=None)
         qtbot.addWidget(dialog)
         dialog._import_old_configurations()
-        mock_maintenance_functions.database_import_wrapper.assert_not_called()
+        assert not mock_maintenance_functions.was_called("database_import_wrapper")
 
     def test_open_dialog_shows_warning_first(self, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
@@ -635,8 +693,11 @@ class TestProcessedFilesDialog:
         result = dialog._get_folder_tuples()
         assert result == []
 
-    def test_get_folder_tuples_returns_sorted(self, qtbot, mock_database_obj):
+    def test_get_folder_tuples_returns_sorted(self, qtbot):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+
+        mock_database_obj = MagicMock()
+        mock_database_obj.get_oversight_or_default.return_value = {}
 
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 2},
@@ -659,8 +720,11 @@ class TestProcessedFilesDialog:
         result = dialog._get_folder_tuples()
         assert result == [(1, "Alpha"), (2, "Zebra")]
 
-    def test_get_folder_tuples_skips_missing_folders(self, qtbot, mock_database_obj):
+    def test_get_folder_tuples_skips_missing_folders(self, qtbot):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+
+        mock_database_obj = MagicMock()
+        mock_database_obj.get_oversight_or_default.return_value = {}
 
         mock_database_obj.processed_files.distinct.return_value = [
             {"folder_id": 1},
@@ -668,6 +732,7 @@ class TestProcessedFilesDialog:
         ]
         mock_database_obj.folders_table.find_one.side_effect = [
             {"alias": "Existing"},
+            None,
             None,
         ]
         dialog = ProcessedFilesDialog(None, mock_database_obj)
@@ -678,6 +743,7 @@ class TestProcessedFilesDialog:
         ]
         mock_database_obj.folders_table.find_one.side_effect = [
             {"alias": "Existing"},
+            None,
             None,
         ]
         result = dialog._get_folder_tuples()

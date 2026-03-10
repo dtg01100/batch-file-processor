@@ -40,8 +40,7 @@ class TestDatabaseInterface:
 
     def test_runtime_checkable(self):
         """Verify DatabaseInterface is runtime_checkable."""
-        assert hasattr(DatabaseInterface, '__protocol_attrs__') or True
-        # Protocol classes with @runtime_checkable can be used with isinstance
+        assert getattr(DatabaseInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -215,8 +214,7 @@ class TestFileSystemInterface:
 
     def test_runtime_checkable(self):
         """Verify FileSystemInterface is runtime_checkable."""
-        # Protocol classes with @runtime_checkable can be used with isinstance
-        assert True
+        assert getattr(FileSystemInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -566,7 +564,7 @@ class TestBackendInterface:
 
     def test_runtime_checkable(self):
         """Verify BackendInterface is runtime_checkable."""
-        assert True
+        assert getattr(BackendInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -686,7 +684,7 @@ class TestValidatorInterface:
 
     def test_runtime_checkable(self):
         """Verify ValidatorInterface is runtime_checkable."""
-        assert True
+        assert getattr(ValidatorInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -784,7 +782,7 @@ class TestErrorHandlerInterface:
 
     def test_runtime_checkable(self):
         """Verify ErrorHandlerInterface is runtime_checkable."""
-        assert True
+        assert getattr(ErrorHandlerInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -1007,7 +1005,7 @@ class TestLogInterface:
 
     def test_runtime_checkable(self):
         """Verify LogInterface is runtime_checkable."""
-        assert True
+        assert getattr(LogInterface, "_is_runtime_protocol", False) is True
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""

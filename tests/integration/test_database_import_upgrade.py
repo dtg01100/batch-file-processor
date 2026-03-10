@@ -163,15 +163,15 @@ class TestMigrationPathValidation:
 
         db.close()
 
-    def test_migration_from_version_5_to_41(self, tmp_path):
-        """Test migration from version 5 (earliest supported) to 41."""
+    def test_migration_from_version_5_to_current(self, tmp_path):
+        """Test migration from version 5 (earliest supported) to current version."""
         db_path = str(tmp_path / "old_v5.db")
         self._create_old_database(db_path, 5)
 
         # Run migration
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         # Verify version updated
@@ -196,14 +196,14 @@ class TestMigrationPathValidation:
 
         db.close()
 
-    def test_migration_from_version_15_to_41(self, tmp_path):
-        """Test migration from version 15 to 41."""
+    def test_migration_from_version_15_to_current(self, tmp_path):
+        """Test migration from version 15 to current version."""
         db_path = str(tmp_path / "old_v15.db")
         self._create_old_database(db_path, 15)
 
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         version_rec = db["version"].find_one(id=1)
@@ -219,14 +219,14 @@ class TestMigrationPathValidation:
 
         db.close()
 
-    def test_migration_from_version_30_to_41(self, tmp_path):
-        """Test migration from version 30 to 41."""
+    def test_migration_from_version_30_to_current(self, tmp_path):
+        """Test migration from version 30 to current version."""
         db_path = str(tmp_path / "old_v30.db")
         self._create_old_database(db_path, 30)
 
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         version_rec = db["version"].find_one(id=1)
@@ -234,14 +234,14 @@ class TestMigrationPathValidation:
 
         db.close()
 
-    def test_migration_from_version_39_to_41(self, tmp_path):
-        """Test migration from version 39 to 41 (includes ID column addition)."""
+    def test_migration_from_version_39_to_current(self, tmp_path):
+        """Test migration from version 39 to current version (includes ID column addition)."""
         db_path = str(tmp_path / "old_v39.db")
         self._create_old_database(db_path, 39)
 
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         version_rec = db["version"].find_one(id=1)
@@ -443,7 +443,7 @@ class TestEdgeCasesAndErrorHandling:
             db["administrative"].insert(dict(id=1, logs_directory="/logs"))
 
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         # Verify migration completed
@@ -784,7 +784,7 @@ class TestDatabaseImport:
         # Import and upgrade
         db = sqlite_wrapper.Database.connect(old_db_path)
         folders_database_migrator.upgrade_database(
-            db, str(tmp_path), "test", target_version="41"
+            db, str(tmp_path), "test"
         )
 
         # Verify upgraded
@@ -818,7 +818,7 @@ class TestMigrationIdempotency:
         for _ in range(2):
             db = sqlite_wrapper.Database.connect(db_path)
             folders_database_migrator.upgrade_database(
-                db, str(tmp_path), "test", target_version="41"
+                db, str(tmp_path), "test"
             )
             db.close()
 

@@ -118,8 +118,16 @@ class TestEditSettingsDialogOpening:
         """Test that dialog has appropriate minimum size."""
         dialog = _make_dialog(qtbot)
 
-        assert dialog.minimumWidth() == 550
-        assert dialog.minimumHeight() == 500
+        assert dialog.minimumWidth() == 700
+        assert dialog.minimumHeight() == 700
+
+    def test_key_input_fields_have_minimum_width(self, qtbot):
+        """Test representative key input fields enforce minimum width."""
+        dialog = _make_dialog(qtbot)
+
+        assert dialog._as400_address.minimumWidth() >= 260
+        assert dialog._email_address.minimumWidth() >= 260
+        assert dialog._email_destination.minimumWidth() >= 260
 
     def test_dialog_is_modal(self, qtbot):
         """Test that dialog is modal."""
@@ -342,12 +350,11 @@ class TestEditSettingsDialogValidation:
         dialog = _make_dialog(qtbot)
         dialog._enable_email_cb.setChecked(True)
         dialog._email_address.setText("not-a-valid-email")
-        dialog._smtp_service.test_connection.return_value = (True, None)
 
         assert dialog.validate() is False
 
-    def test_validation_fails_with_smtp_connection_error(self, qtbot, monkeypatch):
-        """Test that validation fails when SMTP connection test fails."""
+    def test_validation_does_not_require_smtp_connection(self, qtbot, monkeypatch):
+        """Test that save validation does not require SMTP connection test."""
         monkeypatch.setattr(
             "interface.qt.dialogs.edit_settings_dialog.QMessageBox.critical",
             MagicMock(),
@@ -357,12 +364,8 @@ class TestEditSettingsDialogValidation:
         dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("smtp.example.com")
         dialog._email_smtp_port.setText("587")
-        dialog._smtp_service.test_connection.return_value = (
-            False,
-            "Connection refused",
-        )
 
-        assert dialog.validate() is False
+        assert dialog.validate() is True
 
     def test_validation_fails_with_missing_smtp_server(self, qtbot, monkeypatch):
         """Test that validation fails when SMTP server is missing."""
@@ -374,7 +377,6 @@ class TestEditSettingsDialogValidation:
         dialog._enable_email_cb.setChecked(True)
         dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("")
-        dialog._smtp_service.test_connection.return_value = (True, None)
 
         assert dialog.validate() is False
 
@@ -389,7 +391,6 @@ class TestEditSettingsDialogValidation:
         dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("smtp.example.com")
         dialog._email_smtp_port.setText("")
-        dialog._smtp_service.test_connection.return_value = (True, None)
 
         assert dialog.validate() is False
 
@@ -518,10 +519,10 @@ class TestEditSettingsDialogSaveFunctionality:
         dialog.apply()
 
         updated_oversight = update_oversight.call_args[0][0]
-        assert updated_oversight["enable_reporting"] == "True"
+        assert updated_oversight["enable_reporting"] is True
         assert updated_oversight["report_email_destination"] == "recipient@example.com"
         assert updated_oversight["report_edi_errors"] is True
-        assert updated_oversight["report_printing_fallback"] == "True"
+        assert updated_oversight["report_printing_fallback"] is True
 
     def test_apply_disables_email_backends_when_email_off(self, qtbot):
         """Test that apply() calls disable_email_backends when email is disabled."""
@@ -560,6 +561,7 @@ class TestEditSettingsDialogSaveFunctionality:
         from PyQt6.QtCore import Qt
 
         dialog = _make_dialog(qtbot)
+        assert dialog._button_box is not None
 
         with patch.object(dialog, "validate", return_value=True) as mock_validate:
             with patch.object(dialog, "apply") as mock_apply:
@@ -576,6 +578,7 @@ class TestEditSettingsDialogSaveFunctionality:
         from PyQt6.QtCore import Qt
 
         dialog = _make_dialog(qtbot)
+        assert dialog._button_box is not None
 
         with patch.object(dialog, "validate", return_value=False) as mock_validate:
             with patch.object(dialog, "apply") as mock_apply:

@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Integration test: Verify OK button flow works end-to-end."""
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level integration script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch

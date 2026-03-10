@@ -774,7 +774,7 @@ class TestErrorHandling:
         mock_file.return_value.__exit__ = MagicMock(return_value=False)
 
         # Mock SMTP to raise an exception on connection
-        mock_smtp.side_effect = Exception("Connection refused")
+        mock_smtp.side_effect = ConnectionRefusedError("Connection refused")
 
         # Create mock table
         mock_table = MagicMock()
@@ -786,7 +786,7 @@ class TestErrorHandling:
         mock_table.all.return_value = [mock_log_entry]
 
         # The function should raise the exception
-        with pytest.raises(Exception, match="Connection refused"):
+        with pytest.raises(ConnectionRefusedError, match="Connection refused"):
             batch_log_sender.do(
                 settings=mock_settings,
                 reporting=mock_reporting,

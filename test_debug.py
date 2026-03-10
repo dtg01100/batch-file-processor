@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Debug script to find where the hang occurs."""
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level debug script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import sys
 
 print("Starting debug script", flush=True)

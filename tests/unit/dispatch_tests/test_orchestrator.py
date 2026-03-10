@@ -245,7 +245,8 @@ class TestDispatchOrchestrator:
         result = orchestrator.process_folder(folder, run_log)
 
         # Check that files were processed
-        assert result.files_processed >= 0
+        assert result.files_processed == 2
+        assert result.files_failed == 0
 
     def test_process_file_success(self):
         """Test successful file processing."""

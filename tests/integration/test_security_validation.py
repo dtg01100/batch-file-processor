@@ -428,7 +428,8 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             assert output_file.exists()
             # Should be able to read
             content = output_file.read_text()
-            assert len(content) >= 0  # May be empty but should be readable
+            assert isinstance(content, str)
+            assert "\x00" not in content
 
 
 class TestErrorHandling:

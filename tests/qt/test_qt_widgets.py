@@ -27,35 +27,16 @@ class TestSearchWidget:
         qtbot.addWidget(widget)
         assert widget.entry.text() == "test"
 
-    def test_button_click_emits_signal(self, qtbot):
-        from interface.qt.widgets.search_widget import SearchWidget
-
-        widget = SearchWidget()
-        qtbot.addWidget(widget)
-        widget.entry.setText("hello")
-        with qtbot.waitSignal(widget.filter_changed, timeout=1000) as blocker:
-            widget.button.click()
-        assert blocker.args == ["hello"]
-
-    def test_return_key_emits_signal(self, qtbot):
-        from interface.qt.widgets.search_widget import SearchWidget
-
-        widget = SearchWidget()
-        qtbot.addWidget(widget)
-        widget.entry.setText("world")
-        with qtbot.waitSignal(widget.filter_changed, timeout=1000):
-            qtbot.keyPress(widget.entry, Qt.Key.Key_Return)
-
     def test_same_value_does_not_emit(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
 
         widget = SearchWidget()
         qtbot.addWidget(widget)
+        # setText triggers textChanged, so filter_value is now "same"
         widget.entry.setText("same")
-        with qtbot.waitSignal(widget.filter_changed, timeout=1000):
-            widget.button.click()
+        # Setting the same value again should not emit
         with qtbot.assertNotEmitted(widget.filter_changed):
-            widget.button.click()
+            widget.entry.setText("same")
 
     def test_clear_emits_empty_string(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
@@ -63,7 +44,6 @@ class TestSearchWidget:
         widget = SearchWidget()
         qtbot.addWidget(widget)
         widget.entry.setText("test")
-        widget.button.click()
         with qtbot.waitSignal(widget.filter_changed, timeout=1000) as blocker:
             widget.clear()
         assert blocker.args == [""]
@@ -83,7 +63,6 @@ class TestSearchWidget:
         qtbot.addWidget(widget)
         widget.set_enabled(False)
         assert not widget.entry.isEnabled()
-        assert not widget.button.isEnabled()
 
     def test_set_enabled_true(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
@@ -93,7 +72,6 @@ class TestSearchWidget:
         widget.set_enabled(False)
         widget.set_enabled(True)
         assert widget.entry.isEnabled()
-        assert widget.button.isEnabled()
 
     def test_callback_connected(self, qtbot):
         from interface.qt.widgets.search_widget import SearchWidget
@@ -101,8 +79,8 @@ class TestSearchWidget:
         received = []
         widget = SearchWidget(on_filter_change=lambda t: received.append(t))
         qtbot.addWidget(widget)
+        # setText triggers callback via textChanged
         widget.entry.setText("callback test")
-        widget.button.click()
         assert received == ["callback test"]
 
     def test_escape_clears_active_filter(self, qtbot):
@@ -112,11 +90,19 @@ class TestSearchWidget:
         qtbot.addWidget(widget)
         widget.show()
         widget.entry.setText("filter")
-        widget.button.click()
         with qtbot.waitSignal(widget.filter_changed, timeout=1000) as blocker:
             widget._escape_shortcut.activated.emit()
         assert blocker.args == [""]
         assert widget.entry.text() == ""
+
+    def test_text_changed_emits_signal(self, qtbot):
+        from interface.qt.widgets.search_widget import SearchWidget
+
+        widget = SearchWidget()
+        qtbot.addWidget(widget)
+        with qtbot.waitSignal(widget.filter_changed, timeout=1000) as blocker:
+            widget.entry.setText("type")
+        assert blocker.args == ["type"]
 
 
 @pytest.mark.qt
@@ -327,20 +313,21 @@ class TestFolderListWidget:
         qtbot.addWidget(widget)
         count_cb.assert_called_once_with(2, 2)
 
-    def test_calculate_max_alias_length(self):
+    def test_calculate_edit_button_min_width(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        assert FolderListWidget._calculate_max_alias_length([]) == 0
-        assert FolderListWidget._calculate_max_alias_length([{"alias": "abc"}]) == 3
-        assert (
-            FolderListWidget._calculate_max_alias_length(
-                [{"alias": "a"}, {"alias": "abcde"}]
-            )
-            == 5
+        table = self._make_table(active=[{"id": 1, "alias": "abc", "folder_is_active": "True"}])
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=table,
+            on_send=MagicMock(),
+            on_edit=MagicMock(),
+            on_toggle=MagicMock(),
+            on_delete=MagicMock(),
         )
+        qtbot.addWidget(widget)
 
-    def test_char_width_to_pixels(self):
-        from interface.qt.widgets.folder_list_widget import FolderListWidget
-
-        assert FolderListWidget._char_width_to_pixels(10) == 80
-        assert FolderListWidget._char_width_to_pixels(10, 10) == 100
+        short_width = widget._calculate_edit_button_min_width([{"alias": "a"}])
+        long_width = widget._calculate_edit_button_min_width([{"alias": "very-long-alias"}])
+        assert short_width > 0
+        assert long_width > short_width

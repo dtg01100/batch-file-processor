@@ -18,7 +18,6 @@ from interface.operations.folder_data_extractor import (
     ExtractedDialogFields,
 )
 
-
 # =============================================================================
 # Widget Factory Helpers - Reduce mock boilerplate
 # =============================================================================
@@ -64,7 +63,7 @@ class TestExtractedDialogFields:
         # Identity defaults
         assert fields.folder_name == ""
         assert fields.alias == ""
-        assert fields.folder_is_active == "False"
+        assert fields.folder_is_active is False
 
         # Backend toggles defaults
         assert fields.process_backend_copy is False
@@ -83,7 +82,7 @@ class TestExtractedDialogFields:
         assert fields.email_subject_line == ""
 
         # EDI defaults
-        assert fields.process_edi == "False"
+        assert fields.process_edi is False
         assert fields.convert_to_format == ""
         assert fields.tweak_edi is False
         assert fields.split_edi is False
@@ -95,12 +94,12 @@ class TestExtractedDialogFields:
         assert fields.split_edi_filter_mode == "include"
 
         # A-record defaults
-        assert fields.pad_a_records == "False"
+        assert fields.pad_a_records is False
         assert fields.a_record_padding == ""
         assert fields.a_record_padding_length == 6
-        assert fields.append_a_records == "False"
+        assert fields.append_a_records is False
         assert fields.a_record_append_text == ""
-        assert fields.force_txt_file_ext == "False"
+        assert fields.force_txt_file_ext is False
 
         # Invoice date defaults
         assert fields.invoice_date_offset == 0
@@ -226,7 +225,7 @@ class TestFolderDataExtractor:
 
         assert result.folder_name == "/path/to/folder"
         assert result.alias == "alias_field"
-        assert result.folder_is_active == "True"
+        assert result.folder_is_active is True
 
     def test_extract_backend_toggles(self, extractor, mock_fields):
         """Test extracting backend toggle values."""
@@ -257,7 +256,7 @@ class TestFolderDataExtractor:
         """Test extracting EDI fields."""
         result = extractor.extract_all()
 
-        assert result.process_edi == "False"
+        assert result.process_edi is False
         assert result.convert_to_format == "csv"
         assert result.tweak_edi is True
         assert result.split_edi is False
@@ -269,12 +268,12 @@ class TestFolderDataExtractor:
         """Test extracting A-record fields."""
         result = extractor.extract_all()
 
-        assert result.pad_a_records == "False"
+        assert result.pad_a_records is False
         assert result.a_record_padding == ""
         assert result.a_record_padding_length == 6
-        assert result.append_a_records == "False"
+        assert result.append_a_records is False
         assert result.a_record_append_text == ""
-        assert result.force_txt_file_ext == "False"
+        assert result.force_txt_file_ext is False
 
     def test_extract_invoice_date_fields(self, extractor, mock_fields):
         """Test extracting invoice date fields."""
@@ -373,6 +372,16 @@ class TestFolderDataExtractor:
         """Test _get_bool returns False for falsy value."""
         mock_widget = MagicMock()
         mock_widget.get.return_value = False
+
+        extractor.fields["test_field"] = mock_widget
+        result = extractor._get_bool("test_field")
+
+        assert result is False
+
+    def test_get_bool_with_string_false_value(self, extractor):
+        """Test _get_bool returns False for string 'False'."""
+        mock_widget = MagicMock()
+        mock_widget.get.return_value = "False"
 
         extractor.fields["test_field"] = mock_widget
         result = extractor._get_bool("test_field")

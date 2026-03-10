@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Test script to verify the QPropertyAnimation works with custom property"""
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level UI debug script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import QPropertyAnimation, QEasingCurve, pyqtProperty

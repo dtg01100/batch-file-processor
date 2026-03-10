@@ -32,7 +32,8 @@ from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.database.database_obj import DatabaseObj
-from schema import ensure_schema
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+import create_database
 
 pytestmark = pytest.mark.qt
 
@@ -59,16 +60,33 @@ def temp_database():
     """Create a temporary database for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "test.db"
-        db = DatabaseObj(database_path=str(db_path))
-        ensure_schema(db)
+        logs_dir = Path(tmpdir) / "logs"
+        errors_dir = Path(tmpdir) / "errors"
+        logs_dir.mkdir()
+        errors_dir.mkdir()
 
-        # Add some test data
-        db.oversight_and_defaults.insert(
+        create_database.do(
+            CURRENT_DATABASE_VERSION,
+            str(db_path),
+            str(tmpdir),
+            "Linux",
+        )
+        db = DatabaseObj(
+            database_path=str(db_path),
+            database_version=CURRENT_DATABASE_VERSION,
+            config_folder=str(tmpdir),
+            running_platform="Linux",
+        )
+
+        oversight_table = db.oversight_and_defaults
+        assert oversight_table is not None
+        oversight_table.update(
             {
-                "logs_directory": str(Path(tmpdir) / "logs"),
-                "errors_folder": str(Path(tmpdir) / "errors"),
-                "backup_interval": 7,
-            }
+                "id": 1,
+                "logs_directory": str(logs_dir),
+                "errors_folder": str(errors_dir),
+            },
+            ["id"],
         )
 
         yield db
@@ -376,7 +394,6 @@ class TestSearchWidgetComprehensive:
         qtbot.addWidget(widget)
 
         assert widget.entry is not None
-        assert widget.button is not None
         assert widget.value == ""
 
     def test_search_widget_with_initial_value(self, qtbot):
@@ -397,9 +414,8 @@ class TestSearchWidgetComprehensive:
         widget = SearchWidget(on_filter_change=on_filter_change)
         qtbot.addWidget(widget)
 
-        # Type text and click button
+        # Type text (triggers callback automatically)
         widget.entry.setText("test search")
-        qtbot.mouseClick(widget.button, Qt.MouseButton.LeftButton)
 
         # Callback should have been invoked
         assert len(filter_values) > 0
@@ -432,17 +448,14 @@ class TestSearchWidgetComprehensive:
         qtbot.addWidget(widget)
 
         assert widget.entry.isEnabled()
-        assert widget.button.isEnabled()
 
         widget.set_enabled(False)
 
         assert not widget.entry.isEnabled()
-        assert not widget.button.isEnabled()
 
         widget.set_enabled(True)
 
         assert widget.entry.isEnabled()
-        assert widget.button.isEnabled()
 
     def test_search_widget_escape_key(self, qtbot):
         """Test that Escape key clears search when active."""
@@ -455,17 +468,13 @@ class TestSearchWidgetComprehensive:
         qtbot.addWidget(widget)
         widget.show()  # Widget must be visible for shortcuts
 
-        # Press Escape key on the entry field
-        widget.entry.setFocus()
-        qtbot.keyClick(widget.entry, Qt.Key.Key_Escape)
+        widget._escape_shortcut.activated.emit()
 
-        # Should have cleared the filter (if escape shortcut is configured)
-        # Note: Escape behavior depends on SearchWidget implementation
-        # Just verify no crash occurs
-        assert True  # If we get here, escape key was handled without crash
+        assert widget.value == ""
+        assert filter_values[-1] == ""
 
     def test_search_widget_enter_key(self, qtbot):
-        """Test that Enter key triggers filter."""
+        """Test that Enter key does not trigger additional filtering."""
         filter_values = []
 
         def on_filter_change(value):
@@ -474,11 +483,13 @@ class TestSearchWidgetComprehensive:
         widget = SearchWidget(on_filter_change=on_filter_change)
         qtbot.addWidget(widget)
 
+        # setText triggers filtering
         widget.entry.setText("test")
-        qtbot.keyClick(widget.entry, Qt.Key.Key_Return)
+        assert filter_values == ["test"]
 
-        # Filter should have been applied
-        assert len(filter_values) > 0
+        # Enter key should not trigger additional filtering
+        with qtbot.assertNotEmitted(widget.filter_changed):
+            qtbot.keyPress(widget.entry, Qt.Key.Key_Return)
 
     def test_search_widget_placeholder_text(self, qtbot):
         """Test that search widget has placeholder text."""
@@ -537,8 +548,7 @@ class TestQtProgressServiceComprehensive:
         qtbot.addWidget(service.progress_dialog)
 
         service.set_total(100)
-        # Should not crash
-        assert True
+        assert service._total == 100
 
     def test_progress_service_set_current(self, qtbot):
         """Test setting current progress value."""
@@ -552,8 +562,8 @@ class TestQtProgressServiceComprehensive:
 
         service.set_total(100)
         service.set_current(50)
-        # Should not crash
-        assert True
+        assert service._progress_bar.value() == 50
+        assert service._progress_bar.isVisible()
 
     def test_progress_service_set_message(self, qtbot):
         """Test setting progress message."""
@@ -566,8 +576,7 @@ class TestQtProgressServiceComprehensive:
         qtbot.addWidget(service.progress_dialog)
 
         service.set_message("Processing files...")
-        # Should not crash
-        assert True
+        assert service._title_label.text() == "Processing files..."
 
     def test_progress_service_indeterminate_mode(self, qtbot):
         """Test indeterminate progress mode."""
@@ -580,8 +589,8 @@ class TestQtProgressServiceComprehensive:
         qtbot.addWidget(service.progress_dialog)
 
         service.set_indeterminate()
-        # Should not crash
-        assert True
+        assert not service._progress_bar.isVisible()
+        assert service._throbber.isVisible()
 
     def test_progress_service_multiple_updates(self, qtbot):
         """Test multiple progress updates in sequence."""
@@ -602,7 +611,9 @@ class TestQtProgressServiceComprehensive:
             QApplication.processEvents()
 
         service.hide_progress()
-        assert True
+        assert service._progress_bar.value() == 100
+        assert service._title_label.text() == "Processing 100%"
+        assert not service.progress_dialog.isVisible()
 
 
 # =============================================================================
@@ -794,7 +805,7 @@ class TestMainAppComprehensive:
             app.folder_manager.add_folder(test_path)
 
             # Refresh should not crash
-            app._refresh_folders()
+            app._refresh_users_list()
 
             app.shutdown()
 
@@ -814,7 +825,6 @@ class TestDialogStateValidation:
         folder_config = {
             "logs_directory": "/test/logs",
             "errors_folder": "/test/errors",
-            "backup_interval": 7,
         }
 
         mock_smtp = MagicMock()
@@ -869,14 +879,14 @@ class TestDialogStateValidation:
         temp_database.processed_files.insert(
             {
                 "folder_id": 1,
-                "filename": "test1.edi",
+                "file_name": "test1.edi",
                 "md5": "test_hash_1",
             }
         )
         temp_database.processed_files.insert(
             {
                 "folder_id": 1,
-                "filename": "test2.edi",
+                "file_name": "test2.edi",
                 "md5": "test_hash_2",
             }
         )
@@ -902,7 +912,7 @@ class TestDialogStateValidation:
         temp_database.processed_files.insert(
             {
                 "folder_id": 1,
-                "filename": "test.edi",
+                "file_name": "test.edi",
                 "md5": "test_hash",
                 "resend_flag": 0,
             }
@@ -925,7 +935,9 @@ class TestKeyboardAndAccessibility:
 
     def test_search_widget_keyboard_navigation(self, qtbot):
         """Test keyboard navigation in search widget."""
-        widget = SearchWidget()
+        filter_values = []
+
+        widget = SearchWidget(on_filter_change=filter_values.append)
         qtbot.addWidget(widget)
 
         # Focus on entry
@@ -938,16 +950,16 @@ class TestKeyboardAndAccessibility:
         # Press Enter
         qtbot.keyClick(widget.entry, Qt.Key.Key_Return)
 
-        # Should have triggered filter
-        assert True
+        assert filter_values[-1] == "test"
 
     def test_search_widget_escape_clears(self, qtbot):
         """Test Escape key clears search."""
         widget = SearchWidget(initial_value="test")
         qtbot.addWidget(widget)
+        widget.show()
 
         widget.entry.setFocus()
-        qtbot.keyClick(widget.entry, Qt.Key.Key_Escape)
+        qtbot.keyClick(widget, Qt.Key.Key_Escape)
 
         assert widget.value == ""
 
@@ -964,8 +976,7 @@ class TestKeyboardAndAccessibility:
         qtbot.keyClick(first_widget or dialog, Qt.Key.Key_Tab)
         second_widget = dialog.focusWidget()
 
-        # Focus should have changed (unless there's only one widget)
-        assert True  # Navigation works if no crash
+        assert second_widget is not None
 
     def test_dialog_escape_closes(self, qtbot):
         """Test Escape key closes dialogs."""
@@ -978,9 +989,8 @@ class TestKeyboardAndAccessibility:
         dialog.show()
         qtbot.keyClick(dialog, Qt.Key.Key_Escape)
 
-        # Dialog should be closed (or closing)
-        # Just verify no crash
-        assert True
+        qtbot.waitUntil(lambda: not dialog.isVisible(), timeout=1000)
+        assert not dialog.isVisible()
 
 
 # =============================================================================
@@ -993,10 +1003,16 @@ class TestUIThreadSafetyAndState:
 
     def test_progress_updates_from_background_thread(self, qtbot):
         """Test progress updates are thread-safe."""
-        service = QtProgressService()
+        from PyQt6.QtWidgets import QWidget
+
+        parent = QWidget()
+        qtbot.addWidget(parent)
+
+        service = QtProgressService(parent)
         qtbot.addWidget(service.progress_dialog)
 
         service.show_progress()
+        service.set_total(10)
 
         # Simulate background thread updates
         for i in range(10):
@@ -1004,7 +1020,8 @@ class TestUIThreadSafetyAndState:
             QApplication.processEvents()
 
         service.hide_progress()
-        assert True
+        assert service._progress_bar.value() == 90
+        assert not service.progress_dialog.isVisible()
 
     def test_folder_list_refresh_maintains_state(self, qtbot, mock_folder_table):
         """Test folder list refresh maintains scroll position."""
@@ -1050,12 +1067,12 @@ class TestUIErrorHandlingEdgeCases:
     def test_folder_list_with_database_error(self, qtbot):
         """Test folder list handles database errors gracefully."""
         mock_table = MagicMock()
-        mock_table.find.side_effect = Exception("Database error")
+        mock_table.find.side_effect = RuntimeError("Database error")
         mock_table.count.return_value = 0
 
-        # Should not crash
-        try:
-            widget = FolderListWidget(
+        # Current behavior: database exceptions propagate during widget build.
+        with pytest.raises(RuntimeError, match="Database error"):
+            FolderListWidget(
                 None,
                 mock_table,
                 on_send=lambda x: None,
@@ -1063,11 +1080,6 @@ class TestUIErrorHandlingEdgeCases:
                 on_toggle=lambda x: None,
                 on_delete=lambda x, y: None,
             )
-            qtbot.addWidget(widget)
-            assert True
-        except Exception:
-            # If it raises, that's also acceptable error handling
-            assert True
 
     def test_search_with_special_characters(self, qtbot):
         """Test search handles special characters."""
@@ -1082,7 +1094,12 @@ class TestUIErrorHandlingEdgeCases:
 
     def test_progress_with_invalid_values(self, qtbot):
         """Test progress service handles invalid values."""
-        service = QtProgressService()
+        from PyQt6.QtWidgets import QWidget
+
+        parent = QWidget()
+        qtbot.addWidget(parent)
+
+        service = QtProgressService(parent)
         qtbot.addWidget(service.progress_dialog)
 
         # Set invalid values
@@ -1090,8 +1107,9 @@ class TestUIErrorHandlingEdgeCases:
         service.set_current(1000)
         service.set_current(-50)
 
-        # Should not crash
-        assert True
+        assert service._total == -1
+        assert service._progress_bar.value() == 0
+        assert not service._progress_bar.isVisible()
 
     def test_ui_service_with_none_parent(self, qtbot):
         """Test UI service works with None parent."""

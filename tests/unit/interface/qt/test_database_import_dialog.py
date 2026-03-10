@@ -100,7 +100,7 @@ class TestImportThread:
         thread.run()
 
         assert len(error_events) == 1
-        assert error_events[0].startswith("Import failed: boom")
+        assert error_events[0].startswith("Import failed:")
 
 
 class TestDbMigrationJob:

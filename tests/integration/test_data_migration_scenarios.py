@@ -399,21 +399,49 @@ class TestMigrationRollback:
         config_folder = str(tmp_path / "config")
         Path(config_folder).mkdir()
 
-        try:
-            upgrade_database(db_for_migration, config_folder, "Linux")
+        backup_path = tmp_path / "backup"
 
-            # Check backup exists
-            backup_path = tmp_path / "backup"
+        try:
+            try:
+                upgrade_database(db_for_migration, config_folder, "Linux")
+            except Exception as e:
+                message = str(e).lower()
+                if isinstance(e, NotImplementedError) or any(
+                    marker in message
+                    for marker in (
+                        "unsupported",
+                        "not supported",
+                        "platform",
+                        "environment",
+                    )
+                ):
+                    pytest.skip(f"Migration not supported in this environment: {e}")
+                pytest.fail(f"Migration failed unexpectedly: {e}")
+
+            version_row = db_for_migration["version"].find_one(id=1)
+            assert version_row is not None, "Version row should exist after migration"
+
+            # Check backup outcome
             if backup_path.exists():
                 backup_files = list(backup_path.glob("*.db"))
-                # Backup may or may not be created depending on implementation
-                assert True  # Just verify migration completed
+                assert backup_files, (
+                    f"Backup directory exists but no .db backup file was found: {backup_path}"
+                )
             else:
-                # No backup folder is also acceptable
-                assert True
-
-        except Exception as e:
-            pytest.skip(f"Migration failed: {e}")
+                folders = list(db_for_migration["folders"].find({}))
+                processed_files = list(db_for_migration["processed_files"].find({}))
+                assert int(version_row["version"]) >= 3, (
+                    "No backup directory was created and database version is invalid "
+                    "after migration attempt"
+                )
+                assert folders, (
+                    "No backup directory was created and folders data is missing "
+                    "after migration attempt"
+                )
+                assert processed_files, (
+                    "No backup directory was created and processed_files data is missing "
+                    "after migration attempt"
+                )
         finally:
             db_for_migration.close()
 

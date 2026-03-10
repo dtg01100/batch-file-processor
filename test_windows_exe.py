@@ -4,6 +4,14 @@ Test script to verify the Windows executable has all required dependencies.
 This is an integration test for the Windows packaging.
 """
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level Windows packaging verification script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import os
 import sys
 

@@ -275,7 +275,7 @@ class TestFTPBackendOperations:
         """Test that missing file raises exception."""
         missing_file = str(temp_dir / "nonexistent.txt")
 
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError, match="nonexistent.txt"):
             ftp_backend.do(process_parameters, settings_dict, missing_file)
 
 
@@ -407,12 +407,12 @@ class TestEmailBackendOperations:
         # Use mock client that fails - need enough errors for all 10 retries
         mock_client = MockSMTPClient()
         for _ in range(15):  # 10 retries needed
-            mock_client.add_error(Exception("Connection failed"))
+            mock_client.add_error(RuntimeError("Connection failed"))
 
         # Mock sleep to be instant so test runs fast
         with patch("time.sleep"):
             # The file exists, but mock fails - should raise after retries
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Connection failed"):
                 email_backend.do(
                     process_parameters,
                     settings,
@@ -547,9 +547,9 @@ class TestBackendErrorScenarios:
         # - connect, login, cwd, storbinary for each TLS/non-TLS attempt
         # - 10 retries with 2 providers each = up to 20+ errors needed
         for _ in range(50):
-            mock_client.add_error(Exception("Connection failed"))
+            mock_client.add_error(ConnectionError("Connection failed"))
 
-        with pytest.raises(Exception):
+        with pytest.raises(ConnectionError, match="Connection failed"):
             ftp_backend.do(
                 {
                     "ftp_server": "invalid",
@@ -565,26 +565,34 @@ class TestBackendErrorScenarios:
 
     def test_email_auth_failure(self, sample_file):
         """Test email backend handles authentication failures."""
+        import smtplib
+
         from backend.smtp_client import MockSMTPClient
 
         mock_client = MockSMTPClient()
-        mock_client.should_fail_auth = True
+        with patch.object(
+            mock_client,
+            "login",
+            side_effect=smtplib.SMTPAuthenticationError(535, b"Auth failed"),
+        ) as mocked_login, patch("time.sleep"):
+            with pytest.raises(smtplib.SMTPAuthenticationError, match="Auth failed"):
+                email_backend.do(
+                    {"email_to": "test@example.com", "email_subject_line": "Test"},
+                    {
+                        "email_address": "sender@example.com",
+                        "email_smtp_server": "smtp.example.com",
+                        "smtp_port": 587,
+                        "email_username": "user",
+                        "email_password": "bad-password",
+                    },
+                    sample_file,
+                    smtp_client=mock_client,
+                )
 
-        # Email backend retries multiple times, so we just verify it doesn't crash
-        # The actual behavior depends on the mock implementation
-        try:
-            result = email_backend.do(
-                {"email_to": "test@example.com", "email_subject_line": "Test"},
-                {
-                    "email_address": "sender@example.com",
-                    "email_smtp_server": "smtp.example.com",
-                    "smtp_port": 587,
-                },
-                sample_file,
-                smtp_client=mock_client,
-            )
-        except Exception:
-            pass  # Expected to fail
+        assert mocked_login.call_count == 11
+        assert len(mock_client.connections) == 11
+        assert mock_client.ehlo_calls == 11
+        assert mock_client.starttls_calls == 11
 
 
 class TestBackendClasses:

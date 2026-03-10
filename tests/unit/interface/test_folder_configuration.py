@@ -240,7 +240,7 @@ class TestEDIConfiguration:
     def test_create_default_edi_config(self):
         """Test creating default EDI configuration."""
         config = EDIConfiguration()
-        assert config.process_edi == "False"
+        assert config.process_edi is False
         assert config.tweak_edi is False
         assert config.split_edi is False
         assert config.prepend_date_files is False
@@ -249,9 +249,9 @@ class TestEDIConfiguration:
     def test_create_edi_config_with_values(self):
         """Test creating EDI configuration with values."""
         config = EDIConfiguration(
-            process_edi="True", tweak_edi=True, split_edi=True, convert_to_format="csv"
+            process_edi=True, tweak_edi=True, split_edi=True, convert_to_format="csv"
         )
-        assert config.process_edi == "True"
+        assert config.process_edi is True
         assert config.tweak_edi is True
         assert config.split_edi is True
         assert config.convert_to_format == "csv"
@@ -500,7 +500,7 @@ class TestFolderConfiguration:
         """Test creating default folder configuration."""
         config = FolderConfiguration()
         assert config.folder_name == ""
-        assert config.folder_is_active == "False"
+        assert config.folder_is_active is False
         assert config.alias == ""
         assert config.is_template is False
 
@@ -508,12 +508,12 @@ class TestFolderConfiguration:
         """Test creating folder configuration with basic fields."""
         config = FolderConfiguration(
             folder_name="/home/user/test",
-            folder_is_active="True",
+            folder_is_active=True,
             alias="Test Folder",
             process_backend_copy=True,
         )
         assert config.folder_name == "/home/user/test"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "Test Folder"
         assert config.process_backend_copy is True
 
@@ -552,7 +552,7 @@ class TestFolderConfiguration:
         }
         config = FolderConfiguration.from_dict(data)
         assert config.folder_name == "/home/user/test"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "Test Folder"
 
     def test_from_dict_with_ftp(self):
@@ -600,7 +600,7 @@ class TestFolderConfiguration:
         }
         config = FolderConfiguration.from_dict(data)
         assert config.edi is not None
-        assert config.edi.process_edi == "True"
+        assert config.edi.process_edi is True
         assert config.edi.tweak_edi is True
 
     def test_from_dict_with_upc_override(self):
@@ -677,11 +677,11 @@ class TestFolderConfiguration:
     def test_to_dict_basic_fields(self):
         """Test to_dict() with basic fields."""
         config = FolderConfiguration(
-            folder_name="/test", folder_is_active="True", alias="Test"
+            folder_name="/test", folder_is_active=True, alias="Test"
         )
         data = config.to_dict()
         assert data["folder_name"] == "/test"
-        assert data["folder_is_active"] == "True"
+        assert data["folder_is_active"] is True
         assert data["alias"] == "Test"
 
     def test_to_dict_with_ftp(self):
@@ -719,11 +719,11 @@ class TestFolderConfiguration:
     def test_to_dict_with_edi(self):
         """Test to_dict() with EDI configuration."""
         edi_config = EDIConfiguration(
-            process_edi="True", tweak_edi=True, split_edi=True, convert_to_format="csv"
+            process_edi=True, tweak_edi=True, split_edi=True, convert_to_format="csv"
         )
         config = FolderConfiguration(folder_name="/test", edi=edi_config)
         data = config.to_dict()
-        assert data["process_edi"] == "True"
+        assert data["process_edi"] is True
         assert data["tweak_edi"] is True
         assert data["split_edi"] is True
 
@@ -747,7 +747,7 @@ class TestFolderConfiguration:
             folder_name="/test", a_record_padding=a_record_config
         )
         data = config.to_dict()
-        assert data["pad_a_records"] == "True"
+        assert data["pad_a_records"] is True
         assert data["a_record_padding"] == "ABCDEF"
         assert data["a_record_padding_length"] == 6
 
@@ -783,8 +783,8 @@ class TestFolderConfiguration:
         )
         config = FolderConfiguration(folder_name="/test", csv=csv_config)
         data = config.to_dict()
-        assert data["include_headers"] == "True"
-        assert data["filter_ampersand"] == "True"
+        assert data["include_headers"] is True
+        assert data["filter_ampersand"] is True
         assert data["simple_csv_sort_order"] == "item_number"
 
     def test_roundtrip_preserves_all_data(self):

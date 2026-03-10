@@ -232,7 +232,7 @@ class TestMockBackend:
         """Test failed send."""
         backend = MockBackend(should_succeed=False)
 
-        with pytest.raises(Exception, match="Mock backend failure"):
+        with pytest.raises(RuntimeError, match="Mock backend failure"):
             backend.send({}, {}, "/test/file.edi")
 
     def test_validate_success(self):

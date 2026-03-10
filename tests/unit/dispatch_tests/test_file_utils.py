@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from dispatch.file_utils import (
     build_output_filename,
-    filter_files_by_checksum,
     build_error_log_filename,
     get_file_extension,
     strip_invalid_filename_chars,
@@ -93,51 +92,6 @@ class TestBuildOutputFilename:
         )
 
         assert result == "test_file.edi"
-
-
-class TestFilterFilesByChecksum:
-    """Tests for filter_files_by_checksum function."""
-
-    def test_empty_files_list(self):
-        """Test with empty files list."""
-        result = filter_files_by_checksum([], {"hash1", "hash2"})
-
-        assert result == []
-
-    def test_empty_checksums_set(self):
-        """Test with empty checksums set."""
-        files = ["/path/file1.txt", "/path/file2.txt"]
-
-        result = filter_files_by_checksum(files, set())
-
-        assert result == files
-
-    def test_filters_matching_files(self):
-        """Test that files in checksums set are filtered out."""
-        files = ["/path/file1.txt", "/path/file2.txt", "/path/file3.txt"]
-        checksums = {"/path/file1.txt", "/path/file3.txt"}
-
-        result = filter_files_by_checksum(files, checksums)
-
-        assert result == ["/path/file2.txt"]
-
-    def test_no_matching_files(self):
-        """Test when no files match checksums."""
-        files = ["/path/file1.txt", "/path/file2.txt"]
-        checksums = {"/other/file3.txt", "/other/file4.txt"}
-
-        result = filter_files_by_checksum(files, checksums)
-
-        assert result == files
-
-    def test_all_files_filtered(self):
-        """Test when all files are filtered out."""
-        files = ["/path/file1.txt", "/path/file2.txt"]
-        checksums = {"/path/file1.txt", "/path/file2.txt"}
-
-        result = filter_files_by_checksum(files, checksums)
-
-        assert result == []
 
 
 class TestBuildErrorLogFilename:

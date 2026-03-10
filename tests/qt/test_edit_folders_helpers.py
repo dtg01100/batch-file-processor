@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QPushButton
 
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
@@ -34,11 +34,20 @@ class TestColumnBuilders:
         col = builder.build_others_column()
         qtbot.addWidget(col)
 
-        assert builder.others_list.count() == 2
-        assert builder.others_list.item(0).text() == "Alpha"
-        assert builder.others_list.item(1).text() == "Zulu"
+        others_list = fields["others_list"]
+        assert others_list.count() == 2
+        assert others_list.item(0).text() == "Alpha"
+        assert others_list.item(1).text() == "Zulu"
 
-        qtbot.mouseClick(builder.copy_config_btn, Qt.MouseButton.LeftButton)
+        # Locate copy button by text to avoid relying on private attributes
+        copy_button = None
+        for btn in col.findChildren(QPushButton):
+            if btn.text() == "Copy Config":
+                copy_button = btn
+                break
+
+        assert copy_button is not None
+        qtbot.mouseClick(copy_button, Qt.MouseButton.LeftButton)
         copy_cb.assert_called_once()
 
     def test_build_folder_column_creates_alias_field_for_non_template(self, qtbot):
@@ -55,7 +64,7 @@ class TestColumnBuilders:
         qtbot.addWidget(col)
 
         assert "folder_alias_field" in fields
-        assert builder.folder_alias_field is not None
+        assert fields["folder_alias_field"] is not None
 
     def test_build_backend_column_wires_select_copy_callback(self, qtbot):
         fields = {}
@@ -70,7 +79,7 @@ class TestColumnBuilders:
         col = builder.build_backend_column()
         qtbot.addWidget(col)
 
-        qtbot.mouseClick(builder.copy_dest_btn, Qt.MouseButton.LeftButton)
+        qtbot.mouseClick(fields["copy_dest_btn"], Qt.MouseButton.LeftButton)
         select_copy_cb.assert_called_once()
         assert "ftp_password_field" in fields
 
@@ -205,7 +214,7 @@ class TestDynamicEDIBuilder:
         plugin_builder = MagicMock()
         builder._build_plugin_config_sub = plugin_builder
 
-        builder.handle_convert_format_changed("csv")
+        builder.handle_convert_format_changed("custom_plugin_format")
 
         plugin_builder.assert_called_once_with(plugin)
 
@@ -246,7 +255,7 @@ class TestDynamicEDIBuilder:
         layout.addWidget(child)
         assert layout.count() == 1
 
-        builder.clear_convert_sub()
+        builder._clear_convert_sub()
 
         assert layout.count() == 0
 
@@ -348,54 +357,26 @@ class TestEventHandlers:
 
         assert handlers.copy_to_directory == "/new/path"
 
-    def test_on_ok_validation_failure_shows_warning(self, qtbot, monkeypatch):
+    def test_on_ok_calls_dialog_private_handler_when_present(self, qtbot):
         dialog = QDialog()
         qtbot.addWidget(dialog)
-
-        extractor = MagicMock()
-        extractor.extract_all.return_value = {"k": "v"}
-
-        validation_result = MagicMock()
-        validation_result.success = False
-        validation_result.error_messages = ["bad field"]
-
-        validator = MagicMock()
-        validator.validate.return_value = validation_result
-
-        warning_mock = MagicMock()
-        monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders.event_handlers.QMessageBox.warning",
-            warning_mock,
-        )
+        dialog._on_ok = MagicMock()
 
         handlers = EventHandlers(
             dialog=dialog,
             folder_config={},
             fields={},
             copy_to_directory="",
-            validator=validator,
-            data_extractor=extractor,
-            on_apply_success=MagicMock(),
+            validator=None,
         )
 
         handlers.on_ok()
 
-        warning_mock.assert_called_once()
+        dialog._on_ok.assert_called_once()
 
     def test_on_ok_success_calls_callback_and_accept(self, qtbot):
         dialog = QDialog()
         qtbot.addWidget(dialog)
-
-        extractor = MagicMock()
-        extractor.extract_all.return_value = {"k": "v"}
-
-        validation_result = MagicMock()
-        validation_result.success = True
-
-        validator = MagicMock()
-        validator.validate.return_value = validation_result
-
-        on_apply_success = MagicMock()
         dialog_accept = MagicMock()
         dialog.accept = dialog_accept
 
@@ -404,41 +385,28 @@ class TestEventHandlers:
             folder_config={},
             fields={},
             copy_to_directory="",
-            validator=validator,
-            data_extractor=extractor,
-            on_apply_success=on_apply_success,
+            validator=None,
         )
 
         handlers.on_ok()
 
-        on_apply_success.assert_called_once()
         dialog_accept.assert_called_once()
 
-    def test_on_ok_exception_shows_critical(self, qtbot, monkeypatch):
+    def test_on_ok_propagates_private_handler_exception(self, qtbot):
         dialog = QDialog()
         qtbot.addWidget(dialog)
-
-        extractor = MagicMock()
-        extractor.extract_all.side_effect = RuntimeError("bad extract")
-
-        critical_mock = MagicMock()
-        monkeypatch.setattr(
-            "interface.qt.dialogs.edit_folders.event_handlers.QMessageBox.critical",
-            critical_mock,
-        )
+        dialog._on_ok = MagicMock(side_effect=RuntimeError("boom"))
 
         handlers = EventHandlers(
             dialog=dialog,
             folder_config={},
             fields={},
             copy_to_directory="",
-            validator=MagicMock(),
-            data_extractor=extractor,
+            validator=None,
         )
 
-        handlers.on_ok()
-
-        critical_mock.assert_called_once()
+        with pytest.raises(RuntimeError, match="boom"):
+            handlers.on_ok()
 
     def test_select_copy_directory_cancel_keeps_path(self, qtbot, monkeypatch):
         dialog = QDialog()
@@ -460,9 +428,12 @@ class TestEventHandlers:
 
         assert handlers.copy_to_directory == "/original"
 
-    def test_noop_event_handler_methods_are_callable(self, qtbot):
+    def test_noop_event_handler_methods_are_callable(self, qtbot, monkeypatch):
         dialog = QDialog()
         qtbot.addWidget(dialog)
+        dialog.accept = MagicMock()
+        dialog.reject = MagicMock()
+
         handlers = EventHandlers(
             dialog=dialog,
             folder_config={},
@@ -471,16 +442,19 @@ class TestEventHandlers:
             validator=None,
         )
 
+        info_mock = MagicMock()
+        monkeypatch.setattr(
+            "interface.qt.dialogs.edit_folders.event_handlers.QMessageBox.information",
+            info_mock,
+        )
+
         handlers.update_active_state()
         handlers.update_backend_states()
         handlers.copy_config_from_other()
         handlers.show_folder_path()
-        handlers.on_edi_option_changed("Do Nothing")
-        handlers.on_convert_format_changed("csv")
-        handlers.on_ftp_server_changed("srv")
-        handlers.on_ftp_port_changed("21")
-        handlers.on_ftp_username_changed("user")
-        handlers.on_ftp_password_changed("pwd")
-        handlers.on_ftp_folder_changed("/in")
-        handlers.on_email_recipient_changed("x@y.com")
-        handlers.on_email_subject_changed("hello")
+        handlers.on_ok()
+        handlers.on_cancel()
+
+        info_mock.assert_called_once()
+        dialog.accept.assert_called_once()
+        dialog.reject.assert_called_once()

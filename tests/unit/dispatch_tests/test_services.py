@@ -5,6 +5,8 @@ import sys
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 
 from dispatch.services.upc_service import (
     UPCServiceResult,
@@ -492,201 +494,56 @@ class TestMockFileProcessor:
 
 
 class TestFileProcessor:
-    """Tests for FileProcessor class."""
+    """Tests for FileProcessor compatibility adapter."""
 
-    def test_process_file_without_validators(self):
-        """Test processing without any pipeline steps."""
+    def test_process_file_requires_orchestrator(self):
+        """Adapter raises when no orchestrator is configured."""
         processor = FileProcessor()
 
-        result = processor.process_file("/input/file.txt", {}, {}, {})
+        with pytest.raises(RuntimeError):
+            processor.process_file("/input/file.txt", {}, {}, {})
 
+    def test_process_file_delegates_to_orchestrator_pipeline(self):
+        """Adapter delegates to orchestrator single source-of-truth path."""
+        orchestrator = MagicMock()
+        orchestrator.config = MagicMock(settings={})
+        orchestrator._process_file_with_pipeline.return_value = MagicMock(
+            file_name="/input/file.txt",
+            checksum="abc123",
+            sent=True,
+            validated=True,
+            converted=False,
+            errors=[],
+        )
+
+        processor = FileProcessor(orchestrator=orchestrator)
+        result = processor.process_file(
+            "/input/file.txt", {"split_edi": True}, {"k": "v"}, {}
+        )
+
+        orchestrator._process_file_with_pipeline.assert_called_once_with(
+            "/input/file.txt", {"split_edi": True}, {}
+        )
+        assert orchestrator.config.settings == {"k": "v"}
         assert result.input_path == "/input/file.txt"
-        assert result.was_validated is False
-
-    def test_process_file_with_validator_pass(self):
-        """Test processing with passing validator."""
-        mock_validator = MagicMock()
-        mock_validator.validate.return_value = MagicMock(is_valid=True, errors=[])
-        mock_validator.should_block_processing.return_value = False
-
-        processor = FileProcessor(validator=mock_validator)
-
-        result = processor.process_file(
-            "/input/file.txt", {"process_edi": True}, {}, {}
-        )
-
-        assert result.was_validated is True
+        assert result.output_path == "/input/file.txt"
         assert result.validation_passed is True
-
-    def test_process_file_with_validator_fail(self):
-        """Test processing with failing validator."""
-        mock_validator = MagicMock()
-        mock_validator.validate.return_value = MagicMock(
-            is_valid=False, errors=["Invalid file"]
-        )
-        mock_validator.should_block_processing.return_value = True
-
-        processor = FileProcessor(validator=mock_validator)
-
-        result = processor.process_file(
-            "/input/file.txt", {"process_edi": True}, {}, {}
-        )
-
-        assert result.was_validated is True
-        assert result.validation_passed is False
-
-    def test_process_file_validation_blocked(self):
-        """Test that processing is blocked when validation fails."""
-        mock_validator = MagicMock()
-        mock_validator.validate.return_value = MagicMock(
-            is_valid=False, errors=["Error 1"]
-        )
-        mock_validator.should_block_processing.return_value = True
-
-        processor = FileProcessor(validator=mock_validator)
-
-        result = processor.process_file(
-            "/input/file.txt", {"process_edi": True}, {}, {}
-        )
-
-        assert result.validation_passed is False
-        assert result.was_split is False
-        assert result.was_tweaked is False
-        assert result.was_converted is False
-
-    def test_process_file_with_splitter(self):
-        """Test processing with splitter."""
-        mock_splitter = MagicMock()
-        mock_splitter.split.return_value = MagicMock(
-            files=[("/output/file.txt", "", "")], was_split=True, errors=[]
-        )
-
-        processor = FileProcessor(splitter=mock_splitter)
-
-        result = processor.process_file("/input/file.txt", {"split_edi": True}, {}, {})
-
-        assert result.was_split is True
-
-    def test_process_file_with_tweaker(self):
-        """Test processing with tweaker."""
-        mock_tweaker = MagicMock()
-        mock_tweaker.tweak.return_value = MagicMock(
-            output_path="/output/tweaked.txt", success=True, was_tweaked=True, errors=[]
-        )
-
-        processor = FileProcessor(tweaker=mock_tweaker)
-
-        result = processor.process_file("/input/file.txt", {"tweak_edi": True}, {}, {})
-
-        assert result.was_tweaked is True
-
-    def test_process_file_with_converter(self):
-        """Test processing with converter."""
-        mock_converter = MagicMock()
-        mock_converter.convert.return_value = MagicMock(
-            output_path="/output/converted.csv", success=True, errors=[]
-        )
-
-        processor = FileProcessor(converter=mock_converter)
-
-        result = processor.process_file("/input/file.txt", {}, {}, {})
-
-        assert result.was_converted is True
-
-    @patch("dispatch.services.file_processor.os.path.exists")
-    @patch("dispatch.services.file_processor.generate_file_hash")
-    def test_process_file_sending_success(self, mock_hash, mock_exists):
-        """Test successful file sending."""
-        mock_hash.return_value = "abc123"
-        mock_exists.return_value = True
-
-        mock_send_manager = MagicMock()
-        mock_send_manager.get_enabled_backends.return_value = ["backend1"]
-        mock_send_manager.send_all.return_value = {"backend1": True}
-
-        processor = FileProcessor(send_manager=mock_send_manager)
-
-        result = processor.process_file("/input/file.txt", {}, {}, {})
-
         assert result.files_sent is True
 
-    def test_process_file_sending_failure(self):
-        """Test failed file sending."""
-        mock_send_manager = MagicMock()
-        mock_send_manager.get_enabled_backends.return_value = []
-
-        processor = FileProcessor(send_manager=mock_send_manager)
-
-        result = processor.process_file("/input/file.txt", {}, {}, {})
-
-        assert result.files_sent is False
-
-    def test_should_validate_true_for_process_edi(self):
-        """Test that validation is triggered for process_edi."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({"process_edi": True}) is True
-
-    def test_should_validate_true_for_tweak_edi(self):
-        """Test that validation is triggered for tweak_edi."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({"tweak_edi": True}) is True
-
-    def test_should_validate_true_for_split_edi(self):
-        """Test that validation is triggered for split_edi."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({"split_edi": True}) is True
-
-    def test_should_validate_true_for_force_validation(self):
-        """Test that validation is triggered for force_edi_validation."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({"force_edi_validation": True}) is True
-
-    def test_should_validate_false_by_default(self):
-        """Test that validation is not triggered by default."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({}) is False
-
-    def test_should_validate_string_process_edi(self):
-        """Test validation with string process_edi."""
-        processor = FileProcessor()
-
-        assert processor._should_validate({"process_edi": "true"}) is True
-
-    @patch("dispatch.services.file_processor.os.path.exists")
-    @patch("dispatch.services.file_processor.generate_file_hash")
-    def test_process_file_error_accumulation(self, mock_hash, mock_exists):
-        """Test that errors are accumulated through pipeline when no split error."""
-        mock_hash.return_value = "abc123"
-        mock_exists.return_value = True
-
-        mock_splitter = MagicMock()
-        mock_splitter.split.return_value = MagicMock(
-            files=[("/output/file.txt", "", "")], was_split=False, errors=[]
+    def test_process_returns_output_when_sent(self):
+        """process() returns output path when send succeeds."""
+        orchestrator = MagicMock()
+        orchestrator.config = MagicMock(settings={})
+        orchestrator._process_file_with_pipeline.return_value = MagicMock(
+            file_name="/output/final.edi",
+            checksum="abc123",
+            sent=True,
+            validated=True,
+            converted=True,
+            errors=[],
         )
 
-        mock_tweaker = MagicMock()
-        mock_tweaker.tweak.return_value = MagicMock(
-            output_path="/output/file.txt",
-            success=False,
-            was_tweaked=False,
-            errors=["Tweak error"],
-        )
+        processor = FileProcessor(orchestrator=orchestrator)
+        out = processor.process("/input/file.edi", {"settings": {}, "upc_dict": {}})
 
-        mock_converter = MagicMock()
-        mock_converter.convert.return_value = MagicMock(
-            output_path="/output/file.txt", success=False, errors=["Convert error"]
-        )
-
-        processor = FileProcessor(
-            splitter=mock_splitter, tweaker=mock_tweaker, converter=mock_converter
-        )
-
-        result = processor.process_file("/input/file.txt", {}, {}, {})
-
-        assert "Tweak error" in result.errors
-        assert "Convert error" in result.errors
+        assert out == "/output/final.edi"

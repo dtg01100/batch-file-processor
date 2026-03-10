@@ -30,9 +30,10 @@ class TestMaintenanceDialogFunctionality:
 
         # Check that it has methods for required maintenance operations
         assert hasattr(MaintenanceDialog, "__init__")
+        assert hasattr(MaintenanceDialog, "_on_operation_start")
 
         # The actual functionality would be tested in integration tests
-        assert True
+        assert hasattr(MaintenanceDialog, "_on_operation_end")
 
 
 class TestMaintenanceDialogIntegration:

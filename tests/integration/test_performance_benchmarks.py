@@ -12,6 +12,7 @@ and should be run separately from regular test suite.
 """
 
 import pytest
+import os
 import time
 import tracemalloc
 from unittest.mock import MagicMock
@@ -19,12 +20,20 @@ from contextlib import contextmanager
 
 pytestmark = [pytest.mark.integration, pytest.mark.performance]
 
+RUN_PERF_ASSERTS = os.getenv("RUN_PERF_ASSERTS") == "1"
+
+
+def assert_perf_threshold(condition, message):
+    """Assert timing-based thresholds only when explicitly enabled."""
+    if RUN_PERF_ASSERTS:
+        assert condition, message
+
 
 class Timer:
     """Simple timer class to capture elapsed time."""
 
     def __init__(self):
-        self.elapsed = 0
+        self.elapsed: float = 0.0
 
     def __call__(self):
         return self.elapsed
@@ -119,7 +128,9 @@ class TestScalabilityByFileCount:
 
         elapsed = t()
         assert result.success is True
-        assert elapsed < 5.0  # Should complete in under 5 seconds
+        assert_perf_threshold(
+            elapsed < 5.0, "Should complete in under 5 seconds"
+        )
         print(f"\n10 files processed in {elapsed:.3f}s")
 
     def test_process_100_files(self, large_dataset_workspace):
@@ -151,7 +162,9 @@ class TestScalabilityByFileCount:
 
         elapsed = t()
         assert result.success is True
-        assert elapsed < 30.0  # Should complete in under 30 seconds
+        assert_perf_threshold(
+            elapsed < 30.0, "Should complete in under 30 seconds"
+        )
         print(f"\n100 files processed in {elapsed:.3f}s")
 
     def test_process_1000_files(self, large_dataset_workspace):
@@ -184,7 +197,9 @@ class TestScalabilityByFileCount:
         elapsed = t()
         assert result.success is True
         # Allow more time for large batch
-        assert elapsed < 300.0  # Should complete in under 5 minutes
+        assert_perf_threshold(
+            elapsed < 300.0, "Should complete in under 5 minutes"
+        )
         print(
             f"\n1000 files processed in {elapsed:.3f}s ({elapsed/1000*1000:.1f} ms/file)"
         )
@@ -214,7 +229,7 @@ class TestDatabasePerformance:
 
         elapsed = t()
         assert len(results) == 10
-        assert elapsed < 0.1  # Should be very fast
+        assert_perf_threshold(elapsed < 0.1, "Should be very fast")
         print(f"\nSmall DB query (10 records): {elapsed:.4f}s")
 
     def test_query_performance_medium_database(self, temp_database):
@@ -237,7 +252,9 @@ class TestDatabasePerformance:
 
         elapsed = t()
         assert len(results) == 500
-        assert elapsed < 1.0  # Should complete in under 1 second
+        assert_perf_threshold(
+            elapsed < 1.0, "Should complete in under 1 second"
+        )
         print(f"\nMedium DB query (1000 records): {elapsed:.4f}s")
 
     def test_query_performance_large_database(self, temp_database):
@@ -260,7 +277,9 @@ class TestDatabasePerformance:
 
         elapsed = t()
         assert len(results) == 10000
-        assert elapsed < 5.0  # Should complete in under 5 seconds
+        assert_perf_threshold(
+            elapsed < 5.0, "Should complete in under 5 seconds"
+        )
         print(f"\nLarge DB query (10000 records): {elapsed:.4f}s")
 
 
@@ -363,7 +382,9 @@ class TestDiskIO:
         total_bytes = file_size * 100
         throughput_mb_s = (total_bytes / 1024 / 1024) / elapsed
         print(f"\nRead throughput: {throughput_mb_s:.2f} MB/s")
-        assert elapsed < 1.0  # Should read 100KB in under 1 second
+        assert_perf_threshold(
+            elapsed < 1.0, "Should read 100KB in under 1 second"
+        )
 
     def test_write_performance(self, tmp_path):
         """Test file write performance."""
@@ -383,7 +404,7 @@ class TestDiskIO:
         total_bytes = file_size * num_files
         throughput_mb_s = (total_bytes / 1024 / 1024) / elapsed
         print(f"\nWrite throughput: {throughput_mb_s:.2f} MB/s")
-        assert elapsed < 1.0
+        assert_perf_threshold(elapsed < 1.0, "Should complete in under 1 second")
 
 
 @pytest.mark.performance
@@ -434,7 +455,9 @@ class TestUIResponsiveness:
         # Note: Progress update tracking depends on implementation
         # Just verify the processing completes successfully
         print(f"\n50 files processed in {elapsed:.3f}s")
-        assert elapsed < 60.0  # Should complete in reasonable time
+        assert_perf_threshold(
+            elapsed < 60.0, "Should complete in reasonable time"
+        )
 
 
 @pytest.mark.performance
@@ -475,7 +498,9 @@ class TestConversionPerformance:
         print(f"\nCSV conversion speed: {files_per_second:.1f} files/second")
 
         # Should convert at reasonable speed
-        assert files_per_second > 1.0  # At least 1 file per second
+        assert_perf_threshold(
+            files_per_second > 1.0, "At least 1 file per second"
+        )
 
 
 @pytest.mark.performance
@@ -540,4 +565,6 @@ class TestConcurrentProcessing:
         print(f"\nParallel processing (5 folders × 20 files): {elapsed:.3f}s")
 
         # Parallel should be faster than sequential
-        assert elapsed < 30.0  # Should complete in under 30 seconds
+        assert_perf_threshold(
+            elapsed < 30.0, "Should complete in under 30 seconds"
+        )

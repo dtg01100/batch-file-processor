@@ -7,6 +7,7 @@ Tests for PluginManager enhancements related to configuration plugins.
 import unittest
 from unittest.mock import MagicMock, patch
 from interface.plugins import PluginManager
+from interface.plugins.plugin_base import PluginBase
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
 from interface.models.folder_configuration import ConvertFormat
 
@@ -251,6 +252,170 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
         # Try to get fields for invalid format
         fields = self.manager.get_configuration_fields(None)
         self.assertEqual(fields, [])
+
+    def test_initialize_plugins_is_idempotent(self):
+        """Test repeated initialization does not re-run plugin lifecycle."""
+
+        class LifecyclePlugin(PluginBase):
+            initialize_calls = 0
+            activate_calls = 0
+
+            @classmethod
+            def get_name(cls) -> str:
+                return "Lifecycle Plugin"
+
+            @classmethod
+            def get_identifier(cls) -> str:
+                return "lifecycle_plugin"
+
+            @classmethod
+            def get_description(cls) -> str:
+                return "Plugin used to verify lifecycle idempotency"
+
+            @classmethod
+            def get_version(cls) -> str:
+                return "1.0.0"
+
+            def initialize(self, config=None) -> None:
+                type(self).initialize_calls += 1
+
+            def activate(self) -> None:
+                type(self).activate_calls += 1
+
+            def deactivate(self) -> None:
+                pass
+
+            def create_widget(self, parent=None):
+                return None
+
+        self.manager._plugin_classes = {LifecyclePlugin.get_identifier(): LifecyclePlugin}
+
+        first_initialized = self.manager.initialize_plugins()
+        second_initialized = self.manager.initialize_plugins()
+
+        self.assertEqual(first_initialized, [LifecyclePlugin.get_identifier()])
+        self.assertEqual(second_initialized, [LifecyclePlugin.get_identifier()])
+        self.assertEqual(LifecyclePlugin.initialize_calls, 1)
+        self.assertEqual(LifecyclePlugin.activate_calls, 1)
+
+    def test_initialize_order_is_initialize_then_activate_with_config(self):
+        """Test plugin initialize is called before activate with passed config."""
+
+        events = []
+        expected_config = {"enabled": True, "threshold": 7}
+
+        class OrderedLifecyclePlugin(PluginBase):
+            @classmethod
+            def get_name(cls) -> str:
+                return "Ordered Lifecycle Plugin"
+
+            @classmethod
+            def get_identifier(cls) -> str:
+                return "ordered_lifecycle_plugin"
+
+            @classmethod
+            def get_description(cls) -> str:
+                return "Plugin used to verify initialize/activate call order"
+
+            @classmethod
+            def get_version(cls) -> str:
+                return "1.0.0"
+
+            def initialize(self, config=None) -> None:
+                events.append(("initialize", config))
+
+            def activate(self) -> None:
+                events.append(("activate", None))
+
+            def deactivate(self) -> None:
+                pass
+
+            def create_widget(self, parent=None):
+                return None
+
+        plugin_id = OrderedLifecyclePlugin.get_identifier()
+        self.manager._plugin_classes = {plugin_id: OrderedLifecyclePlugin}
+
+        self.manager.initialize_plugins(config={plugin_id: expected_config})
+
+        self.assertEqual(events[0], ("initialize", expected_config))
+        self.assertEqual(events[1], ("activate", None))
+
+    def test_plugin_initialize_failure_does_not_block_other_plugins(self):
+        """Test one plugin failure does not prevent others from initializing."""
+
+        class FailingPlugin(PluginBase):
+            @classmethod
+            def get_name(cls) -> str:
+                return "Failing Plugin"
+
+            @classmethod
+            def get_identifier(cls) -> str:
+                return "failing_plugin"
+
+            @classmethod
+            def get_description(cls) -> str:
+                return "Plugin that fails during initialize"
+
+            @classmethod
+            def get_version(cls) -> str:
+                return "1.0.0"
+
+            def initialize(self, config=None) -> None:
+                raise RuntimeError("intentional init failure")
+
+            def activate(self) -> None:
+                pass
+
+            def deactivate(self) -> None:
+                pass
+
+            def create_widget(self, parent=None):
+                return None
+
+        class HealthyPlugin(PluginBase):
+            activated = False
+
+            @classmethod
+            def get_name(cls) -> str:
+                return "Healthy Plugin"
+
+            @classmethod
+            def get_identifier(cls) -> str:
+                return "healthy_plugin"
+
+            @classmethod
+            def get_description(cls) -> str:
+                return "Plugin that should still initialize"
+
+            @classmethod
+            def get_version(cls) -> str:
+                return "1.0.0"
+
+            def initialize(self, config=None) -> None:
+                self.config = config or {}
+
+            def activate(self) -> None:
+                type(self).activated = True
+
+            def deactivate(self) -> None:
+                pass
+
+            def create_widget(self, parent=None):
+                return None
+
+        self.manager._plugin_classes = {
+            FailingPlugin.get_identifier(): FailingPlugin,
+            HealthyPlugin.get_identifier(): HealthyPlugin,
+        }
+
+        initialized = self.manager.initialize_plugins()
+
+        self.assertIn(HealthyPlugin.get_identifier(), initialized)
+        self.assertNotIn(FailingPlugin.get_identifier(), initialized)
+        self.assertIn(HealthyPlugin.get_identifier(), self.manager._plugins)
+        self.assertNotIn(FailingPlugin.get_identifier(), self.manager._plugins)
+        self.assertTrue(HealthyPlugin.activated)
 
 
 if __name__ == "__main__":

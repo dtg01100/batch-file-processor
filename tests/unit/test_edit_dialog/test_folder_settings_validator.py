@@ -18,6 +18,7 @@ from interface.validation.folder_settings_validator import (
     ValidationResult,
 )
 from interface.services.ftp_service import MockFTPService
+from interface.operations.folder_data_extractor import ExtractedDialogFields
 
 
 class TestFolderSettingsValidator:
@@ -293,6 +294,56 @@ class TestFolderSettingsValidator:
 
         assert result.is_valid is False
         assert any("jolley_custom" in e.message.lower() for e in result.errors)
+
+    def test_validate_extracted_fields_matches_core_backend_checks(self, validator):
+        """Extracted field validation follows canonical backend/alias path."""
+        extracted = ExtractedDialogFields(
+            folder_name="orders",
+            folder_is_active="True",
+            alias="existing_alias",
+            process_backend_copy=True,
+            process_backend_ftp=True,
+            process_backend_email=True,
+            ftp_server="",
+            ftp_port=0,
+            ftp_folder="",
+            ftp_username="",
+            ftp_password="",
+            email_to="invalid-email",
+            copy_to_directory="",
+        )
+
+        result = validator.validate_extracted_fields(extracted, current_alias="different")
+
+        assert result.is_valid is False
+        messages = [e.message for e in result.errors]
+        assert "FTP Server Field Is Required" in messages
+        assert "FTP Folder Field Is Required" in messages
+        assert "FTP Username Field Is Required" in messages
+        assert "FTP Password Field Is Required" in messages
+        assert "Invalid Email Destination Address: invalid-email" in messages
+        assert "Copy Backend Destination Is Currently Unset" in messages
+        assert "Folder Alias Already In Use" in messages
+
+    def test_validate_extracted_fields_does_not_apply_complete_only_checks(self, validator):
+        """Dialog extracted-field validation preserves existing narrower semantics."""
+        extracted = ExtractedDialogFields(
+            folder_name="orders",
+            folder_is_active="True",
+            alias="new_alias",
+            process_backend_copy=True,
+            copy_to_directory="/tmp/out",
+            invoice_date_offset=20,
+            override_upc_bool=True,
+            override_upc_category_filter="",
+            convert_to_format="fintech",
+            fintech_division_id="abc",
+        )
+
+        result = validator.validate_extracted_fields(extracted)
+
+        assert result.is_valid is True
+        assert result.errors == []
 
 
 class TestValidationResult:

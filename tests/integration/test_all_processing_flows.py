@@ -865,7 +865,9 @@ C00000003000030000
 
         # Attempt 2: Success
         result2 = orchestrator.process_folder(folder_config, run_log)
-        assert result2.files_processed >= 0, "Should process files"
+        assert result2.success is True, "Second attempt should succeed"
+        assert result2.files_failed == 0, "Second attempt should have no failures"
+        assert result2.files_processed == 2, "Second attempt should process all input files"
 
     def test_full_lifecycle_flow(self, temp_workspace):
         """Test complete lifecycle: config → process → track → resend → cleanup.

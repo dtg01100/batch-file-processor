@@ -78,8 +78,6 @@ def qt_app():
 
 def _make_app(**kwargs):
     """Helper to create a QtBatchFileSenderApp with minimal required parameters."""
-    # Remove folder_manager from kwargs as it's not accepted by __init__
-    kwargs.pop("folder_manager", None)
     app = QtBatchFileSenderApp(**kwargs)
     return app
 
@@ -322,7 +320,7 @@ class TestQtAppButtonStates:
     ):
         """Test Process button is enabled when there are active folders."""
         mock_database.folders_table.count.side_effect = lambda **kwargs: (
-            5 if kwargs.get("folder_is_active") == "True" else 0
+            5 if kwargs.get("folder_is_active") is True else 0
         )
 
         app = _make_app(

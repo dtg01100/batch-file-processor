@@ -13,8 +13,9 @@ Tests cover:
 
 import os
 import pytest
+from typing import cast
 from unittest.mock import MagicMock, patch
-from PyQt6.QtWidgets import QDialogButtonBox, QMessageBox, QLineEdit
+from PyQt6.QtWidgets import QDialogButtonBox, QFormLayout, QMessageBox, QLineEdit
 
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.services.smtp_service import SMTPService
@@ -100,8 +101,42 @@ class TestEditSettingsDialogUI:
         assert dialog is not None
         assert dialog.windowTitle() == "Test Settings"
         assert dialog.isModal()
-        assert dialog.minimumWidth() >= 550
-        assert dialog.minimumHeight() >= 500
+        assert dialog.minimumWidth() >= 700
+        assert dialog.minimumHeight() >= 700
+
+    def test_dialog_layout_growth_and_key_field_min_widths(
+        self, qtbot, sample_settings, sample_oversight, mock_callbacks
+    ):
+        """Test key forms use expanding growth and key fields have minimum width."""
+        dialog = _make_dialog(
+            settings_data=sample_oversight,
+            settings_provider=MagicMock(return_value=sample_settings),
+            **mock_callbacks,
+        )
+        qtbot.addWidget(dialog)
+
+        as400_parent = dialog._as400_address.parentWidget()
+        assert as400_parent is not None
+        as400_layout = as400_parent.layout()
+        email_layout = dialog._email_fields_widget.layout()
+        reporting_layout = dialog._reporting_fields_widget.layout()
+
+        assert as400_layout is not None
+        assert email_layout is not None
+        assert reporting_layout is not None
+
+        as400_layout = cast(QFormLayout, as400_layout)
+        email_layout = cast(QFormLayout, email_layout)
+        reporting_layout = cast(QFormLayout, reporting_layout)
+
+        assert as400_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        assert email_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        assert reporting_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+
+        assert dialog._as400_address.minimumWidth() >= 260
+        assert dialog._email_address.minimumWidth() >= 260
+        assert dialog._email_smtp_server.minimumWidth() >= 260
+        assert dialog._email_destination.minimumWidth() >= 260
 
     def test_widget_creation(
         self, qtbot, sample_settings, sample_oversight, mock_callbacks
@@ -394,7 +429,7 @@ class TestEditSettingsDialogReporting:
         ):
             # Verify button exists
             assert dialog._select_log_folder_btn is not None
-            assert dialog._select_log_folder_btn.text() == "Select Log Folder..."
+            assert dialog._select_log_folder_btn.text() == "Select &Log Folder..."
 
 
 class TestEditSettingsDialogBackup:
@@ -550,10 +585,10 @@ class TestEditSettingsDialogValidation:
             args = mock_critical.call_args[0]
             assert "Invalid Email Origin Address" in args[2]
 
-    def test_validation_fails_smtp_connection(
+    def test_validation_does_not_fail_on_smtp_connection(
         self, qtbot, sample_settings, sample_oversight, mock_callbacks
     ):
-        """Test validation fails when SMTP connection fails."""
+        """Validation should not require a live SMTP connection."""
         mock_smtp = MagicMock(spec=SMTPService)
         mock_smtp.test_connection.return_value = (False, "Connection failed")
 
@@ -567,10 +602,104 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
-            mock_critical.assert_called_once()
-            args = mock_critical.call_args[0]
-            assert "Test Login Failed" in args[2]
+            assert result is True
+            mock_critical.assert_not_called()
+        mock_smtp.test_connection.assert_not_called()
+
+    def test_validation_focuses_first_invalid_email_field(
+        self,
+        qtbot,
+        sample_settings,
+        sample_oversight,
+        mock_callbacks,
+        mock_smtp_service,
+    ):
+        """First invalid field should receive focus for faster correction."""
+        settings = sample_settings.copy()
+        settings["email_address"] = ""
+        settings["email_smtp_server"] = ""
+
+        dialog = _make_dialog(
+            settings_data=sample_oversight,
+            settings_provider=MagicMock(return_value=settings),
+            smtp_service=mock_smtp_service,
+            **mock_callbacks,
+        )
+        qtbot.addWidget(dialog)
+
+        with patch.object(QMessageBox, "critical"):
+            result = dialog.validate()
+        assert result is False
+        assert dialog.focusWidget() is dialog._email_address
+
+    def test_validation_uses_grouped_error_text(
+        self,
+        qtbot,
+        sample_settings,
+        sample_oversight,
+        mock_callbacks,
+        mock_smtp_service,
+    ):
+        """Validation errors should be grouped by section."""
+        settings = sample_settings.copy()
+        settings["email_address"] = ""
+
+        dialog = _make_dialog(
+            settings_data=sample_oversight,
+            settings_provider=MagicMock(return_value=settings),
+            smtp_service=mock_smtp_service,
+            **mock_callbacks,
+        )
+        qtbot.addWidget(dialog)
+
+        with patch.object(QMessageBox, "critical") as mock_critical:
+            result = dialog.validate()
+        assert result is False
+        message_text = mock_critical.call_args[0][2]
+        assert "Email Settings:" in message_text
+        assert "- Email Address Is A Required Field" in message_text
+
+
+class TestEditSettingsDialogSMTPTesting:
+    """Test explicit SMTP connection testing workflow."""
+
+    def test_test_connection_button_invokes_smtp_service(
+        self, qtbot, sample_settings, sample_oversight, mock_callbacks
+    ):
+        mock_smtp = MagicMock(spec=SMTPService)
+        mock_smtp.test_connection.return_value = (True, None)
+        dialog = _make_dialog(
+            settings_data=sample_oversight,
+            settings_provider=MagicMock(return_value=sample_settings),
+            smtp_service=mock_smtp,
+            **mock_callbacks,
+        )
+        qtbot.addWidget(dialog)
+
+        with patch.object(QMessageBox, "information") as mock_info:
+            dialog._test_smtp_connection()
+
+        mock_smtp.test_connection.assert_called_once()
+        mock_info.assert_called_once()
+
+    def test_test_connection_button_shows_failure_dialog(
+        self, qtbot, sample_settings, sample_oversight, mock_callbacks
+    ):
+        mock_smtp = MagicMock(spec=SMTPService)
+        mock_smtp.test_connection.return_value = (False, "Connection failed")
+        dialog = _make_dialog(
+            settings_data=sample_oversight,
+            settings_provider=MagicMock(return_value=sample_settings),
+            smtp_service=mock_smtp,
+            **mock_callbacks,
+        )
+        qtbot.addWidget(dialog)
+
+        with patch.object(QMessageBox, "critical") as mock_critical:
+            dialog._test_smtp_connection()
+
+        mock_critical.assert_called_once()
+        assert "Test Login Failed With Error" in mock_critical.call_args[0][2]
 
     def test_validation_fails_missing_smtp_server(
         self,
@@ -1098,9 +1227,13 @@ class TestEditSettingsDialogEdgeCases:
         )
         qtbot.addWidget(dialog)
 
-        # Should not raise errors
         dialog.apply()
-        assert True
+
+        assert dialog._settings["enable_email"] is False
+        assert dialog._settings["backup_counter_maximum"] == 100
+        assert dialog._settings_data["enable_reporting"] is False
+        assert dialog._settings_data["folder_is_active"] is False
+        assert dialog._settings_data["process_backend_email"] is False
 
     def test_default_smtp_service(self, qtbot, sample_settings, sample_oversight):
         """Test dialog creates default SMTP service if not provided."""

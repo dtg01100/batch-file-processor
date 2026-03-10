@@ -926,8 +926,8 @@ class TestFieldCoverageReport:
 
         print(f"\n{'='*70}")
 
-        # This test always passes - it's just for reporting
-        assert True
+        # Keep a concrete invariant so this test verifies report inputs are valid
+        assert len(to_dict_keys) > 0
 
 
 class TestRoundTripIntegrity:

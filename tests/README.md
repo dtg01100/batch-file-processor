@@ -216,7 +216,7 @@ Or in your CI configuration:
 # GitHub Actions example
 - name: Run tests
   run: |
-    python -m pytest -m "not slow" -v --tb=short
+    pytest -m "not slow"
 ```
 
 ## Adding Markers to New Tests

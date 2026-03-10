@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Test script to verify the application can be imported and run."""
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level import verification script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import sys
 import os
 

@@ -401,14 +401,14 @@ class TestBaseEDIConverter(TestFixtures):
     @patch('convert_base.utils')
     def test_error_cleanup(self, mock_utils, tmp_path):
         """Test that resources are cleaned up on error."""
-        mock_utils.capture_records.side_effect = Exception("Parse error")
+        mock_utils.capture_records.side_effect = ValueError("Parse error")
 
         input_file = tmp_path / "test.edi"
         input_file.write_text("invalid")
 
         converter = MockConverter()
 
-        with pytest.raises(Exception, match="Parse error"):
+        with pytest.raises(ValueError, match="Parse error"):
             converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
 
         # Initialize should have been called

@@ -39,6 +39,15 @@ class TestDatabaseImportDialogUI:
         assert hasattr(dialog, "_progress_bar")
         assert hasattr(dialog, "_close_button")
 
+    def test_dialog_uses_no_base_action_mode(self, qtbot):
+        """Test dialog opts out of BaseDialog default action buttons."""
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", "42")
+        qtbot.addWidget(dialog)
+
+        assert dialog._button_box is None
+
     def test_initial_button_states(self, qtbot):
         """Test initial button enabled/disabled states."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
@@ -369,10 +378,15 @@ class TestImportThread:
         result_event.result = False
 
         # Manually emit the signal to test the connection
-        thread.confirm_required.emit("Test Title", "Test Message", result_event)
+        with qtbot.waitSignal(thread.confirm_required, timeout=1000) as blocker:
+            thread.confirm_required.emit("Test Title", "Test Message", result_event)
 
-        # Wait for the event to be processed
-        qtbot.wait(100)
+        qtbot.waitUntil(result_event.is_set, timeout=1000)
+
+        assert blocker.args == ["Test Title", "Test Message", result_event]
+        assert len(signal_emitted) == 1
+        assert signal_emitted[0] == ("Test Title", "Test Message", result_event)
+        assert result_event.result is True
 
     def test_import_thread_run_handles_exception(self, tmp_path):
         """Test ImportThread.run handles exceptions when database doesn't exist."""

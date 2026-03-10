@@ -251,3 +251,65 @@ class TestQtProgressService:
         QApplication.processEvents()
 
         assert service._overlay.geometry() == parent.rect()
+
+    def test_progress_dialog_property_exposes_overlay(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        assert service.progress_dialog is service._overlay
+
+    def test_update_detailed_progress_updates_labels_and_footer(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.update_detailed_progress(2, 5, 7, 9, "Finalizing...")
+
+        assert service._folder_label.text() == "Folder 2 of 5"
+        assert service._file_label.text() == "File 7 of 9"
+        assert service._footer_label.text() == "Finalizing..."
+        assert service._folder_label.isHidden() is False
+        assert service._file_label.isHidden() is False
+        assert service._footer_label.isHidden() is False
+
+    def test_update_detailed_progress_hides_labels_when_totals_zero(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.update_detailed_progress(0, 0, 0, 0, "")
+
+        assert service._folder_label.isHidden() is True
+        assert service._file_label.isHidden() is True
+        assert service._footer_label.isHidden() is True
+
+    def test_update_progress_switches_from_throbber_to_progressbar(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.set_indeterminate()
+        assert service._throbber.isHidden() is False
+        assert service._progress_bar.isHidden() is True
+
+        service.update_progress(42)
+
+        assert service._progress_bar.value() == 42
+        assert service._throbber.isHidden() is True
+        assert service._progress_bar.isHidden() is False
+
+    def test_set_current_uses_total_to_compute_percentage(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.set_total(8)
+        service.set_current(2)
+
+        assert service._progress_bar.value() == 25

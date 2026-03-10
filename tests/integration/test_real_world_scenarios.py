@@ -17,12 +17,71 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
+import tempfile
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
 from interface.operations.folder_manager import FolderManager
+from interface.database.database_obj import DatabaseObj
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+import create_database
 from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+
+
+@pytest.fixture
+def workspace(tmp_path):
+    """Provide a temporary workspace dict with a DatabaseObj and I/O directories.
+
+    Keys:
+        db       – a DatabaseObj with .folders_table / .processed_files attributes
+        input    – Path to the input directory
+        output_1 – Path to the first output directory
+        output_2 – Path to the second output directory
+    """
+    input_dir = tmp_path / "input"
+    output_1 = tmp_path / "output_1"
+    output_2 = tmp_path / "output_2"
+    logs_dir = tmp_path / "logs"
+    db_path = tmp_path / "folders.db"
+
+    for d in (input_dir, output_1, output_2, logs_dir):
+        d.mkdir()
+
+    # Create the initial database file
+    create_database.do(
+        CURRENT_DATABASE_VERSION,
+        str(db_path),
+        str(tmp_path),
+        "Linux",
+    )
+
+    db = DatabaseObj(
+        database_path=str(db_path),
+        database_version=CURRENT_DATABASE_VERSION,
+        config_folder=str(tmp_path),
+        running_platform="Linux",
+    )
+
+    # Ensure administrative record exists with a valid logs directory
+    if db.oversight_and_defaults.find_one(id=1) is None:
+        db.oversight_and_defaults.insert(
+            dict(id=1, logs_directory=str(logs_dir), errors_folder=str(tmp_path / "errors"))
+        )
+    else:
+        db.oversight_and_defaults.update(
+            {"id": 1, "logs_directory": str(logs_dir)}, ["id"]
+        )
+
+    yield {
+        "db": db,
+        "input": input_dir,
+        "output_1": output_1,
+        "output_2": output_2,
+    }
+
+    db.close()
 
 
 class MockLog:

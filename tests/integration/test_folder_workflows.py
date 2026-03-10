@@ -523,7 +523,8 @@ class TestPerformanceBaselines:
 
         # Filter operations - should be fast
         active_count = folder_manager.count_folders(active_only=True)
-        assert active_count >= 0
+        assert active_count == len(folder_manager.get_active_folders())
+        assert active_count <= count
 
 
 class TestMultiVendorScenarios:

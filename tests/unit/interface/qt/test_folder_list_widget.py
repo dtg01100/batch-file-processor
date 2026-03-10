@@ -26,9 +26,10 @@ class TestFolderListWidgetFunctionality:
 
     def test_folder_list_methods_exist(self):
         """Test that required folder list methods exist."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         # The actual functionality would be tested in integration tests
-        assert True
+        assert hasattr(FolderListWidget, "_build_widget")
 
 
 class TestFolderListWidgetIntegration:

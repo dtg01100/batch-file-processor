@@ -5,6 +5,7 @@ Tests for the dynamic form generator system.
 """
 
 import pytest
+from unittest.mock import MagicMock
 
 pytestmark = [pytest.mark.unit, pytest.mark.gui]
 
@@ -198,6 +199,107 @@ class TestComplexFormGenerator:
         generator.set_field_value('employed', False)
         generator._update_dependent_fields('employed')
         assert mock_set_visible.call_args_list[-1] == __import__('unittest.mock', fromlist=['call']).call(False)
+
+
+class TestPluginSectionCommunication:
+    """Communication tests for FormGenerator <-> plugin section factory/widgets."""
+
+    @pytest.mark.qt
+    def test_render_plugin_sections_passes_schema_and_config_to_factory(
+        self, qtbot, monkeypatch
+    ):
+        base_schema = ConfigurationSchema([
+            FieldDefinition('name', FieldType.STRING, label='Name'),
+        ])
+        plugin_schema = ConfigurationSchema([
+            FieldDefinition('include_headers', FieldType.BOOLEAN, label='Include Headers'),
+        ])
+
+        generator = FormGeneratorFactory.create_form_generator(base_schema, 'qt')
+        generator.add_plugin_section(
+            section_id='csv_section',
+            schema=plugin_schema,
+            config={'include_headers': True},
+        )
+
+        captured = {}
+
+        class FakeSection:
+            def render(self, config):
+                from PyQt6.QtWidgets import QWidget
+                captured['render_config'] = config
+                return QWidget()
+
+            def get_values(self):
+                return {'include_headers': True}
+
+        def fake_create_section(section_type, schema, framework, config, parent):
+            captured['section_type'] = section_type
+            captured['schema'] = schema
+            captured['framework'] = framework
+            captured['config'] = config
+            captured['parent'] = parent
+            return FakeSection()
+
+        monkeypatch.setattr(
+            'interface.form.section_factory.SectionFactoryRegistry.create_section',
+            fake_create_section,
+        )
+
+        form = generator.build_form(parent=None)
+        qtbot.addWidget(form)
+
+        assert captured['section_type'] == 'default'
+        assert captured['schema'] is plugin_schema
+        assert captured['framework'] == 'qt'
+        assert captured['config'] == {'include_headers': True}
+        assert captured['render_config'] == {'include_headers': True}
+
+    def test_plugin_section_values_roundtrip_and_validation_aggregation(self):
+        schema = ConfigurationSchema([
+            FieldDefinition('name', FieldType.STRING, label='Name'),
+        ])
+        generator = FormGeneratorFactory.create_form_generator(schema, 'qt')
+
+        section_ok = MagicMock()
+        section_ok.section_id = 'ok_section'
+        section_ok.get_values.return_value = {'enabled': True}
+        section_ok.validate.return_value = __import__(
+            'interface.plugins.validation_framework', fromlist=['ValidationResult']
+        ).ValidationResult(success=True, errors=[])
+
+        section_bad = MagicMock()
+        section_bad.section_id = 'bad_section'
+        section_bad.get_values.return_value = {'enabled': False}
+        section_bad.validate.return_value = __import__(
+            'interface.plugins.validation_framework', fromlist=['ValidationResult']
+        ).ValidationResult(success=False, errors=['bad field'])
+
+        section_fallback = MagicMock()
+        section_fallback.section_id = 'fallback_section'
+        # No validate() method branch: use get_validation_errors fallback
+        del section_fallback.validate
+        section_fallback.get_values.return_value = {'x': 1}
+        section_fallback.get_validation_errors.return_value = ['fallback error']
+
+        generator._plugin_sections = [section_ok, section_bad, section_fallback]
+
+        values = generator.get_plugin_section_values()
+        assert values['ok_section'] == {'enabled': True}
+        assert values['bad_section'] == {'enabled': False}
+        assert values['fallback_section'] == {'x': 1}
+
+        generator.set_plugin_section_values({
+            'ok_section': {'enabled': False},
+            'bad_section': {'enabled': True},
+        })
+        section_ok.set_values.assert_called_once_with({'enabled': False})
+        section_bad.set_values.assert_called_once_with({'enabled': True})
+
+        result = generator.validate_plugin_sections()
+        assert result.success is False
+        assert 'bad field' in result.errors
+        assert 'fallback error' in result.errors
 
 
 if __name__ == '__main__':

@@ -45,6 +45,7 @@ from utils import (
     filter_b_records_by_category,
     filter_edi_file_by_category,
 )
+from core.edi.edi_parser import EDIParseError
 
 
 # =============================================================================
@@ -923,9 +924,8 @@ class TestCaptureRecords:
         """When parser returns None for non-empty line, raise exception."""
         mock_parser = MagicMock()
         mock_parser.parse_line.return_value = None
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EDIParseError, match="Not An EDI"):
             capture_records("Atest", parser=mock_parser)
-        assert "Not An EDI" in str(exc_info.value)
 
 
 # =============================================================================
@@ -950,10 +950,10 @@ class TestDetectInvoiceIsCredit:
         # A negative number would have a minus sign in that field
         # Let's use dac_str_int_to_int to understand the format
         # For negative: -0012345678 -> the minus is at position 0 of the field
-        edi_file.write_text("A12345678901234567010123-0012345678\n")
+        edi_file.write_text("A1234567890123456010123-001234567\n")
         result = detect_invoice_is_credit(str(edi_file))
         # The function uses dac_str_int_to_int which should detect negative
-        assert result is True or result is False  # Depends on actual implementation
+        assert result is True
 
     def test_zero_invoice_total_returns_false(self, tmp_path):
         """Zero invoice total is not a credit."""

@@ -8,6 +8,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
+from interface.validation.folder_settings_validator import ValidationResult
 
 
 @pytest.fixture
@@ -311,18 +312,29 @@ class TestEditFoldersDialogRegression:
 
         # Verify widgets are properly initialized
         active_btn = dialog._fields.get("active_checkbutton")
+        copy_check = dialog._fields.get("process_backend_copy_check")
+        ftp_check = dialog._fields.get("process_backend_ftp_check")
         assert active_btn is not None
-        assert (
-            active_btn.isChecked() or not active_btn.isChecked()
-        )  # Just verify it works
+        assert copy_check is not None
+        assert ftp_check is not None
 
-        # This should not raise an exception
-        try:
-            dialog.handlers.update_active_state()
-            # If we get here, the method executed without returning early
-            assert True, "update_active_state() completed successfully"
-        except AttributeError as e:
-            pytest.fail(f"update_active_state() crashed: {e}")
+        # Active state updates should propagate to backend widgets
+        active_btn.setChecked(False)
+        dialog.handlers.update_active_state()
+        assert not copy_check.isEnabled()
+        assert not ftp_check.isEnabled()
+
+        active_btn.setChecked(True)
+        dialog.handlers.update_active_state()
+        assert copy_check.isEnabled()
+        assert ftp_check.isEnabled()
+
+        # OK flow should validate, apply, and accept
+        dialog.apply = MagicMock()
+        dialog.accept = MagicMock()
+        dialog._on_ok()
+        dialog.apply.assert_called_once()
+        dialog.accept.assert_called_once()
 
 
 class TestEditFoldersDialogOKButtonFlow:
@@ -348,6 +360,9 @@ class TestEditFoldersDialogOKButtonFlow:
             "process_backend_email_check": QCheckBox("Email"),
         }
         qtbot.addWidget(active_checkbox)
+        qtbot.addWidget(fields["process_backend_copy_check"])
+        qtbot.addWidget(fields["process_backend_ftp_check"])
+        qtbot.addWidget(fields["process_backend_email_check"])
 
         # Create event handlers
         handlers = EventHandlers(
@@ -356,27 +371,24 @@ class TestEditFoldersDialogOKButtonFlow:
             fields=fields,
             copy_to_directory="",
             validator=None,
+            settings_provider=lambda: {"enable_email": True},
         )
 
-        # Test that update_active_state doesn't crash and actually updates state
-        try:
-            # When folder is disabled
-            active_checkbox.setChecked(False)
-            handlers.update_active_state()
+        # When folder is disabled, all backends should be disabled
+        active_checkbox.setChecked(False)
+        handlers.update_active_state()
+        assert fields["process_backend_copy_check"].text() == "Copy"
+        assert not fields["process_backend_copy_check"].isEnabled()
+        assert not fields["process_backend_ftp_check"].isEnabled()
+        assert not fields["process_backend_email_check"].isEnabled()
 
-            # Backend should be disabled
-            assert not fields["process_backend_copy_check"].isEnabled()
-
-            # When folder is enabled
-            active_checkbox.setChecked(True)
-            handlers.update_active_state()
-
-            # Backend should be enabled
-            assert fields["process_backend_copy_check"].isEnabled()
-
-            assert True, "update_active_state completed without crash"
-        except Exception as e:
-            pytest.fail(f"update_active_state crashed: {e}")
+        # When folder is enabled, backends should be enabled (email depends on settings)
+        active_checkbox.setChecked(True)
+        handlers.update_active_state()
+        assert active_checkbox.text() == "Folder Is Enabled"
+        assert fields["process_backend_copy_check"].isEnabled()
+        assert fields["process_backend_ftp_check"].isEnabled()
+        assert fields["process_backend_email_check"].isEnabled()
 
     def test_apply_does_not_add_plugin_configurations_to_target(self, qtbot):
         """Regression: Ensure apply() doesn't add plugin_configurations to target dict.
@@ -408,3 +420,144 @@ class TestEditFoldersDialogOKButtonFlow:
         assert (
             "plugin_configurations" not in saved_config
         ), "plugin_configurations should not be added to the target dict for database saving"
+
+
+class TestEditFoldersDialogWave3FocusAndAccessibility:
+    """Wave 3: focus handling and accessibility improvements."""
+
+    def test_validation_focuses_first_invalid_field(self, qtbot):
+        dialog = _make_dialog(
+            qtbot,
+            folder_config={"folder_name": "/test", "folder_is_active": True},
+        )
+
+        result = ValidationResult(is_valid=False)
+        result.add_error("ftp_server", "FTP Server Field Is Required")
+        result.add_error("ftp_port", "FTP Port Field Is Required")
+        mock_validator = MagicMock()
+        mock_validator.validate_extracted_fields.return_value = result
+        dialog._validator = mock_validator
+
+        focused = {"widget": None}
+
+        def _capture_focus(widget):
+            focused["widget"] = widget
+
+        dialog._focus_widget = _capture_focus
+        dialog._fields["active_checkbutton"].setChecked(True)
+        with patch("interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical"):
+            is_valid = dialog.validate()
+
+        assert is_valid is False
+        assert focused["widget"] is dialog._fields["ftp_server_field"]
+
+    def test_validation_error_text_is_grouped(self, qtbot):
+        dialog = _make_dialog(
+            qtbot,
+            folder_config={"folder_name": "/test", "folder_is_active": True},
+        )
+
+        result = ValidationResult(is_valid=False)
+        result.add_error("ftp_server", "FTP Server Field Is Required")
+        result.add_error(
+            "email_recipient", "Email Destination Address Field Is Required"
+        )
+        mock_validator = MagicMock()
+        mock_validator.validate_extracted_fields.return_value = result
+        dialog._validator = mock_validator
+
+        dialog._fields["active_checkbutton"].setChecked(True)
+        with patch(
+            "interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical"
+        ) as mock_critical:
+            is_valid = dialog.validate()
+
+        assert is_valid is False
+        message = mock_critical.call_args[0][2]
+        assert "FTP:" in message
+        assert "Email:" in message
+
+    def test_dynamic_edi_controls_remain_focusable_after_mode_change(self, qtbot):
+        dialog = _make_dialog(
+            qtbot,
+            folder_config={
+                "folder_name": "/test",
+                "folder_is_active": True,
+                "process_backend_copy": True,
+            },
+        )
+
+        dialog._fields["active_checkbutton"].setChecked(True)
+        dialog._fields["process_backend_copy_check"].setChecked(True)
+
+        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(lambda: "convert_formats_var" in dialog._fields, timeout=1000)
+        qtbot.waitUntil(
+            lambda: not dialog.dynamic_edi_builder._edi_option_processing,
+            timeout=1000,
+        )
+        convert_combo = dialog._fields["convert_formats_var"]
+        assert convert_combo.focusPolicy() != 0
+
+        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Tweak EDI")
+        qtbot.waitUntil(
+            lambda: (
+                "force_txt_file_ext_check" in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
+        tweak_check = dialog._fields["force_txt_file_ext_check"]
+        assert tweak_check.focusPolicy() != 0
+
+    def test_dynamic_controls_have_accessible_names(self, qtbot):
+        dialog = _make_dialog(
+            qtbot,
+            folder_config={
+                "folder_name": "/test",
+                "folder_is_active": True,
+                "process_backend_copy": True,
+            },
+        )
+        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(lambda: "convert_formats_var" in dialog._fields, timeout=1000)
+
+        assert (
+            dialog.dynamic_edi_builder.edi_options_combo.accessibleName()
+            == "EDI options"
+        )
+        assert (
+            dialog._fields["convert_formats_var"].accessibleName() == "Convert format"
+        )
+
+    def test_convert_mode_normalizes_string_false_booleans(self, qtbot):
+        """Convert mode checkboxes treat string 'False' as unchecked."""
+        dialog = _make_dialog(
+            qtbot,
+            folder_config={
+                "folder_name": "/test",
+                "folder_is_active": True,
+                "process_backend_copy": True,
+                "convert_to_format": "csv",
+                "override_upc_bool": "False",
+                "retail_uom": "False",
+                "split_prepaid_sales_tax_crec": "False",
+                "include_item_numbers": "False",
+                "include_item_description": "False",
+            },
+        )
+
+        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(
+            lambda: (
+                "override_upc_bool" in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
+
+        assert dialog._fields["override_upc_bool"].isChecked() is False
+        assert dialog._fields["edi_each_uom_tweak"].isChecked() is False
+        assert dialog._fields["split_sales_tax_prepaid_var"].isChecked() is False
+        assert dialog._fields["include_item_numbers"].isChecked() is False
+        assert dialog._fields["include_item_description"].isChecked() is False

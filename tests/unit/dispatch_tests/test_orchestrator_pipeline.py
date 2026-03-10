@@ -130,32 +130,21 @@ class TestGetUPCDictionary:
 class TestInitializePipelineSteps:
     """Tests for _initialize_pipeline_steps method."""
 
-    def test_initialization_when_pipeline_enabled(self):
-        """Test initialization when steps are provided."""
+    def test_initialization_with_file_processor(self):
+        """Initialization calls file processor hook when present."""
         mock_file_processor = MagicMock()
         mock_file_processor.initialize = MagicMock()
 
-        config = DispatchConfig(use_pipeline=True, file_processor=mock_file_processor)
+        config = DispatchConfig(file_processor=mock_file_processor)
         orchestrator = DispatchOrchestrator(config)
 
         orchestrator._initialize_pipeline_steps()
 
         mock_file_processor.initialize.assert_called_once()
 
-    def test_initialization_when_pipeline_disabled(self):
-        """Test that no initialization happens when pipeline disabled."""
-        mock_file_processor = MagicMock()
-
-        config = DispatchConfig(use_pipeline=False, file_processor=mock_file_processor)
-        orchestrator = DispatchOrchestrator(config)
-
-        orchestrator._initialize_pipeline_steps()
-
-        mock_file_processor.initialize.assert_not_called()
-
     def test_lazy_initialization_no_steps(self):
         """Test lazy initialization when no steps provided."""
-        config = DispatchConfig(use_pipeline=True)
+        config = DispatchConfig()
         orchestrator = DispatchOrchestrator(config)
 
         orchestrator._initialize_pipeline_steps()
@@ -204,12 +193,12 @@ class TestIsPipelineReady:
 
         assert orchestrator._is_pipeline_ready() is True
 
-    def test_pipeline_not_ready(self):
-        """Test pipeline not ready when no steps configured."""
+    def test_pipeline_ready_without_steps(self):
+        """Phase 3 always routes through pipeline."""
         config = DispatchConfig()
         orchestrator = DispatchOrchestrator(config)
 
-        assert orchestrator._is_pipeline_ready() is False
+        assert orchestrator._is_pipeline_ready() is True
 
 
 class TestProcessFolderWithPipeline:
@@ -556,6 +545,231 @@ class TestProcessFileWithPipeline:
         assert "Validator error" in result.errors
 
 
+class TestProcessedFilesAndCleanupBehavior:
+    """Tests for processed-file idempotency and pipeline cleanup behavior."""
+
+    def test_filter_skips_checksum_when_resend_flag_false(self):
+        """Previously processed non-resend checksum is filtered out."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        processed_files = MagicMock()
+        processed_files.find.return_value = [
+            {"file_checksum": "checksum-a", "resend_flag": False}
+        ]
+
+        files = ["/data/input/a.edi", "/data/input/b.edi"]
+        with patch.object(
+            orchestrator,
+            "_calculate_checksum",
+            side_effect=["checksum-a", "checksum-b"],
+        ):
+            filtered = orchestrator._filter_processed_files(
+                files, processed_files, {"id": 42}
+            )
+
+        assert filtered == ["/data/input/b.edi"]
+
+    def test_filter_keeps_checksum_when_resend_flag_true(self):
+        """Resend-marked checksum remains eligible for processing."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        processed_files = MagicMock()
+        processed_files.find.return_value = [
+            {"file_checksum": "checksum-a", "resend_flag": True}
+        ]
+
+        files = ["/data/input/a.edi", "/data/input/b.edi"]
+        with patch.object(
+            orchestrator,
+            "_calculate_checksum",
+            side_effect=["checksum-a", "checksum-b"],
+        ):
+            filtered = orchestrator._filter_processed_files(
+                files, processed_files, {"id": 42}
+            )
+
+        assert filtered == files
+
+    def test_record_processed_file_updates_existing_resend_record_instead_of_insert(
+        self,
+    ):
+        """Existing resend record is updated and not duplicated."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        processed_files = MagicMock()
+        processed_files.find_one.return_value = {"id": 7}
+        file_result = FileResult(file_name="/data/input/file.edi", checksum="abc123")
+
+        folder = {
+            "id": 99,
+            "alias": "Orders",
+            "process_backend_copy": True,
+            "copy_to_directory": "/out/copy",
+        }
+
+        orchestrator._record_processed_file(processed_files, folder, file_result)
+
+        processed_files.find_one.assert_called_once_with(
+            file_name="/data/input/file.edi", folder_id=99, resend_flag=1
+        )
+        processed_files.insert.assert_not_called()
+        processed_files.update.assert_called_once()
+        update_payload, update_keys = processed_files.update.call_args.args
+        assert update_payload["id"] == 7
+        assert update_payload["resend_flag"] == 0
+        assert update_payload["status"] == "processed"
+        assert update_payload["sent_to"] == "Copy: /out/copy"
+        assert isinstance(update_payload["processed_at"], str)
+        assert update_keys == ["id"]
+
+    def test_record_processed_file_inserts_when_no_existing_resend_record(self):
+        """New processed-file record is inserted when resend match is absent."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        processed_files = MagicMock()
+        processed_files.find_one.return_value = None
+        file_result = FileResult(file_name="/data/input/file.edi", checksum="def456")
+
+        folder = {
+            "old_id": 123,
+            "alias": "Inbound",
+            "process_backend_email": True,
+            "email_to": "ops@example.com",
+        }
+
+        orchestrator._record_processed_file(processed_files, folder, file_result)
+
+        processed_files.update.assert_not_called()
+        processed_files.insert.assert_called_once()
+        insert_payload = processed_files.insert.call_args.args[0]
+        assert insert_payload["file_name"] == "/data/input/file.edi"
+        assert insert_payload["folder_id"] == 123
+        assert insert_payload["folder_alias"] == "Inbound"
+        assert insert_payload["file_checksum"] == "def456"
+        assert insert_payload["md5"] == "def456"
+        assert insert_payload["resend_flag"] == 0
+        assert insert_payload["sent_to"] == "Email: ops@example.com"
+        assert insert_payload["status"] == "processed"
+        assert isinstance(insert_payload["processed_at"], str)
+
+    def test_process_file_with_pipeline_cleans_context_registered_temp_dirs_in_finally(
+        self,
+    ):
+        """Context-tracked pipeline temp dirs are removed during finally cleanup."""
+        mock_fs = MockFileSystem(
+            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
+        )
+        mock_converter = MagicMock()
+        mock_converter.execute.return_value = None
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(
+                file_system=mock_fs,
+                converter_step=mock_converter,
+                use_pipeline=True,
+                settings={},
+            )
+        )
+
+        folder = {
+            "folder_name": "/data/input",
+            "convert_edi": True,
+        }
+
+        def converter_with_context(
+            file_path, folder_cfg, settings, upc_dict, context=None
+        ):
+            context.temp_dirs.extend(["/tmp/pipeline-1", "/tmp/pipeline-2"])
+            return None
+
+        mock_converter.execute.side_effect = converter_with_context
+
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("shutil.rmtree") as mock_rmtree,
+        ):
+            orchestrator._process_file_with_pipeline("/data/input/file.edi", folder, {})
+
+        assert mock_rmtree.call_count == 2
+        mock_rmtree.assert_any_call("/tmp/pipeline-1", ignore_errors=True)
+        mock_rmtree.assert_any_call("/tmp/pipeline-2", ignore_errors=True)
+        assert "_pipeline_temp_dirs" not in folder
+
+    def test_process_file_with_pipeline_cleanup_best_effort_when_remove_rmtree_raises(
+        self,
+    ):
+        """Cleanup exceptions are suppressed so processing remains best-effort."""
+        mock_fs = MockFileSystem(
+            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
+        )
+
+        mock_converter = MagicMock()
+        mock_converter.execute.return_value = "/tmp/converted.edi"
+
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(
+                file_system=mock_fs,
+                converter_step=mock_converter,
+                use_pipeline=True,
+                settings={},
+            )
+        )
+
+        folder = {
+            "folder_name": "/data/input",
+            "convert_edi": True,
+        }
+
+        def converter_with_context(
+            file_path, folder_cfg, settings, upc_dict, context=None
+        ):
+            context.temp_dirs.append("/tmp/pipeline-dir")
+            return "/tmp/converted.edi"
+
+        mock_converter.execute.side_effect = converter_with_context
+
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("shutil.rmtree", side_effect=OSError("rmtree failed")) as mock_rmtree,
+            patch("os.remove", side_effect=OSError("remove failed")) as mock_remove,
+        ):
+            result = orchestrator._process_file_with_pipeline(
+                "/data/input/file.edi", folder, {}
+            )
+
+        assert "No backends enabled" in result.errors
+        mock_rmtree.assert_called_once_with("/tmp/pipeline-dir", ignore_errors=True)
+        mock_remove.assert_called_once_with("/tmp/converted.edi")
+        assert "_pipeline_temp_dirs" not in folder
+
+    def test_process_file_with_pipeline_uses_effective_folder_without_mutating_source(
+        self,
+    ):
+        """Pipeline receives effective flags while original folder remains unchanged."""
+        mock_fs = MockFileSystem(
+            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
+        )
+        mock_converter = MagicMock()
+        mock_converter.execute.return_value = None
+
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(
+                file_system=mock_fs,
+                converter_step=mock_converter,
+                use_pipeline=True,
+                settings={},
+            )
+        )
+
+        folder = {
+            "folder_name": "/data/input",
+            "convert_edi": True,
+        }
+
+        orchestrator._process_file_with_pipeline("/data/input/file.edi", folder, {})
+
+        execute_args = mock_converter.execute.call_args.args
+        effective_folder = execute_args[1]
+        assert effective_folder.get("process_edi") is True
+        assert "process_edi" not in folder
+        assert "_pipeline_temp_dirs" not in folder
+
+
 class TestSendPipelineFile:
     """Tests for _send_pipeline_file method."""
 
@@ -645,40 +859,8 @@ class TestProcessFolderPipelineRouting:
 
             mock_pipeline.assert_called_once()
 
-    def test_process_folder_routes_to_legacy(self):
-        """Test that process_folder routes to legacy when pipeline not enabled."""
-        mock_fs = MockFileSystem(
-            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
-        )
-
-        mock_backend = MagicMock()
-        mock_backend.send.return_value = True
-
-        config = DispatchConfig(
-            file_system=mock_fs,
-            backends={"copy": mock_backend},
-            use_pipeline=False,
-            settings={},
-        )
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {
-            "folder_name": "/data/input",
-            "alias": "Test",
-            "process_backend_copy": True,
-        }
-        run_log = MagicMock()
-
-        with patch.object(orchestrator, "_process_folder_legacy") as mock_legacy:
-            mock_legacy.return_value = FolderResult(
-                folder_name="/data/input", alias="Test", files_processed=1
-            )
-            result = orchestrator.process_folder(folder, run_log)
-
-            mock_legacy.assert_called_once()
-
-    def test_legacy_processing_when_pipeline_not_ready(self):
-        """Test legacy processing when pipeline not ready despite use_pipeline flag."""
+    def test_process_folder_ignores_use_pipeline_and_still_uses_pipeline(self):
+        """Deprecated use_pipeline flag does not change runtime routing."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -702,12 +884,16 @@ class TestProcessFolderPipelineRouting:
         run_log = MagicMock()
 
         with patch.object(orchestrator, "_process_folder_legacy") as mock_legacy:
-            mock_legacy.return_value = FolderResult(
-                folder_name="/data/input", alias="Test", files_processed=1
-            )
-            result = orchestrator.process_folder(folder, run_log)
+            with patch.object(
+                orchestrator, "process_folder_with_pipeline"
+            ) as mock_pipeline:
+                mock_pipeline.return_value = FolderResult(
+                    folder_name="/data/input", alias="Test", files_processed=1
+                )
+                result = orchestrator.process_folder(folder, run_log)
 
-            mock_legacy.assert_called_once()
+                mock_pipeline.assert_called_once()
+                mock_legacy.assert_not_called()
 
 
 class TestProcessFilePipelineRouting:
@@ -739,8 +925,8 @@ class TestProcessFilePipelineRouting:
 
             mock_pipeline.assert_called_once()
 
-    def test_process_file_routes_to_legacy(self):
-        """Test that process_file routes to legacy when pipeline not enabled."""
+    def test_process_file_ignores_use_pipeline_and_still_uses_pipeline(self):
+        """Deprecated use_pipeline flag does not change file routing."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -751,19 +937,23 @@ class TestProcessFilePipelineRouting:
         folder = {"folder_name": "/data/input"}
 
         with patch.object(orchestrator, "_process_file_legacy") as mock_legacy:
-            mock_legacy.return_value = FileResult(
-                file_name="/data/input/file.edi", checksum="abc123"
-            )
-            result = orchestrator.process_file("/data/input/file.edi", folder)
+            with patch.object(
+                orchestrator, "_process_file_with_pipeline"
+            ) as mock_pipeline:
+                mock_pipeline.return_value = FileResult(
+                    file_name="/data/input/file.edi", checksum="abc123"
+                )
+                result = orchestrator.process_file("/data/input/file.edi", folder)
 
-            mock_legacy.assert_called_once()
+                mock_pipeline.assert_called_once()
+                mock_legacy.assert_not_called()
 
 
 class TestBackwardCompatibility:
     """Tests for backward compatibility with legacy processing."""
 
-    def test_legacy_processing_still_works(self):
-        """Test that legacy processing still works when pipeline not enabled."""
+    def test_process_file_works_when_use_pipeline_false(self):
+        """Compatibility: deprecated flag does not break processing."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -786,14 +976,14 @@ class TestBackwardCompatibility:
         assert result.file_name == "/data/input/file.edi"
         assert result.checksum is not None
 
-    def test_legacy_processing_with_validation(self):
-        """Test legacy processing with validation."""
+    def test_process_file_with_validation_when_use_pipeline_false(self):
+        """Validation still runs through pipeline path."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"valid content"}
         )
 
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (True, [])
+        mock_validator.execute.return_value = (True, "/data/input/file.edi")
 
         mock_backend = MagicMock()
         mock_backend.send.return_value = True
@@ -801,7 +991,7 @@ class TestBackwardCompatibility:
         config = DispatchConfig(
             file_system=mock_fs,
             backends={"copy": mock_backend},
-            validator=mock_validator,
+            validator_step=mock_validator,
             use_pipeline=False,
             settings={},
         )
@@ -815,10 +1005,10 @@ class TestBackwardCompatibility:
 
         result = orchestrator.process_file("/data/input/file.edi", folder)
 
-        mock_validator.validate.assert_called_once()
+        mock_validator.execute.assert_called_once()
 
-    def test_legacy_folder_processing(self):
-        """Test legacy folder processing."""
+    def test_process_folder_when_use_pipeline_false(self):
+        """Folder processing still routes through consolidated path."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )

@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Simple test script to verify imports only."""
 
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Manual root-level import smoke script; skip during pytest collection to avoid side effects.",
+        allow_module_level=True,
+    )
+
 import sys
 import os
 

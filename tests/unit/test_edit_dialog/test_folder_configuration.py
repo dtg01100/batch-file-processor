@@ -264,7 +264,7 @@ class TestEDIConfiguration:
         """Test default values for EDIConfiguration."""
         config = EDIConfiguration()
 
-        assert config.process_edi == "False"
+        assert config.process_edi is False
         assert config.tweak_edi is False
         assert config.split_edi is False
         assert config.split_edi_include_invoices is False
@@ -439,7 +439,7 @@ class TestFolderConfiguration:
 
         # Identity
         assert config.folder_name == ""
-        assert config.folder_is_active == "False"
+        assert config.folder_is_active is False
         assert config.alias == ""
         assert config.is_template is False
 
@@ -478,7 +478,7 @@ class TestFolderConfiguration:
         config = FolderConfiguration.from_dict(data)
 
         assert config.folder_name == "test_folder"
-        assert config.folder_is_active == "False"
+        assert config.folder_is_active is False
         assert config.alias == ""
         assert config.is_template is False
 
@@ -499,7 +499,7 @@ class TestFolderConfiguration:
         config = FolderConfiguration.from_dict(data)
 
         assert config.folder_name == "test_folder"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "test-alias"
         assert config.process_backend_ftp is True
         assert config.ftp is not None
@@ -552,7 +552,7 @@ class TestFolderConfiguration:
         config = FolderConfiguration.from_dict(data)
 
         assert config.edi is not None
-        assert config.edi.process_edi == "True"
+        assert config.edi.process_edi is True
         assert config.edi.split_edi is True
         assert config.edi.convert_to_format == "csv"
         assert config.edi.tweak_edi is True
@@ -646,6 +646,91 @@ class TestFolderConfiguration:
         assert config.csv.include_item_numbers is True
         assert config.csv.include_item_description is True
 
+    def test_from_dict_normalizes_boolean_boundaries(self):
+        """Test from_dict normalizes legacy string/int boolean values."""
+        data = {
+            "folder_name": "test_folder",
+            "folder_is_active": "1",
+            "process_backend_copy": "true",
+            "process_backend_ftp": 1,
+            "process_backend_email": "0",
+            "process_edi": "yes",
+            "tweak_edi": "false",
+            "split_edi": "1",
+            "split_edi_include_invoices": "0",
+            "split_edi_include_credits": 1,
+            "prepend_date_files": "off",
+            "force_edi_validation": "on",
+            "override_upc_bool": "True",
+            "pad_a_records": "true",
+            "append_a_records": "false",
+            "force_txt_file_ext": 1,
+            "invoice_date_custom_format": "no",
+            "retail_uom": "yes",
+            "include_headers": "1",
+            "filter_ampersand": "0",
+            "include_item_numbers": "True",
+            "include_item_description": "False",
+            "split_prepaid_sales_tax_crec": "on",
+        }
+
+        config = FolderConfiguration.from_dict(data)
+
+        assert config.folder_is_active is True
+        assert config.process_backend_copy is True
+        assert config.process_backend_ftp is True
+        assert config.process_backend_email is False
+        assert config.edi is not None
+        assert config.edi.process_edi is True
+        assert config.edi.tweak_edi is False
+        assert config.edi.split_edi is True
+        assert config.edi.split_edi_include_invoices is False
+        assert config.edi.split_edi_include_credits is True
+        assert config.edi.prepend_date_files is False
+        assert config.edi.force_edi_validation is True
+        assert config.upc_override is not None
+        assert config.upc_override.enabled is True
+        assert config.a_record_padding is not None
+        assert config.a_record_padding.enabled is True
+        assert config.a_record_padding.append_enabled is False
+        assert config.a_record_padding.force_txt_extension is True
+        assert config.invoice_date is not None
+        assert config.invoice_date.custom_format_enabled is False
+        assert config.invoice_date.retail_uom is True
+        assert config.csv is not None
+        assert config.csv.include_headers is True
+        assert config.csv.filter_ampersand is False
+        assert config.csv.include_item_numbers is True
+        assert config.csv.include_item_description is False
+        assert config.csv.split_prepaid_sales_tax_crec is True
+
+        serialized = config.to_dict()
+        for key in [
+            "folder_is_active",
+            "process_backend_copy",
+            "process_backend_ftp",
+            "process_backend_email",
+            "process_edi",
+            "tweak_edi",
+            "split_edi",
+            "split_edi_include_invoices",
+            "split_edi_include_credits",
+            "prepend_date_files",
+            "force_edi_validation",
+            "override_upc_bool",
+            "pad_a_records",
+            "append_a_records",
+            "force_txt_file_ext",
+            "invoice_date_custom_format",
+            "retail_uom",
+            "include_headers",
+            "filter_ampersand",
+            "include_item_numbers",
+            "include_item_description",
+            "split_prepaid_sales_tax_crec",
+        ]:
+            assert isinstance(serialized[key], bool)
+
     def test_from_dict_template(self):
         """Test from_dict detects template."""
         data = {"folder_name": "template"}
@@ -661,7 +746,7 @@ class TestFolderConfiguration:
         result = config.to_dict()
 
         assert result["folder_name"] == "test"
-        assert result["folder_is_active"] == "False"
+        assert result["folder_is_active"] is False
         assert "ftp_server" not in result
         assert "email_to" not in result
 
@@ -719,13 +804,13 @@ class TestFolderConfiguration:
         config = FolderConfiguration(
             folder_name="test",
             edi=EDIConfiguration(
-                process_edi="True", split_edi=True, convert_to_format="csv"
+                process_edi=True, split_edi=True, convert_to_format="csv"
             ),
         )
 
         result = config.to_dict()
 
-        assert result["process_edi"] == "True"
+        assert result["process_edi"] is True
         assert result["split_edi"] is True
         assert result["convert_to_format"] == "csv"
 
@@ -769,7 +854,7 @@ class TestFolderConfiguration:
         result = config.to_dict()
 
         assert result["folder_name"] == original_data["folder_name"]
-        assert result["folder_is_active"] == original_data["folder_is_active"]
+        assert result["folder_is_active"] is True
         assert result["ftp_server"] == original_data["ftp_server"]
         assert result["email_to"] == original_data["email_to"]
         assert result["copy_to_directory"] == original_data["copy_to_directory"]

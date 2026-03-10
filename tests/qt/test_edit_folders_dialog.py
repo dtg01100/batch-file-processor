@@ -767,10 +767,17 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
+        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
 
         # Switch to "Convert EDI" which creates widgets
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
-        qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
+        edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(
+            lambda: (
+                "convert_formats_var" in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
 
         # Verify widgets were created
         assert "process_edi" in dialog._fields
@@ -782,8 +789,14 @@ class TestWidgetCleanupAndLifecycle:
         assert isinstance(old_widget, QComboBox)
 
         # Switch to "Tweak EDI" which clears convert widgets
-        dialog._edi_options_combo.setCurrentText("Tweak EDI")
-        qtbot.wait(200)  # Wait for debounce timer (100ms) + processing
+        edi_options_combo.setCurrentText("Tweak EDI")
+        qtbot.waitUntil(
+            lambda: (
+                "convert_formats_var" not in dialog._fields
+                and "force_txt_file_ext_check" in dialog._fields
+            ),
+            timeout=1000,
+        )
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
         # (Tweak EDI has different widgets)
@@ -798,13 +811,21 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
+        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
 
         # Switch to "Convert EDI" with CSV format
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
-        qtbot.wait(200)
+        edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(
+            lambda: (
+                "convert_formats_var" in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
 
-        dialog._convert_format_combo.setCurrentText("csv")
-        qtbot.wait(200)
+        convert_format_combo = dialog._fields["convert_formats_var"]
+        convert_format_combo.setCurrentText("csv")
+        qtbot.waitUntil(lambda: "upc_var_check" in dialog._fields, timeout=1000)
 
         # Verify CSV widgets were created
         assert "upc_var_check" in dialog._fields
@@ -814,8 +835,14 @@ class TestWidgetCleanupAndLifecycle:
         assert old_widget is not None
 
         # Change to different format (ScannerWare doesn't have upc_var_check)
-        dialog._convert_format_combo.setCurrentText("ScannerWare")
-        qtbot.wait(200)
+        convert_format_combo.setCurrentText("ScannerWare")
+        qtbot.waitUntil(
+            lambda: (
+                "upc_var_check" not in dialog._fields
+                and "append_arec_check" in dialog._fields
+            ),
+            timeout=1000,
+        )
 
         # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
         assert (
@@ -854,6 +881,7 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
+        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
 
         # Rapidly switch EDI options (with proper debounce wait times)
         options = [
@@ -864,11 +892,14 @@ class TestWidgetCleanupAndLifecycle:
             "Do Nothing",
         ]
         for option in options:
-            dialog._edi_options_combo.setCurrentText(option)
-            qtbot.wait(200)  # Wait for debounce timer
+            edi_options_combo.setCurrentText(option)
+            qtbot.waitUntil(
+                lambda: not dialog.dynamic_edi_builder._edi_option_processing,
+                timeout=1000,
+            )
 
         # Should not crash - if we get here, test passes
-        assert True
+        assert edi_options_combo.currentText() == options[-1]
 
     def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
         """Data extractor should handle widgets that have been deleted with deleteLater()."""
@@ -887,7 +918,10 @@ class TestWidgetCleanupAndLifecycle:
 
         # Delete the widget (simulate what happens during clear operations)
         test_widget.deleteLater()
-        qtbot.wait(50)  # Let Qt process the deletion
+        qtbot.waitUntil(
+            lambda: _widget_deleted(dialog._fields["test_field"]),
+            timeout=1000,
+        )
 
         # Create extractor and try to extract - should handle gracefully
         extractor = QtFolderDataExtractor(dialog._fields)
@@ -905,3 +939,12 @@ class TestWidgetCleanupAndLifecycle:
             )
         except Exception as e:
             pytest.fail(f"Data extractor crashed with deleted widget: {e}")
+
+
+def _widget_deleted(widget):
+    """Return True once a Qt widget has been deleted."""
+    try:
+        widget.objectName()
+        return False
+    except RuntimeError:
+        return True

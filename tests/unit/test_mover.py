@@ -317,8 +317,8 @@ class TestThreading:
         thread = threading.Thread(target=background_task)
         thread.start()
 
-        while thread.is_alive():
-            pass
+        thread.join(timeout=0.1)
+        assert not thread.is_alive()
 
         assert len(thread_completed) == 1
 

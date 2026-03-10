@@ -323,8 +323,8 @@ class TestBasicProcessingFlow:
         )
 
         # Verify processing results
-        assert result.files_processed >= 0, "Should have result"
-        # Note: Actual processing depends on backend configuration
+        assert result.success, "Dispatch should succeed"
+        assert result.files_processed == 1, "Should process the single input file"
 
     def test_folder_is_active_flag(self, workspace):
         """Test that inactive folders are not processed."""
@@ -540,7 +540,7 @@ class TestResendWorkflow:
         )
 
         # Should find the file marked for resend
-        assert len(resend_records) >= 0, "Should be able to query resend files"
+        assert len(resend_records) == 1, "Should find exactly one resend record"
 
     def test_clear_resend_flag(self, workspace, test_folder, sample_edi_content):
         """Test clearing the resend flag after reprocessing."""
@@ -850,23 +850,38 @@ class TestFullIntegrationWorkflow:
 
         # Check if already processed
         existing = list(workspace["db"].processed_files.find(md5=file_hash))
-        if existing:
-            # Mark for resend
-            workspace["db"].processed_files.update(
+        if not existing:
+            record_id = workspace["db"].processed_files.insert(
                 {
-                    "id": existing[0]["id"],
-                    "resend_flag": 1,
-                },
-                ["id"],
+                    "file_name": str(test_file),
+                    "folder_id": folder_id,
+                    "md5": file_hash,
+                    "processed_at": datetime.now().isoformat(),
+                    "resend_flag": 0,
+                    "status": "processed",
+                }
             )
+        else:
+            record_id = existing[0]["id"]
+
+        # Mark for resend
+        workspace["db"].processed_files.update(
+            {
+                "id": record_id,
+                "resend_flag": 1,
+            },
+            ["id"],
+        )
 
         # Step 5: Verify resend works by querying directly
         resend_records = list(
             workspace["db"].processed_files.find(folder_id=folder_id, resend_flag=1)
         )
 
-        # Should be able to query for resend files
-        assert resend_records is not None or len(resend_records) >= 0
+        # Should find the specific file marked for resend
+        assert len(resend_records) == 1
+        assert resend_records[0]["id"] == record_id
+        assert resend_records[0]["resend_flag"] == 1
 
     def test_workflow_with_edi_tweaking_enabled(
         self, workspace, sample_edi_with_ampersand

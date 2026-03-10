@@ -537,8 +537,9 @@ class TestResendDialogStress:
         dialog._folder_id = 1
         dialog._load_files_for_folder(1)
 
-        # Should handle long names without crash
-        assert len(dialog._file_checkboxes) >= 0
+        # Loaded checkboxes should match service-visible file count
+        expected_count = dialog._service.count_files_for_folder(1)
+        assert len(dialog._file_checkboxes) == expected_count
 
     def test_unicode_file_names(self, qtbot, mock_database_obj, tmp_path):
         """Test dialog with Unicode file names."""
@@ -571,8 +572,9 @@ class TestResendDialogStress:
         dialog._folder_id = 1
         dialog._load_files_for_folder(1)
 
-        # Should handle Unicode without crash
-        assert len(dialog._file_checkboxes) >= 0
+        # Loaded checkboxes should match service-visible file count
+        expected_count = dialog._service.count_files_for_folder(1)
+        assert len(dialog._file_checkboxes) == expected_count
 
     def test_file_count_spinbox_boundary(self, qtbot, mock_database_obj):
         """Test file count spinbox at boundary values."""
@@ -1208,7 +1210,14 @@ class TestAppSmokeActions:
     def test_maintenance_action_no_crash(self, app, qtbot, monkeypatch):
         """Test that 'Maintenance' action doesn't crash."""
         app.initialize([])
-        monkeypatch.setattr("PyQt6.QtWidgets.QDialog.exec", lambda self: 1)
+        # open_dialog shows a confirmation QMessageBox before the dialog itself,
+        # which bypasses a plain QDialog.exec patch and blocks the test runner.
+        # Patch the classmethod directly so we verify the wrapper calls it without
+        # any real UI being shown.
+        monkeypatch.setattr(
+            "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",
+            lambda *args, **kwargs: None,
+        )
         app._show_maintenance_dialog_wrapper()
 
 
