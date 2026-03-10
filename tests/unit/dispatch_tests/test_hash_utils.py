@@ -125,8 +125,9 @@ class TestGenerateFileHash:
     
     def test_generate_hash_file_not_found(self):
         """Test hash generation for non-existent file."""
-        with pytest.raises(FileNotFoundError):
-            generate_file_hash('/nonexistent/path/file.txt')
+        with patch('dispatch.hash_utils.time.sleep'):
+            with pytest.raises(FileNotFoundError):
+                generate_file_hash('/nonexistent/path/file.txt')
     
     def test_generate_hash_empty_file(self):
         """Test hash generation for empty file."""

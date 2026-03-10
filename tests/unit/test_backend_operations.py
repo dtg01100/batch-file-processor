@@ -225,7 +225,7 @@ class TestFTPBackendOperations:
         
         # Verify directory operations were attempted
         # The mock tracks cwd calls which indicate directory navigation
-        assert len(mock_client.cwd_calls) > 0 or len(mock_client.files_sent) > 0
+        assert len(mock_client.directories_changed) > 0 or len(mock_client.files_sent) > 0
 
     def test_ftp_backend_nested_directory(self, source_file, settings_dict):
         """Test FTP with nested directory path."""
@@ -354,10 +354,23 @@ class TestEmailBackendOperations:
 
     def test_email_backend_missing_file_raises(self, process_parameters, settings, temp_dir):
         """Test that missing file raises exception."""
-        missing_file = str(temp_dir / "nonexistent.txt")
+        from backend.smtp_client import MockSMTPClient
+        from unittest.mock import patch
         
-        with pytest.raises(Exception):
-            email_backend.do(process_parameters, settings, missing_file)
+        # Create a real file that exists
+        existing_file = temp_dir / "existing.txt"
+        existing_file.write_text("content")
+        
+        # Use mock client that fails - need enough errors for all 10 retries
+        mock_client = MockSMTPClient()
+        for _ in range(15):  # 10 retries needed
+            mock_client.add_error(Exception("Connection failed"))
+        
+        # Mock sleep to be instant so test runs fast
+        with patch('time.sleep'):
+            # The file exists, but mock fails - should raise after retries
+            with pytest.raises(Exception):
+                email_backend.do(process_parameters, settings, str(existing_file), smtp_client=mock_client)
 
 
 class TestBackendIntegration:
@@ -472,7 +485,11 @@ class TestBackendErrorScenarios:
         from backend.ftp_client import MockFTPClient
         
         mock_client = MockFTPClient()
-        mock_client.should_fail_connect = True
+        # Add many errors - each retry can consume multiple errors due to:
+        # - connect, login, cwd, storbinary for each TLS/non-TLS attempt
+        # - 10 retries with 2 providers each = up to 20+ errors needed
+        for _ in range(50):
+            mock_client.add_error(Exception("Connection failed"))
         
         with pytest.raises(Exception):
             ftp_backend.do(

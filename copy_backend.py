@@ -99,6 +99,24 @@ class CopyBackend:
         """
         return do(process_parameters, settings_dict, filename, self.file_ops)
     
+    def send(
+        self,
+        process_parameters: dict,
+        settings_dict: dict,
+        filename: str
+    ) -> bool:
+        """Send a file via copy (local file copy).
+        
+        Args:
+            process_parameters: Copy parameters
+            settings_dict: Settings dictionary
+            filename: File to send (copy)
+            
+        Returns:
+            True if successful
+        """
+        return self.copy(process_parameters, settings_dict, filename)
+    
     @staticmethod
     def create_file_ops() -> FileOperationsProtocol:
         """Create a file operations instance.

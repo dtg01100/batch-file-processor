@@ -437,7 +437,7 @@ class EDIConverterStep:
         
         try:
             result = self.convert(file_path, temp_dir, folder, effective_settings, effective_upc_dict)
-            if result.success and result.output_path != file_path and os.path.exists(result.output_path):
+            if result.success and result.output_path != file_path:
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path

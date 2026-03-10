@@ -145,3 +145,28 @@ def real_admin_row(migrated_v42_db):
         dict: The administrative row as a dict.
     """
     return migrated_v42_db["administrative"].find_one(id=1)
+
+
+@pytest.fixture
+def temp_database(tmp_path):
+    """Create a temporary database for testing.
+
+    Creates a fresh database with current schema for isolated testing.
+    Each test gets its own copy.
+
+    Returns:
+        DatabaseObj: Temporary database object
+    """
+    from interface.database.database_obj import DatabaseObj
+
+    db_path = tmp_path / "test_folders.db"
+
+    # Create database with current schema
+    db = DatabaseObj(
+        database_path=str(db_path),
+        database_version="42",
+        config_folder=str(tmp_path),
+        running_platform="Linux",
+    )
+
+    return db

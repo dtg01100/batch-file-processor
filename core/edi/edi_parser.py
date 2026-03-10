@@ -134,7 +134,7 @@ class CRecord:
     amount: str
 
 
-def capture_records(line: str) -> Optional[dict]:
+def capture_records(line: str, parser=None) -> Optional[dict]:
     """Parse an EDI record line into a dictionary.
     
     Args:
@@ -150,6 +150,15 @@ def capture_records(line: str) -> Optional[dict]:
         >>> capture_records("AVENDOR0000000001120240000000123\\n")
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
     """
+    # Handle parser parameter
+    if parser is not None:
+        result = parser.parse_line(line)
+        if result is None and line and line.strip() != "":
+            if line.strip() == "\x1a":
+                return None
+            raise Exception("Not An EDI")
+        return result
+    
     if not line or line.startswith("\x1a") or line.strip() == "":
         return None
     

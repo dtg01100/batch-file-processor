@@ -142,7 +142,10 @@ class ProcessedFilesDialog(BaseDialog):
 
         tuples: List[Tuple[int, str]] = []
         for fid in distinct_ids:
-            folder = self._database_obj.folders_table.find_one(id=str(fid))
+            # Try both integer and string lookup for compatibility
+            folder = self._database_obj.folders_table.find_one(id=fid)
+            if folder is None:
+                folder = self._database_obj.folders_table.find_one(id=str(fid))
             if folder is None:
                 # Skip folders that no longer exist
                 continue

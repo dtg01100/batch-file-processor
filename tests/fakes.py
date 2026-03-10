@@ -88,10 +88,19 @@ class FakeTable:
     def delete(self, **kwargs) -> None:
         """Delete records matching criteria."""
         self._track_call("delete")
-        self._data = [
-            r for r in self._data
-            if not all(r.get(k) == v for k, v in kwargs.items())
-        ]
+        if not kwargs:
+            # Delete all records when no criteria provided
+            self._data = []
+        else:
+            self._data = [
+                r for r in self._data
+                if not all(r.get(k) == v for k, v in kwargs.items())
+            ]
+    
+    def delete_all(self) -> None:
+        """Delete all records from the table."""
+        self._track_call("delete_all")
+        self._data = []
     
     def count(self, **kwargs) -> int:
         """Count records matching criteria."""

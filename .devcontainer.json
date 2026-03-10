@@ -10,7 +10,7 @@
         "dockerfile": "Dockerfile"
     },
     "features": {
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+        "ghcr.io/maks1ms/devcontainers-features/wine:0": {}
     },
     "runArgs": [
         "-e", "DISPLAY=:99",
