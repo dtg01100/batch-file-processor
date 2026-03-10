@@ -253,8 +253,13 @@ def main():
         
         # Create a mock thread object for the migration
         class MockThread:
-            def progress(self, *args):
-                print(f"  Progress: {args[2]}")
+            class _ProgressSignal:
+                @staticmethod
+                def emit(*args):
+                    print(f"  Progress: {args[2]}")
+
+            def __init__(self):
+                self.progress = self._ProgressSignal()
         
         mock_thread = MockThread()
         
