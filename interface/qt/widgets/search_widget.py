@@ -95,6 +95,7 @@ class SearchWidget(QWidget):
         layout.setSpacing(Theme.SPACING_SM_INT)
 
         self._entry = QLineEdit()
+<<<<<<< ours
         self._entry.setPlaceholderText("\U0001f50d Search folders...")
         self._entry.setStyleSheet(
             f"""
@@ -118,6 +119,11 @@ class SearchWidget(QWidget):
             }}
         """
         )
+=======
+        self._entry.setPlaceholderText("\U0001F50D Search folders...")
+        # Use Theme's input stylesheet for consistent styling
+        self._entry.setStyleSheet(Theme.get_input_stylesheet())
+>>>>>>> theirs
         self._entry.returnPressed.connect(self._on_return_pressed)
 
         self._button = QPushButton("Filter")

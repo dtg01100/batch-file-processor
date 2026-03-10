@@ -20,6 +20,7 @@ from PyQt6.QtCore import Qt
 
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
 from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
+from interface.qt.theme import Theme
 
 
 class UILayoutBuilder:
@@ -103,9 +104,14 @@ class UILayoutBuilder:
 
         # Active state checkbox
         self.active_checkbox = QCheckBox("Folder Is Disabled")
-        self.active_checkbox.setStyleSheet(
-            "QCheckBox { background-color: red; padding: 4px; }"
-        )
+        self.active_checkbox.setStyleSheet(f"""
+            QCheckBox {{
+                background-color: {Theme.ERROR_CONTAINER};
+                color: {Theme.ON_ERROR_CONTAINER};
+                padding: 4px;
+                border-radius: 4px;
+            }}
+        """)
         if self.on_update_backend_states:
             self.active_checkbox.toggled.connect(self.on_update_backend_states)
         self.fields["active_checkbutton"] = self.active_checkbox

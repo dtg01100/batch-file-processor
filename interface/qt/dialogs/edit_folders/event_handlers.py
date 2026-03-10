@@ -11,6 +11,8 @@ from typing import Dict, Any, Optional, Callable
 
 from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QCheckBox
 
+from interface.qt.theme import Theme
+
 
 class EventHandlers:
     """Handler class for user interaction events in the edit folders dialog.
@@ -66,14 +68,24 @@ class EventHandlers:
         is_active = active_btn.isChecked()
         if is_active:
             active_btn.setText("Folder Is Enabled")
-            active_btn.setStyleSheet(
-                "QPushButton { background-color: green; color: white; padding: 8px; }"
-            )
+            active_btn.setStyleSheet(f"""
+                QCheckBox {{
+                    background-color: {Theme.SUCCESS_CONTAINER};
+                    color: {Theme.ON_SUCCESS_CONTAINER};
+                    padding: 4px;
+                    border-radius: 4px;
+                }}
+            """)
         else:
             active_btn.setText("Folder Is Disabled")
-            active_btn.setStyleSheet(
-                "QPushButton { background-color: red; color: white; padding: 8px; }"
-            )
+            active_btn.setStyleSheet(f"""
+                QCheckBox {{
+                    background-color: {Theme.ERROR_CONTAINER};
+                    color: {Theme.ON_ERROR_CONTAINER};
+                    padding: 4px;
+                    border-radius: 4px;
+                }}
+            """)
 
         # Update enabled state of other widgets
         for key in ["process_backend_copy_check", "process_backend_ftp_check"]:

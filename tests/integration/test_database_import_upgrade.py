@@ -42,7 +42,7 @@ class TestDatabaseCreation:
         # Verify version
         version_rec = db["version"].find_one(id=1)
         assert version_rec is not None
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         # Verify all core tables exist
         expected_tables = [
@@ -176,7 +176,7 @@ class TestMigrationPathValidation:
 
         # Verify version updated
         version_rec = db["version"].find_one(id=1)
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         # Verify data preserved
         folder = db["folders"].find_one(folder_name="/test/folder1")
@@ -207,7 +207,7 @@ class TestMigrationPathValidation:
         )
 
         version_rec = db["version"].find_one(id=1)
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         # Verify force_edi_validation was added
         cursor = db.raw_connection.cursor()
@@ -230,7 +230,7 @@ class TestMigrationPathValidation:
         )
 
         version_rec = db["version"].find_one(id=1)
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         db.close()
 
@@ -245,7 +245,7 @@ class TestMigrationPathValidation:
         )
 
         version_rec = db["version"].find_one(id=1)
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         # Verify id column was added
         cursor = db.raw_connection.cursor()
@@ -448,7 +448,7 @@ class TestEdgeCasesAndErrorHandling:
 
         # Verify migration completed
         version_rec = db["version"].find_one(id=1)
-        assert version_rec["version"] == "41"
+        assert version_rec["version"] == CURRENT_DATABASE_VERSION
 
         db.close()
 
@@ -763,7 +763,7 @@ class TestDatabaseImport:
         db = sqlite_wrapper.Database.connect(import_db_path)
 
         version = db["version"].find_one(id=1)
-        assert version["version"] == "41"
+        assert version["version"] == CURRENT_DATABASE_VERSION
 
         folders = list(db["folders"].all())
         assert len(folders) == 2
@@ -789,7 +789,7 @@ class TestDatabaseImport:
 
         # Verify upgraded
         version = db["version"].find_one(id=1)
-        assert version["version"] == "41"
+        assert version["version"] == CURRENT_DATABASE_VERSION
 
         # Verify data preserved
         folder = db["folders"].find_one(folder_name="/old/folder")
@@ -825,7 +825,7 @@ class TestMigrationIdempotency:
         # Verify final state
         db = sqlite_wrapper.Database.connect(db_path)
         version = db["version"].find_one(id=1)
-        assert version["version"] == "41"
+        assert version["version"] == CURRENT_DATABASE_VERSION
 
         folder = db["folders"].find_one(folder_name="/test")
         assert folder is not None
