@@ -353,12 +353,13 @@ class FolderListWidget(QWidget):
 
         row_layout.addWidget(status_badge)
 
-        # Edit button (always present, expands to show folder alias)
-        edit_text = "Edit"
+        # Edit button (always present, shows folder alias for quick scanning)
+        edit_text = f"Edit: {alias}" if alias else "Edit"
         target_char_width = max_alias_length + 6
         edit_btn = QPushButton(edit_text)
         edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         edit_btn.setMinimumWidth(self._char_width_to_pixels(target_char_width))
+        edit_btn.setToolTip(f"Edit folder settings for '{alias}'" if alias else "Edit folder settings")
         self._style_action_button(edit_btn)
         edit_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_edit(fid))
         row_layout.addWidget(edit_btn, stretch=1)
@@ -366,7 +367,7 @@ class FolderListWidget(QWidget):
         # Action buttons based on status
         if is_active:
             # Disable button
-            toggle_btn = QPushButton("⏸")
+            toggle_btn = QPushButton("<-")
             toggle_btn.setFixedWidth(40)
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Disable folder")
@@ -380,12 +381,13 @@ class FolderListWidget(QWidget):
             send_btn = QPushButton("Send")
             send_btn.setFixedWidth(64)
             send_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            send_btn.setToolTip(f"Process only '{alias}'")
             self._style_action_button(send_btn, "primary")
             send_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_send(fid))
             row_layout.addWidget(send_btn)
         else:
             # Enable button
-            toggle_btn = QPushButton("▶")
+            toggle_btn = QPushButton("->")
             toggle_btn.setFixedWidth(40)
             toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             toggle_btn.setToolTip("Enable folder")
@@ -399,6 +401,7 @@ class FolderListWidget(QWidget):
             delete_btn = QPushButton("Delete")
             delete_btn.setFixedWidth(74)
             delete_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            delete_btn.setToolTip(f"Remove '{alias}' from configured folders")
             self._style_action_button(delete_btn, "danger")
             delete_btn.clicked.connect(
                 lambda _checked, fid=folder_id, a=alias: self._on_delete(fid, a)
