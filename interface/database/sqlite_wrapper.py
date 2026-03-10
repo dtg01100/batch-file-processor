@@ -26,6 +26,8 @@ import threading
 from typing import Any, Dict, List, Optional
 import json
 
+from core.utils.bool_utils import normalize_bool, to_db_bool
+
 
 # Thread-local storage for database connections
 _thread_local = threading.local()
@@ -48,6 +50,75 @@ class Table:
         self._conn = conn
         self._name = name
         self._boolean_columns: Optional[set] = None
+
+    _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE = {
+        "folders": {
+            "folder_is_active",
+            "process_backend_copy",
+            "process_backend_ftp",
+            "process_backend_email",
+            "process_edi",
+            "calculate_upc_check_digit",
+            "include_a_records",
+            "include_c_records",
+            "include_headers",
+            "filter_ampersand",
+            "tweak_edi",
+            "split_edi",
+            "force_edi_validation",
+            "append_a_records",
+            "force_txt_file_ext",
+            "invoice_date_custom_format",
+            "retail_uom",
+            "override_upc_bool",
+            "split_edi_include_invoices",
+            "split_edi_include_credits",
+            "prepend_date_files",
+            "include_item_numbers",
+            "include_item_description",
+            "split_prepaid_sales_tax_crec",
+            "pad_a_records",
+        },
+        "settings": {
+            "enable_email",
+            "enable_interval_backups",
+            "folder_is_active",
+            "process_edi",
+            "calculate_upc_check_digit",
+            "include_a_records",
+            "include_c_records",
+            "include_headers",
+            "filter_ampersand",
+            "tweak_edi",
+            "pad_a_records",
+            "invoice_date_custom_format",
+            "process_backend_copy",
+            "process_edi_output",
+        },
+        "administrative": {
+            "enable_reporting",
+            "report_edi_errors",
+            "report_printing_fallback",
+            "tweak_edi",
+            "split_edi",
+            "force_edi_validation",
+            "append_a_records",
+            "force_txt_file_ext",
+            "invoice_date_custom_format",
+            "retail_uom",
+            "force_each_upc",
+            "include_item_numbers",
+            "include_item_description",
+            "split_prepaid_sales_tax_crec",
+            "prepend_date_files",
+            "override_upc_bool",
+            "split_edi_include_invoices",
+            "split_edi_include_credits",
+            "process_backend_email",
+            "process_backend_ftp",
+        },
+        "processed_files": {"resend_flag"},
+    }
 
     @staticmethod
     def _quote_identifier(name: str) -> str:
@@ -83,6 +154,8 @@ class Table:
             f"PRAGMA table_info({self._quote_identifier(self._name)})"
         )
         boolean_cols = set()
+        explicit = self._EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE.get(self._name, set())
+
         for row in cur.fetchall():
             col_name = row[1]
             col_type = row[2].upper()
@@ -99,6 +172,8 @@ class Table:
                     or "boolean" in lower_name
                 ):
                     boolean_cols.add(col_name)
+            if col_name in explicit:
+                boolean_cols.add(col_name)
 
         self._boolean_columns = boolean_cols
         return boolean_cols
@@ -127,8 +202,8 @@ class Table:
                 continue
 
             # Convert boolean columns from INTEGER (0/1) to Python bool
-            if k in boolean_cols and isinstance(v, int):
-                d[k] = bool(v)
+            if k in boolean_cols:
+                d[k] = normalize_bool(v)
 
             # Attempt to deserialize JSON strings
             # Only try to parse if string looks like valid JSON (starts with { or [ and ends with matching bracket)
@@ -146,6 +221,36 @@ class Table:
                         pass
 
         return d
+
+    def _serialize_record_value(self, column: str, value: Any, boolean_cols: set) -> Any:
+        if column in boolean_cols:
+            return to_db_bool(value)
+        return self._serialize_value(value)
+
+    def _build_where_clause(self, kwargs: Dict[str, Any]) -> tuple[str, list[Any]]:
+        boolean_cols = self._get_boolean_columns()
+        clauses: list[str] = []
+        values: list[Any] = []
+
+        true_legacy = "('true','1','yes','on')"
+        false_legacy = "('false','0','no','off','')"
+
+        for key, value in kwargs.items():
+            quoted_key = self._quote_identifier(key)
+            if key in boolean_cols:
+                if normalize_bool(value):
+                    clauses.append(
+                        f"({quoted_key}=1 OR lower(cast({quoted_key} as text)) IN {true_legacy})"
+                    )
+                else:
+                    clauses.append(
+                        f"({quoted_key}=0 OR lower(cast({quoted_key} as text)) IN {false_legacy})"
+                    )
+            else:
+                clauses.append(f"{quoted_key}=?")
+                values.append(self._serialize_value(value))
+
+        return " AND ".join(clauses), values
 
     def _serialize_value(self, v: Any) -> Any:
         """Serialize a value for SQLite storage.
@@ -195,10 +300,9 @@ class Table:
         """
         quoted_table = self._quote_identifier(self._name)
         if kwargs:
-            where = " AND ".join(f"{self._quote_identifier(k)}=?" for k in kwargs)
-            values = tuple(self._serialize_value(v) for v in kwargs.values())
+            where, values = self._build_where_clause(kwargs)
             cur = self._conn.execute(
-                f"SELECT * FROM {quoted_table} WHERE {where} LIMIT 1", values
+                f"SELECT * FROM {quoted_table} WHERE {where} LIMIT 1", tuple(values)
             )
         else:
             cur = self._conn.execute(f"SELECT * FROM {quoted_table} LIMIT 1")
@@ -226,9 +330,9 @@ class Table:
         params = []
 
         if kwargs:
-            where = " AND ".join(f"{self._quote_identifier(k)}=?" for k in kwargs)
+            where, where_values = self._build_where_clause(kwargs)
             sql += f" WHERE {where}"
-            params = [self._serialize_value(v) for v in kwargs.values()]
+            params = where_values
 
         if order_by:
             sql += f" ORDER BY {self._quote_identifier(order_by)}"
@@ -237,7 +341,12 @@ class Table:
             sql += f" LIMIT {_limit}"
 
         cur = self._conn.execute(sql, tuple(params))
-        return [self._row_to_dict(r) for r in cur.fetchall()]
+        return [
+            row_dict
+            for r in cur.fetchall()
+            for row_dict in [self._row_to_dict(r)]
+            if row_dict is not None
+        ]
 
     def all(self) -> List[Dict[str, Any]]:
         """Get all records from the table.
@@ -250,7 +359,12 @@ class Table:
         """
         quoted_table = self._quote_identifier(self._name)
         cur = self._conn.execute(f"SELECT * FROM {quoted_table}")
-        return [self._row_to_dict(r) for r in cur.fetchall()]
+        return [
+            row_dict
+            for r in cur.fetchall()
+            for row_dict in [self._row_to_dict(r)]
+            if row_dict is not None
+        ]
 
     def insert(self, record: Dict[str, Any]) -> int:
         """Insert a new record into the table.
@@ -273,11 +387,14 @@ class Table:
         cols = ", ".join(self._quote_identifier(k) for k in keys)
         placeholders = ", ".join("?" for _ in keys)
         sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
-        values = tuple(self._serialize_value(record[k]) for k in keys)
+        boolean_cols = self._get_boolean_columns()
+        values = tuple(
+            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+        )
 
         cur = self._conn.execute(sql, values)
         self._conn.commit()
-        return cur.lastrowid
+        return int(cur.lastrowid or 0)
 
     def update(self, record: Dict[str, Any], keys: List[str]) -> None:
         """Update an existing record.
@@ -299,8 +416,13 @@ class Table:
         where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
         sql = f"UPDATE {quoted_table} SET {set_clause} WHERE {where_clause}"
 
-        params = [self._serialize_value(record[k]) for k in set_keys]
-        params.extend(self._serialize_value(record[k]) for k in keys)
+        boolean_cols = self._get_boolean_columns()
+        params = [
+            self._serialize_record_value(k, record[k], boolean_cols) for k in set_keys
+        ]
+        params.extend(
+            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+        )
 
         self._conn.execute(sql, tuple(params))
         self._conn.commit()
@@ -319,10 +441,9 @@ class Table:
             sql = f"DELETE FROM {quoted_table}"
             self._conn.execute(sql)
         else:
-            where = " AND ".join(f"{self._quote_identifier(k)}=?" for k in kwargs)
+            where, values = self._build_where_clause(kwargs)
             sql = f"DELETE FROM {quoted_table} WHERE {where}"
-            values = tuple(self._serialize_value(v) for v in kwargs.values())
-            self._conn.execute(sql, values)
+            self._conn.execute(sql, tuple(values))
 
         self._conn.commit()
 
@@ -340,10 +461,9 @@ class Table:
         """
         quoted_table = self._quote_identifier(self._name)
         if kwargs:
-            where = " AND ".join(f"{self._quote_identifier(k)}=?" for k in kwargs)
-            values = tuple(self._serialize_value(v) for v in kwargs.values())
+            where, values = self._build_where_clause(kwargs)
             cur = self._conn.execute(
-                f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}", values
+                f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}", tuple(values)
             )
         else:
             cur = self._conn.execute(f"SELECT COUNT(*) as c FROM {quoted_table}")
@@ -366,7 +486,10 @@ class Table:
         """
         quoted_table = self._quote_identifier(self._name)
         where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
-        values = tuple(self._serialize_value(record[k]) for k in keys)
+        boolean_cols = self._get_boolean_columns()
+        values = tuple(
+            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+        )
 
         cur = self._conn.execute(
             f"SELECT 1 FROM {quoted_table} WHERE {where_clause} LIMIT 1", values
@@ -398,7 +521,11 @@ class Table:
         sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
 
         params = [
-            tuple(self._serialize_value(record[k]) for k in keys) for record in records
+            tuple(
+                self._serialize_record_value(k, record[k], self._get_boolean_columns())
+                for k in keys
+            )
+            for record in records
         ]
 
         self._conn.executemany(sql, params)
@@ -454,7 +581,12 @@ class Table:
         quoted_table = self._quote_identifier(self._name)
         sql = f"SELECT DISTINCT * FROM {quoted_table} ORDER BY {self._quote_identifier(column)}"
         cur = self._conn.execute(sql)
-        return [self._row_to_dict(r) for r in cur.fetchall()]
+        return [
+            row_dict
+            for r in cur.fetchall()
+            for row_dict in [self._row_to_dict(r)]
+            if row_dict is not None
+        ]
 
     def drop(self) -> None:
         """Drop the table from the database."""
@@ -571,7 +703,12 @@ class Database:
             self._conn.commit()
             # Use a dummy table to process rows with boolean conversion
             dummy_table = Table(self._conn, "dummy")
-            return [dummy_table._row_to_dict(r) for r in cur.fetchall()]
+            return [
+                row_dict
+                for r in cur.fetchall()
+                for row_dict in [dummy_table._row_to_dict(r)]
+                if row_dict is not None
+            ]
         except sqlite3.Error:
             try:
                 self._conn.commit()

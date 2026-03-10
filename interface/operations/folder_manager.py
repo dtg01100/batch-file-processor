@@ -72,6 +72,10 @@ class DatabaseProtocol(Protocol):
         """Access emails table."""
         ...
 
+    def get_oversight_or_default(self) -> dict:
+        """Get oversight/defaults singleton with fallback creation."""
+        ...
+
 
 class FolderManager:
     """Manages folder CRUD operations.
@@ -227,7 +231,7 @@ class FolderManager:
     def disable_folder(self, folder_id: int) -> bool:
         """Disable a folder.
 
-        Sets the folder_is_active field to "False".
+        Sets the folder_is_active field to False.
 
         Args:
             folder_id: The folder ID to disable
@@ -237,7 +241,7 @@ class FolderManager:
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
-            folder["folder_is_active"] = "False"
+            folder["folder_is_active"] = False
             self._db.folders_table.update(folder, ["id"])
             return True
         return False
@@ -245,7 +249,7 @@ class FolderManager:
     def enable_folder(self, folder_id: int) -> bool:
         """Enable a folder.
 
-        Sets the folder_is_active field to "True".
+        Sets the folder_is_active field to True.
 
         Args:
             folder_id: The folder ID to enable
@@ -255,7 +259,7 @@ class FolderManager:
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
-            folder["folder_is_active"] = "True"
+            folder["folder_is_active"] = True
             self._db.folders_table.update(folder, ["id"])
             return True
         return False
@@ -303,7 +307,7 @@ class FolderManager:
         Returns:
             List of active folder dicts
         """
-        return list(self._db.folders_table.find(folder_is_active="True"))
+        return list(self._db.folders_table.find(folder_is_active=True))
 
     def get_inactive_folders(self) -> list[dict]:
         """Get all inactive folders.
@@ -311,7 +315,7 @@ class FolderManager:
         Returns:
             List of inactive folder dicts
         """
-        return list(self._db.folders_table.find(folder_is_active="False"))
+        return list(self._db.folders_table.find(folder_is_active=False))
 
     def get_all_folders(self, order_by: Optional[str] = "alias") -> list[dict]:
         """Get all folders.
@@ -336,7 +340,7 @@ class FolderManager:
             Folder count
         """
         if active_only:
-            return self._db.folders_table.count(folder_is_active="True")
+            return self._db.folders_table.count(folder_is_active=True)
         return self._db.folders_table.count()
 
     def update_folder(self, folder_data: dict) -> bool:

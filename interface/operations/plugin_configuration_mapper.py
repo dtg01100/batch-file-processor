@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.ui_abstraction import WidgetBase
 from interface.plugins.validation_framework import ValidationResult
@@ -288,11 +289,9 @@ class PluginConfigurationMapper:
     Qt widget system, providing a unified interface for working with plugin data.
     """
 
-    def __init__(self):
+    def __init__(self, plugin_manager: Optional[PluginManager] = None):
         """Initialize the plugin configuration mapper."""
-        self.plugin_manager = PluginManager()
-        self.plugin_manager.discover_plugins()
-        self.plugin_manager.initialize_plugins()
+        self.plugin_manager = plugin_manager or get_shared_plugin_manager()
         self.state_manager = PluginSectionStateManager()
 
     def extract_plugin_configurations(

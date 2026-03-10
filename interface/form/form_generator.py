@@ -41,6 +41,7 @@ class FormGenerator(ABC):
         self._field_dependencies: Dict[str, List[str]] = {}
         self._visibility_callbacks: Dict[str, List] = {}
         self._plugin_sections: List[WidgetBase] = []
+        self._plugin_schemas: Dict[str, ConfigurationSchema] = {}
         self._plugin_configs: Dict[str, Dict[str, Any]] = {}
 
     @abstractmethod
@@ -231,6 +232,7 @@ class FormGenerator(ABC):
             schema: Configuration schema for the section
             config: Optional initial configuration values
         """
+        self._plugin_schemas[section_id] = schema
         self._plugin_configs[section_id] = config or {}
         # This will be rendered in build_form when _render_plugin_sections is called
 
@@ -370,7 +372,7 @@ class QtFormGenerator(FormGenerator):
         Args:
             parent: Optional parent widget
         """
-        if not self._plugin_configs:
+        if not self._plugin_schemas:
             return
 
         from interface.form.section_factory import SectionFactoryRegistry
@@ -378,11 +380,11 @@ class QtFormGenerator(FormGenerator):
         try:
             section_layout = self.form_container.layout()
 
-            for section_id, schema in self._plugin_configs.items():
+            for section_id, schema in self._plugin_schemas.items():
                 if schema is None:
                     continue
 
-                config = self._plugin_configs.get(section_id)
+                config = self._plugin_configs.get(section_id, {})
                 section_widget = SectionFactoryRegistry.create_section(
                     "default", schema, self.framework, config, self.form_container
                 )

@@ -7,9 +7,17 @@ from the EditDialog class to enable comprehensive unit testing.
 from typing import List, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 import re
+from core.utils.bool_utils import normalize_bool
 
 from interface.models.folder_configuration import (
+    BackendSpecificConfiguration,
+    CopyConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
+    FTPConfiguration,
     FolderConfiguration,
+    InvoiceDateConfiguration,
+    UPCOverrideConfiguration,
 )
 from interface.services.ftp_service import FTPServiceProtocol
 
@@ -412,85 +420,9 @@ class FolderSettingsValidator:
         Returns:
             ValidationResult with all validation errors
         """
-        result = ValidationResult()
-
-        # Validate FTP
-        if config.ftp:
-            ftp_result = self.validate_ftp_settings(
-                server=config.ftp.server,
-                port=str(config.ftp.port),
-                folder=config.ftp.folder,
-                username=config.ftp.username,
-                password=config.ftp.password,
-                enabled=config.process_backend_ftp,
-            )
-            for error in ftp_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Email
-        if config.email:
-            email_result = self.validate_email_settings(
-                recipients=config.email.recipients, enabled=config.process_backend_email
-            )
-            for error in email_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Copy
-        if config.copy:
-            copy_result = self.validate_copy_settings(
-                destination=config.copy.destination_directory,
-                enabled=config.process_backend_copy,
-            )
-            for error in copy_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Alias
-        alias_result = self.validate_alias(
-            alias=config.alias,
-            folder_name=config.folder_name,
-            current_alias=current_alias,
+        return self._validate_config(
+            config=config, current_alias=current_alias, include_extended_checks=True
         )
-        for error in alias_result.errors:
-            result.add_error(error.field, error.message)
-
-        # Validate Invoice Date
-        if config.invoice_date:
-            date_result = self.validate_invoice_date_offset(
-                offset=config.invoice_date.offset
-            )
-            for error in date_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate UPC Override
-        if config.upc_override:
-            upc_result = self.validate_upc_override(
-                enabled=config.upc_override.enabled,
-                category_filter=config.upc_override.category_filter,
-            )
-            for error in upc_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Backend-Specific
-        if config.backend_specific and config.edi:
-            backend_result = self.validate_backend_specific(
-                convert_format=config.edi.convert_to_format,
-                division_id=config.backend_specific.fintech_division_id,
-            )
-            for error in backend_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Backend count check
-        backend_count = sum(
-            [
-                config.process_backend_copy,
-                config.process_backend_ftp,
-                config.process_backend_email,
-            ]
-        )
-        if backend_count == 0 and config.folder_is_active == "True":
-            result.add_error("backends", "No Backend Is Selected")
-
-        return result
 
     def validate_extracted_fields(
         self,
@@ -507,55 +439,159 @@ class FolderSettingsValidator:
         Returns:
             ValidationResult with all validation errors
         """
-        result = ValidationResult()
+        config = self._to_folder_configuration(extracted_fields)
+        return self._validate_config(
+            config=config,
+            current_alias=current_alias,
+            include_extended_checks=False,
+        )
 
-        # Validate FTP settings
-        if extracted_fields.process_backend_ftp:
-            ftp_result = self.validate_ftp_settings(
+    def _to_folder_configuration(
+        self, extracted_fields: "ExtractedDialogFields"
+    ) -> FolderConfiguration:
+        """Convert extracted dialog fields into canonical FolderConfiguration."""
+        return FolderConfiguration(
+            folder_name=extracted_fields.folder_name,
+            folder_is_active=extracted_fields.folder_is_active,
+            alias=extracted_fields.alias,
+            process_backend_copy=extracted_fields.process_backend_copy,
+            process_backend_ftp=extracted_fields.process_backend_ftp,
+            process_backend_email=extracted_fields.process_backend_email,
+            ftp=FTPConfiguration(
                 server=extracted_fields.ftp_server,
-                port=str(extracted_fields.ftp_port),
-                folder=extracted_fields.ftp_folder,
+                port=extracted_fields.ftp_port,
                 username=extracted_fields.ftp_username,
                 password=extracted_fields.ftp_password,
-                enabled=True,
-            )
-            for error in ftp_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Email settings
-        if extracted_fields.process_backend_email:
-            email_result = self.validate_email_settings(
-                recipients=extracted_fields.email_to, enabled=True
-            )
-            for error in email_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Copy settings
-        if extracted_fields.process_backend_copy:
-            copy_result = self.validate_copy_settings(
-                destination=extracted_fields.copy_to_directory, enabled=True
-            )
-            for error in copy_result.errors:
-                result.add_error(error.field, error.message)
-
-        # Validate Alias
-        alias_result = self.validate_alias(
-            alias=extracted_fields.alias,
-            folder_name=extracted_fields.folder_name,
-            current_alias=current_alias,
+                folder=extracted_fields.ftp_folder,
+            ),
+            email=EmailConfiguration(
+                recipients=extracted_fields.email_to,
+                subject_line=extracted_fields.email_subject_line,
+            ),
+            copy=CopyConfiguration(destination_directory=extracted_fields.copy_to_directory),
+            edi=EDIConfiguration(
+                process_edi=extracted_fields.process_edi,
+                tweak_edi=extracted_fields.tweak_edi,
+                split_edi=extracted_fields.split_edi,
+                split_edi_include_invoices=extracted_fields.split_edi_include_invoices,
+                split_edi_include_credits=extracted_fields.split_edi_include_credits,
+                prepend_date_files=extracted_fields.prepend_date_files,
+                convert_to_format=extracted_fields.convert_to_format,
+                force_edi_validation=extracted_fields.force_edi_validation,
+                rename_file=extracted_fields.rename_file,
+                split_edi_filter_categories=extracted_fields.split_edi_filter_categories,
+                split_edi_filter_mode=extracted_fields.split_edi_filter_mode,
+            ),
+            upc_override=UPCOverrideConfiguration(
+                enabled=extracted_fields.override_upc_bool,
+                level=extracted_fields.override_upc_level,
+                category_filter=extracted_fields.override_upc_category_filter,
+                target_length=extracted_fields.upc_target_length,
+                padding_pattern=extracted_fields.upc_padding_pattern,
+            ),
+            invoice_date=InvoiceDateConfiguration(
+                offset=extracted_fields.invoice_date_offset,
+                custom_format_enabled=extracted_fields.invoice_date_custom_format,
+                custom_format_string=extracted_fields.invoice_date_custom_format_string,
+                retail_uom=extracted_fields.retail_uom,
+            ),
+            backend_specific=BackendSpecificConfiguration(
+                estore_store_number=extracted_fields.estore_store_number,
+                estore_vendor_oid=extracted_fields.estore_vendor_oid,
+                estore_vendor_namevendoroid=extracted_fields.estore_vendor_namevendoroid,
+                fintech_division_id=extracted_fields.fintech_division_id,
+            ),
+            plugin_configurations=extracted_fields.plugin_configurations,
         )
-        for error in alias_result.errors:
-            result.add_error(error.field, error.message)
 
-        # Backend count check
+    def _merge_result(self, target: ValidationResult, source: ValidationResult) -> None:
+        """Merge errors and warnings from source into target."""
+        for error in source.errors:
+            target.add_error(error.field, error.message)
+        for warning in source.warnings:
+            target.add_warning(warning.field, warning.message)
+
+    def _validate_config(
+        self,
+        config: FolderConfiguration,
+        current_alias: Optional[str],
+        include_extended_checks: bool,
+    ) -> ValidationResult:
+        """Core validation path for full and extracted folder data."""
+        result = ValidationResult()
+
+        if config.ftp:
+            self._merge_result(
+                result,
+                self.validate_ftp_settings(
+                    server=config.ftp.server,
+                    port=str(config.ftp.port),
+                    folder=config.ftp.folder,
+                    username=config.ftp.username,
+                    password=config.ftp.password,
+                    enabled=config.process_backend_ftp,
+                ),
+            )
+
+        if config.email:
+            self._merge_result(
+                result,
+                self.validate_email_settings(
+                    recipients=config.email.recipients,
+                    enabled=config.process_backend_email,
+                ),
+            )
+
+        if config.copy:
+            self._merge_result(
+                result,
+                self.validate_copy_settings(
+                    destination=config.copy.destination_directory,
+                    enabled=config.process_backend_copy,
+                ),
+            )
+
+        self._merge_result(
+            result,
+            self.validate_alias(
+                alias=config.alias,
+                folder_name=config.folder_name,
+                current_alias=current_alias,
+            ),
+        )
+
+        if include_extended_checks and config.invoice_date:
+            self._merge_result(
+                result,
+                self.validate_invoice_date_offset(offset=config.invoice_date.offset),
+            )
+
+        if include_extended_checks and config.upc_override:
+            self._merge_result(
+                result,
+                self.validate_upc_override(
+                    enabled=config.upc_override.enabled,
+                    category_filter=config.upc_override.category_filter,
+                ),
+            )
+
+        if include_extended_checks and config.backend_specific and config.edi:
+            self._merge_result(
+                result,
+                self.validate_backend_specific(
+                    convert_format=config.edi.convert_to_format,
+                    division_id=config.backend_specific.fintech_division_id,
+                ),
+            )
+
         backend_count = sum(
             [
-                extracted_fields.process_backend_copy,
-                extracted_fields.process_backend_ftp,
-                extracted_fields.process_backend_email,
+                config.process_backend_copy,
+                config.process_backend_ftp,
+                config.process_backend_email,
             ]
         )
-        if backend_count == 0 and extracted_fields.folder_is_active == "True":
+        if backend_count == 0 and normalize_bool(config.folder_is_active):
             result.add_error("backends", "No Backend Is Selected")
 
         return result

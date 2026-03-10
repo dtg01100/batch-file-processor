@@ -10,6 +10,12 @@ from typing import Optional, List, Dict, Any
 from enum import Enum
 import re
 
+from core.utils.bool_utils import normalize_bool
+
+
+def _bool_from_data(data: Dict[str, Any], key: str, default: bool = False) -> bool:
+    return normalize_bool(data.get(key, default))
+
 
 class BackendType(Enum):
     """Enum for backend types."""
@@ -111,7 +117,7 @@ class CopyConfiguration:
 class EDIConfiguration:
     """EDI processing configuration."""
 
-    process_edi: str = "False"  # "True", "False"
+    process_edi: bool = False
     tweak_edi: bool = False
     split_edi: bool = False
     split_edi_include_invoices: bool = False
@@ -234,7 +240,7 @@ class FolderConfiguration:
 
     # Identity
     folder_name: str = ""
-    folder_is_active: str = "False"
+    folder_is_active: bool = False
     alias: str = ""
     is_template: bool = False
 
@@ -383,14 +389,18 @@ class FolderConfiguration:
 
         # EDI configuration
         edi = EDIConfiguration(
-            process_edi=data.get("process_edi", "False"),
-            tweak_edi=data.get("tweak_edi", False),
-            split_edi=data.get("split_edi", False),
-            split_edi_include_invoices=data.get("split_edi_include_invoices", False),
-            split_edi_include_credits=data.get("split_edi_include_credits", False),
-            prepend_date_files=data.get("prepend_date_files", False),
+            process_edi=_bool_from_data(data, "process_edi"),
+            tweak_edi=_bool_from_data(data, "tweak_edi"),
+            split_edi=_bool_from_data(data, "split_edi"),
+            split_edi_include_invoices=_bool_from_data(
+                data, "split_edi_include_invoices"
+            ),
+            split_edi_include_credits=_bool_from_data(
+                data, "split_edi_include_credits"
+            ),
+            prepend_date_files=_bool_from_data(data, "prepend_date_files"),
             convert_to_format=data.get("convert_to_format", ""),
-            force_edi_validation=data.get("force_edi_validation", False),
+            force_edi_validation=_bool_from_data(data, "force_edi_validation"),
             rename_file=data.get("rename_file", ""),
             split_edi_filter_categories=data.get("split_edi_filter_categories", "ALL"),
             split_edi_filter_mode=data.get("split_edi_filter_mode", "include"),
@@ -398,7 +408,7 @@ class FolderConfiguration:
 
         # UPC override
         upc_override = None
-        if data.get("override_upc_bool", False):
+        if _bool_from_data(data, "override_upc_bool"):
             upc_override = UPCOverrideConfiguration(
                 enabled=True,
                 level=data.get("override_upc_level", 1),
@@ -409,20 +419,20 @@ class FolderConfiguration:
 
         # A-record padding
         a_record_padding = ARecordPaddingConfiguration(
-            enabled=data.get("pad_a_records") == "True",
+            enabled=normalize_bool(data.get("pad_a_records", False)),
             padding_text=data.get("a_record_padding", ""),
             padding_length=data.get("a_record_padding_length", 6),
             append_text=data.get("a_record_append_text", ""),
-            append_enabled=data.get("append_a_records") == "True",
-            force_txt_extension=data.get("force_txt_file_ext") == "True",
+            append_enabled=normalize_bool(data.get("append_a_records", False)),
+            force_txt_extension=normalize_bool(data.get("force_txt_file_ext", False)),
         )
 
         # Invoice date
         invoice_date = InvoiceDateConfiguration(
             offset=data.get("invoice_date_offset", 0),
-            custom_format_enabled=data.get("invoice_date_custom_format", False),
+            custom_format_enabled=_bool_from_data(data, "invoice_date_custom_format"),
             custom_format_string=data.get("invoice_date_custom_format_string", ""),
-            retail_uom=data.get("retail_uom", False),
+            retail_uom=_bool_from_data(data, "retail_uom"),
         )
 
         # Backend-specific
@@ -435,24 +445,24 @@ class FolderConfiguration:
 
         # CSV configuration
         csv = CSVConfiguration(
-            include_headers=data.get("include_headers") == "True",
-            filter_ampersand=data.get("filter_ampersand") == "True",
-            include_item_numbers=data.get("include_item_numbers", False),
-            include_item_description=data.get("include_item_description", False),
+            include_headers=normalize_bool(data.get("include_headers", False)),
+            filter_ampersand=normalize_bool(data.get("filter_ampersand", False)),
+            include_item_numbers=_bool_from_data(data, "include_item_numbers"),
+            include_item_description=_bool_from_data(data, "include_item_description"),
             simple_csv_sort_order=data.get("simple_csv_sort_order", ""),
-            split_prepaid_sales_tax_crec=data.get(
-                "split_prepaid_sales_tax_crec", False
+            split_prepaid_sales_tax_crec=_bool_from_data(
+                data, "split_prepaid_sales_tax_crec"
             ),
         )
 
         return cls(
             folder_name=data.get("folder_name", ""),
-            folder_is_active=data.get("folder_is_active", "False"),
+            folder_is_active=normalize_bool(data.get("folder_is_active", False)),
             alias=data.get("alias", ""),
             is_template=data.get("folder_name") == "template",
-            process_backend_copy=data.get("process_backend_copy", False),
-            process_backend_ftp=data.get("process_backend_ftp", False),
-            process_backend_email=data.get("process_backend_email", False),
+            process_backend_copy=_bool_from_data(data, "process_backend_copy"),
+            process_backend_ftp=_bool_from_data(data, "process_backend_ftp"),
+            process_backend_email=_bool_from_data(data, "process_backend_email"),
             ftp=ftp,
             email=email,
             copy=copy,
@@ -469,11 +479,11 @@ class FolderConfiguration:
         """Convert FolderConfiguration to dictionary for database."""
         data = {
             "folder_name": self.folder_name,
-            "folder_is_active": self.folder_is_active,
+            "folder_is_active": normalize_bool(self.folder_is_active),
             "alias": self.alias,
-            "process_backend_copy": self.process_backend_copy,
-            "process_backend_ftp": self.process_backend_ftp,
-            "process_backend_email": self.process_backend_email,
+            "process_backend_copy": normalize_bool(self.process_backend_copy),
+            "process_backend_ftp": normalize_bool(self.process_backend_ftp),
+            "process_backend_email": normalize_bool(self.process_backend_email),
         }
 
         if self.ftp:
@@ -501,14 +511,20 @@ class FolderConfiguration:
         if self.edi:
             data.update(
                 {
-                    "process_edi": self.edi.process_edi,
-                    "tweak_edi": self.edi.tweak_edi,
-                    "split_edi": self.edi.split_edi,
-                    "split_edi_include_invoices": self.edi.split_edi_include_invoices,
-                    "split_edi_include_credits": self.edi.split_edi_include_credits,
-                    "prepend_date_files": self.edi.prepend_date_files,
+                    "process_edi": normalize_bool(self.edi.process_edi),
+                    "tweak_edi": normalize_bool(self.edi.tweak_edi),
+                    "split_edi": normalize_bool(self.edi.split_edi),
+                    "split_edi_include_invoices": normalize_bool(
+                        self.edi.split_edi_include_invoices
+                    ),
+                    "split_edi_include_credits": normalize_bool(
+                        self.edi.split_edi_include_credits
+                    ),
+                    "prepend_date_files": normalize_bool(self.edi.prepend_date_files),
                     "convert_to_format": self.edi.convert_to_format,
-                    "force_edi_validation": self.edi.force_edi_validation,
+                    "force_edi_validation": normalize_bool(
+                        self.edi.force_edi_validation
+                    ),
                     "rename_file": self.edi.rename_file,
                     "split_edi_filter_categories": self.edi.split_edi_filter_categories,
                     "split_edi_filter_mode": self.edi.split_edi_filter_mode,
@@ -518,7 +534,7 @@ class FolderConfiguration:
         if self.upc_override:
             data.update(
                 {
-                    "override_upc_bool": self.upc_override.enabled,
+                    "override_upc_bool": normalize_bool(self.upc_override.enabled),
                     "override_upc_level": self.upc_override.level,
                     "override_upc_category_filter": self.upc_override.category_filter,
                     "upc_target_length": self.upc_override.target_length,
@@ -529,12 +545,14 @@ class FolderConfiguration:
         if self.a_record_padding:
             data.update(
                 {
-                    "pad_a_records": str(self.a_record_padding.enabled),
+                    "pad_a_records": normalize_bool(self.a_record_padding.enabled),
                     "a_record_padding": self.a_record_padding.padding_text,
                     "a_record_padding_length": self.a_record_padding.padding_length,
-                    "append_a_records": str(self.a_record_padding.append_enabled),
+                    "append_a_records": normalize_bool(
+                        self.a_record_padding.append_enabled
+                    ),
                     "a_record_append_text": self.a_record_padding.append_text,
-                    "force_txt_file_ext": str(
+                    "force_txt_file_ext": normalize_bool(
                         self.a_record_padding.force_txt_extension
                     ),
                 }
@@ -544,9 +562,11 @@ class FolderConfiguration:
             data.update(
                 {
                     "invoice_date_offset": self.invoice_date.offset,
-                    "invoice_date_custom_format": self.invoice_date.custom_format_enabled,
+                    "invoice_date_custom_format": normalize_bool(
+                        self.invoice_date.custom_format_enabled
+                    ),
                     "invoice_date_custom_format_string": self.invoice_date.custom_format_string,
-                    "retail_uom": self.invoice_date.retail_uom,
+                    "retail_uom": normalize_bool(self.invoice_date.retail_uom),
                 }
             )
 
@@ -563,12 +583,18 @@ class FolderConfiguration:
         if self.csv:
             data.update(
                 {
-                    "include_headers": str(self.csv.include_headers),
-                    "filter_ampersand": str(self.csv.filter_ampersand),
-                    "include_item_numbers": self.csv.include_item_numbers,
-                    "include_item_description": self.csv.include_item_description,
+                    "include_headers": normalize_bool(self.csv.include_headers),
+                    "filter_ampersand": normalize_bool(self.csv.filter_ampersand),
+                    "include_item_numbers": normalize_bool(
+                        self.csv.include_item_numbers
+                    ),
+                    "include_item_description": normalize_bool(
+                        self.csv.include_item_description
+                    ),
                     "simple_csv_sort_order": self.csv.simple_csv_sort_order,
-                    "split_prepaid_sales_tax_crec": self.csv.split_prepaid_sales_tax_crec,
+                    "split_prepaid_sales_tax_crec": normalize_bool(
+                        self.csv.split_prepaid_sales_tax_crec
+                    ),
                 }
             )
 

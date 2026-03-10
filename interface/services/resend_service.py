@@ -106,3 +106,37 @@ class ResendService:
             resend_flag: Whether to enable resend
         """
         self._processed_files.update(dict(resend_flag=resend_flag, id=file_id), ["id"])
+
+    def get_all_files_for_resend(self) -> List[Dict[str, Any]]:
+        """Get all processable files across all folders for resend interface.
+
+        Returns:
+            List of dicts with keys: id, folder_id, folder_alias, file_name, resend_flag, sent_date_time
+        """
+        file_list = []
+        processed_lines = list(
+            self._processed_files.find(order_by="-sent_date_time")
+        )
+
+        # Group by file_name and folder to avoid duplicates
+        seen_files = set()
+        for processed_line in processed_lines:
+            file_key = (processed_line["file_name"], processed_line["folder_id"])
+            if file_key in seen_files:
+                continue
+            if os.path.exists(processed_line["file_name"]):
+                # Get folder alias
+                folder_info = self._folders.find_one(id=processed_line["folder_id"])
+                folder_alias = folder_info["alias"] if folder_info else "Unknown"
+
+                file_list.append({
+                    "id": processed_line["id"],
+                    "folder_id": processed_line["folder_id"],
+                    "folder_alias": folder_alias,
+                    "file_name": processed_line["file_name"],
+                    "resend_flag": processed_line["resend_flag"],
+                    "sent_date_time": processed_line["sent_date_time"],
+                })
+                seen_files.add(file_key)
+
+        return file_list

@@ -80,9 +80,9 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         self._progress.show("Working...")
-        self._database_obj.database_connection.query(
-            'update folders set folder_is_active="False" where folder_is_active="True"'
-        )
+        for row in self._database_obj.folders_table.find(folder_is_active=True):
+            row["folder_is_active"] = False
+            self._database_obj.folders_table.update(row, ["id"])
         if self._refresh_callback:
             self._refresh_callback()
         self._progress.hide()
@@ -94,9 +94,9 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         self._progress.show("Working...")
-        self._database_obj.database_connection.query(
-            'update folders set folder_is_active="True" where folder_is_active="False"'
-        )
+        for row in self._database_obj.folders_table.find(folder_is_active=False):
+            row["folder_is_active"] = True
+            self._database_obj.folders_table.update(row, ["id"])
         if self._refresh_callback:
             self._refresh_callback()
         self._progress.hide()
@@ -131,15 +131,15 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         users_refresh = False
-        if self._database_obj.folders_table.count(folder_is_active="False") > 0:
+        if self._database_obj.folders_table.count(folder_is_active=False) > 0:
             users_refresh = True
-        folders_total = self._database_obj.folders_table.count(folder_is_active="False")
+        folders_total = self._database_obj.folders_table.count(folder_is_active=False)
         folders_count = 0
         self._progress.show(
             "removing " + str(folders_count) + " of " + str(folders_total)
         )
         for folder_to_be_removed in self._database_obj.folders_table.find(
-            folder_is_active="False"
+            folder_is_active=False
         ):
             folders_count += 1
             self._progress.update_message(
@@ -169,7 +169,7 @@ class MaintenanceFunctions:
         folder_count = 0
         self._database_obj.folders_table_list = []
         if selected_folder is None:
-            for row in self._database_obj.folders_table.find(folder_is_active="True"):
+            for row in self._database_obj.folders_table.find(folder_is_active=True):
                 self._database_obj.folders_table_list.append(row)
         else:
             folder_dict = self._database_obj.folders_table.find_one(id=selected_folder)
@@ -292,9 +292,9 @@ class MaintenanceFunctions:
                     process_backend_ftp=False,
                     process_backend_copy=False,
                     process_backend_email=False,
-                    folder_is_active="True",
+                    folder_is_active=True,
                 ):
-                    folder_to_disable["folder_is_active"] = "False"
+                    folder_to_disable["folder_is_active"] = False
                     self._database_obj.folders_table.update(folder_to_disable, ["id"])
             if self._refresh_callback:
                 self._refresh_callback()

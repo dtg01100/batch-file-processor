@@ -8,6 +8,8 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 import os
 
+from core.utils.bool_utils import normalize_bool
+
 
 @dataclass
 class ExtractedDialogFields:
@@ -16,7 +18,7 @@ class ExtractedDialogFields:
     # Identity
     folder_name: str = ""
     alias: str = ""
-    folder_is_active: str = "False"
+    folder_is_active: bool = False
 
     # Backend toggles
     process_backend_copy: bool = False
@@ -35,7 +37,7 @@ class ExtractedDialogFields:
     email_subject_line: str = ""
 
     # EDI fields
-    process_edi: str = "False"
+    process_edi: bool = False
     convert_to_format: str = ""
     tweak_edi: bool = False
     split_edi: bool = False
@@ -47,20 +49,20 @@ class ExtractedDialogFields:
     split_edi_filter_mode: str = "include"
 
     # EDI options
-    calculate_upc_check_digit: str = "True"
-    include_a_records: str = "True"
-    include_c_records: str = "False"
-    include_headers: str = "True"
-    filter_ampersand: str = "False"
+    calculate_upc_check_digit: bool = True
+    include_a_records: bool = True
+    include_c_records: bool = False
+    include_headers: bool = True
+    filter_ampersand: bool = False
     force_edi_validation: bool = False
 
     # A-record
-    pad_a_records: str = "False"
+    pad_a_records: bool = False
     a_record_padding: str = ""
     a_record_padding_length: int = 6
-    append_a_records: str = "False"
+    append_a_records: bool = False
     a_record_append_text: str = ""
-    force_txt_file_ext: str = "False"
+    force_txt_file_ext: bool = False
 
     # Invoice date
     invoice_date_offset: int = 0
@@ -123,7 +125,7 @@ class FolderDataExtractor:
             # Identity
             folder_name=self._get_text("foldersnameinput", "folder_name"),
             alias=self._get_text("folder_alias_field"),
-            folder_is_active=self._get_value("active_checkbutton"),
+            folder_is_active=self._get_bool("active_checkbutton"),
             # Backend toggles
             process_backend_copy=self._get_bool("process_backend_copy_check"),
             process_backend_ftp=self._get_bool("process_backend_ftp_check"),
@@ -138,7 +140,7 @@ class FolderDataExtractor:
             email_to=self._get_text("email_recepient_field"),
             email_subject_line=self._get_text("email_sender_subject_field"),
             # EDI
-            process_edi=self._get_value("process_edi"),
+            process_edi=self._get_bool("process_edi"),
             convert_to_format=self._get_value("convert_formats_var"),
             tweak_edi=self._get_bool("tweak_edi"),
             split_edi=self._get_bool("split_edi"),
@@ -151,19 +153,19 @@ class FolderDataExtractor:
             ),
             split_edi_filter_mode=self._get_value("split_edi_filter_mode"),
             # EDI options
-            calculate_upc_check_digit=self._get_value("upc_var_check"),
-            include_a_records=self._get_value("a_rec_var_check"),
-            include_c_records=self._get_value("c_rec_var_check"),
-            include_headers=self._get_value("headers_check"),
-            filter_ampersand=self._get_value("ampersand_check"),
+            calculate_upc_check_digit=self._get_bool("upc_var_check"),
+            include_a_records=self._get_bool("a_rec_var_check"),
+            include_c_records=self._get_bool("c_rec_var_check"),
+            include_headers=self._get_bool("headers_check"),
+            filter_ampersand=self._get_bool("ampersand_check"),
             force_edi_validation=self._get_bool("force_edi_check_var"),
             # A-record
-            pad_a_records=self._get_value("pad_arec_check"),
+            pad_a_records=self._get_bool("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
             a_record_padding_length=self._get_int("a_record_padding_length"),
-            append_a_records=self._get_value("append_arec_check"),
+            append_a_records=self._get_bool("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
-            force_txt_file_ext=self._get_value("force_txt_file_ext_check"),
+            force_txt_file_ext=self._get_bool("force_txt_file_ext_check"),
             # Invoice date
             invoice_date_offset=self._get_int("invoice_date_offset"),
             invoice_date_custom_format=self._get_bool("invoice_date_custom_format"),
@@ -242,7 +244,7 @@ class FolderDataExtractor:
         widget = self.fields.get(field_name)
         if widget is None:
             return False
-        return bool(widget.get())
+        return normalize_bool(widget.get())
 
     def _get_value(self, field_name: str) -> str:
         """Get value from StringVar/BooleanVar."""
