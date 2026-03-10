@@ -9,7 +9,35 @@ from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable, Any
 
 from core.edi.edi_splitter import EDISplitter, SplitConfig
+from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
+
+
+def _normalize_true_false_only(value: Any) -> bool:
+    """Normalize bool while preserving strict legacy string behavior.
+
+    Legacy behavior accepted only "true"/"false" string values for these flags.
+    """
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("true", "false"):
+            return normalize_bool(lowered)
+        return False
+    return normalize_bool(value)
+
+
+def _normalize_include_flag(value: Any, default: bool = True) -> bool:
+    """Normalize include_* flags with legacy string/int compatibility."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("0", "false"):
+            return False
+        if lowered in ("1", "true"):
+            return True
+        return bool(lowered)
+    return normalize_bool(value)
 
 
 @dataclass
@@ -281,27 +309,21 @@ class EDISplitterStep:
         """
         errors: list[str] = []
 
-        split_edi = params.get("split_edi", False)
-        if isinstance(split_edi, str):
-            split_edi = split_edi.lower() == "true"
+        split_edi = _normalize_true_false_only(params.get("split_edi", False))
 
         filter_categories = params.get("split_edi_filter_categories", "ALL")
         filter_mode = params.get("split_edi_filter_mode", "include")
-        prepend_date = params.get("prepend_date_files", False)
-        if isinstance(prepend_date, str):
-            prepend_date = prepend_date.lower() == "true"
+        prepend_date = _normalize_true_false_only(
+            params.get("prepend_date_files", False)
+        )
 
-        include_invoices = params.get("split_edi_include_invoices", True)
-        if isinstance(include_invoices, int):
-            include_invoices = include_invoices != 0
-        elif isinstance(include_invoices, str):
-            include_invoices = include_invoices.lower() not in ("0", "false")
+        include_invoices = _normalize_include_flag(
+            params.get("split_edi_include_invoices", True), default=True
+        )
 
-        include_credits = params.get("split_edi_include_credits", True)
-        if isinstance(include_credits, int):
-            include_credits = include_credits != 0
-        elif isinstance(include_credits, str):
-            include_credits = include_credits.lower() not in ("0", "false")
+        include_credits = _normalize_include_flag(
+            params.get("split_edi_include_credits", True), default=True
+        )
 
         if split_edi:
             return self._do_split(

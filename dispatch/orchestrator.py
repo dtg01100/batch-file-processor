@@ -19,6 +19,7 @@ from dispatch.interfaces import (
 from dispatch.edi_validator import EDIValidator
 from dispatch.send_manager import SendManager
 from dispatch.error_handler import ErrorHandler
+from core.utils.bool_utils import normalize_bool
 
 
 @dataclass
@@ -58,6 +59,8 @@ class DispatchConfig:
     tweaker_step: Optional[Any] = None
     file_processor: Optional[Any] = None
     upc_dict: dict = field(default_factory=dict)
+    # Deprecated: pipeline mode is always enabled in Phase 3.
+    # Retained only for config compatibility with existing callers.
     use_pipeline: bool = True
 
 
@@ -103,6 +106,18 @@ class FileResult:
     errors: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProcessingContext:
+    """Per-file mutable processing state for pipeline execution."""
+
+    folder: dict
+    effective_folder: dict
+    settings: dict
+    upc_dict: dict
+    temp_dirs: list[str] = field(default_factory=list)
+    temp_files: list[str] = field(default_factory=list)
+
+
 class DispatchOrchestrator:
     """Orchestrates the dispatch process for file processing.
 
@@ -130,44 +145,31 @@ class DispatchOrchestrator:
         self.error_count: int = 0
 
     def _initialize_pipeline_steps(self) -> None:
-        """Initialize pipeline steps (stub for backward compatibility with tests)."""
-        if self.config.use_pipeline and self.config.file_processor:
-            if hasattr(self.config.file_processor, "initialize"):
-                self.config.file_processor.initialize()
+        """Initialize optional integration hooks.
+
+        Kept for compatibility with older tests/callers.
+        """
+        if self.config.file_processor and hasattr(
+            self.config.file_processor, "initialize"
+        ):
+            self.config.file_processor.initialize()
 
     def _is_pipeline_ready(self) -> bool:
-        """Check if pipeline is ready (stub for backward compatibility with tests).
+        """Phase 3 compatibility shim.
 
-        Returns:
-            True if any pipeline step is configured
+        Pipeline path is now the only runtime path.
         """
-        return any(
-            [
-                self.config.validator_step,
-                self.config.splitter_step,
-                self.config.converter_step,
-                self.config.tweaker_step,
-                self.config.file_processor,
-            ]
-        )
+        return True
 
     def _process_folder_legacy(self, folder, run_log, processed_files=None):
-        """Legacy folder processing (stub for backward compatibility with tests).
-
-        This method is kept for test compatibility but should not be used in production.
-        """
-        # For test compatibility, delegate to pipeline processing
+        """Deprecated shim that delegates to the pipeline path."""
         upc_dict = self._get_upc_dictionary(self.config.settings)
         return self.process_folder_with_pipeline(
             folder, run_log, processed_files, upc_dict
         )
 
     def _process_file_legacy(self, file_path, folder):
-        """Legacy file processing (stub for backward compatibility with tests).
-
-        This method is kept for test compatibility but should not be used in production.
-        """
-        # For test compatibility, delegate to pipeline processing
+        """Deprecated shim that delegates to the pipeline path."""
         upc_dict = self._get_upc_dictionary(self.config.settings)
         return self._process_file_with_pipeline(file_path, folder, upc_dict)
 
@@ -177,7 +179,7 @@ class DispatchOrchestrator:
         run_log: Any,
         processed_files: Optional[DatabaseInterface] = None,
     ) -> FolderResult:
-        """Process a single folder, routing to pipeline or legacy as appropriate.
+        """Process a single folder via the pipeline path.
 
         Args:
             folder: Folder configuration dictionary
@@ -187,10 +189,6 @@ class DispatchOrchestrator:
         Returns:
             FolderResult with processing outcome
         """
-        # Route to legacy if pipeline is disabled or not ready
-        if not self.config.use_pipeline or not self._is_pipeline_ready():
-            return self._process_folder_legacy(folder, run_log, processed_files)
-
         upc_dict = self._get_upc_dictionary(self.config.settings)
         return self.process_folder_with_pipeline(
             folder, run_log, processed_files, upc_dict
@@ -317,8 +315,7 @@ class DispatchOrchestrator:
         import shutil
 
         result = FileResult(file_name=file_path, checksum="")
-        temp_files_created = []  # Track temporary files for cleanup
-        pipeline_temp_dirs = []  # Track temporary directories from pipeline steps
+        context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
 
         try:
             result.checksum = self._calculate_checksum(file_path)
@@ -326,10 +323,12 @@ class DispatchOrchestrator:
 
             # Support both legacy validator and new validator_step
             # Determine which interface to use based on which config field is set
-            if self.config.validator_step and self._should_validate(folder):
+            if self.config.validator_step and self._should_validate(
+                context.effective_folder
+            ):
                 # New pipeline interface
                 validation_result = self.config.validator_step.execute(
-                    current_file, folder
+                    current_file, context.effective_folder
                 )
                 # Handle both tuple return (old) and ValidationResult object (new)
                 if isinstance(validation_result, tuple):
@@ -356,11 +355,13 @@ class DispatchOrchestrator:
                     else:
                         result.errors.append(str(errors_or_file))
 
-                    if not folder.get("force_edi_validation", False):
+                    if not context.effective_folder.get("force_edi_validation", False):
                         return result
                 elif isinstance(errors_or_file, str):
                     current_file = errors_or_file
-            elif self.config.validator and self._should_validate(folder):
+            elif self.config.validator and self._should_validate(
+                context.effective_folder
+            ):
                 # Legacy interface
                 is_valid, errors_or_file = self.config.validator.validate(current_file)
                 result.validated = is_valid
@@ -371,21 +372,22 @@ class DispatchOrchestrator:
                     else:
                         result.errors.append(str(errors_or_file))
 
-                    if not folder.get("force_edi_validation", False):
+                    if not context.effective_folder.get("force_edi_validation", False):
                         return result
                 elif isinstance(errors_or_file, str):
                     current_file = errors_or_file
 
-            if self.config.splitter_step and folder.get("split_edi", False):
-                # Ensure process_edi flag is also set for the splitter to work correctly
-                updated_folder = folder.copy()
-                if "process_edi" not in updated_folder:
-                    updated_folder["process_edi"] = True
+            if self.config.splitter_step and context.effective_folder.get(
+                "split_edi", False
+            ):
                 import tempfile
 
                 with tempfile.TemporaryDirectory() as temp_dir:
                     split_result = self.config.splitter_step.split(
-                        current_file, temp_dir, updated_folder, upc_dict
+                        current_file,
+                        temp_dir,
+                        context.effective_folder,
+                        context.upc_dict,
                     )
                     if hasattr(split_result, "files"):
                         split_files = [f[0] for f in split_result.files]
@@ -394,7 +396,9 @@ class DispatchOrchestrator:
 
                 if split_files and isinstance(split_files, list):
                     for split_file in split_files:
-                        send_result = self._send_pipeline_file(split_file, folder)
+                        send_result = self._send_pipeline_file(
+                            split_file, context.effective_folder
+                        )
                         if not send_result:
                             send_errors = self.send_manager.get_errors()
                             if send_errors:
@@ -410,53 +414,52 @@ class DispatchOrchestrator:
                     result.sent = len(result.errors) == 0
                     return result
 
-            if self.config.converter_step and folder.get("convert_edi", False):
-                # Ensure process_edi flag is also set for the converter to work correctly
-                if "process_edi" not in folder:
-                    folder["process_edi"] = True
-                if "_pipeline_temp_dirs" not in folder:
-                    folder["_pipeline_temp_dirs"] = []
-
-                converted_file = self.config.converter_step.execute(
-                    current_file, folder, self.config.settings, upc_dict
+            converter_step = self.config.converter_step
+            if converter_step is not None and context.effective_folder.get(
+                "convert_edi", False
+            ):
+                converted_file = converter_step.execute(
+                    current_file,
+                    context.effective_folder,
+                    context.settings,
+                    context.upc_dict,
+                    context=context,
                 )
                 if converted_file:
                     # Track temp files created by converter (mkstemp persistent files)
                     if converted_file != file_path:
-                        temp_files_created.append(converted_file)
+                        context.temp_files.append(converted_file)
                     current_file = converted_file
                     result.converted = True
 
-            if self.config.tweaker_step and folder.get("tweak_edi", False):
-                # Ensure process_edi flag is also set for the tweaker to work correctly
-                if "process_edi" not in folder:
-                    folder["process_edi"] = True
-                if "_pipeline_temp_dirs" not in folder:
-                    folder["_pipeline_temp_dirs"] = []
-
-                tweaked_file = self.config.tweaker_step.execute(
-                    current_file, folder, upc_dict, self.config.settings
+            tweaker_step = self.config.tweaker_step
+            if tweaker_step is not None and context.effective_folder.get(
+                "tweak_edi", False
+            ):
+                tweaked_file = tweaker_step.execute(
+                    current_file,
+                    context.effective_folder,
+                    context.upc_dict,
+                    context.settings,
+                    context=context,
                 )
                 if tweaked_file:
                     # Track temp files created by tweaker (mkstemp)
                     if tweaked_file != file_path:
-                        temp_files_created.append(tweaked_file)
+                        context.temp_files.append(tweaked_file)
                     current_file = tweaked_file
 
-            if self.config.file_processor:
-                processed_file = self.config.file_processor.process(
-                    current_file, folder
-                )
-                if processed_file:
-                    current_file = processed_file
-
             # Check if any backends are enabled before attempting to send
-            enabled_backends = self.send_manager.get_enabled_backends(folder)
+            enabled_backends = self.send_manager.get_enabled_backends(
+                context.effective_folder
+            )
             if not enabled_backends:
                 result.sent = False
                 result.errors.append("No backends enabled")
             else:
-                result.sent = self._send_pipeline_file(current_file, folder)
+                result.sent = self._send_pipeline_file(
+                    current_file, context.effective_folder
+                )
 
                 if not result.sent:
                     send_errors = self.send_manager.get_errors()
@@ -478,12 +481,8 @@ class DispatchOrchestrator:
             )
 
         finally:
-            # Collect any pipeline temp dirs that were tracked by pipeline steps
-            if "_pipeline_temp_dirs" in folder:
-                pipeline_temp_dirs.extend(folder["_pipeline_temp_dirs"])
-
             # Clean up temporary directories from pipeline steps (mkdtemp)
-            for temp_dir in pipeline_temp_dirs:
+            for temp_dir in context.temp_dirs:
                 try:
                     if os.path.exists(temp_dir):
                         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -491,7 +490,7 @@ class DispatchOrchestrator:
                     pass  # Best effort cleanup
 
             # Clean up temporary files created by pipeline steps (mkstemp)
-            for temp_file in temp_files_created:
+            for temp_file in context.temp_files:
                 try:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
@@ -499,6 +498,25 @@ class DispatchOrchestrator:
                     pass  # Best effort cleanup
 
         return result
+
+    def _build_processing_context(
+        self, folder: dict, upc_dict: dict
+    ) -> ProcessingContext:
+        """Build non-mutating per-file processing context."""
+        effective_folder = folder.copy()
+        if "process_edi" not in effective_folder and (
+            effective_folder.get("split_edi", False)
+            or effective_folder.get("convert_edi", False)
+            or effective_folder.get("tweak_edi", False)
+        ):
+            effective_folder["process_edi"] = True
+
+        return ProcessingContext(
+            folder=folder,
+            effective_folder=effective_folder,
+            settings=self.config.settings,
+            upc_dict=upc_dict,
+        )
 
     def _send_pipeline_file(self, file_path: str, folder: dict) -> bool:
         """Send file through pipeline to backends.
@@ -523,7 +541,7 @@ class DispatchOrchestrator:
         return all(send_results.values())
 
     def process_file(self, file_path: str, folder: dict) -> FileResult:
-        """Process a single file, routing to pipeline or legacy as appropriate.
+        """Process a single file via the pipeline path.
 
         Args:
             file_path: Path to the file to process
@@ -532,10 +550,6 @@ class DispatchOrchestrator:
         Returns:
             FileResult with processing outcome
         """
-        # Route to legacy if pipeline is disabled or not ready
-        if not self.config.use_pipeline or not self._is_pipeline_ready():
-            return self._process_file_legacy(file_path, folder)
-
         upc_dict = self._get_upc_dictionary(self.config.settings)
         return self._process_file_with_pipeline(file_path, folder, upc_dict)
 
@@ -687,7 +701,7 @@ class DispatchOrchestrator:
             True if validation should be performed
         """
         return (
-            folder.get("process_edi") == "True"
+            normalize_bool(folder.get("process_edi"))
             or folder.get("tweak_edi", False)
             or folder.get("split_edi", False)
             or folder.get("force_edi_validation", False)
@@ -779,7 +793,7 @@ class DispatchOrchestrator:
         upc_dict = orchestrator._get_upc_dictionary(settings)
 
         # Get all active folders
-        folders = list(folders_database.find(folder_is_active="True", order_by="alias"))
+        folders = list(folders_database.find(folder_is_active=True, order_by="alias"))
 
         has_errors = False
 

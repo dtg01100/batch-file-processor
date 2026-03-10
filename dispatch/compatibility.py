@@ -24,6 +24,18 @@ Deprecation Timeline:
 import warnings
 from typing import Any, Dict
 
+from core.utils.bool_utils import normalize_bool
+
+
+def _normalize_legacy_true_false(value: Any) -> bool:
+    """Normalize legacy true/false string flags conservatively."""
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("true", "false"):
+            return normalize_bool(lowered)
+        return False
+    return normalize_bool(value)
+
 
 def parse_legacy_process_edi_flag(value: Any) -> bool:
     """Parse legacy process_edi flag to boolean.
@@ -34,13 +46,7 @@ def parse_legacy_process_edi_flag(value: Any) -> bool:
     Returns:
         Boolean value
     """
-    if value is None:
-        return False
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.lower() == "true"
-    return bool(value)
+    return _normalize_legacy_true_false(value)
 
 
 def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -54,11 +60,11 @@ def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str,
     """
     return {
         "copy": {
-            "enabled": bool(legacy_config.get("process_backend_copy", False)),
+            "enabled": normalize_bool(legacy_config.get("process_backend_copy", False)),
             "directory": legacy_config.get("copy_to_directory", ""),
         },
         "ftp": {
-            "enabled": bool(legacy_config.get("process_backend_ftp", False)),
+            "enabled": normalize_bool(legacy_config.get("process_backend_ftp", False)),
             "server": legacy_config.get("ftp_server", ""),
             "port": legacy_config.get("ftp_port", 21),
             "username": legacy_config.get("ftp_username", ""),
@@ -66,7 +72,9 @@ def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str,
             "folder": legacy_config.get("ftp_folder", ""),
         },
         "email": {
-            "enabled": bool(legacy_config.get("process_backend_email", False)),
+            "enabled": normalize_bool(
+                legacy_config.get("process_backend_email", False)
+            ),
             "to": legacy_config.get("email_to", ""),
             "subject": legacy_config.get("email_subject_line", ""),
         },
@@ -169,7 +177,6 @@ def __getattr__(name: str) -> Any:
         "generate_file_hash": "dispatch.hash_utils",
         # File utilities
         "build_output_filename": "dispatch.file_utils",
-        "filter_files_by_checksum": "dispatch.file_utils",
         "do_clear_old_files": "dispatch.file_utils",
         # Interfaces
         "DatabaseInterface": "dispatch.interfaces",

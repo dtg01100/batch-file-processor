@@ -19,7 +19,6 @@ from dispatch.feature_flags import (
 )
 from dispatch.file_utils import (
     build_output_filename,
-    filter_files_by_checksum,
     do_clear_old_files,
 )
 from dispatch.interfaces import (
@@ -65,7 +64,6 @@ __all__ = [
     "generate_file_hash",
     # File utilities
     "build_output_filename",
-    "filter_files_by_checksum",
     "do_clear_old_files",
     # Interfaces
     "DatabaseInterface",

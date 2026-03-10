@@ -9,6 +9,10 @@ from dataclasses import dataclass
 _default_parser = None
 
 
+class EDIParseError(Exception):
+    """Raised when a non-empty line cannot be parsed as EDI."""
+
+
 def _get_default_parser():
     global _default_parser
     if _default_parser is None:
@@ -31,7 +35,7 @@ def capture_records(line, parser=None):
             # Ignore standard EOF marker (Ctrl+Z)
             if line.strip() == "\x1a":
                 return None
-            raise Exception("Not An EDI")
+            raise EDIParseError("Not An EDI")
         return result
 
     if not line or line.startswith("\x1a"):
@@ -159,7 +163,7 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
         if result is None and line and line.strip() != "":
             if line.strip() == "\x1a":
                 return None
-            raise Exception("Not An EDI")
+            raise EDIParseError("Not An EDI")
         return result
 
     if not line or line.startswith("\x1a") or line.strip() == "":

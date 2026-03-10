@@ -8,7 +8,22 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable, Any
 
+from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
+
+
+def _normalize_process_edi_flag(value: Any) -> bool:
+    """Normalize process_edi with legacy-compatible semantics.
+
+    Legacy behavior treated only string "true" as enabled.
+    Non-string values continue to use general boolean normalization.
+    """
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("true", "false"):
+            return normalize_bool(lowered)
+        return False
+    return normalize_bool(value)
 
 
 SUPPORTED_FORMATS = [
@@ -289,9 +304,7 @@ class EDIConverterStep:
                 output_path=input_path, format_used="", success=True, errors=errors
             )
 
-        process_edi = params.get("process_edi", False)
-        if isinstance(process_edi, str):
-            process_edi = process_edi.lower() == "true"
+        process_edi = _normalize_process_edi_flag(params.get("process_edi", False))
         if not process_edi:
             return ConverterResult(
                 output_path=input_path,
@@ -411,6 +424,7 @@ class EDIConverterStep:
         folder: dict,
         settings: Optional[dict] = None,
         upc_dict: Optional[dict] = None,
+        context: Optional[Any] = None,
     ) -> str | None:
         """Execute convert step (wrapper for pipeline compatibility).
 
@@ -436,10 +450,16 @@ class EDIConverterStep:
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_converter_")
 
-        # Register with folder so orchestrator can clean up later
-        if "_pipeline_temp_dirs" not in folder:
-            folder["_pipeline_temp_dirs"] = []
-        folder["_pipeline_temp_dirs"].append(temp_dir)
+        temp_dirs: Optional[list[str]] = None
+        if context is not None and hasattr(context, "temp_dirs"):
+            temp_dirs = context.temp_dirs
+        elif "_pipeline_temp_dirs" in folder and isinstance(
+            folder.get("_pipeline_temp_dirs"), list
+        ):
+            temp_dirs = folder["_pipeline_temp_dirs"]
+
+        if temp_dirs is not None:
+            temp_dirs.append(temp_dir)
 
         try:
             result = self.convert(
@@ -452,12 +472,12 @@ class EDIConverterStep:
 
             # Cleanup if conversion didn't produce output
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder["_pipeline_temp_dirs"]:
-                folder["_pipeline_temp_dirs"].remove(temp_dir)
+            if temp_dirs is not None and temp_dir in temp_dirs:
+                temp_dirs.remove(temp_dir)
             return None
         except Exception as e:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder["_pipeline_temp_dirs"]:
-                folder["_pipeline_temp_dirs"].remove(temp_dir)
+            if temp_dirs is not None and temp_dir in temp_dirs:
+                temp_dirs.remove(temp_dir)
             raise

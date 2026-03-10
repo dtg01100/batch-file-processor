@@ -261,7 +261,7 @@ class MockBackend:
         self.send_calls.append((params.copy(), settings.copy(), filename))
 
         if not self.should_succeed:
-            raise Exception("Mock backend failure")
+            raise RuntimeError("Mock backend failure")
 
     def validate(self, params: dict) -> list[str]:
         """Validate backend configuration.

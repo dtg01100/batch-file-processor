@@ -305,6 +305,7 @@ class EDITweakerStep:
         folder: dict,
         upc_dict: dict,
         settings: Optional[dict] = None,
+        context: Optional[Any] = None,
     ) -> str | None:
         """Execute tweak step (wrapper for pipeline compatibility).
 
@@ -328,10 +329,16 @@ class EDITweakerStep:
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
 
-        # Register with folder so orchestrator can clean up later
-        if "_pipeline_temp_dirs" not in folder:
-            folder["_pipeline_temp_dirs"] = []
-        folder["_pipeline_temp_dirs"].append(temp_dir)
+        temp_dirs: Optional[list[str]] = None
+        if context is not None and hasattr(context, "temp_dirs"):
+            temp_dirs = context.temp_dirs
+        elif "_pipeline_temp_dirs" in folder and isinstance(
+            folder.get("_pipeline_temp_dirs"), list
+        ):
+            temp_dirs = folder["_pipeline_temp_dirs"]
+
+        if temp_dirs is not None:
+            temp_dirs.append(temp_dir)
 
         try:
             result = self.tweak(
@@ -349,12 +356,12 @@ class EDITweakerStep:
 
             # Cleanup if tweaking didn't produce output
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder["_pipeline_temp_dirs"]:
-                folder["_pipeline_temp_dirs"].remove(temp_dir)
+            if temp_dirs is not None and temp_dir in temp_dirs:
+                temp_dirs.remove(temp_dir)
             return None
         except Exception as e:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dir in folder["_pipeline_temp_dirs"]:
-                folder["_pipeline_temp_dirs"].remove(temp_dir)
+            if temp_dirs is not None and temp_dir in temp_dirs:
+                temp_dirs.remove(temp_dir)
             raise

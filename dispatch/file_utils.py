@@ -53,19 +53,6 @@ def build_output_filename(
     return stripped_filename
 
 
-def filter_files_by_checksum(files: list[str], checksums: set[str]) -> list[str]:
-    """Filter out files whose checksums are already in the set.
-
-    Args:
-        files: List of file paths
-        checksums: Set of already-processed checksums
-
-    Returns:
-        List of file paths not in the checksum set
-    """
-    return [f for f in files if f not in checksums]
-
-
 def build_error_log_filename(
     alias: str, errors_folder: str, folder_name: str, timestamp: Optional[str] = None
 ) -> str:
