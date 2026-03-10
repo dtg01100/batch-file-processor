@@ -9,6 +9,3 @@ profile = "black"
 line-length = 88
 extend-ignore = ["E203", "W503"]
 select = ["E", "F", "W", "C90", "I"]
-
-[tool.pytest.ini_options]
-addopts = "-q"
