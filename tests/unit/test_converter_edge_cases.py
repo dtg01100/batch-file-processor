@@ -402,7 +402,7 @@ class TestConverterEmptyFileHandling:
     def test_convert_to_stewarts_custom_empty_file_raises(
         self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
     ):
-        """convert_to_stewarts_custom raises IndexError on empty file (no first line)."""
+        """convert_to_stewarts_custom handles empty file gracefully (no crash)."""
         import convert_to_stewarts_custom
 
         with patch("core.database.create_query_runner") as mock_qr_class:
@@ -410,14 +410,16 @@ class TestConverterEmptyFileHandling:
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
-            with pytest.raises((IndexError, Exception)):
-                convert_to_stewarts_custom.edi_convert(
-                    empty_edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
+            # Empty file should be handled gracefully - creates empty output
+            result = convert_to_stewarts_custom.edi_convert(
+                empty_edi_file,
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            # Should return a result without raising
+            assert result is not None
 
     def test_convert_to_stewarts_custom_with_valid_content(
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
@@ -487,7 +489,7 @@ class TestConverterEmptyFileHandling:
     def test_convert_to_jolley_custom_empty_file_raises(
         self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
     ):
-        """convert_to_jolley_custom raises IndexError on empty file (no first line)."""
+        """convert_to_jolley_custom handles empty file gracefully (no crash)."""
         import convert_to_jolley_custom
 
         with patch("core.database.create_query_runner") as mock_qr_class:
@@ -495,14 +497,16 @@ class TestConverterEmptyFileHandling:
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
-            with pytest.raises((IndexError, Exception)):
-                convert_to_jolley_custom.edi_convert(
-                    empty_edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
+            # Empty file should be handled gracefully - creates empty output
+            result = convert_to_jolley_custom.edi_convert(
+                empty_edi_file,
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            # Should return a result without raising
+            assert result is not None
 
     def test_convert_to_jolley_custom_with_valid_content(
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
@@ -1123,11 +1127,11 @@ class TestConverterEmptyUpcLut:
     def test_convert_to_fintech_empty_upc_lut_raises_key_error(
         self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
     ):
-        """convert_to_fintech with empty upc_lut raises KeyError (no UPC for item).
+        """convert_to_fintech with empty upc_lut handles gracefully (returns empty UPC).
 
-        The fintech converter does not guard against missing UPC entries; it
-        directly indexes upc_lut[int(vendor_item)].  An empty lut therefore
-        raises KeyError.
+        The fintech converter now guards against missing UPC entries using .get()
+        with a default value. An empty lut therefore returns empty strings
+        instead of raising KeyError.
         """
         import convert_to_fintech
 
@@ -1175,9 +1179,9 @@ class TestConverterEmptyUpcLut:
             mock_utils.datetime_from_invtime.return_value = mock_dt
             mock_utils.convert_to_price.return_value = "1.00"
 
-            with pytest.raises(KeyError):
-                convert_to_fintech.edi_convert(
-                    valid_edi_file,
+            # Empty UPC LUT should be handled gracefully - returns empty strings
+            result = convert_to_fintech.edi_convert(
+                valid_edi_file,
                     output_base,
                     default_settings_dict,
                     default_parameters_dict,

@@ -307,12 +307,13 @@ class DispatchOrchestrator:
         import shutil
         result = FileResult(
             file_name=file_path,
-            checksum=self._calculate_checksum(file_path)
+            checksum=""
         )
         temp_files_created = []  # Track temporary files for cleanup
         pipeline_temp_dirs = []  # Track temporary directories from pipeline steps
         
         try:
+            result.checksum = self._calculate_checksum(file_path)
             current_file = file_path
             
             # Support both legacy validator and new validator_step
@@ -377,7 +378,14 @@ class DispatchOrchestrator:
                     for split_file in split_files:
                         send_result = self._send_pipeline_file(split_file, folder)
                         if not send_result:
-                            result.errors.append(f"Failed to send split file: {split_file}")
+                            send_errors = self.send_manager.get_errors()
+                            if send_errors:
+                                for backend_name, error_message in send_errors.items():
+                                    result.errors.append(
+                                        f"Failed to send split file via {backend_name}: {error_message}"
+                                    )
+                            else:
+                                result.errors.append(f"Failed to send split file: {split_file}")
                     
                     result.sent = len(result.errors) == 0
                     return result
@@ -425,7 +433,14 @@ class DispatchOrchestrator:
                 result.sent = self._send_pipeline_file(current_file, folder)
                 
                 if not result.sent:
-                    result.errors.append(f"Failed to send file: {current_file}")
+                    send_errors = self.send_manager.get_errors()
+                    if send_errors:
+                        for backend_name, error_message in send_errors.items():
+                            result.errors.append(
+                                f"Failed to send file via {backend_name}: {error_message}"
+                            )
+                    else:
+                        result.errors.append(f"Failed to send file: {current_file}")
         
         except Exception as e:
             result.errors.append(str(e))

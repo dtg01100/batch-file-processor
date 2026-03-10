@@ -122,8 +122,10 @@ class SendManager:
         # Check if we have an injected backend instance
         if backend_name in self.backends:
             backend = self.backends[backend_name]
-            backend.send(params, settings, file_path)
-            return True
+            send_result = backend.send(params, settings, file_path)
+            if send_result is None:
+                return True
+            return bool(send_result)
         
         # Fall back to default module-based backend
         if self.use_default_backends and backend_name in self.DEFAULT_BACKENDS:
@@ -180,7 +182,20 @@ class SendManager:
         for backend_name, config in self.DEFAULT_BACKENDS.items():
             if params.get(config['enabled_key'], False):
                 enabled.add(backend_name)
-        
+
+        # Include injected/non-default backends for DI and tests
+        for backend_name in self.backends:
+            if backend_name in self.DEFAULT_BACKENDS:
+                continue
+
+            enabled_key = f'process_backend_{backend_name}'
+            if enabled_key in params:
+                if params.get(enabled_key):
+                    enabled.add(backend_name)
+            else:
+                # Absent flag defaults to enabled for injected backends
+                enabled.add(backend_name)
+
         return enabled
     
     def validate_backend_config(self, params: dict) -> list[str]:

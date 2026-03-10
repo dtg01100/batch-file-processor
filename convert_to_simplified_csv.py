@@ -29,6 +29,7 @@ from convert_base import (
     create_csv_writer,
     normalize_parameter
 )
+from core.exceptions import CustomerLookupError
 
 
 class SimplifiedCSVConverter(BaseEDIConverter):

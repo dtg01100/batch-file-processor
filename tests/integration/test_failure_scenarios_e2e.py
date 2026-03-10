@@ -233,7 +233,7 @@ class TestFileProcessingFailureScenarios:
         result = orchestrator.process_folder(folder_config, run_log)
         
         # Should process valid files but handle corrupted files appropriately
-        assert len(success_calls) <= 3, "Should handle corrupted file without crashing"
+        assert len(success_calls) == 4, "Without validation enabled, all 4 files should be sent"
         assert result.files_processed + result.files_failed == 4, "All 4 files should be attempted"
     
     def test_file_access_permission_failures(self, temp_workspace, folder_config):
@@ -385,8 +385,6 @@ class TestDatabaseConnectionFailures:
     
     def test_database_unavailable_during_processing(self, temp_workspace, folder_config):
         """Test processing when database is unavailable."""
-        # This would require mocking the database layer
-        # For now, we'll test the error handling structure
         success_calls = []
         
         class SuccessBackend:
@@ -394,9 +392,8 @@ class TestDatabaseConnectionFailures:
                 success_calls.append(filename)
                 return True
         
-        # Mock database operations to fail
-        with patch('dispatch.hash_utils.generate_file_hash') as mock_hash:
-            mock_hash.side_effect = Exception("Database unavailable")
+        # Simulate failure in checksum path used by DispatchOrchestrator
+        with patch.object(DispatchOrchestrator, '_calculate_checksum', side_effect=Exception("Database unavailable")):
             
             config = DispatchConfig(
                 backends={'copy': SuccessBackend()},

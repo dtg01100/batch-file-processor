@@ -100,9 +100,10 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_fetch_po(self, mock_query_runner):
         """Test fetch_po method."""
-        # Setup mock
+        # Setup mock - need to set up run_query since InvFetcher uses that method
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO12345", "CUST001")]
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
+        mock_query.run_query.return_value = [{"0": "PO12345", "1": "CUST001", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
@@ -114,7 +115,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
     def test_fetch_po_caching(self, mock_query_runner):
         """Test fetch_po caching behavior."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO12345", "CUST001")]
+        mock_query.run_query.return_value = [{"0": "PO12345", "1": "CUST001", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
@@ -125,14 +126,14 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         result2 = fetcher.fetch_po("0000000001")
 
         # Should only call query once due to caching
-        assert mock_query.run_arbitrary_query.call_count == 1
+        assert mock_query.run_query.call_count == 1
         assert result1 == result2 == "PO12345"
 
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_fetch_po_not_found(self, mock_query_runner):
         """Test fetch_po when PO not found."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = []
+        mock_query.run_query.return_value = []
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
@@ -144,7 +145,7 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
     def test_fetch_cust(self, mock_query_runner):
         """Test fetch_cust method."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO12345", "CUST001")]
+        mock_query.run_query.return_value = [{"0": "PO12345", "1": "CUST001", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
@@ -156,43 +157,46 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
     def test_fetch_uom_desc_from_lut(self, mock_query_runner):
         """Test fetch_uom_desc from lookup table."""
         mock_query = MagicMock()
-        # First query for PO/cust, second for UOM LUT
-        mock_query.run_arbitrary_query.side_effect = [
-            [("PO12345", "CUST001")],
-            [(1, "EA"), (2, "CS")],  # UOM LUT
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
+        # First call for PO/cust, second for UOM LUT
+        mock_query.run_query.side_effect = [
+            [{"0": "PO12345", "1": "CUST001", "2": 12345}],  # fetch_po result
+            [{"0": 1, "1": "EA"}, {"0": 2, "1": "CS"}],  # UOM LUT
         ]
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
         
-        # Should get from LUT
-        result = fetcher.fetch_uom_desc(123456, 1, 0, 1)
+        # Should get from LUT - uses string args
+        result = fetcher.fetch_uom_desc("123456", "1", 0, "1")
         assert result == 1 or result == "EA"
 
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_fetch_uom_desc_fallback_lookup(self, mock_query_runner):
         """Test fetch_uom_desc fallback to item lookup."""
         mock_query = MagicMock()
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
         # First query for PO/cust, second for UOM LUT (empty), then for item
-        mock_query.run_arbitrary_query.side_effect = [
-            [("PO12345", "CUST001")],
+        mock_query.run_query.side_effect = [
+            [{"0": "PO12345", "1": "CUST001", "2": 12345}],  # fetch_po result
             [],  # Empty UOM LUT
-            [("HI",)],  # Item lookup result for multiplier > 1
+            [{"0": "HI"}],  # Item lookup result for multiplier > 1
         ]
         mock_query_runner.return_value = mock_query
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
         
-        # Should fall back to item lookup
-        result = fetcher.fetch_uom_desc(123456, 12, 0, 1)
+        # Should fall back to item lookup - uses string args
+        result = fetcher.fetch_uom_desc("123456", "12", 0, "1")
         assert result == "HI"
 
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_fetch_uom_desc_default_lo(self, mock_query_runner):
         """Test fetch_uom_desc default for LO (low)."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            [("PO12345", "CUST001")],
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
+        mock_query.run_query.side_effect = [
+            [{"0": "PO12345", "1": "CUST001", "2": 12345}],  # fetch_po result
             [],  # Empty UOM LUT
             Exception("Not found"),  # Item lookup fails
         ]
@@ -200,16 +204,17 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
         
-        # Should return LO for multiplier <= 1
-        result = fetcher.fetch_uom_desc(123456, 1, 0, 1)
+        # Should return LO for multiplier <= 1 - uses string args
+        result = fetcher.fetch_uom_desc("123456", "1", 0, "1")
         assert result == "LO"
 
     @patch('convert_to_estore_einvoice_generic.query_runner')
     def test_fetch_uom_desc_default_hi(self, mock_query_runner):
         """Test fetch_uom_desc default for HI (high)."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            [("PO12345", "CUST001")],
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
+        mock_query.run_query.side_effect = [
+            [{"0": "PO12345", "1": "CUST001", "2": 12345}],  # fetch_po result
             [],  # Empty UOM LUT
             Exception("Not found"),  # Item lookup fails
         ]
@@ -217,8 +222,8 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
 
         fetcher = convert_to_estore_einvoice_generic.invFetcher({"as400_username": "test_user", "as400_password": "test_pass", "as400_address": "test.address.com", "odbc_driver": "ODBC Driver 17 for SQL Server"})
         
-        # Should return HI for multiplier > 1
-        result = fetcher.fetch_uom_desc(123456, 12, 0, 1)
+        # Should return HI for multiplier > 1 - uses string args
+        result = fetcher.fetch_uom_desc("123456", "12", 0, "1")
         assert result == "HI"
 
 
@@ -237,9 +242,9 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
                                                default_parameters, default_settings, 
                                                sample_upc_lut, tmp_path):
         """Test that edi_convert returns the expected CSV filename."""
-        # Setup mocks
+        # Setup mocks - run_query is used by core.edi.inv_fetcher.InvFetcher
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -265,7 +270,7 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
                                sample_upc_lut, tmp_path):
         """Test that the CSV file is created."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -293,7 +298,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
                            sample_upc_lut, tmp_path):
         """Test that expected header columns are present."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -344,7 +349,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
                                     sample_upc_lut, tmp_path):
         """Test that store number appears in output."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -374,7 +379,7 @@ class TestEstoreEinvoiceGenericDetailRecord(TestEstoreEinvoiceGenericFixtures):
                            sample_upc_lut, tmp_path):
         """Test that detail records have Detail Type 'I'."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -401,7 +406,7 @@ class TestEstoreEinvoiceGenericDetailRecord(TestEstoreEinvoiceGenericFixtures):
                            sample_upc_lut, tmp_path):
         """Test that GTIN type is 'UP' for UPC."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
@@ -432,7 +437,7 @@ class TestEstoreEinvoiceGenericCRecords(TestEstoreEinvoiceGenericFixtures):
                                      sample_upc_lut, tmp_path):
         """Test that C records have Detail Type 'S'."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         detail = ("B" + "01234567890" + "Test Item Description    " + "123456" + "000100" +
@@ -469,7 +474,7 @@ class TestEstoreEinvoiceGenericShipperMode(TestEstoreEinvoiceGenericFixtures):
                                                 sample_upc_lut, tmp_path):
         """Test that parent item in shipper mode has Detail Type 'D'."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # Parent item (parent_item_number == vendor_item)
@@ -502,7 +507,7 @@ class TestEstoreEinvoiceGenericShipperMode(TestEstoreEinvoiceGenericFixtures):
                                                sample_upc_lut, tmp_path):
         """Test that child items in shipper mode have Detail Type 'C'."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # Parent
@@ -541,7 +546,7 @@ class TestEstoreEinvoiceGenericDateHandling(TestEstoreEinvoiceGenericFixtures):
                                             default_settings, sample_upc_lut, tmp_path):
         """Test that invoice date is formatted as YYYYMMDD."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # Date: 010125 = Jan 1, 2025
@@ -573,7 +578,7 @@ class TestEstoreEinvoiceGenericDateHandling(TestEstoreEinvoiceGenericFixtures):
                                  default_settings, sample_upc_lut, tmp_path):
         """Test handling of zero date (000000)."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         header = "A" + "VENDOR" + "0000000001" + "000000" + "0000010000"
@@ -626,7 +631,7 @@ class TestEstoreEinvoiceGenericEdgeCases(TestEstoreEinvoiceGenericFixtures):
                                 sample_upc_lut, tmp_path):
         """Test with only header record."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         edi_content = sample_header_record + "\n"
@@ -651,7 +656,7 @@ class TestEstoreEinvoiceGenericEdgeCases(TestEstoreEinvoiceGenericFixtures):
                                default_settings, sample_upc_lut, tmp_path):
         """Test with multiple invoices."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # First invoice
@@ -696,7 +701,7 @@ class TestEstoreEinvoiceGenericDataTransformation(TestEstoreEinvoiceGenericFixtu
                                         sample_upc_lut, tmp_path):
         """Test extended cost calculation."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # Unit cost = 000100 = $1.00, qty = 10
@@ -727,7 +732,7 @@ class TestEstoreEinvoiceGenericDataTransformation(TestEstoreEinvoiceGenericFixtu
                                          sample_upc_lut, tmp_path):
         """Test that Vendor Pack comes from unit multiplier."""
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO123", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO123", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         # Unit multiplier = 000012 = 12
@@ -777,8 +782,9 @@ class TestEstoreEinvoiceGenericPurchaseOrder(TestEstoreEinvoiceGenericFixtures):
                                        default_parameters, default_settings,
                                        sample_upc_lut, tmp_path):
         """Test that purchase order appears in output."""
+        # run_query is used by core.edi.inv_fetcher.InvFetcher
         mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = [("PO12345", "CUST1")]
+        mock_query.run_query.return_value = [{"0": "PO12345", "1": "CUST1", "2": 12345}]
         mock_query_runner.return_value = mock_query
 
         input_file = tmp_path / "input.edi"
