@@ -31,12 +31,12 @@
     "updateRemoteUserUID": true,
     "containerEnv": {
         "HOME": "/home/vscode",
-        "PATH": "/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin:/home/vscode/.local/bin"
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     },
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/batch-file-processor,type=bind",
     "workspaceFolder": "/workspaces/batch-file-processor",
-    "postCreateCommand": "bash -lc 'chmod +x /workspaces/batch-file-processor/start_x11.sh && if [ -f /workspaces/batch-file-processor/ibm-iaccess-1.1.0.28-1.0.amd64.deb ]; then echo Installing IBM i Access package... && sudo apt-get update && sudo apt-get -y install /workspaces/batch-file-processor/ibm-iaccess-1.1.0.28-1.0.amd64.deb && sudo apt-get -f install -y; else echo Skipping IBM i Access install: package not found in workspace root.; fi'",
-    "postStartCommand": "bash /workspaces/batch-file-processor/start_x11.sh",
+    "postCreateCommand": "bash -lc 'chmod +x /workspaces/batch-file-processor/start_x11.sh && sudo mkdir -p /workspaces/batch-file-processor.worktrees && sudo chown -R vscode:vscode /workspaces/batch-file-processor.worktrees && if [ -f /workspaces/batch-file-processor/ibm-iaccess-1.1.0.28-1.0.amd64.deb ]; then echo Installing IBM i Access package... && sudo apt-get update && sudo apt-get -y install /workspaces/batch-file-processor/ibm-iaccess-1.1.0.28-1.0.amd64.deb && sudo apt-get -f install -y; else echo Skipping IBM i Access install: package not found in workspace root.; fi'",
+    "postStartCommand": "bash -lc 'sudo mkdir -p /workspaces/batch-file-processor.worktrees && sudo chown -R vscode:vscode /workspaces/batch-file-processor.worktrees && bash /workspaces/batch-file-processor/start_x11.sh'",
     "mounts": [
         "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
         "source=batch-file-processor-home,target=/home/vscode,type=volume"

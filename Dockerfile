@@ -38,3 +38,13 @@ RUN git clone https://github.com/novnc/noVNC.git /tmp/novnc
 COPY requirements.txt /tmp/pip-tmp/
 RUN pip3 --disable-pip-version-check --no-cache-dir install --break-system-packages -r /tmp/pip-tmp/requirements.txt \
 && rm -rf /tmp/pip-tmp
+# Ensure git is available at /usr/bin/git (standard location for delegated sessions)
+RUN ln -sf /usr/bin/git /usr/bin/git || true
+
+# Create profile.d script to ensure PATH includes critical binaries for all shell types
+RUN cat > /etc/profile.d/path-setup.sh << 'EOF'
+# Ensure /usr/bin and /usr/local/bin are always in PATH
+if ! echo "$PATH" | grep -q "/usr/bin"; then
+    export PATH="/usr/bin:/usr/local/bin:/usr/sbin:/usr/local/sbin:/sbin:/bin:$PATH"
+fi
+EOF
