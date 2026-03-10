@@ -30,7 +30,8 @@
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,
     "containerEnv": {
-        "HOME": "/home/vscode"
+        "HOME": "/home/vscode",
+        "PATH": "/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin:/home/vscode/.local/bin"
     },
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/batch-file-processor,type=bind",
     "workspaceFolder": "/workspaces/batch-file-processor",

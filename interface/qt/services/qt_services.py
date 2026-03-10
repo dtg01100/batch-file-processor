@@ -258,13 +258,8 @@ class QtProgressService(QObject):
         """Create an animated throbber indicator with pulsing effect."""
         throbber = QLabel("◐", parent)
         throbber.setAlignment(Qt.AlignmentFlag.AlignCenter)
-<<<<<<< ours
-        throbber.setStyleSheet("color: white; font-size: 36pt; font-weight: bold;")
-
-=======
         throbber.setStyleSheet(f"color: {Theme.TEXT_ON_OVERLAY}; font-size: 36pt; font-weight: bold;")
-        
->>>>>>> theirs
+
         # Create pulsing animation for opacity (ping-pong effect)
         # Use QGraphicsOpacityEffect for proper opacity animation support
         from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
@@ -306,16 +301,9 @@ class QtProgressService(QObject):
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(100)
         progress_bar.setValue(0)
-<<<<<<< ours
-        progress_bar.setStyleSheet(
-            """
-            QProgressBar {
-                border: 2px solid #666;
-=======
         progress_bar.setStyleSheet(f"""
             QProgressBar {{
                 border: 2px solid {Theme.PROGRESS_BAR_BORDER};
->>>>>>> theirs
                 border-radius: 5px;
                 text-align: center;
                 color: {Theme.TEXT_ON_OVERLAY};
@@ -324,14 +312,8 @@ class QtProgressService(QObject):
             QProgressBar::chunk {{
                 background-color: {Theme.PROGRESS_BAR_CHUNK};
                 border-radius: 3px;
-<<<<<<< ours
-            }
-        """
-        )
-=======
             }}
         """)
->>>>>>> theirs
         return progress_bar
 
     def _setup_layout(self) -> None:

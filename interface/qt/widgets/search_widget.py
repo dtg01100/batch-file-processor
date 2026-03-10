@@ -95,35 +95,8 @@ class SearchWidget(QWidget):
         layout.setSpacing(Theme.SPACING_SM_INT)
 
         self._entry = QLineEdit()
-<<<<<<< ours
-        self._entry.setPlaceholderText("\U0001f50d Search folders...")
-        self._entry.setStyleSheet(
-            f"""
-            QLineEdit {{
-                background-color: {Theme.INPUT_BACKGROUND};
-                color: {Theme.TEXT_PRIMARY};
-                border: 1px solid {Theme.INPUT_BORDER};
-                border-radius: {Theme.RADIUS_MD};
-                padding: {Theme.SPACING_SM} {Theme.SPACING_MD};
-                font-size: {Theme.FONT_SIZE_BASE};
-                selection-background-color: {Theme.PRIMARY_CONTAINER};
-                selection-color: {Theme.ON_PRIMARY_CONTAINER};
-            }}
-            QLineEdit:hover {{
-                border-color: {Theme.INPUT_HOVER_BORDER};
-            }}
-            QLineEdit:focus {{
-                border: 2px solid {Theme.INPUT_FOCUS_BORDER};
-                padding: calc({Theme.SPACING_SM} - 1px) calc({Theme.SPACING_MD} - 1px);
-                background-color: {Theme.BACKGROUND};
-            }}
-        """
-        )
-=======
         self._entry.setPlaceholderText("\U0001F50D Search folders...")
-        # Use Theme's input stylesheet for consistent styling
         self._entry.setStyleSheet(Theme.get_input_stylesheet())
->>>>>>> theirs
         self._entry.returnPressed.connect(self._on_return_pressed)
 
         self._button = QPushButton("Filter")

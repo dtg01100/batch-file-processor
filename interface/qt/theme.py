@@ -81,28 +81,20 @@ class Theme:
     TEXT_ON_PRIMARY = "#FFFFFF"
     TEXT_ON_SIDEBAR = "#E6E1E5"
     TEXT_ON_SIDEBAR_HOVER = "#FFFFFF"
-<<<<<<< ours
-
-=======
     TEXT_ON_OVERLAY = "#FFFFFF"
     TEXT_ON_OVERLAY_SECONDARY = "#CCCCCC"
     TEXT_ON_OVERLAY_TERTIARY = "#999999"
-    
->>>>>>> theirs
+
     # Border Colors
     BORDER = "#D9D2E9"
     BORDER_FOCUS = "#6750A4"
     BORDER_HOVER = "#C4B5E0"
-<<<<<<< ours
 
-=======
-    
     # Overlay Colors
     OVERLAY_BACKGROUND = "rgba(0, 0, 0, 160)"
     PROGRESS_BAR_BORDER = "#666666"
     PROGRESS_BAR_CHUNK = "#4CAF50"
-    
->>>>>>> theirs
+
     # Typography System
     FONT_FAMILY = (
         "Segoe UI",
@@ -171,7 +163,6 @@ class Theme:
         """Convert a spacing string (e.g., '16px') to integer value."""
         if isinstance(spacing_str, int):
             return spacing_str
-<<<<<<< ours
         return int(spacing_str.replace("px", ""))
 
     @staticmethod
@@ -207,10 +198,6 @@ class Theme:
                 border-color: {Theme.OUTLINE_VARIANT};
             }}
         """
-=======
-        return int(spacing_str.replace('px', ''))
-    
->>>>>>> theirs
 
         if variant == "primary":
             return f"""
