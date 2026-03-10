@@ -486,6 +486,16 @@ class Database:
         except sqlite3.Error:
             pass
 
+        # Ensure core schema exists for new or in-memory databases so tests and
+        # migrations can assume base tables like 'version' are present.
+        try:
+            import schema
+
+            schema.ensure_schema(self)
+        except Exception:
+            # Be tolerant: if schema ensure fails, don't crash the connection
+            pass
+
     @property
     def raw_connection(self) -> sqlite3.Connection:
         """Get the raw sqlite3 connection.
