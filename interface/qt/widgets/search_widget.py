@@ -96,11 +96,13 @@ class SearchWidget(QWidget):
 
         self._entry = QLineEdit()
         self._entry.setPlaceholderText("\U0001F50D Search folders...")
+        self._entry.setToolTip("Type folder name text and press Enter to filter")
         self._entry.setStyleSheet(Theme.get_input_stylesheet())
         self._entry.returnPressed.connect(self._on_return_pressed)
 
         self._button = QPushButton("Filter")
         self._button.setObjectName("primary")
+        self._button.setToolTip("Apply folder filter")
         self._button.clicked.connect(self._on_button_clicked)
 
         layout.addWidget(self._entry, stretch=1)
@@ -113,10 +115,10 @@ class SearchWidget(QWidget):
         self._escape_shortcut.activated.connect(self._on_escape_pressed)
 
     def _on_button_clicked(self) -> None:
-        self._on_filter_applied(self._entry.text())
+        self._on_filter_applied(self._entry.text().strip())
 
     def _on_return_pressed(self) -> None:
-        self._on_filter_applied(self._entry.text())
+        self._on_filter_applied(self._entry.text().strip())
 
     def _on_escape_pressed(self) -> None:
         self.clear()

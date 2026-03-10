@@ -22,6 +22,7 @@ import csv
 from decimal import Decimal
 
 import utils
+from core.exceptions import CustomerLookupError
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
