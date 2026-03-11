@@ -8,9 +8,11 @@ Tests cover:
 - Processed files tracking via real database
 - DatabaseObj initialization and table wiring
 - Orchestrator with real database-backed folder list
+- App-upgrade scenario: open old DB via DatabaseObj, auto-migrate
 """
 
 import os
+import shutil
 from unittest.mock import MagicMock
 
 import pytest
@@ -519,3 +521,555 @@ class TestOrchestratorWithRealDB:
 
         assert len(backend.sent) == 3
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Helpers for app-upgrade tests
+# ---------------------------------------------------------------------------
+LEGACY_DB_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "fixtures", "legacy_v32_folders.db"
+)
+
+
+def _create_old_version_db(db_path: str, config_folder: str, version: str) -> None:
+    """Create a database at *version* with sample data, ready for upgrade.
+
+    Uses raw SQL to create tables at a schema level that pre-dates the
+    migrations from *version* onward, so the real migration path is exercised
+    when DatabaseObj opens the file.
+    """
+    import sqlite3
+
+    raw = sqlite3.connect(db_path)
+    c = raw.cursor()
+
+    # -- Base tables at roughly v33 level (no columns added by v33+ migrations)
+    c.execute("""
+        CREATE TABLE version (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version TEXT,
+            os TEXT
+        )
+    """)
+    c.execute("INSERT INTO version (id, version, os) VALUES (1, ?, 'Linux')", (version,))
+
+    c.execute("""
+        CREATE TABLE folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_name TEXT,
+            alias TEXT,
+            folder_is_active INTEGER DEFAULT 0,
+            copy_to_directory TEXT,
+            process_edi INTEGER DEFAULT 0,
+            convert_to_format TEXT DEFAULT 'csv',
+            calculate_upc_check_digit INTEGER DEFAULT 0,
+            upc_target_length INTEGER DEFAULT 11,
+            upc_padding_pattern TEXT DEFAULT '',
+            include_a_records INTEGER DEFAULT 0,
+            include_c_records INTEGER DEFAULT 0,
+            include_headers INTEGER DEFAULT 0,
+            filter_ampersand INTEGER DEFAULT 0,
+            tweak_edi INTEGER DEFAULT 0,
+            pad_a_records INTEGER DEFAULT 0,
+            a_record_padding TEXT DEFAULT '',
+            a_record_padding_length INTEGER DEFAULT 6,
+            invoice_date_custom_format_string TEXT DEFAULT '%Y%%m%%d',
+            invoice_date_custom_format INTEGER DEFAULT 0,
+            reporting_email TEXT DEFAULT '',
+            report_email_destination TEXT DEFAULT '',
+            process_backend_copy INTEGER DEFAULT 0,
+            backend_copy_destination TEXT,
+            process_edi_output INTEGER DEFAULT 0,
+            edi_output_folder TEXT,
+            split_edi INTEGER DEFAULT 0,
+            force_edi_validation INTEGER DEFAULT 0,
+            append_a_records INTEGER DEFAULT 0,
+            force_txt_file_ext INTEGER DEFAULT 0,
+            prepend_date_files INTEGER DEFAULT 0,
+            override_upc_bool INTEGER DEFAULT 0,
+            split_edi_include_invoices INTEGER DEFAULT 0,
+            split_edi_include_credits INTEGER DEFAULT 0
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE processed_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT,
+            folder_id INTEGER,
+            file_checksum TEXT,
+            resend_flag INTEGER DEFAULT 0
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            enable_email INTEGER DEFAULT 0,
+            email_address TEXT DEFAULT '',
+            email_username TEXT DEFAULT '',
+            email_password TEXT DEFAULT '',
+            email_smtp_server TEXT DEFAULT '',
+            smtp_port INTEGER DEFAULT 587,
+            odbc_driver TEXT DEFAULT '',
+            as400_address TEXT DEFAULT '',
+            as400_username TEXT DEFAULT '',
+            as400_password TEXT DEFAULT '',
+            backup_counter INTEGER DEFAULT 0,
+            backup_counter_maximum INTEGER DEFAULT 100,
+            enable_interval_backups INTEGER DEFAULT 0,
+            folder_is_active INTEGER DEFAULT 0,
+            copy_to_directory TEXT,
+            convert_to_format TEXT DEFAULT 'csv',
+            process_edi INTEGER DEFAULT 0,
+            calculate_upc_check_digit INTEGER DEFAULT 0,
+            upc_target_length INTEGER DEFAULT 11,
+            upc_padding_pattern TEXT DEFAULT '',
+            include_a_records INTEGER DEFAULT 0,
+            include_c_records INTEGER DEFAULT 0,
+            include_headers INTEGER DEFAULT 0,
+            filter_ampersand INTEGER DEFAULT 0,
+            tweak_edi INTEGER DEFAULT 0,
+            pad_a_records INTEGER DEFAULT 0,
+            a_record_padding TEXT DEFAULT '',
+            a_record_padding_length INTEGER DEFAULT 6,
+            invoice_date_custom_format_string TEXT DEFAULT '%Y%%m%%d',
+            invoice_date_custom_format INTEGER DEFAULT 0,
+            reporting_email TEXT DEFAULT '',
+            folder_name TEXT DEFAULT 'template',
+            alias TEXT DEFAULT '',
+            report_email_destination TEXT DEFAULT '',
+            process_backend_copy INTEGER DEFAULT 0,
+            backend_copy_destination TEXT,
+            process_edi_output INTEGER DEFAULT 0,
+            edi_output_folder TEXT,
+            split_edi INTEGER DEFAULT 0,
+            force_edi_validation INTEGER DEFAULT 0,
+            append_a_records INTEGER DEFAULT 0,
+            force_txt_file_ext INTEGER DEFAULT 0,
+            prepend_date_files INTEGER DEFAULT 0,
+            override_upc_bool INTEGER DEFAULT 0,
+            split_edi_include_invoices INTEGER DEFAULT 0,
+            split_edi_include_credits INTEGER DEFAULT 0
+        )
+    """)
+    c.execute("INSERT INTO settings (id) VALUES (1)")
+
+    c.execute("""
+        CREATE TABLE administrative (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            copy_to_directory TEXT DEFAULT '',
+            logs_directory TEXT,
+            enable_reporting INTEGER DEFAULT 0,
+            report_email_destination TEXT DEFAULT '',
+            report_edi_errors INTEGER DEFAULT 0,
+            convert_to_format TEXT DEFAULT 'csv',
+            tweak_edi INTEGER DEFAULT 0,
+            split_edi INTEGER DEFAULT 0,
+            single_add_folder_prior TEXT,
+            batch_add_folder_prior TEXT,
+            export_processed_folder_prior TEXT
+        )
+    """)
+    c.execute(
+        "INSERT INTO administrative (id, logs_directory) VALUES (1, ?)",
+        (os.path.join(config_folder, "logs"),),
+    )
+
+    # -- Test data: two folders and one processed file
+    c.execute(
+        "INSERT INTO folders (folder_name, alias, folder_is_active, process_backend_copy, copy_to_directory)"
+        " VALUES (?, ?, 1, 1, ?)",
+        ("/data/invoices", "invoices", "/out/invoices"),
+    )
+    c.execute(
+        "INSERT INTO folders (folder_name, alias, folder_is_active, process_backend_copy)"
+        " VALUES (?, ?, 0, 0)",
+        ("/data/orders", "orders"),
+    )
+    c.execute(
+        "INSERT INTO processed_files (file_name, folder_id, file_checksum)"
+        " VALUES (?, 1, ?)",
+        ("old_invoice.edi", "legacy_checksum_abc"),
+    )
+
+    raw.commit()
+    raw.close()
+
+    # If the caller wants a version higher than 33, migrate up to it so
+    # the schema matches that version exactly.
+    if int(version) > 33:
+        conn = sqlite_wrapper.Database.connect(db_path)
+        folders_database_migrator.upgrade_database(
+            conn, config_folder, "Linux", target_version=version
+        )
+        conn.commit()
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Tests: App upgrade via DatabaseObj (simulates real app opening old DB)
+# ---------------------------------------------------------------------------
+class TestAppUpgradeViaDatabaseObj:
+    """Open an old-version DB through DatabaseObj and verify auto-upgrade.
+
+    This mirrors the real app-upgrade scenario: user installs a new version
+    of the application, launches it, and DatabaseObj detects the older schema,
+    creates a backup, and migrates in-place.
+    """
+
+    @pytest.mark.parametrize("old_version", ["33", "35", "38", "40"])
+    def test_upgrade_from_old_version_reaches_current(self, tmp_path, old_version):
+        """DatabaseObj auto-migrates an old DB to CURRENT_DB_VERSION."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, old_version)
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        ver = db.database_connection["version"].find_one(id=1)
+        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
+        db.close()
+
+    @pytest.mark.parametrize("old_version", ["33", "35", "38", "40"])
+    def test_backup_created_before_upgrade(self, tmp_path, old_version):
+        """A backup file is produced during the upgrade."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, old_version)
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        # backup_increment.do_backup creates files in a "backups" sub-folder
+        backups_dir = tmp_path / "backups"
+        assert backups_dir.is_dir(), "No backups directory created during upgrade"
+        backup_files = list(backups_dir.iterdir())
+        assert len(backup_files) >= 1, "No backup file created during upgrade"
+        db.close()
+
+    @pytest.mark.parametrize("old_version", ["33", "38"])
+    def test_folder_data_preserved_after_upgrade(self, tmp_path, old_version):
+        """Folder rows inserted before upgrade survive the migration."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, old_version)
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        invoices = db.folders_table.find_one(alias="invoices")
+        assert invoices is not None
+        assert invoices["folder_name"] == "/data/invoices"
+
+        orders = db.folders_table.find_one(alias="orders")
+        assert orders is not None
+        assert orders["folder_name"] == "/data/orders"
+
+        db.close()
+
+    @pytest.mark.parametrize("old_version", ["33", "38"])
+    def test_processed_files_preserved_after_upgrade(self, tmp_path, old_version):
+        """Processed file records survive the upgrade."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, old_version)
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        pf = db.processed_files.find_one(file_name="old_invoice.edi")
+        assert pf is not None
+        assert pf["file_checksum"] == "legacy_checksum_abc"
+        db.close()
+
+    def test_tables_all_wired_after_upgrade(self, tmp_path):
+        """All DatabaseObj table references are non-None after upgrading."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, "33")
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        assert db.folders_table is not None
+        assert db.settings is not None
+        assert db.processed_files is not None
+        assert db.oversight_and_defaults is not None
+        assert db.emails_table is not None
+        assert db.session_database is not None
+        db.close()
+
+    def test_upgraded_db_is_fully_functional(self, tmp_path):
+        """After upgrade, new folder inserts and queries work normally."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, "33")
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        # Insert a new folder post-upgrade
+        db.folders_table.insert(dict(
+            folder_name="/new/path",
+            alias="new_folder",
+            folder_is_active=1,
+            process_backend_copy=1,
+            copy_to_directory="/new/out",
+        ))
+        db.database_connection.commit()
+
+        found = db.folders_table.find_one(alias="new_folder")
+        assert found is not None
+        assert found["folder_name"] == "/new/path"
+
+        # Old data still there
+        assert db.folders_table.find_one(alias="invoices") is not None
+
+        # Settings accessible
+        settings = db.settings.find_one(id=1)
+        assert settings is not None
+        db.close()
+
+    def test_upgraded_db_can_process_files(self, tmp_path):
+        """After upgrade, the orchestrator can process folders from the DB."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, "33")
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        # Create real input folder with a file
+        inp = tmp_path / "input"
+        inp.mkdir()
+        (inp / "test.edi").write_text(
+            "HDRA0000000000000000  000000000000000test.edi\n"
+            "A0000000000  0000000100100000000000\n"
+        )
+        out = tmp_path / "output"
+        out.mkdir()
+
+        # Update the "invoices" folder to point at real paths
+        row = db.folders_table.find_one(alias="invoices")
+        row["folder_name"] = str(inp)
+        row["copy_to_directory"] = str(out)
+        db.folders_table.update(row, ["id"])
+        db.database_connection.commit()
+
+        folder = dict(db.folders_table.find_one(alias="invoices"))
+
+        backend = TrackingBackend()
+        orch_config = DispatchConfig(backends={"copy": backend}, settings={})
+        orch = DispatchOrchestrator(orch_config)
+        result = orch.process_folder(folder, MagicMock())
+
+        assert len(backend.sent) == 1
+        assert result.files_processed == 1
+        db.close()
+
+    def test_version_too_new_raises_system_exit(self, tmp_path):
+        """Opening a DB newer than the app version raises SystemExit."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        # Create DB at current version
+        _create_old_version_db(db_path, config, CURRENT_DB_VERSION)
+
+        # Try to open it as if the app is at an older version
+        with pytest.raises(SystemExit, match="Database version too new"):
+            DatabaseObj(
+                database_path=db_path,
+                database_version="33",
+                config_folder=config,
+                running_platform="Linux",
+            )
+
+    def test_double_open_after_upgrade_is_noop(self, tmp_path):
+        """Opening an already-upgraded DB a second time doesn't re-migrate."""
+        db_path = str(tmp_path / "folders.db")
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        _create_old_version_db(db_path, config, "33")
+
+        # First open: triggers upgrade
+        db1 = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+        db1.close()
+
+        # Second open: should be a no-op (already at current version)
+        db2 = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+        ver = db2.database_connection["version"].find_one(id=1)
+        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
+
+        # Data still intact
+        assert db2.folders_table.find_one(alias="invoices") is not None
+        db2.close()
+
+
+# ---------------------------------------------------------------------------
+# Tests: Real legacy v32 DB through DatabaseObj
+# ---------------------------------------------------------------------------
+class TestRealLegacyDbViaDatabaseObj:
+    """Open the actual v32 production DB fixture through DatabaseObj.
+
+    Skipped automatically if the fixture file is not present.
+    """
+
+    @pytest.fixture()
+    def legacy_db_copy(self, tmp_path):
+        if not os.path.exists(LEGACY_DB_PATH):
+            pytest.skip("Legacy v32 database fixture not found")
+        dest = str(tmp_path / "folders.db")
+        shutil.copy2(LEGACY_DB_PATH, dest)
+        # The real fixture was created on Windows – patch OS to Linux so
+        # DatabaseObj doesn't reject it for OS mismatch.
+        conn = sqlite_wrapper.Database.connect(dest)
+        ver = conn["version"].find_one(id=1)
+        ver["os"] = "Linux"
+        conn["version"].update(ver, ["id"])
+        conn.commit()
+        conn.close()
+        return dest
+
+    def test_real_v32_upgrades_via_database_obj(self, legacy_db_copy, tmp_path):
+        """Real v32 DB auto-upgrades to current when opened via DatabaseObj."""
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        db = DatabaseObj(
+            database_path=legacy_db_copy,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        ver = db.database_connection["version"].find_one(id=1)
+        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
+        db.close()
+
+    def test_real_v32_folders_accessible_after_upgrade(self, legacy_db_copy, tmp_path):
+        """All 530 folders from the real legacy DB are accessible post-upgrade."""
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        db = DatabaseObj(
+            database_path=legacy_db_copy,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        all_folders = list(db.folders_table.all())
+        assert len(all_folders) >= 530
+        db.close()
+
+    def test_real_v32_processed_files_accessible(self, legacy_db_copy, tmp_path):
+        """Processed files from the real legacy DB are accessible post-upgrade."""
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        db = DatabaseObj(
+            database_path=legacy_db_copy,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        pf_count = db.processed_files.count()
+        assert pf_count >= 227000
+        db.close()
+
+    def test_real_v32_settings_accessible(self, legacy_db_copy, tmp_path):
+        """Settings table is accessible and populated after upgrade."""
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        db = DatabaseObj(
+            database_path=legacy_db_copy,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        settings = db.settings.find_one(id=1)
+        assert settings is not None
+        db.close()
+
+    def test_real_v32_can_insert_new_folder_after_upgrade(self, legacy_db_copy, tmp_path):
+        """Post-upgrade, new folder inserts work on the real legacy DB."""
+        config = str(tmp_path / "config")
+        os.makedirs(config, exist_ok=True)
+
+        db = DatabaseObj(
+            database_path=legacy_db_copy,
+            database_version=CURRENT_DB_VERSION,
+            config_folder=config,
+            running_platform="Linux",
+        )
+
+        db.folders_table.insert(dict(
+            folder_name="/brand/new/path",
+            alias="post_upgrade_folder",
+            folder_is_active=1,
+        ))
+        db.database_connection.commit()
+
+        found = db.folders_table.find_one(alias="post_upgrade_folder")
+        assert found is not None
+        assert found["folder_name"] == "/brand/new/path"
+        db.close()
