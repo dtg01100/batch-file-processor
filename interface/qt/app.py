@@ -348,9 +348,7 @@ class QtBatchFileSenderApp:
     def _toggle_folder(self, folder_id: int) -> None:
         folder = self._folder_manager.get_folder_by_id(folder_id)
         if folder:
-            if folder.get("folder_is_active", False):
-                self._folder_manager.disable_folder(folder_id)
-            else:
+            if not folder.get("folder_is_active", False):
                 has_backend = (
                     folder.get("process_backend_email")
                     or folder.get("process_backend_ftp")
@@ -366,13 +364,27 @@ class QtBatchFileSenderApp:
                         "• Copy to Directory",
                     )
                     return
+            if folder.get("folder_is_active", False):
+                self._folder_manager.disable_folder(folder_id)
+            else:
                 self._folder_manager.enable_folder(folder_id)
-            self._refresh_users_list()
-            self._set_main_button_states()
+
+            # Update only the affected row instead of rebuilding the whole list
+            if (
+                self._folder_list_widget is not None
+                and self._folder_list_widget.update_folder_row(folder_id)
+            ):
+                self._set_main_button_states()
+            else:
+                self._refresh_users_list()
+                self._set_main_button_states()
 
     def _set_folders_filter(self, filter_field_contents: str) -> None:
         self._folder_filter = filter_field_contents
-        self._refresh_users_list()
+        if self._folder_list_widget is not None:
+            self._folder_list_widget.apply_filter(filter_field_contents)
+        else:
+            self._refresh_users_list()
 
     def _delete_folder_entry_wrapper(
         self, folder_to_be_removed: int, alias: str
@@ -405,8 +417,16 @@ class QtBatchFileSenderApp:
             on_apply_success=self._on_folder_edit_applied,
         )
         if dlg.exec():
-            self._refresh_users_list()
-            self._set_main_button_states()
+            folder_id = folder_config.get("id")
+            if (
+                folder_id is not None
+                and self._folder_list_widget is not None
+                and self._folder_list_widget.update_folder_row(folder_id)
+            ):
+                self._set_main_button_states()
+            else:
+                self._refresh_users_list()
+                self._set_main_button_states()
 
     def _on_folder_edit_applied(self, folder_config: dict) -> None:
         self._database.folders_table.update(folder_config, ["id"])

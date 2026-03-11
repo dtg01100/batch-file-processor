@@ -2,7 +2,7 @@
 
 from typing import Optional, Callable
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QStyle
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence
 
 from interface.qt.theme import Theme
@@ -37,6 +37,11 @@ class SearchWidget(QWidget):
 
         self._build_ui()
         self._setup_shortcuts()
+
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.setInterval(150)
+        self._debounce_timer.timeout.connect(self._emit_filter)
 
         if initial_value:
             self._entry.setText(initial_value)
@@ -109,7 +114,11 @@ class SearchWidget(QWidget):
         self._escape_shortcut.activated.connect(self._on_escape_pressed)
 
     def _on_text_changed(self, text: str) -> None:
-        self._on_filter_applied(text.strip())
+        self._pending_filter = text.strip()
+        self._debounce_timer.start()
+
+    def _emit_filter(self) -> None:
+        self._on_filter_applied(self._pending_filter)
 
     def _on_escape_pressed(self) -> None:
         self.clear()

@@ -132,6 +132,12 @@ class FolderListWidget(QWidget):
         self._on_delete = on_delete
         self._filter_value = filter_value
         self._total_count_callback = total_count_callback
+        self._row_widgets: Dict[int, QWidget] = {}
+        self._folder_aliases: Dict[int, str] = {}
+        self._scroll_layout: Optional[QVBoxLayout] = None
+        self._scroll_area: Optional[QScrollArea] = None
+        self._empty_label: Optional[QLabel] = None
+        self._edit_button_min_width: int = 0
 
         self._build_widget()
 
@@ -140,32 +146,30 @@ class FolderListWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _build_widget(self) -> None:
-        """Build the complete folder list widget."""
+        """Build the complete folder list widget.
+
+        All rows are created up front; the initial filter is applied via
+        visibility so subsequent filter changes are just show/hide operations.
+        """
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(Theme.SPACING_LG_INT)
 
         # Get all folders sorted by alias
-        folders_dict_list: List[Dict[str, Any]] = list(
+        all_folders: List[Dict[str, Any]] = list(
             self._folders_table.find(order_by="alias")
         )
 
-        # Apply filter to the combined list
-        filtered_folder_dict_list = self._apply_filter(folders_dict_list)
-
-        if self._total_count_callback is not None:
-            self._total_count_callback(
-                len(filtered_folder_dict_list),
-                self._folders_table.count(),
-            )
-
-        # Build single column with all folders
+        # Build column with ALL folders (visibility controlled by filter)
         folder_column = self._build_column(
             title="Folders",
-            folder_list=filtered_folder_dict_list,
+            folder_list=all_folders,
         )
 
         main_layout.addWidget(folder_column, stretch=1)
+
+        # Apply initial filter via visibility
+        self.apply_filter(self._filter_value)
 
     def _build_column(
         self,
@@ -257,31 +261,55 @@ class FolderListWidget(QWidget):
         scroll_layout.setSpacing(Theme.SPACING_SM_INT)
 
         if not folder_list:
-            empty_label = QLabel(f"No {title}")
-            empty_label.setStyleSheet(
+            self._empty_label = QLabel(f"No {title}")
+            self._empty_label.setStyleSheet(
                 f"""
                 color: {Theme.TEXT_TERTIARY};
                 font-size: {Theme.FONT_SIZE_SM};
                 font-style: italic;
             """
             )
-            empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_label.setContentsMargins(
+            self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._empty_label.setContentsMargins(
                 Theme.SPACING_LG_INT,
                 Theme.SPACING_XXL_INT,
                 Theme.SPACING_LG_INT,
                 Theme.SPACING_XXL_INT,
             )
-            scroll_layout.addWidget(empty_label)
+            scroll_layout.addWidget(self._empty_label)
+        else:
+            # Create "no matches" label (hidden by default, shown when filter hides all)
+            self._empty_label = QLabel("No matching folders")
+            self._empty_label.setStyleSheet(
+                f"""
+                color: {Theme.TEXT_TERTIARY};
+                font-size: {Theme.FONT_SIZE_SM};
+                font-style: italic;
+            """
+            )
+            self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._empty_label.setContentsMargins(
+                Theme.SPACING_LG_INT,
+                Theme.SPACING_XXL_INT,
+                Theme.SPACING_LG_INT,
+                Theme.SPACING_XXL_INT,
+            )
+            self._empty_label.setVisible(False)
+            scroll_layout.addWidget(self._empty_label)
 
         edit_button_min_width = self._calculate_edit_button_min_width(folder_list)
+        self._edit_button_min_width = edit_button_min_width
 
         for folder in folder_list:
             row = self._build_folder_row(folder, edit_button_min_width)
+            self._row_widgets[folder["id"]] = row
+            self._folder_aliases[folder["id"]] = folder.get("alias", "")
             scroll_layout.addWidget(row)
 
         scroll_layout.addStretch(1)
         scroll_area.setWidget(scroll_content)
+        self._scroll_layout = scroll_layout
+        self._scroll_area = scroll_area
         container_layout.addWidget(scroll_area, stretch=1)
 
         return container
@@ -441,9 +469,98 @@ class FolderListWidget(QWidget):
 
         return row_widget
 
+    def get_scroll_position(self) -> int:
+        """Return the current vertical scroll position."""
+        if self._scroll_area is not None:
+            return self._scroll_area.verticalScrollBar().value()
+        return 0
+
+    def set_scroll_position(self, position: int) -> None:
+        """Restore a previously saved vertical scroll position."""
+        if self._scroll_area is not None:
+            self._scroll_area.verticalScrollBar().setValue(position)
+
+    def update_folder_row(self, folder_id: int) -> bool:
+        """Replace a single folder row in-place after a state change.
+
+        Re-reads the folder from the database, builds a new row widget, and
+        swaps it into the scroll layout at the same position.
+
+        Args:
+            folder_id: The ID of the folder whose row should be refreshed.
+
+        Returns:
+            ``True`` if the row was found and replaced, ``False`` otherwise.
+        """
+        old_row = self._row_widgets.get(folder_id)
+        if old_row is None or self._scroll_layout is None:
+            return False
+
+        folder = self._folders_table.find_one(id=folder_id)
+        if folder is None:
+            return False
+
+        idx = self._scroll_layout.indexOf(old_row)
+        if idx < 0:
+            return False
+
+        new_row = self._build_folder_row(folder, self._edit_button_min_width)
+
+        self._scroll_layout.removeWidget(old_row)
+        old_row.setParent(None)
+        old_row.deleteLater()
+
+        self._scroll_layout.insertWidget(idx, new_row)
+        self._row_widgets[folder_id] = new_row
+        return True
+
     # ------------------------------------------------------------------
     # Filtering
     # ------------------------------------------------------------------
+
+    def apply_filter(self, filter_text: str) -> None:
+        """Show/hide folder rows in-place based on a fuzzy filter.
+
+        When *filter_text* is empty every row is shown.  Otherwise
+        ``thefuzz`` fuzzy matching is used to determine which rows to keep
+        visible.
+
+        Args:
+            filter_text: The search string (empty string shows all).
+        """
+        self._filter_value = filter_text
+
+        if not filter_text:
+            visible_ids = set(self._row_widgets.keys())
+        else:
+            alias_list = list(self._folder_aliases.values())
+            if not alias_list:
+                visible_ids = set()
+            else:
+                fuzzy_matches = list(
+                    thefuzz.process.extractWithoutOrder(
+                        filter_text, alias_list, score_cutoff=80
+                    )
+                )
+                matched_aliases = {m[0] for m in fuzzy_matches}
+                visible_ids = {
+                    fid
+                    for fid, alias in self._folder_aliases.items()
+                    if alias in matched_aliases
+                }
+
+        visible_count = 0
+        for fid, row in self._row_widgets.items():
+            is_visible = fid in visible_ids
+            row.setVisible(is_visible)
+            if is_visible:
+                visible_count += 1
+
+        if self._empty_label is not None:
+            self._empty_label.setVisible(visible_count == 0 and bool(self._row_widgets))
+
+        if self._total_count_callback is not None:
+            self._total_count_callback(visible_count, len(self._row_widgets))
 
     def _apply_filter(
         self,

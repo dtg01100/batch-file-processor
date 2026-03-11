@@ -175,19 +175,41 @@ class QtMainWindowController:
 
         layout = self._app._right_panel_widget.layout()
 
+        # Save scroll position before rebuild
+        scroll_pos = 0
         if self._app._folder_list_widget is not None:
+            scroll_pos = self._app._folder_list_widget.get_scroll_position()
             layout.removeWidget(self._app._folder_list_widget)
             self._app._folder_list_widget.setParent(None)
             self._app._folder_list_widget.deleteLater()
             self._app._folder_list_widget = None
 
-        if self._app._search_widget is not None:
-            layout.removeWidget(self._app._search_widget)
-            self._app._search_widget.setParent(None)
-            self._app._search_widget.deleteLater()
-            self._app._search_widget = None
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        self._app._build_folder_list(layout)
+        self._app._folder_list_widget = FolderListWidget(
+            parent=self._app._right_panel_widget,
+            folders_table=self._app._database.folders_table,
+            on_send=self._app._send_single,
+            on_edit=self._app._edit_folder_selector,
+            on_toggle=self._app._toggle_folder,
+            on_delete=self._app._delete_folder_entry_wrapper,
+            filter_value=self._app._folder_filter,
+            total_count_callback=None,
+        )
+
+        # Insert folder list before the search widget (which stays at the bottom)
+        if self._app._search_widget is not None:
+            idx = layout.indexOf(self._app._search_widget)
+            layout.insertWidget(idx, self._app._folder_list_widget, stretch=1)
+            has_folders = self._app._database.folders_table.count() > 0
+            self._app._search_widget.set_enabled(has_folders)
+        else:
+            layout.addWidget(self._app._folder_list_widget, stretch=1)
+
+        # Restore scroll position after rebuild
+        if scroll_pos:
+            self._app._folder_list_widget.set_scroll_position(scroll_pos)
+
         self._app._set_main_button_states()
 
     def set_main_button_states(self) -> None:

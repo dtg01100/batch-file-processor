@@ -782,22 +782,43 @@ class TestQtBatchFileSenderApp:
 
         app._refresh_users_list()
 
-    def test_refresh_users_list_rebuilds_widgets(self):
+    def test_refresh_users_list_rebuilds_widgets(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
+        db = MagicMock()
+        db.folders_table = MagicMock()
+        db.folders_table.find.return_value = []
+        db.folders_table.count.return_value = 0
+        app._database = db
+
         layout = MagicMock()
         right_panel = MagicMock()
         right_panel.layout.return_value = layout
         app._right_panel_widget = right_panel
-        app._folder_list_widget = MagicMock()
+
+        old_folder_list = MagicMock()
+        app._folder_list_widget = old_folder_list
         app._search_widget = MagicMock()
-        app._build_folder_list = MagicMock()
+        layout.indexOf.return_value = 1
+
         app._set_main_button_states = MagicMock()
+
+        # Patch FolderListWidget so it doesn't require a real QWidget parent
+        mock_new_list = MagicMock()
+        monkeypatch.setattr(
+            "interface.qt.widgets.folder_list_widget.FolderListWidget",
+            lambda **kwargs: mock_new_list,
+        )
 
         app._refresh_users_list()
 
-        app._build_folder_list.assert_called_once_with(layout)
+        # Old folder list widget should be removed
+        layout.removeWidget.assert_called_once_with(old_folder_list)
+        old_folder_list.deleteLater.assert_called_once()
+        # New folder list widget should be inserted
+        assert app._folder_list_widget is mock_new_list
+        layout.insertWidget.assert_called_once()
         app._set_main_button_states.assert_called_once()
 
     def test_process_directories_triggers_backup_when_counter_reached(
