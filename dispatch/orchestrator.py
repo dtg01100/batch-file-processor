@@ -377,6 +377,8 @@ class DispatchOrchestrator:
                 elif isinstance(errors_or_file, str):
                     current_file = errors_or_file
 
+            files_to_send = [current_file]
+
             if self.config.splitter_step and context.effective_folder.get(
                 "split_edi", False
             ):
@@ -394,10 +396,49 @@ class DispatchOrchestrator:
                     else:
                         split_files = split_result
 
-                if split_files and isinstance(split_files, list):
-                    for split_file in split_files:
+                    if split_files and isinstance(split_files, list):
+                        files_to_send = split_files
+
+                    for pipeline_file in files_to_send:
+                        current_pipeline_file = pipeline_file
+
+                        converter_step = self.config.converter_step
+                        if converter_step is not None and context.effective_folder.get(
+                            "convert_edi", False
+                        ):
+                            converted_file = converter_step.execute(
+                                current_pipeline_file,
+                                context.effective_folder,
+                                context.settings,
+                                context.upc_dict,
+                                context=context,
+                            )
+                            if converted_file:
+                                # Track temp files created by converter (mkstemp persistent files)
+                                if converted_file != file_path:
+                                    context.temp_files.append(converted_file)
+                                current_pipeline_file = converted_file
+                                result.converted = True
+
+                        tweaker_step = self.config.tweaker_step
+                        if tweaker_step is not None and context.effective_folder.get(
+                            "tweak_edi", False
+                        ):
+                            tweaked_file = tweaker_step.execute(
+                                current_pipeline_file,
+                                context.effective_folder,
+                                context.upc_dict,
+                                context.settings,
+                                context=context,
+                            )
+                            if tweaked_file:
+                                # Track temp files created by tweaker (mkstemp)
+                                if tweaked_file != file_path:
+                                    context.temp_files.append(tweaked_file)
+                                current_pipeline_file = tweaked_file
+
                         send_result = self._send_pipeline_file(
-                            split_file, context.effective_folder
+                            current_pipeline_file, context.effective_folder
                         )
                         if not send_result:
                             send_errors = self.send_manager.get_errors()
@@ -408,7 +449,7 @@ class DispatchOrchestrator:
                                     )
                             else:
                                 result.errors.append(
-                                    f"Failed to send split file: {split_file}"
+                                    f"Failed to send split file: {current_pipeline_file}"
                                 )
 
                     result.sent = len(result.errors) == 0
@@ -778,6 +819,11 @@ class DispatchOrchestrator:
         Returns:
             Tuple of (has_errors: bool, summary: str)
         """
+        from dispatch.pipeline.converter import EDIConverterStep
+        from dispatch.pipeline.splitter import EDISplitterStep
+        from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
+
         # Create orchestrator config
         config = DispatchConfig(
             database=folders_database,
@@ -785,6 +831,10 @@ class DispatchOrchestrator:
             version=version,
             use_pipeline=True,
             progress_reporter=progress_callback,
+            validator_step=EDIValidationStep(),
+            splitter_step=EDISplitterStep(),
+            converter_step=EDIConverterStep(),
+            tweaker_step=EDITweakerStep(),
         )
 
         orchestrator = DispatchOrchestrator(config)
