@@ -977,39 +977,31 @@ def upgrade_database(
 
     if str(db_version_dict["version"]) == "40":
         # Add missing backend columns to folders and administrative tables
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'process_backend_email' INTEGER")
-        database_connection.query("UPDATE 'folders' SET 'process_backend_email' = 0")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'process_backend_ftp' INTEGER")
-        database_connection.query("UPDATE 'folders' SET 'process_backend_ftp' = 0")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'email_to' TEXT")
-        database_connection.query("UPDATE 'folders' SET 'email_to' = ''")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_server' TEXT")
-        database_connection.query("UPDATE 'folders' SET 'ftp_server' = ''")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_port' INTEGER")
-        database_connection.query("UPDATE 'folders' SET 'ftp_port' = 21")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_folder' TEXT")
-        database_connection.query("UPDATE 'folders' SET 'ftp_folder' = ''")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_username' TEXT")
-        database_connection.query("UPDATE 'folders' SET 'ftp_username' = ''")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'ftp_password' TEXT")
-        database_connection.query("UPDATE 'folders' SET 'ftp_password' = ''")
+        # without overwriting real values already present in legacy databases.
+        def _existing_columns(table_name):
+            cursor = database_connection.raw_connection.cursor()
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            return {row[1] for row in cursor.fetchall()}
 
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_email' INTEGER")
-        database_connection.query("UPDATE 'administrative' SET 'process_backend_email' = 0")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'process_backend_ftp' INTEGER")
-        database_connection.query("UPDATE 'administrative' SET 'process_backend_ftp' = 0")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'email_to' TEXT")
-        database_connection.query("UPDATE 'administrative' SET 'email_to' = ''")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_server' TEXT")
-        database_connection.query("UPDATE 'administrative' SET 'ftp_server' = ''")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_port' INTEGER")
-        database_connection.query("UPDATE 'administrative' SET 'ftp_port' = 21")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_folder' TEXT")
-        database_connection.query("UPDATE 'administrative' SET 'ftp_folder' = ''")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_username' TEXT")
-        database_connection.query("UPDATE 'administrative' SET 'ftp_username' = ''")
-        database_connection.query("ALTER TABLE 'administrative' ADD COLUMN 'ftp_password' TEXT")
-        database_connection.query("UPDATE 'administrative' SET 'ftp_password' = ''")
+        def _ensure_column(table_name, column_name, sql_type, default_sql):
+            if column_name in _existing_columns(table_name):
+                return
+            database_connection.query(
+                f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}' {sql_type}"
+            )
+            database_connection.query(
+                f"UPDATE '{table_name}' SET '{column_name}' = {default_sql}"
+            )
+
+        for table_name in ("folders", "administrative"):
+            _ensure_column(table_name, "process_backend_email", "INTEGER", "0")
+            _ensure_column(table_name, "process_backend_ftp", "INTEGER", "0")
+            _ensure_column(table_name, "email_to", "TEXT", "''")
+            _ensure_column(table_name, "ftp_server", "TEXT", "''")
+            _ensure_column(table_name, "ftp_port", "INTEGER", "21")
+            _ensure_column(table_name, "ftp_folder", "TEXT", "''")
+            _ensure_column(table_name, "ftp_username", "TEXT", "''")
+            _ensure_column(table_name, "ftp_password", "TEXT", "''")
 
         update_version = dict(id=1, version="41", os=running_platform)
         db_version.update(update_version, ["id"])
