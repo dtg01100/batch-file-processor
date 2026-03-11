@@ -329,34 +329,67 @@ class FolderListWidget(QWidget):
         alias: str = folder["alias"]
         is_active: bool = normalize_bool(folder.get("folder_is_active"))
 
-        # Status badge
-        status_badge = QLabel("●")
-        status_badge.setFixedWidth(24)
-        status_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Status toggle button — shows state and toggles on click
+        toggle_symbol = "\u25CF" if is_active else "\u25CB"  # ● active, ○ inactive
+        toggle_btn = QPushButton(toggle_symbol)
+        toggle_btn.setFixedSize(36, 36)
+        toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if is_active:
-            status_badge.setStyleSheet(
-                f"""
-                color: {Theme.PRIMARY};
-                font-size: 18px;
-                font-weight: bold;
-            """
+            toggle_btn.setToolTip("Active — click to disable")
+            toggle_btn.setAccessibleName(f"Disable folder {alias}" if alias else "Disable folder")
+            toggle_btn.setAccessibleDescription(
+                f"Folder '{alias}' is active. Click to disable."
             )
-            status_badge.setToolTip("Active")
+            toggle_btn.setStyleSheet(
+                f"""
+                QPushButton {{
+                    color: {Theme.PRIMARY};
+                    background-color: transparent;
+                    border: 2px solid {Theme.PRIMARY};
+                    border-radius: 18px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    padding: 0;
+                }}
+                QPushButton:hover {{
+                    background-color: {Theme.PRIMARY_CONTAINER};
+                }}
+                QPushButton:pressed {{
+                    background-color: {Theme.SECONDARY_CONTAINER};
+                }}
+                """
+            )
         else:
-            status_badge.setStyleSheet(
-                f"""
-                color: {Theme.TEXT_DISABLED};
-                font-size: 18px;
-                font-weight: bold;
-            """
+            toggle_btn.setToolTip("Inactive — click to enable")
+            toggle_btn.setAccessibleName(f"Enable folder {alias}" if alias else "Enable folder")
+            toggle_btn.setAccessibleDescription(
+                f"Folder '{alias}' is inactive. Click to enable."
             )
-            status_badge.setToolTip("Inactive")
-        status_badge.setAccessibleName("Folder status")
-        status_badge.setAccessibleDescription(
-            f"Folder '{alias}' is {'active' if is_active else 'inactive'}"
+            toggle_btn.setStyleSheet(
+                f"""
+                QPushButton {{
+                    color: {Theme.TEXT_DISABLED};
+                    background-color: transparent;
+                    border: 2px solid {Theme.OUTLINE_VARIANT};
+                    border-radius: 18px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    padding: 0;
+                }}
+                QPushButton:hover {{
+                    border-color: {Theme.PRIMARY};
+                    color: {Theme.PRIMARY};
+                    background-color: {Theme.PRIMARY_CONTAINER};
+                }}
+                QPushButton:pressed {{
+                    background-color: {Theme.SECONDARY_CONTAINER};
+                }}
+                """
+            )
+        toggle_btn.clicked.connect(
+            lambda _checked, fid=folder_id: self._on_toggle(fid)
         )
-
-        row_layout.addWidget(status_badge)
+        row_layout.addWidget(toggle_btn)
 
         # Edit button (always present, shows folder alias for quick scanning)
         edit_text = f"Edit: {alias}" if alias else "Edit"
@@ -374,19 +407,6 @@ class FolderListWidget(QWidget):
 
         # Action buttons based on status
         if is_active:
-            # Disable button
-            toggle_btn = QPushButton("<-")
-            toggle_btn.setFixedWidth(40)
-            toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            toggle_btn.setToolTip("Disable folder")
-            toggle_btn.setAccessibleName(f"Disable folder {alias}" if alias else "Disable folder")
-            toggle_btn.setAccessibleDescription("Disable this folder")
-            self._style_action_button(toggle_btn)
-            toggle_btn.clicked.connect(
-                lambda _checked, fid=folder_id: self._on_toggle(fid)
-            )
-            row_layout.addWidget(toggle_btn)
-
             # Send button
             send_btn = QPushButton("Send")
             send_btn.setFixedWidth(64)
@@ -400,19 +420,6 @@ class FolderListWidget(QWidget):
             send_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_send(fid))
             row_layout.addWidget(send_btn)
         else:
-            # Enable button
-            toggle_btn = QPushButton("->")
-            toggle_btn.setFixedWidth(40)
-            toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            toggle_btn.setToolTip("Enable folder")
-            toggle_btn.setAccessibleName(f"Enable folder {alias}" if alias else "Enable folder")
-            toggle_btn.setAccessibleDescription("Enable this folder")
-            self._style_action_button(toggle_btn)
-            toggle_btn.clicked.connect(
-                lambda _checked, fid=folder_id: self._on_toggle(fid)
-            )
-            row_layout.addWidget(toggle_btn)
-
             # Delete button
             delete_btn = QPushButton("Delete")
             delete_btn.setFixedWidth(74)
@@ -481,16 +488,19 @@ class FolderListWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _style_action_button(self, btn: QPushButton, variant: str = "default") -> None:
-        """Apply modern styling to an action button."""
+        """Apply modern styling to an action button.
+
+        Uses compact padding so fixed-width buttons (toggle, send, delete)
+        have room for their text/symbols.
+        """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        if variant == "primary":
-            btn.setProperty("class", "primary")
-        elif variant == "danger":
-            btn.setProperty("class", "danger")
-        elif variant == "sidebar":
-            btn.setProperty("class", "sidebar")
-        else:
-            btn.setProperty("class", "")
+        stylesheet = Theme.get_button_stylesheet(variant)
+        # Reduce horizontal padding for compact folder-row action buttons
+        stylesheet = stylesheet.replace(
+            f"padding: {Theme.SPACING_SM} {Theme.SPACING_XL}",
+            f"padding: {Theme.SPACING_SM} {Theme.SPACING_SM}",
+        )
+        btn.setStyleSheet(stylesheet)
 
     def _calculate_edit_button_min_width(self, folder_list: List[Dict[str, Any]]) -> int:
         """Calculate a robust minimum width for edit buttons using font metrics."""

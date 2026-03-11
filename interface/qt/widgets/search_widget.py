@@ -1,7 +1,7 @@
 """Qt implementation of the search/filter widget."""
 
 from typing import Optional, Callable
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QStyle
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShortcut, QKeySequence
 
@@ -91,7 +91,9 @@ class SearchWidget(QWidget):
         layout.setSpacing(Theme.SPACING_SM_INT)
 
         self._entry = QLineEdit()
-        self._entry.setPlaceholderText("\U0001F50D Search folders...")
+        self._entry.setPlaceholderText("Search folders...")
+        search_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)
+        self._entry.addAction(search_icon, QLineEdit.ActionPosition.LeadingPosition)
         self._entry.setToolTip("Type folder name text to filter folders as you type")
         self._entry.setAccessibleName("Folder search")
         self._entry.setAccessibleDescription("Search folders by alias text (filters automatically as you type)")
