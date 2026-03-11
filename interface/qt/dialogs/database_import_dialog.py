@@ -43,6 +43,7 @@ class DatabaseImportDialog(BaseDialog):
         running_platform: str,
         backup_path: str,
         current_db_version: str,
+        preselected_database_path: Optional[str] = None,
     ) -> None:
         super().__init__(parent, "folders.db merging utility", action_mode="none")
         self.setWindowModality(Qt.WindowModality.WindowModal)
@@ -55,6 +56,8 @@ class DatabaseImportDialog(BaseDialog):
         self._database_migrate_job: Optional[DbMigrationJob] = None
 
         self._setup_ui()
+        if preselected_database_path:
+            self._apply_selected_database_path(preselected_database_path)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
@@ -137,13 +140,17 @@ class DatabaseImportDialog(BaseDialog):
             "Database Files (*.db);;All Files (*)",
         )
 
-        if file_path and os.path.exists(file_path):
-            self._new_database_path = file_path
-            self._db_label.setText(file_path)
-            self._import_button.setEnabled(True)
-            self._database_migrate_job = DbMigrationJob(
-                self._original_database_path, file_path
-            )
+        if file_path:
+            self._apply_selected_database_path(file_path)
+
+    def _apply_selected_database_path(self, file_path: str) -> None:
+        """Apply a selected database path to dialog state and UI."""
+        self._new_database_path = file_path
+        self._db_label.setText(file_path)
+        self._import_button.setEnabled(True)
+        self._database_migrate_job = DbMigrationJob(
+            self._original_database_path, file_path
+        )
 
     def _start_import(self) -> None:
         """Start the import process."""
@@ -362,10 +369,14 @@ class DbMigrationJob:
 
         # Get active folders
         new_folders = new_db["folders"]
-        old_folders = original_db["folders"]
+        target_folders = original_db["folders"]
 
         # Count folders for progress
-        active_new_folders = list(new_folders.find(folder_is_active=1))
+        active_new_folders = [
+            folder
+            for folder in new_folders.find()
+            if normalize_bool(folder.get("folder_is_active"))
+        ]
 
         total_folders = len(active_new_folders)
         thread.progress.emit(0, total_folders, "Migrating folders...")
@@ -374,69 +385,81 @@ class DbMigrationJob:
         for i, folder in enumerate(active_new_folders):
             if not isinstance(folder, dict):
                 continue
-            self._migrate_folder(folder, old_folders, new_db)
+            self._migrate_folder(folder, target_folders, original_db)
             thread.progress.emit(
                 i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders"
             )
 
+        # Preserve global settings from imported database where columns overlap.
+        self._migrate_settings(new_db, original_db)
+
+    def _migrate_settings(self, source_db: Any, target_db: Any) -> None:
+        """Migrate settings row from source DB into target DB (column intersection)."""
+        source_settings = source_db["settings"]
+        target_settings = target_db["settings"]
+
+        source_row = source_settings.find_one(id=1)
+        target_row = target_settings.find_one(id=1)
+        if not isinstance(source_row, dict) or not isinstance(target_row, dict):
+            return
+
+        cursor = target_db.raw_connection.cursor()
+        cursor.execute("PRAGMA table_info(settings)")
+        target_columns = {row[1] for row in cursor.fetchall()}
+
+        payload = {
+            key: value
+            for key, value in source_row.items()
+            if key in target_columns and key != "id"
+        }
+        if not payload:
+            return
+
+        payload["id"] = target_row["id"]
+        target_settings.update(payload, ["id"])
+
     def _migrate_folder(
         self,
-        folder: dict,
-        old_folders: Any,
-        new_db: Any,
+        imported_folder: dict,
+        target_folders: Any,
+        target_db: Any,
     ) -> None:
-        """Migrate a single folder's settings."""
-        # Find matching folder in old database
+        """Migrate a single active folder into the live database.
+
+        If a folder with the same path already exists in the target DB, update it.
+        Otherwise, insert a new row.
+        """
+        # Find matching folder in target database (active or inactive)
         match = None
-        for old_folder in old_folders.find(folder_is_active=1):
+        for existing_folder in target_folders.find():
             try:
-                if os.path.samefile(old_folder["folder_name"], folder["folder_name"]):
-                    match = old_folder
+                if os.path.samefile(
+                    existing_folder["folder_name"], imported_folder["folder_name"]
+                ):
+                    match = existing_folder
                     break
             except (OSError, TypeError, ValueError):
-                if old_folder["folder_name"] == folder["folder_name"]:
-                    match = old_folder
+                if existing_folder["folder_name"] == imported_folder["folder_name"]:
+                    match = existing_folder
                     break
 
+        cursor = target_db.raw_connection.cursor()
+        cursor.execute("PRAGMA table_info(folders)")
+        target_columns = {row[1] for row in cursor.fetchall()}
+
+        payload = {
+            key: value
+            for key, value in imported_folder.items()
+            if key in target_columns and key != "id"
+        }
+
         if match:
-            update_data = {"id": folder["id"]}
+            payload["id"] = match["id"]
+            target_folders.update(payload, ["id"])
+            return
 
-            # Merge backend settings
-            if normalize_bool(match.get("process_backend_copy")):
-                update_data.update(
-                    {
-                        "process_backend_copy": match["process_backend_copy"],
-                        "copy_to_directory": match["copy_to_directory"],
-                    }
-                )
-
-            if normalize_bool(match.get("process_backend_ftp")):
-                update_data.update(
-                    {
-                        "ftp_server": match["ftp_server"],
-                        "ftp_folder": match["ftp_folder"],
-                        "ftp_username": match["ftp_username"],
-                        "ftp_password": match["ftp_password"],
-                    }
-                )
-
-            if normalize_bool(match.get("process_backend_email")):
-                update_data.update(
-                    {
-                        "process_backend_email": match["process_backend_email"],
-                        "email_recipients": match["email_recipients"],
-                        "email_subject": match["email_subject"],
-                        "email_from": match["email_from"],
-                        "smtp_server": match["smtp_server"],
-                        "smtp_port": match["smtp_port"],
-                        "smtp_username": match["smtp_username"],
-                        "smtp_password": match["smtp_password"],
-                        "smtp_use_tls": match["smtp_use_tls"],
-                    }
-                )
-
-            if update_data:
-                new_db["folders"].update(update_data)
+        if payload:
+            target_folders.insert(payload)
 
 
 def show_database_import_dialog(
@@ -445,6 +468,7 @@ def show_database_import_dialog(
     running_platform: str,
     backup_path: str,
     current_db_version: str,
+    preselected_database_path: Optional[str] = None,
 ) -> None:
     """Show the database import dialog.
 
@@ -454,6 +478,7 @@ def show_database_import_dialog(
         running_platform: Current operating system platform
         backup_path: Path for backup files
         current_db_version: Current database version
+        preselected_database_path: Optional path to preselect and show in UI
     """
     dialog = DatabaseImportDialog(
         parent,
@@ -461,5 +486,6 @@ def show_database_import_dialog(
         running_platform,
         backup_path,
         current_db_version,
+        preselected_database_path,
     )
     dialog.exec()
