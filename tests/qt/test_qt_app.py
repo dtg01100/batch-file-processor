@@ -428,11 +428,14 @@ class TestQtBatchFileSenderApp:
         app._graphical_process_directories = MagicMock()
 
         single_table = MagicMock()
-        app._database.session_database = {"single_table": single_table}
+        session_database = MagicMock()
+        session_database.__getitem__.return_value = single_table
+        app._database.session_database = session_database
         app._database.folders_table.find_one.return_value = None
 
         app._send_single(123)
 
+        assert session_database.query.call_count == 2
         single_table.drop.assert_called_once()
         app._ui_service.show_error.assert_called_once_with(
             "Error", "Folder with id 123 not found."
@@ -449,7 +452,9 @@ class TestQtBatchFileSenderApp:
         app._graphical_process_directories = MagicMock()
 
         single_table = MagicMock()
-        app._database.session_database = {"single_table": single_table}
+        session_database = MagicMock()
+        session_database.__getitem__.return_value = single_table
+        app._database.session_database = session_database
         app._database.folders_table.find_one.return_value = {
             "id": 7,
             "folder_name": "/tmp/f",
@@ -458,6 +463,7 @@ class TestQtBatchFileSenderApp:
 
         app._send_single(7)
 
+        assert session_database.query.call_count == 2
         single_table.insert.assert_called_once()
         inserted = single_table.insert.call_args[0][0]
         assert inserted["old_id"] == 7
@@ -2104,14 +2110,18 @@ class TestQtAppInteractionWorkflows:
             lambda **kwargs: None,
         )
 
+        captured_show_kwargs = {}
+
         # Success path
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.show_database_import_dialog",
-            lambda **kwargs: None,
+            lambda **kwargs: captured_show_kwargs.update(kwargs),
         )
 
         app._show_maintenance_dialog_wrapper()
         assert captured["database_import_callback"]("/tmp/backup.db") is True
+        assert captured_show_kwargs["preselected_database_path"] == "/tmp/backup.db"
+        assert captured_show_kwargs["backup_path"] == "/tmp/backup.db"
 
         # Failure path
         monkeypatch.setattr(

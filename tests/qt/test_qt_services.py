@@ -2,6 +2,7 @@
 
 import pytest
 
+from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog, QWidget
 
 from interface.qt.services.qt_services import QtUIService, QtProgressService
@@ -313,3 +314,16 @@ class TestQtProgressService:
         service.set_current(2)
 
         assert service._progress_bar.value() == 25
+
+        def test_event_filter_handles_missing_parent_attribute(self, qtbot):
+            parent = QWidget()
+            qtbot.addWidget(parent)
+            parent.show()
+
+            service = QtProgressService(parent)
+            delattr(service, "_parent")
+
+            event = QEvent(QEvent.Type.Resize)
+            # Should not raise even when _parent is missing.
+            handled = service.eventFilter(parent, event)
+            assert isinstance(handled, bool)

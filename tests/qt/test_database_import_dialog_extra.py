@@ -77,6 +77,25 @@ class TestDatabaseImportDialogUI:
 
         assert dialog._db_label.text() == "No File Selected"
 
+    def test_preselected_path_populates_label_and_enables_import(self, qtbot):
+        """Test constructor preselection immediately reflects selected DB in UI."""
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        selected = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        dialog = DatabaseImportDialog(
+            None,
+            "/original.db",
+            "Linux",
+            "/backup",
+            "42",
+            preselected_database_path=selected,
+        )
+        qtbot.addWidget(dialog)
+
+        assert dialog._new_database_path == selected
+        assert dialog._db_label.text() == selected
+        assert dialog._import_button.isEnabled()
+
 
 @pytest.mark.qt
 class TestDatabaseImportDialogFileSelection:
@@ -143,8 +162,8 @@ class TestDatabaseImportDialogFileSelection:
         assert dialog._new_database_path == "/original.db"
         assert dialog._import_button.isEnabled()
 
-    def test_select_nonexistent_database_does_not_set_path(self, qtbot, monkeypatch):
-        """Test selecting nonexistent database does not set the path."""
+    def test_select_database_updates_ui_without_exists_check(self, qtbot, monkeypatch):
+        """Test selection updates UI even when path existence checks are unreliable."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
         monkeypatch.setattr(
@@ -152,19 +171,14 @@ class TestDatabaseImportDialogFileSelection:
             lambda *args, **kwargs: ("/nonexistent.db", ""),
         )
 
-        monkeypatch.setattr(
-            "interface.qt.dialogs.database_import_dialog.os.path.exists",
-            lambda x: False,
-        )
-
         dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", "42")
         qtbot.addWidget(dialog)
 
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
 
-        # The dialog should not set the path if file doesn't exist
-        assert dialog._new_database_path is None
-        assert not dialog._import_button.isEnabled()
+        assert dialog._new_database_path == "/nonexistent.db"
+        assert dialog._db_label.text() == "/nonexistent.db"
+        assert dialog._import_button.isEnabled()
 
 
 @pytest.mark.qt
@@ -428,7 +442,7 @@ class TestDbMigrationJob:
         assert job.new_folder_path == "/new.db"
 
     def test_migration_job_migrate_folder_with_copy_backend(self, monkeypatch):
-        """Test _migrate_folder merges copy backend settings."""
+        """Test _migrate_folder updates matching target row from imported folder."""
         from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -436,23 +450,29 @@ class TestDbMigrationJob:
         folder = {
             "id": 1,
             "folder_name": "/test/folder",
-            "process_backend_copy": False,
+            "process_backend_copy": True,
+            "copy_to_directory": "/imported/copy",
+            "folder_is_active": True,
         }
 
-        # Old folder with copy backend enabled
-        old_folders = MagicMock()
-        old_folders.find.return_value = [
+        target_folders = MagicMock()
+        target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
-                "process_backend_copy": True,
-                "copy_to_directory": "/backup",
-                "process_backend_ftp": False,
-                "process_backend_email": False,
+                "id": 42,
             }
         ]
 
-        new_db = MagicMock()
-        new_db["folders"] = MagicMock()
+        target_db = MagicMock()
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "folder_name", "TEXT", 0, None, 0),
+            (2, "process_backend_copy", "INTEGER", 0, None, 0),
+            (3, "copy_to_directory", "TEXT", 0, None, 0),
+            (4, "folder_is_active", "INTEGER", 0, None, 0),
+        ]
+        target_db.raw_connection.cursor.return_value = cursor
 
         # Mock samefile to return True for matching paths
         monkeypatch.setattr(
@@ -460,17 +480,16 @@ class TestDbMigrationJob:
             lambda a, b: a == b and a == "/test/folder",
         )
 
-        job._migrate_folder(folder, old_folders, new_db)
+        job._migrate_folder(folder, target_folders, target_db)
 
-        # Should update with copy backend settings
-        new_db["folders"].update.assert_called_once()
-        update_data = new_db["folders"].update.call_args[0][0]
-        assert update_data["id"] == 1
+        target_folders.update.assert_called_once()
+        update_data = target_folders.update.call_args[0][0]
+        assert update_data["id"] == 42
         assert update_data["process_backend_copy"] is True
-        assert update_data["copy_to_directory"] == "/backup"
+        assert update_data["copy_to_directory"] == "/imported/copy"
 
     def test_migration_job_migrate_folder_with_ftp_backend(self, monkeypatch):
-        """Test _migrate_folder merges FTP backend settings."""
+        """Test _migrate_folder keeps FTP settings from imported folder."""
         from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -478,42 +497,50 @@ class TestDbMigrationJob:
         folder = {
             "id": 1,
             "folder_name": "/test/folder",
-            "process_backend_ftp": False,
+            "process_backend_ftp": True,
+            "ftp_server": "ftp.example.com",
+            "ftp_folder": "/upload",
+            "ftp_username": "user",
+            "ftp_password": "pass",
         }
 
-        old_folders = MagicMock()
-        old_folders.find.return_value = [
+        target_folders = MagicMock()
+        target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
-                "process_backend_ftp": True,
-                "ftp_server": "ftp.example.com",
-                "ftp_folder": "/upload",
-                "ftp_username": "user",
-                "ftp_password": "pass",
-                "process_backend_copy": False,
-                "process_backend_email": False,
+                "id": 7,
             }
         ]
 
-        new_db = MagicMock()
-        new_db["folders"] = MagicMock()
+        target_db = MagicMock()
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "folder_name", "TEXT", 0, None, 0),
+            (2, "process_backend_ftp", "INTEGER", 0, None, 0),
+            (3, "ftp_server", "TEXT", 0, None, 0),
+            (4, "ftp_folder", "TEXT", 0, None, 0),
+            (5, "ftp_username", "TEXT", 0, None, 0),
+            (6, "ftp_password", "TEXT", 0, None, 0),
+        ]
+        target_db.raw_connection.cursor.return_value = cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
             lambda a, b: a == b and a == "/test/folder",
         )
 
-        job._migrate_folder(folder, old_folders, new_db)
+        job._migrate_folder(folder, target_folders, target_db)
 
-        new_db["folders"].update.assert_called_once()
-        update_data = new_db["folders"].update.call_args[0][0]
+        target_folders.update.assert_called_once()
+        update_data = target_folders.update.call_args[0][0]
         assert update_data["ftp_server"] == "ftp.example.com"
         assert update_data["ftp_folder"] == "/upload"
         assert update_data["ftp_username"] == "user"
         assert update_data["ftp_password"] == "pass"
 
     def test_migration_job_migrate_folder_with_email_backend(self, monkeypatch):
-        """Test _migrate_folder merges email backend settings."""
+        """Test _migrate_folder keeps email settings from imported folder."""
         from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -521,44 +548,44 @@ class TestDbMigrationJob:
         folder = {
             "id": 1,
             "folder_name": "/test/folder",
-            "process_backend_email": False,
+            "process_backend_email": True,
+            "email_to": "test@example.com",
+            "email_subject_line": "Test Subject",
         }
 
-        old_folders = MagicMock()
-        old_folders.find.return_value = [
+        target_folders = MagicMock()
+        target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
-                "process_backend_email": True,
-                "email_recipients": "test@example.com",
-                "email_subject": "Test Subject",
-                "email_from": "sender@example.com",
-                "smtp_server": "smtp.example.com",
-                "smtp_port": 587,
-                "smtp_username": "smtp_user",
-                "smtp_password": "smtp_pass",
-                "smtp_use_tls": True,
-                "process_backend_copy": False,
-                "process_backend_ftp": False,
+                "id": 9,
             }
         ]
 
-        new_db = MagicMock()
-        new_db["folders"] = MagicMock()
+        target_db = MagicMock()
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "folder_name", "TEXT", 0, None, 0),
+            (2, "process_backend_email", "INTEGER", 0, None, 0),
+            (3, "email_to", "TEXT", 0, None, 0),
+            (4, "email_subject_line", "TEXT", 0, None, 0),
+        ]
+        target_db.raw_connection.cursor.return_value = cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
             lambda a, b: a == b and a == "/test/folder",
         )
 
-        job._migrate_folder(folder, old_folders, new_db)
+        job._migrate_folder(folder, target_folders, target_db)
 
-        new_db["folders"].update.assert_called_once()
-        update_data = new_db["folders"].update.call_args[0][0]
-        assert update_data["email_recipients"] == "test@example.com"
-        assert update_data["smtp_server"] == "smtp.example.com"
+        target_folders.update.assert_called_once()
+        update_data = target_folders.update.call_args[0][0]
+        assert update_data["email_to"] == "test@example.com"
+        assert update_data["email_subject_line"] == "Test Subject"
 
-    def test_migration_job_migrate_folder_no_match(self, monkeypatch):
-        """Test _migrate_folder does nothing when no matching folder."""
+    def test_migration_job_migrate_folder_no_match_inserts(self, monkeypatch):
+        """Test _migrate_folder inserts when no matching target folder exists."""
         from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -568,26 +595,31 @@ class TestDbMigrationJob:
             "folder_name": "/test/folder",
         }
 
-        old_folders = MagicMock()
-        old_folders.find.return_value = [
+        target_folders = MagicMock()
+        target_folders.find.return_value = [
             {
                 "folder_name": "/different/folder",
                 "process_backend_copy": True,
             }
         ]
 
-        new_db = MagicMock()
-        new_db["folders"] = MagicMock()
+        target_db = MagicMock()
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "folder_name", "TEXT", 0, None, 0),
+        ]
+        target_db.raw_connection.cursor.return_value = cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
             lambda a, b: False,
         )
 
-        job._migrate_folder(folder, old_folders, new_db)
+        job._migrate_folder(folder, target_folders, target_db)
 
-        # Should not update when no match
-        new_db["folders"].update.assert_not_called()
+        target_folders.update.assert_not_called()
+        target_folders.insert.assert_called_once()
 
     def test_migration_job_migrate_folder_handles_samefile_error(self, monkeypatch):
         """Test _migrate_folder handles samefile errors gracefully."""
@@ -600,19 +632,21 @@ class TestDbMigrationJob:
             "folder_name": "/test/folder",
         }
 
-        old_folders = MagicMock()
-        old_folders.find.return_value = [
+        target_folders = MagicMock()
+        target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",  # Same name
-                "process_backend_copy": True,
-                "copy_to_directory": "/backup",
-                "process_backend_ftp": False,
-                "process_backend_email": False,
+                "id": 11,
             }
         ]
 
-        new_db = MagicMock()
-        new_db["folders"] = MagicMock()
+        target_db = MagicMock()
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [
+            (0, "id", "INTEGER", 0, None, 1),
+            (1, "folder_name", "TEXT", 0, None, 0),
+        ]
+        target_db.raw_connection.cursor.return_value = cursor
 
         def mock_samefile(a, b):
             raise OSError("Cannot compare paths")
@@ -622,10 +656,54 @@ class TestDbMigrationJob:
             mock_samefile,
         )
 
-        job._migrate_folder(folder, old_folders, new_db)
+        job._migrate_folder(folder, target_folders, target_db)
 
         # Should fallback to string comparison and update
-        new_db["folders"].update.assert_called_once()
+        target_folders.update.assert_called_once()
+
+    def test_do_migrate_imports_active_folders_into_target_db(
+        self, legacy_v32_db, tmp_path
+    ):
+        """Regression: import should preserve active folders from legacy source."""
+        from interface.qt.dialogs.database_import_dialog import DbMigrationJob
+        from interface.database.database_obj import DatabaseObj
+        from interface.database import sqlite_wrapper
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
+        target_path = str(tmp_path / "target_folders.db")
+        # Create fresh live database that receives imported folders.
+        target_db_obj = DatabaseObj(
+            database_path=target_path,
+            database_version=CURRENT_DATABASE_VERSION,
+            config_folder=str(tmp_path),
+            running_platform="Linux",
+        )
+        target_db_obj.close()
+
+        source_db = sqlite_wrapper.Database.connect(legacy_v32_db)
+        expected_active = source_db["folders"].count(folder_is_active=True)
+        source_db.close()
+        assert expected_active > 0
+
+        class _Signal:
+            def emit(self, *args, **kwargs):
+                return
+
+        class _Thread:
+            progress = _Signal()
+
+        job = DbMigrationJob(target_path, legacy_v32_db)
+        job.do_migrate(_Thread(), legacy_v32_db, target_path)
+
+        imported_db = sqlite_wrapper.Database.connect(target_path)
+        actual_active = imported_db["folders"].count(folder_is_active=True)
+        imported_settings = imported_db["settings"].find_one(id=1)
+        imported_jolley = imported_db["folders"].find_one(folder_name="D:/DATA/OUT/011078")
+        imported_db.close()
+
+        assert actual_active == expected_active
+        assert bool(imported_settings.get("enable_email")) is True
+        assert bool(imported_jolley.get("process_backend_ftp")) is True
 
 
 @pytest.mark.qt
@@ -663,5 +741,42 @@ class TestShowDatabaseImportDialog:
             "Linux",
             "/backup",
             "42",
+            None,
+        )
+        assert len(exec_called) == 1
+
+    def test_show_database_import_dialog_with_preselected_path(self, monkeypatch):
+        """Test show_database_import_dialog forwards a preselected database path."""
+        from interface.qt.dialogs.database_import_dialog import (
+            show_database_import_dialog,
+        )
+
+        exec_called = []
+        mock_dialog = MagicMock()
+        mock_dialog.exec = lambda: exec_called.append(1)
+
+        mock_dialog_class = MagicMock(return_value=mock_dialog)
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.DatabaseImportDialog",
+            mock_dialog_class,
+        )
+
+        show_database_import_dialog(
+            parent=None,
+            original_database_path="/original.db",
+            running_platform="Linux",
+            backup_path="/backup",
+            current_db_version="42",
+            preselected_database_path="/fixtures/legacy_v32_folders.db",
+        )
+
+        mock_dialog_class.assert_called_once_with(
+            None,
+            "/original.db",
+            "Linux",
+            "/backup",
+            "42",
+            "/fixtures/legacy_v32_folders.db",
         )
         assert len(exec_called) == 1

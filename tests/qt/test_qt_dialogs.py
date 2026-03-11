@@ -857,6 +857,57 @@ class TestDatabaseImportDialog:
         assert dialog._db_label.text() == "/test.db"
         assert dialog._import_button.isEnabled() is True
 
+    def test_select_fixture_database_path_updates_label_with_qtbot(
+        self, qtbot, monkeypatch
+    ):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        fixture_path = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",
+            lambda *args, **kwargs: (fixture_path, ""),
+        )
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
+        qtbot.addWidget(dialog)
+
+        qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
+
+        assert dialog._new_database_path == fixture_path
+        assert dialog._db_label.text() == fixture_path
+        assert dialog._import_button.isEnabled() is True
+
+    def test_cancel_after_selection_preserves_selected_database(
+        self, qtbot, monkeypatch
+    ):
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
+        selected_path = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        dialog_results = iter([(selected_path, ""), ("", "")])
+        monkeypatch.setattr(
+            "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",
+            lambda *args, **kwargs: next(dialog_results),
+        )
+
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Windows", "/backup/path", "33"
+        )
+        qtbot.addWidget(dialog)
+
+        # First click selects a valid database
+        qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
+        assert dialog._new_database_path == selected_path
+        assert dialog._db_label.text() == selected_path
+        assert dialog._import_button.isEnabled() is True
+
+        # Second click cancels picker; prior selection should remain intact
+        qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
+        assert dialog._new_database_path == selected_path
+        assert dialog._db_label.text() == selected_path
+        assert dialog._import_button.isEnabled() is True
+
     def test_import_button_toggled_when_no_file_selected(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
