@@ -498,6 +498,7 @@ class QtProgressService(QObject):
 
     def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:  # noqa: N802
         """Resize overlay when the parent widget is resized."""
-        if a0 is self._parent and a1 and a1.type() == QEvent.Type.Resize:
+        parent = getattr(self, "_parent", None)
+        if a0 is parent and a1 and a1.type() == QEvent.Type.Resize:
             self._sync_geometry()
         return super().eventFilter(a0, a1)

@@ -180,6 +180,13 @@ class DatabaseObj:
             self._check_version()
             # Ensure all schema migrations are applied (idempotent operation)
             schema.ensure_schema(self.database_connection)
+            schema.ensure_schema(self.session_database)
+            self.session_database.query(
+                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+            )
+            self.session_database.query(
+                "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
+            )
             self._initialize_tables()
         except Exception as connect_error:
             self._handle_connection_error(connect_error)
@@ -465,6 +472,13 @@ class DatabaseObj:
                 self._database_path
             )
             self.session_database = sqlite_wrapper.Database.connect("")
+            schema.ensure_schema(self.session_database)
+            self.session_database.query(
+                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+            )
+            self.session_database.query(
+                "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
+            )
         except Exception as connect_error:
             self._handle_connection_error(connect_error)
 

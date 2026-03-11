@@ -321,6 +321,12 @@ class QtBatchFileSenderApp:
             single_table = self._database.session_database["single_table"]
             single_table.drop()
         finally:
+            self._database.session_database.query(
+                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+            )
+            self._database.session_database.query(
+                "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
+            )
             single_table = self._database.session_database["single_table"]
             table_dict = self._database.folders_table.find_one(id=folder_id)
             if table_dict:
@@ -507,14 +513,15 @@ class QtBatchFileSenderApp:
 
         backup_increment.do_backup(self._database_path)
 
-        def database_import_callback(backup_path: str) -> bool:
+        def database_import_callback(selected_import_db_path: str) -> bool:
             try:
                 show_database_import_dialog(
                     parent=self._window,
                     original_database_path=self._database_path,
                     running_platform=self._running_platform,
-                    backup_path=backup_path,
+                    backup_path=selected_import_db_path,
                     current_db_version=self._database_version,
+                    preselected_database_path=selected_import_db_path,
                 )
                 return True
             except Exception as e:

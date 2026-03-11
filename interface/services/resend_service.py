@@ -24,6 +24,13 @@ class ResendService:
         self._processed_files = database_connection["processed_files"]
         self._folders = database_connection["folders"]
 
+    @staticmethod
+    def _get_sent_timestamp(processed_line: Dict[str, Any]) -> Any:
+        """Return the best available resend timestamp for a processed file."""
+        return processed_line.get("sent_date_time") or processed_line.get(
+            "processed_at"
+        )
+
     def has_processed_files(self) -> bool:
         """Check if there are any processed files."""
         return self._processed_files.count() > 0
@@ -73,7 +80,7 @@ class ResendService:
                         "file_name": processed_line["file_name"],
                         "resend_flag": processed_line["resend_flag"],
                         "id": processed_line["id"],
-                        "sent_date_time": processed_line["sent_date_time"],
+                        "sent_date_time": self._get_sent_timestamp(processed_line),
                     }
                 )
                 file_name_list.append(processed_line["file_name"])
@@ -135,7 +142,7 @@ class ResendService:
                     "folder_alias": folder_alias,
                     "file_name": processed_line["file_name"],
                     "resend_flag": processed_line["resend_flag"],
-                    "sent_date_time": processed_line["sent_date_time"],
+                    "sent_date_time": self._get_sent_timestamp(processed_line),
                 })
                 seen_files.add(file_key)
 
