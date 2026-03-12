@@ -17,8 +17,6 @@ def dac_str_int_to_int(dacstr: str) -> int:
 
 
 def convert_to_price(value):
-    if len(value) < 2:
-        return 0
     return (
         (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
         + "."

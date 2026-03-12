@@ -111,6 +111,29 @@ def validate_upc(upc: str) -> bool:
     return expected_check == actual_check
 
 
+def pad_upc(upc: str, target_length: int, fill_char: str = " ") -> str:
+    """Pad or truncate a UPC string to a target length.
+
+    Args:
+        upc: The UPC string to pad or truncate.
+        target_length: The desired output length.
+        fill_char: Character used for padding (default: space).
+
+    Returns:
+        Right-justified string of exactly target_length characters.
+        If upc is longer than target_length, it is truncated to target_length.
+
+    Example:
+        >>> pad_upc("12345", 10)
+        '     12345'
+        >>> pad_upc("123456789", 5)
+        '12345'
+    """
+    if len(upc) >= target_length:
+        return upc[:target_length]
+    return upc.rjust(target_length, fill_char)
+
+
 def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
     """Apply retail UOM transformation to a B record.
 

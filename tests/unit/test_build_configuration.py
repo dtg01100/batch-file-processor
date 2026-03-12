@@ -48,15 +48,23 @@ def get_spec_hidden_imports():
     tree = ast.parse(content)
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "hidden_imports":
-                    if isinstance(node.value, ast.List):
-                        return [
-                            elt.value
-                            for elt in node.value.elts
-                            if isinstance(elt, ast.Constant)
-                        ]
+        # Look for calls to Analysis(...)
+        if isinstance(node, ast.Call):
+            func = node.func
+            func_name = ""
+            if isinstance(func, ast.Name):
+                func_name = func.id
+            elif isinstance(func, ast.Attribute):
+                func_name = func.attr
+            if func_name == "Analysis":
+                for keyword in node.keywords:
+                    if keyword.arg == "hiddenimports":
+                        if isinstance(keyword.value, ast.List):
+                            return [
+                                elt.value
+                                for elt in keyword.value.elts
+                                if isinstance(elt, ast.Constant)
+                            ]
     return []
 
 
@@ -220,6 +228,9 @@ class TestImportDiscovery:
                 ".venv" in str(py_file)
                 or "test_venv" in str(py_file)
                 or "/venv" in str(py_file)
+                or ".wine" in str(py_file)
+                or "build_wine" in str(py_file)
+                or "winvenv" in str(py_file)
             ):
                 continue
 

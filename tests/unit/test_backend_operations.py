@@ -275,8 +275,9 @@ class TestFTPBackendOperations:
         """Test that missing file raises exception."""
         missing_file = str(temp_dir / "nonexistent.txt")
 
-        with pytest.raises(FileNotFoundError, match="nonexistent.txt"):
-            ftp_backend.do(process_parameters, settings_dict, missing_file)
+        with patch("time.sleep"):
+            with pytest.raises(FileNotFoundError, match="nonexistent.txt"):
+                ftp_backend.do(process_parameters, settings_dict, missing_file)
 
 
 class TestEmailBackendOperations:
@@ -549,19 +550,20 @@ class TestBackendErrorScenarios:
         for _ in range(50):
             mock_client.add_error(ConnectionError("Connection failed"))
 
-        with pytest.raises(ConnectionError, match="Connection failed"):
-            ftp_backend.do(
-                {
-                    "ftp_server": "invalid",
-                    "ftp_port": 21,
-                    "ftp_username": "x",
-                    "ftp_password": "x",
-                    "ftp_folder": "/",
-                },
-                {},
-                sample_file,
-                ftp_client=mock_client,
-            )
+        with patch("time.sleep"):
+            with pytest.raises(ConnectionError, match="Connection failed"):
+                ftp_backend.do(
+                    {
+                        "ftp_server": "invalid",
+                        "ftp_port": 21,
+                        "ftp_username": "x",
+                        "ftp_password": "x",
+                        "ftp_folder": "/",
+                    },
+                    {},
+                    sample_file,
+                    ftp_client=mock_client,
+                )
 
     def test_email_auth_failure(self, sample_file):
         """Test email backend handles authentication failures."""
