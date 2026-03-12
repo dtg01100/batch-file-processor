@@ -20,7 +20,6 @@ from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.validation.folder_settings_validator import ValidationResult
 from tests.fakes import FakeDatabaseObj, FakeMaintenanceFunctions
 
-
 pytestmark = pytest.mark.qt
 
 
@@ -32,7 +31,8 @@ class TestBaseDialogActionModes:
         assert dialog._button_box is not None
         assert dialog._button_box.button(QDialogButtonBox.StandardButton.Ok) is not None
         assert (
-            dialog._button_box.button(QDialogButtonBox.StandardButton.Cancel) is not None
+            dialog._button_box.button(QDialogButtonBox.StandardButton.Cancel)
+            is not None
         )
 
     def test_close_only_mode_has_close_only(self, qtbot):

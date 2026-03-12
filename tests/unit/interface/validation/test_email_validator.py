@@ -5,11 +5,12 @@ to ensure proper email format validation.
 """
 
 import pytest
+
 from interface.validation.email_validator import (
+    EmailValidator,
+    normalize_email,
     validate_email,
     validate_email_list,
-    normalize_email,
-    EmailValidator,
 )
 
 

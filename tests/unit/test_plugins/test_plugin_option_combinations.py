@@ -14,14 +14,14 @@ Tests cover:
 
 import pytest
 
-from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
-from interface.plugins.scannerware_configuration_plugin import (
-    ScannerWareConfigurationPlugin,
-)
-from interface.plugins.fintech_configuration_plugin import FintechConfigurationPlugin
 from interface.plugins.estore_einvoice_configuration_plugin import (
     EStoreEInvoiceConfigurationPlugin,
+)
+from interface.plugins.fintech_configuration_plugin import FintechConfigurationPlugin
+from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.scannerware_configuration_plugin import (
+    ScannerWareConfigurationPlugin,
 )
 from interface.plugins.simplified_csv_configuration_plugin import (
     SimplifiedCSVConfigurationPlugin,

@@ -19,10 +19,11 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
 import os
+
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
 
 @pytest.fixture

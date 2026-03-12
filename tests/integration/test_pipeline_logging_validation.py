@@ -16,22 +16,17 @@ which all passed MagicMock() as run_log and never verified log content.
 import io
 import logging
 import os
-import shutil
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from batch_file_processor.logging_config import (
     RunLogAdapter,
     RunLogHandler,
-    get_logger,
     setup_logging,
 )
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from dispatch.send_manager import MockBackend
 from tests.fakes import FakeTable
 
 pytestmark = [
@@ -50,8 +45,10 @@ MINIMAL_EDI = (
 # Reusable helpers / fakes
 # ---------------------------------------------------------------------------
 
+
 class TrackingBackend:
     """Backend that records sent filenames and always succeeds."""
+
     def __init__(self):
         self.sent = []
 
@@ -62,6 +59,7 @@ class TrackingBackend:
 
 class FailingBackend:
     """Backend that always raises on send."""
+
     def __init__(self, msg="Backend send failed"):
         self.msg = msg
 
@@ -71,6 +69,7 @@ class FailingBackend:
 
 class PassthroughConverterStep:
     """Converter step that returns the input path unchanged."""
+
     def __init__(self):
         self.call_count = 0
         self.last_file = None
@@ -83,6 +82,7 @@ class PassthroughConverterStep:
 
 class PassthroughTweakerStep:
     """Tweaker step that returns the input path unchanged."""
+
     def __init__(self):
         self.call_count = 0
         self.last_file = None
@@ -95,6 +95,7 @@ class PassthroughTweakerStep:
 
 class AlwaysPassValidator:
     """Validator step that always passes."""
+
     def __init__(self):
         self.call_count = 0
 
@@ -105,6 +106,7 @@ class AlwaysPassValidator:
 
 class AlwaysFailValidator:
     """Validator step that always fails with configurable errors."""
+
     def __init__(self, errors=None):
         self.errors = errors or ["validation failed"]
         self.call_count = 0
@@ -126,6 +128,7 @@ def _make_edi(folder: Path, name: str = "test.edi", content: str = MINIMAL_EDI) 
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _configure_logging():
     """Set up logging at DEBUG so all pipeline messages are captured.
@@ -135,8 +138,12 @@ def _configure_logging():
     setup_logging(level=logging.DEBUG)
     yield
     # Clean up: remove any stray RunLogHandlers from the dispatch loggers
-    for logger_name in ("dispatch", "dispatch.orchestrator", "dispatch.send_manager",
-                        "dispatch.error_handler"):
+    for logger_name in (
+        "dispatch",
+        "dispatch.orchestrator",
+        "dispatch.send_manager",
+        "dispatch.error_handler",
+    ):
         lgr = logging.getLogger(logger_name)
         for h in lgr.handlers[:]:
             if isinstance(h, RunLogHandler):
@@ -195,6 +202,7 @@ def folder_config(workspace):
 # 1. Successful pipeline log sequence
 # ===================================================================
 
+
 class TestSuccessfulPipelineLogging:
     """Verify log messages emitted during a successful processing run."""
 
@@ -224,9 +232,7 @@ class TestSuccessfulPipelineLogging:
         # Success messages
         assert joined.lower().count("success") >= 3
 
-    def test_empty_folder_logs_no_files_message(
-        self, tmp_path, log_capture
-    ):
+    def test_empty_folder_logs_no_files_message(self, tmp_path, log_capture):
         """An empty input folder should log 'No files in directory'."""
         empty_dir = tmp_path / "empty_input"
         empty_dir.mkdir()
@@ -273,6 +279,7 @@ class TestSuccessfulPipelineLogging:
 # ===================================================================
 # 2. RunLogHandler capture modes
 # ===================================================================
+
 
 class TestRunLogHandlerCapture:
     """Verify RunLogHandler captures pipeline messages in both modes."""
@@ -338,6 +345,7 @@ class TestRunLogHandlerCapture:
 # 3. RunLogAdapter context prefixing
 # ===================================================================
 
+
 class TestRunLogAdapterPrefixing:
     """Verify RunLogAdapter prepends folder/file context to messages."""
 
@@ -372,7 +380,9 @@ class TestRunLogAdapterPrefixing:
         base_logger.setLevel(logging.DEBUG)
 
         try:
-            adapter = RunLogAdapter(base_logger, {"folder": "ACME_Corp", "file": "INV_001.edi"})
+            adapter = RunLogAdapter(
+                base_logger, {"folder": "ACME_Corp", "file": "INV_001.edi"}
+            )
             adapter.info("Conversion complete")
         finally:
             base_logger.removeHandler(handler)
@@ -405,6 +415,7 @@ class TestRunLogAdapterPrefixing:
 # ===================================================================
 # 4. Validation failure logging
 # ===================================================================
+
 
 class TestValidationFailureLogging:
     """Verify validation failures are captured in log output."""
@@ -517,6 +528,7 @@ class TestValidationFailureLogging:
 # 5. Conversion step logging
 # ===================================================================
 
+
 class TestConversionStepLogging:
     """Verify conversion activity is captured in log output."""
 
@@ -558,6 +570,7 @@ class TestConversionStepLogging:
 # ===================================================================
 # 6. Send failure logging
 # ===================================================================
+
 
 class TestSendFailureLogging:
     """Verify send failures produce meaningful log output."""
@@ -603,6 +616,7 @@ class TestSendFailureLogging:
 # ===================================================================
 # 7. Multi-backend send logging
 # ===================================================================
+
 
 class TestMultiBackendLogging:
     """Verify log output when multiple backends are enabled."""
@@ -679,6 +693,7 @@ class TestMultiBackendLogging:
 # 8. Full pipeline with all steps
 # ===================================================================
 
+
 class TestFullPipelineLogging:
     """Verify complete log sequence through validate → convert → tweak → send."""
 
@@ -739,7 +754,9 @@ class TestFullPipelineLogging:
         (tmp_path / "out").mkdir()
 
         class FailingConverter:
-            def execute(self, file_path, folder, settings=None, upc_dict=None, context=None):
+            def execute(
+                self, file_path, folder, settings=None, upc_dict=None, context=None
+            ):
                 raise RuntimeError("converter exploded")
 
         tweaker = PassthroughTweakerStep()
@@ -779,7 +796,9 @@ class TestFullPipelineLogging:
         (tmp_path / "out").mkdir()
 
         class FailingTweaker:
-            def execute(self, file_path, folder, upc_dict=None, settings=None, context=None):
+            def execute(
+                self, file_path, folder, upc_dict=None, settings=None, context=None
+            ):
                 raise RuntimeError("tweaker exploded")
 
         backend = TrackingBackend()
@@ -807,6 +826,7 @@ class TestFullPipelineLogging:
 # ===================================================================
 # 9. ErrorHandler logging integration
 # ===================================================================
+
 
 class TestErrorHandlerLogging:
     """Verify ErrorHandler emits messages through the logging infrastructure."""
@@ -846,6 +866,7 @@ class TestErrorHandlerLogging:
 # ===================================================================
 # 10. setup_logging configuration
 # ===================================================================
+
 
 class TestSetupLoggingConfiguration:
     """Verify setup_logging respects level configuration."""
@@ -887,6 +908,7 @@ class TestSetupLoggingConfiguration:
 # 11. Processed files skip logging
 # ===================================================================
 
+
 class TestProcessedFilesSkipLogging:
     """Verify that already-processed files are skipped and logged."""
 
@@ -902,10 +924,12 @@ class TestProcessedFilesSkipLogging:
                 checksums.append(hashlib.md5(f.read()).hexdigest())
 
         # Create a FakeTable pre-populated with these checksums
-        processed_files = FakeTable([
-            {"file_checksum": cs, "folder_id": 1, "resend_flag": 0}
-            for cs in checksums
-        ])
+        processed_files = FakeTable(
+            [
+                {"file_checksum": cs, "folder_id": 1, "resend_flag": 0}
+                for cs in checksums
+            ]
+        )
 
         backend = TrackingBackend()
         config = DispatchConfig(backends={"copy": backend}, settings={})
@@ -919,7 +943,9 @@ class TestProcessedFilesSkipLogging:
             "copy_to_directory": str(workspace["output"]),
         }
 
-        result = orch.process_folder(folder, run_log=None, processed_files=processed_files)
+        result = orch.process_folder(
+            folder, run_log=None, processed_files=processed_files
+        )
 
         assert result.files_processed == 0
         assert backend.sent == []
@@ -931,6 +957,7 @@ class TestProcessedFilesSkipLogging:
 # ===================================================================
 # 12. Multi-file error isolation with log evidence
 # ===================================================================
+
 
 class TestMultiFileErrorIsolation:
     """Verify that errors in one file don't prevent processing of others,
@@ -946,6 +973,7 @@ class TestMultiFileErrorIsolation:
         (tmp_path / "out").mkdir()
 
         call_idx = 0
+
         class SelectiveBackend:
             def send(self, params, settings, filename):
                 nonlocal call_idx
@@ -973,7 +1001,11 @@ class TestMultiFileErrorIsolation:
         joined = "\n".join(log_capture)
         # Both success and failure evidence in the log
         assert "Success" in joined
-        assert ("FAILED" in joined or "Failed" in joined or "middle file boom" in joined.lower())
+        assert (
+            "FAILED" in joined
+            or "Failed" in joined
+            or "middle file boom" in joined.lower()
+        )
 
     def test_ten_files_one_fails_log_shows_nine_successes(self, tmp_path, log_capture):
         """10 files, 1 fails → 9 'Success' messages in the log."""
@@ -983,6 +1015,7 @@ class TestMultiFileErrorIsolation:
         (tmp_path / "out").mkdir()
 
         call_idx = 0
+
         class FailFifthBackend:
             def send(self, params, settings, filename):
                 nonlocal call_idx
@@ -1015,6 +1048,7 @@ class TestMultiFileErrorIsolation:
 # ===================================================================
 # 13. Reprocess after failure with log evidence
 # ===================================================================
+
 
 class TestReprocessAfterFailure:
     """Verify that reprocessing after a failure produces clean log output."""

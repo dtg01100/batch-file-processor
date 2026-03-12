@@ -2,11 +2,12 @@
 
 import logging
 import os
+
 import pytest
 
 from backend.file_operations import (
-    RealFileOperations,
     MockFileOperations,
+    RealFileOperations,
     create_file_operations,
 )
 from backend.protocols import FileOperationsProtocol

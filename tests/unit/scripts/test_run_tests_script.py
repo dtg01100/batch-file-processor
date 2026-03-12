@@ -31,7 +31,15 @@ def test_build_pytest_command_without_optional_flags():
         extra_args=[],
     )
 
-    assert cmd == [run_tests_script.sys.executable, "-m", "pytest", "tests", "-v", "--timeout", "300"]
+    assert cmd == [
+        run_tests_script.sys.executable,
+        "-m",
+        "pytest",
+        "tests",
+        "-v",
+        "--timeout",
+        "300",
+    ]
 
 
 def test_run_tests_returns_subprocess_code(monkeypatch):
@@ -47,7 +55,9 @@ def test_run_tests_returns_subprocess_code(monkeypatch):
         captured["run"] = (list(cmd), check)
         return SimpleNamespace(returncode=0)
 
-    monkeypatch.setattr(run_tests_script, "build_pytest_command", fake_build_pytest_command)
+    monkeypatch.setattr(
+        run_tests_script, "build_pytest_command", fake_build_pytest_command
+    )
     monkeypatch.setattr(run_tests_script.subprocess, "run", fake_run)
 
     result = run_tests_script.run_tests("unit", "Unit Tests", args, ["-k", "abc"])
@@ -59,7 +69,9 @@ def test_run_tests_returns_subprocess_code(monkeypatch):
 
 def test_run_tests_keyboard_interrupt_returns_130(monkeypatch):
     args = SimpleNamespace(verbose=False, exitfirst=False, timeout=50)
-    monkeypatch.setattr(run_tests_script, "build_pytest_command", lambda **kwargs: ["pytest-cmd"])
+    monkeypatch.setattr(
+        run_tests_script, "build_pytest_command", lambda **kwargs: ["pytest-cmd"]
+    )
 
     def raise_interrupt(cmd, check):
         raise KeyboardInterrupt
@@ -71,7 +83,9 @@ def test_run_tests_keyboard_interrupt_returns_130(monkeypatch):
 
 def test_run_tests_exception_returns_1(monkeypatch):
     args = SimpleNamespace(verbose=False, exitfirst=False, timeout=50)
-    monkeypatch.setattr(run_tests_script, "build_pytest_command", lambda **kwargs: ["pytest-cmd"])
+    monkeypatch.setattr(
+        run_tests_script, "build_pytest_command", lambda **kwargs: ["pytest-cmd"]
+    )
 
     def raise_exception(cmd, check):
         raise RuntimeError("boom")
@@ -82,11 +96,17 @@ def test_run_tests_exception_returns_1(monkeypatch):
 
 
 def test_main_list_via_flag(monkeypatch):
-    monkeypatch.setattr(run_tests_script.sys, "argv", ["run_tests.py", "unit", "--list"])
+    monkeypatch.setattr(
+        run_tests_script.sys, "argv", ["run_tests.py", "unit", "--list"]
+    )
 
     called = {"listed": False, "ran": False}
-    monkeypatch.setattr(run_tests_script, "list_suites", lambda: called.__setitem__("listed", True))
-    monkeypatch.setattr(run_tests_script, "run_tests", lambda *a, **k: called.__setitem__("ran", True))
+    monkeypatch.setattr(
+        run_tests_script, "list_suites", lambda: called.__setitem__("listed", True)
+    )
+    monkeypatch.setattr(
+        run_tests_script, "run_tests", lambda *a, **k: called.__setitem__("ran", True)
+    )
 
     rc = run_tests_script.main()
 
@@ -99,7 +119,9 @@ def test_main_list_via_suite_name(monkeypatch):
     monkeypatch.setattr(run_tests_script.sys, "argv", ["run_tests.py", "list"])
 
     called = {"listed": False}
-    monkeypatch.setattr(run_tests_script, "list_suites", lambda: called.__setitem__("listed", True))
+    monkeypatch.setattr(
+        run_tests_script, "list_suites", lambda: called.__setitem__("listed", True)
+    )
 
     rc = run_tests_script.main()
 

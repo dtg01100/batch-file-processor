@@ -1,12 +1,14 @@
-import unittest
-import json
 import ast
+import json
+import unittest
 
-from interface.database import sqlite_wrapper
-
-from interface.models.folder_configuration import FolderConfiguration
 import schema
-from interface.operations.plugin_configuration_mapper import ExtractedPluginConfig, PluginConfigurationMapper
+from interface.database import sqlite_wrapper
+from interface.models.folder_configuration import FolderConfiguration
+from interface.operations.plugin_configuration_mapper import (
+    ExtractedPluginConfig,
+    PluginConfigurationMapper,
+)
 
 
 def _normalize_plugin_configs(value):
@@ -32,7 +34,7 @@ def _normalize_plugin_configs(value):
 class TestFolderDatabaseRoundTrip(unittest.TestCase):
     def setUp(self):
         # in-memory DB
-        self.db = sqlite_wrapper.Database.connect(':memory:')
+        self.db = sqlite_wrapper.Database.connect(":memory:")
         schema.ensure_schema(self.db)
 
     def tearDown(self):
@@ -42,27 +44,35 @@ class TestFolderDatabaseRoundTrip(unittest.TestCase):
             pass
 
     def test_insert_and_read_folder_with_plugin_configs(self):
-        fc = FolderConfiguration(folder_name='rt-test', folder_is_active='True')
-        fc.set_plugin_configuration('csv', {'include_headers': True, 'filter_ampersand': False})
+        fc = FolderConfiguration(folder_name="rt-test", folder_is_active="True")
+        fc.set_plugin_configuration(
+            "csv", {"include_headers": True, "filter_ampersand": False}
+        )
 
-        folders = self.db['folders']
+        folders = self.db["folders"]
         new_id = folders.insert(fc.to_dict())
 
         row = folders.find_one(id=new_id)
         self.assertIsNotNone(row)
 
-        stored = _normalize_plugin_configs(row.get('plugin_configurations'))
-        self.assertIn('csv', stored)
-        self.assertEqual(stored['csv']['include_headers'], True)
+        stored = _normalize_plugin_configs(row.get("plugin_configurations"))
+        self.assertIn("csv", stored)
+        self.assertEqual(stored["csv"]["include_headers"], True)
 
     def test_update_folder_plugin_configurations_via_mapper(self):
         # create basic folder w/ empty plugin configs
-        fc = FolderConfiguration(folder_name='update-test')
-        folders = self.db['folders']
+        fc = FolderConfiguration(folder_name="update-test")
+        folders = self.db["folders"]
         rowid = folders.insert(fc.to_dict())
 
         # prepare extracted plugin configs (as mapper would produce)
-        extracted = [ExtractedPluginConfig(format_name='csv', config={'include_headers': False}, validation_errors=[])]
+        extracted = [
+            ExtractedPluginConfig(
+                format_name="csv",
+                config={"include_headers": False},
+                validation_errors=[],
+            )
+        ]
 
         # load existing dict, apply update
         folder_dict = folders.find_one(id=rowid)
@@ -70,13 +80,13 @@ class TestFolderDatabaseRoundTrip(unittest.TestCase):
         updated = mapper.update_folder_configuration_from_dict(folder_dict, extracted)
 
         # perform DB update
-        folders.update(updated, ['id'])
+        folders.update(updated, ["id"])
 
         row_after = folders.find_one(id=rowid)
-        stored = _normalize_plugin_configs(row_after.get('plugin_configurations'))
-        self.assertIn('csv', stored)
-        self.assertEqual(stored['csv']['include_headers'], False)
+        stored = _normalize_plugin_configs(row_after.get("plugin_configurations"))
+        self.assertIn("csv", stored)
+        self.assertEqual(stored["csv"]["include_headers"], False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,10 +4,9 @@ Dialogs are tested via direct widget manipulation, never exec() or show().
 Uses pytest-qt (qtbot fixture) for proper widget lifecycle management.
 """
 
-from unittest.mock import MagicMock, patch
-
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
 
 # Add the project root to the path
 sys.path.insert(

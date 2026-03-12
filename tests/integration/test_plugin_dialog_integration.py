@@ -9,9 +9,9 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.gui]
 from unittest.mock import Mock
 
-from interface.plugins.plugin_manager import PluginManager
-from interface.plugins.config_schemas import ConfigurationSchema
 from interface.form.form_generator import FormGeneratorFactory
+from interface.plugins.config_schemas import ConfigurationSchema
+from interface.plugins.plugin_manager import PluginManager
 
 
 class TestPluginDialogIntegration:

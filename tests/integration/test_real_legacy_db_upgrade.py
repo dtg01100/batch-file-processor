@@ -22,10 +22,9 @@ import os
 import shutil
 import sqlite3
 
-from interface.database import sqlite_wrapper
-
 import folders_database_migrator
 import schema
+from interface.database import sqlite_wrapper
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 LEGACY_DB_PATH = os.path.join(FIXTURES_DIR, "legacy_v32_folders.db")
@@ -59,7 +58,7 @@ def migrated_db(legacy_db, tmp_path):
 @pytest.fixture(scope="class")
 def migrated_db_shared(tmp_path_factory):
     """Class-scoped migrated database for read-only test classes.
-    
+
     Performs the expensive v32→v42 migration ONCE per test class.
     WARNING: Tests using this fixture must NOT modify the database.
     """
@@ -144,8 +143,11 @@ class TestLegacyDatabasePreConditions:
     def test_legacy_db_has_string_booleans(self, legacy_db):
         """v32 database should have string "True"/"False" boolean values."""
         import sqlite3
+
         conn = sqlite3.connect(legacy_db)
-        row = conn.execute("SELECT folder_is_active FROM folders WHERE id=21").fetchone()
+        row = conn.execute(
+            "SELECT folder_is_active FROM folders WHERE id=21"
+        ).fetchone()
         assert row[0] == "True"
         conn.close()
 

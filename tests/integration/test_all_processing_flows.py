@@ -19,21 +19,20 @@ pytestmark = [
 ]
 
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from datetime import datetime
-from interface.database import sqlite_wrapper
 
 import pytest
 
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-from dispatch.processed_files_tracker import ProcessedFilesTracker
-from dispatch.hash_utils import generate_file_hash
-from dispatch.error_handler import ErrorHandler
-from dispatch.pipeline.tweaker import EDITweakerStep
 from core.edi.edi_splitter import filter_edi_file_by_category
+from dispatch.error_handler import ErrorHandler
+from dispatch.hash_utils import generate_file_hash
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.pipeline.tweaker import EDITweakerStep
+from dispatch.processed_files_tracker import ProcessedFilesTracker
+from interface.database import sqlite_wrapper
 from schema import ensure_schema
-
 
 # =============================================================================
 # Test Fixtures
@@ -867,7 +866,9 @@ C00000003000030000
         result2 = orchestrator.process_folder(folder_config, run_log)
         assert result2.success is True, "Second attempt should succeed"
         assert result2.files_failed == 0, "Second attempt should have no failures"
-        assert result2.files_processed == 2, "Second attempt should process all input files"
+        assert (
+            result2.files_processed == 2
+        ), "Second attempt should process all input files"
 
     def test_full_lifecycle_flow(self, temp_workspace):
         """Test complete lifecycle: config → process → track → resend → cleanup.

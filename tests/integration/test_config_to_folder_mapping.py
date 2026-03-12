@@ -11,19 +11,16 @@ Covers:
 
 import csv
 import io
-import tempfile
-from pathlib import Path
 
 import pytest
 
 pytestmark = [pytest.mark.integration]
 
-from interface.database import sqlite_wrapper
 import schema
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
-
+from interface.database import sqlite_wrapper
 
 # =============================================================================
 # Shared EDI content + helpers
@@ -61,8 +58,10 @@ class CaptureBackend:
 
     def first_csv_rows(self) -> list[list[str]]:
         assert self.received
-        text = self.received[0][1].decode("utf-8-sig", errors="replace").replace(
-            "\r\n", "\n"
+        text = (
+            self.received[0][1]
+            .decode("utf-8-sig", errors="replace")
+            .replace("\r\n", "\n")
         )
         return list(csv.reader(io.StringIO(text)))
 
@@ -124,9 +123,9 @@ class TestProcessEDIMappingFromDB:
         assert result.files_processed == 1
         # The file delivered to the backend should be a converted CSV
         assert backend.received
-        assert backend.received[0][0].endswith(".csv"), (
-            f"Expected .csv output, got: {backend.received[0][0]}"
-        )
+        assert backend.received[0][0].endswith(
+            ".csv"
+        ), f"Expected .csv output, got: {backend.received[0][0]}"
 
     def test_process_edi_false_sends_original(self, temp_db, tmp_path):
         indir = _make_edi_dir(tmp_path)
@@ -238,7 +237,9 @@ class TestTweakEDIMappingFromDB:
             }
         )
         as400_settings = {
-            "as400_username": "u", "as400_password": "p", "as400_address": "h",
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "h",
             "odbc_driver": "IBM i Access ODBC Driver",
         }
         result, backend = _run_folder_from_db(temp_db, fid, as400_settings)
@@ -266,7 +267,9 @@ class TestTweakEDIMappingFromDB:
             }
         )
         as400_settings = {
-            "as400_username": "u", "as400_password": "p", "as400_address": "h",
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "h",
             "odbc_driver": "IBM i Access ODBC Driver",
         }
         result, backend = _run_folder_from_db(temp_db, fid, as400_settings)
@@ -401,7 +404,12 @@ class TestMultiFolderIsolation:
         )
 
         result_conv, backend_conv = _run_folder_from_db(temp_db, fid_conv)
-        as400 = {"as400_username": "u", "as400_password": "p", "as400_address": "h", "odbc_driver": "IBM i Access ODBC Driver"}
+        as400 = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "h",
+            "odbc_driver": "IBM i Access ODBC Driver",
+        }
         result_tweak, backend_tweak = _run_folder_from_db(temp_db, fid_tweak, as400)
 
         assert result_conv.success and result_tweak.success

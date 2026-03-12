@@ -3,13 +3,14 @@
 This module tests the refactored processed files tracker with mock database.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from dispatch.processed_files_tracker import (
-    ProcessedFileRecord,
     DatabaseProtocol,
     InMemoryDatabase,
+    ProcessedFileRecord,
     ProcessedFilesTracker,
     create_processed_files_tracker,
 )

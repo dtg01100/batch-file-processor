@@ -3,8 +3,8 @@
 Tests focus on services that might have Qt-specific implementations.
 """
 
-import sys
 import os
+import sys
 
 # Add the project root to the path
 sys.path.insert(
@@ -14,7 +14,7 @@ sys.path.insert(
     ),
 )
 
-from interface.qt.services.qt_services import QtUIService, QtProgressService
+from interface.qt.services.qt_services import QtProgressService, QtUIService
 
 
 class TestQtUIService:

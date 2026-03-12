@@ -7,11 +7,12 @@ related to plugin configuration.
 
 import unittest
 from unittest.mock import MagicMock, patch
+
+from interface.form import FormGeneratorFactory
+from interface.models.folder_configuration import ConvertFormat
+from interface.plugins import PluginManager
 from interface.plugins.config_schemas import FieldType
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
-from interface.form import FormGeneratorFactory
-from interface.plugins import PluginManager
-from interface.models.folder_configuration import ConvertFormat
 
 
 class TestFormGeneratorForPlugins(unittest.TestCase):

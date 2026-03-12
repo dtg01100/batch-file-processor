@@ -32,13 +32,12 @@ project_root = Path(__file__).parent.parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from dispatch.hash_utils import generate_file_hash
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-from dispatch.hash_utils import generate_file_hash
 from schema import ensure_schema
-
 
 # =============================================================================
 # FIXTURES

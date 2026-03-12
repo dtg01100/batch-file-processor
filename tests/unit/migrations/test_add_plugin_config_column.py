@@ -50,13 +50,21 @@ def test_apply_migration_tolerates_runtime_errors_for_idempotency():
 
     assert result is True
     assert "ALTER TABLE 'administrative' ADD COLUMN 'plugin_config' TEXT" in db.queries
-    assert "UPDATE 'administrative' SET plugin_config = '{}' WHERE plugin_config IS NULL" in db.queries
-    assert "ALTER TABLE 'administrative' ADD COLUMN 'split_edi_filter_mode' TEXT" in db.queries
+    assert (
+        "UPDATE 'administrative' SET plugin_config = '{}' WHERE plugin_config IS NULL"
+        in db.queries
+    )
+    assert (
+        "ALTER TABLE 'administrative' ADD COLUMN 'split_edi_filter_mode' TEXT"
+        in db.queries
+    )
 
 
 def test_apply_migration_returns_false_and_prints_on_unexpected_failure(capsys):
     db = FakeDatabaseConnection(
-        exception_on_sql={"ALTER TABLE 'administrative' ADD COLUMN 'plugin_config' TEXT"}
+        exception_on_sql={
+            "ALTER TABLE 'administrative' ADD COLUMN 'plugin_config' TEXT"
+        }
     )
 
     result = migration.apply_migration(db)

@@ -5,12 +5,12 @@ and can be used with isinstance() checks for dependency injection.
 """
 
 from dispatch.interfaces import (
-    DatabaseInterface,
-    FileSystemInterface,
     BackendInterface,
-    ValidatorInterface,
+    DatabaseInterface,
     ErrorHandlerInterface,
+    FileSystemInterface,
     LogInterface,
+    ValidatorInterface,
 )
 
 

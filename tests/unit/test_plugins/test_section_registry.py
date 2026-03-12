@@ -125,7 +125,10 @@ class TestSectionRegistry(unittest.TestCase):
             ["plugin_a_second_section"],
         )
         self.assertEqual(
-            [section.get_section_id() for section in SectionRegistry.get_sections_by_plugin("plugin_b")],
+            [
+                section.get_section_id()
+                for section in SectionRegistry.get_sections_by_plugin("plugin_b")
+            ],
             ["plugin_b_section"],
         )
 

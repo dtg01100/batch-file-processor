@@ -39,6 +39,7 @@ class TestFolderListWidgetIntegration:
         """Test that required dependencies exist."""
         # Test that required modules can be imported
         from PyQt6.QtWidgets import QListWidget
+
         from interface.operations.folder_manager import FolderManager
 
         assert QListWidget is not None

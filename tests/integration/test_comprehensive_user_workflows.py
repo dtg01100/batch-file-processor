@@ -13,23 +13,22 @@ Coverage:
 6. Processed file tracking and resend workflows
 """
 
-import pytest
 import shutil
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
 
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-from dispatch.processed_files_tracker import (
-    ProcessedFilesTracker,
-    InMemoryDatabase,
-)
 from dispatch.error_handler import ErrorHandler
 from dispatch.hash_utils import generate_file_hash
-
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.processed_files_tracker import (
+    InMemoryDatabase,
+    ProcessedFilesTracker,
+)
 
 # ---------------------------------------------------------------------------
 # Shared helpers / fixtures
@@ -166,9 +165,7 @@ class TestAddConfigureProcessView:
         copy_be = TrackingCopyBackend()
         ftp_be = NoopBackend()
 
-        config = DispatchConfig(
-            backends={"copy": copy_be, "ftp": ftp_be}, settings={}
-        )
+        config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
         result = orchestrator.process_folder(folder_config, MagicMock())
@@ -218,9 +215,9 @@ class TestEditFolderPersistence:
 
     def test_folder_crud_roundtrip(self, tmp_path):
         """Insert, read, update, delete a folder in DatabaseObj."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -264,9 +261,9 @@ class TestEditFolderPersistence:
 
     def test_toggle_folder_active_status(self, tmp_path):
         """Toggle folder active ↔ inactive and verify persistence."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -297,9 +294,9 @@ class TestEditFolderPersistence:
 
     def test_settings_roundtrip(self, tmp_path):
         """Read and update global settings."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -361,9 +358,7 @@ class TestErrorRetrySuccess:
         copy_be = TrackingCopyBackend()
         ftp_be = AlwaysFailBackend()
 
-        config = DispatchConfig(
-            backends={"copy": copy_be, "ftp": ftp_be}, settings={}
-        )
+        config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
         result = orchestrator.process_folder(folder_config, MagicMock())
 
@@ -414,9 +409,9 @@ class TestBulkOperations:
 
     def test_bulk_create_and_process(self, tmp_path):
         """Create N folders in DB, process all, verify all succeed."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -451,9 +446,7 @@ class TestBulkOperations:
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        results = [
-            orchestrator.process_folder(f, MagicMock()) for f in all_folders
-        ]
+        results = [orchestrator.process_folder(f, MagicMock()) for f in all_folders]
 
         assert all(r.success for r in results)
         assert sum(r.files_processed for r in results) == 5
@@ -462,9 +455,9 @@ class TestBulkOperations:
 
     def test_bulk_deactivate_and_delete(self, tmp_path):
         """Deactivate then delete multiple folder configs."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -476,9 +469,7 @@ class TestBulkOperations:
         )
 
         for i in range(4):
-            db.folders_table.insert(
-                {"folder_name": f"/path/{i}", "alias": f"Del {i}"}
-            )
+            db.folders_table.insert({"folder_name": f"/path/{i}", "alias": f"Del {i}"})
 
         rows = list(db.folders_table.all())
         assert len(rows) == 4
@@ -507,9 +498,9 @@ class TestCompleteLifecycle:
 
     def test_full_lifecycle(self, tmp_path):
         """Walk through the entire folder lifecycle."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -605,18 +596,21 @@ class TestProcessedFilesTracking:
         assert tracker.file_exists("a.edi", folder_id=1) is True
         assert tracker.file_exists("b.edi", folder_id=1) is False
 
-    def test_processed_files_used_to_skip_reprocessing(self, workspace, edi_files, folder_config):
+    def test_processed_files_used_to_skip_reprocessing(
+        self, workspace, edi_files, folder_config
+    ):
         """Orchestrator can skip already-processed files via processed_files DB."""
-        from dispatch.interfaces import DatabaseInterface
 
         class SimpleProcessedDB:
             """Minimalist DatabaseInterface for the processed-files table."""
+
             def __init__(self):
                 self._records: list[dict] = []
 
             def find(self, **kwargs) -> list[dict]:
                 return [
-                    r for r in self._records
+                    r
+                    for r in self._records
                     if all(r.get(k) == v for k, v in kwargs.items())
                 ]
 

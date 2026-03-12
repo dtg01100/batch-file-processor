@@ -13,9 +13,10 @@ Tests:
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
+import os
 import shutil
 import sys
-import os
+
 from interface.database import sqlite_wrapper
 
 # Add the project root to the path
@@ -24,16 +25,16 @@ sys.path.insert(
 )
 
 from interface.models.folder_configuration import (
+    ARecordPaddingConfiguration,
+    BackendSpecificConfiguration,
+    CopyConfiguration,
+    CSVConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
     FolderConfiguration,
     FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
-    UPCOverrideConfiguration,
-    ARecordPaddingConfiguration,
     InvoiceDateConfiguration,
-    BackendSpecificConfiguration,
-    CSVConfiguration,
+    UPCOverrideConfiguration,
 )
 
 

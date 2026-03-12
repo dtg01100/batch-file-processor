@@ -36,6 +36,7 @@ import pytest
 # EDI record builders
 # ---------------------------------------------------------------------------
 
+
 def make_a_record(
     cust_vendor="VENDOR",
     invoice_number="0000000001",
@@ -95,15 +96,14 @@ def make_c_record(
 
 
 VALID_EDI_CONTENT = (
-    make_a_record() + "\n"
-    + make_b_record() + "\n"
-    + make_c_record() + "\n"
+    make_a_record() + "\n" + make_b_record() + "\n" + make_c_record() + "\n"
 )
 
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def default_settings_dict():
@@ -131,9 +131,9 @@ def default_parameters_dict():
         "calculate_upc_check_digit": "False",
         "retail_uom": "False",
         "override_upc_bool": "False",
-        "override_upc_level": 1,          # int – used as tuple index in convert_to_csv
+        "override_upc_level": 1,  # int – used as tuple index in convert_to_csv
         "override_upc_category_filter": "ALL",
-        "invoice_date_offset": 0,          # int – used in timedelta(days=...) in scannerware
+        "invoice_date_offset": 0,  # int – used in timedelta(days=...) in scannerware
         "invoice_date_custom_format": "False",
         "invoice_date_custom_format_string": "",
         "pad_a_records": "False",
@@ -206,31 +206,31 @@ def mock_query_runner():
     # Return a minimal result set for header queries
     qr_instance.run_arbitrary_query.return_value = [
         (
-            "Salesperson",   # Salesperson Name
-            1250101,         # Invoice Date (DAC format)
-            "NET30",         # Terms Code
-            30,              # Terms Duration
-            "A",             # Customer Status
-            10001,           # Customer Number
-            "Test Customer", # Customer Name
-            "001",           # Customer Store Number
-            "123 Main St",   # Customer Address
-            "Anytown",       # Customer Town
-            "CA",            # Customer State
-            "90210",         # Customer Zip
-            "5551234567",    # Customer Phone
-            "test@test.com", # Customer Email
-            "",              # Customer Email 2
-            "A",             # Corporate Customer Status
-            20001,           # Corporate Customer Number
-            "Corp Customer", # Corporate Customer Name
+            "Salesperson",  # Salesperson Name
+            1250101,  # Invoice Date (DAC format)
+            "NET30",  # Terms Code
+            30,  # Terms Duration
+            "A",  # Customer Status
+            10001,  # Customer Number
+            "Test Customer",  # Customer Name
+            "001",  # Customer Store Number
+            "123 Main St",  # Customer Address
+            "Anytown",  # Customer Town
+            "CA",  # Customer State
+            "90210",  # Customer Zip
+            "5551234567",  # Customer Phone
+            "test@test.com",  # Customer Email
+            "",  # Customer Email 2
+            "A",  # Corporate Customer Status
+            20001,  # Corporate Customer Number
+            "Corp Customer",  # Corporate Customer Name
             "456 Corp Ave",  # Corporate Customer Address
-            "Bigcity",       # Corporate Customer Town
-            "NY",            # Corporate Customer State
-            "10001",         # Corporate Customer Zip
-            "5559876543",    # Corporate Customer Phone
-            "corp@test.com", # Corporate Customer Email
-            "",              # Corporate Customer Email 2
+            "Bigcity",  # Corporate Customer Town
+            "NY",  # Corporate Customer State
+            "10001",  # Corporate Customer Zip
+            "5559876543",  # Corporate Customer Phone
+            "corp@test.com",  # Corporate Customer Email
+            "",  # Corporate Customer Email 2
         )
     ]
     qr_class = MagicMock(return_value=qr_instance)
@@ -240,6 +240,7 @@ def mock_query_runner():
 # ---------------------------------------------------------------------------
 # 1. TestConverterEmptyFileHandling
 # ---------------------------------------------------------------------------
+
 
 class TestConverterEmptyFileHandling:
     """Test all 10 converters with an empty input file.
@@ -252,7 +253,11 @@ class TestConverterEmptyFileHandling:
     """
 
     def test_convert_to_csv_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_csv with empty input produces an empty CSV (headers only)."""
         import convert_to_csv
@@ -268,7 +273,11 @@ class TestConverterEmptyFileHandling:
         assert os.path.exists(result)
 
     def test_convert_to_simplified_csv_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_simplified_csv with empty input produces an empty CSV."""
         import convert_to_simplified_csv
@@ -284,7 +293,11 @@ class TestConverterEmptyFileHandling:
         assert os.path.exists(result)
 
     def test_convert_to_scannerware_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_scannerware with empty input produces an empty output file."""
         import convert_to_scannerware
@@ -299,7 +312,12 @@ class TestConverterEmptyFileHandling:
         assert os.path.exists(result)
 
     def test_convert_to_fintech_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_fintech with empty input produces a CSV with headers only."""
         import convert_to_fintech
@@ -322,7 +340,12 @@ class TestConverterEmptyFileHandling:
         assert os.path.exists(result)
 
     def test_convert_to_yellowdog_csv_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv with empty input handles it gracefully (doesn't crash badly)."""
         import convert_to_yellowdog_csv
@@ -349,7 +372,7 @@ class TestConverterEmptyFileHandling:
                     {},
                 )
             except KeyError as e:
-                if 'invoice_date' not in str(e):
+                if "invoice_date" not in str(e):
                     raise  # Re-raise if it's a different KeyError
                 # Otherwise, this is the expected behavior for empty files
             except Exception:
@@ -398,7 +421,11 @@ class TestConverterEmptyFileHandling:
         assert os.path.exists(result)
 
     def test_convert_to_stewarts_custom_empty_file_raises(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_stewarts_custom handles empty file gracefully (no crash)."""
         import convert_to_stewarts_custom
@@ -433,21 +460,21 @@ class TestConverterEmptyFileHandling:
             # Return valid header query result
             mock_qr_instance.run_arbitrary_query.return_value = [
                 (
-                    "Salesperson",   # Salesperson Name
-                    1250101,         # Invoice Date (DAC format)
-                    "NET30",         # Terms Code
-                    30,              # Terms Duration
-                    "A",             # Customer Status
-                    10001,           # Customer Number
-                    "Test Customer", # Customer Name
-                    "001",           # Customer Store Number
-                    "123 Main St",   # Customer Address
-                    "Anytown",       # Customer Town
-                    "CA",            # Customer State
-                    "90210",        # Customer Zip
-                    "5551234567",   # Customer Phone
-                    "test@test.com", # Customer Email
-                    "",              # Customer Email 2
+                    "Salesperson",  # Salesperson Name
+                    1250101,  # Invoice Date (DAC format)
+                    "NET30",  # Terms Code
+                    30,  # Terms Duration
+                    "A",  # Customer Status
+                    10001,  # Customer Number
+                    "Test Customer",  # Customer Name
+                    "001",  # Customer Store Number
+                    "123 Main St",  # Customer Address
+                    "Anytown",  # Customer Town
+                    "CA",  # Customer State
+                    "90210",  # Customer Zip
+                    "5551234567",  # Customer Phone
+                    "test@test.com",  # Customer Email
+                    "",  # Customer Email 2
                 )
             ]
             mock_qr_class.return_value = mock_qr_instance
@@ -485,7 +512,11 @@ class TestConverterEmptyFileHandling:
                 )
 
     def test_convert_to_jolley_custom_empty_file_raises(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_jolley_custom handles empty file gracefully (no crash)."""
         import convert_to_jolley_custom
@@ -520,31 +551,31 @@ class TestConverterEmptyFileHandling:
             # Return valid header query result
             mock_qr_instance.run_arbitrary_query.return_value = [
                 (
-                    "Salesperson",   # Salesperson Name
-                    1250101,         # Invoice Date (DAC format)
-                    "NET30",         # Terms Code
-                    30,              # Terms Duration
-                    "A",             # Customer Status
-                    10001,           # Customer Number
-                    "Test Customer", # Customer Name
-                    "001",           # Customer Store Number
-                    "123 Main St",   # Customer Address
-                    "Anytown",       # Customer Town
-                    "CA",            # Customer State
-                    "90210",        # Customer Zip
-                    "5551234567",   # Customer Phone
-                    "test@test.com", # Customer Email
-                    "",              # Customer Email 2
-                    "A",             # Corporate Customer Status
-                    20001,          # Corporate Customer Number
-                    "Corp Customer", # Corporate Customer Name
+                    "Salesperson",  # Salesperson Name
+                    1250101,  # Invoice Date (DAC format)
+                    "NET30",  # Terms Code
+                    30,  # Terms Duration
+                    "A",  # Customer Status
+                    10001,  # Customer Number
+                    "Test Customer",  # Customer Name
+                    "001",  # Customer Store Number
+                    "123 Main St",  # Customer Address
+                    "Anytown",  # Customer Town
+                    "CA",  # Customer State
+                    "90210",  # Customer Zip
+                    "5551234567",  # Customer Phone
+                    "test@test.com",  # Customer Email
+                    "",  # Customer Email 2
+                    "A",  # Corporate Customer Status
+                    20001,  # Corporate Customer Number
+                    "Corp Customer",  # Corporate Customer Name
                     "456 Corp Ave",  # Corporate Customer Address
-                    "Bigcity",      # Corporate Customer Town
-                    "NY",           # Corporate Customer State
-                    "10001",        # Corporate Customer Zip
-                    "5559876543",   # Corporate Customer Phone
-                    "corp@test.com",# Corporate Customer Email
-                    "",             # Corporate Customer Email 2
+                    "Bigcity",  # Corporate Customer Town
+                    "NY",  # Corporate Customer State
+                    "10001",  # Corporate Customer Zip
+                    "5559876543",  # Corporate Customer Phone
+                    "corp@test.com",  # Corporate Customer Email
+                    "",  # Corporate Customer Email 2
                 )
             ]
             mock_qr_class.return_value = mock_qr_instance
@@ -582,7 +613,11 @@ class TestConverterEmptyFileHandling:
                 )
 
     def test_convert_to_scansheet_type_a_empty_file(
-        self, empty_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        empty_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_scansheet_type_a with empty input completes without crash."""
         import convert_to_scansheet_type_a
@@ -618,6 +653,7 @@ class TestConverterEmptyFileHandling:
 # ---------------------------------------------------------------------------
 # 2. TestConverterMalformedInput
 # ---------------------------------------------------------------------------
+
 
 class TestConverterMalformedInput:
     """Test converters with various malformed input lines."""
@@ -675,7 +711,13 @@ class TestConverterMalformedInput:
         """Lines starting with an unknown record type (e.g. 'X') should not crash."""
         import convert_to_csv
 
-        content = make_a_record() + "\n" + "Xunknown record type here\n" + make_b_record() + "\n"
+        content = (
+            make_a_record()
+            + "\n"
+            + "Xunknown record type here\n"
+            + make_b_record()
+            + "\n"
+        )
         edi_file = self._write_edi(tmp_path, content)
 
         # capture_records returns None for unknown types; converter should skip
@@ -697,7 +739,9 @@ class TestConverterMalformedInput:
         """Files with mixed CRLF/LF line endings should be handled gracefully."""
         import convert_to_csv
 
-        content = make_a_record() + "\r\n" + make_b_record() + "\n" + make_c_record() + "\r\n"
+        content = (
+            make_a_record() + "\r\n" + make_b_record() + "\n" + make_c_record() + "\r\n"
+        )
         edi_file = self._write_edi(tmp_path, content)
 
         result = convert_to_csv.edi_convert(
@@ -754,7 +798,12 @@ class TestConverterMalformedInput:
         assert os.path.exists(result)
 
     def test_fintech_unknown_record_type(
-        self, tmp_path, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        tmp_path,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_fintech with an unknown record type should not crash."""
         import convert_to_fintech
@@ -816,6 +865,7 @@ class TestConverterMalformedInput:
 # 3. TestConverterFileIOErrors
 # ---------------------------------------------------------------------------
 
+
 class TestConverterFileIOErrors:
     """Test converters when the input file does not exist."""
 
@@ -868,7 +918,12 @@ class TestConverterFileIOErrors:
             )
 
     def test_convert_to_fintech_missing_input(
-        self, tmp_path, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        tmp_path,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_fintech raises FileNotFoundError for missing input."""
         import convert_to_fintech
@@ -887,7 +942,12 @@ class TestConverterFileIOErrors:
                 )
 
     def test_convert_to_yellowdog_csv_missing_input(
-        self, tmp_path, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        tmp_path,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv raises FileNotFoundError for missing input."""
         import convert_to_yellowdog_csv
@@ -944,6 +1004,7 @@ class TestConverterFileIOErrors:
 # ---------------------------------------------------------------------------
 # 4. TestConverterRetailUomMode  (convert_to_csv specific)
 # ---------------------------------------------------------------------------
+
 
 class TestConverterRetailUomMode:
     """Tests for convert_to_csv with retail_uom=True."""
@@ -1060,6 +1121,7 @@ class TestConverterRetailUomMode:
 # 5. TestConverterEmptyUpcLut
 # ---------------------------------------------------------------------------
 
+
 class TestConverterEmptyUpcLut:
     """Test converters with an empty upc_lut when UPC override is enabled."""
 
@@ -1092,7 +1154,11 @@ class TestConverterEmptyUpcLut:
         assert len(content) > 0
 
     def test_convert_to_simplified_csv_empty_upc_lut(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """convert_to_simplified_csv with empty upc_lut completes without crash."""
         import convert_to_simplified_csv
@@ -1123,7 +1189,12 @@ class TestConverterEmptyUpcLut:
         assert os.path.exists(result)
 
     def test_convert_to_fintech_empty_upc_lut_raises_key_error(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_fintech with empty upc_lut handles gracefully (returns empty UPC).
 
@@ -1180,14 +1251,19 @@ class TestConverterEmptyUpcLut:
             # Empty UPC LUT should be handled gracefully - returns empty strings
             result = convert_to_fintech.edi_convert(
                 valid_edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},  # empty upc_lut
-                )
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {},  # empty upc_lut
+            )
 
     def test_convert_to_yellowdog_csv_empty_upc_lut(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict, mock_inv_fetcher
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
+        mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv with empty upc_lut uses raw UPC from EDI."""
         import convert_to_yellowdog_csv
@@ -1232,13 +1308,18 @@ class TestConverterEmptyUpcLut:
                 )
             )
             from datetime import datetime
+
             mock_dt = datetime(2025, 1, 1)  # Real datetime object instead of MagicMock
+
             def datetime_from_invtime_side_effect(date_str):
                 if date_str == "010125":  # From our A record
                     return datetime(2025, 1, 1)
                 else:
-                    return datetime.strptime(date_str, '%m%d%y')
-            mock_utils.datetime_from_invtime.side_effect = datetime_from_invtime_side_effect
+                    return datetime.strptime(date_str, "%m%d%y")
+
+            mock_utils.datetime_from_invtime.side_effect = (
+                datetime_from_invtime_side_effect
+            )
             mock_utils.convert_to_price.return_value = "1.00"
             mock_utils.dac_str_int_to_int.return_value = 100
 
@@ -1255,6 +1336,7 @@ class TestConverterEmptyUpcLut:
 # ---------------------------------------------------------------------------
 # 6. Additional edge-case tests for specific converters
 # ---------------------------------------------------------------------------
+
 
 class TestScannerwareInvoiceDateOffset:
     """Test convert_to_scannerware invoice_date_offset parameter."""
@@ -1415,7 +1497,11 @@ class TestCsvConverterOutputContent:
     """Verify that convert_to_csv produces correct CSV content for valid input."""
 
     def test_csv_output_has_header_row(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """With include_headers=True the first row should be the column headers."""
         import convert_to_csv
@@ -1437,7 +1523,11 @@ class TestCsvConverterOutputContent:
         assert rows[0][0] == "UPC"
 
     def test_csv_output_no_header_row(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """With include_headers=False the first row should be a data row (or empty)."""
         import convert_to_csv
@@ -1460,7 +1550,11 @@ class TestCsvConverterOutputContent:
             assert rows[0][0] != "UPC"
 
     def test_csv_output_b_record_data(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """B record data should appear in the CSV output."""
         import convert_to_csv
@@ -1486,7 +1580,11 @@ class TestSimplifiedCsvSortOrder:
     """Test convert_to_simplified_csv with different sort order configurations."""
 
     def test_default_sort_order(
-        self, valid_edi_file, output_base, default_settings_dict, default_parameters_dict
+        self,
+        valid_edi_file,
+        output_base,
+        default_settings_dict,
+        default_parameters_dict,
     ):
         """Default sort order produces a valid CSV."""
         import convert_to_simplified_csv
@@ -1507,7 +1605,9 @@ class TestSimplifiedCsvSortOrder:
         import convert_to_simplified_csv
 
         params = dict(default_parameters_dict)
-        params["simple_csv_sort_order"] = "vendor_item,upc_number,qty_of_units,unit_cost"
+        params["simple_csv_sort_order"] = (
+            "vendor_item,upc_number,qty_of_units,unit_cost"
+        )
         output_base = str(tmp_path / "output_vendor_item")
 
         result = convert_to_simplified_csv.edi_convert(
@@ -1632,7 +1732,7 @@ class TestEstoreEinvoiceGenericProcessing:
             with open(result, encoding="utf-8") as f:
                 csv_content = f.read()
             # Should have multiple rows (header + B records)
-            assert len(csv_content.split('\n')) >= 3
+            assert len(csv_content.split("\n")) >= 3
 
     def test_estore_einvoice_generic_negative_quantity(
         self, tmp_path, default_settings_dict, default_parameters_dict

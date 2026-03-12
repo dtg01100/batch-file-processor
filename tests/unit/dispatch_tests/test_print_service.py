@@ -4,15 +4,15 @@ This module tests the refactored print service with mock implementations.
 """
 
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from dispatch.print_service import (
-    PrintServiceProtocol,
-    WindowsPrintService,
-    UnixPrintService,
     MockPrintService,
     NullPrintService,
+    PrintServiceProtocol,
     RunLogPrinter,
+    UnixPrintService,
+    WindowsPrintService,
     create_print_service,
     create_run_log_printer,
 )

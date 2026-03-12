@@ -1,10 +1,11 @@
 """Tests for dispatch/send_manager.py module."""
 
 import logging
-import pytest
 from unittest.mock import MagicMock, patch
 
-from dispatch.send_manager import SendManager, MockBackend
+import pytest
+
+from dispatch.send_manager import MockBackend, SendManager
 
 
 class TestSendManager:

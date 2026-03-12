@@ -8,11 +8,11 @@ from unittest.mock import patch
 import pytest
 
 from dispatch.hash_utils import (
-    generate_match_lists,
-    generate_file_hash,
-    check_file_against_processed,
-    process_file_hash_entry,
     build_hash_dictionaries,
+    check_file_against_processed,
+    generate_file_hash,
+    generate_match_lists,
+    process_file_hash_entry,
 )
 
 

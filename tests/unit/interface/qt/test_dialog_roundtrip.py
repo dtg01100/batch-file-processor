@@ -6,14 +6,16 @@ properly without crashes or resource leaks.
 
 import os
 import tempfile
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from PyQt6.QtWidgets import QApplication
-from interface.database.database_obj import DatabaseObj
-from interface.qt.dialogs.resend_dialog import ResendDialog
-from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
-from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from interface.database.database_obj import DatabaseObj
+from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+from interface.qt.dialogs.resend_dialog import ResendDialog
 
 
 @pytest.fixture(scope="module")
@@ -68,6 +70,7 @@ class TestDialogLifecycle:
     def test_resend_dialog_with_processed_files(self, qapp, temp_db):
         """Test ResendDialog when processed files exist."""
         from unittest.mock import patch
+
         from interface.services.resend_service import ResendService
 
         # Add a folder and processed file
@@ -256,6 +259,7 @@ class TestDialogRoundtrip:
     def test_resend_dialog_full_cycle(self, qapp, temp_db):
         """Test complete ResendDialog open-use-close cycle."""
         from unittest.mock import patch
+
         from interface.services.resend_service import ResendService
 
         # Setup: Add folder and processed files
@@ -297,6 +301,7 @@ class TestDialogRoundtrip:
     def test_multiple_dialogs_sequentially(self, qapp, temp_db):
         """Test opening multiple dialogs in sequence."""
         from unittest.mock import patch
+
         from interface.services.resend_service import ResendService
 
         # Add test data

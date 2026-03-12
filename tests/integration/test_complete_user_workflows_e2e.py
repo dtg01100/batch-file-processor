@@ -7,14 +7,15 @@ Tests cover:
 - Complete batch processing workflows
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-from dispatch.send_manager import MockBackend
+import pytest
+
 from copy_backend import CopyBackend
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.send_manager import MockBackend
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
@@ -98,7 +99,7 @@ class TestAddFolderConfigureProcessWorkflow:
         self, complete_workspace, sample_folder_config
     ):
         """Test workflow with EDI validation enabled."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create orchestrator with validator
         config = DispatchConfig(
@@ -116,7 +117,7 @@ class TestAddFolderConfigureProcessWorkflow:
         self, complete_workspace, sample_folder_config
     ):
         """Test workflow detects duplicate files."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Process same files twice
         config = DispatchConfig(backends={"copy": CopyBackend()}, settings={})
@@ -238,7 +239,7 @@ class TestErrorRecoveryWorkflow:
         self, complete_workspace, sample_folder_config
     ):
         """Test retry workflow after backend failure."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create a flaky backend that fails first time but succeeds on retry
         class FlakyBackend:
@@ -275,7 +276,7 @@ class TestErrorRecoveryWorkflow:
 
     def test_continue_after_file_error(self, complete_workspace, sample_folder_config):
         """Test processing continues after individual file error."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create one invalid file
         (complete_workspace / "input" / "invalid.edi").write_text("INVALID CONTENT")
@@ -295,8 +296,8 @@ class TestErrorRecoveryWorkflow:
 
     def test_error_logging_and_recovery(self, complete_workspace, sample_folder_config):
         """Test that errors are logged and recovery is possible."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from dispatch.error_handler import ErrorHandler
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         error_handler = ErrorHandler()
 
@@ -332,7 +333,7 @@ class TestMultiStepWorkflow:
 
     def test_process_multiple_folders_sequentially(self, complete_workspace):
         """Test processing multiple folders in sequence."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create second folder
         input2 = complete_workspace / "input2"
@@ -382,7 +383,7 @@ B002001ITEM001     000020EA0020Test Item                     0000020000
         self, complete_workspace, sample_folder_config
     ):
         """Test processing with multiple backends enabled."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         class MockFTPBackend:
             def send(self, params, settings, filename):
@@ -429,7 +430,7 @@ class TestDatabaseIntegrationWorkflow:
         self, complete_workspace, sample_folder_config, temp_database
     ):
         """Test that processed files are tracked in database."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         config = DispatchConfig(backends={"copy": CopyBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
@@ -452,7 +453,7 @@ class TestDatabaseIntegrationWorkflow:
         self, complete_workspace, sample_folder_config, temp_database
     ):
         """Test marking files for resend and reprocessing."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Process files initially
         config = DispatchConfig(
@@ -535,7 +536,7 @@ class TestEdgeCaseWorkflows:
 
     def test_empty_folder_processing(self, complete_workspace):
         """Test processing empty folder."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create empty folder
         empty_input = complete_workspace / "empty_input"
@@ -562,7 +563,7 @@ class TestEdgeCaseWorkflows:
 
     def test_large_file_processing(self, complete_workspace, sample_folder_config):
         """Test processing large files."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create large EDI file (1MB)
         large_content = (
@@ -584,8 +585,9 @@ class TestEdgeCaseWorkflows:
 
     def test_special_characters_in_path(self, sample_folder_config):
         """Test processing files with special characters in path."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         import tempfile
+
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create folder with special characters
         with tempfile.TemporaryDirectory(suffix="_test-folder") as tmpdir:

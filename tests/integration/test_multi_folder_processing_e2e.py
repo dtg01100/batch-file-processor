@@ -8,11 +8,12 @@ Tests cover:
 - Progress tracking across multiple folders
 """
 
-import pytest
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import MagicMock
-from concurrent.futures import ThreadPoolExecutor
+
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
@@ -80,10 +81,10 @@ class TestSequentialMultiFolderProcessing:
 
     def test_process_multiple_folders_sequentially(self, multiple_folders_workspace):
         """Test processing 5 folders in sequence."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
             backends={"copy": create_copy_backend()},
@@ -112,10 +113,10 @@ class TestSequentialMultiFolderProcessing:
 
     def test_process_folders_with_different_configs(self, multiple_folders_workspace):
         """Test processing folders with different configurations."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
             backends={"copy": create_copy_backend()},
@@ -151,10 +152,10 @@ class TestMixedSuccessFailureScenarios:
 
     def test_some_folders_fail_others_succeed(self, multiple_folders_workspace):
         """Test processing when some folders fail but others succeed."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         class FailingBackend:
             def __init__(self, fail_on_indices):
@@ -193,10 +194,10 @@ class TestMixedSuccessFailureScenarios:
 
     def test_partial_folder_processing_success(self, multiple_folders_workspace):
         """Test when folder processing has partial success."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
             backends={"copy": create_copy_backend()},
@@ -225,10 +226,10 @@ class TestResourceContention:
 
     def test_concurrent_folder_access(self, multiple_folders_workspace):
         """Test accessing same output directory from multiple folders."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         # All folders write to same output with unique filenames
         shared_output = multiple_folders_workspace["workspace"] / "shared_output"
@@ -264,10 +265,10 @@ class TestResourceContention:
         self, multiple_folders_workspace, temp_database
     ):
         """Test database locking during multi-folder processing."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
             backends={"copy": create_copy_backend()},
@@ -303,10 +304,10 @@ class TestProgressTracking:
 
     def test_progress_updates_across_folders(self, multiple_folders_workspace):
         """Test that progress is tracked across multiple folders."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         # Track progress via progress_reporter
         progress_updates = []
@@ -342,10 +343,10 @@ class TestProgressTracking:
 
     def test_cumulative_file_count_tracking(self, multiple_folders_workspace):
         """Test cumulative file count tracking."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
             backends={"copy": create_copy_backend()},
@@ -374,10 +375,10 @@ class TestParallelProcessing:
 
     def test_parallel_folder_processing(self, multiple_folders_workspace):
         """Test processing folders in parallel."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         def process_folder_thread(folder_config):
             config = DispatchConfig(
@@ -415,10 +416,10 @@ class TestLargeScaleMultiFolder:
 
     def test_process_20_folders(self, tmp_path):
         """Test processing 20 folders."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         workspace = tmp_path / "large_scale"
         workspace.mkdir()
@@ -484,10 +485,10 @@ class TestMultiFolderErrorRecovery:
 
     def test_retry_failed_folders(self, multiple_folders_workspace):
         """Test retrying failed folders."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         fail_count = {"count": 0}
 
@@ -521,10 +522,10 @@ class TestMultiFolderErrorRecovery:
 
     def test_skip_problematic_folders(self, multiple_folders_workspace):
         """Test skipping folders that consistently fail."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         class AlwaysFailingBackend:
             def send(self, params, settings, filename):

@@ -1,7 +1,7 @@
 """FTP Service tests for EditFoldersDialog refactoring."""
 
-import sys
 import os
+import sys
 
 # Add the project root to the path
 project_root = os.path.dirname(
@@ -10,8 +10,8 @@ project_root = os.path.dirname(
 sys.path.insert(0, project_root)
 
 from interface.services.ftp_service import (
-    MockFTPService,
     FTPConnectionResult,
+    MockFTPService,
 )
 
 

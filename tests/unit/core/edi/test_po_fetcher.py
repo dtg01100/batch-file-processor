@@ -1,11 +1,12 @@
 """Unit tests for POFetcher."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from core.edi.po_fetcher import (
-    POFetcher,
     POData,
+    POFetcher,
     QueryRunnerProtocol,
 )
 
@@ -58,7 +59,11 @@ class TestPOFetcher:
 
         # Verify int conversion is passed as param
         call_kwargs = mock_query_runner.run_query.call_args
-        params = call_kwargs[0][1] if len(call_kwargs[0]) > 1 else call_kwargs[1].get("params")
+        params = (
+            call_kwargs[0][1]
+            if len(call_kwargs[0]) > 1
+            else call_kwargs[1].get("params")
+        )
         assert params is not None
         assert 100 in params
 

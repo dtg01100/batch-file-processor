@@ -5,7 +5,9 @@ Tests for the ConfigurationPlugin interface and its implementations.
 """
 
 import unittest
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+from interface.models.folder_configuration import ConvertFormat, CSVConfiguration
 from interface.plugins import ConfigurationPlugin
 from interface.plugins.config_schemas import (
     ConfigurationSchema,
@@ -14,7 +16,6 @@ from interface.plugins.config_schemas import (
 )
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
 from interface.plugins.validation_framework import ValidationResult
-from interface.models.folder_configuration import ConvertFormat, CSVConfiguration
 
 
 class TestConfigurationPluginInterface(unittest.TestCase):

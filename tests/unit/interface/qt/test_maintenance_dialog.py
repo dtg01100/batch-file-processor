@@ -15,8 +15,8 @@ class TestMaintenanceDialogInitialization:
 
     def test_dialog_inherits_from_base_dialog(self):
         """Test that MaintenanceDialog inherits from BaseDialog."""
-        from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
         from interface.qt.dialogs.base_dialog import BaseDialog
+        from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
         assert issubclass(MaintenanceDialog, BaseDialog)
 
@@ -42,8 +42,8 @@ class TestMaintenanceDialogIntegration:
     def test_dependencies_can_be_imported(self):
         """Test that required dependencies exist."""
         # Test that required modules can be imported
-        from interface.services.reporting_service import ReportingService
         from interface.database.database_obj import DatabaseObj
+        from interface.services.reporting_service import ReportingService
 
         assert ReportingService is not None
         assert DatabaseObj is not None

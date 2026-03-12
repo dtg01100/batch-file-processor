@@ -8,17 +8,18 @@ Configuration in pytest.ini:
 """
 
 import os
+
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from tests.fakes import (
     FakeDatabaseObj,
-    FakeUIService,
-    FakeProgressService,
     FakeMaintenanceFunctions,
+    FakeProgressService,
     FakeResendService,
     FakeTable,
+    FakeUIService,
 )
 
 

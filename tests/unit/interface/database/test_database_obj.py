@@ -4,15 +4,16 @@ Tests the DatabaseObj class with mocked database connections
 to ensure proper behavior without requiring actual database files.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from interface.database.database_obj import (
-    DatabaseObj,
-    DatabaseConnectionProtocol,
-    TableProtocol,
-)
+
+import pytest
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from interface.database.database_obj import (
+    DatabaseConnectionProtocol,
+    DatabaseObj,
+    TableProtocol,
+)
 
 
 def create_mock_connection(mock_tables):

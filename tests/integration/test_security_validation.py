@@ -16,13 +16,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from interface.database.database_obj import DatabaseObj
 import create_database
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-from dispatch.pipeline.validator import EDIValidationStep
+from copy_backend import do as copy_backend_do
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
-from copy_backend import do as copy_backend_do
+from dispatch.pipeline.validator import EDIValidationStep
+from interface.database.database_obj import DatabaseObj
 
 
 @pytest.fixture
@@ -435,7 +435,9 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
 class TestErrorHandling:
     """Test secure error handling."""
 
-    def test_error_messages_dont_leak_sensitive_info(self, secure_test_environment, pipeline_steps):
+    def test_error_messages_dont_leak_sensitive_info(
+        self, secure_test_environment, pipeline_steps
+    ):
         """Test that error messages don't expose sensitive information."""
         workspace = secure_test_environment["workspace"]
         db = secure_test_environment["db"]

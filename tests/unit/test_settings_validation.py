@@ -11,6 +11,7 @@ Tests validation functions for:
 """
 
 import os
+
 import pytest
 
 # Import actual validation functions from the codebase
@@ -82,22 +83,28 @@ class TestEmailValidation:
         """Email with invalid special characters should fail validation."""
         assert validate_email("user@example.com!") is False
 
-    @pytest.mark.parametrize("email", [
-        "test@valid.org",
-        "another.user@company.co.uk",
-        "user123@test.io",
-        # a@b.c fails because TLD needs 2+ chars
-    ])
+    @pytest.mark.parametrize(
+        "email",
+        [
+            "test@valid.org",
+            "another.user@company.co.uk",
+            "user123@test.io",
+            # a@b.c fails because TLD needs 2+ chars
+        ],
+    )
     def test_valid_emails_parametrized(self, email):
         """Parametrized test for valid emails."""
         assert validate_email(email) is True
 
-    @pytest.mark.parametrize("email", [
-        "notanemail",
-        "@nodomain.com",
-        "no@domain",
-        "double@@at.com",
-    ])
+    @pytest.mark.parametrize(
+        "email",
+        [
+            "notanemail",
+            "@nodomain.com",
+            "no@domain",
+            "double@@at.com",
+        ],
+    )
     def test_invalid_emails_parametrized(self, email):
         """Parametrized test for invalid emails."""
         assert validate_email(email) is False
@@ -138,16 +145,20 @@ class TestPathValidation:
 class TestNumericRangeValidation:
     """Test suite for numeric range validation."""
 
-    @pytest.mark.parametrize("value,expected", [
-        (0, True),
-        (1, True),
-        (10, True),
-        (100, True),
-        (-1, False),
-        (None, False),
-    ])
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (0, True),
+            (1, True),
+            (10, True),
+            (100, True),
+            (-1, False),
+            (None, False),
+        ],
+    )
     def test_backup_counter_validation(self, value, expected):
         """Test backup counter validation."""
+
         def validate_backup_counter(counter):
             if counter is None:
                 return False
@@ -159,19 +170,23 @@ class TestNumericRangeValidation:
 
         assert validate_backup_counter(value) == expected
 
-    @pytest.mark.parametrize("length,expected", [
-        (11, True),
-        (12, True),
-        (8, True),
-        (13, True),
-        (0, False),
-        (5, False),
-        (20, False),
-        (-1, False),
-        (None, False),
-    ])
+    @pytest.mark.parametrize(
+        "length,expected",
+        [
+            (11, True),
+            (12, True),
+            (8, True),
+            (13, True),
+            (0, False),
+            (5, False),
+            (20, False),
+            (-1, False),
+            (None, False),
+        ],
+    )
     def test_upc_length_validation(self, length, expected):
         """Test UPC length validation."""
+
         def validate_upc_length(upc_length):
             if upc_length is None:
                 return False
@@ -189,6 +204,7 @@ class TestAS400SettingsValidation:
 
     def test_valid_username(self):
         """Valid AS/400 username should pass validation."""
+
         def validate_username(username):
             if not username:
                 return False
@@ -203,6 +219,7 @@ class TestAS400SettingsValidation:
 
     def test_valid_password(self):
         """Valid AS/400 password should pass validation."""
+
         def validate_password(password):
             if not password:
                 return False
@@ -216,6 +233,7 @@ class TestAS400SettingsValidation:
 
     def test_valid_address(self):
         """Valid AS/400 address should pass validation."""
+
         def validate_address(address):
             if not address:
                 return False
@@ -234,6 +252,7 @@ class TestSMTPSettingsValidation:
 
     def test_valid_smtp_server(self):
         """Valid SMTP server should pass validation."""
+
         def validate_smtp_server(server):
             if not server:
                 return False
@@ -245,20 +264,24 @@ class TestSMTPSettingsValidation:
         assert validate_smtp_server("") is False
         assert validate_smtp_server(None) is False
 
-    @pytest.mark.parametrize("port,expected", [
-        (25, True),
-        (465, True),
-        (587, True),
-        (993, True),
-        (1, True),
-        (65535, True),
-        (0, False),
-        (65536, False),
-        (-1, False),
-        ("587", True),
-    ])
+    @pytest.mark.parametrize(
+        "port,expected",
+        [
+            (25, True),
+            (465, True),
+            (587, True),
+            (993, True),
+            (1, True),
+            (65535, True),
+            (0, False),
+            (65536, False),
+            (-1, False),
+            ("587", True),
+        ],
+    )
     def test_smtp_port_validation(self, port, expected):
         """Test SMTP port validation."""
+
         def validate_smtp_port(port):
             try:
                 port_int = int(port)
@@ -270,6 +293,7 @@ class TestSMTPSettingsValidation:
 
     def test_smtp_credentials_validation(self):
         """SMTP credentials should be validated correctly."""
+
         def validate_smtp_credentials(username, password):
             if username is None:
                 return False
@@ -290,6 +314,7 @@ class TestFTPSettingsValidation:
 
     def test_valid_ftp_server(self):
         """Valid FTP server should pass validation."""
+
         def validate_ftp_server(server):
             if not server:
                 return False
@@ -303,6 +328,7 @@ class TestFTPSettingsValidation:
 
     def test_valid_ftp_port(self):
         """Valid FTP port should pass validation."""
+
         def validate_ftp_port(port):
             try:
                 port_int = int(port)
@@ -317,6 +343,7 @@ class TestFTPSettingsValidation:
 
     def test_valid_ftp_username(self):
         """FTP username can be empty for anonymous access."""
+
         def validate_ftp_username(username):
             if username is None:
                 return False
@@ -330,6 +357,7 @@ class TestFTPSettingsValidation:
 
     def test_valid_ftp_folder(self):
         """FTP folder path should be validated."""
+
         def validate_ftp_folder(folder):
             if folder is None:
                 return False
@@ -345,15 +373,19 @@ class TestFTPSettingsValidation:
 class TestODBCDriverValidation:
     """Test suite for ODBC driver validation."""
 
-    @pytest.mark.parametrize("driver,expected", [
-        ("{ODBC Driver 17 for SQL Server}", True),
-        ("{MySQL ODBC 8.0 Driver}", True),
-        ("SQL Server", True),
-        ("", False),
-        (None, False),
-    ])
+    @pytest.mark.parametrize(
+        "driver,expected",
+        [
+            ("{ODBC Driver 17 for SQL Server}", True),
+            ("{MySQL ODBC 8.0 Driver}", True),
+            ("SQL Server", True),
+            ("", False),
+            (None, False),
+        ],
+    )
     def test_odbc_driver_validation(self, driver, expected):
         """Test ODBC driver name validation."""
+
         def validate_odbc_driver(driver):
             if driver is None:
                 return False
@@ -367,24 +399,28 @@ class TestODBCDriverValidation:
 class TestSettingsToggleValidation:
     """Test suite for settings toggle (boolean) validation."""
 
-    @pytest.mark.parametrize("value,expected", [
-        ("True", True),
-        ("False", False),
-        ("true", True),
-        ("false", False),
-        ("1", True),
-        ("0", False),
-        ("yes", True),
-        ("no", False),
-        (True, True),
-        (False, False),
-        (1, True),
-        (0, False),
-        ("", False),
-        (None, False),
-    ])
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("True", True),
+            ("False", False),
+            ("true", True),
+            ("false", False),
+            ("1", True),
+            ("0", False),
+            ("yes", True),
+            ("no", False),
+            (True, True),
+            (False, False),
+            (1, True),
+            (0, False),
+            ("", False),
+            (None, False),
+        ],
+    )
     def test_toggle_validation(self, value, expected):
         """Test settings toggle (boolean) validation."""
+
         def validate_toggle(value):
             if value is None:
                 return False
@@ -404,6 +440,7 @@ class TestBackendToggleValidation:
 
     def test_copy_backend_toggle(self):
         """Copy backend toggle should be validated correctly."""
+
         def validate_copy_backend(setting):
             if setting is None:
                 return False
@@ -420,6 +457,7 @@ class TestBackendToggleValidation:
 
     def test_ftp_backend_toggle(self):
         """FTP backend toggle should be validated correctly."""
+
         def validate_ftp_backend(setting):
             if setting is None:
                 return False
@@ -435,6 +473,7 @@ class TestBackendToggleValidation:
 
     def test_email_backend_toggle(self):
         """Email backend toggle should be validated correctly."""
+
         def validate_email_backend(setting):
             if setting is None:
                 return False

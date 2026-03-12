@@ -10,12 +10,12 @@ Tests cover:
 
 import pytest
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
     QCheckBox,
     QComboBox,
-    QLineEdit,
     QDialog,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
@@ -504,11 +504,11 @@ class TestComponentIntegration:
 
     def test_dynamic_fields_with_extraction(self, qtbot):
         """Test dynamic field building and extraction."""
-        from interface.qt.dialogs.edit_folders.dynamic_edi_builder import (
-            DynamicEDIBuilder,
-        )
         from interface.qt.dialogs.edit_folders.data_extractor import (
             QtFolderDataExtractor,
+        )
+        from interface.qt.dialogs.edit_folders.dynamic_edi_builder import (
+            DynamicEDIBuilder,
         )
 
         parent = QWidget()

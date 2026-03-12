@@ -2,16 +2,17 @@
 
 import logging
 from unittest.mock import patch
+
 import pytest
 
-from dispatch.pipeline.splitter import (
-    SplitterResult,
-    MockSplitter,
-    FilesystemAdapter,
-    EDISplitterStep,
-    DefaultCreditDetector,
-)
 from core.edi.edi_splitter import SplitConfig, SplitResult
+from dispatch.pipeline.splitter import (
+    DefaultCreditDetector,
+    EDISplitterStep,
+    FilesystemAdapter,
+    MockSplitter,
+    SplitterResult,
+)
 
 
 class MockFileSystem:

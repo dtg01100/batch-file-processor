@@ -12,8 +12,8 @@ Tests:
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.backend]
-import sys
 import os
+import sys
 
 # Add the project root to the path
 sys.path.insert(
@@ -21,10 +21,10 @@ sys.path.insert(
 )
 
 from interface.models.folder_configuration import (
+    CopyConfiguration,
+    EmailConfiguration,
     FolderConfiguration,
     FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
 )
 
 

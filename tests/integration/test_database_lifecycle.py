@@ -20,9 +20,9 @@ import pytest
 import create_database
 import folders_database_migrator
 import schema
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
 
@@ -173,13 +173,15 @@ class TestFolderCRUD:
 
     def test_insert_and_retrieve_folder(self, db):
         folders = db["folders"]
-        folders.insert(dict(
-            folder_name="/data/invoices",
-            alias="invoices",
-            folder_is_active=1,
-            process_backend_copy=1,
-            copy_to_directory="/out",
-        ))
+        folders.insert(
+            dict(
+                folder_name="/data/invoices",
+                alias="invoices",
+                folder_is_active=1,
+                process_backend_copy=1,
+                copy_to_directory="/out",
+            )
+        )
         db.commit()
 
         found = folders.find_one(alias="invoices")
@@ -189,11 +191,13 @@ class TestFolderCRUD:
 
     def test_update_folder(self, db):
         folders = db["folders"]
-        folders.insert(dict(
-            folder_name="/data/old",
-            alias="orig",
-            folder_is_active=1,
-        ))
+        folders.insert(
+            dict(
+                folder_name="/data/old",
+                alias="orig",
+                folder_is_active=1,
+            )
+        )
         db.commit()
 
         row = folders.find_one(alias="orig")
@@ -229,11 +233,13 @@ class TestFolderCRUD:
     def test_multiple_folder_insert_and_count(self, db):
         folders = db["folders"]
         for i in range(10):
-            folders.insert(dict(
-                folder_name=f"/folder_{i}",
-                alias=f"f{i}",
-                folder_is_active=1,
-            ))
+            folders.insert(
+                dict(
+                    folder_name=f"/folder_{i}",
+                    alias=f"f{i}",
+                    folder_is_active=1,
+                )
+            )
         db.commit()
 
         all_folders = list(folders.all())
@@ -302,11 +308,13 @@ class TestProcessedFilesTracking:
 
     def test_insert_processed_file(self, db):
         pf = db["processed_files"]
-        pf.insert(dict(
-            file_name="invoice_001.edi",
-            folder_id=1,
-            file_checksum="abc123",
-        ))
+        pf.insert(
+            dict(
+                file_name="invoice_001.edi",
+                folder_id=1,
+                file_checksum="abc123",
+            )
+        )
         db.commit()
 
         found = pf.find_one(file_name="invoice_001.edi")
@@ -325,12 +333,14 @@ class TestProcessedFilesTracking:
 
     def test_resend_flag(self, db):
         pf = db["processed_files"]
-        pf.insert(dict(
-            file_name="resend_me.edi",
-            folder_id=1,
-            file_checksum="abc",
-            resend_flag=0,
-        ))
+        pf.insert(
+            dict(
+                file_name="resend_me.edi",
+                folder_id=1,
+                file_checksum="abc",
+                resend_flag=0,
+            )
+        )
         db.commit()
 
         row = pf.find_one(file_name="resend_me.edi")
@@ -532,11 +542,13 @@ class TestDatabaseObjWrapper:
             running_platform="Linux",
         )
 
-        db.folders_table.insert(dict(
-            folder_name="/test/path",
-            alias="myalias",
-            folder_is_active=1,
-        ))
+        db.folders_table.insert(
+            dict(
+                folder_name="/test/path",
+                alias="myalias",
+                folder_is_active=1,
+            )
+        )
         db.database_connection.commit()
 
         found = db.folders_table.find_one(alias="myalias")
@@ -622,13 +634,15 @@ class TestOrchestratorWithRealDB:
 
         # Insert an active folder into the real database
         folders = conn["folders"]
-        folders.insert(dict(
-            folder_name=str(inp),
-            alias="real_test",
-            folder_is_active=1,
-            process_backend_copy=1,
-            copy_to_directory=str(out),
-        ))
+        folders.insert(
+            dict(
+                folder_name=str(inp),
+                alias="real_test",
+                folder_is_active=1,
+                process_backend_copy=1,
+                copy_to_directory=str(out),
+            )
+        )
         conn.commit()
 
         # Read it back
@@ -664,13 +678,15 @@ class TestOrchestratorWithRealDB:
         (inp / "test.edi").write_text("HDR content\nA record\n")
 
         folders = conn["folders"]
-        folders.insert(dict(
-            folder_name=str(inp),
-            alias="disabled",
-            folder_is_active=0,
-            process_backend_copy=1,
-            copy_to_directory=str(tmp_path / "out"),
-        ))
+        folders.insert(
+            dict(
+                folder_name=str(inp),
+                alias="disabled",
+                folder_is_active=0,
+                process_backend_copy=1,
+                copy_to_directory=str(tmp_path / "out"),
+            )
+        )
         conn.commit()
 
         active = list(folders.find(folder_is_active=1))
@@ -701,13 +717,15 @@ class TestOrchestratorWithRealDB:
             out = tmp_path / f"out_{i}"
             out.mkdir()
 
-            conn["folders"].insert(dict(
-                folder_name=str(inp),
-                alias=f"folder_{i}",
-                folder_is_active=1,
-                process_backend_copy=1,
-                copy_to_directory=str(out),
-            ))
+            conn["folders"].insert(
+                dict(
+                    folder_name=str(inp),
+                    alias=f"folder_{i}",
+                    folder_is_active=1,
+                    process_backend_copy=1,
+                    copy_to_directory=str(out),
+                )
+            )
         conn.commit()
 
         active = list(conn["folders"].find(folder_is_active=1))
@@ -741,16 +759,21 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
     c = raw.cursor()
 
     # -- Base tables at roughly v33 level (no columns added by v33+ migrations)
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE version (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             version TEXT,
             os TEXT
         )
-    """)
-    c.execute("INSERT INTO version (id, version, os) VALUES (1, ?, 'Linux')", (version,))
+    """
+    )
+    c.execute(
+        "INSERT INTO version (id, version, os) VALUES (1, ?, 'Linux')", (version,)
+    )
 
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             folder_name TEXT,
@@ -787,9 +810,11 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             split_edi_include_invoices INTEGER DEFAULT 0,
             split_edi_include_credits INTEGER DEFAULT 0
         )
-    """)
+    """
+    )
 
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE processed_files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_name TEXT,
@@ -797,9 +822,11 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             file_checksum TEXT,
             resend_flag INTEGER DEFAULT 0
         )
-    """)
+    """
+    )
 
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             enable_email INTEGER DEFAULT 0,
@@ -849,10 +876,12 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             split_edi_include_invoices INTEGER DEFAULT 0,
             split_edi_include_credits INTEGER DEFAULT 0
         )
-    """)
+    """
+    )
     c.execute("INSERT INTO settings (id) VALUES (1)")
 
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE administrative (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             copy_to_directory TEXT DEFAULT '',
@@ -867,7 +896,8 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             batch_add_folder_prior TEXT,
             export_processed_folder_prior TEXT
         )
-    """)
+    """
+    )
     c.execute(
         "INSERT INTO administrative (id, logs_directory) VALUES (1, ?)",
         (os.path.join(config_folder, "logs"),),
@@ -1044,13 +1074,15 @@ class TestAppUpgradeViaDatabaseObj:
         )
 
         # Insert a new folder post-upgrade
-        db.folders_table.insert(dict(
-            folder_name="/new/path",
-            alias="new_folder",
-            folder_is_active=1,
-            process_backend_copy=1,
-            copy_to_directory="/new/out",
-        ))
+        db.folders_table.insert(
+            dict(
+                folder_name="/new/path",
+                alias="new_folder",
+                folder_is_active=1,
+                process_backend_copy=1,
+                copy_to_directory="/new/out",
+            )
+        )
         db.database_connection.commit()
 
         found = db.folders_table.find_one(alias="new_folder")
@@ -1247,7 +1279,9 @@ class TestRealLegacyDbViaDatabaseObj:
         assert settings is not None
         db.close()
 
-    def test_real_v32_can_insert_new_folder_after_upgrade(self, legacy_db_copy, tmp_path):
+    def test_real_v32_can_insert_new_folder_after_upgrade(
+        self, legacy_db_copy, tmp_path
+    ):
         """Post-upgrade, new folder inserts work on the real legacy DB."""
         config = str(tmp_path / "config")
         os.makedirs(config, exist_ok=True)
@@ -1259,11 +1293,13 @@ class TestRealLegacyDbViaDatabaseObj:
             running_platform="Linux",
         )
 
-        db.folders_table.insert(dict(
-            folder_name="/brand/new/path",
-            alias="post_upgrade_folder",
-            folder_is_active=1,
-        ))
+        db.folders_table.insert(
+            dict(
+                folder_name="/brand/new/path",
+                alias="post_upgrade_folder",
+                folder_is_active=1,
+            )
+        )
         db.database_connection.commit()
 
         found = db.folders_table.find_one(alias="post_upgrade_folder")

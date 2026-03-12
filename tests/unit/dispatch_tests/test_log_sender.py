@@ -5,12 +5,12 @@ This module tests the refactored log sender with mock services.
 
 from dispatch.log_sender import (
     EmailConfig,
-    LogSender,
     LogEntry,
-    SMTPEmailService,
+    LogSender,
     MockEmailService,
     MockUIService,
     NullUIService,
+    SMTPEmailService,
     create_log_sender_from_settings,
 )
 

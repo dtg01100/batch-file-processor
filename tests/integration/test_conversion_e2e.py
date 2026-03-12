@@ -23,9 +23,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
 
 import csv
 import os
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # =============================================================================
 # EDI FORMAT SPECIFICATIONS (from test_convert_backends.py)

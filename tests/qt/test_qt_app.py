@@ -3,11 +3,12 @@
 import pytest
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui, pytest.mark.slow]
-from unittest.mock import MagicMock
-import os
 import argparse
-import types
 import builtins
+import os
+import types
+from unittest.mock import MagicMock
+
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
 
@@ -455,7 +456,7 @@ class TestQtBatchFileSenderApp:
         single_table = MagicMock()
         session_database = MagicMock()
         session_database.__getitem__.return_value = single_table
-        
+
         # Mock the PRAGMA table_info query to return column info for filtering
         def query_side_effect(sql):
             if "PRAGMA table_info" in sql:
@@ -467,7 +468,7 @@ class TestQtBatchFileSenderApp:
                     {"name": "old_id"},
                 ]
             return None
-        
+
         session_database.query.side_effect = query_side_effect
         app._database.session_database = session_database
         app._database.folders_table.find_one.return_value = {
@@ -1229,8 +1230,9 @@ class TestQtBatchFileSenderApp:
         app._process_directories(folders_table)
 
     def test_build_main_window_creates_widgets(self, qtbot):
-        from interface.qt.app import QtBatchFileSenderApp
         from PyQt6.QtWidgets import QMainWindow
+
+        from interface.qt.app import QtBatchFileSenderApp
 
         db = MagicMock()
         db.folders_table.count.return_value = 0
@@ -1287,8 +1289,9 @@ class TestQtBatchFileSenderApp:
         db.folders_table.update.assert_called_once_with(folder_config, ["id"])
 
     def test_configure_window(self, qtbot):
-        from interface.qt.app import QtBatchFileSenderApp
         from PyQt6.QtWidgets import QMainWindow
+
+        from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
         window = QMainWindow()
@@ -1608,8 +1611,9 @@ class TestQtBatchFileSenderApp:
 
     def test_parse_arguments_parses_self_test_flag(self):
         """Test _parse_arguments correctly parses self-test flag."""
-        from interface.qt.app import QtBatchFileSenderApp
         import sys
+
+        from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
 
@@ -1624,8 +1628,9 @@ class TestQtBatchFileSenderApp:
 
     def test_parse_arguments_parses_automatic_flag(self):
         """Test _parse_arguments correctly parses automatic flag."""
-        from interface.qt.app import QtBatchFileSenderApp
         import sys
+
+        from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
 
@@ -1640,8 +1645,9 @@ class TestQtBatchFileSenderApp:
 
     def test_parse_arguments_default_values(self):
         """Test _parse_arguments has correct default values."""
-        from interface.qt.app import QtBatchFileSenderApp
         import sys
+
+        from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
 

@@ -1,9 +1,10 @@
 """Folder Data Extractor tests for EditFoldersDialog refactoring."""
 
-import pytest
-from unittest.mock import MagicMock
-import sys
 import os
+import sys
+from unittest.mock import MagicMock
+
+import pytest
 
 # Add the project root to the path
 sys.path.insert(
@@ -14,8 +15,8 @@ sys.path.insert(
 )
 
 from interface.operations.folder_data_extractor import (
-    FolderDataExtractor,
     ExtractedDialogFields,
+    FolderDataExtractor,
 )
 
 # =============================================================================

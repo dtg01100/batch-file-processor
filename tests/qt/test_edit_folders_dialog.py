@@ -14,6 +14,7 @@ Mocks file dialogs and message boxes.
 from unittest.mock import MagicMock
 
 import pytest
+
 from interface.qt.theme import Theme
 
 
@@ -629,7 +630,9 @@ class TestConvertFormatFieldPopulation:
         assert dialog._sw_arec_padding_field.text() == "X"
         assert dialog._tweak_arec_padding_length.currentText() == "30"
 
-    def test_basic_format_shows_no_additional_options(self, qtbot, sample_folder_config):
+    def test_basic_format_shows_no_additional_options(
+        self, qtbot, sample_folder_config
+    ):
         """jolley_custom/stewarts_custom/YellowDog CSV show no extra option fields."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_edi"] = "True"
@@ -693,7 +696,9 @@ class TestConvertFormatFieldPopulation:
         assert sample_folder_config["invoice_date_offset"] == 3
         assert sample_folder_config["force_txt_file_ext"] is True
 
-    def test_estore_einvoice_generic_populates_c_record_oid(self, qtbot, sample_folder_config):
+    def test_estore_einvoice_generic_populates_c_record_oid(
+        self, qtbot, sample_folder_config
+    ):
         """Estore eInvoice Generic should populate the C Record OId field."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_edi"] = "True"
@@ -708,8 +713,6 @@ class TestConvertFormatFieldPopulation:
 
         assert dialog._estore_store_number_field.text() == "99"
         assert dialog._estore_c_record_oid_field.text() == "COID123"
-
-
 
     """Tests for proper field population when switching EDI options."""
 
@@ -998,10 +1001,11 @@ class TestWidgetCleanupAndLifecycle:
 
     def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
         """Data extractor should handle widgets that have been deleted with deleteLater()."""
+        from PyQt6.QtWidgets import QLineEdit
+
         from interface.qt.dialogs.edit_folders.data_extractor import (
             QtFolderDataExtractor,
         )
-        from PyQt6.QtWidgets import QLineEdit
 
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True

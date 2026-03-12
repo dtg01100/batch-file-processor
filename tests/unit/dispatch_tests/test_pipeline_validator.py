@@ -5,10 +5,10 @@ import logging
 import pytest
 
 from dispatch.pipeline.validator import (
-    ValidationResult,
-    MockValidator,
     EDIValidationStep,
+    MockValidator,
     ValidationError,
+    ValidationResult,
 )
 
 

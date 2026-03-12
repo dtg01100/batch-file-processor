@@ -2,13 +2,13 @@
 
 import unittest
 
+from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
-    PluginConfigurationMapper,
-    PluginSectionStateManager,
     ExtractedPluginConfig,
     PluginConfigPopulationResult,
+    PluginConfigurationMapper,
+    PluginSectionStateManager,
 )
-from interface.models.folder_configuration import FolderConfiguration
 
 
 class TestPluginSectionStateManager(unittest.TestCase):

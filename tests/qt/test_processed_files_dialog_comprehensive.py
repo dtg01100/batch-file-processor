@@ -9,10 +9,11 @@ Tests cover:
 - Error handling
 """
 
-import pytest
 from unittest.mock import patch
-from PyQt6.QtWidgets import QPushButton
+
+import pytest
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QPushButton
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 

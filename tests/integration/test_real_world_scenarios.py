@@ -17,17 +17,15 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-import tempfile
-from pathlib import Path
 from unittest import mock
 
 import pytest
 
-from interface.operations.folder_manager import FolderManager
-from interface.database.database_obj import DatabaseObj
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 import create_database
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from interface.database.database_obj import DatabaseObj
+from interface.operations.folder_manager import FolderManager
 
 
 @pytest.fixture
@@ -67,7 +65,11 @@ def workspace(tmp_path):
     # Ensure administrative record exists with a valid logs directory
     if db.oversight_and_defaults.find_one(id=1) is None:
         db.oversight_and_defaults.insert(
-            dict(id=1, logs_directory=str(logs_dir), errors_folder=str(tmp_path / "errors"))
+            dict(
+                id=1,
+                logs_directory=str(logs_dir),
+                errors_folder=str(tmp_path / "errors"),
+            )
         )
     else:
         db.oversight_and_defaults.update(
@@ -261,8 +263,9 @@ def test_tweaking_scenario(workspace):
     test_file_path.write_text(test_file_content)
 
     # Setup orchestrator with pipeline steps (needed for tweaking)
-    from dispatch.pipeline.tweaker import EDITweakerStep
     from unittest import mock
+
+    from dispatch.pipeline.tweaker import EDITweakerStep
 
     with mock.patch("archive.edi_tweaks.query_runner") as mock_qr:
         config = DispatchConfig(
@@ -367,7 +370,7 @@ def test_csv_conversion_with_options(workspace):
 
 def test_all_conversion_formats(workspace):
     """Test that all supported conversion formats can process a file."""
-    from dispatch.pipeline.converter import EDIConverterStep, SUPPORTED_FORMATS
+    from dispatch.pipeline.converter import SUPPORTED_FORMATS, EDIConverterStep
 
     db = workspace["db"]
     folder_manager = FolderManager(db)
@@ -637,9 +640,10 @@ def test_ftp_backend(workspace):
 
 def test_conversion_with_tweaking(workspace):
     """Test conversion combined with EDI tweaking."""
+    from unittest import mock
+
     from dispatch.pipeline.converter import EDIConverterStep
     from dispatch.pipeline.tweaker import EDITweakerStep
-    from unittest import mock
 
     db = workspace["db"]
     folder_manager = FolderManager(db)
@@ -1342,8 +1346,9 @@ def test_backends_with_csv_options(workspace, backend_type, backend_config):
     test_file_path = workspace["input"] / f"test_backend_{backend_type}.edi"
     test_file_path.write_text(test_file_content)
 
-    from dispatch.pipeline.converter import EDIConverterStep
     from unittest import mock
+
+    from dispatch.pipeline.converter import EDIConverterStep
 
     if backend_type == "ftp":
         with mock.patch("backend.ftp_client.RealFTPClient") as MockFTP:

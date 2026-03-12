@@ -3,16 +3,16 @@
 These tests target low-coverage helper modules used by the Qt EditFolders dialog.
 """
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QPushButton
+from PyQt6.QtWidgets import QDialog, QPushButton, QVBoxLayout, QWidget
 
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
-from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
+from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 
 
 @pytest.mark.qt

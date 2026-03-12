@@ -5,8 +5,9 @@ Tests the base plugin interface and lifecycle management.
 """
 
 import unittest
+from typing import Any, Dict
 from unittest.mock import patch
-from typing import Dict, Any
+
 from interface.plugins import PluginBase
 from interface.plugins.config_schemas import (
     ConfigurationSchema,

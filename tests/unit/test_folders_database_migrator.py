@@ -12,9 +12,9 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 
-from interface.database import sqlite_wrapper
-import schema
 import folders_database_migrator
+import schema
+from interface.database import sqlite_wrapper
 
 
 class TestLogMigrationStep:
@@ -47,8 +47,8 @@ class TestUpgradeDatabase:
         schema.ensure_schema(db_conn)
 
         # Start at version 10
-        db_conn['version'].insert(dict(version="10", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="10", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         # Request upgrade to version 10 (should be a no-op)
@@ -56,8 +56,8 @@ class TestUpgradeDatabase:
             db_conn, str(tmp_path), "Linux", target_version="10"
         )
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "10"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "10"
 
         db_conn.close()
 
@@ -68,9 +68,9 @@ class TestUpgradeDatabase:
         schema.ensure_schema(db_conn)
 
         # Start at version 10
-        db_conn['version'].insert(dict(version="10", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
+        db_conn["version"].insert(dict(version="10", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
         db_conn.commit()
 
         # Request upgrade to version 12
@@ -78,8 +78,8 @@ class TestUpgradeDatabase:
             db_conn, str(tmp_path), "Linux", target_version="12"
         )
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "12"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "12"
 
         db_conn.close()
 
@@ -90,14 +90,14 @@ class TestUpgradeDatabase:
         schema.ensure_schema(db_conn)
 
         # Start at version 42 (current)
-        db_conn['version'].insert(dict(version="42", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="42", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -107,16 +107,16 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="10", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
-        db_conn['processed_files'].insert(dict(folder_id=1, filename='test.edi'))
+        db_conn["version"].insert(dict(version="10", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn["processed_files"].insert(dict(folder_id=1, filename="test.edi"))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -126,15 +126,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="15", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="15", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -144,15 +144,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="20", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="20", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -162,15 +162,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="25", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="25", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -180,15 +180,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="30", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="30", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -202,8 +202,8 @@ class TestMigrationEdgeCases:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="30", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="30", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         # Should not raise with None config_folder
@@ -217,9 +217,9 @@ class TestMigrationEdgeCases:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="30", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="30", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         # Run migration multiple times
@@ -227,9 +227,9 @@ class TestMigrationEdgeCases:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
+        version_record = db_conn["version"].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record['version']) <= 42
+        assert int(version_record["version"]) <= 42
 
         db_conn.close()
 
@@ -243,16 +243,16 @@ class TestMigrationVersion36:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="35", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="35", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Migration runs to completion (note: target_version param has a bug)
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) >= 35
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) >= 35
 
         db_conn.close()
 
@@ -266,15 +266,15 @@ class TestMigrationVersion37and38:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="36", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="36", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Migration runs to completion
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) >= 36
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) >= 36
 
         db_conn.close()
 
@@ -284,16 +284,16 @@ class TestMigrationVersion37and38:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="37", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="37", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Migration runs to completion
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) >= 37
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) >= 37
 
         db_conn.close()
 
@@ -307,16 +307,16 @@ class TestMigrationVersion39:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="38", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="38", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Migration runs to completion
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) >= 38
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) >= 38
 
         db_conn.close()
 
@@ -330,16 +330,16 @@ class TestMigrationVersion40:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="39", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="39", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Migration runs to completion
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) >= 39
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) >= 39
 
         db_conn.close()
 
@@ -353,15 +353,15 @@ class TestMigrationVersion41:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="40", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="40", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "42"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "42"
 
         db_conn.close()
 
@@ -376,16 +376,16 @@ class TestMigrationSkipLogic:
         schema.ensure_schema(db_conn)
 
         # Start at a version that has duplicate checks (e.g., version 11)
-        db_conn['version'].insert(dict(version="11", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
+        db_conn["version"].insert(dict(version="11", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
         db_conn.commit()
 
         # This should complete without hanging or errors
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert int(version_record['version']) > 11
+        version_record = db_conn["version"].find_one(id=1)
+        assert int(version_record["version"]) > 11
 
         db_conn.close()
 
@@ -395,16 +395,16 @@ class TestMigrationSkipLogic:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="35", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="35", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(
             db_conn, str(tmp_path), "Linux", target_version="35"
         )
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "35"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "35"
 
         db_conn.close()
 
@@ -414,16 +414,16 @@ class TestMigrationSkipLogic:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="35", os="Linux"))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="35", os="Linux"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(
             db_conn, str(tmp_path), "Linux", target_version="36"
         )
 
-        version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "36"
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "36"
 
         db_conn.close()
 
@@ -437,17 +437,17 @@ class TestMigrationContents:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="29", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
+        db_conn["version"].insert(dict(version="29", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        folders = list(db_conn['folders'].all())
-        assert 'split_edi_include_invoices' in folders[0]
-        assert 'split_edi_include_credits' in folders[0]
-        assert 'fintech_division_id' in folders[0]
+        folders = list(db_conn["folders"].all())
+        assert "split_edi_include_invoices" in folders[0]
+        assert "split_edi_include_credits" in folders[0]
+        assert "fintech_division_id" in folders[0]
 
         db_conn.close()
 
@@ -457,24 +457,24 @@ class TestMigrationContents:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="32", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
-        db_conn['processed_files'].insert(dict(folder_id=1, filename='test.edi'))
-        db_conn['settings'].insert(dict(folder_name='test'))
+        db_conn["version"].insert(dict(version="32", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn["processed_files"].insert(dict(folder_id=1, filename="test.edi"))
+        db_conn["settings"].insert(dict(folder_name="test"))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         # Check folders has timestamps
-        folders = list(db_conn['folders'].all())
-        assert 'created_at' in folders[0]
-        assert 'updated_at' in folders[0]
+        folders = list(db_conn["folders"].all())
+        assert "created_at" in folders[0]
+        assert "updated_at" in folders[0]
 
         # Check processed_files has timestamps
-        processed = list(db_conn['processed_files'].all())
-        assert 'created_at' in processed[0]
-        assert 'processed_at' in processed[0]
+        processed = list(db_conn["processed_files"].all())
+        assert "created_at" in processed[0]
+        assert "processed_at" in processed[0]
 
         db_conn.close()
 
@@ -484,18 +484,18 @@ class TestMigrationContents:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        db_conn['version'].insert(dict(version="33", os="Linux"))
-        db_conn['folders'].insert(dict(folder_name='/test', alias='Test'))
-        db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
-        db_conn['processed_files'].insert(dict(folder_id=1, file_name='test.edi'))
+        db_conn["version"].insert(dict(version="33", os="Linux"))
+        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn["processed_files"].insert(dict(folder_id=1, file_name="test.edi"))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        processed = list(db_conn['processed_files'].all())
-        assert 'filename' in processed[0]
-        assert 'original_path' in processed[0]
-        assert 'processed_path' in processed[0]
-        assert 'status' in processed[0]
+        processed = list(db_conn["processed_files"].all())
+        assert "filename" in processed[0]
+        assert "original_path" in processed[0]
+        assert "processed_path" in processed[0]
+        assert "status" in processed[0]
 
         db_conn.close()

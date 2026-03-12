@@ -8,11 +8,12 @@ These tests verify that no fields are accidentally omitted from any part of the 
 Uses reflection/introspection to automatically detect missing fields.
 """
 
-import pytest
-import sys
 import os
+import sys
 from dataclasses import fields, is_dataclass
-from typing import Optional, Dict, Set
+from typing import Dict, Optional, Set
+
+import pytest
 
 # Add the project root to the path
 sys.path.insert(
@@ -20,19 +21,18 @@ sys.path.insert(
 )
 
 from interface.models.folder_configuration import (
+    ARecordPaddingConfiguration,
+    BackendSpecificConfiguration,
+    CopyConfiguration,
+    CSVConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
     FolderConfiguration,
     FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
-    UPCOverrideConfiguration,
-    ARecordPaddingConfiguration,
     InvoiceDateConfiguration,
-    BackendSpecificConfiguration,
-    CSVConfiguration,
+    UPCOverrideConfiguration,
 )
 from interface.operations.folder_data_extractor import ExtractedDialogFields
-
 
 # =============================================================================
 # FIELD COLLECTION UTILITIES
@@ -478,14 +478,14 @@ class TestFieldCoverageAnalysis:
         )
 
         print(f"\n{'='*60}")
-        print(f"EXTRACTOR FIELD COVERAGE ANALYSIS")
+        print("EXTRACTOR FIELD COVERAGE ANALYSIS")
         print(f"{'='*60}")
         print(f"Total to_dict keys: {len(fields_to_check)}")
         print(f"Extractor fields: {len(extractor_fields)}")
         print(f"Coverage: {coverage_pct:.1f}%")
 
         if missing_fields:
-            print(f"\nMissing fields in ExtractedDialogFields:")
+            print("\nMissing fields in ExtractedDialogFields:")
             for f in sorted(missing_fields):
                 print(f"  - {f}")
 
@@ -503,19 +503,19 @@ class TestFieldCoverageAnalysis:
         coverage_pct = len(expected_keys & actual_keys) / len(expected_keys) * 100
 
         print(f"\n{'='*60}")
-        print(f"to_dict() FIELD COVERAGE ANALYSIS")
+        print("to_dict() FIELD COVERAGE ANALYSIS")
         print(f"{'='*60}")
         print(f"Expected keys: {len(expected_keys)}")
         print(f"Actual keys: {len(actual_keys)}")
         print(f"Coverage: {coverage_pct:.1f}%")
 
         if missing_fields:
-            print(f"\nMissing fields in to_dict():")
+            print("\nMissing fields in to_dict():")
             for f in sorted(missing_fields):
                 print(f"  - {f}")
 
         if extra_fields:
-            print(f"\nExtra fields in to_dict() (not in expected):")
+            print("\nExtra fields in to_dict() (not in expected):")
             for f in sorted(extra_fields):
                 print(f"  - {f}")
 
@@ -618,7 +618,7 @@ class TestFieldCoverageAnalysis:
         assert config.csv.include_headers is True
 
         print(f"\n{'='*60}")
-        print(f"from_dict() FIELD COVERAGE ANALYSIS")
+        print("from_dict() FIELD COVERAGE ANALYSIS")
         print(f"{'='*60}")
         print(f"All {len(test_dict)} fields loaded successfully")
 
@@ -634,18 +634,18 @@ class TestFieldCoverageAnalysis:
         orphan_in_db = db_columns - to_dict_keys
 
         print(f"\n{'='*60}")
-        print(f"DATABASE COLUMN COVERAGE ANALYSIS")
+        print("DATABASE COLUMN COVERAGE ANALYSIS")
         print(f"{'='*60}")
         print(f"to_dict keys: {len(to_dict_keys)}")
         print(f"Initial DB columns: {len(db_columns)}")
 
         if missing_in_db:
-            print(f"\nFields in to_dict() but NOT in initial DB schema:")
+            print("\nFields in to_dict() but NOT in initial DB schema:")
             for f in sorted(missing_in_db):
                 print(f"  - {f}")
 
         if orphan_in_db:
-            print(f"\nFields in initial DB schema but NOT in to_dict():")
+            print("\nFields in initial DB schema but NOT in to_dict():")
             for f in sorted(orphan_in_db):
                 print(f"  - {f}")
 
@@ -675,11 +675,11 @@ class TestFieldCoverageAnalysis:
         )
 
         print(f"\n{'='*60}")
-        print(f"ORPHAN DATABASE COLUMN CHECK")
+        print("ORPHAN DATABASE COLUMN CHECK")
         print(f"{'='*60}")
 
         if orphan_columns:
-            print(f"Orphan DB columns (no corresponding config field):")
+            print("Orphan DB columns (no corresponding config field):")
             for f in sorted(orphan_columns):
                 print(f"  - {f}")
 
@@ -695,11 +695,11 @@ class TestFieldCoverageAnalysis:
         orphan_config = to_dict_keys - db_columns
 
         print(f"\n{'='*60}")
-        print(f"ORPHAN CONFIG FIELD CHECK")
+        print("ORPHAN CONFIG FIELD CHECK")
         print(f"{'='*60}")
 
         if orphan_config:
-            print(f"Config fields NOT in initial DB schema (may be lost on save):")
+            print("Config fields NOT in initial DB schema (may be lost on save):")
             for f in sorted(orphan_config):
                 print(f"  - {f}")
 
@@ -713,7 +713,7 @@ class TestFieldCoverageAnalysis:
         dispatch_fields = get_dispatch_required_fields()
 
         print(f"\n{'='*60}")
-        print(f"BACKEND FIELD REQUIREMENTS CHECK")
+        print("BACKEND FIELD REQUIREMENTS CHECK")
         print(f"{'='*60}")
 
         all_satisfied = True
@@ -732,7 +732,7 @@ class TestFieldCoverageAnalysis:
             print(f"DISPATCH missing fields: {missing_dispatch}")
             all_satisfied = False
         else:
-            print(f"DISPATCH: All required fields present ✓")
+            print("DISPATCH: All required fields present ✓")
 
         assert all_satisfied, "Some backends are missing required fields"
 
@@ -876,7 +876,7 @@ class TestFieldCoverageReport:
         backend_fields = get_backend_required_fields()
 
         print(f"\n{'='*70}")
-        print(f"FIELD COVERAGE SUMMARY REPORT")
+        print("FIELD COVERAGE SUMMARY REPORT")
         print(f"{'='*70}")
 
         print(f"\n1. FolderConfiguration.to_dict() output: {len(to_dict_keys)} fields")
@@ -892,7 +892,7 @@ class TestFieldCoverageReport:
         to_dict_vs_extractor = len(to_dict_keys & extractor_fields)
         to_dict_vs_db = len(to_dict_keys & db_columns)
 
-        print(f"\n4. Coverage Analysis:")
+        print("\n4. Coverage Analysis:")
         print(
             f"   to_dict vs Extractor: {to_dict_vs_extractor}/{len(to_dict_keys)} "
             f"({to_dict_vs_extractor/len(to_dict_keys)*100:.1f}%)"
@@ -907,17 +907,17 @@ class TestFieldCoverageReport:
         missing_in_db = to_dict_keys - db_columns
 
         if missing_in_extractor:
-            print(f"\n5. Fields in to_dict() but NOT in ExtractedDialogFields:")
+            print("\n5. Fields in to_dict() but NOT in ExtractedDialogFields:")
             for f in sorted(missing_in_extractor):
                 print(f"   - {f}")
 
         if missing_in_db:
-            print(f"\n6. Fields in to_dict() but NOT in initial DB schema:")
+            print("\n6. Fields in to_dict() but NOT in initial DB schema:")
             for f in sorted(missing_in_db):
                 print(f"   - {f}")
 
         # Backend coverage
-        print(f"\n7. Backend Field Coverage:")
+        print("\n7. Backend Field Coverage:")
         for backend_name, required in backend_fields.items():
             coverage = len(required & to_dict_keys)
             print(
@@ -1161,7 +1161,7 @@ class TestRoundTripIntegrity:
         )
 
         print(f"\n{'='*60}")
-        print(f"ROUNDTRIP TEST PASSED")
+        print("ROUNDTRIP TEST PASSED")
         print(f"{'='*60}")
         print(f"All {len(dict_form)} fields survived the round trip!")
 

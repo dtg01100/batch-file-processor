@@ -13,8 +13,12 @@ from scripts.graphical_mock_automatic_run import (
     run_graphical_mock_automatic,
 )
 
-
-pytestmark = [pytest.mark.integration, pytest.mark.workflow, pytest.mark.qt, pytest.mark.gui]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.workflow,
+    pytest.mark.qt,
+    pytest.mark.gui,
+]
 
 
 def test_mock_dispatch_process_updates_progress_and_writes_log() -> None:

@@ -11,13 +11,15 @@ Tests:
 - Feature flags default to correct values when not set
 """
 
-import pytest
 import os
+
+import pytest
+
 from dispatch.feature_flags import (
-    is_legacy_mode,
-    is_pipeline_enabled,
     get_debug_mode,
     get_feature_flags,
+    is_legacy_mode,
+    is_pipeline_enabled,
     set_feature_flag,
 )
 

@@ -192,7 +192,9 @@ def _create_legacy_db(path):
     conn.close()
 
 
-def test_redact_updates_expected_columns_and_preserves_empty_values(tmp_path, monkeypatch):
+def test_redact_updates_expected_columns_and_preserves_empty_values(
+    tmp_path, monkeypatch
+):
     db_path = tmp_path / "legacy.db"
     _create_legacy_db(db_path)
     monkeypatch.setattr(redact_script, "DB_PATH", str(db_path))

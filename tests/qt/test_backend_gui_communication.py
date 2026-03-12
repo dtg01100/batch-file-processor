@@ -14,7 +14,6 @@ import pytest
 
 from interface.qt.app import QtBatchFileSenderApp
 
-
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
 
@@ -164,7 +163,9 @@ class TestProcessingCallbackCommunication:
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr("interface.qt.app.utils.do_clear_old_files", lambda *_: None)
+        monkeypatch.setattr(
+            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
+        )
         monkeypatch.setattr("dispatch.process", fake_dispatch)
 
         app._process_directories(folders_table)

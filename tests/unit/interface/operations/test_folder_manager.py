@@ -4,11 +4,13 @@ Tests the FolderManager class with mocked database connections
 to ensure proper behavior without requiring actual database files.
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from interface.operations.folder_manager import (
-    FolderManager,
     DatabaseProtocol,
+    FolderManager,
     TableProtocol,
 )
 from tests.fakes import FakeDatabaseObj, FakeTable
@@ -166,9 +168,7 @@ class TestFolderManager:
 
     def test_get_active_folders(self, manager, mock_db):
         """Test getting active folders."""
-        mock_db.folders_table.find.return_value = [
-            {"id": 1, "folder_is_active": True}
-        ]
+        mock_db.folders_table.find.return_value = [{"id": 1, "folder_is_active": True}]
 
         result = manager.get_active_folders()
 
@@ -177,9 +177,7 @@ class TestFolderManager:
 
     def test_get_inactive_folders(self, manager, mock_db):
         """Test getting inactive folders."""
-        mock_db.folders_table.find.return_value = [
-            {"id": 2, "folder_is_active": False}
-        ]
+        mock_db.folders_table.find.return_value = [{"id": 2, "folder_is_active": False}]
 
         result = manager.get_inactive_folders()
 

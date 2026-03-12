@@ -141,7 +141,10 @@ class TestReportingServiceCommunication:
             utils_module=Utils,
         )
 
-        monkeypatch.setattr("interface.services.reporting_service.time.ctime", lambda: "Mon Mar 10 12:00:00 2026")
+        monkeypatch.setattr(
+            "interface.services.reporting_service.time.ctime",
+            lambda: "Mon Mar 10 12:00:00 2026",
+        )
 
         service.send_report_emails(
             settings_dict={"smtp_server": "example"},
@@ -181,7 +184,10 @@ class TestReportingServiceCommunication:
             utils_module=Utils,
         )
 
-        monkeypatch.setattr("interface.services.reporting_service.time.ctime", lambda: "Mon Mar 10 12:00:00 2026")
+        monkeypatch.setattr(
+            "interface.services.reporting_service.time.ctime",
+            lambda: "Mon Mar 10 12:00:00 2026",
+        )
 
         service.send_report_emails(
             settings_dict={},
@@ -277,4 +283,7 @@ class TestReportingServiceCommunication:
         error_log = next(tmp_path.glob("Email Errors Log *.txt"))
         content = error_log.read_text(encoding="utf-8")
         assert f"{missing_path} missing, skipping" in content
-        assert f"file was expected to be at {missing_path} on the sending computer" in content
+        assert (
+            f"file was expected to be at {missing_path} on the sending computer"
+            in content
+        )

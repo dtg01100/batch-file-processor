@@ -4,16 +4,15 @@ import hashlib
 import logging
 from unittest.mock import MagicMock
 
-
+from dispatch.edi_validator import EDIValidator
+from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import (
     DispatchConfig,
     DispatchOrchestrator,
-    FolderResult,
     FileResult,
+    FolderResult,
 )
-from dispatch.edi_validator import EDIValidator
 from dispatch.send_manager import MockBackend
-from dispatch.error_handler import ErrorHandler
 
 
 class MockDatabase:

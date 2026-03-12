@@ -10,7 +10,7 @@ Benefits over MagicMock:
 4. Catches protocol violations at test time
 """
 
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
 
 
 class FakeTable:
@@ -93,7 +93,8 @@ class FakeTable:
             self._data = []
         else:
             self._data = [
-                r for r in self._data
+                r
+                for r in self._data
                 if not all(r.get(k) == v for k, v in kwargs.items())
             ]
 
@@ -203,9 +204,15 @@ class FakeDatabaseObj:
         # Initialize standard tables
         self.folders_table = FakeTable(data.get("folders") if data else None)
         self.emails_table = FakeTable(data.get("emails_to_send") if data else None)
-        self.emails_table_batch = FakeTable(data.get("working_batch_emails_to_send") if data else None)
-        self.sent_emails_removal_queue = FakeTable(data.get("sent_emails_removal_queue") if data else None)
-        self.oversight_and_defaults = FakeTable(data.get("administrative") if data else None)
+        self.emails_table_batch = FakeTable(
+            data.get("working_batch_emails_to_send") if data else None
+        )
+        self.sent_emails_removal_queue = FakeTable(
+            data.get("sent_emails_removal_queue") if data else None
+        )
+        self.oversight_and_defaults = FakeTable(
+            data.get("administrative") if data else None
+        )
         self.processed_files = FakeTable(data.get("processed_files") if data else None)
         self.settings = FakeTable(data.get("settings") if data else None)
         self.session_database = FakeTable()

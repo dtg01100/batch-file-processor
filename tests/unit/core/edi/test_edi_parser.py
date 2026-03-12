@@ -1,17 +1,18 @@
 """Unit tests for EDI parser functions."""
 
 import pytest
+
 from core.edi.edi_parser import (
+    ARecord,
+    BRecord,
+    CRecord,
+    build_a_record,
+    build_b_record,
+    build_c_record,
     capture_records,
     parse_a_record,
     parse_b_record,
     parse_c_record,
-    build_a_record,
-    build_b_record,
-    build_c_record,
-    ARecord,
-    BRecord,
-    CRecord,
 )
 
 

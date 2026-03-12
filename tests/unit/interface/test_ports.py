@@ -11,11 +11,12 @@ Tests:
 """
 
 from unittest.mock import MagicMock, patch
+
 from interface.ports import (
-    UIServiceProtocol,
-    ProgressServiceProtocol,
     NullUIService,
+    ProgressServiceProtocol,
     QtUIService,
+    UIServiceProtocol,
 )
 
 

@@ -48,12 +48,16 @@ class TestRecordError:
 
     def test_do_function_exists(self):
         """Test that do function exists."""
-        assert hasattr(record_error, 'do')
+        assert hasattr(record_error, "do")
         assert callable(record_error.do)
 
     def test_basic_error_recording(
-        self, sample_run_log, sample_errors_log, sample_error_message,
-        sample_filename, sample_error_source
+        self,
+        sample_run_log,
+        sample_errors_log,
+        sample_error_message,
+        sample_filename,
+        sample_error_source,
     ):
         """Test basic error recording without threading."""
         result = record_error.do(
@@ -62,7 +66,7 @@ class TestRecordError:
             sample_error_message,
             sample_filename,
             sample_error_source,
-            threaded=False
+            threaded=False,
         )
 
         # Check that run_log has content written
@@ -80,8 +84,12 @@ class TestRecordError:
         assert sample_error_source in errors_log_content
 
     def test_error_message_format(
-        self, sample_run_log, sample_errors_log, sample_error_message,
-        sample_filename, sample_error_source
+        self,
+        sample_run_log,
+        sample_errors_log,
+        sample_error_message,
+        sample_filename,
+        sample_error_source,
     ):
         """Test that error message is formatted correctly."""
         record_error.do(
@@ -90,7 +98,7 @@ class TestRecordError:
             sample_error_message,
             sample_filename,
             sample_error_source,
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -112,12 +120,7 @@ class TestRecordError:
         error_source = "test_module"
 
         result_run_log, result_errors_log = record_error.do(
-            run_log,
-            errors_log,
-            error_message,
-            filename,
-            error_source,
-            threaded=True
+            run_log, errors_log, error_message, filename, error_source, threaded=True
         )
 
         assert result_run_log is run_log
@@ -138,7 +141,7 @@ class TestRecordError:
                 f"Error {i}",
                 f"file_{i}.txt",
                 "test_module",
-                threaded=True
+                threaded=True,
             )
 
         assert len(run_log) == 3
@@ -157,14 +160,14 @@ class TestRecordError:
             "Test error",
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         assert result is None
 
     def test_timestamp_included(self, sample_run_log, sample_errors_log):
         """Test that timestamp is included in error message."""
-        with patch('record_error.time.ctime') as mock_ctime:
+        with patch("record_error.time.ctime") as mock_ctime:
             mock_ctime.return_value = "Mon Mar  3 12:00:00 2026"
 
             record_error.do(
@@ -173,12 +176,14 @@ class TestRecordError:
                 "Test error",
                 "test.txt",
                 "test_module",
-                threaded=False
+                threaded=False,
             )
 
             mock_ctime.assert_called_once()
 
-    def test_special_characters_in_error_message(self, sample_run_log, sample_errors_log):
+    def test_special_characters_in_error_message(
+        self, sample_run_log, sample_errors_log
+    ):
         """Test handling of special characters in error message."""
         special_message = "Error: 'file' not found\nLine 2\tTabbed"
 
@@ -188,7 +193,7 @@ class TestRecordError:
             special_message,
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -205,7 +210,7 @@ class TestRecordError:
             long_message,
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -222,7 +227,7 @@ class TestRecordError:
             unicode_message,
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -237,7 +242,7 @@ class TestRecordError:
             "",
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -252,7 +257,7 @@ class TestRecordError:
             "Test error",
             "",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -267,7 +272,7 @@ class TestRecordError:
             "Test error",
             "test.txt",
             "",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -283,7 +288,7 @@ class TestRecordError:
                 f"Error {i}",
                 f"file_{i}.txt",
                 "test_module",
-                threaded=False
+                threaded=False,
             )
 
         sample_run_log.seek(0)
@@ -305,7 +310,7 @@ class TestRecordError:
             "Test error",
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_run_log.seek(0)
@@ -322,7 +327,7 @@ class TestRecordError:
             "Test error",
             "test.txt",
             "test_module",
-            threaded=False
+            threaded=False,
         )
 
         sample_errors_log.seek(0)
@@ -344,12 +349,7 @@ class TestRecordErrorEdgeCases:
             raise ValueError("Test exception")
         except ValueError as e:
             record_error.do(
-                run_log,
-                errors_log,
-                str(e),
-                "test.txt",
-                "test_module",
-                threaded=True
+                run_log, errors_log, str(e), "test.txt", "test_module", threaded=True
             )
 
         assert len(run_log) == 1
@@ -361,12 +361,7 @@ class TestRecordErrorEdgeCases:
         errors_log = []
 
         record_error.do(
-            run_log,
-            errors_log,
-            None,
-            "test.txt",
-            "test_module",
-            threaded=True
+            run_log, errors_log, None, "test.txt", "test_module", threaded=True
         )
 
         # Should not crash, message should contain "None"
@@ -379,12 +374,7 @@ class TestRecordErrorEdgeCases:
         errors_log = []
 
         record_error.do(
-            run_log,
-            errors_log,
-            404,
-            "test.txt",
-            "test_module",
-            threaded=True
+            run_log, errors_log, 404, "test.txt", "test_module", threaded=True
         )
 
         assert len(run_log) == 1
@@ -401,7 +391,7 @@ class TestRecordErrorEdgeCases:
             "Error",
             "/path/to/file with spaces & symbols!.txt",
             "test_module",
-            threaded=True
+            threaded=True,
         )
 
         assert len(run_log) == 1

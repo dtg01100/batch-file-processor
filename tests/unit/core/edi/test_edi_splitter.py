@@ -1,13 +1,14 @@
 """Unit tests for EDISplitter class."""
 
 import pytest
+
 from core.edi.edi_splitter import (
     EDISplitter,
+    RealFilesystem,
     SplitConfig,
     SplitResult,
-    RealFilesystem,
-    filter_b_records_by_category,
     _col_to_excel,
+    filter_b_records_by_category,
 )
 
 

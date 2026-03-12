@@ -1,7 +1,8 @@
 """Tests for ProcessedFilesDialog."""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from PyQt6.QtWidgets import QDialogButtonBox
 
 
@@ -17,8 +18,8 @@ class TestProcessedFilesDialogInitialization:
 
     def test_dialog_inherits_from_base_dialog(self):
         """Test that ProcessedFilesDialog inherits from BaseDialog."""
-        from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
         from interface.qt.dialogs.base_dialog import BaseDialog
+        from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
         assert issubclass(ProcessedFilesDialog, BaseDialog)
 

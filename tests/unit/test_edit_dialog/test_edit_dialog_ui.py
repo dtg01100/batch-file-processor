@@ -1,9 +1,8 @@
 """UI Dialog Integration tests for EditFoldersDialog refactoring."""
 
-from unittest.mock import MagicMock
-
-import sys
 import os
+import sys
+from unittest.mock import MagicMock
 
 # Add the project root to the path
 sys.path.insert(
@@ -15,14 +14,14 @@ sys.path.insert(
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.folder_data_extractor import (
-    FolderDataExtractor,
     ExtractedDialogFields,
+    FolderDataExtractor,
 )
+from interface.services.ftp_service import MockFTPService
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
 )
-from interface.services.ftp_service import MockFTPService
 
 
 class TestEditFoldersDialogClassAttributes:
@@ -31,6 +30,7 @@ class TestEditFoldersDialogClassAttributes:
     def test_default_ftp_service_is_none(self):
         """Test that default FTP service parameter is None."""
         import inspect
+
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         sig = inspect.signature(EditFoldersDialog.__init__)
@@ -39,6 +39,7 @@ class TestEditFoldersDialogClassAttributes:
     def test_default_validator_is_none(self):
         """Test that default validator parameter is None."""
         import inspect
+
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         sig = inspect.signature(EditFoldersDialog.__init__)
@@ -47,6 +48,7 @@ class TestEditFoldersDialogClassAttributes:
     def test_default_plugin_manager_is_none(self):
         """Test that default plugin_manager parameter is None."""
         import inspect
+
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         sig = inspect.signature(EditFoldersDialog.__init__)

@@ -1,9 +1,8 @@
 """Tests for dispatch/edi_validator.py module."""
 
 import logging
-import tempfile
 import os
-
+import tempfile
 
 from dispatch.edi_validator import EDIValidator, RealFileSystem
 

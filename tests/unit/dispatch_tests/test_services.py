@@ -3,26 +3,25 @@
 import logging
 import sys
 from io import StringIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-
-from dispatch.services.upc_service import (
-    UPCServiceResult,
-    MockQueryRunner,
-    UPCService,
-)
-from dispatch.services.progress_reporter import (
-    ProgressReporter,
-    CLIProgressReporter,
-    NullProgressReporter,
-    LoggingProgressReporter,
-)
 from dispatch.services.file_processor import (
+    FileProcessor,
     FileProcessorResult,
     MockFileProcessor,
-    FileProcessor,
+)
+from dispatch.services.progress_reporter import (
+    CLIProgressReporter,
+    LoggingProgressReporter,
+    NullProgressReporter,
+    ProgressReporter,
+)
+from dispatch.services.upc_service import (
+    MockQueryRunner,
+    UPCService,
+    UPCServiceResult,
 )
 
 

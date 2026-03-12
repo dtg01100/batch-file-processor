@@ -19,22 +19,21 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-import tempfile
+import os
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QApplication, QDialog, QPushButton
 
-import os
 from core.edi.edi_parser import build_a_record, build_b_record, build_c_record
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
-
 
 # =============================================================================
 # Test Fixtures
@@ -156,7 +155,7 @@ def initialized_app(qt_app, temp_workspace):
         yield app
 
         # Close the window before shutdown to avoid segfaults from stale Qt objects
-        if hasattr(app, '_window') and app._window is not None:
+        if hasattr(app, "_window") and app._window is not None:
             app._window.close()
             app._window.deleteLater()
         app.shutdown()
@@ -363,13 +362,17 @@ class TestMaintenanceWorkflow:
     ):
         """Test full flow from app startup through maintenance import selection."""
         app = initialized_app
-        fixture_path = str(Path(__file__).resolve().parents[1] / "fixtures" / "legacy_v32_folders.db")
+        fixture_path = str(
+            Path(__file__).resolve().parents[1] / "fixtures" / "legacy_v32_folders.db"
+        )
         assert Path(fixture_path).exists(), "Expected legacy fixture database to exist"
 
         captured_show_kwargs = {}
 
         # Avoid real backup side effects in this integration flow test.
-        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", lambda *_: None)
+        monkeypatch.setattr(
+            "interface.qt.app.backup_increment.do_backup", lambda *_: None
+        )
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.show_database_import_dialog",
@@ -384,7 +387,11 @@ class TestMaintenanceWorkflow:
         )
 
         def _fake_open_dialog(parent, maintenance_functions, ui_service=None):
-            path = ui_service.ask_open_filename(title="Select backup file to import") if ui_service else ""
+            path = (
+                ui_service.ask_open_filename(title="Select backup file to import")
+                if ui_service
+                else ""
+            )
             if path:
                 maintenance_functions.database_import_wrapper(path)
             return None
@@ -410,7 +417,9 @@ class TestMaintenanceWorkflow:
         app = initialized_app
 
         # Avoid real backup side effects in this integration flow test.
-        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", lambda *_: None)
+        monkeypatch.setattr(
+            "interface.qt.app.backup_increment.do_backup", lambda *_: None
+        )
 
         show_calls = []
         monkeypatch.setattr(
@@ -426,7 +435,11 @@ class TestMaintenanceWorkflow:
         )
 
         def _fake_open_dialog(parent, maintenance_functions, ui_service=None):
-            path = ui_service.ask_open_filename(title="Select backup file to import") if ui_service else ""
+            path = (
+                ui_service.ask_open_filename(title="Select backup file to import")
+                if ui_service
+                else ""
+            )
             if path:
                 maintenance_functions.database_import_wrapper(path)
             return None
@@ -446,11 +459,15 @@ class TestMaintenanceWorkflow:
     ):
         """Test selected fixture path is reflected in dialog constructor inputs."""
         app = initialized_app
-        fixture_path = str(Path(__file__).resolve().parents[1] / "fixtures" / "legacy_v32_folders.db")
+        fixture_path = str(
+            Path(__file__).resolve().parents[1] / "fixtures" / "legacy_v32_folders.db"
+        )
         assert Path(fixture_path).exists(), "Expected legacy fixture database to exist"
 
         # Avoid real backup side effects in this integration flow test.
-        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", lambda *_: None)
+        monkeypatch.setattr(
+            "interface.qt.app.backup_increment.do_backup", lambda *_: None
+        )
 
         captured_dialog_state = {}
 
@@ -465,8 +482,12 @@ class TestMaintenanceWorkflow:
                 preselected_database_path=None,
             ):
                 captured_dialog_state["selected_path"] = preselected_database_path
-                captured_dialog_state["label_text"] = preselected_database_path or "No File Selected"
-                captured_dialog_state["import_enabled"] = bool(preselected_database_path)
+                captured_dialog_state["label_text"] = (
+                    preselected_database_path or "No File Selected"
+                )
+                captured_dialog_state["import_enabled"] = bool(
+                    preselected_database_path
+                )
                 captured_dialog_state["parent"] = parent
                 captured_dialog_state["original_database_path"] = original_database_path
                 captured_dialog_state["running_platform"] = running_platform
@@ -489,7 +510,11 @@ class TestMaintenanceWorkflow:
         )
 
         def _fake_open_dialog(parent, maintenance_functions, ui_service=None):
-            path = ui_service.ask_open_filename(title="Select backup file to import") if ui_service else ""
+            path = (
+                ui_service.ask_open_filename(title="Select backup file to import")
+                if ui_service
+                else ""
+            )
             if path:
                 maintenance_functions.database_import_wrapper(path)
             return None
@@ -544,7 +569,9 @@ class TestMaintenanceWorkflow:
         finally:
             conn.close()
 
-        assert row is not None and row[0], "Expected at least one folder in legacy fixture DB"
+        assert (
+            row is not None and row[0]
+        ), "Expected at least one folder in legacy fixture DB"
         imported_folder_name = str(row[0])
 
         # Keep side effects local and deterministic.
@@ -565,7 +592,9 @@ class TestMaintenanceWorkflow:
             class _Thread:
                 progress = _Signal()
 
-            source_db_path = kwargs.get("preselected_database_path") or kwargs["backup_path"]
+            source_db_path = (
+                kwargs.get("preselected_database_path") or kwargs["backup_path"]
+            )
             job = DbMigrationJob(kwargs["original_database_path"], source_db_path)
             job.do_migrate(
                 cast(Any, _Thread()),
@@ -594,12 +623,18 @@ class TestMaintenanceWorkflow:
             "ask_open_filename",
             MagicMock(return_value=legacy_v32_db),
         )
-        monkeypatch.setattr(app._ui_service, "ask_ok_cancel", MagicMock(return_value=True))
+        monkeypatch.setattr(
+            app._ui_service, "ask_ok_cancel", MagicMock(return_value=True)
+        )
 
         # Use the real maintenance dialog and click the real import button.
         def _maintenance_exec_and_click_import(self):
             import_btn = next(
-                (b for b in self.findChildren(QPushButton) if b.text() == "Import old configurations..."),
+                (
+                    b
+                    for b in self.findChildren(QPushButton)
+                    if b.text() == "Import old configurations..."
+                ),
                 None,
             )
             assert import_btn is not None, "Expected Import old configurations button"
@@ -613,7 +648,11 @@ class TestMaintenanceWorkflow:
         )
 
         maintenance_button = next(
-            (b for b in app._window.findChildren(QPushButton) if b.text() == "Maintenance..."),
+            (
+                b
+                for b in app._window.findChildren(QPushButton)
+                if b.text() == "Maintenance..."
+            ),
             None,
         )
         assert maintenance_button is not None, "Expected Maintenance sidebar button"
@@ -682,7 +721,9 @@ class TestMaintenanceWorkflow:
             + " \n"
             + build_c_record("TAB", "Sales Tax".ljust(25), "000010000")
         )
-        (Path(input_dir) / "realistic_import_run.edi").write_text(edi_content, encoding="utf-8")
+        (Path(input_dir) / "realistic_import_run.edi").write_text(
+            edi_content, encoding="utf-8"
+        )
         edi_file_path = str(Path(input_dir) / "realistic_import_run.edi")
         single_edi_file_path = str(Path(input_dir) / "realistic_import_single.edi")
 
@@ -706,9 +747,15 @@ class TestMaintenanceWorkflow:
 
         # Track file discovery per folder. Initialize entries for all active folders
         # so we can validate that some folders are empty while others have files.
-        active_folder_rows = list(app._database.folders_table.find(folder_is_active=True))
-        active_folder_names = [str(f["folder_name"]) for f in active_folder_rows if f.get("folder_name")]
-        processed_files_per_folder = {folder_name: [] for folder_name in active_folder_names}
+        active_folder_rows = list(
+            app._database.folders_table.find(folder_is_active=True)
+        )
+        active_folder_names = [
+            str(f["folder_name"]) for f in active_folder_rows if f.get("folder_name")
+        ]
+        processed_files_per_folder = {
+            folder_name: [] for folder_name in active_folder_names
+        }
         primary_folder_with_files = None
 
         def _mock_get_files(self, path: str):
@@ -736,7 +783,6 @@ class TestMaintenanceWorkflow:
             "dispatch.orchestrator.DispatchOrchestrator._get_files_in_folder",
             _mock_get_files,
         )
-
 
         # Mock ODBC connection/query layer (external dependency boundary).
         query_calls = []
@@ -853,9 +899,13 @@ class TestMaintenanceWorkflow:
         # Ensure conversion is applied in runtime processing context without mutating DB schema.
         from dispatch.orchestrator import DispatchOrchestrator
 
-        original_build_processing_context = DispatchOrchestrator._build_processing_context
+        original_build_processing_context = (
+            DispatchOrchestrator._build_processing_context
+        )
 
-        def _build_processing_context_with_transient_convert(self, folder_data, upc_dict):
+        def _build_processing_context_with_transient_convert(
+            self, folder_data, upc_dict
+        ):
             context = original_build_processing_context(self, folder_data, upc_dict)
             context.effective_folder["convert_to_format"] = "jolley_custom"
             context.effective_folder["convert_edi"] = True
@@ -873,7 +923,9 @@ class TestMaintenanceWorkflow:
         )
 
         # Track that ALL active folders are being processed (not just ones with files).
-        active_folder_ids = set(f["id"] for f in app._database.folders_table.find(folder_is_active=True))
+        active_folder_ids = set(
+            f["id"] for f in app._database.folders_table.find(folder_is_active=True)
+        )
         processed_folder_ids = set()
         # Import and save original method before creating wrapper
         original_process_folder = DispatchOrchestrator.process_folder
@@ -886,6 +938,7 @@ class TestMaintenanceWorkflow:
 
         def _track_process_folder_calls():
             """Factory to create a wrapper that tracks which folders are processed."""
+
             def _inner_wrapper(self, folder, run_log, processed_files):
                 folder_id = folder.get("id")
                 if folder_id:
@@ -935,23 +988,23 @@ class TestMaintenanceWorkflow:
                 }
             )
 
-        assert (copy_calls or ftp_calls or email_calls), (
-            "Expected at least one backend to be invoked during run"
-        )
+        assert (
+            copy_calls or ftp_calls or email_calls
+        ), "Expected at least one backend to be invoked during run"
         assert sent_file_snapshots, "Expected captured sent file content"
         sent_file = sent_file_snapshots[0]
-        assert sent_file["filename"].lower().endswith(".csv"), (
-            "Expected converted output to be a CSV file"
-        )
-        assert "Invoice Details" in sent_file["content"], (
-            "Expected converted Jolley CSV invoice header"
-        )
-        assert "Corporate Customer" in sent_file["content"], (
-            "Expected customer lookup fields from mocked ODBC query"
-        )
-        assert "Test Item Description" in sent_file["content"], (
-            "Expected transformed line-item detail from input EDI"
-        )
+        assert (
+            sent_file["filename"].lower().endswith(".csv")
+        ), "Expected converted output to be a CSV file"
+        assert (
+            "Invoice Details" in sent_file["content"]
+        ), "Expected converted Jolley CSV invoice header"
+        assert (
+            "Corporate Customer" in sent_file["content"]
+        ), "Expected customer lookup fields from mocked ODBC query"
+        assert (
+            "Test Item Description" in sent_file["content"]
+        ), "Expected transformed line-item detail from input EDI"
         processed_after_full = list(app._database.processed_files.all())
         assert processed_after_full, "Expected processed_files rows after full run"
         assert all(r.get("file_checksum") for r in processed_after_full)
@@ -1005,7 +1058,9 @@ class TestMaintenanceWorkflow:
             if btn.text() == "Send":
                 send_button = btn
                 break
-        assert send_button is not None or folder is not None, "Expected row-level Send button or fallback folder id"
+        assert (
+            send_button is not None or folder is not None
+        ), "Expected row-level Send button or fallback folder id"
 
         pre_single_send_count = len(copy_calls) + len(ftp_calls) + len(email_calls)
         if send_button is not None:
@@ -1025,33 +1080,36 @@ class TestMaintenanceWorkflow:
                 '"Invoice Details","Corporate Customer"\n"Test Item Description","2"\n',
                 encoding="utf-8",
             )
-            _mock_copy_backend(folder.copy(), settings.copy(), str(synthetic_single_csv))
+            _mock_copy_backend(
+                folder.copy(), settings.copy(), str(synthetic_single_csv)
+            )
             post_single_send_count = len(copy_calls) + len(ftp_calls) + len(email_calls)
 
-        assert post_single_send_count > pre_single_send_count, (
-            "Expected additional send during single-folder run"
-        )
+        assert (
+            post_single_send_count > pre_single_send_count
+        ), "Expected additional send during single-folder run"
         processed_after_single = list(app._database.processed_files.all())
         assert len(processed_after_single) >= len(processed_after_full)
-        assert any("Invoice Details" in s["content"] for s in sent_file_snapshots), (
-            "Expected transformed CSV content in sent files across runs"
-        )
-        assert any("FROM dacdata.ohhst" in q for q in query_calls), (
-            "Expected ODBC customer lookup query"
-        )
-        assert any("select distinct bubacd" in q for q in query_calls), (
-            "Expected ODBC UOM lookup query"
-        )
+        assert any(
+            "Invoice Details" in s["content"] for s in sent_file_snapshots
+        ), "Expected transformed CSV content in sent files across runs"
+        assert any(
+            "FROM dacdata.ohhst" in q for q in query_calls
+        ), "Expected ODBC customer lookup query"
+        assert any(
+            "select distinct bubacd" in q for q in query_calls
+        ), "Expected ODBC UOM lookup query"
 
         # Ensure we generated folder entries for every active folder.
-        assert set(active_folder_names).issubset(set(processed_files_per_folder.keys())), (
-            "Expected discovery entries for all active folders"
-        )
+        assert set(active_folder_names).issubset(
+            set(processed_files_per_folder.keys())
+        ), "Expected discovery entries for all active folders"
 
         folders_with_empty_entries = [
             folder_name
             for folder_name, discovered_batches in processed_files_per_folder.items()
-            if not discovered_batches or any(len(batch) == 0 for batch in discovered_batches)
+            if not discovered_batches
+            or any(len(batch) == 0 for batch in discovered_batches)
         ]
         folders_with_multiple_files = [
             folder_name
@@ -1059,107 +1117,111 @@ class TestMaintenanceWorkflow:
             if any(len(batch) > 1 for batch in discovered_batches)
         ]
 
-        assert folders_with_empty_entries, (
-            "Expected some folders to have empty discovery entries"
-        )
-        assert folders_with_multiple_files, (
-            "Expected at least one folder with more than one discovered file"
-        )
-        
+        assert (
+            folders_with_empty_entries
+        ), "Expected some folders to have empty discovery entries"
+        assert (
+            folders_with_multiple_files
+        ), "Expected at least one folder with more than one discovered file"
+
         # Comprehensive validation for all sent files
         assert sent_file_snapshots, "Expected at least one sent file snapshot"
-        sent_csv_files = [f for f in sent_file_snapshots if f["filename"].lower().endswith(".csv")]
-        sent_edi_files = [f for f in sent_file_snapshots if f["filename"].lower().endswith(".edi")]
-        
+        sent_csv_files = [
+            f for f in sent_file_snapshots if f["filename"].lower().endswith(".csv")
+        ]
+        sent_edi_files = [
+            f for f in sent_file_snapshots if f["filename"].lower().endswith(".edi")
+        ]
+
         # CRITICAL: Only processed files should be sent, never originals
         assert not sent_edi_files, (
             f"Original EDI files should NOT be sent. "
             f"Only processed/converted files should be sent. "
             f"Found {len(sent_edi_files)} EDI files: {[f['filename'] for f in sent_edi_files]}"
         )
-        
+
         assert sent_csv_files, "Expected only converted CSV files to be sent"
         for idx, sent_file_snap in enumerate(sent_csv_files):
             # Validate format is CSV
-            assert sent_file_snap["filename"].lower().endswith(".csv"), (
-                f"Sent file {idx} should be CSV (processed), got: {sent_file_snap['filename']}"
-            )
+            assert (
+                sent_file_snap["filename"].lower().endswith(".csv")
+            ), f"Sent file {idx} should be CSV (processed), got: {sent_file_snap['filename']}"
             # Validate backend context
-            assert sent_file_snap.get("backend") in ["copy", "ftp", "email"], (
-                f"CSV file {idx} missing backend context"
-            )
+            assert sent_file_snap.get("backend") in [
+                "copy",
+                "ftp",
+                "email",
+            ], f"CSV file {idx} missing backend context"
             # Validate expected CSV content in each file
             content = sent_file_snap["content"]
-            assert "Invoice Details" in content, (
-                f"CSV file {idx} missing Jolley CSV invoice header"
-            )
+            assert (
+                "Invoice Details" in content
+            ), f"CSV file {idx} missing Jolley CSV invoice header"
             # Validate format structure (CSV has headers and data)
             lines = content.strip().split("\n")
-            assert len(lines) > 1, (
-                f"CSV file {idx} should have multiple lines (header + data)"
-            )
+            assert (
+                len(lines) > 1
+            ), f"CSV file {idx} should have multiple lines (header + data)"
             # Validate CSV structure with quoted fields
-            assert "," in content, (
-                f"CSV file {idx} missing comma separators (CSV format)"
-            )
+            assert (
+                "," in content
+            ), f"CSV file {idx} missing comma separators (CSV format)"
             # Validate CSV structure with quoted fields
-            assert '"' in content, (
-                f"CSV file {idx} missing quoted fields (standard CSV)"
-            )
-        
+            assert (
+                '"' in content
+            ), f"CSV file {idx} missing quoted fields (standard CSV)"
+
         # Validate backend distribution: at least one backend should have been used
         total_backend_calls = sum(sent_file_count_per_backend.values())
-        assert total_backend_calls > 0, (
-            "Expected at least one backend call"
-        )
-        assert len([b for b, count in sent_file_count_per_backend.items() if count > 0]) > 0, (
-            "Expected at least one backend type to be invoked"
-        )
-        
+        assert total_backend_calls > 0, "Expected at least one backend call"
+        assert (
+            len([b for b, count in sent_file_count_per_backend.items() if count > 0])
+            > 0
+        ), "Expected at least one backend type to be invoked"
+
         # Comprehensive database validation: each processed file has correct record
         assert processed_after_single, "Expected processed files records in database"
         for proc_file in processed_after_single:
             # Each record must have checksum
-            assert proc_file.get("file_checksum"), (
-                "Processed file record missing file_checksum"
-            )
+            assert proc_file.get(
+                "file_checksum"
+            ), "Processed file record missing file_checksum"
             # Each record must have status
-            assert proc_file.get("status") == "processed", (
-                f"Processed file record should have status='processed', got: {proc_file.get('status')}"
-            )
+            assert (
+                proc_file.get("status") == "processed"
+            ), f"Processed file record should have status='processed', got: {proc_file.get('status')}"
             # Each record must have folder_id
-            assert proc_file.get("folder_id") is not None, (
-                "Processed file record missing folder_id"
-            )
+            assert (
+                proc_file.get("folder_id") is not None
+            ), "Processed file record missing folder_id"
             # Each record must be associated with an active folder
-            assert proc_file.get("folder_id") in active_folder_ids, (
-                f"Processed file references non-existent folder: {proc_file.get('folder_id')}"
-            )
+            assert (
+                proc_file.get("folder_id") in active_folder_ids
+            ), f"Processed file references non-existent folder: {proc_file.get('folder_id')}"
             # Validate timestamps are present
-            assert proc_file.get("processed_at"), (
-                "Processed file record missing processed_at timestamp"
-            )
-        
+            assert proc_file.get(
+                "processed_at"
+            ), "Processed file record missing processed_at timestamp"
+
         # Validate log generation
         logs_dir_path = Path(logs_dir)
-        assert logs_dir_path.exists() and logs_dir_path.is_dir(), (
-            f"Logs directory should exist: {logs_dir_path}"
-        )
+        assert (
+            logs_dir_path.exists() and logs_dir_path.is_dir()
+        ), f"Logs directory should exist: {logs_dir_path}"
         log_files = list(logs_dir_path.glob("*.txt"))
         assert log_files, "Expected at least one log file generated"
-        
+
         # Validate run log contains expected content
         run_log = log_files[0]  # Get the most recent run log
         log_content = run_log.read_text(encoding="utf-8", errors="replace")
-        assert "starting run at" in log_content, (
-            "Run log should contain start marker"
-        )
+        assert "starting run at" in log_content, "Run log should contain start marker"
         # Run log should mention processing directories or files
         log_content_lower = log_content.lower()
-        assert "no files in directory" in log_content_lower or "processing" in log_content_lower, (
-            "Run log should contain directory/file processing entries"
-        )
-        
+        assert (
+            "no files in directory" in log_content_lower
+            or "processing" in log_content_lower
+        ), "Run log should contain directory/file processing entries"
+
         # Verify that ALL active folders were processed.
         assert processed_folder_ids == active_folder_ids, (
             f"Not all active folders were processed. "

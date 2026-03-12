@@ -5,10 +5,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from interface.database import sqlite_wrapper
 import pytest
 
 import folders_database_migrator
+from interface.database import sqlite_wrapper
 from tests.fakes import FakeEvent
 
 project_root = Path(__file__).parent.parent.resolve()
@@ -173,8 +173,8 @@ def temp_database(tmp_path):
     Returns:
         DatabaseObj: Temporary database object
     """
-    from interface.database.database_obj import DatabaseObj
     from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+    from interface.database.database_obj import DatabaseObj
 
     db_path = tmp_path / "test_folders.db"
 

@@ -11,12 +11,13 @@ Note: These tests are marked with @pytest.mark.performance
 and should be run separately from regular test suite.
 """
 
-import pytest
 import os
 import time
 import tracemalloc
-from unittest.mock import MagicMock
 from contextlib import contextmanager
+from unittest.mock import MagicMock
+
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.performance, pytest.mark.slow]
 
@@ -101,8 +102,8 @@ class TestScalabilityByFileCount:
 
     def test_process_10_files(self, large_dataset_workspace):
         """Test processing 10 files - baseline."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 10 files
         for i in range(10):
@@ -128,15 +129,13 @@ class TestScalabilityByFileCount:
 
         elapsed = t()
         assert result.success is True
-        assert_perf_threshold(
-            elapsed < 5.0, "Should complete in under 5 seconds"
-        )
+        assert_perf_threshold(elapsed < 5.0, "Should complete in under 5 seconds")
         print(f"\n10 files processed in {elapsed:.3f}s")
 
     def test_process_100_files(self, large_dataset_workspace):
         """Test processing 100 files."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 100 files
         for i in range(100):
@@ -162,15 +161,13 @@ class TestScalabilityByFileCount:
 
         elapsed = t()
         assert result.success is True
-        assert_perf_threshold(
-            elapsed < 30.0, "Should complete in under 30 seconds"
-        )
+        assert_perf_threshold(elapsed < 30.0, "Should complete in under 30 seconds")
         print(f"\n100 files processed in {elapsed:.3f}s")
 
     def test_process_1000_files(self, large_dataset_workspace):
         """Test processing 1000 files."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 1000 files
         for i in range(1000):
@@ -197,9 +194,7 @@ class TestScalabilityByFileCount:
         elapsed = t()
         assert result.success is True
         # Allow more time for large batch
-        assert_perf_threshold(
-            elapsed < 300.0, "Should complete in under 5 minutes"
-        )
+        assert_perf_threshold(elapsed < 300.0, "Should complete in under 5 minutes")
         print(
             f"\n1000 files processed in {elapsed:.3f}s ({elapsed/1000*1000:.1f} ms/file)"
         )
@@ -252,9 +247,7 @@ class TestDatabasePerformance:
 
         elapsed = t()
         assert len(results) == 500
-        assert_perf_threshold(
-            elapsed < 1.0, "Should complete in under 1 second"
-        )
+        assert_perf_threshold(elapsed < 1.0, "Should complete in under 1 second")
         print(f"\nMedium DB query (1000 records): {elapsed:.4f}s")
 
     def test_query_performance_large_database(self, temp_database):
@@ -262,10 +255,16 @@ class TestDatabasePerformance:
         folders_table = temp_database.folders_table
 
         # Add 10000 records
-        temp_database.folders_table.insert_many([
-            {"folder_name": f"/folder/{i}", "alias": f"Folder {i}", "folder_is_active": True}
-            for i in range(10000)
-        ])
+        temp_database.folders_table.insert_many(
+            [
+                {
+                    "folder_name": f"/folder/{i}",
+                    "alias": f"Folder {i}",
+                    "folder_is_active": True,
+                }
+                for i in range(10000)
+            ]
+        )
 
         with measure_time() as t:
             # Complex query
@@ -273,9 +272,7 @@ class TestDatabasePerformance:
 
         elapsed = t()
         assert len(results) == 10000
-        assert_perf_threshold(
-            elapsed < 5.0, "Should complete in under 5 seconds"
-        )
+        assert_perf_threshold(elapsed < 5.0, "Should complete in under 5 seconds")
         print(f"\nLarge DB query (10000 records): {elapsed:.4f}s")
 
 
@@ -285,8 +282,8 @@ class TestMemoryUsage:
 
     def test_memory_usage_small_batch(self, large_dataset_workspace):
         """Test memory usage with small batch (10 files)."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 10 files
         for i in range(10):
@@ -320,8 +317,8 @@ class TestMemoryUsage:
 
     def test_memory_usage_large_batch(self, large_dataset_workspace):
         """Test memory usage with large batch (100 files)."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 100 files
         for i in range(100):
@@ -378,9 +375,7 @@ class TestDiskIO:
         total_bytes = file_size * 100
         throughput_mb_s = (total_bytes / 1024 / 1024) / elapsed
         print(f"\nRead throughput: {throughput_mb_s:.2f} MB/s")
-        assert_perf_threshold(
-            elapsed < 1.0, "Should read 100KB in under 1 second"
-        )
+        assert_perf_threshold(elapsed < 1.0, "Should read 100KB in under 1 second")
 
     def test_write_performance(self, tmp_path):
         """Test file write performance."""
@@ -409,8 +404,8 @@ class TestUIResponsiveness:
 
     def test_progress_update_frequency(self, large_dataset_workspace):
         """Test that progress updates are frequent enough."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 50 files
         for i in range(50):
@@ -451,9 +446,7 @@ class TestUIResponsiveness:
         # Note: Progress update tracking depends on implementation
         # Just verify the processing completes successfully
         print(f"\n50 files processed in {elapsed:.3f}s")
-        assert_perf_threshold(
-            elapsed < 60.0, "Should complete in reasonable time"
-        )
+        assert_perf_threshold(elapsed < 60.0, "Should complete in reasonable time")
 
 
 @pytest.mark.performance
@@ -462,8 +455,8 @@ class TestConversionPerformance:
 
     def test_csv_conversion_speed(self, large_dataset_workspace):
         """Test CSV conversion speed."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
         from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 50 EDI files
         for i in range(50):
@@ -494,9 +487,7 @@ class TestConversionPerformance:
         print(f"\nCSV conversion speed: {files_per_second:.1f} files/second")
 
         # Should convert at reasonable speed
-        assert_perf_threshold(
-            files_per_second > 1.0, "At least 1 file per second"
-        )
+        assert_perf_threshold(files_per_second > 1.0, "At least 1 file per second")
 
 
 @pytest.mark.performance
@@ -505,9 +496,10 @@ class TestConcurrentProcessing:
 
     def test_parallel_folder_processing(self, tmp_path):
         """Test processing multiple folders in parallel."""
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from copy_backend import CopyBackend
         from concurrent.futures import ThreadPoolExecutor
+
+        from copy_backend import CopyBackend
+        from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 5 folders
         folders = []
@@ -561,6 +553,4 @@ class TestConcurrentProcessing:
         print(f"\nParallel processing (5 folders × 20 files): {elapsed:.3f}s")
 
         # Parallel should be faster than sequential
-        assert_perf_threshold(
-            elapsed < 30.0, "Should complete in under 30 seconds"
-        )
+        assert_perf_threshold(elapsed < 30.0, "Should complete in under 30 seconds")

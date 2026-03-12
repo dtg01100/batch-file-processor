@@ -6,7 +6,6 @@ import pytest
 
 from scripts.mock_automatic_run import run_mock_automatic
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.workflow]
 
 

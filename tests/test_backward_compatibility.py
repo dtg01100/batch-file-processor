@@ -14,7 +14,6 @@ Tests verify:
 """
 
 import inspect
-from pathlib import Path
 
 import pytest
 
@@ -27,6 +26,7 @@ class TestCoreModulesImportable:
     def test_dispatch_module_importable(self):
         """dispatch module should be importable."""
         import dispatch
+
         assert dispatch is not None
 
     @pytest.mark.backward_compatibility
@@ -34,6 +34,7 @@ class TestCoreModulesImportable:
     def test_dispatch_orchestrator_importable(self):
         """DispatchOrchestrator should be importable."""
         from dispatch import DispatchOrchestrator
+
         assert DispatchOrchestrator is not None
 
     @pytest.mark.backward_compatibility
@@ -41,6 +42,7 @@ class TestCoreModulesImportable:
     def test_backend_module_importable(self):
         """backend module should be importable."""
         import backend
+
         assert backend is not None
 
     @pytest.mark.backward_compatibility
@@ -48,6 +50,7 @@ class TestCoreModulesImportable:
     def test_backend_protocols_importable(self):
         """backend.protocols should be importable."""
         from backend import protocols
+
         assert protocols is not None
 
     @pytest.mark.backward_compatibility
@@ -55,6 +58,7 @@ class TestCoreModulesImportable:
     def test_core_module_importable(self):
         """core module should be importable."""
         import core
+
         assert core is not None
 
     @pytest.mark.backward_compatibility
@@ -62,6 +66,7 @@ class TestCoreModulesImportable:
     def test_schema_module_importable(self):
         """schema module should be importable."""
         import schema
+
         assert schema is not None
 
 
@@ -77,6 +82,7 @@ class TestBackendProtocolsCompatibility:
             FTPClientProtocol,
             SMTPClientProtocol,
         )
+
         assert FileOperationsProtocol is not None
         assert FTPClientProtocol is not None
         assert SMTPClientProtocol is not None
@@ -86,6 +92,7 @@ class TestBackendProtocolsCompatibility:
     def test_real_file_operations_exists(self):
         """RealFileOperations should exist."""
         from backend.file_operations import RealFileOperations
+
         assert RealFileOperations is not None
 
     @pytest.mark.backward_compatibility
@@ -93,6 +100,7 @@ class TestBackendProtocolsCompatibility:
     def test_file_operations_factory_exists(self):
         """create_file_operations factory should exist."""
         from backend.file_operations import create_file_operations
+
         assert callable(create_file_operations)
 
     @pytest.mark.backward_compatibility
@@ -100,6 +108,7 @@ class TestBackendProtocolsCompatibility:
     def test_ftp_client_importable(self):
         """FTP client module should be importable."""
         from backend.ftp_client import create_ftp_client
+
         assert callable(create_ftp_client)
 
     @pytest.mark.backward_compatibility
@@ -107,6 +116,7 @@ class TestBackendProtocolsCompatibility:
     def test_smtp_client_importable(self):
         """SMTP client (RealSMTPClient) should be importable."""
         from backend.smtp_client import RealSMTPClient
+
         assert RealSMTPClient is not None
 
 
@@ -118,6 +128,7 @@ class TestDispatchAPICompatibility:
     def test_dispatch_orchestrator_class_exists(self):
         """DispatchOrchestrator class should exist."""
         from dispatch import DispatchOrchestrator
+
         assert DispatchOrchestrator is not None
 
     @pytest.mark.backward_compatibility
@@ -125,6 +136,7 @@ class TestDispatchAPICompatibility:
     def test_dispatch_config_class_exists(self):
         """DispatchConfig class should exist."""
         from dispatch import DispatchConfig
+
         assert DispatchConfig is not None
 
     @pytest.mark.backward_compatibility
@@ -132,6 +144,7 @@ class TestDispatchAPICompatibility:
     def test_dispatch_orchestrator_has_process_method(self):
         """DispatchOrchestrator should have process method."""
         from dispatch import DispatchOrchestrator
+
         assert hasattr(DispatchOrchestrator, "process")
         assert callable(getattr(DispatchOrchestrator, "process"))
 
@@ -140,6 +153,7 @@ class TestDispatchAPICompatibility:
     def test_error_handler_exists(self):
         """ErrorHandler should be available."""
         from dispatch import ErrorHandler
+
         assert ErrorHandler is not None
 
     @pytest.mark.backward_compatibility
@@ -147,6 +161,7 @@ class TestDispatchAPICompatibility:
     def test_edi_validator_exists(self):
         """EDIValidator should be available."""
         from dispatch import EDIValidator
+
         assert EDIValidator is not None
 
     @pytest.mark.backward_compatibility
@@ -154,6 +169,7 @@ class TestDispatchAPICompatibility:
     def test_log_sender_exists(self):
         """LogSender should be available."""
         from dispatch import LogSender
+
         assert LogSender is not None
 
 
@@ -165,6 +181,7 @@ class TestPipelineCompatibility:
     def test_pipeline_module_exists(self):
         """dispatch.pipeline module should exist."""
         from dispatch import pipeline
+
         assert pipeline is not None
 
     @pytest.mark.backward_compatibility
@@ -172,6 +189,7 @@ class TestPipelineCompatibility:
     def test_converter_step_importable(self):
         """EDIConverterStep should be importable from pipeline."""
         from dispatch.pipeline.converter import EDIConverterStep
+
         assert EDIConverterStep is not None
 
     @pytest.mark.backward_compatibility
@@ -179,6 +197,7 @@ class TestPipelineCompatibility:
     def test_splitter_step_importable(self):
         """EDISplitterStep should be importable from pipeline."""
         from dispatch.pipeline.splitter import EDISplitterStep
+
         assert EDISplitterStep is not None
 
     @pytest.mark.backward_compatibility
@@ -186,6 +205,7 @@ class TestPipelineCompatibility:
     def test_validation_step_importable(self):
         """EDIValidationStep should be importable from pipeline."""
         from dispatch.pipeline.validator import EDIValidationStep
+
         assert EDIValidationStep is not None
 
     @pytest.mark.backward_compatibility
@@ -193,6 +213,7 @@ class TestPipelineCompatibility:
     def test_tweaker_step_importable(self):
         """EDITweakerStep should be importable from pipeline."""
         from dispatch.pipeline.tweaker import EDITweakerStep
+
         assert EDITweakerStep is not None
 
     @pytest.mark.backward_compatibility
@@ -201,8 +222,8 @@ class TestPipelineCompatibility:
         """Pipeline interfaces should exist."""
         from dispatch.pipeline.converter import ConverterInterface
         from dispatch.pipeline.splitter import SplitterInterface
-        from dispatch.pipeline.validator import ValidatorStepInterface
         from dispatch.pipeline.tweaker import TweakerInterface
+        from dispatch.pipeline.validator import ValidatorStepInterface
 
         assert ConverterInterface is not None
         assert SplitterInterface is not None
@@ -219,6 +240,7 @@ class TestConversionModulesCompatibility:
     def test_convert_base_importable(self):
         """convert_base module should be importable."""
         from convert_base import BaseEDIConverter
+
         assert BaseEDIConverter is not None
 
     @pytest.mark.backward_compatibility
@@ -227,6 +249,7 @@ class TestConversionModulesCompatibility:
     def test_conversion_base_has_methods(self):
         """BaseEDIConverter should have expected methods."""
         from convert_base import BaseEDIConverter
+
         # Should be an ABC with abstract methods
         assert BaseEDIConverter is not None
         assert hasattr(BaseEDIConverter, "edi_convert")
@@ -234,13 +257,16 @@ class TestConversionModulesCompatibility:
     @pytest.mark.backward_compatibility
     @pytest.mark.conversion
     @pytest.mark.unit
-    @pytest.mark.parametrize("module_name", [
-        "convert_to_csv",
-        "convert_to_simplified_csv",
-        "convert_to_fintech",
-        "convert_to_jolley_custom",
-        "convert_to_scannerware",
-    ])
+    @pytest.mark.parametrize(
+        "module_name",
+        [
+            "convert_to_csv",
+            "convert_to_simplified_csv",
+            "convert_to_fintech",
+            "convert_to_jolley_custom",
+            "convert_to_scannerware",
+        ],
+    )
     def test_conversion_modules_importable(self, module_name):
         """Each conversion module should be importable."""
         try:
@@ -259,6 +285,7 @@ class TestDatabaseSchemaCompatibility:
     def test_ensure_schema_function_exists(self):
         """ensure_schema function should exist."""
         from schema import ensure_schema
+
         assert callable(ensure_schema)
 
     @pytest.mark.backward_compatibility
@@ -267,6 +294,7 @@ class TestDatabaseSchemaCompatibility:
     def test_ensure_schema_accepts_connection(self):
         """ensure_schema should accept database_connection parameter."""
         from schema import ensure_schema
+
         sig = inspect.signature(ensure_schema)
         params = list(sig.parameters.keys())
         assert "database_connection" in params
@@ -277,6 +305,7 @@ class TestDatabaseSchemaCompatibility:
     def test_core_database_module_exists(self):
         """core.database module should exist."""
         from core.database import DatabaseConnectionProtocol, QueryRunner
+
         assert DatabaseConnectionProtocol is not None
         assert QueryRunner is not None
 
@@ -286,6 +315,7 @@ class TestDatabaseSchemaCompatibility:
     def test_schema_can_be_created(self, temp_db):
         """Core schema should be generatable without errors."""
         from schema import ensure_schema
+
         try:
             # Just verify this doesn't raise an error
             ensure_schema(temp_db)
@@ -302,6 +332,7 @@ class TestMainEntryPointsCompatibility:
         """main_interface module should be importable."""
         try:
             import main_interface
+
             assert main_interface is not None
         except ImportError as e:
             pytest.fail(f"Failed to import main_interface: {e}")
@@ -312,6 +343,7 @@ class TestMainEntryPointsCompatibility:
         """create_database module should be importable."""
         try:
             import create_database
+
             assert create_database is not None
         except ImportError as e:
             pytest.fail(f"Failed to import create_database: {e}")
@@ -321,6 +353,7 @@ class TestMainEntryPointsCompatibility:
     def test_schema_module_accessible(self):
         """schema module should be accessible."""
         import schema
+
         assert hasattr(schema, "ensure_schema")
 
 
@@ -332,6 +365,7 @@ class TestAPISignaturePreservation:
     def test_dispatch_orchestrator_instantiable(self):
         """DispatchOrchestrator should be instantiable."""
         from dispatch import DispatchOrchestrator
+
         try:
             # Should be instantiable with proper params
             assert DispatchOrchestrator is not None
@@ -345,6 +379,7 @@ class TestAPISignaturePreservation:
     def test_base_edi_converter_instantiable(self):
         """BaseEDIConverter should be available as base class."""
         from convert_base import BaseEDIConverter
+
         try:
             assert BaseEDIConverter is not None
             assert hasattr(BaseEDIConverter, "__init__")
@@ -357,14 +392,12 @@ class TestAPISignaturePreservation:
         """Pipeline steps should have execute methods."""
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.splitter import EDISplitterStep
-        from dispatch.pipeline.validator import EDIValidationStep
         from dispatch.pipeline.tweaker import EDITweakerStep
+        from dispatch.pipeline.validator import EDIValidationStep
 
         steps = [EDIConverterStep, EDISplitterStep, EDIValidationStep, EDITweakerStep]
         for step in steps:
-            assert hasattr(step, "execute"), (
-                f"{step.__name__} missing execute method"
-            )
+            assert hasattr(step, "execute"), f"{step.__name__} missing execute method"
 
 
 class TestExceptionHandling:
@@ -376,6 +409,7 @@ class TestExceptionHandling:
         """core utilities should be importable."""
         try:
             from core import utils
+
             assert utils is not None
         except ImportError as e:
             pytest.fail(f"Failed to import core.utils: {e}")
@@ -385,6 +419,7 @@ class TestExceptionHandling:
     def test_validation_error_available(self):
         """ValidationError should be available."""
         from dispatch.pipeline.validator import ValidationError
+
         assert ValidationError is not None
 
 
@@ -396,6 +431,7 @@ class TestInterfaceDefinitions:
     def test_file_system_interface_exists(self):
         """FileSystemInterface should be defined."""
         from dispatch import FileSystemInterface
+
         assert FileSystemInterface is not None
 
     @pytest.mark.backward_compatibility
@@ -403,6 +439,7 @@ class TestInterfaceDefinitions:
     def test_database_interface_exists(self):
         """DatabaseInterface should be defined."""
         from dispatch import DatabaseInterface
+
         assert DatabaseInterface is not None
 
     @pytest.mark.backward_compatibility
@@ -410,6 +447,7 @@ class TestInterfaceDefinitions:
     def test_backend_interface_exists(self):
         """BackendInterface should be defined."""
         from dispatch import BackendInterface
+
         assert BackendInterface is not None
 
 
@@ -421,6 +459,7 @@ class TestUtilityModulesAccessible:
     def test_utils_module_importable(self):
         """utils module should be importable."""
         import utils
+
         assert utils is not None
 
     @pytest.mark.backward_compatibility
@@ -428,6 +467,7 @@ class TestUtilityModulesAccessible:
     def test_core_edi_module_importable(self):
         """core.edi module should be importable."""
         from core import edi
+
         assert edi is not None
 
     @pytest.mark.backward_compatibility
@@ -435,6 +475,7 @@ class TestUtilityModulesAccessible:
     def test_batch_file_processor_constants_importable(self):
         """batch_file_processor.constants should be importable."""
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
         assert CURRENT_DATABASE_VERSION is not None
 
 
@@ -446,9 +487,10 @@ class TestBackendImplementations:
     def test_file_operations_protocol_implementations(self):
         """File operations implementations should exist."""
         from backend.file_operations import (
-            RealFileOperations,
             MockFileOperations,
+            RealFileOperations,
         )
+
         assert RealFileOperations is not None
         assert MockFileOperations is not None
 
@@ -457,9 +499,10 @@ class TestBackendImplementations:
     def test_smtp_client_implementations(self):
         """SMTP client implementations should exist."""
         from backend.smtp_client import (
-            RealSMTPClient,
             MockSMTPClient,
+            RealSMTPClient,
         )
+
         assert RealSMTPClient is not None
         assert MockSMTPClient is not None
 

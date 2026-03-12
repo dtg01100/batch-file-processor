@@ -19,34 +19,33 @@ pytestmark = [pytest.mark.unit, pytest.mark.fast]
 
 import os
 from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from core.edi.edi_parser import EDIParseError
 from utils import (
-    normalize_bool,
-    to_db_bool,
-    from_db_bool,
-    dactime_from_datetime,
-    datetime_from_dactime,
-    datetime_from_invtime,
-    dactime_from_invtime,
     apply_retail_uom_transform,
     apply_upc_override,
-    do_clear_old_files,
-    dac_str_int_to_int,
+    calc_check_digit,
+    capture_records,
     convert_to_price,
     convert_to_price_decimal,
-    detect_invoice_is_credit,
-    capture_records,
-    calc_check_digit,
     convert_UPCE_to_UPCA,
+    dac_str_int_to_int,
+    dactime_from_datetime,
+    dactime_from_invtime,
+    datetime_from_dactime,
+    datetime_from_invtime,
+    detect_invoice_is_credit,
+    do_clear_old_files,
     do_split_edi,
     filter_b_records_by_category,
     filter_edi_file_by_category,
+    from_db_bool,
+    normalize_bool,
+    to_db_bool,
 )
-from core.edi.edi_parser import EDIParseError
-
 
 # =============================================================================
 # normalize_bool() tests
@@ -213,13 +212,13 @@ class TestFromDbBool:
     @pytest.mark.parametrize(
         "value, expected",
         [
-            ("True", True),    # legacy string format
+            ("True", True),  # legacy string format
             ("False", False),  # legacy string format
-            (1, True),         # new integer format
-            (0, False),        # new integer format
-            ("1", True),       # string integer from DB
-            ("0", False),      # string integer from DB
-            (None, False),     # NULL in database
+            (1, True),  # new integer format
+            (0, False),  # new integer format
+            ("1", True),  # string integer from DB
+            ("0", False),  # string integer from DB
+            (None, False),  # NULL in database
         ],
     )
     def test_from_db_bool_values(self, value, expected):
@@ -228,9 +227,9 @@ class TestFromDbBool:
     def test_return_type_is_bool(self):
         for value in ["True", "False", 1, 0, "1", "0", None]:
             result = from_db_bool(value)
-            assert type(result) is bool, (
-                f"Expected bool for {value!r}, got {type(result).__name__}"
-            )
+            assert (
+                type(result) is bool
+            ), f"Expected bool for {value!r}, got {type(result).__name__}"
 
 
 # =============================================================================
@@ -495,7 +494,9 @@ class TestApplyUpcOverride:
         """With category_filter='ALL', override should always apply."""
         record = self._make_record(vendor_item="000123")
         upc_dict = {123: ["GROCERY", "12345678901", "99999999999"]}
-        result = apply_upc_override(record, upc_dict, override_level=1, category_filter="ALL")
+        result = apply_upc_override(
+            record, upc_dict, override_level=1, category_filter="ALL"
+        )
         assert result is True
         assert record["upc_number"] == "12345678901"
 
@@ -524,7 +525,9 @@ class TestApplyUpcOverride:
         """When vendor_item is not in upc_dict, return False and clear upc_number."""
         record = self._make_record(vendor_item="000999")
         upc_dict = {123: ["GROCERY", "12345678901", "99999999999"]}
-        result = apply_upc_override(record, upc_dict, override_level=1, category_filter="ALL")
+        result = apply_upc_override(
+            record, upc_dict, override_level=1, category_filter="ALL"
+        )
         assert result is False
         assert record["upc_number"] == ""
 
@@ -725,6 +728,7 @@ class TestConvertToPriceDecimal:
     def test_returns_decimal(self):
         """Should return a Decimal type."""
         from decimal import Decimal
+
         # Use valid decimal input
         result = convert_to_price_decimal("00150")
         # May return Decimal or int depending on implementation
@@ -733,6 +737,7 @@ class TestConvertToPriceDecimal:
     def test_basic_conversion(self):
         """Basic conversion to decimal."""
         from decimal import Decimal
+
         result = convert_to_price_decimal("00150")
         # Result may be 0 or a decimal - just check no exception
         assert isinstance(result, (Decimal, int))
@@ -908,7 +913,9 @@ class TestCaptureRecords:
         # X is not a valid record type so it should raise or return None
         result = capture_records("Xsomestring")
         # The behavior may vary - either raises or returns some result
-        assert result is None or (isinstance(result, dict) and result.get("record_type") == "X")
+        assert result is None or (
+            isinstance(result, dict) and result.get("record_type") == "X"
+        )
 
     def test_with_parser_object(self):
         """Test with custom parser object."""
@@ -1091,7 +1098,7 @@ class TestFilterBRecordsByCategory:
         # B record format: starts with B, then UPC (1-12), description (12-37), vendor_item (37-43)
         b_records = [
             "B00000000001DESC1         000001             00010000010",
-            "B00000000002DESC2         000002             00020000020"
+            "B00000000002DESC2         000002             00020000020",
         ]
         upc_dict = {1: ["GROCERY", "111", "222"], 2: ["DAIRY", "333", "444"]}
         result = filter_b_records_by_category(b_records, upc_dict, "GROCERY", "include")
@@ -1102,7 +1109,7 @@ class TestFilterBRecordsByCategory:
         """Exclude specific category."""
         b_records = [
             "B00000000001DESC1         000001             00010000010",
-            "B00000000002DESC2         000002             00020000020"
+            "B00000000002DESC2         000002             00020000020",
         ]
         upc_dict = {1: ["GROCERY", "111", "222"], 2: ["DAIRY", "333", "444"]}
         result = filter_b_records_by_category(b_records, upc_dict, "GROCERY", "exclude")
@@ -1113,13 +1120,9 @@ class TestFilterBRecordsByCategory:
         b_records = [
             "B00000000001DESC1         000001             00010000010",
             "B00000000002DESC2         000002             00020000020",
-            "B00000000003DESC3         000003             00030000030"
+            "B00000000003DESC3         000003             00030000030",
         ]
-        upc_dict = {
-            1: ["A", "111"],
-            2: ["B", "222"],
-            3: ["C", "333"]
-        }
+        upc_dict = {1: ["A", "111"], 2: ["B", "222"], 3: ["C", "333"]}
         result = filter_b_records_by_category(b_records, upc_dict, "A,B", "include")
         assert isinstance(result, list)
 
@@ -1162,7 +1165,9 @@ class TestFilterEdiFileByCategory:
         """ALL filter copies file unchanged."""
         input_file = tmp_path / "input.edi"
         output_file = tmp_path / "output.edi"
-        input_file.write_text("A12345678901234567010123000123456789\nB00000000001ITEM001\n")
+        input_file.write_text(
+            "A12345678901234567010123000123456789\nB00000000001ITEM001\n"
+        )
 
         upc_dict = {1: ["A", "111"]}
         result = filter_edi_file_by_category(
@@ -1228,8 +1233,7 @@ class TestFilterEdiFileByCategory:
         input_file = tmp_path / "input.edi"
         output_file = tmp_path / "output.edi"
         input_file.write_text(
-            "A00000000010000000000001001\n"
-            "B00000000002ITEM002000100\n"
+            "A00000000010000000000001001\n" "B00000000002ITEM002000100\n"
         )
 
         upc_dict = {2: ["DAIRY", "222"]}

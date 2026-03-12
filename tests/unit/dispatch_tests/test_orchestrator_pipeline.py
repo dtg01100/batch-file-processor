@@ -2,12 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-
 from dispatch.orchestrator import (
     DispatchConfig,
     DispatchOrchestrator,
-    FolderResult,
     FileResult,
+    FolderResult,
 )
 
 

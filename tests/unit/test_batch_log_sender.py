@@ -13,8 +13,9 @@ Tests:
 - Progress callback invocation
 """
 
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
 
 
 class TestEmailComposition:

@@ -3,9 +3,9 @@
 import pytest
 
 from dispatch.compatibility import (
+    convert_backend_config,
     legacy_config_to_modern,
     modern_config_to_legacy,
-    convert_backend_config,
     parse_legacy_process_edi_flag,
 )
 

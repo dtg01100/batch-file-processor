@@ -16,20 +16,21 @@ Tests:
 - Plugin configuration validation
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from interface.models.folder_configuration import (
-    FolderConfiguration,
-    FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
-    UPCOverrideConfiguration,
     ARecordPaddingConfiguration,
-    InvoiceDateConfiguration,
     BackendSpecificConfiguration,
-    CSVConfiguration,
     BackendType,
     ConvertFormat,
+    CopyConfiguration,
+    CSVConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
+    FolderConfiguration,
+    FTPConfiguration,
+    InvoiceDateConfiguration,
+    UPCOverrideConfiguration,
 )
 
 

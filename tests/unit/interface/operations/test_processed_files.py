@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,10 +36,15 @@ class _Database:
 
 
 def test_export_processed_report_raises_value_error_when_folder_missing(tmp_path: Path):
-    db = _Database(folders_table=_FoldersTable(folder=None), processed_files=_ProcessedFilesTable(rows=[]))
+    db = _Database(
+        folders_table=_FoldersTable(folder=None),
+        processed_files=_ProcessedFilesTable(rows=[]),
+    )
 
     with pytest.raises(ValueError, match="Folder with id 99 not found"):
-        export_processed_report(folder_id=99, output_folder=str(tmp_path), database_obj=db)
+        export_processed_report(
+            folder_id=99, output_folder=str(tmp_path), database_obj=db
+        )
 
 
 def test_export_processed_report_writes_header_and_formatted_row(tmp_path: Path):
@@ -81,12 +85,13 @@ def test_export_processed_report_writes_header_only_when_no_rows(tmp_path: Path)
     report_path = tmp_path / "Empty processed report.csv"
     assert report_path.exists()
     assert (
-        report_path.read_text(encoding="utf-8")
-        == "File,Invoice Numbers,Date,Sent To\n"
+        report_path.read_text(encoding="utf-8") == "File,Invoice Numbers,Date,Sent To\n"
     )
 
 
-def test_export_processed_report_uses_incrementing_suffix_on_name_collision(tmp_path: Path):
+def test_export_processed_report_uses_incrementing_suffix_on_name_collision(
+    tmp_path: Path,
+):
     db = _Database(
         folders_table=_FoldersTable(folder={"id": 3, "alias": "Archive"}),
         processed_files=_ProcessedFilesTable(rows=[]),

@@ -6,10 +6,11 @@ Tests for PluginManager enhancements related to configuration plugins.
 
 import unittest
 from unittest.mock import MagicMock, patch
-from interface.plugins import PluginManager
-from interface.plugins.plugin_base import PluginBase
-from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
+
 from interface.models.folder_configuration import ConvertFormat
+from interface.plugins import PluginManager
+from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
+from interface.plugins.plugin_base import PluginBase
 
 
 class TestPluginManagerConfigurationPlugins(unittest.TestCase):
@@ -288,7 +289,9 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
             def create_widget(self, parent=None):
                 return None
 
-        self.manager._plugin_classes = {LifecyclePlugin.get_identifier(): LifecyclePlugin}
+        self.manager._plugin_classes = {
+            LifecyclePlugin.get_identifier(): LifecyclePlugin
+        }
 
         first_initialized = self.manager.initialize_plugins()
         second_initialized = self.manager.initialize_plugins()

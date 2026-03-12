@@ -20,8 +20,7 @@ from dispatch.orchestrator import (
     DispatchConfig,
     DispatchOrchestrator,
 )
-from dispatch.send_manager import SendManager, MockBackend
-
+from dispatch.send_manager import MockBackend, SendManager
 
 # =============================================================================
 # Test Fixtures

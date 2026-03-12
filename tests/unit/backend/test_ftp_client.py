@@ -2,13 +2,14 @@
 
 import io
 import logging
-import pytest
-from unittest.mock import MagicMock, patch
 from ftplib import error_perm
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from backend.ftp_client import (
-    RealFTPClient,
     MockFTPClient,
+    RealFTPClient,
     create_ftp_client,
 )
 from backend.protocols import FTPClientProtocol

@@ -140,7 +140,9 @@ class TestDbMigrationJob:
         mock_cursor.execute.return_value = mock_cursor
         mock_cursor.fetchall.return_value = pragma_columns
         target_db = MagicMock()
-        target_db.__getitem__ = MagicMock(side_effect=lambda key: {"folders": target_folders_table}[key])
+        target_db.__getitem__ = MagicMock(
+            side_effect=lambda key: {"folders": target_folders_table}[key]
+        )
         target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(

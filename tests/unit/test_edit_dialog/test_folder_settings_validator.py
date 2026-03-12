@@ -1,9 +1,9 @@
 """Folder Settings Validator tests for EditFoldersDialog refactoring."""
 
-import pytest
-
-import sys
 import os
+import sys
+
+import pytest
 
 # Add the project root to the path
 sys.path.insert(
@@ -13,12 +13,12 @@ sys.path.insert(
     ),
 )
 
+from interface.operations.folder_data_extractor import ExtractedDialogFields
+from interface.services.ftp_service import MockFTPService
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
 )
-from interface.services.ftp_service import MockFTPService
-from interface.operations.folder_data_extractor import ExtractedDialogFields
 
 
 class TestFolderSettingsValidator:
@@ -313,7 +313,9 @@ class TestFolderSettingsValidator:
             copy_to_directory="",
         )
 
-        result = validator.validate_extracted_fields(extracted, current_alias="different")
+        result = validator.validate_extracted_fields(
+            extracted, current_alias="different"
+        )
 
         assert result.is_valid is False
         messages = [e.message for e in result.errors]
@@ -325,7 +327,9 @@ class TestFolderSettingsValidator:
         assert "Copy Backend Destination Is Currently Unset" in messages
         assert "Folder Alias Already In Use" in messages
 
-    def test_validate_extracted_fields_does_not_apply_complete_only_checks(self, validator):
+    def test_validate_extracted_fields_does_not_apply_complete_only_checks(
+        self, validator
+    ):
         """Dialog extracted-field validation preserves existing narrower semantics."""
         extracted = ExtractedDialogFields(
             folder_name="orders",

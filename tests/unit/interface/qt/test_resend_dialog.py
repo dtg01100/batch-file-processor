@@ -1,9 +1,9 @@
 """Tests for ResendDialog."""
 
-import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QTableWidget, QLineEdit
+import pytest
+from PyQt6.QtWidgets import QLineEdit, QTableWidget
 
 
 @pytest.mark.qt
@@ -18,8 +18,8 @@ class TestResendDialogInitialization:
 
     def test_dialog_inherits_from_base_dialog(self):
         """Test that ResendDialog inherits from BaseDialog."""
-        from interface.qt.dialogs.resend_dialog import ResendDialog
         from interface.qt.dialogs.base_dialog import BaseDialog
+        from interface.qt.dialogs.resend_dialog import ResendDialog
 
         assert issubclass(ResendDialog, BaseDialog)
 
@@ -194,12 +194,13 @@ class TestResendDialogEdgeCases:
 
         db_conn = MagicMock()
 
-        with patch(
-            "interface.qt.dialogs.resend_dialog.ResendService",
-            side_effect=Exception("Database error"),
-        ), patch(
-            "PyQt6.QtWidgets.QMessageBox.critical"
-        ) as mock_critical:
+        with (
+            patch(
+                "interface.qt.dialogs.resend_dialog.ResendService",
+                side_effect=Exception("Database error"),
+            ),
+            patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_critical,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 

@@ -1,6 +1,7 @@
 """Additional tests for DatabaseImportDialog to improve coverage."""
 
 from unittest.mock import MagicMock
+
 import pytest
 from PyQt6.QtCore import Qt
 
@@ -81,7 +82,9 @@ class TestDatabaseImportDialogUI:
         """Test constructor preselection immediately reflects selected DB in UI."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        selected = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        selected = (
+            "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        )
         dialog = DatabaseImportDialog(
             None,
             "/original.db",
@@ -278,8 +281,10 @@ class TestDatabaseImportDialogConfirm:
     def test_on_confirm_required_yes(self, qtbot, monkeypatch):
         """Test confirmation handler with Yes response."""
         import threading
-        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
         from PyQt6.QtWidgets import QMessageBox
+
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
         def mock_question(parent, title, message, buttons, default):
             return QMessageBox.StandardButton.Yes
@@ -301,8 +306,10 @@ class TestDatabaseImportDialogConfirm:
     def test_on_confirm_required_no(self, qtbot, monkeypatch):
         """Test confirmation handler with No response."""
         import threading
-        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
         from PyQt6.QtWidgets import QMessageBox
+
+        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
         def mock_question(parent, title, message, buttons, default):
             return QMessageBox.StandardButton.No
@@ -329,8 +336,8 @@ class TestImportThread:
     def test_import_thread_init(self):
         """Test ImportThread initialization."""
         from interface.qt.dialogs.database_import_dialog import (
-            ImportThread,
             DbMigrationJob,
+            ImportThread,
         )
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -361,9 +368,10 @@ class TestImportThread:
     def test_import_thread_confirm_mechanism(self, qtbot):
         """Test ImportThread._confirm uses signal mechanism."""
         import threading
+
         from interface.qt.dialogs.database_import_dialog import (
-            ImportThread,
             DbMigrationJob,
+            ImportThread,
         )
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -405,8 +413,8 @@ class TestImportThread:
     def test_import_thread_run_handles_exception(self, tmp_path):
         """Test ImportThread.run handles exceptions when database doesn't exist."""
         from interface.qt.dialogs.database_import_dialog import (
-            ImportThread,
             DbMigrationJob,
+            ImportThread,
         )
 
         job = DbMigrationJob("/original.db", "/new.db")
@@ -666,10 +674,10 @@ class TestDbMigrationJob:
         self, legacy_v32_db, tmp_path
     ):
         """Regression: import should preserve active folders from legacy source."""
-        from interface.qt.dialogs.database_import_dialog import DbMigrationJob
-        from interface.database.database_obj import DatabaseObj
-        from interface.database import sqlite_wrapper
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database import sqlite_wrapper
+        from interface.database.database_obj import DatabaseObj
+        from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         target_path = str(tmp_path / "target_folders.db")
         # Create fresh live database that receives imported folders.
@@ -699,7 +707,9 @@ class TestDbMigrationJob:
         imported_db = sqlite_wrapper.Database.connect(target_path)
         actual_active = imported_db["folders"].count(folder_is_active=True)
         imported_settings = imported_db["settings"].find_one(id=1)
-        imported_jolley = imported_db["folders"].find_one(folder_name="D:/DATA/OUT/011078")
+        imported_jolley = imported_db["folders"].find_one(
+            folder_name="D:/DATA/OUT/011078"
+        )
         imported_db.close()
 
         assert actual_active == expected_active

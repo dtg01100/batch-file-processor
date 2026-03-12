@@ -1,17 +1,18 @@
 """Unit tests for SMTP client implementations."""
 
 import logging
-import pytest
-from unittest.mock import MagicMock, patch
-from smtplib import SMTPAuthenticationError
 from email.message import EmailMessage
+from smtplib import SMTPAuthenticationError
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from backend.protocols import SMTPClientProtocol
 from backend.smtp_client import (
-    RealSMTPClient,
     MockSMTPClient,
+    RealSMTPClient,
     create_smtp_client,
 )
-from backend.protocols import SMTPClientProtocol
 
 
 class TestRealSMTPClient:

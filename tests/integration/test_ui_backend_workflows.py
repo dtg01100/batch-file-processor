@@ -17,15 +17,13 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.qt, pytest.m
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+
 from PyQt6.QtWidgets import QApplication
 
-from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 import create_database
-import folders_database_migrator
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from interface.database.database_obj import DatabaseObj
+from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
 
 @pytest.fixture
@@ -100,8 +98,11 @@ class TestCompleteFolderWorkflow:
         edi_file.write_text(sample_edi_content)
 
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
@@ -126,18 +127,23 @@ class TestCompleteFolderWorkflow:
     ):
         """Test workflow: View folder → Edit configuration → Save → Verify update."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "input"),
-            "alias": "Original Name",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-            "convert_to_format": "csv",
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "input"),
+                "alias": "Original Name",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+                "convert_to_format": "csv",
+            }
+        )
 
         folders = list(database.folders_table.all())
         assert len(folders) == 1
@@ -155,16 +161,21 @@ class TestCompleteFolderWorkflow:
     def test_delete_folder_workflow(self, qtbot, qt_app, temp_workspace, database):
         """Test workflow: Select folder → Delete → Confirm → Verify removal."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "input"),
-            "alias": "To Delete",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "input"),
+                "alias": "To Delete",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+            }
+        )
 
         folders = list(database.folders_table.all())
         assert len(folders) == 1
@@ -179,8 +190,11 @@ class TestSettingsWorkflow:
     def test_edit_settings_workflow(self, qtbot, qt_app, temp_workspace, database):
         """Test workflow: Open settings → Modify → Save → Verify persistence."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
@@ -202,17 +216,22 @@ class TestSettingsWorkflow:
         edi_file.write_text(sample_edi_content)
 
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "input"),
-            "alias": "Settings Test",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-            "convert_to_format": "csv",
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "input"),
+                "alias": "Settings Test",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+                "convert_to_format": "csv",
+            }
+        )
 
         assert len(list(database.folders_table.all())) == 1
 
@@ -233,18 +252,23 @@ class TestMultiDialogWorkflow:
     ):
         """Test workflow using both EditFolders and EditSettings dialogs."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "input"),
-            "alias": "Multi-Dialog Test",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-            "convert_to_format": "csv",
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "input"),
+                "alias": "Multi-Dialog Test",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+                "convert_to_format": "csv",
+            }
+        )
 
         settings = database.oversight_and_defaults.find_one()
         updated = dict(settings)
@@ -261,18 +285,25 @@ class TestMultiDialogWorkflow:
     def test_maintenance_dialog_workflow(self, qtbot, qt_app, temp_workspace, database):
         """Test maintenance dialog can be created with a real DatabaseObj."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
-        database.processed_files.insert({
-            "folder_id": 1,
-            "file_name": "test1.edi",
-            "md5": "test_hash_1",
-        })
+        database.processed_files.insert(
+            {
+                "folder_id": 1,
+                "file_name": "test1.edi",
+                "md5": "test_hash_1",
+            }
+        )
 
-        from PyQt6.QtWidgets import QWidget, QPushButton
+        from PyQt6.QtWidgets import QPushButton, QWidget
+
         from interface.operations.maintenance_functions import MaintenanceFunctions
+
         parent = QWidget()
         qtbot.addWidget(parent)
 
@@ -296,18 +327,23 @@ class TestErrorRecoveryWorkflow:
     ):
         """Test workflow: Add invalid folder → Fix path → Verify updated path persisted."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "nonexistent"),
-            "alias": "Invalid Path Test",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-            "convert_to_format": "csv",
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "nonexistent"),
+                "alias": "Invalid Path Test",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+                "convert_to_format": "csv",
+            }
+        )
 
         folders = list(database.folders_table.all())
         assert len(folders) == 1
@@ -323,8 +359,11 @@ class TestErrorRecoveryWorkflow:
     def test_database_error_recovery(self, qtbot, qt_app, temp_workspace, database):
         """Test that basic database operations raise no unexpected errors."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
@@ -341,18 +380,23 @@ class TestRealUserInteractions:
     def test_rapid_folder_selection(self, qtbot, qt_app, temp_workspace, database):
         """Test that inserting many folders and reading them back is reliable."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
 
         for i in range(5):
-            database.folders_table.insert({
-                "folder_name": str(temp_workspace / f"input_{i}"),
-                "alias": f"Folder {i}",
-                "process_backend_copy": 1,
-                "copy_to_directory": str(temp_workspace / f"output_{i}"),
-            })
+            database.folders_table.insert(
+                {
+                    "folder_name": str(temp_workspace / f"input_{i}"),
+                    "alias": f"Folder {i}",
+                    "process_backend_copy": 1,
+                    "copy_to_directory": str(temp_workspace / f"output_{i}"),
+                }
+            )
 
         folders = list(database.folders_table.all())
         assert len(folders) == 5
@@ -364,21 +408,28 @@ class TestRealUserInteractions:
     def test_search_while_processing(self, qtbot, qt_app, temp_workspace, database):
         """Test filtering folders by alias (what a search widget does)."""
         database.oversight_and_defaults.update(
-            {"id": 1, "logs_directory": str(temp_workspace / "logs"),
-             "errors_folder": str(temp_workspace / "errors")},
+            {
+                "id": 1,
+                "logs_directory": str(temp_workspace / "logs"),
+                "errors_folder": str(temp_workspace / "errors"),
+            },
             ["id"],
         )
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "input"),
-            "alias": "Test Folder",
-            "process_backend_copy": 1,
-            "copy_to_directory": str(temp_workspace / "output"),
-        })
-        database.folders_table.insert({
-            "folder_name": str(temp_workspace / "archive"),
-            "alias": "Archive Folder",
-            "process_backend_copy": 0,
-        })
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "input"),
+                "alias": "Test Folder",
+                "process_backend_copy": 1,
+                "copy_to_directory": str(temp_workspace / "output"),
+            }
+        )
+        database.folders_table.insert(
+            {
+                "folder_name": str(temp_workspace / "archive"),
+                "alias": "Archive Folder",
+                "process_backend_copy": 0,
+            }
+        )
 
         all_folders = list(database.folders_table.all())
         assert len(all_folders) == 2

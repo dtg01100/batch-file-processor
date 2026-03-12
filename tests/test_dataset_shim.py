@@ -1,7 +1,8 @@
-import pytest
-import sqlite3
 import json
-from datetime import datetime, date
+import sqlite3
+from datetime import date, datetime
+
+import pytest
 
 from interface.database.sqlite_wrapper import connect
 
@@ -115,7 +116,7 @@ def test_create_column_and_table_info():
     t = db["schema_test"]
     # inserting should work with the new column
     t.insert({"flag": True, "note": "ok"})
-    info = db.query(f"PRAGMA table_info(schema_test)")
+    info = db.query("PRAGMA table_info(schema_test)")
     names = {c["name"] for c in info}
     assert "flag" in names
 
@@ -152,7 +153,11 @@ def test_delete_without_conditions_clears_table():
 
 def test_insert_with_various_types_serialization():
     db = connect("sqlite:///")
-    _create_table(db, "types", {"d": "TEXT", "l": "TEXT", "t": "TEXT", "today": "TEXT", "now": "TEXT"})
+    _create_table(
+        db,
+        "types",
+        {"d": "TEXT", "l": "TEXT", "t": "TEXT", "today": "TEXT", "now": "TEXT"},
+    )
     t = db["types"]
     # test dict/list/tuple serialization
     result_id = t.insert({"d": {"x": 1}, "l": [1, 2], "t": (3, 4)})
@@ -184,7 +189,9 @@ def test_serialization_failure_falls_back_to_str(monkeypatch):
     bad = UnserializableObject()
 
     # monkeypatch json.dumps to raise
-    monkeypatch.setattr(json, "dumps", lambda v: (_ for _ in ()).throw(ValueError("nope")))
+    monkeypatch.setattr(
+        json, "dumps", lambda v: (_ for _ in ()).throw(ValueError("nope"))
+    )
     # now insert object that cannot be serialized; fallback to str should happen
     rid = t.insert({"x": bad})
     r = t.find_one(id=rid)

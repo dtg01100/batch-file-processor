@@ -2,14 +2,15 @@
 
 import logging
 from unittest.mock import MagicMock
+
 import pytest
 
 from dispatch.pipeline.converter import (
+    SUPPORTED_FORMATS,
     ConverterResult,
     DefaultModuleLoader,
-    MockConverter,
     EDIConverterStep,
-    SUPPORTED_FORMATS,
+    MockConverter,
 )
 
 

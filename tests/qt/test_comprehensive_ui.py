@@ -13,10 +13,11 @@ import pytest
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui, pytest.mark.slow]
 
-import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
@@ -24,16 +25,16 @@ from PyQt6.QtWidgets import (
     QPushButton,
 )
 
+import create_database
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from interface.database.database_obj import DatabaseObj
 from interface.qt.app import QtBatchFileSenderApp
-from interface.qt.widgets.folder_list_widget import FolderListWidget
-from interface.qt.widgets.search_widget import SearchWidget
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.qt.services.qt_services import QtProgressService, QtUIService
-from interface.database.database_obj import DatabaseObj
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-import create_database
+from interface.qt.widgets.folder_list_widget import FolderListWidget
+from interface.qt.widgets.search_widget import SearchWidget
 
 pytestmark = pytest.mark.qt
 

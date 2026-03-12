@@ -6,9 +6,11 @@ None returns and provide defaults where appropriate.
 
 import os
 import tempfile
+
 import pytest
-from interface.database.database_obj import DatabaseObj
+
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from interface.database.database_obj import DatabaseObj
 
 
 class TestSafeDatabaseAccessors:

@@ -122,7 +122,9 @@ class TestBaseDialog:
         qtbot.addWidget(dialog)
 
         assert dialog._button_box is not None
-        close_button = dialog._button_box.button(dialog._button_box.StandardButton.Close)
+        close_button = dialog._button_box.button(
+            dialog._button_box.StandardButton.Close
+        )
         assert close_button is not None
 
     def test_action_mode_none_has_no_button_box(self, qtbot):
@@ -134,8 +136,9 @@ class TestBaseDialog:
         assert dialog._button_box is None
 
     def test_confirm_yes_no_uses_question_box(self, qtbot, monkeypatch):
-        from interface.qt.dialogs.base_dialog import BaseDialog
         from PyQt6.QtWidgets import QMessageBox
+
+        from interface.qt.dialogs.base_dialog import BaseDialog
 
         monkeypatch.setattr(
             QMessageBox,
@@ -165,6 +168,7 @@ class TestQtFolderDataExtractor:
 
     def test_reads_line_edit(self, qtbot):
         from PyQt6.QtWidgets import QLineEdit
+
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
         edit = QLineEdit()
@@ -175,6 +179,7 @@ class TestQtFolderDataExtractor:
 
     def test_reads_checkbox(self, qtbot):
         from PyQt6.QtWidgets import QCheckBox
+
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
         cb = QCheckBox()
@@ -185,6 +190,7 @@ class TestQtFolderDataExtractor:
 
     def test_reads_combobox(self, qtbot):
         from PyQt6.QtWidgets import QComboBox
+
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
         combo = QComboBox()
@@ -196,6 +202,7 @@ class TestQtFolderDataExtractor:
 
     def test_reads_spinbox(self, qtbot):
         from PyQt6.QtWidgets import QSpinBox
+
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
         spin = QSpinBox()
@@ -417,7 +424,9 @@ class TestEditFoldersDialog:
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
 
-    def test_convert_format_control_contains_expected_option(self, qtbot, sample_folder_config):
+    def test_convert_format_control_contains_expected_option(
+        self, qtbot, sample_folder_config
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         dialog = EditFoldersDialog(None, sample_folder_config)
@@ -429,7 +438,9 @@ class TestEditFoldersDialog:
         options = [convert_combo.itemText(i) for i in range(convert_combo.count())]
         assert "CSV" in options
 
-    def test_edi_options_combo_contains_expected_values(self, qtbot, sample_folder_config):
+    def test_edi_options_combo_contains_expected_values(
+        self, qtbot, sample_folder_config
+    ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
         dialog = EditFoldersDialog(None, sample_folder_config)
@@ -651,7 +662,9 @@ class TestMaintenanceDialog:
 
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
-        mock_maintenance_functions._database_obj.emails_table.insert({"id": 1, "to": "a@b.com"})
+        mock_maintenance_functions._database_obj.emails_table.insert(
+            {"id": 1, "to": "a@b.com"}
+        )
         dialog._clear_queued_emails()
         assert mock_maintenance_functions._database_obj.emails_table.count() == 0
 
@@ -868,7 +881,9 @@ class TestDatabaseImportDialog:
     ):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        fixture_path = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        fixture_path = (
+            "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        )
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",
             lambda *args, **kwargs: (fixture_path, ""),
@@ -890,7 +905,9 @@ class TestDatabaseImportDialog:
     ):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        selected_path = "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        selected_path = (
+            "/workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db"
+        )
         dialog_results = iter([(selected_path, ""), ("", "")])
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.QFileDialog.getOpenFileName",

@@ -6,7 +6,6 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QPushButton
 
-
 pytestmark = pytest.mark.qt
 
 
@@ -159,7 +158,7 @@ class TestFolderListWidget:
         buttons = widget.findChildren(QPushButton)
         button_texts = [b.text() for b in buttons]
         assert "Send" in button_texts
-        assert "\u25CF" in button_texts  # ● active toggle button
+        assert "\u25cf" in button_texts  # ● active toggle button
         assert any("Edit:" in t for t in button_texts)
 
     def test_inactive_folder_buttons(self, qtbot):
@@ -241,7 +240,7 @@ class TestFolderListWidget:
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
-            if btn.text() == "\u25CF":  # ● active toggle button
+            if btn.text() == "\u25cf":  # ● active toggle button
                 qtbot.mouseClick(btn, Qt.MouseButton.LeftButton)
                 break
         on_toggle.assert_called_once_with(42)
@@ -269,6 +268,7 @@ class TestFolderListWidget:
 
     def test_fuzzy_filter(self, qtbot):
         from unittest.mock import patch
+
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         active = [
@@ -291,7 +291,11 @@ class TestFolderListWidget:
             )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
-        visible_edit_texts = [b.text() for b in buttons if "Edit:" in b.text() and not b.parent().isHidden()]
+        visible_edit_texts = [
+            b.text()
+            for b in buttons
+            if "Edit:" in b.text() and not b.parent().isHidden()
+        ]
         assert any("Alpha" in t for t in visible_edit_texts)
         assert not any("Beta" in t for t in visible_edit_texts)
 
@@ -317,7 +321,9 @@ class TestFolderListWidget:
     def test_calculate_edit_button_min_width(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        table = self._make_table(active=[{"id": 1, "alias": "abc", "folder_is_active": "True"}])
+        table = self._make_table(
+            active=[{"id": 1, "alias": "abc", "folder_is_active": "True"}]
+        )
         widget = FolderListWidget(
             parent=None,
             folders_table=table,
@@ -329,6 +335,8 @@ class TestFolderListWidget:
         qtbot.addWidget(widget)
 
         short_width = widget._calculate_edit_button_min_width([{"alias": "a"}])
-        long_width = widget._calculate_edit_button_min_width([{"alias": "very-long-alias"}])
+        long_width = widget._calculate_edit_button_min_width(
+            [{"alias": "very-long-alias"}]
+        )
         assert short_width > 0
         assert long_width > short_width

@@ -11,17 +11,17 @@ Covers:
 8. Concurrent database access
 """
 
-import pytest
 import shutil
 import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
 # ---------------------------------------------------------------------------
 # Shared EDI content
@@ -135,9 +135,7 @@ class TestMixedBackendConfigurations:
         copy_be = CopyBackend()
         ftp_be = RecordingBackend("ftp")
 
-        config = DispatchConfig(
-            backends={"copy": copy_be, "ftp": ftp_be}, settings={}
-        )
+        config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         orch = DispatchOrchestrator(config)
 
         r0 = orch.process_folder(fc_copy, MagicMock())
@@ -299,9 +297,7 @@ class TestPartialSuccess:
         copy_be = CopyBackend()
         ftp_be = FailingBackend("ftp down")
 
-        config = DispatchConfig(
-            backends={"copy": copy_be, "ftp": ftp_be}, settings={}
-        )
+        config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         result = DispatchOrchestrator(config).process_folder(fc, MagicMock())
 
         assert result.success is False
@@ -389,9 +385,9 @@ class TestConcurrentDatabaseAccess:
 
     def test_concurrent_reads_and_writes(self, tmp_path):
         """Multiple threads read and one writes; no crashes."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -438,9 +434,9 @@ class TestConcurrentDatabaseAccess:
 
     def test_multiple_folder_inserts_are_isolated(self, tmp_path):
         """Insert many folders quickly; verify all are present."""
-        from interface.database.database_obj import DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
         import create_database
+        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from interface.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -453,9 +449,7 @@ class TestConcurrentDatabaseAccess:
 
         count = 50
         for i in range(count):
-            db.folders_table.insert(
-                {"folder_name": f"/path/{i}", "alias": f"F{i}"}
-            )
+            db.folders_table.insert({"folder_name": f"/path/{i}", "alias": f"F{i}"})
 
         rows = list(db.folders_table.all())
         assert len(rows) == count

@@ -10,9 +10,10 @@ Tests cover:
 - Folder operations
 """
 
-import pytest
-from unittest.mock import MagicMock, patch
 from argparse import Namespace
+from unittest.mock import MagicMock, patch
+
+import pytest
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from interface.qt.app import QtBatchFileSenderApp
@@ -776,7 +777,7 @@ class TestQtAppIntegration:
         """Test that required dependencies can be imported."""
         from interface.database.database_obj import DatabaseObj
         from interface.operations.folder_manager import FolderManager
-        from interface.ports import UIServiceProtocol, ProgressServiceProtocol
+        from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 
         assert DatabaseObj is not None
         assert FolderManager is not None

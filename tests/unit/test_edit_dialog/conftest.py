@@ -6,7 +6,7 @@ and related components (validator, extractor, FTP service).
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, Callable
+from typing import Any, Callable, Dict
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,30 +17,29 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from interface.models.folder_configuration import (
+    ARecordPaddingConfiguration,
+    BackendSpecificConfiguration,
+    CopyConfiguration,
+    CSVConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
     FolderConfiguration,
     FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
-    UPCOverrideConfiguration,
-    ARecordPaddingConfiguration,
     InvoiceDateConfiguration,
-    BackendSpecificConfiguration,
-    CSVConfiguration,
+    UPCOverrideConfiguration,
 )
 from interface.operations.folder_data_extractor import (
-    FolderDataExtractor,
     ExtractedDialogFields,
+    FolderDataExtractor,
+)
+from interface.services.ftp_service import (
+    FTPConnectionResult,
+    FTPServiceProtocol,
 )
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,
 )
-from interface.services.ftp_service import (
-    FTPServiceProtocol,
-    FTPConnectionResult,
-)
-
 
 # =============================================================================
 # FTP Service Fixtures

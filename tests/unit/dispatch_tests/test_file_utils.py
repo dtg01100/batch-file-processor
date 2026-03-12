@@ -5,15 +5,14 @@ import os
 import tempfile
 from unittest.mock import patch
 
-
 from dispatch.file_utils import (
-    build_output_filename,
     build_error_log_filename,
-    get_file_extension,
-    strip_invalid_filename_chars,
-    ensure_directory_exists,
-    list_files_in_directory,
+    build_output_filename,
     build_processed_file_record,
+    ensure_directory_exists,
+    get_file_extension,
+    list_files_in_directory,
+    strip_invalid_filename_chars,
 )
 
 

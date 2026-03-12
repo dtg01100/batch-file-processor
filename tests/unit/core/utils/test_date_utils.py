@@ -58,7 +58,9 @@ class TestPrettifyDates:
     )
     def test_prettify_offsets(self, offset, adj_offset, expected):
         """Offsets and adjustment offsets are applied deterministically."""
-        assert prettify_dates("1240124", offset=offset, adj_offset=adj_offset) == expected
+        assert (
+            prettify_dates("1240124", offset=offset, adj_offset=adj_offset) == expected
+        )
 
     @pytest.mark.parametrize(
         "bad_value",

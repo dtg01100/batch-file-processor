@@ -1,7 +1,9 @@
 """Unit tests for InvFetcher class."""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from core.edi.inv_fetcher import InvFetcher, QueryRunnerProtocol
 
 

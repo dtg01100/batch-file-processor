@@ -12,10 +12,11 @@ Tests cover:
 """
 
 import os
-import pytest
 from typing import cast
 from unittest.mock import MagicMock, patch
-from PyQt6.QtWidgets import QDialogButtonBox, QFormLayout, QMessageBox, QLineEdit
+
+import pytest
+from PyQt6.QtWidgets import QDialogButtonBox, QFormLayout, QLineEdit, QMessageBox
 
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.services.smtp_service import SMTPService
@@ -129,9 +130,18 @@ class TestEditSettingsDialogUI:
         email_layout = cast(QFormLayout, email_layout)
         reporting_layout = cast(QFormLayout, reporting_layout)
 
-        assert as400_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
-        assert email_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
-        assert reporting_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        assert (
+            as400_layout.fieldGrowthPolicy()
+            == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+        assert (
+            email_layout.fieldGrowthPolicy()
+            == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+        assert (
+            reporting_layout.fieldGrowthPolicy()
+            == QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
 
         assert dialog._as400_address.minimumWidth() >= 260
         assert dialog._email_address.minimumWidth() >= 260

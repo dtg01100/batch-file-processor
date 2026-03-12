@@ -1,7 +1,7 @@
 """Folder Configuration Model tests for EditFoldersDialog refactoring."""
 
-import sys
 import os
+import sys
 
 # Add the project root to the path
 sys.path.insert(
@@ -12,18 +12,18 @@ sys.path.insert(
 )
 
 from interface.models.folder_configuration import (
-    FolderConfiguration,
-    FTPConfiguration,
-    EmailConfiguration,
-    CopyConfiguration,
-    EDIConfiguration,
-    UPCOverrideConfiguration,
     ARecordPaddingConfiguration,
-    InvoiceDateConfiguration,
     BackendSpecificConfiguration,
-    CSVConfiguration,
     BackendType,
     ConvertFormat,
+    CopyConfiguration,
+    CSVConfiguration,
+    EDIConfiguration,
+    EmailConfiguration,
+    FolderConfiguration,
+    FTPConfiguration,
+    InvoiceDateConfiguration,
+    UPCOverrideConfiguration,
 )
 
 

@@ -3,10 +3,11 @@
 Uses actual APIs: FolderConfiguration.from_dict(), PluginConfigurationMapper methods.
 """
 
-import pytest
-import tempfile
 import json
+import tempfile
 from pathlib import Path
+
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.plugin]
 
@@ -93,8 +94,8 @@ class TestPluginConfigurationWithFolderModel:
         """Test updating folder config with PluginConfigurationMapper."""
         from interface.models.folder_configuration import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
-            PluginConfigurationMapper,
             ExtractedPluginConfig,
+            PluginConfigurationMapper,
         )
 
         data = {"folder_name": "/test", "alias": "Test", "convert_to_format": "csv"}
@@ -275,8 +276,8 @@ class TestMultiplePluginsWorkflow:
         """Test switching plugin configurations."""
         from interface.models.folder_configuration import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
-            PluginConfigurationMapper,
             ExtractedPluginConfig,
+            PluginConfigurationMapper,
         )
 
         data = {"folder_name": "/test", "alias": "Test", "convert_to_format": "csv"}
@@ -318,12 +319,12 @@ class TestPluginLifecycle:
 
     def test_plugin_full_lifecycle(self, workspace_with_edi):
         """Test plugin lifecycle: discover → configure → use."""
-        from interface.plugins.plugin_manager import PluginManager
         from interface.models.folder_configuration import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
-            PluginConfigurationMapper,
             ExtractedPluginConfig,
+            PluginConfigurationMapper,
         )
+        from interface.plugins.plugin_manager import PluginManager
 
         # 1. Discover plugins
         manager = PluginManager()

@@ -126,10 +126,10 @@ class TestFilterBRecordsByCategory:
         # Only records with categories 1 and 5 should be included
         assert len(result) == 2
         # Verify the correct records are included
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert '123456' in result_items
-        assert '789012' in result_items
-        assert '345678' not in result_items
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert "123456" in result_items
+        assert "789012" in result_items
+        assert "345678" not in result_items
 
     def test_exclude_mode_filters_correctly(self):
         """filter_mode='exclude' should remove records with specified categories."""
@@ -150,10 +150,10 @@ class TestFilterBRecordsByCategory:
 
         # Records with categories 1 and 5 should be excluded
         assert len(result) == 1
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert '345678' in result_items
-        assert '123456' not in result_items
-        assert '789012' not in result_items
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert "345678" in result_items
+        assert "123456" not in result_items
+        assert "789012" not in result_items
 
     def test_exclude_all_categories_leaves_none(self):
         """Exclude mode with all categories should leave no matching records."""
@@ -190,8 +190,8 @@ class TestFilterBRecordsByCategory:
         # 123456 should be excluded (category 1 not in filter)
         # 999999 should be included (fail-open for unknown items)
         assert len(result) == 1
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert '999999' in result_items
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert "999999" in result_items
 
     def test_fail_open_for_items_not_in_upc_dict_exclude_mode(self):
         """Items not in upc_dict should be included even in exclude mode."""
@@ -211,8 +211,8 @@ class TestFilterBRecordsByCategory:
         # 123456 should be excluded (category 1 is in exclude list)
         # 999999 should be included (fail-open for unknown items)
         assert len(result) == 1
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert '999999' in result_items
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert "999999" in result_items
 
     def test_empty_b_records_returns_empty_list(self):
         """Empty B records list should return empty list."""
@@ -343,8 +343,8 @@ class TestFilterBRecordsByCategory:
         )
 
         assert len(result) == 1
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert '123456' in result_items
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert "123456" in result_items
 
     def test_preserves_record_order(self):
         """Filtering should preserve the original order of records."""
@@ -367,8 +367,8 @@ class TestFilterBRecordsByCategory:
 
         # All should be included, order preserved
         assert len(result) == 4
-        result_items = [capture_records(r)['vendor_item'].strip() for r in result]
-        assert result_items == ['111111', '222222', '333333', '444444']
+        result_items = [capture_records(r)["vendor_item"].strip() for r in result]
+        assert result_items == ["111111", "222222", "333333", "444444"]
 
 
 class TestCaptureRecordsIntegration:
@@ -380,8 +380,8 @@ class TestCaptureRecordsIntegration:
         parsed = capture_records(record)
 
         assert parsed is not None
-        assert parsed['record_type'] == 'B'
-        assert parsed['vendor_item'].strip() == '123456'
+        assert parsed["record_type"] == "B"
+        assert parsed["vendor_item"].strip() == "123456"
 
     def test_create_b_record_with_different_items(self):
         """Verify B record creation with different item numbers."""
@@ -390,14 +390,16 @@ class TestCaptureRecordsIntegration:
             parsed = capture_records(record)
 
             assert parsed is not None
-            assert parsed['record_type'] == 'B'
-            assert int(parsed['vendor_item'].strip()) == item_num
+            assert parsed["record_type"] == "B"
+            assert int(parsed["vendor_item"].strip()) == item_num
 
 
 class TestFilterEDICategoryDropInvoices:
     """Test that invoices with no B records after filtering are dropped."""
 
-    def create_a_record(self, invoice_number: str = "0012345678", invoice_total: str = "0000100000") -> str:
+    def create_a_record(
+        self, invoice_number: str = "0012345678", invoice_total: str = "0000100000"
+    ) -> str:
         """Create a minimal valid A record for testing.
 
         A record format:
@@ -460,8 +462,11 @@ class TestFilterEDICategoryDropInvoices:
 
         # Filter to only include category 1
         result = utils.filter_edi_file_by_category(
-            str(input_file), str(output_file), upc_dict,
-            filter_categories="1", filter_mode="include"
+            str(input_file),
+            str(output_file),
+            upc_dict,
+            filter_categories="1",
+            filter_mode="include",
         )
 
         assert result is True
@@ -496,8 +501,11 @@ class TestFilterEDICategoryDropInvoices:
 
         # Filter to only include category 1
         result = utils.filter_edi_file_by_category(
-            str(input_file), str(output_file), upc_dict,
-            filter_categories="1", filter_mode="include"
+            str(input_file),
+            str(output_file),
+            upc_dict,
+            filter_categories="1",
+            filter_mode="include",
         )
 
         assert result is True
@@ -530,8 +538,11 @@ class TestFilterEDICategoryDropInvoices:
         }
 
         result = utils.filter_edi_file_by_category(
-            str(input_file), str(output_file), upc_dict,
-            filter_categories="ALL", filter_mode="include"
+            str(input_file),
+            str(output_file),
+            upc_dict,
+            filter_categories="ALL",
+            filter_mode="include",
         )
 
         # Should return False indicating no filtering was applied
@@ -671,7 +682,13 @@ class TestFilterBRecordsByCategoryEdgeCases:
         for i in range(1, 21):
             vendor_item = 100000 + i
             b_records.append(create_b_record(vendor_item))
-            upc_dict[vendor_item] = [str(i), f"upc{i}", f"upc{i}_2", f"upc{i}_3", f"upc{i}_4"]
+            upc_dict[vendor_item] = [
+                str(i),
+                f"upc{i}",
+                f"upc{i}_2",
+                f"upc{i}_3",
+                f"upc{i}_4",
+            ]
 
         # Filter for categories 1-15
         category_list = ",".join([str(i) for i in range(1, 16)])
@@ -780,7 +797,13 @@ class TestFilterUPCValidationIntegration:
     def test_upc_length_affects_category_lookup(self):
         """UPC length validation should work with category filtering."""
         upc_dict = {
-            123456: ["1", "0123456789", "012345678901", "0123456789012", "01234567890123"],
+            123456: [
+                "1",
+                "0123456789",
+                "012345678901",
+                "0123456789012",
+                "01234567890123",
+            ],
         }
 
         # Valid UPC lengths: 11, 12, 13, 14
@@ -797,7 +820,7 @@ class TestFilterUPCValidationIntegration:
         target_length = 11
         padding_pattern = "           "  # 11 spaces
 
-        padded_upc = padding_pattern[:target_length - len(upc)] + upc
+        padded_upc = padding_pattern[: target_length - len(upc)] + upc
 
         assert len(padded_upc) == target_length
         assert padded_upc.startswith("      ")
@@ -822,7 +845,10 @@ class TestFilterUPCValidationIntegration:
             filter_category = "5"
 
         result = filter_b_records_by_category(
-            b_records, upc_dict, filter_categories=filter_category, filter_mode="include"
+            b_records,
+            upc_dict,
+            filter_categories=filter_category,
+            filter_mode="include",
         )
 
         # With override to category 1, but record has category 5, it won't match
@@ -850,7 +876,7 @@ class TestFilterModeCombinations:
         assert len(result) == 1
         parsed = capture_records(result[0])
         assert parsed is not None
-        assert parsed['vendor_item'].strip() == '123456'
+        assert parsed["vendor_item"].strip() == "123456"
 
     def test_include_mode_with_multiple_categories(self):
         """Include mode with multiple categories."""
@@ -889,7 +915,7 @@ class TestFilterModeCombinations:
         assert len(result) == 1
         parsed = capture_records(result[0])
         assert parsed is not None
-        assert parsed['vendor_item'].strip() == '789012'
+        assert parsed["vendor_item"].strip() == "789012"
 
     def test_exclude_mode_with_multiple_categories(self):
         """Exclude mode with multiple categories."""
@@ -911,7 +937,7 @@ class TestFilterModeCombinations:
         assert len(result) == 1
         parsed = capture_records(result[0])
         assert parsed is not None
-        assert parsed['vendor_item'].strip() == '345678'
+        assert parsed["vendor_item"].strip() == "345678"
 
     def test_all_mode_ignores_filter_mode(self):
         """ALL mode should return all records regardless of filter_mode."""

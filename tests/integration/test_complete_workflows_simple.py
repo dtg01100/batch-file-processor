@@ -14,13 +14,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database.database_obj import DatabaseObj
-from interface.database import sqlite_wrapper
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
 from copy_backend import do as copy_backend_do
-from dispatch.pipeline.validator import EDIValidationStep
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
+from dispatch.pipeline.validator import EDIValidationStep
+from interface.database import sqlite_wrapper
+from interface.database.database_obj import DatabaseObj
 
 # Module-level constant replacing the former sample_edi_content fixture.
 SAMPLE_EDI_CONTENT = """\

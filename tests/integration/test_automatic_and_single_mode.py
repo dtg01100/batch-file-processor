@@ -13,10 +13,11 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.dispatch, pytest.mark.workflow]
 
 import os
-import pytest
-from unittest.mock import patch, MagicMock
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent.resolve()
@@ -384,7 +385,7 @@ class TestErrorHandling:
             # This is what happens in automatic_process_directories exception handler
             try:
                 raise Exception(error_message)
-            except Exception as e:
+            except Exception:
                 # In actual code: with open("critical_error.log", "a") as f:
                 #                      f.write(str(e) + "\r\n")
                 mock_file.write(f"{error_message}\r\n")

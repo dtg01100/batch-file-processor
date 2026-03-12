@@ -12,17 +12,14 @@ Tweak-EDI flow is also covered via EDITweakerStep.
 
 import csv
 import io
-import tempfile
-from pathlib import Path
 
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e]
 
-from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
-
 
 # =============================================================================
 # EDI sample content
@@ -84,7 +81,7 @@ def base_folder_params(edi_dir):
         "folder_is_active": True,
         # EDI processing flags
         "process_edi": True,
-        "convert_edi": True,   # orchestrator gate
+        "convert_edi": True,  # orchestrator gate
         "tweak_edi": False,
         "split_edi": False,
         # Backend – we use a capture backend, not the real copy backend
@@ -406,7 +403,9 @@ class TestPipelineTweakEDI:
         assert result.success
         assert result.files_processed == 1
 
-    def test_tweak_date_offset_modifies_content(self, base_folder_params, base_settings):
+    def test_tweak_date_offset_modifies_content(
+        self, base_folder_params, base_settings
+    ):
         """Invoice date offset should change the date in the A record."""
         folder = self._tweak_folder(base_folder_params)
         folder["invoice_date_offset"] = 1  # shift date by 1 day

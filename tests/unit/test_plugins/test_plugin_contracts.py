@@ -3,8 +3,8 @@
 import pytest
 
 from interface.models.folder_configuration import ConvertFormat
-from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition
+from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
 from interface.plugins.estore_einvoice_configuration_plugin import (
     EStoreEInvoiceConfigurationPlugin,
@@ -32,7 +32,6 @@ from interface.plugins.validation_framework import ValidationResult
 from interface.plugins.yellowdog_csv_configuration_plugin import (
     YellowDogCSVConfigurationPlugin,
 )
-
 
 PLUGIN_CASES = [
     (

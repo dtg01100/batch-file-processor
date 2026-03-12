@@ -10,7 +10,6 @@ import pytest
 
 from interface.models.folder_configuration import FolderConfiguration
 
-
 pytestmark = [pytest.mark.integration]
 
 

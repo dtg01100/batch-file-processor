@@ -2,11 +2,12 @@
 
 import logging
 from unittest.mock import Mock
+
 from dispatch.pipeline.tweaker import (
-    TweakerResult,
-    MockTweaker,
     EDITweakerStep,
+    MockTweaker,
     TweakerInterface,
+    TweakerResult,
 )
 
 

@@ -4,8 +4,9 @@ Dialogs are tested via direct widget manipulation, never exec() or show().
 Uses pytest-qt (qtbot fixture) for proper widget lifecycle management.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 from interface.validation.folder_settings_validator import ValidationResult
@@ -347,6 +348,7 @@ class TestEditFoldersDialogOKButtonFlow:
     def test_event_handlers_update_active_state_with_qcheckbox(self, qtbot):
         """Test that EventHandlers.update_active_state works with QCheckBox."""
         from PyQt6.QtWidgets import QCheckBox
+
         from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 
         # Create a minimal QCheckBox

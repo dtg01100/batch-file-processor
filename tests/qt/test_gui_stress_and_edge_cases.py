@@ -10,8 +10,9 @@ This test module focuses on:
 """
 
 import os
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
@@ -574,10 +575,14 @@ class TestResendDialogStress:
 
         f1 = tmp_path / "test.txt"
         f1.write_text("x")
-        mock_database_obj.processed_files.insert({
-            "folder_id": 1, "file_name": str(f1),
-            "resend_flag": False, "sent_date_time": "2024-01-01T00:00:00",
-        })
+        mock_database_obj.processed_files.insert(
+            {
+                "folder_id": 1,
+                "file_name": str(f1),
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            }
+        )
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
         dialog = ResendDialog(None, mock_database_obj)
@@ -594,10 +599,14 @@ class TestResendDialogStress:
 
         f1 = tmp_path / "test.txt"
         f1.write_text("x")
-        mock_database_obj.processed_files.insert({
-            "folder_id": 1, "file_name": str(f1),
-            "resend_flag": False, "sent_date_time": "2024-01-01T00:00:00",
-        })
+        mock_database_obj.processed_files.insert(
+            {
+                "folder_id": 1,
+                "file_name": str(f1),
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            }
+        )
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
         dialog = ResendDialog(None, mock_database_obj)
@@ -734,6 +743,7 @@ class TestFolderListWidgetStress:
     def test_filter_with_special_regex_chars(self, qtbot):
         """Test filter with special regex characters."""
         from unittest.mock import patch
+
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         active = [
@@ -1129,11 +1139,13 @@ class TestAppSmokeActions:
     @pytest.fixture
     def app(self, qtbot, tmp_path, monkeypatch):
         """Create a functional app instance for testing."""
-        from interface.qt.app import QtBatchFileSenderApp
-        from interface.database.database_obj import DatabaseObj
-        import create_database
         import platform
+
         import appdirs
+
+        import create_database
+        from interface.database.database_obj import DatabaseObj
+        from interface.qt.app import QtBatchFileSenderApp
 
         # Mock appdirs to return tmp_path
         monkeypatch.setattr(appdirs, "user_data_dir", lambda name: str(tmp_path / name))

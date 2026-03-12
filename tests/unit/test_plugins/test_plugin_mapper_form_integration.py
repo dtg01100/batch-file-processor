@@ -3,11 +3,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
     PluginConfigurationMapper,
     PluginSectionStateManager,
 )
-from interface.models.folder_configuration import FolderConfiguration
 from interface.plugins.config_schemas import (
     ConfigurationSchema,
     FieldDefinition,

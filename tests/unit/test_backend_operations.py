@@ -17,12 +17,13 @@ pytestmark = [pytest.mark.unit, pytest.mark.backend]
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
+
 import pytest
 
 import copy_backend
-import ftp_backend
 import email_backend
+import ftp_backend
 
 
 class MockFileOperations:
@@ -398,8 +399,9 @@ class TestEmailBackendOperations:
         self, process_parameters, settings, temp_dir
     ):
         """Test that missing file raises exception."""
-        from backend.smtp_client import MockSMTPClient
         from unittest.mock import patch
+
+        from backend.smtp_client import MockSMTPClient
 
         # Create a real file that exists
         existing_file = temp_dir / "existing.txt"
@@ -572,11 +574,14 @@ class TestBackendErrorScenarios:
         from backend.smtp_client import MockSMTPClient
 
         mock_client = MockSMTPClient()
-        with patch.object(
-            mock_client,
-            "login",
-            side_effect=smtplib.SMTPAuthenticationError(535, b"Auth failed"),
-        ) as mocked_login, patch("time.sleep"):
+        with (
+            patch.object(
+                mock_client,
+                "login",
+                side_effect=smtplib.SMTPAuthenticationError(535, b"Auth failed"),
+            ) as mocked_login,
+            patch("time.sleep"),
+        ):
             with pytest.raises(smtplib.SMTPAuthenticationError, match="Auth failed"):
                 email_backend.do(
                     {"email_to": "test@example.com", "email_subject_line": "Test"},

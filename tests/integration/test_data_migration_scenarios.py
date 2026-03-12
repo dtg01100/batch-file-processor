@@ -8,9 +8,10 @@ Tests cover:
 - Multi-version skip migration
 """
 
-import pytest
 import shutil
 from pathlib import Path
+
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.migration]
 
@@ -207,9 +208,9 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v1_to_current(self, legacy_database_v1, tmp_path):
         """Test migrating from v1 schema to current."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         # Connect to the database
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v1))
@@ -240,9 +241,9 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v2_to_current(self, legacy_database_v2, tmp_path):
         """Test migrating from v2 schema to current."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v2))
 
@@ -269,9 +270,9 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v3_to_current(self, legacy_database_v3, tmp_path):
         """Test migrating from v3 schema to current."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v3))
 
@@ -311,9 +312,9 @@ class TestMigrationWithDataValidation:
         self, legacy_database_v3, tmp_path
     ):
         """Test that all data is preserved after migration."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         # Read data before migration using sqlite_wrapper
         db_before = sqlite_wrapper.Database.connect(str(legacy_database_v3))
@@ -351,9 +352,9 @@ class TestMigrationWithDataValidation:
 
     def test_validate_data_types_preserved(self, legacy_database_v3, tmp_path):
         """Test that data types are preserved during migration."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v3))
 
@@ -386,9 +387,9 @@ class TestMigrationRollback:
 
     def test_backup_created_before_migration(self, legacy_database_v3, tmp_path):
         """Test that backup is created before migration."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v3))
 
@@ -424,9 +425,9 @@ class TestMigrationRollback:
             # Check backup outcome
             if backup_path.exists():
                 backup_files = list(backup_path.glob("*.db"))
-                assert backup_files, (
-                    f"Backup directory exists but no .db backup file was found: {backup_path}"
-                )
+                assert (
+                    backup_files
+                ), f"Backup directory exists but no .db backup file was found: {backup_path}"
             else:
                 folders = list(db_for_migration["folders"].find({}))
                 processed_files = list(db_for_migration["processed_files"].find({}))
@@ -447,9 +448,9 @@ class TestMigrationRollback:
 
     def test_restore_from_backup(self, legacy_database_v3, tmp_path):
         """Test restoring from backup after failed migration."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         # Create backup manually
         backup_path = tmp_path / "backup"
@@ -496,9 +497,9 @@ class TestInterruptedMigration:
 
     def test_resume_interrupted_migration(self, legacy_database_v3, tmp_path):
         """Test resuming migration after interruption."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v3))
 
@@ -534,8 +535,8 @@ class TestInterruptedMigration:
         shutil.copy(str(legacy_database_v3), str(backup_db))
 
         # Connect for migration
-        from interface.database import sqlite_wrapper
         from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v3))
 
@@ -569,9 +570,9 @@ class TestMultiVersionMigration:
 
     def test_skip_version_migration_v1_to_v5(self, legacy_database_v1, tmp_path):
         """Test migrating from v1 directly to current (skipping intermediate versions)."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v1))
 
@@ -596,9 +597,9 @@ class TestMultiVersionMigration:
 
     def test_migrate_with_schema_evolution(self, legacy_database_v2, tmp_path):
         """Test migration handling schema evolution."""
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(legacy_database_v2))
 
@@ -693,9 +694,9 @@ class TestMigrationEdgeCases:
         conn.commit()
         conn.close()
 
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(db_path))
 
@@ -809,9 +810,9 @@ class TestMigrationEdgeCases:
         conn.commit()
         conn.close()
 
-        from interface.database import sqlite_wrapper
-        from folders_database_migrator import upgrade_database
         import schema
+        from folders_database_migrator import upgrade_database
+        from interface.database import sqlite_wrapper
 
         db_for_migration = sqlite_wrapper.Database.connect(str(db_path))
 

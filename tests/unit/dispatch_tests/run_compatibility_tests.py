@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Run compatibility tests directly without pytest."""
 
-import sys
 import os
+import sys
 
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
 from dispatch.compatibility import (
+    convert_backend_config,
     legacy_config_to_modern,
     modern_config_to_legacy,
-    convert_backend_config,
     parse_legacy_process_edi_flag,
 )
 

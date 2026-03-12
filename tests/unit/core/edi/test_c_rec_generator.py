@@ -1,8 +1,9 @@
 """Unit tests for CRecGenerator."""
 
-import pytest
-from unittest.mock import MagicMock
 from io import StringIO
+from unittest.mock import MagicMock
+
+import pytest
 
 from core.edi.c_rec_generator import (
     CRecGenerator,
