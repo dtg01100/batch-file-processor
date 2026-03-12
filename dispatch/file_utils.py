@@ -201,16 +201,20 @@ def build_processed_file_record(
 
 
 def do_clear_old_files(folder_path, maximum_files):
-    while len(os.listdir(folder_path)) > maximum_files:
-        os.remove(
-            os.path.join(
-                folder_path,
-                min(
-                    os.listdir(folder_path),
-                    key=lambda f: os.path.getctime("{}/{}".format(folder_path, f)),
-                ),
-            )
-        )
+    while True:
+        files = os.listdir(folder_path)
+        if len(files) <= maximum_files:
+            break
+        def _safe_ctime(f):
+            try:
+                return os.path.getctime(os.path.join(folder_path, f))
+            except OSError:
+                return float('inf')
+        oldest = min(files, key=_safe_ctime)
+        try:
+            os.remove(os.path.join(folder_path, oldest))
+        except FileNotFoundError:
+            pass  # already deleted by another process
 
 
 # Import time module for build_error_log_filename

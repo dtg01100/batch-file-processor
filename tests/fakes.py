@@ -10,7 +10,7 @@ Benefits over MagicMock:
 4. Catches protocol violations at test time
 """
 
-from typing import Optional, Any
+from typing import Callable, Optional, Any
 
 
 class FakeTable:
@@ -484,6 +484,15 @@ class FakeMaintenanceFunctions:
     def call_count(self, method: str) -> int:
         """Get the number of times a method was called."""
         return self._calls.get(method, 0)
+
+    def set_operation_callbacks(
+        self,
+        on_start: Optional[Callable[[], None]],
+        on_end: Optional[Callable[[], None]],
+    ) -> None:
+        """Store callbacks invoked at the start and end of each operation."""
+        self._on_operation_start = on_start
+        self._on_operation_end = on_end
 
     def reset(self) -> None:
         """Reset all tracked calls."""

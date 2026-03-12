@@ -739,7 +739,6 @@ class TestQtAppLifecycle:
         app = _make_app()
         # Should not raise exception
         app.shutdown()
-        assert True
 
 
 class TestQtAppSelfTest:

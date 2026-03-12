@@ -34,6 +34,7 @@ class RealFileOperations:
         """
         logger.debug("Copying file %s -> %s", src, dst)
         shutil.copy(src, dst)
+        logger.debug("Copied file %s -> %s", src, dst)
 
     def copy2(self, src: str, dst: str) -> None:
         """Copy a file with metadata preserved.
@@ -78,6 +79,7 @@ class RealFileOperations:
         """
         logger.debug("Creating directories %s (exist_ok=%s)", path, exist_ok)
         os.makedirs(path, exist_ok=exist_ok)
+        logger.debug("Created directories %s", path)
 
     def remove(self, path: str) -> None:
         """Remove a file.
@@ -195,6 +197,7 @@ class RealFileOperations:
         """
         logger.debug("Moving %s -> %s", src, dst)
         shutil.move(src, dst)
+        logger.debug("Moved %s -> %s", src, dst)
 
     def rename(self, src: str, dst: str) -> None:
         """Rename a file or directory.

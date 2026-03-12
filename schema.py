@@ -417,7 +417,7 @@ def ensure_schema(database_connection) -> None:
                     raw.commit()
             except Exception:
                 # last resort: skip silently to avoid breaking upgrades
-                logger.debug("Failed to create scan_sheets table")
+                logger.debug("Failed to execute schema statement (may already exist or DB locked)")
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
@@ -427,9 +427,9 @@ def ensure_schema(database_connection) -> None:
         database_connection.query('UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL')
     except Exception:
         # Ignore failures (column exists or DB locked) — migrations handle this elsewhere
-        logger.debug("Failed to create processed_files table")
+        logger.debug("Failed to add plugin_configurations column to folders table (may already exist)")
 
     try:
         database_connection.query("ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT")
     except Exception:
-        logger.debug("Failed to create settings table")
+        logger.debug("Failed to add invoice_numbers column to processed_files table (may already exist)")

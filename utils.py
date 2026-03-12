@@ -209,45 +209,50 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
             list_of_first_characters.append(line[0])
         if list_of_first_characters.count("A") > 700:
             return edi_send_list
-        for line_mum, line in enumerate(
-            work_file_lined
-        ):  # iterate over work file contents
-            writeable_line = line
-            if writeable_line.startswith("A"):
-                count += 1
-                prepend_letters = col_to_excel(count)
-                line_dict = capture_records(writeable_line)
-                if int(line_dict["invoice_total"]) < 0:
-                    file_name_suffix = ".cr"
-                else:
-                    file_name_suffix = ".inv"
-                if len(edi_send_list) != 0:
-                    f.close()
-                file_name_prefix = prepend_letters + "_"
-                if parameters_dict["prepend_date_files"]:
-                    datetime_from_arec = datetime.strptime(
-                        line_dict["invoice_date"], "%m%d%y"
+        try:
+            for line_mum, line in enumerate(
+                work_file_lined
+            ):  # iterate over work file contents
+                writeable_line = line
+                if writeable_line.startswith("A"):
+                    count += 1
+                    prepend_letters = col_to_excel(count)
+                    line_dict = capture_records(writeable_line)
+                    if int(line_dict["invoice_total"]) < 0:
+                        file_name_suffix = ".cr"
+                    else:
+                        file_name_suffix = ".inv"
+                    if len(edi_send_list) != 0:
+                        f.close()
+                    file_name_prefix = prepend_letters + "_"
+                    if parameters_dict["prepend_date_files"]:
+                        datetime_from_arec = datetime.strptime(
+                            line_dict["invoice_date"], "%m%d%y"
+                        )
+                        inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
+                        file_name_prefix = inv_date + "_" + file_name_prefix
+                    output_file_path = os.path.join(
+                        work_directory,
+                        file_name_prefix + os.path.basename(edi_process) + file_name_suffix,
                     )
-                    inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
-                    file_name_prefix = inv_date + "_" + file_name_prefix
-                output_file_path = os.path.join(
-                    work_directory,
-                    file_name_prefix + os.path.basename(edi_process) + file_name_suffix,
-                )
-                edi_send_list.append(
-                    (output_file_path, file_name_prefix, file_name_suffix)
-                )
-                f = open(output_file_path, "wb")
+                    edi_send_list.append(
+                        (output_file_path, file_name_prefix, file_name_suffix)
+                    )
+                    f = open(output_file_path, "wb")
+                if f is None:
+                    raise ValueError(
+                        f"[do_split_edi]: No A record found before line {line_mum}; "
+                        "EDI file must start with an A record"
+                    )
+                f.write(writeable_line.replace("\n", "\r\n").encode())
+                write_counter += 1
             if f is None:
-                raise ValueError(
-                    f"[do_split_edi]: No A record found before line {line_mum}; "
-                    "EDI file must start with an A record"
-                )
-            f.write(writeable_line.replace("\n", "\r\n").encode())
-            write_counter += 1
-        if f is None:
-            raise ValueError("[do_split_edi]: EDI file contained no A records")
-        f.close()  # close output file
+                raise ValueError("[do_split_edi]: EDI file contained no A records")
+            f.close()  # close output file
+        except Exception:
+            if f is not None and not f.closed:
+                f.close()
+            raise
         # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
         # edi_send_list.pop(0)
         edi_send_list_lines = 0
@@ -266,16 +271,20 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
 
 
 def do_clear_old_files(folder_path, maximum_files):
-    while len(os.listdir(folder_path)) > maximum_files:
-        os.remove(
-            os.path.join(
-                folder_path,
-                min(
-                    os.listdir(folder_path),
-                    key=lambda f: os.path.getctime("{}/{}".format(folder_path, f)),
-                ),
-            )
-        )
+    while True:
+        files = os.listdir(folder_path)
+        if len(files) <= maximum_files:
+            break
+        def _safe_ctime(f):
+            try:
+                return os.path.getctime(os.path.join(folder_path, f))
+            except OSError:
+                return float('inf')
+        oldest = min(files, key=_safe_ctime)
+        try:
+            os.remove(os.path.join(folder_path, oldest))
+        except FileNotFoundError:
+            pass  # already deleted by another process
 
 
 def qty_to_int(qty: str) -> int:
@@ -363,15 +372,16 @@ class cRecGenerator:
             self._db_connect()
 
         qry_ret = self.query_object.run_arbitrary_query(
-            f"""
+            """
             SELECT
                 sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
                 sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
             FROM
                 dacdata.odhst odhst
             WHERE
-                odhst.BUHHNB = {self._invoice_number}
-            """
+                odhst.BUHHNB = ?
+            """,
+            (self._invoice_number,),
         )
 
         qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]

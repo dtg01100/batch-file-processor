@@ -17,9 +17,6 @@ import folders_database_migrator
 
 logger = logging.getLogger(__name__)
 
-new_database_connection = None
-modified_new_folder_path = None
-
 
 class DbMigrationThing:
     """Database migration handler.
@@ -55,20 +52,23 @@ class DbMigrationThing:
         if original_database_path is None:
             original_database_path = self.original_folder_path
 
+        _thread_result: dict = {"modified_new_folder_path": None, "error": None}
+
         def database_preimport_operations():
-            global new_database_connection
-            global modified_new_folder_path
-            original_database_connection_for_migrate = sqlite_wrapper.Database.connect(original_database_path)
-            backup_increment.do_backup(self.original_folder_path)
-            modified_new_folder_path = backup_increment.do_backup(self.new_folder_path)
-            original_db_version = original_database_connection_for_migrate['version']
-            original_db_version_dict = original_db_version.find_one(id=1)
-            new_database_connection = sqlite_wrapper.Database.connect(modified_new_folder_path)
-            new_db_version = new_database_connection['version']
-            new_db_version_dict = new_db_version.find_one(id=1)
-            if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
-                logger.info("db needs upgrading")
-                folders_database_migrator.upgrade_database(new_database_connection, None, "Null")
+            try:
+                original_database_connection_for_migrate = sqlite_wrapper.Database.connect(original_database_path)
+                backup_increment.do_backup(self.original_folder_path)
+                _thread_result["modified_new_folder_path"] = backup_increment.do_backup(self.new_folder_path)
+                original_db_version = original_database_connection_for_migrate['version']
+                original_db_version_dict = original_db_version.find_one(id=1)
+                _new_db_conn = sqlite_wrapper.Database.connect(_thread_result["modified_new_folder_path"])
+                new_db_version = _new_db_conn['version']
+                new_db_version_dict = new_db_version.find_one(id=1)
+                if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
+                    logger.info("db needs upgrading")
+                    folders_database_migrator.upgrade_database(_new_db_conn, None, "Null")
+            except Exception as exc:
+                _thread_result["error"] = exc
 
         preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
         preimport_operations_thread_object.start()
@@ -90,6 +90,10 @@ class DbMigrationThing:
         if progress_callback:
             progress_callback(0, 100)
 
+        if _thread_result["error"] is not None:
+            raise _thread_result["error"]
+
+        modified_new_folder_path = _thread_result["modified_new_folder_path"]
         new_database_connection = sqlite_wrapper.Database.connect(modified_new_folder_path)
         new_folders_table = new_database_connection['folders']
         original_database_connection = sqlite_wrapper.Database.connect(original_database_path)

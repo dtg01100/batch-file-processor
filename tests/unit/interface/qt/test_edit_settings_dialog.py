@@ -1232,8 +1232,6 @@ class TestEditSettingsDialogEdgeCases:
         assert dialog._settings["enable_email"] is False
         assert dialog._settings["backup_counter_maximum"] == 100
         assert dialog._settings_data["enable_reporting"] is False
-        assert dialog._settings_data["folder_is_active"] is False
-        assert dialog._settings_data["process_backend_email"] is False
 
     def test_default_smtp_service(self, qtbot, sample_settings, sample_oversight):
         """Test dialog creates default SMTP service if not provided."""

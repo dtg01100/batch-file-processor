@@ -61,7 +61,10 @@ def generate_file_hash(
     while generated_checksum is None:
         try:
             with open(absolute_path, "rb") as f:
-                generated_checksum = hashlib.md5(f.read()).hexdigest()
+                h = hashlib.md5()
+                for chunk in iter(lambda: f.read(8192), b""):
+                    h.update(chunk)
+                generated_checksum = h.hexdigest()
         except Exception as error:
             last_error = error
             if checksum_attempt <= max_retries:
