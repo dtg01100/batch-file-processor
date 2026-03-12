@@ -224,13 +224,19 @@ class TestQtFolderDataExtractor:
         assert extractor._get_bool("nonexistent_field") is False
 
     def test_get_check_str_returns_false_str_for_missing(self, qtbot):
-        from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.dialogs.edit_folders.data_extractor import (
+            QtFolderDataExtractor,
+        )
 
         extractor = QtFolderDataExtractor({})
-        assert extractor._get_check_str("nonexistent_field") == "False"
+        extracted = extractor.extract_all()
+        # Missing checkbox fields default to False (bool), not "False" (str)
+        assert extracted.folder_is_active is False
 
     def test_get_combo_returns_empty_for_missing(self, qtbot):
-        from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.dialogs.edit_folders.data_extractor import (
+            QtFolderDataExtractor,
+        )
 
         extractor = QtFolderDataExtractor({})
         assert extractor._get_combo("nonexistent_field") == ""
@@ -1118,7 +1124,7 @@ class TestResendDialog:
         )
 
         # Mock QMessageBox to avoid blocking
-        monkeypatch.setattr("PyQt6.QtWidgets.QMessageBox.information", MagicMock())
+        monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", MagicMock())
 
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
@@ -1128,12 +1134,9 @@ class TestResendDialog:
 
         mock_db = MagicMock()
 
-        # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = []
-        mock_service.count_files_for_folder.return_value = 0
-        mock_service.get_files_for_folder.return_value = []
+        mock_service.get_all_files_for_resend.return_value = []
 
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -1142,21 +1145,26 @@ class TestResendDialog:
 
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
-        assert not dialog._file_count_spinbox.isEnabled()
+        # With current table UI, bulk action frame is hidden when no selection
+        assert dialog._bulk_action_frame.isHidden()
 
     def test_folder_selection_enables_spinbox(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         mock_db = MagicMock()
 
-        # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = [
-            {"id": 5, "folder_name": "Test Folder"}
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 1,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            }
         ]
-        mock_service.count_files_for_folder.return_value = 20
-        mock_service.get_files_for_folder.return_value = []
 
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -1165,23 +1173,17 @@ class TestResendDialog:
 
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
-        dialog._on_folder_selected(5)
-        assert dialog._folder_id == 5
-        assert dialog._file_count_spinbox.isEnabled()
+        # Table should be populated and search should be accessible
+        assert dialog._table.rowCount() >= 1
 
     def test_folder_selection_updates_max(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         mock_db = MagicMock()
 
-        # Mock ResendService to avoid database operations
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = [
-            {"id": 1, "folder_name": "Test Folder"}
-        ]
-        mock_service.count_files_for_folder.return_value = 23
-        mock_service.get_files_for_folder.return_value = []
+        mock_service.get_all_files_for_resend.return_value = []
 
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -1190,8 +1192,8 @@ class TestResendDialog:
 
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
-        dialog._on_folder_selected(1)
-        assert dialog._file_count_spinbox.maximum() == 1000  # Default max is 1000
+        # Table should be accessible (no spinbox in current UI)
+        assert hasattr(dialog, "_table")
 
     def test_no_selection_initially(self, qtbot, monkeypatch):
         mock_db = MagicMock()

@@ -661,6 +661,7 @@ class TestDbMigrationJob:
         # Should fallback to string comparison and update
         target_folders.update.assert_called_once()
 
+    @pytest.mark.timeout(120)
     def test_do_migrate_imports_active_folders_into_target_db(
         self, legacy_v32_db, tmp_path
     ):

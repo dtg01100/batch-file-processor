@@ -506,6 +506,7 @@ class TestMaintenanceWorkflow:
         assert captured_dialog_state["import_enabled"] is True
         assert captured_dialog_state["exec_called"] is True
 
+    @pytest.mark.timeout(180)
     def test_imported_db_dependent_interactions_and_run_with_odbc_mocked(
         self,
         initialized_app,

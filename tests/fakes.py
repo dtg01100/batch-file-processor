@@ -53,6 +53,7 @@ class FakeTable:
         """Find all records matching criteria."""
         self._track_call("find")
         _limit = kwargs.pop("_limit", None)
+        kwargs.pop("order_by", None)  # dataset-compatible: ignore ordering
         results = []
         for record in self._data:
             if all(record.get(k) == v for k, v in kwargs.items()):
@@ -493,6 +494,10 @@ class FakeMaintenanceFunctions:
         """Store callbacks invoked at the start and end of each operation."""
         self._on_operation_start = on_start
         self._on_operation_end = on_end
+
+    def get_database(self) -> "FakeDatabaseObj":
+        """Return the underlying fake database object."""
+        return self._database_obj
 
     def reset(self) -> None:
         """Reset all tracked calls."""

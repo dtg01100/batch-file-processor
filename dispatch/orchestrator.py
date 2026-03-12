@@ -501,7 +501,8 @@ class DispatchOrchestrator:
                                 current_pipeline_file = tweaked_file
 
                         send_result = self._send_pipeline_file(
-                            current_pipeline_file, context.effective_folder, run_log
+                            self._apply_file_rename(current_pipeline_file, context),
+                            context.effective_folder, run_log
                         )
                         if not send_result:
                             send_errors = self.send_manager.get_errors()
@@ -586,7 +587,8 @@ class DispatchOrchestrator:
                 result.errors.append("No backends enabled")
             else:
                 result.sent = self._send_pipeline_file(
-                    current_file, context.effective_folder, run_log
+                    self._apply_file_rename(current_file, context),
+                    context.effective_folder, run_log
                 )
 
                 if not result.sent:
@@ -669,6 +671,15 @@ class DispatchOrchestrator:
         "estore_vendor_NameVendorOID": "",
         "estore_c_record_OID": "",
         "fintech_division_id": "",
+        # Boolean tweak fields — accessed via direct dict key in archive/edi_tweaks.py;
+        # must default to False so missing/NULL DB values don't raise KeyError.
+        "pad_a_records": False,
+        "append_a_records": False,
+        "force_txt_file_ext": False,
+        "calculate_upc_check_digit": False,
+        "retail_uom": False,
+        "override_upc_bool": False,
+        "split_prepaid_sales_tax_crec": False,
     }
 
     def _build_processing_context(
@@ -703,6 +714,47 @@ class DispatchOrchestrator:
             settings=self.config.settings,
             upc_dict=upc_dict,
         )
+
+    def _apply_file_rename(self, file_path: str, context: Any) -> str:
+        """Return a renamed copy of file_path if rename_file is configured.
+
+        Creates a temp copy with the new name (tracked in context.temp_dirs
+        for automatic cleanup) and returns its path.  If rename_file is empty,
+        returns the original path unchanged.
+
+        Args:
+            file_path: Current file path
+            context: ProcessingContext with effective_folder and temp_dirs
+
+        Returns:
+            Path to send (renamed copy, or original if no rename configured)
+        """
+        import datetime
+        import os
+        import re
+        import shutil
+        import tempfile
+
+        rename_template = context.effective_folder.get("rename_file", "").strip()
+        if not rename_template:
+            return file_path
+
+        original_basename = os.path.basename(file_path)
+        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
+        ext = original_basename.split(".")[-1] if "." in original_basename else ""
+        new_name = rename_template.replace("%datetime%", date_time)
+        if ext:
+            new_name = f"{new_name}.{ext}"
+        new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
+
+        temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
+        if hasattr(context, "temp_dirs"):
+            context.temp_dirs.append(temp_dir)
+
+        dest_path = os.path.join(temp_dir, new_name)
+        shutil.copy2(file_path, dest_path)
+        logger.debug("Renamed %s → %s for send", original_basename, new_name)
+        return dest_path
 
     def _send_pipeline_file(self, file_path: str, folder: dict, run_log: Any = None) -> bool:
         """Send file through pipeline to backends.

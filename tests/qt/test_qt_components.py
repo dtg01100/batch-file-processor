@@ -294,7 +294,7 @@ class TestDataExtractor:
 
         assert extracted is not None
         assert extracted.alias == "Test Alias"
-        assert extracted.folder_is_active == "True"
+        assert extracted.folder_is_active is True
 
     def test_extract_backend_configurations(self, qtbot):
         """Test extracting backend configurations."""
@@ -351,7 +351,7 @@ class TestDataExtractor:
         extracted = extractor.extract_all()
 
         assert extracted is not None
-        assert extracted.process_edi == "True"
+        assert extracted.process_edi is True
         assert extracted.split_edi is True
 
 
@@ -500,7 +500,7 @@ class TestComponentIntegration:
 
         # Verify roundtrip
         assert extracted.alias == "Test Alias"
-        assert extracted.folder_is_active == "True"
+        assert extracted.folder_is_active is True
 
     def test_dynamic_fields_with_extraction(self, qtbot):
         """Test dynamic field building and extraction."""

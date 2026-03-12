@@ -129,8 +129,8 @@ class TestDynamicEDIBuilder:
 
         assert "process_edi" in fields
         assert "tweak_edi" in fields
-        assert fields["process_edi"].isChecked() is False
-        assert fields["tweak_edi"].isChecked() is False
+        assert fields["process_edi"] is False
+        assert fields["tweak_edi"] is False
 
     def test_edi_option_tweak_populates_expected_fields(self, qtbot):
         container = QWidget()

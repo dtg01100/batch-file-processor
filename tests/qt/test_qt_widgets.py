@@ -79,8 +79,9 @@ class TestSearchWidget:
         received = []
         widget = SearchWidget(on_filter_change=lambda t: received.append(t))
         qtbot.addWidget(widget)
-        # setText triggers callback via textChanged
-        widget.entry.setText("callback test")
+        # setText triggers callback via textChanged (after debounce)
+        with qtbot.waitSignal(widget.filter_changed, timeout=1000):
+            widget.entry.setText("callback test")
         assert received == ["callback test"]
 
     def test_escape_clears_active_filter(self, qtbot):
@@ -158,7 +159,7 @@ class TestFolderListWidget:
         buttons = widget.findChildren(QPushButton)
         button_texts = [b.text() for b in buttons]
         assert "Send" in button_texts
-        assert "<-" in button_texts
+        assert "\u25CF" in button_texts  # ● active toggle button
         assert any("Edit:" in t for t in button_texts)
 
     def test_inactive_folder_buttons(self, qtbot):
@@ -240,7 +241,7 @@ class TestFolderListWidget:
         )
         qtbot.addWidget(widget)
         for btn in widget.findChildren(QPushButton):
-            if btn.text() == "<-":
+            if btn.text() == "\u25CF":  # ● active toggle button
                 qtbot.mouseClick(btn, Qt.MouseButton.LeftButton)
                 break
         on_toggle.assert_called_once_with(42)
@@ -278,7 +279,7 @@ class TestFolderListWidget:
         with patch(
             "interface.qt.widgets.folder_list_widget.thefuzz.process"
         ) as mock_fuzzy:
-            mock_fuzzy.extractWithoutOrder.return_value = [("Alpha", 95)]
+            mock_fuzzy.extractWithoutOrder.return_value = [("Alpha", 95, "1")]
             widget = FolderListWidget(
                 parent=None,
                 folders_table=table,
@@ -290,9 +291,9 @@ class TestFolderListWidget:
             )
         qtbot.addWidget(widget)
         buttons = widget.findChildren(QPushButton)
-        edit_texts = [b.text() for b in buttons if "Edit:" in b.text()]
-        assert any("Alpha" in t for t in edit_texts)
-        assert not any("Beta" in t for t in edit_texts)
+        visible_edit_texts = [b.text() for b in buttons if "Edit:" in b.text() and not b.parent().isHidden()]
+        assert any("Alpha" in t for t in visible_edit_texts)
+        assert not any("Beta" in t for t in visible_edit_texts)
 
     def test_total_count_callback(self, qtbot):
         from interface.qt.widgets.folder_list_widget import FolderListWidget

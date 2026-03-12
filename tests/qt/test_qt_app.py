@@ -180,7 +180,7 @@ class TestQtBatchFileSenderApp:
         app._graphical_process_directories(folders_table)
 
         app._ui_service.show_error.assert_called_once_with(
-            "Error", "One or more expected folders are missing."
+            "Error", "One or more expected folders are missing (e.g. '/missing/path')."
         )
         app._process_directories.assert_not_called()
         app._progress_service.show.assert_not_called()
@@ -241,8 +241,8 @@ class TestQtBatchFileSenderApp:
 
         app._disable_folders_without_backends()
 
-        assert row1["folder_is_active"] == "False"
-        assert row2["folder_is_active"] == "False"
+        assert row1["folder_is_active"] is False
+        assert row2["folder_is_active"] is False
         assert app._database.folders_table.update.call_count == 2
 
     def test_automatic_process_directories_exits_after_no_active_folders(
@@ -2088,7 +2088,7 @@ class TestQtAppInteractionWorkflows:
             process_backend_email=True,
             process_backend_ftp=False,
             process_backend_copy=False,
-            folder_is_active="True",
+            folder_is_active=True,
         )
 
     def test_show_maintenance_dialog_database_import_callback_branches(

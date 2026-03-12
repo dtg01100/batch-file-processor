@@ -62,8 +62,16 @@ class SearchWidget(QWidget):
 
     def clear(self) -> None:
         """Clear the search field and fire filter change."""
+        had_content = bool(self._entry.text()) or bool(self._filter_value) or bool(self._pending_filter)
+        self._debounce_timer.stop()
+        self._entry.blockSignals(True)
         self._entry.clear()
-        self._on_filter_applied("")
+        self._entry.blockSignals(False)
+        self._pending_filter = ""
+        self._filter_value = ""
+        self._escape_shortcut.setEnabled(False)
+        if had_content:
+            self.filter_changed.emit("")
 
     def set_value(self, value: str) -> None:
         """Set the search field text without firing the signal.
