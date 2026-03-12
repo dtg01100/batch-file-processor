@@ -34,7 +34,6 @@ class RealFileOperations:
         """
         logger.debug("Copying file %s -> %s", src, dst)
         shutil.copy(src, dst)
-        logger.debug("Copied file %s -> %s", src, dst)
 
     def copy2(self, src: str, dst: str) -> None:
         """Copy a file with metadata preserved.
@@ -45,7 +44,6 @@ class RealFileOperations:
         """
         logger.debug("Copying file with metadata %s -> %s", src, dst)
         shutil.copy2(src, dst)
-        logger.debug("Copied file with metadata %s -> %s", src, dst)
 
     def copytree(self, src: str, dst: str, symlinks: bool = False) -> None:
         """Copy a directory tree.
@@ -57,7 +55,6 @@ class RealFileOperations:
         """
         logger.debug("Copying directory tree %s -> %s (symlinks=%s)", src, dst, symlinks)
         shutil.copytree(src, dst, symlinks=symlinks)
-        logger.debug("Copied directory tree %s -> %s", src, dst)
 
     def exists(self, path: str) -> bool:
         """Check if path exists.
@@ -68,8 +65,8 @@ class RealFileOperations:
         Returns:
             True if path exists, False otherwise
         """
+        logger.debug("Checking if path exists: %s", path)
         result = os.path.exists(path)
-        logger.debug("exists(%s) -> %s", path, result)
         return result
 
     def makedirs(self, path: str, exist_ok: bool = False) -> None:
@@ -81,7 +78,6 @@ class RealFileOperations:
         """
         logger.debug("Creating directories %s (exist_ok=%s)", path, exist_ok)
         os.makedirs(path, exist_ok=exist_ok)
-        logger.debug("Created directories %s", path)
 
     def remove(self, path: str) -> None:
         """Remove a file.
@@ -95,7 +91,6 @@ class RealFileOperations:
         """
         logger.debug("Removing file %s", path)
         os.remove(path)
-        logger.debug("Removed file %s", path)
 
     def rmtree(self, path: str) -> None:
         """Remove directory and all contents.
@@ -105,7 +100,6 @@ class RealFileOperations:
         """
         logger.debug("Removing directory tree %s", path)
         shutil.rmtree(path)
-        logger.debug("Removed directory tree %s", path)
 
     def basename(self, path: str) -> str:
         """Get base name of path.
@@ -149,8 +143,8 @@ class RealFileOperations:
         Returns:
             True if path is a file, False otherwise
         """
+        logger.debug("Checking if path is file: %s", path)
         result = os.path.isfile(path)
-        logger.debug("isfile(%s) -> %s", path, result)
         return result
 
     def isdir(self, path: str) -> bool:
@@ -162,8 +156,8 @@ class RealFileOperations:
         Returns:
             True if path is a directory, False otherwise
         """
+        logger.debug("Checking if path is directory: %s", path)
         result = os.path.isdir(path)
-        logger.debug("isdir(%s) -> %s", path, result)
         return result
 
     def listdir(self, path: str) -> List[str]:
@@ -175,8 +169,8 @@ class RealFileOperations:
         Returns:
             List of file and directory names
         """
+        logger.debug("Listing directory: %s", path)
         result = os.listdir(path)
-        logger.debug("listdir(%s) -> %d entries", path, len(result))
         return result
 
     def getsize(self, path: str) -> int:
@@ -188,8 +182,8 @@ class RealFileOperations:
         Returns:
             File size in bytes
         """
+        logger.debug("Getting size of: %s", path)
         result = os.path.getsize(path)
-        logger.debug("getsize(%s) -> %d bytes", path, result)
         return result
 
     def move(self, src: str, dst: str) -> None:
@@ -201,7 +195,6 @@ class RealFileOperations:
         """
         logger.debug("Moving %s -> %s", src, dst)
         shutil.move(src, dst)
-        logger.debug("Moved %s -> %s", src, dst)
 
     def rename(self, src: str, dst: str) -> None:
         """Rename a file or directory.
@@ -212,7 +205,6 @@ class RealFileOperations:
         """
         logger.debug("Renaming %s -> %s", src, dst)
         os.rename(src, dst)
-        logger.debug("Renamed %s -> %s", src, dst)
 
     def stat(self, path: str) -> os.stat_result:
         """Get file status.

@@ -103,9 +103,8 @@ class RealFTPClient:
             logger.debug("FTP disconnecting (quit)")
             try:
                 self._connection.quit()
-            except Exception:
-                # Ignore errors during quit
-                pass
+            except Exception as e:
+                logger.debug("Failed to close FTP connection: %s", e)
             finally:
                 self._connection = None
 
@@ -115,9 +114,8 @@ class RealFTPClient:
             logger.debug("FTP closing connection")
             try:
                 self._connection.close()
-            except Exception:
-                # Ignore errors during close
-                pass
+            except Exception as e:
+                logger.debug("Failed to close FTP connection: %s", e)
             finally:
                 self._connection = None
 

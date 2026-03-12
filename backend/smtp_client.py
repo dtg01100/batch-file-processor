@@ -113,7 +113,7 @@ class RealSMTPClient:
             raise RuntimeError("Not connected to SMTP server")
         logger.debug("SMTP sending message object from=%s to=%s", msg.get("From", ""), msg.get("To", ""))
         result = self._connection.send_message(msg)
-        logger.info("SMTP message sent successfully")
+        logger.info("SMTP message sent successfully to %s", msg['To'])
         return result
 
     def quit(self) -> None:
@@ -122,9 +122,8 @@ class RealSMTPClient:
             logger.debug("SMTP disconnecting (quit)")
             try:
                 self._connection.quit()
-            except Exception:
-                # Ignore errors during quit
-                pass
+            except Exception as e:
+                logger.debug("Failed to close SMTP connection: %s", e)
             finally:
                 self._connection = None
 
@@ -133,9 +132,8 @@ class RealSMTPClient:
         if self._connection is not None:
             try:
                 self._connection.close()
-            except Exception:
-                # Ignore errors during close
-                pass
+            except Exception as e:
+                logger.debug("Failed to close SMTP connection: %s", e)
             finally:
                 self._connection = None
 

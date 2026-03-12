@@ -61,17 +61,17 @@ def do(
                         client = create_ftp_client(use_tls=use_tls)
 
                     try:
-                        logger.info("Connecting to ftp server: %s", process_parameters['ftp_server'])
+                        logger.debug("Connecting to ftp server: %s", process_parameters['ftp_server'])
                         client.connect(
                             str(process_parameters['ftp_server']),
                             process_parameters['ftp_port']
                         )
-                        logger.info("Logging in to %s", process_parameters['ftp_server'])
+                        logger.debug("Logging in to %s", process_parameters['ftp_server'])
                         client.login(
                             process_parameters['ftp_username'],
                             process_parameters['ftp_password']
                         )
-                        logger.info("Sending File...")
+                        logger.debug("Sending File %s...", filename_no_path)
 
                         # Ensure remote directory exists
                         remote_dir = process_parameters['ftp_folder']
@@ -93,7 +93,7 @@ def do(
                             "stor " + filename_no_path,
                             send_file
                         )
-                        logger.info("Success")
+                        logger.info("Successfully sent file %s", filename_no_path)
                         client.close()
                         file_pass = True
                         break
@@ -101,7 +101,7 @@ def do(
                         logger.warning("FTP error: %s", error)
                         if provider_index + 1 == len(use_tls_options):
                             raise
-                        logger.info("Falling back to non-TLS...")
+                        logger.debug("Falling back to non-TLS...")
                         # Reset file pointer for retry
                         send_file.seek(0)
 
