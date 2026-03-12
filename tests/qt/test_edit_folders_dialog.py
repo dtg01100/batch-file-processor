@@ -14,6 +14,7 @@ Mocks file dialogs and message boxes.
 from unittest.mock import MagicMock
 
 import pytest
+from interface.qt.theme import Theme
 
 
 def create_dialog(qtbot, sample_folder_config, **kwargs):
@@ -77,11 +78,11 @@ class TestActiveCheckboxToggle:
 
         dialog._active_checkbox.setChecked(True)
         assert "Enabled" in dialog._active_checkbox.text()
-        assert "green" in dialog._active_checkbox.styleSheet()
+        assert Theme.SUCCESS_CONTAINER in dialog._active_checkbox.styleSheet()
 
         dialog._active_checkbox.setChecked(False)
         assert "Disabled" in dialog._active_checkbox.text()
-        assert "red" in dialog._active_checkbox.styleSheet()
+        assert Theme.ERROR_CONTAINER in dialog._active_checkbox.styleSheet()
 
     def test_active_checkbox_toggles_edi_fields(self, qtbot, sample_folder_config):
         """EDI fields should be disabled when folder is inactive."""

@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional, Callable
 from PyQt6.QtWidgets import (
     QWidget,
     QMessageBox,
+    QFileDialog,
 )
 
 from interface.qt.dialogs.base_dialog import BaseDialog
@@ -288,6 +289,263 @@ class EditFoldersDialog(BaseDialog):
         widget = self._fields.get(key)
         if widget and hasattr(widget, "setText"):
             widget.setText(value)
+
+    # ------------------------------------------------------------------
+    # Convenience properties – expose commonly accessed widgets directly
+    # so tests and external code can reference them without knowing the
+    # internal fields-dict keys or sub-builder structure.
+    # ------------------------------------------------------------------
+
+    @property
+    def _active_checkbox(self):
+        return self._fields.get("active_checkbutton")
+
+    @property
+    def _copy_backend_check(self):
+        return self._fields.get("process_backend_copy_check")
+
+    @property
+    def _ftp_backend_check(self):
+        return self._fields.get("process_backend_ftp_check")
+
+    @property
+    def _email_backend_check(self):
+        return self._fields.get("process_backend_email_check")
+
+    @property
+    def _split_edi_check(self):
+        return self._fields.get("split_edi")
+
+    @property
+    def _send_invoices_check(self):
+        return self._fields.get("split_edi_send_invoices")
+
+    @property
+    def _send_credits_check(self):
+        return self._fields.get("split_edi_send_credits")
+
+    @property
+    def _filter_mode_combo(self):
+        return self._fields.get("split_edi_filter_mode")
+
+    @property
+    def _others_list(self):
+        return self._fields.get("others_list")
+
+    @property
+    def _folder_alias_field(self):
+        return self._fields.get("folder_alias_field")
+
+    @property
+    def _copy_config_btn(self):
+        return self._fields.get("copy_config_btn")
+
+    @property
+    def _copy_dest_btn(self):
+        return self._fields.get("copy_dest_btn")
+
+    @property
+    def _ftp_server_field(self):
+        return self._fields.get("ftp_server_field")
+
+    @property
+    def _email_recipient_field(self):
+        return self._fields.get("email_recipient_field")
+
+    @property
+    def _prepend_dates_check(self):
+        return self._fields.get("prepend_file_dates")
+
+    @property
+    def _filter_categories_field(self):
+        return self._fields.get("split_edi_filter_categories_entry")
+
+    @property
+    def _convert_format_combo(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.convert_format_combo
+        return None
+
+    @property
+    def _convert_sub_container(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.convert_sub_container
+        return None
+
+    @property
+    def _edi_options_combo(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.edi_options_combo
+        return None
+
+    @property
+    def _dynamic_edi_layout(self):
+        return self.ui_builder.get_dynamic_edi_layout()
+
+    @property
+    def _tweak_upc_check(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("upc_var_check")
+        return None
+
+    @property
+    def _tweak_pad_arec_check(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("pad_arec_check")
+        return None
+
+    @property
+    def _tweak_force_txt_check(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("force_txt_file_ext_check")
+        return None
+
+    @property
+    def _tweak_invoice_offset(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("invoice_date_offset")
+        return None
+
+    @property
+    def _tweak_override_upc_check(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("override_upc_bool")
+        return None
+
+    @property
+    def _tweak_override_upc_level(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("override_upc_level")
+        return None
+
+    @property
+    def _tweak_override_upc_cat_filter(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("override_upc_category_filter_entry")
+        return None
+
+    @property
+    def _tweak_upc_target_length(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("upc_target_length_entry")
+        return None
+
+    @property
+    def _ftp_port_field(self):
+        return self._fields.get("ftp_port_field")
+
+    @property
+    def _ftp_folder_field(self):
+        return self._fields.get("ftp_folder_field")
+
+    @property
+    def _ftp_username_field(self):
+        return self._fields.get("ftp_username_field")
+
+    @property
+    def _ftp_password_field(self):
+        return self._fields.get("ftp_password_field")
+
+    @property
+    def _email_subject_field(self):
+        return self._fields.get("email_sender_subject_field")
+
+    # EDI Convert – CSV fields
+    @property
+    def _csv_upc_check(self):
+        return self._fields.get("upc_var_check")
+
+    @property
+    def _csv_a_rec_check(self):
+        return self._fields.get("a_rec_var_check")
+
+    @property
+    def _csv_headers_check(self):
+        return self._fields.get("headers_check")
+
+    @property
+    def _csv_pad_arec_check(self):
+        return self._fields.get("pad_arec_check")
+
+    # EDI Convert – ScannerWare fields (share keys with other formats)
+    @property
+    def _sw_pad_arec_check(self):
+        return self._fields.get("pad_arec_check")
+
+    @property
+    def _sw_arec_padding_field(self):
+        return self._fields.get("a_record_padding_field")
+
+    # EDI Convert – simplified_csv fields
+    @property
+    def _simp_headers_check(self):
+        return self._fields.get("headers_check")
+
+    @property
+    def _simp_include_item_numbers_check(self):
+        return self._fields.get("include_item_numbers")
+
+    @property
+    def _simp_each_uom_check(self):
+        return self._fields.get("edi_each_uom_tweak")
+
+    @property
+    def _simp_column_sort_field(self):
+        return self._fields.get("simple_csv_column_sorter")
+
+    # EDI Convert – Estore fields
+    @property
+    def _estore_store_number_field(self):
+        return self._fields.get("estore_store_number_field")
+
+    @property
+    def _estore_vendor_oid_field(self):
+        return self._fields.get("estore_Vendor_OId_field")
+
+    @property
+    def _estore_vendor_name_field(self):
+        return self._fields.get("estore_vendor_namevendoroid_field")
+
+    @property
+    def _estore_c_record_oid_field(self):
+        return self._fields.get("estore_c_record_oid_field")
+
+    # EDI Convert – fintech fields
+    @property
+    def _fintech_division_field(self):
+        return self._fields.get("fintech_divisionid_field")
+
+    @property
+    def _convert_sub_layout(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.convert_sub_layout
+        return None
+
+    @property
+    def _tweak_arec_padding_length(self):
+        if self.dynamic_edi_builder:
+            return self.dynamic_edi_builder.fields.get("a_record_padding_length")
+        return None
+
+    def _show_folder_path(self):
+        """Show the folder path in an informational dialog."""
+        self.handlers.show_folder_path()
+
+    def _select_copy_directory(self):
+        """Open a directory picker for the copy destination."""
+        initial = self.handlers.copy_to_directory
+        if not initial or not os.path.isdir(initial):
+            initial = os.getcwd()
+        folder = QFileDialog.getExistingDirectory(
+            self, "Select Copy Backend Destination Folder", initial
+        )
+        if folder:
+            self.handlers.copy_to_directory = folder
+            self.copy_to_directory = folder
+
+    def _copy_config_from_other(self):
+        """Copy configuration from the selected folder in the list."""
+        self.handlers.copy_config_from_other()
 
     def _on_ok(self):
         """Handle OK button: Validate and Apply."""

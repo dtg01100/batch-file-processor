@@ -162,13 +162,11 @@ class EventHandlers:
             "rename_file_field",
             "split_edi_filter_categories_entry",
             "split_edi_filter_mode",
+            "edi_options_combo",
         ]:
             widget = self.fields.get(key)
             if widget:
                 widget.setEnabled(edi_enabled)
-
-        # We don't have direct access to edi_options_combo here yet,
-        # it's managed by DynamicEDIBuilder
 
     def copy_config_from_other(self):
         """Copy configuration from another selected folder."""

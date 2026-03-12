@@ -99,6 +99,7 @@ class ColumnBuilders:
         )
         if self.on_copy_config:
             copy_config_btn.clicked.connect(self.on_copy_config)
+        self.fields["copy_config_btn"] = copy_config_btn
         layout.addWidget(copy_config_btn)
 
         return container
