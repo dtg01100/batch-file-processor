@@ -414,11 +414,12 @@ class TestSearchWidgetComprehensive:
         widget = SearchWidget(on_filter_change=on_filter_change)
         qtbot.addWidget(widget)
 
-        # Type text (triggers callback automatically)
-        widget.entry.setText("test search")
+        # Text change fires after debounce timer (150ms)
+        with qtbot.waitSignal(widget.filter_changed, timeout=1000):
+            widget.entry.setText("test search")
 
         # Callback should have been invoked
-        assert len(filter_values) > 0
+        assert filter_values == ["test search"]
 
     def test_search_widget_clear_function(self, qtbot):
         """Test search widget clear function."""
@@ -483,8 +484,9 @@ class TestSearchWidgetComprehensive:
         widget = SearchWidget(on_filter_change=on_filter_change)
         qtbot.addWidget(widget)
 
-        # setText triggers filtering
-        widget.entry.setText("test")
+        # setText triggers filtering after debounce timer
+        with qtbot.waitSignal(widget.filter_changed, timeout=1000):
+            widget.entry.setText("test")
         assert filter_values == ["test"]
 
         # Enter key should not trigger additional filtering
@@ -563,7 +565,7 @@ class TestQtProgressServiceComprehensive:
         service.set_total(100)
         service.set_current(50)
         assert service._progress_bar.value() == 50
-        assert service._progress_bar.isVisible()
+        assert not service._progress_bar.isHidden()
 
     def test_progress_service_set_message(self, qtbot):
         """Test setting progress message."""
@@ -589,8 +591,8 @@ class TestQtProgressServiceComprehensive:
         qtbot.addWidget(service.progress_dialog)
 
         service.set_indeterminate()
-        assert not service._progress_bar.isVisible()
-        assert service._throbber.isVisible()
+        assert service._progress_bar.isHidden()
+        assert not service._throbber.isHidden()
 
     def test_progress_service_multiple_updates(self, qtbot):
         """Test multiple progress updates in sequence."""

@@ -435,6 +435,7 @@ class TestQtBatchFileSenderApp:
 
         app._send_single(123)
 
+        # CREATE TABLE + ALTER TABLE = 2 queries (no PRAGMA since folder not found)
         assert session_database.query.call_count == 2
         single_table.drop.assert_called_once()
         app._ui_service.show_error.assert_called_once_with(
@@ -454,6 +455,20 @@ class TestQtBatchFileSenderApp:
         single_table = MagicMock()
         session_database = MagicMock()
         session_database.__getitem__.return_value = single_table
+        
+        # Mock the PRAGMA table_info query to return column info for filtering
+        def query_side_effect(sql):
+            if "PRAGMA table_info" in sql:
+                # Return column names that exist in the single_table
+                return [
+                    {"name": "id"},
+                    {"name": "folder_name"},
+                    {"name": "folder_is_active"},
+                    {"name": "old_id"},
+                ]
+            return None
+        
+        session_database.query.side_effect = query_side_effect
         app._database.session_database = session_database
         app._database.folders_table.find_one.return_value = {
             "id": 7,
@@ -463,7 +478,8 @@ class TestQtBatchFileSenderApp:
 
         app._send_single(7)
 
-        assert session_database.query.call_count == 2
+        # CREATE TABLE + ALTER TABLE + PRAGMA table_info = 3 queries
+        assert session_database.query.call_count == 3
         single_table.insert.assert_called_once()
         inserted = single_table.insert.call_args[0][0]
         assert inserted["old_id"] == 7
