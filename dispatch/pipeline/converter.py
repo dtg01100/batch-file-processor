@@ -400,7 +400,7 @@ class EDIConverterStep:
 
         except ImportError as e:
             error_msg = f"Conversion module not found: {module_name} - {e}"
-            logger.error("Converter module not found: %s", module_name)
+            logger.error("Converter module not found: %s", module_name, exc_info=True)
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -412,7 +412,7 @@ class EDIConverterStep:
         except Exception as e:
             error_msg = f"Conversion failed: {e}"
             logger.error(
-                "Conversion failed for %s: %s", os.path.basename(input_path), e
+                "Conversion failed for %s: %s", os.path.basename(input_path), e, exc_info=True
             )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)

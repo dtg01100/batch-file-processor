@@ -559,7 +559,7 @@ class QtBatchFileSenderApp:
                 )
                 return True
             except Exception as e:
-                logger.error("Database import failed: %s", e)
+                logger.error("Database import failed: %s", e, exc_info=True)
                 return False
 
         maintenance = MaintenanceFunctions(
@@ -661,7 +661,7 @@ class QtBatchFileSenderApp:
         except SystemExit:
             raise
         except Exception as big_error:
-            logger.error("Error writing critical error log")
+            logger.error("Error writing critical error log", exc_info=True)
             raise SystemExit from big_error
 
 

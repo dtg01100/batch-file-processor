@@ -263,7 +263,7 @@ class EDITweakerStep:
             try:
                 self._file_system.makedirs(output_dir)
             except Exception as e:
-                logger.error("Failed to create output directory %s: %s", output_dir, e)
+                logger.error("Failed to create output directory %s: %s", output_dir, e, exc_info=True)
                 error_msg = f"Failed to create output directory: {e}"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -285,7 +285,7 @@ class EDITweakerStep:
             )
 
         except Exception as e:
-            logger.error("Tweaking failed for %s: %s", basename, e)
+            logger.error("Tweaking failed for %s: %s", basename, e, exc_info=True)
             error_msg = f"Tweaking failed: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)

@@ -170,11 +170,11 @@ class SMTPEmailService:
             finally:
                 server.close()
 
-            logger.info(f"Email sent successfully to {to}")
+            logger.info("Email sent successfully to %s", to)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send email: {e}")
+            logger.error("Failed to send email: %s", e, exc_info=True)
             return False
 
 
@@ -419,7 +419,7 @@ class LogSender:
                 )
                 results[log.log_path] = True
             else:
-                logger.warning(f"Log file not found: {log.log_path}")
+                logger.warning("Log file not found: %s", log.log_path)
                 results[log.log_path] = False
 
         if attachments:

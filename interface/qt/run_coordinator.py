@@ -137,8 +137,7 @@ class QtRunCoordinator:
                     )
                 logger.info("Dispatch completed (errors=%s, summary=%s)", run_error_bool, run_summary_string)
             except Exception as dispatch_error:
-                logger.error("Run failed: %s", dispatch_error)
-                traceback.print_exc()
+                logger.exception("Run failed: %s", dispatch_error)
                 run_log.write(
                     (
                         "Run failed, check your configuration \r\n"

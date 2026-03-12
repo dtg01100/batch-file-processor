@@ -130,7 +130,7 @@ class WindowsPrintService(BasePrintService):
         try:
             return win32print.GetDefaultPrinter()
         except Exception as e:
-            logger.error(f"Failed to get default printer: {e}")
+            logger.error("Failed to get default printer: %s", e, exc_info=True)
             return None
 
     def print_file(self, file_path: str) -> bool:
@@ -147,10 +147,10 @@ class WindowsPrintService(BasePrintService):
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
-            logger.error(f"File not found: {file_path}")
+            logger.error("File not found: %s", file_path, exc_info=True)
             return False
         except Exception as e:
-            logger.error(f"Failed to read file for printing: {e}")
+            logger.error("Failed to read file for printing: %s", e, exc_info=True)
             return False
 
     def print_content(self, content: str) -> bool:
@@ -194,11 +194,11 @@ class WindowsPrintService(BasePrintService):
             finally:
                 win32print.ClosePrinter(h_printer)
 
-            logger.info(f"Successfully printed to {printer_name}")
+            logger.info("Successfully printed to %s", printer_name)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to print: {e}")
+            logger.error("Failed to print: %s", e, exc_info=True)
             return False
 
     def is_available(self) -> bool:
@@ -237,10 +237,10 @@ class UnixPrintService(BasePrintService):
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
-            logger.error(f"File not found: {file_path}")
+            logger.error("File not found: %s", file_path, exc_info=True)
             return False
         except Exception as e:
-            logger.error(f"Failed to read file for printing: {e}")
+            logger.error("Failed to read file for printing: %s", e, exc_info=True)
             return False
 
     def print_content(self, content: str) -> bool:
@@ -266,17 +266,17 @@ class UnixPrintService(BasePrintService):
             stdout, stderr = lpr.communicate(input=formatted_log.encode("utf-8"))
 
             if lpr.returncode != 0:
-                logger.error(f"lpr command failed: {stderr.decode('utf-8')}")
+                logger.error("lpr command failed: %s", stderr.decode('utf-8'))
                 return False
 
             logger.info("Successfully printed via lpr")
             return True
 
         except FileNotFoundError:
-            logger.error(f"lpr command not found at {self.lpr_path}")
+            logger.error("lpr command not found at %s", self.lpr_path, exc_info=True)
             return False
         except Exception as e:
-            logger.error(f"Failed to print: {e}")
+            logger.error("Failed to print: %s", e, exc_info=True)
             return False
 
     def is_available(self) -> bool:
