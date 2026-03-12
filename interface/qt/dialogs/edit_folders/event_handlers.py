@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QCheckBo
 
 from interface.qt.theme import Theme
 
+logger = logging.getLogger(__name__)
+
 
 class EventHandlers:
     """Handler class for user interaction events in the edit folders dialog.
@@ -201,7 +203,7 @@ class EventHandlers:
                     )
                 )
             except Exception as e:
-                logging.error(f"Error finding config for {selected_alias}: {e}")
+                logger.exception("Error finding config for %s: %s", selected_alias, e)
                 return
 
         if other_config and hasattr(self.dialog, "_populate_fields_from_config"):

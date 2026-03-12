@@ -7,6 +7,8 @@ that appear based on user selections in the EDI options dropdown.
 import logging
 from typing import Dict, Optional, Callable, Any, List
 
+logger = logging.getLogger(__name__)
+
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -178,7 +180,7 @@ class DynamicEDIBuilder:
 
     def _clear_dynamic_edi(self):
         """Clear dynamic EDI widgets and clean up field references."""
-        logging.debug("Clearing dynamic EDI widgets")
+        logger.debug("Clearing dynamic EDI widgets")
         self._snapshot_upc_override()
         try:
             keys_to_remove = []
@@ -211,7 +213,7 @@ class DynamicEDIBuilder:
                     del self.fields[key]
 
         except Exception as e:
-            logging.error(f"Error in _clear_dynamic_edi: {e}")
+            logger.exception("Error in _clear_dynamic_edi: %s", e)
         self._restore_upc_override_as_plain_values()
 
     def _find_and_track_widget_keys(self, widget, keys_to_remove):
@@ -355,7 +357,7 @@ class DynamicEDIBuilder:
         if not self.convert_sub_layout:
             return
 
-        logging.debug("Clearing convert sub widgets")
+        logger.debug("Clearing convert sub widgets")
         self._snapshot_upc_override()
         try:
             keys_to_remove = []
@@ -383,7 +385,7 @@ class DynamicEDIBuilder:
                     del self.fields[key]
 
         except Exception as e:
-            logging.error(f"Error in _clear_convert_sub: {e}")
+            logger.exception("Error in _clear_convert_sub: %s", e)
         self._restore_upc_override_as_plain_values()
 
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
