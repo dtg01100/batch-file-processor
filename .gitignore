@@ -118,3 +118,7 @@ coverage_*/
 # Allow tracked spec files (exceptions to *.spec above)
 !main_interface.spec
 !main_interface_native.spec
+
+# Build artifacts
+outdir/
+settings_dialog_screenshot.png
