@@ -10,10 +10,11 @@ if __name__ != "__main__":
     )
 
 from unittest.mock import MagicMock, patch
+
 from PyQt6.QtWidgets import QApplication
 
 # Mock the plugin manager before importing dialog
-with patch('interface.qt.dialogs.edit_folders_dialog.PluginManager') as mock_pm_class:
+with patch("interface.qt.dialogs.edit_folders_dialog.PluginManager") as mock_pm_class:
     mock_manager = MagicMock()
     mock_manager.get_configuration_plugins.return_value = []
     mock_pm_class.return_value = mock_manager
@@ -66,9 +67,11 @@ try:
 except AttributeError as e:
     print(f"\n❌ AttributeError: {e}")
     import traceback
+
     traceback.print_exc()
 
 except Exception as e:
     print(f"\n❌ Exception: {e}")
     import traceback
+
     traceback.print_exc()

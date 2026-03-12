@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+
 def test_ok_button_full_flow():
     """Test the complete OK button flow with database save."""
     from PyQt6.QtWidgets import QApplication
@@ -24,7 +25,9 @@ def test_ok_button_full_flow():
     app = QApplication([])
 
     # Mock the plugin manager before importing
-    with patch('interface.qt.dialogs.edit_folders_dialog.PluginManager') as mock_pm_class:
+    with patch(
+        "interface.qt.dialogs.edit_folders_dialog.PluginManager"
+    ) as mock_pm_class:
         mock_manager = MagicMock()
         mock_manager.get_configuration_plugins.return_value = []
         mock_pm_class.return_value = mock_manager
@@ -63,8 +66,10 @@ def test_ok_button_full_flow():
 
             print("\n5. Capturing apply() data...")
             saved_data = {}
+
             def capture_save(config):
                 saved_data.update(config)
+
             dialog._on_apply_success = capture_save
 
             print("\n6. Calling apply()...")
@@ -72,12 +77,14 @@ def test_ok_button_full_flow():
             print("   ✓ Apply completed")
 
             print("\n7. Verifying saved data...")
-            assert "plugin_configurations" not in saved_data, \
-                "❌ ERROR: plugin_configurations should not be in saved data"
+            assert (
+                "plugin_configurations" not in saved_data
+            ), "❌ ERROR: plugin_configurations should not be in saved data"
             print("   ✓ plugin_configurations NOT in saved data (correct!)")
 
-            assert "folder_is_active" in saved_data, \
-                "❌ ERROR: folder_is_active should be saved"
+            assert (
+                "folder_is_active" in saved_data
+            ), "❌ ERROR: folder_is_active should be saved"
             print("   ✓ folder_is_active is in saved data")
 
             print("\n8. Mocking accept() to prevent dialog close...")
@@ -99,8 +106,10 @@ def test_ok_button_full_flow():
         except Exception as e:
             print(f"\n❌ FAILED: {e}")
             import traceback
+
             traceback.print_exc()
             return False
+
 
 if __name__ == "__main__":
     success = test_ok_button_full_flow()

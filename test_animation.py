@@ -10,9 +10,11 @@ if __name__ != "__main__":
     )
 
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
-from PyQt6.QtCore import QPropertyAnimation, QEasingCurve, pyqtProperty
+
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
 from PyQt6.QtGui import QTransform
+from PyQt6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
+
 
 class RotatableLabel(QLabel):
     """A QLabel that supports rotation animation"""

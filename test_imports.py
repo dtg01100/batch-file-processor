@@ -9,8 +9,8 @@ if __name__ != "__main__":
         allow_module_level=True,
     )
 
-import sys
 import os
+import sys
 
 # Add project root to sys.path
 _script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,23 +23,23 @@ print(f"  Script directory: {_script_dir}")
 
 print("\nTest 2: Checking if main_interface module can be imported")
 import main_interface
+
 print("✓ main_interface module imported successfully")
 
 print("\nTest 3: Checking if interface.qt.app module is accessible")
 from interface.qt.app import QtBatchFileSenderApp
+
 print("✓ QtBatchFileSenderApp class imported successfully")
 
 print("\nTest 4: Creating an instance of the application")
 try:
     app = QtBatchFileSenderApp(
-        appname="Test App",
-        version="Test Version",
-        database_version="1"
+        appname="Test App", version="Test Version", database_version="1"
     )
     print("✓ QtBatchFileSenderApp instance created successfully")
 
     print("\nTest 5: Checking if main() function exists")
-    if hasattr(main_interface, 'main') and callable(main_interface.main):
+    if hasattr(main_interface, "main") and callable(main_interface.main):
         print("✓ main() function is callable")
     else:
         print("✗ main() function not found or not callable")
@@ -47,6 +47,7 @@ try:
 except Exception as e:
     print(f"✗ Error creating QtBatchFileSenderApp instance: {e}")
     import traceback
+
     print(f"\nStack trace: {traceback.format_exc()}")
 
 print("\n\nAll tests completed!")

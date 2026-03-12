@@ -9,8 +9,8 @@ if __name__ != "__main__":
         allow_module_level=True,
     )
 
-import sys
 import os
+import sys
 
 # Add project root to sys.path
 _script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +40,7 @@ try:
 except Exception as e:
     print(f"✗ Failed to import interface.qt.app: {e}")
     import traceback
+
     print(f"Stack trace: {traceback.format_exc()}")
 
 print()

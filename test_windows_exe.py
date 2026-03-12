@@ -15,6 +15,7 @@ if __name__ != "__main__":
 import os
 import sys
 
+
 def test_executable_structure():
     """Verify the executable has all required files."""
     exe_dir = ".wine-build/dist/Batch File Sender"
@@ -39,9 +40,9 @@ def test_executable_structure():
 
     # Check _internal directory
     if os.path.exists(internal_dir):
-        print(f"✓ _internal directory found")
+        print("✓ _internal directory found")
     else:
-        print(f"✗ _internal directory NOT found")
+        print("✗ _internal directory NOT found")
         return 1
 
     print()
@@ -121,6 +122,7 @@ def test_executable_structure():
         print("✓ ALL CHECKS PASSED")
         print("  The Windows executable appears to be properly packaged.")
         return 0
+
 
 if __name__ == "__main__":
     sys.exit(test_executable_structure())
