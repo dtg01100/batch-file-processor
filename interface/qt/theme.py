@@ -311,7 +311,7 @@ class Theme:
                     border: 1px solid {Theme.SIDEBAR_OUTLINE};
                 }}
                 QPushButton:disabled {{
-                    color: {Theme.TEXT_DISABLED};
+                    color: {Theme.SIDEBAR_ON_SURFACE_VARIANT};
                 }}
             """
         elif variant == "text":
@@ -522,7 +522,7 @@ class Theme:
                 border: 1px solid {cls.SIDEBAR_OUTLINE};
             }}
             QPushButton[class="sidebar"]:disabled {{
-                color: {cls.TEXT_DISABLED};
+                color: {cls.SIDEBAR_ON_SURFACE_VARIANT};
             }}
 
             /* Text Button */
