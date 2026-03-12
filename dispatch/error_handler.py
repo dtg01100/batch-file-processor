@@ -12,7 +12,7 @@ from typing import Optional, Any
 
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
 
-eh_logger = logging.getLogger("dispatch.error_handler")
+logger = logging.getLogger("dispatch.error_handler")
 
 
 class ErrorHandler:
@@ -75,7 +75,7 @@ class ErrorHandler:
         }
 
         # Emit through Python logging framework
-        eh_logger.error(
+        logger.error(
             "Error in %s processing %s: %s", folder, filename, error
         )
 
