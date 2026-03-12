@@ -487,6 +487,25 @@ class EditSettingsDialog(BaseDialog):
             QMessageBox.critical(self, "Validation Error", grouped_errors)
             return False
 
+        if self._enable_email_cb.isChecked() and self._email_smtp_server.text():
+            try:
+                success, error_msg = self._smtp_service.test_connection(
+                    smtp_server=self._email_smtp_server.text(),
+                    smtp_port=self._email_smtp_port.text(),
+                    username=self._email_username.text(),
+                    password=self._email_password.text(),
+                )
+            except Exception as e:
+                success = False
+                error_msg = str(e)
+            if not success:
+                QMessageBox.critical(
+                    self,
+                    "SMTP Connection Failed",
+                    "Could not connect to SMTP server:\n" + (error_msg or "Unknown error"),
+                )
+                return False
+
         if not self._enable_email_cb.isChecked():
             num_backends = (
                 self._count_email_backends() if self._count_email_backends else 0
