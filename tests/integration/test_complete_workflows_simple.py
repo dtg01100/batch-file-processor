@@ -4,63 +4,27 @@ These tests validate the complete user journey without heavy Qt app initializati
 making them faster and more reliable for CI/CD.
 """
 
+import shutil
+
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from interface.database.database_obj import DatabaseObj
-import create_database
+from interface.database import sqlite_wrapper
 from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
 from copy_backend import do as copy_backend_do
 from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
 
-
-@pytest.fixture
-def test_environment():
-    """Create a complete test environment."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        workspace = Path(tmpdir)
-
-        # Create directories
-        (workspace / "input").mkdir()
-        (workspace / "output").mkdir()
-        (workspace / "database").mkdir()
-        (workspace / "logs").mkdir()
-        (workspace / "errors").mkdir()
-
-        # Create database
-        db_path = workspace / "database" / "folders.db"
-        create_database.do("33", str(db_path), str(workspace), "Linux")
-
-        # Connect using DatabaseObj
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-
-        db = DatabaseObj(
-            database_path=str(db_path),
-            database_version=CURRENT_DATABASE_VERSION,  # Use latest version
-            config_folder=str(workspace),
-            running_platform="Linux",
-        )
-
-        yield {
-            "workspace": workspace,
-            "db": db,
-        }
-
-        # Cleanup
-        db.close()
-
-
-@pytest.fixture
-def sample_edi_content():
-    """Sample EDI file content."""
-    return """A00000120240101001TESTVENDOR         Test Vendor Inc                 00001
+# Module-level constant replacing the former sample_edi_content fixture.
+SAMPLE_EDI_CONTENT = """\
+A00000120240101001TESTVENDOR         Test Vendor Inc                 00001
 B001001ITEM001     000010EA0010Test Item 1                     0000010000
 B001002ITEM002     000020EA0020Test Item 2                     0000020000
 C00000003000030000
@@ -68,8 +32,55 @@ C00000003000030000
 
 
 @pytest.fixture
+def test_environment(fresh_db, tmp_path):
+    """Create a complete test environment using the shared fresh_db template."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    # Create directories
+    (workspace / "input").mkdir()
+    (workspace / "output").mkdir()
+    (workspace / "database").mkdir()
+    (workspace / "logs").mkdir()
+    (workspace / "errors").mkdir()
+
+    # Copy the pre-built database into the workspace
+    db_path = workspace / "database" / "folders.db"
+    shutil.copy2(str(fresh_db), str(db_path))
+
+    # Update the version record to match CURRENT_DATABASE_VERSION so
+    # DatabaseObj does not trigger the migration / upgrade path.
+    tmp_conn = sqlite_wrapper.Database.connect(str(db_path))
+    tmp_conn["version"].update(
+        {"id": 1, "version": CURRENT_DATABASE_VERSION, "os": "Linux"}, ["id"]
+    )
+    tmp_conn.close()
+
+    # Connect using DatabaseObj
+    db = DatabaseObj(
+        database_path=str(db_path),
+        database_version=CURRENT_DATABASE_VERSION,
+        config_folder=str(workspace),
+        running_platform="Linux",
+    )
+
+    yield {
+        "workspace": workspace,
+        "db": db,
+    }
+
+    # Cleanup
+    db.close()
+
+
+@pytest.fixture
 def pipeline_steps():
-    """Create pipeline steps for processing."""
+    """Create pipeline steps for processing.
+
+    These step objects accumulate internal state (e.g. EDIValidationStep's
+    error log buffer), so they remain function-scoped to avoid cross-test
+    contamination.
+    """
     return {
         "validator_step": EDIValidationStep(),
         "converter_step": EDIConverterStep(),
@@ -81,15 +92,15 @@ class TestCompleteFolderLifecycle:
     """Test complete folder lifecycle from creation to deletion."""
 
     def test_create_configure_process_delete_workflow(
-        self, test_environment, sample_edi_content, pipeline_steps
+        self, test_environment, pipeline_steps
     ):
-        """Test: Create folder → Configure → Process → Verify → Delete."""
+        """Test: Create folder -> Configure -> Process -> Verify -> Delete."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
         # Step 1: Create sample EDI file (simulating user placing files in folder)
         edi_file = workspace / "input" / "test_invoice.edi"
-        edi_file.write_text(sample_edi_content)
+        edi_file.write_text(SAMPLE_EDI_CONTENT)
 
         # Step 2: User adds folder via UI (simulating EditFoldersDialog save)
         folder_config = {
@@ -155,7 +166,7 @@ class TestCompleteFolderLifecycle:
         assert len(final_folders) == 0
 
     def test_edit_folder_configuration_workflow(self, test_environment):
-        """Test: View folder → Edit configuration → Save → Verify update."""
+        """Test: View folder -> Edit configuration -> Save -> Verify update."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
@@ -194,9 +205,9 @@ class TestCompleteFolderLifecycle:
         )  # SQLite returns 1 for True
 
     def test_multiple_folders_independent_processing(
-        self, test_environment, sample_edi_content, pipeline_steps
+        self, test_environment, pipeline_steps
     ):
-        """Test: Create multiple folders → Process independently → Verify isolation."""
+        """Test: Create multiple folders -> Process independently -> Verify isolation."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
@@ -212,9 +223,9 @@ class TestCompleteFolderLifecycle:
         output2.mkdir(exist_ok=True)
 
         # Create different EDI files in each
-        (input1 / "invoice1.edi").write_text(sample_edi_content)
+        (input1 / "invoice1.edi").write_text(SAMPLE_EDI_CONTENT)
         (input2 / "invoice2.edi").write_text(
-            sample_edi_content.replace("TESTVENDOR", "VENDOR2")
+            SAMPLE_EDI_CONTENT.replace("TESTVENDOR", "VENDOR2")
         )
 
         # Configure folders with different settings
@@ -238,9 +249,6 @@ class TestCompleteFolderLifecycle:
         db.folders_table.insert(folder2_config)
 
         # Process both folders
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from copy_backend import do as copy_backend_do
-
         class CopyBackend:
             def send(self, params: dict, settings: dict, filename: str) -> None:
                 copy_backend_do(params, settings, filename)
@@ -281,7 +289,7 @@ class TestSettingsWorkflow:
     """Test settings management workflows."""
 
     def test_edit_settings_persistence_workflow(self, test_environment):
-        """Test: Open settings → Modify values → Save → Verify persistence."""
+        """Test: Open settings -> Modify values -> Save -> Verify persistence."""
         db = test_environment["db"]
         workspace = test_environment["workspace"]
 
@@ -304,7 +312,7 @@ class TestSettingsWorkflow:
         assert updated["convert_to_format"] == "fintech"
 
     def test_settings_validation_workflow(self, test_environment):
-        """Test: Modify settings → Validate → Save or reject based on validation."""
+        """Test: Modify settings -> Validate -> Save or reject based on validation."""
         db = test_environment["db"]
         workspace = test_environment["workspace"]
 
@@ -346,7 +354,7 @@ class TestErrorRecoveryWorkflow:
     """Test error detection and recovery workflows."""
 
     def test_invalid_folder_path_detection_and_recovery(self, test_environment):
-        """Test: Add invalid path → Detect error → Fix path → Process successfully."""
+        """Test: Add invalid path -> Detect error -> Fix path -> Process successfully."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
@@ -381,17 +389,15 @@ class TestErrorRecoveryWorkflow:
         updated = list(db.folders_table.all())
         assert Path(updated[0]["folder_name"]).exists()
 
-    def test_processing_error_continues_with_other_folders(
-        self, test_environment, sample_edi_content
-    ):
-        """Test: One folder fails → Error logged → Other folders continue processing."""
+    def test_processing_error_continues_with_other_folders(self, test_environment):
+        """Test: One folder fails -> Error logged -> Other folders continue processing."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
         # Create one valid folder with EDI file
         valid_input = workspace / "valid_input"
         valid_input.mkdir(exist_ok=True)
-        (valid_input / "test.edi").write_text(sample_edi_content)
+        (valid_input / "test.edi").write_text(SAMPLE_EDI_CONTENT)
 
         valid_config = {
             "folder_name": str(valid_input),
@@ -415,12 +421,6 @@ class TestErrorRecoveryWorkflow:
         db.folders_table.insert(invalid_config)
 
         # Process all folders
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from dispatch.pipeline.validator import EDIValidationStep
-        from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
-        from copy_backend import do as copy_backend_do
-
         class CopyBackend:
             def send(self, params: dict, settings: dict, filename: str) -> None:
                 copy_backend_do(params, settings, filename)
@@ -461,10 +461,8 @@ class TestErrorRecoveryWorkflow:
 class TestMultiStepWorkflow:
     """Test complex multi-step user workflows."""
 
-    def test_complete_setup_workflow(
-        self, test_environment, sample_edi_content, pipeline_steps
-    ):
-        """Test complete setup: Settings → Folder → Process → Verify."""
+    def test_complete_setup_workflow(self, test_environment, pipeline_steps):
+        """Test complete setup: Settings -> Folder -> Process -> Verify."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
@@ -476,7 +474,7 @@ class TestMultiStepWorkflow:
 
         # Phase 2: Create EDI file
         input_folder = workspace / "input"
-        (input_folder / "test.edi").write_text(sample_edi_content)
+        (input_folder / "test.edi").write_text(SAMPLE_EDI_CONTENT)
 
         # Phase 3: Add and configure folder
         folder_config = {
@@ -489,9 +487,6 @@ class TestMultiStepWorkflow:
         db.folders_table.insert(folder_config)
 
         # Phase 4: Process folder
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from copy_backend import do as copy_backend_do
-
         class CopyBackend:
             def send(self, params: dict, settings: dict, filename: str) -> None:
                 copy_backend_do(params, settings, filename)
@@ -522,7 +517,7 @@ class TestMultiStepWorkflow:
         assert final_settings["convert_to_format"] == "csv"
 
     def test_bulk_configuration_workflow(self, test_environment, pipeline_steps):
-        """Test: Add multiple folders → Configure all → Process all → Verify."""
+        """Test: Add multiple folders -> Configure all -> Process all -> Verify."""
         workspace = test_environment["workspace"]
         db = test_environment["db"]
 
@@ -554,9 +549,6 @@ B00100{i}ITEM00{i}     0000{i}0EA00{i}0Item {i}                          00000{i
         assert len(folders) == num_folders
 
         # Process all folders
-        from dispatch.orchestrator import DispatchOrchestrator, DispatchConfig
-        from copy_backend import do as copy_backend_do
-
         class CopyBackend:
             def send(self, params: dict, settings: dict, filename: str) -> None:
                 copy_backend_do(params, settings, filename)

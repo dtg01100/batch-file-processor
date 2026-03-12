@@ -173,7 +173,7 @@ class TestEditFolderSettingsPersistenceWorkflow:
         # Verify persistence
         updated_config = temp_database.folders_table.find_one(id=folder_id)
         assert updated_config["alias"] == "Updated Folder Name"
-        assert updated_config["process_backend_ftp"] == "True"
+        assert updated_config["process_backend_ftp"] is True
 
     def test_edit_folder_backend_configuration(self, complete_workspace, temp_database):
         """Test enabling/disabling backends persists."""
@@ -201,9 +201,9 @@ class TestEditFolderSettingsPersistenceWorkflow:
         )
 
         updated = temp_database.folders_table.find_one(id=folder_id)
-        assert updated["process_backend_copy"] == "True"
-        assert updated["process_backend_ftp"] == "True"
-        assert updated["process_backend_email"] == "True"
+        assert updated["process_backend_copy"] is True
+        assert updated["process_backend_ftp"] is True
+        assert updated["process_backend_email"] is True
 
     def test_edit_folder_conversion_settings(self, complete_workspace, temp_database):
         """Test conversion settings persistence."""
@@ -487,11 +487,11 @@ class TestConfigurationPersistenceWorkflow:
         config = {
             "folder_name": str(complete_workspace / "input"),
             "alias": "Persistence Test",
-            "folder_is_active": "True",
-            "process_backend_copy": "True",
+            "folder_is_active": True,
+            "process_backend_copy": True,
             "copy_to_directory": str(complete_workspace / "output"),
             "convert_to_format": "csv",
-            "process_edi": "True",
+            "process_edi": True,
         }
         folder_id = temp_database.folders_table.insert(config)
 

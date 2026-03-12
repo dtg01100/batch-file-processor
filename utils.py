@@ -52,7 +52,12 @@ def normalize_bool(value) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     if isinstance(value, str):
-        return value.lower() in ("true", "1", "yes", "on", "y")
+        stripped = value.strip().lower()
+        if stripped in ("true", "1", "yes", "on", "y"):
+            return True
+        if stripped in ("false", "0", "no", "off", ""):
+            return False
+        return bool(value.strip())
     return bool(value)
 
 
@@ -96,7 +101,7 @@ def from_db_bool(value) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     if isinstance(value, str):
-        return value in ("1", "true", "yes", "on")
+        return value.lower() in ("1", "true", "yes", "on")
     return bool(value)
 
 

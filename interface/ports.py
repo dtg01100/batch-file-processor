@@ -13,6 +13,14 @@ from __future__ import annotations
 
 from typing import Optional, Protocol, runtime_checkable
 
+try:
+    from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
+except ImportError:
+    QApplication = None  # type: ignore[assignment,misc]
+    QFileDialog = None  # type: ignore[assignment,misc]
+    QMessageBox = None  # type: ignore[assignment,misc]
+    QWidget = None  # type: ignore[assignment,misc]
+
 
 @runtime_checkable
 class UIServiceProtocol(Protocol):
@@ -295,36 +303,26 @@ class QtUIService:
     """
 
     def __init__(self, parent=None) -> None:
-        from PyQt6.QtWidgets import QWidget
-
         self._parent: Optional[QWidget] = parent
 
     # -- informational dialogs ------------------------------------------------
 
     def show_info(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.information."""
-        from PyQt6.QtWidgets import QMessageBox
-
         QMessageBox.information(self._parent, title, message)
 
     def show_error(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.critical."""
-        from PyQt6.QtWidgets import QMessageBox
-
         QMessageBox.critical(self._parent, title, message)
 
     def show_warning(self, title: str, message: str) -> None:
         """Delegates to QMessageBox.warning."""
-        from PyQt6.QtWidgets import QMessageBox
-
         QMessageBox.warning(self._parent, title, message)
 
     # -- question dialogs -----------------------------------------------------
 
     def ask_yes_no(self, title: str, message: str) -> bool:
         """Delegates to QMessageBox.question."""
-        from PyQt6.QtWidgets import QMessageBox
-
         result = QMessageBox.question(
             self._parent,
             title,
@@ -336,8 +334,6 @@ class QtUIService:
 
     def ask_ok_cancel(self, title: str, message: str) -> bool:
         """Delegates to QMessageBox.question."""
-        from PyQt6.QtWidgets import QMessageBox
-
         result = QMessageBox.question(
             self._parent,
             title,
@@ -371,8 +367,6 @@ class QtUIService:
         initial_dir: Optional[str] = None,
     ) -> str:
         """Delegates to QFileDialog.getExistingDirectory."""
-        from PyQt6.QtWidgets import QFileDialog
-
         result = QFileDialog.getExistingDirectory(
             self._parent,
             title,
@@ -387,8 +381,6 @@ class QtUIService:
         filetypes: Optional[list[tuple[str, str]]] = None,
     ) -> str:
         """Delegates to QFileDialog.getOpenFileName."""
-        from PyQt6.QtWidgets import QFileDialog
-
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getOpenFileName(
             self._parent,
@@ -406,8 +398,6 @@ class QtUIService:
         filetypes: Optional[list[tuple[str, str]]] = None,
     ) -> str:
         """Delegates to QFileDialog.getSaveFileName."""
-        from PyQt6.QtWidgets import QFileDialog
-
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getSaveFileName(
             self._parent,
@@ -423,6 +413,4 @@ class QtUIService:
 
     def pump_events(self) -> None:
         """Delegates to QApplication.processEvents()."""
-        from PyQt6.QtWidgets import QApplication
-
         QApplication.processEvents()

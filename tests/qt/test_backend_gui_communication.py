@@ -34,7 +34,7 @@ class TestToggleFolderCommunication:
         app._folder_manager.get_folder_by_id.return_value = {
             "id": 10,
             "alias": "Folder A",
-            "folder_is_active": "True",
+            "folder_is_active": True,
             "process_backend_email": False,
             "process_backend_ftp": False,
             "process_backend_copy": False,
@@ -52,7 +52,7 @@ class TestToggleFolderCommunication:
         app._folder_manager.get_folder_by_id.return_value = {
             "id": 11,
             "alias": "Folder B",
-            "folder_is_active": "False",
+            "folder_is_active": False,
             "process_backend_email": False,
             "process_backend_ftp": False,
             "process_backend_copy": False,
@@ -70,7 +70,7 @@ class TestToggleFolderCommunication:
         app._folder_manager.get_folder_by_id.return_value = {
             "id": 12,
             "alias": "Folder C",
-            "folder_is_active": "False",
+            "folder_is_active": False,
             "process_backend_email": True,
             "process_backend_ftp": False,
             "process_backend_copy": False,

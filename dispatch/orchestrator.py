@@ -6,6 +6,7 @@ coordinating validation, conversion, and sending of files.
 
 from dataclasses import dataclass, field
 import datetime
+import logging
 from io import StringIO
 from typing import Any, Optional
 
@@ -20,6 +21,8 @@ from dispatch.edi_validator import EDIValidator
 from dispatch.send_manager import SendManager
 from dispatch.error_handler import ErrorHandler
 from core.utils.bool_utils import normalize_bool
+
+logger = logging.getLogger("dispatch.orchestrator")
 
 
 @dataclass
@@ -217,6 +220,10 @@ class DispatchOrchestrator:
         )
 
         folder_path = folder.get("folder_name", "")
+        alias = folder.get("alias", folder_path)
+
+        self._log_message(run_log, f"entering folder: {alias}")
+
         if not self._folder_exists(folder_path):
             error_msg = f"Folder not found: {folder_path}"
             result.errors.append(error_msg)
@@ -239,7 +246,7 @@ class DispatchOrchestrator:
             return result
 
         self._log_message(
-            run_log, f"Processing {len(files)} files in {folder_path} (pipeline mode)"
+            run_log, f"{len(files)} found in {folder_path} (pipeline mode)"
         )
 
         total_files = len(files)
@@ -255,7 +262,7 @@ class DispatchOrchestrator:
                 self.config.progress_reporter.update_file(idx + 1, total_files)
 
             file_result = self._process_file_with_pipeline(
-                file_path, folder, effective_upc_dict
+                file_path, folder, effective_upc_dict, run_log
             )
 
             if file_result.sent:
@@ -299,7 +306,7 @@ class DispatchOrchestrator:
         return {}
 
     def _process_file_with_pipeline(
-        self, file_path: str, folder: dict, upc_dict: dict
+        self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
     ) -> FileResult:
         """Process single file with pipeline.
 
@@ -307,6 +314,7 @@ class DispatchOrchestrator:
             file_path: Path to the file to process
             folder: Folder configuration dictionary
             upc_dict: UPC dictionary for lookup
+            run_log: Optional run log for recording processing activity
 
         Returns:
             FileResult with processing outcome
@@ -316,6 +324,7 @@ class DispatchOrchestrator:
 
         result = FileResult(file_name=file_path, checksum="")
         context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
+        file_basename = os.path.basename(file_path)
 
         try:
             result.checksum = self._calculate_checksum(file_path)
@@ -355,6 +364,11 @@ class DispatchOrchestrator:
                     else:
                         result.errors.append(str(errors_or_file))
 
+                    self._log_message(
+                        run_log,
+                        f"Validation failed for {file_basename}: {result.errors}",
+                    )
+
                     if not context.effective_folder.get("force_edi_validation", False):
                         return result
                 elif isinstance(errors_or_file, str):
@@ -371,6 +385,11 @@ class DispatchOrchestrator:
                         result.errors.extend(errors_or_file)
                     else:
                         result.errors.append(str(errors_or_file))
+
+                    self._log_message(
+                        run_log,
+                        f"Validation failed for {file_basename}: {result.errors}",
+                    )
 
                     if not context.effective_folder.get("force_edi_validation", False):
                         return result
@@ -406,6 +425,13 @@ class DispatchOrchestrator:
                         if converter_step is not None and context.effective_folder.get(
                             "convert_edi", False
                         ):
+                            convert_format = context.effective_folder.get(
+                                "convert_to_format", "unknown"
+                            )
+                            self._log_message(
+                                run_log,
+                                f"Converting {file_basename} to {convert_format}",
+                            )
                             converted_file = converter_step.execute(
                                 current_pipeline_file,
                                 context.effective_folder,
@@ -424,6 +450,10 @@ class DispatchOrchestrator:
                         if tweaker_step is not None and context.effective_folder.get(
                             "tweak_edi", False
                         ):
+                            self._log_message(
+                                run_log,
+                                f"Applying tweaks to {file_basename}",
+                            )
                             tweaked_file = tweaker_step.execute(
                                 current_pipeline_file,
                                 context.effective_folder,
@@ -438,7 +468,7 @@ class DispatchOrchestrator:
                                 current_pipeline_file = tweaked_file
 
                         send_result = self._send_pipeline_file(
-                            current_pipeline_file, context.effective_folder
+                            current_pipeline_file, context.effective_folder, run_log
                         )
                         if not send_result:
                             send_errors = self.send_manager.get_errors()
@@ -453,12 +483,21 @@ class DispatchOrchestrator:
                                 )
 
                     result.sent = len(result.errors) == 0
+                    if result.sent:
+                        self._log_message(run_log, f"Success: {file_basename}")
                     return result
 
             converter_step = self.config.converter_step
             if converter_step is not None and context.effective_folder.get(
                 "convert_edi", False
             ):
+                convert_format = context.effective_folder.get(
+                    "convert_to_format", "unknown"
+                )
+                self._log_message(
+                    run_log,
+                    f"Converting {file_basename} to {convert_format}",
+                )
                 converted_file = converter_step.execute(
                     current_file,
                     context.effective_folder,
@@ -477,6 +516,10 @@ class DispatchOrchestrator:
             if tweaker_step is not None and context.effective_folder.get(
                 "tweak_edi", False
             ):
+                self._log_message(
+                    run_log,
+                    f"Applying tweaks to {file_basename}",
+                )
                 tweaked_file = tweaker_step.execute(
                     current_file,
                     context.effective_folder,
@@ -499,7 +542,7 @@ class DispatchOrchestrator:
                 result.errors.append("No backends enabled")
             else:
                 result.sent = self._send_pipeline_file(
-                    current_file, context.effective_folder
+                    current_file, context.effective_folder, run_log
                 )
 
                 if not result.sent:
@@ -509,8 +552,18 @@ class DispatchOrchestrator:
                             result.errors.append(
                                 f"Failed to send file via {backend_name}: {error_message}"
                             )
+                            self._log_message(
+                                run_log,
+                                f"FAILED sending {file_basename} via {backend_name}: {error_message}",
+                            )
                     else:
                         result.errors.append(f"Failed to send file: {current_file}")
+                        self._log_message(
+                            run_log,
+                            f"FAILED sending {file_basename}",
+                        )
+                else:
+                    self._log_message(run_log, f"Success: {file_basename}")
 
         except Exception as e:
             result.errors.append(str(e))
@@ -559,20 +612,34 @@ class DispatchOrchestrator:
             upc_dict=upc_dict,
         )
 
-    def _send_pipeline_file(self, file_path: str, folder: dict) -> bool:
+    def _send_pipeline_file(self, file_path: str, folder: dict, run_log: Any = None) -> bool:
         """Send file through pipeline to backends.
 
         Args:
             file_path: Path to the file to send
             folder: Folder configuration dictionary
+            run_log: Optional run log for recording processing activity
 
         Returns:
             True if file was sent successfully
         """
+        import os
+
         enabled_backends = self.send_manager.get_enabled_backends(folder)
 
         if not enabled_backends:
             return False
+
+        file_basename = os.path.basename(file_path)
+
+        for backend_name in enabled_backends:
+            display_name = self.send_manager.DEFAULT_BACKENDS.get(
+                backend_name, {}
+            ).get("display_name", backend_name)
+            self._log_message(
+                run_log,
+                f"sending {file_basename} to {display_name}",
+            )
 
         settings = self.config.settings
         send_results = self.send_manager.send_all(
@@ -749,25 +816,30 @@ class DispatchOrchestrator:
         )
 
     def _log_message(self, run_log: Any, message: str) -> None:
-        """Log a message to the run log.
+        """Log a message to the run log and Python logger.
 
         Args:
             run_log: Run log to write to
             message: Message to log
         """
+        logger.info(message)
         if hasattr(run_log, "write"):
             run_log.write((message + "\r\n").encode())
         elif hasattr(run_log, "append"):
             run_log.append(message)
 
     def _log_error(self, run_log: Any, message: str) -> None:
-        """Log an error message to the run log.
+        """Log an error message to the run log and Python logger.
 
         Args:
             run_log: Run log to write to
             message: Error message to log
         """
-        self._log_message(run_log, f"ERROR: {message}")
+        logger.error(f"ERROR: {message}")
+        if hasattr(run_log, "write"):
+            run_log.write((f"ERROR: {message}" + "\r\n").encode())
+        elif hasattr(run_log, "append"):
+            run_log.append(f"ERROR: {message}")
 
     def get_summary(self) -> str:
         """Get a summary of the processing run.

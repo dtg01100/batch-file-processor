@@ -18,7 +18,7 @@ import tracemalloc
 from unittest.mock import MagicMock
 from contextlib import contextmanager
 
-pytestmark = [pytest.mark.integration, pytest.mark.performance]
+pytestmark = [pytest.mark.integration, pytest.mark.performance, pytest.mark.slow]
 
 RUN_PERF_ASSERTS = os.getenv("RUN_PERF_ASSERTS") == "1"
 

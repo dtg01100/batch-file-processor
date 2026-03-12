@@ -22,12 +22,11 @@ import os
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
-from schema import ensure_schema
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
 
 @pytest.fixture
-def workspace(tmp_path):
+def workspace(fresh_db, tmp_path):
     """Create a test workspace with database and directories."""
     workspace_dir = tmp_path / "folder_mgmt_workspace"
     workspace_dir.mkdir()
@@ -46,13 +45,9 @@ def workspace(tmp_path):
     for dir_path in test_dirs.values():
         dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Database setup
-    db_path = workspace_dir / "test_folders.db"
+    # Database setup — fresh_db already has the schema and version record
+    db_path = fresh_db
     db_conn = sqlite_wrapper.Database.connect(str(db_path))
-    ensure_schema(db_conn)
-
-    # Initialize version record
-    db_conn["version"].insert({"id": 1, "version": "41", "os": "Linux"})
 
     db = DatabaseObj(
         database_path=str(db_path),
@@ -183,7 +178,7 @@ class TestBasicFolderOperations:
 
         # Verify update
         updated = db.folders_table.find_one(id=folder_id)
-        assert updated["folder_is_active"] == "False"
+        assert updated["folder_is_active"] is False
         assert updated["convert_to_format"] == "estore_einvoice"
 
     def test_update_folder_by_name(self, workspace):
@@ -206,7 +201,7 @@ class TestBasicFolderOperations:
 
         # Verify update
         updated = db.folders_table.find_one(folder_name=folder_path)
-        assert updated["folder_is_active"] == "False"
+        assert updated["folder_is_active"] is False
         assert updated["process_edi"] == 0
 
     def test_delete_folder(self, workspace):
@@ -302,7 +297,7 @@ class TestEnableDisableOperations:
 
         # Verify disabled
         folder_after = db.folders_table.find_one(id=folder_id)
-        assert folder_after["folder_is_active"] == "False"
+        assert folder_after["folder_is_active"] is False
 
     def test_enable_folder(self, workspace):
         """Test enabling an inactive folder."""
@@ -322,7 +317,7 @@ class TestEnableDisableOperations:
         folder_id = folder["id"]
 
         # Verify initially inactive
-        assert folder["folder_is_active"] == "False"
+        assert folder["folder_is_active"] is False
 
         # Enable folder
         result = folder_manager.enable_folder(folder_id)
@@ -330,7 +325,7 @@ class TestEnableDisableOperations:
 
         # Verify enabled
         folder_after = db.folders_table.find_one(id=folder_id)
-        assert folder_after["folder_is_active"] == "True"
+        assert folder_after["folder_is_active"] is True
 
     def test_disable_nonexistent_folder(self, workspace):
         """Test disabling non-existent folder returns False."""
@@ -433,7 +428,7 @@ class TestFolderRetrieval:
 
         assert len(active_folders) == 2
         for folder in active_folders:
-            assert folder["folder_is_active"] == "True"
+            assert folder["folder_is_active"] is True
 
     def test_get_inactive_folders(self, workspace):
         """Test retrieving only inactive folders."""
@@ -457,7 +452,7 @@ class TestFolderRetrieval:
 
         assert len(inactive_folders) == 2
         for folder in inactive_folders:
-            assert folder["folder_is_active"] == "False"
+            assert folder["folder_is_active"] is False
 
     def test_get_all_folders(self, workspace):
         """Test retrieving all folders regardless of status."""

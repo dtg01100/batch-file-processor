@@ -158,7 +158,7 @@ def sample_extracted_fields() -> ExtractedDialogFields:
     return ExtractedDialogFields(
         folder_name="/test/folder",
         alias="Test Folder",
-        folder_is_active="True",
+        folder_is_active=True,
         process_backend_copy=True,
         process_backend_ftp=True,
         process_backend_email=True,
@@ -169,7 +169,7 @@ def sample_extracted_fields() -> ExtractedDialogFields:
         ftp_password="testpass",
         email_to="recipient@example.com",
         email_subject_line="Test Subject",
-        process_edi="True",
+        process_edi=True,
         convert_to_format="CSV",
         tweak_edi=True,
         split_edi=False,
@@ -194,7 +194,7 @@ def sample_folder_config() -> FolderConfiguration:
     """
     return FolderConfiguration(
         folder_name="/test/folder",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="test-folder",
         is_template=False,
         process_backend_copy=True,
@@ -212,7 +212,7 @@ def sample_folder_config() -> FolderConfiguration:
         ),
         copy=CopyConfiguration(destination_directory="/copy/destination"),
         edi=EDIConfiguration(
-            process_edi="True",
+            process_edi=True,
             tweak_edi=True,
             split_edi=False,
             split_edi_include_invoices=True,
@@ -271,7 +271,7 @@ def sample_ftp_folder_config() -> FolderConfiguration:
     """
     return FolderConfiguration(
         folder_name="/ftp/folder",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="ftp-folder",
         process_backend_ftp=True,
         process_backend_copy=False,
@@ -285,7 +285,7 @@ def sample_ftp_folder_config() -> FolderConfiguration:
         ),
         email=None,
         copy=None,
-        edi=EDIConfiguration(process_edi="False"),
+        edi=EDIConfiguration(process_edi=False),
     )
 
 
@@ -298,7 +298,7 @@ def sample_email_folder_config() -> FolderConfiguration:
     """
     return FolderConfiguration(
         folder_name="/email/folder",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="email-folder",
         process_backend_email=True,
         process_backend_ftp=False,
@@ -309,7 +309,7 @@ def sample_email_folder_config() -> FolderConfiguration:
         ),
         ftp=None,
         copy=None,
-        edi=EDIConfiguration(process_edi="False"),
+        edi=EDIConfiguration(process_edi=False),
     )
 
 
@@ -322,12 +322,12 @@ def sample_edi_folder_config() -> FolderConfiguration:
     """
     return FolderConfiguration(
         folder_name="/edi/folder",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="edi-folder",
         process_backend_copy=True,
         copy=CopyConfiguration(destination_directory="/output"),
         edi=EDIConfiguration(
-            process_edi="True",
+            process_edi=True,
             tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
@@ -355,7 +355,7 @@ def sample_folder_dict() -> Dict[str, Any]:
     """
     return {
         "folder_name": "/test/folder",
-        "folder_is_active": "True",
+        "folder_is_active": True,
         "alias": "test-folder",
         "is_template": False,
         # Backend toggles
@@ -374,7 +374,7 @@ def sample_folder_dict() -> Dict[str, Any]:
         # Copy fields
         "copy_to_directory": "/copy/destination",
         # EDI fields
-        "process_edi": "True",
+        "process_edi": True,
         "convert_to_format": "CSV",
         "tweak_edi": True,
         "split_edi": False,
@@ -386,18 +386,18 @@ def sample_folder_dict() -> Dict[str, Any]:
         "split_edi_filter_mode": "include",
         "force_edi_validation": False,
         # EDI options
-        "calculate_upc_check_digit": "True",
-        "include_a_records": "True",
-        "include_c_records": "False",
-        "include_headers": "True",
-        "filter_ampersand": "False",
+        "calculate_upc_check_digit": True,
+        "include_a_records": True,
+        "include_c_records": False,
+        "include_headers": True,
+        "filter_ampersand": False,
         # A-record
-        "pad_a_records": "False",
+        "pad_a_records": False,
         "a_record_padding": "",
         "a_record_padding_length": 6,
-        "append_a_records": "False",
+        "append_a_records": False,
         "a_record_append_text": "",
-        "force_txt_file_ext": "False",
+        "force_txt_file_ext": False,
         # Invoice date
         "invoice_date_offset": 0,
         "invoice_date_custom_format": False,
@@ -431,12 +431,12 @@ def minimal_folder_dict() -> Dict[str, Any]:
     """
     return {
         "folder_name": "/minimal/folder",
-        "folder_is_active": "False",
+        "folder_is_active": False,
         "alias": "minimal-folder",
         "process_backend_copy": False,
         "process_backend_ftp": False,
         "process_backend_email": False,
-        "process_edi": "False",
+        "process_edi": False,
     }
 
 

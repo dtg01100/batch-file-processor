@@ -805,20 +805,18 @@ class TestConvertUPCEToUPCA:
 
     def test_seven_digit_upce(self):
         """7-digit UPC-E (with check digit) should truncate and convert."""
-        result = convert_UPCE_to_UPCA("041826356")  # 7 digits
-        # May return False or the converted value
-        assert result is False or (isinstance(result, str) and len(result) == 12)
+        result = convert_UPCE_to_UPCA("0418263")  # 7 digits
+        assert isinstance(result, str) and len(result) == 12
 
     def test_eight_digit_upce(self):
         """8-digit UPC-E should truncate and convert."""
-        result = convert_UPCE_to_UPCA("004182635")  # 8 digits
-        # May return False or the converted value
-        assert result is False or (isinstance(result, str) and len(result) == 12)
+        result = convert_UPCE_to_UPCA("00418263")  # 8 digits
+        assert isinstance(result, str) and len(result) == 12
 
     def test_invalid_length(self):
-        """Invalid length should return False."""
+        """Invalid length should return empty string."""
         result = convert_UPCE_to_UPCA("1234")  # Too short
-        assert result is False
+        assert result == ""
 
     def test_d6_in_012(self):
         """Test d6 in 0,1,2 range."""

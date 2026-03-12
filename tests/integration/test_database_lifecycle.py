@@ -93,6 +93,70 @@ class TestDatabaseCreation:
         assert isinstance(folders, list)
         conn.close()
 
+    def test_fresh_database_has_all_columns(self, tmp_path):
+        """Verify fresh database has all expected columns in each table."""
+        db_path, _ = _create_fresh_db(tmp_path)
+        conn = sqlite_wrapper.Database.connect(db_path)
+        cursor = conn.raw_connection.cursor()
+
+        # Check folders table columns
+        cursor.execute("PRAGMA table_info(folders)")
+        folders_columns = [row[1] for row in cursor.fetchall()]
+
+        required_folders_columns = [
+            "id",
+            "folder_name",
+            "alias",
+            "folder_is_active",
+            "process_edi",
+            "tweak_edi",
+            "convert_to_format",
+            "process_backend_copy",
+            "process_backend_email",
+            "process_backend_ftp",
+            "email_to",
+            "ftp_server",
+            "ftp_port",
+            "ftp_username",
+            "ftp_password",
+        ]
+
+        for col in required_folders_columns:
+            assert col in folders_columns, f"folders table should have {col} column"
+
+        # Check administrative table columns
+        cursor.execute("PRAGMA table_info(administrative)")
+        admin_columns = [row[1] for row in cursor.fetchall()]
+
+        required_admin_columns = [
+            "id",
+            "logs_directory",
+            "errors_folder",
+            "process_backend_email",
+            "process_backend_ftp",
+        ]
+
+        for col in required_admin_columns:
+            assert (
+                col in admin_columns
+            ), f"administrative table should have {col} column"
+
+        conn.close()
+
+    def test_foreign_keys_enabled(self, tmp_path):
+        """Verify foreign keys are enabled after database creation."""
+        db_path, _ = _create_fresh_db(tmp_path)
+        conn = sqlite_wrapper.Database.connect(db_path)
+        cursor = conn.raw_connection.cursor()
+
+        cursor.execute("PRAGMA foreign_keys")
+        result = cursor.fetchone()
+
+        # Foreign keys should be enabled
+        assert result[0] == 1 or result[0] == "1"
+
+        conn.close()
+
 
 # ---------------------------------------------------------------------------
 # Tests: Folder CRUD
@@ -328,6 +392,109 @@ class TestMigrationChain:
         assert int(ver["version"]) >= 42
         conn.close()
 
+    def test_migration_with_missing_tables(self, tmp_path):
+        """Test migration when some tables are missing."""
+        db_path = str(tmp_path / "missing_tables.db")
+        config = str(tmp_path / "cfg")
+        os.makedirs(config, exist_ok=True)
+
+        conn = sqlite_wrapper.Database.connect(db_path)
+        # Only create version and folders tables
+        conn.query(
+            "CREATE TABLE version (id INTEGER PRIMARY KEY, version TEXT, os TEXT)"
+        )
+        conn.query(
+            "CREATE TABLE folders "
+            "(id INTEGER PRIMARY KEY AUTOINCREMENT, folder_name TEXT, alias TEXT)"
+        )
+
+        conn["version"].insert(dict(version="10", os="Linux"))
+        conn["folders"].insert(dict(folder_name="/test", alias="Test"))
+        conn.close()
+
+        # Run migration - should handle missing tables gracefully
+        conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(conn)
+        if conn["administrative"].find_one(id=1) is None:
+            conn["administrative"].insert(dict(id=1, logs_directory="/logs"))
+
+        folders_database_migrator.upgrade_database(conn, config, "Linux")
+
+        # Verify migration completed
+        version_rec = conn["version"].find_one(id=1)
+        assert int(version_rec["version"]) >= int(CURRENT_DB_VERSION)
+
+        conn.close()
+
+    def test_migration_with_null_values(self, tmp_path):
+        """Test migration handles NULL values correctly."""
+        db_path = str(tmp_path / "nulls.db")
+        config = str(tmp_path / "cfg")
+        os.makedirs(config, exist_ok=True)
+
+        conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(conn)
+        conn["version"].insert(dict(version="20", os="Linux"))
+
+        # Insert folder with NULL values
+        conn["folders"].insert(
+            dict(
+                folder_name="/test",
+                alias=None,
+                folder_is_active="True",
+                copy_to_directory=None,
+                process_edi=1,
+            )
+        )
+
+        conn["administrative"].insert(dict(id=1, logs_directory="/logs"))
+        conn.close()
+
+        # Run migration
+        conn = sqlite_wrapper.Database.connect(db_path)
+        folders_database_migrator.upgrade_database(
+            conn, config, "Linux", target_version="41"
+        )
+
+        # Verify folder still exists
+        folder = conn["folders"].find_one(folder_name="/test")
+        assert folder is not None
+
+        conn.close()
+
+    def test_migration_with_duplicate_folders(self, tmp_path):
+        """Test migration handles duplicate folder names."""
+        db_path = str(tmp_path / "duplicates.db")
+        config = str(tmp_path / "cfg")
+        os.makedirs(config, exist_ok=True)
+
+        conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(conn)
+        conn["version"].insert(dict(version="20", os="Linux"))
+
+        # Insert folders with duplicate names (shouldn't happen, but test resilience)
+        conn["folders"].insert(
+            dict(folder_name="/test", alias="Test 1", folder_is_active="True")
+        )
+        conn["folders"].insert(
+            dict(folder_name="/test", alias="Test 2", folder_is_active="False")
+        )
+
+        conn["administrative"].insert(dict(id=1, logs_directory="/logs"))
+        conn.close()
+
+        # Run migration
+        conn = sqlite_wrapper.Database.connect(db_path)
+        folders_database_migrator.upgrade_database(
+            conn, config, "Linux", target_version="41"
+        )
+
+        # Both folders should still exist
+        folders = list(conn["folders"].find(folder_name="/test"))
+        assert len(folders) == 2
+
+        conn.close()
+
 
 # ---------------------------------------------------------------------------
 # Tests: DatabaseObj wrapper
@@ -396,6 +563,36 @@ class TestDatabaseObjWrapper:
 
         assert db.folders_table is not None
         db.close()
+
+    def test_import_database_from_file(self, tmp_path):
+        """Test importing a database file from a different location."""
+        # Create source database
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        source_path, _ = _create_fresh_db(source_dir)
+        conn = sqlite_wrapper.Database.connect(source_path)
+        conn["folders"].insert_many(
+            [
+                dict(folder_name="/folder/1", alias="Folder 1"),
+                dict(folder_name="/folder/2", alias="Folder 2"),
+            ]
+        )
+        conn.close()
+
+        # "Import" by copying
+        import_db_path = str(tmp_path / "imported.db")
+        shutil.copy(source_path, import_db_path)
+
+        # Verify imported database is valid
+        conn = sqlite_wrapper.Database.connect(import_db_path)
+
+        version = conn["version"].find_one(id=1)
+        assert int(version["version"]) >= int(CURRENT_DB_VERSION)
+
+        folders = list(conn["folders"].all())
+        assert len(folders) == 2
+
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

@@ -4,12 +4,15 @@ This module provides centralized error handling and logging,
 using dependency injection for testability.
 """
 
+import logging
 import os
 import time
 from io import StringIO
 from typing import Optional, Any
 
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
+
+eh_logger = logging.getLogger("dispatch.error_handler")
 
 
 class ErrorHandler:
@@ -70,6 +73,11 @@ class ErrorHandler:
             "error_source": error_source,
             "context": context or {},
         }
+
+        # Emit through Python logging framework
+        eh_logger.error(
+            "Error in %s processing %s: %s", folder, filename, error
+        )
 
         # Add to in-memory list
         self.errors.append(error_record)

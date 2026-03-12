@@ -1,6 +1,25 @@
 import os
 
 
+def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
+    """Add a column to a table if it doesn't already exist.
+
+    Args:
+        db: A sqlite_wrapper.Database connection.
+        table_name: Name of the table to alter.
+        column_name: Name of the column to add.
+        default_sql: SQL literal for the default value (e.g. '"default_val"', '0').
+        sql_type: SQL column type (default "TEXT").
+    """
+    cursor = db.raw_connection.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    existing = {row[1] for row in cursor.fetchall()}
+    if column_name in existing:
+        return
+    db.query(f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}' {sql_type}")
+    db.query(f"UPDATE '{table_name}' SET '{column_name}' = {default_sql}")
+
+
 def _log_migration_step(from_version, to_version):
     """Log migration step progress."""
     print(f"  Migrating: v{from_version} → v{to_version}")

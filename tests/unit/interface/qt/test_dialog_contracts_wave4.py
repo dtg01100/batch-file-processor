@@ -65,7 +65,7 @@ class TestNonApplyDialogRejectContracts:
     def test_resend_close_button_rejects(self, qtbot, monkeypatch):
         service = MagicMock()
         service.has_processed_files.return_value = True
-        service.get_folder_list.return_value = []
+        service.get_all_files_for_resend.return_value = []
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
         )
@@ -197,7 +197,7 @@ class TestBaseDialogHelperUsageGuards:
     def test_resend_toggle_error_uses_show_error_helper(self, qtbot, monkeypatch):
         service = MagicMock()
         service.has_processed_files.return_value = True
-        service.get_folder_list.return_value = []
+        service.get_all_files_for_resend.return_value = []
         service.set_resend_flag.side_effect = RuntimeError("boom")
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
@@ -206,8 +206,10 @@ class TestBaseDialogHelperUsageGuards:
         dialog = ResendDialog(None, FakeDatabaseObj())
         qtbot.addWidget(dialog)
 
+        # Select a file, then attempt to mark for resend which calls the service
+        dialog._on_file_selected(1, True)
         with patch.object(BaseDialog, "show_error") as show_error:
-            dialog._on_file_toggled(1, True)
+            dialog._mark_selected_for_resend()
             show_error.assert_called_once()
 
     def test_database_import_completion_paths_use_helpers(self, qtbot):

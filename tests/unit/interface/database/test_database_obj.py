@@ -316,7 +316,7 @@ class TestDatabaseObjVersionChecking:
         # Set version to match database_version so only OS mismatch is checked
         # (version 41 matches the database_version in the test)
         mock_tables["version"].find_one.return_value = {
-            "version": "41",
+            "version": "42",
             "os": "Windows",
         }
 

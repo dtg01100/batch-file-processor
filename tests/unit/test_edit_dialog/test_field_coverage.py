@@ -73,7 +73,7 @@ def get_to_dict_keys() -> Set[str]:
     """Get all keys that to_dict() produces."""
     config = FolderConfiguration(
         folder_name="test",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="test_alias",
         ftp=FTPConfiguration(
             server="server",
@@ -85,7 +85,7 @@ def get_to_dict_keys() -> Set[str]:
         email=EmailConfiguration(recipients="test@test.com", subject_line="subject"),
         copy=CopyConfiguration(destination_directory="/dest/"),
         edi=EDIConfiguration(
-            process_edi="True",
+            process_edi=True,
             tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
@@ -581,7 +581,7 @@ class TestFieldCoverageAnalysis:
 
         # Verify all fields loaded correctly
         assert config.folder_name == "/test/path"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "Test Alias"
         assert config.process_backend_copy is True
         assert config.process_backend_ftp is True
@@ -599,7 +599,7 @@ class TestFieldCoverageAnalysis:
         assert config.copy.destination_directory == "/dest/"
 
         assert config.edi is not None
-        assert config.edi.process_edi == "True"
+        assert config.edi.process_edi is True
         assert config.edi.split_edi is True
 
         assert config.upc_override is not None
@@ -937,7 +937,7 @@ class TestRoundTripIntegrity:
         """Test that all fields survive: config -> to_dict -> from_dict -> config."""
         original = FolderConfiguration(
             folder_name="/test/path",
-            folder_is_active="True",
+            folder_is_active=True,
             alias="Test Alias",
             process_backend_copy=True,
             process_backend_ftp=True,
@@ -954,7 +954,7 @@ class TestRoundTripIntegrity:
             ),
             copy=CopyConfiguration(destination_directory="/backup/"),
             edi=EDIConfiguration(
-                process_edi="True",
+                process_edi=True,
                 tweak_edi=True,
                 split_edi=True,
                 split_edi_include_invoices=True,

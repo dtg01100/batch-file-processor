@@ -61,7 +61,7 @@ def convert_upce_to_upca(upce_value: str) -> str:
     elif len(upce_value) == 8:
         middle_digits = upce_value[1:7]
     else:
-        return False
+        return ""
 
     d1, d2, d3, d4, d5, d6 = list(middle_digits)
 

@@ -23,13 +23,9 @@ import shutil
 import sqlite3
 
 from interface.database import sqlite_wrapper
-import pytest
 
 import folders_database_migrator
 import schema
-
-
-pytestmark = [pytest.mark.integration]
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 LEGACY_DB_PATH = os.path.join(FIXTURES_DIR, "legacy_v32_folders.db")
@@ -56,6 +52,24 @@ def migrated_db(legacy_db, tmp_path):
     """
     db = sqlite_wrapper.Database.connect(legacy_db)
     folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+    yield db
+    db.close()
+
+
+@pytest.fixture(scope="class")
+def migrated_db_shared(tmp_path_factory):
+    """Class-scoped migrated database for read-only test classes.
+    
+    Performs the expensive v32→v42 migration ONCE per test class.
+    WARNING: Tests using this fixture must NOT modify the database.
+    """
+    if not os.path.exists(LEGACY_DB_PATH):
+        pytest.skip("Legacy v32 database fixture not found")
+    tmpdir = tmp_path_factory.mktemp("legacy_shared")
+    dest = str(tmpdir / "folders.db")
+    shutil.copy2(LEGACY_DB_PATH, dest)
+    db = sqlite_wrapper.Database.connect(dest)
+    folders_database_migrator.upgrade_database(db, str(tmpdir), "Linux")
     yield db
     db.close()
 
@@ -140,14 +154,14 @@ class TestLegacyDatabasePreConditions:
 class TestUpgradeCompletes:
     """Test that the full v32 → v42 migration completes successfully."""
 
-    def test_upgrade_reaches_v42(self, migrated_db):
+    def test_upgrade_reaches_v42(self, migrated_db_shared):
         """Migration should bring the database to version 42."""
-        version = migrated_db["version"].find_one(id=1)
+        version = migrated_db_shared["version"].find_one(id=1)
         assert version["version"] == "42"
 
-    def test_upgrade_updates_os_field(self, migrated_db):
+    def test_upgrade_updates_os_field(self, migrated_db_shared):
         """Migration should update the OS field to the current platform."""
-        version = migrated_db["version"].find_one(id=1)
+        version = migrated_db_shared["version"].find_one(id=1)
         # upgrade_database() is called with "Linux", so OS gets updated
         assert version["os"] == "Linux"
 
@@ -155,54 +169,54 @@ class TestUpgradeCompletes:
 class TestDataPreservation:
     """Test that all data survives the migration intact."""
 
-    def test_all_530_folders_preserved(self, migrated_db):
+    def test_all_530_folders_preserved(self, migrated_db_shared):
         """All 530 folder records should survive migration."""
-        count = migrated_db["folders"].count()
+        count = migrated_db_shared["folders"].count()
         assert count == 530
 
-    def test_all_processed_files_preserved(self, migrated_db):
+    def test_all_processed_files_preserved(self, migrated_db_shared):
         """All 227,501 processed file records should survive migration."""
-        count = migrated_db["processed_files"].count()
+        count = migrated_db_shared["processed_files"].count()
         assert count == 227501
 
-    def test_specific_folder_data_preserved(self, migrated_db):
+    def test_specific_folder_data_preserved(self, migrated_db_shared):
         """Specific folder data should be preserved exactly."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert folder is not None
         assert folder["alias"] == "012258"
         assert folder["convert_to_format"] == "csv"
 
-    def test_second_folder_data_preserved(self, migrated_db):
+    def test_second_folder_data_preserved(self, migrated_db_shared):
         """Second sample folder should be preserved."""
-        folder = migrated_db["folders"].find_one(id=29)
+        folder = migrated_db_shared["folders"].find_one(id=29)
         assert folder is not None
         assert folder["alias"] == "PIERCES"
 
-    def test_settings_preserved(self, migrated_db):
+    def test_settings_preserved(self, migrated_db_shared):
         """Settings table data should be preserved."""
-        settings = migrated_db["settings"].find_one(id=1)
+        settings = migrated_db_shared["settings"].find_one(id=1)
         assert settings is not None
         assert settings["smtp_port"] == 587
         assert settings["email_smtp_server"] == "smtp.example.com"
         assert settings["odbc_driver"] == "iSeries Access ODBC Driver"
         assert settings["as400_address"] == "10.0.0.100"
 
-    def test_administrative_preserved(self, migrated_db):
+    def test_administrative_preserved(self, migrated_db_shared):
         """Administrative table data should be preserved."""
-        admin = migrated_db["administrative"].find_one(id=1)
+        admin = migrated_db_shared["administrative"].find_one(id=1)
         assert admin is not None
         assert admin["logs_directory"] == "C:/ProgramData/BatchFileSender/Logs"
 
-    def test_processed_file_data_preserved(self, migrated_db):
+    def test_processed_file_data_preserved(self, migrated_db_shared):
         """Individual processed file records should be preserved."""
-        pf = migrated_db["processed_files"].find_one(id=1)
+        pf = migrated_db_shared["processed_files"].find_one(id=1)
         assert pf is not None
         assert pf["file_name"] == r"D:\DATA\OUT\012258\012258.115"
         assert pf["folder_id"] == 21
 
-    def test_email_tables_preserved(self, migrated_db):
+    def test_email_tables_preserved(self, migrated_db_shared):
         """Email-related tables should still exist after migration."""
-        tables = migrated_db.tables
+        tables = migrated_db_shared.tables
         assert "emails_to_send" in tables
         assert "working_batch_emails_to_send" in tables
         assert "sent_emails_removal_queue" in tables
@@ -211,57 +225,57 @@ class TestDataPreservation:
 class TestNewColumnsAdded:
     """Test that migration adds all expected new columns."""
 
-    def test_folders_has_plugin_config(self, migrated_db):
+    def test_folders_has_plugin_config(self, migrated_db_shared):
         """Folders table should have plugin_config column after migration."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert "plugin_config" in folder
 
-    def test_folders_has_edi_format(self, migrated_db):
+    def test_folders_has_edi_format(self, migrated_db_shared):
         """Folders table should have edi_format column with default value."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert "edi_format" in folder
         assert folder["edi_format"] == "default"
 
-    def test_folders_has_timestamps(self, migrated_db):
+    def test_folders_has_timestamps(self, migrated_db_shared):
         """Folders table should have created_at and updated_at columns."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert "created_at" in folder
         assert folder["created_at"] is not None
         assert "updated_at" in folder
         assert folder["updated_at"] is not None
 
-    def test_folders_has_split_edi_filter_columns(self, migrated_db):
+    def test_folders_has_split_edi_filter_columns(self, migrated_db_shared):
         """Folders table should have split_edi_filter_categories and split_edi_filter_mode."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert "split_edi_filter_categories" in folder
         assert "split_edi_filter_mode" in folder
 
-    def test_administrative_has_plugin_config(self, migrated_db):
+    def test_administrative_has_plugin_config(self, migrated_db_shared):
         """Administrative table should have plugin_config column."""
-        admin = migrated_db["administrative"].find_one(id=1)
+        admin = migrated_db_shared["administrative"].find_one(id=1)
         assert "plugin_config" in admin
 
-    def test_administrative_has_edi_format(self, migrated_db):
+    def test_administrative_has_edi_format(self, migrated_db_shared):
         """Administrative table should have edi_format column."""
-        admin = migrated_db["administrative"].find_one(id=1)
+        admin = migrated_db_shared["administrative"].find_one(id=1)
         assert "edi_format" in admin
         assert admin["edi_format"] == "default"
 
-    def test_administrative_has_timestamps(self, migrated_db):
+    def test_administrative_has_timestamps(self, migrated_db_shared):
         """Administrative table should have created_at and updated_at."""
-        admin = migrated_db["administrative"].find_one(id=1)
+        admin = migrated_db_shared["administrative"].find_one(id=1)
         assert "created_at" in admin
         assert admin["created_at"] is not None
         assert "updated_at" in admin
 
-    def test_version_has_notes_column(self, migrated_db):
+    def test_version_has_notes_column(self, migrated_db_shared):
         """Version table should have notes column after v37→v38."""
-        version = migrated_db["version"].find_one(id=1)
+        version = migrated_db_shared["version"].find_one(id=1)
         assert "notes" in version
 
-    def test_processed_files_has_new_columns(self, migrated_db):
+    def test_processed_files_has_new_columns(self, migrated_db_shared):
         """Processed files should have new columns from v34→v35."""
-        pf = migrated_db["processed_files"].find_one(id=1)
+        pf = migrated_db_shared["processed_files"].find_one(id=1)
         assert "filename" in pf
         assert "original_path" in pf
         assert "processed_path" in pf
@@ -270,9 +284,9 @@ class TestNewColumnsAdded:
         assert "convert_format" in pf
         assert "sent_to" in pf
 
-    def test_settings_has_timestamps(self, migrated_db):
+    def test_settings_has_timestamps(self, migrated_db_shared):
         """Settings table should have created_at and updated_at."""
-        settings = migrated_db["settings"].find_one(id=1)
+        settings = migrated_db_shared["settings"].find_one(id=1)
         assert "created_at" in settings
         assert "updated_at" in settings
 
@@ -280,26 +294,26 @@ class TestNewColumnsAdded:
 class TestBooleanNormalization:
     """Test that string booleans are normalized to integers (v40→v41)."""
 
-    def test_folder_is_active_normalized(self, migrated_db):
+    def test_folder_is_active_normalized(self, migrated_db_shared):
         """folder_is_active should be normalized from "True"/"False" to 1/0."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         # Was "True" in legacy, should now be 1 or "1"
         assert str(folder["folder_is_active"]) in ("1", "0")
         assert str(folder["folder_is_active"]) not in ("True", "False")
 
-    def test_process_edi_normalized(self, migrated_db):
+    def test_process_edi_normalized(self, migrated_db_shared):
         """process_edi should be normalized from "True"/"False" to 1/0."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert str(folder["process_edi"]) in ("1", "0")
         assert str(folder["process_edi"]) not in ("True", "False")
 
-    def test_active_folder_has_value_1(self, migrated_db):
+    def test_active_folder_has_value_1(self, migrated_db_shared):
         """Folder id=21 was active ("True"), should now be 1."""
-        folder = migrated_db["folders"].find_one(id=21)
+        folder = migrated_db_shared["folders"].find_one(id=21)
         assert int(folder["folder_is_active"]) == 1
 
     @pytest.mark.slow
-    def test_boolean_fields_across_multiple_folders(self, migrated_db):
+    def test_boolean_fields_across_multiple_folders(self, migrated_db_shared):
         """Check boolean normalization across several folders."""
         boolean_fields = [
             "folder_is_active",
@@ -311,7 +325,7 @@ class TestBooleanNormalization:
             "filter_ampersand",
             "pad_a_records",
         ]
-        for folder in migrated_db["folders"].find(_limit=20):
+        for folder in migrated_db_shared["folders"].find(_limit=20):
             for field in boolean_fields:
                 if field in folder and folder[field] is not None:
                     val = str(folder[field])
@@ -384,45 +398,45 @@ class TestIndexesCreated:
 class TestNormalizedTablesCreated:
     """Test that v41→v42 creates the new normalized schema tables."""
 
-    def test_users_table_exists(self, migrated_db):
+    def test_users_table_exists(self, migrated_db_shared):
         """users table should exist after v42 migration."""
-        assert "users" in migrated_db.tables
+        assert "users" in migrated_db_shared.tables
 
-    def test_organizations_table_exists(self, migrated_db):
+    def test_organizations_table_exists(self, migrated_db_shared):
         """organizations table should exist after v42 migration."""
-        assert "organizations" in migrated_db.tables
+        assert "organizations" in migrated_db_shared.tables
 
-    def test_projects_table_exists(self, migrated_db):
+    def test_projects_table_exists(self, migrated_db_shared):
         """projects table should exist after v42 migration."""
-        assert "projects" in migrated_db.tables
+        assert "projects" in migrated_db_shared.tables
 
-    def test_files_table_exists(self, migrated_db):
+    def test_files_table_exists(self, migrated_db_shared):
         """files table should exist after v42 migration."""
-        assert "files" in migrated_db.tables
+        assert "files" in migrated_db_shared.tables
 
-    def test_batches_table_exists(self, migrated_db):
+    def test_batches_table_exists(self, migrated_db_shared):
         """batches table should exist after v42 migration."""
-        assert "batches" in migrated_db.tables
+        assert "batches" in migrated_db_shared.tables
 
-    def test_processors_table_exists(self, migrated_db):
+    def test_processors_table_exists(self, migrated_db_shared):
         """processors table should exist after v42 migration."""
-        assert "processors" in migrated_db.tables
+        assert "processors" in migrated_db_shared.tables
 
-    def test_processing_jobs_table_exists(self, migrated_db):
+    def test_processing_jobs_table_exists(self, migrated_db_shared):
         """processing_jobs table should exist after v42 migration."""
-        assert "processing_jobs" in migrated_db.tables
+        assert "processing_jobs" in migrated_db_shared.tables
 
-    def test_job_logs_table_exists(self, migrated_db):
+    def test_job_logs_table_exists(self, migrated_db_shared):
         """job_logs table should exist after v42 migration."""
-        assert "job_logs" in migrated_db.tables
+        assert "job_logs" in migrated_db_shared.tables
 
-    def test_tags_table_exists(self, migrated_db):
+    def test_tags_table_exists(self, migrated_db_shared):
         """tags table should exist after v42 migration."""
-        assert "tags" in migrated_db.tables
+        assert "tags" in migrated_db_shared.tables
 
-    def test_file_tags_table_exists(self, migrated_db):
+    def test_file_tags_table_exists(self, migrated_db_shared):
         """file_tags table should exist after v42 migration."""
-        assert "file_tags" in migrated_db.tables
+        assert "file_tags" in migrated_db_shared.tables
 
 
 class TestTableRebuild:

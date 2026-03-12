@@ -226,7 +226,7 @@ class TestBackwardCompatibility(unittest.TestCase):
         folder_config = FolderConfiguration.from_dict(legacy_config)
 
         self.assertEqual(folder_config.folder_name, "Test")
-        self.assertEqual(folder_config.folder_is_active, "True")
+        self.assertEqual(folder_config.folder_is_active, True)
 
     def test_plugin_config_migration(self):
         """Test migrating legacy settings to plugin config."""

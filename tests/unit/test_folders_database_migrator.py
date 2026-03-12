@@ -89,15 +89,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        # Start at version 41 (current)
-        db_conn['version'].insert(dict(version="41", os="Linux"))
+        # Start at version 42 (current)
+        db_conn['version'].insert(dict(version="42", os="Linux"))
         db_conn['administrative'].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -116,7 +116,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -134,7 +134,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -152,7 +152,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -170,7 +170,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -188,7 +188,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 
@@ -229,7 +229,7 @@ class TestMigrationEdgeCases:
 
         version_record = db_conn['version'].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record['version']) <= 41
+        assert int(version_record['version']) <= 42
 
         db_conn.close()
 
@@ -345,10 +345,10 @@ class TestMigrationVersion40:
 
 
 class TestMigrationVersion41:
-    """Test version 41 migration (final version)."""
+    """Test version 41 migration (boolean normalization) and version 42."""
 
-    def test_version_40_to_41(self, tmp_path):
-        """Test migration to version 41 completes successfully."""
+    def test_version_40_to_42(self, tmp_path):
+        """Test migration from version 40 completes to version 42."""
         db_path = str(tmp_path / "test_v41.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
@@ -361,7 +361,7 @@ class TestMigrationVersion41:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn['version'].find_one(id=1)
-        assert version_record['version'] == "41"
+        assert version_record['version'] == "42"
 
         db_conn.close()
 

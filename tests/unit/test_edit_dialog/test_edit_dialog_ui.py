@@ -26,25 +26,31 @@ from interface.services.ftp_service import MockFTPService
 
 
 class TestEditFoldersDialogClassAttributes:
-    """Test suite for EditFoldersDialog class attributes."""
+    """Test suite for EditFoldersDialog constructor defaults."""
 
     def test_default_ftp_service_is_none(self):
-        """Test that default FTP service is None."""
+        """Test that default FTP service parameter is None."""
+        import inspect
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert EditFoldersDialog.DEFAULT_FTP_SERVICE is None
+        sig = inspect.signature(EditFoldersDialog.__init__)
+        assert sig.parameters["ftp_service"].default is None
 
-    def test_default_validator_class(self):
-        """Test that default validator class is set."""
+    def test_default_validator_is_none(self):
+        """Test that default validator parameter is None."""
+        import inspect
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert EditFoldersDialog.DEFAULT_VALIDATOR_CLASS == FolderSettingsValidator
+        sig = inspect.signature(EditFoldersDialog.__init__)
+        assert sig.parameters["validator"].default is None
 
-    def test_default_extractor_class(self):
-        """Test that default extractor class is set."""
+    def test_default_plugin_manager_is_none(self):
+        """Test that default plugin_manager parameter is None."""
+        import inspect
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        assert EditFoldersDialog.DEFAULT_EXTRACTOR_CLASS == FolderDataExtractor
+        sig = inspect.signature(EditFoldersDialog.__init__)
+        assert sig.parameters["plugin_manager"].default is None
 
 
 class TestFolderConfigurationFromExtractedFields:
@@ -55,7 +61,7 @@ class TestFolderConfigurationFromExtractedFields:
         extracted = ExtractedDialogFields(
             folder_name="/test/folder",
             alias="test-alias",
-            folder_is_active="True",
+            folder_is_active=True,
             process_backend_ftp=True,
             ftp_server="ftp.example.com",
             ftp_port=21,
@@ -86,7 +92,7 @@ class TestFolderConfigurationFromExtractedFields:
         config = FolderConfiguration.from_dict(config_data)
 
         assert config.folder_name == "/test/folder"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "test-alias"
         assert config.process_backend_ftp is True
         assert config.ftp is not None
@@ -267,12 +273,12 @@ class TestExtractedDialogFieldsIntegration:
     def test_all_identity_fields(self):
         """Test all identity fields are properly defined."""
         fields = ExtractedDialogFields(
-            folder_name="/path/to/folder", alias="my-alias", folder_is_active="True"
+            folder_name="/path/to/folder", alias="my-alias", folder_is_active=True
         )
 
         assert fields.folder_name == "/path/to/folder"
         assert fields.alias == "my-alias"
-        assert fields.folder_is_active == "True"
+        assert fields.folder_is_active is True
 
     def test_all_backend_toggles(self):
         """Test all backend toggle fields."""
@@ -315,7 +321,7 @@ class TestExtractedDialogFieldsIntegration:
     def test_all_edi_fields(self):
         """Test all EDI fields."""
         fields = ExtractedDialogFields(
-            process_edi="True",
+            process_edi=True,
             convert_to_format="csv",
             tweak_edi=True,
             split_edi=True,
@@ -325,7 +331,7 @@ class TestExtractedDialogFieldsIntegration:
             rename_file="invoice_{date}.csv",
         )
 
-        assert fields.process_edi == "True"
+        assert fields.process_edi is True
         assert fields.convert_to_format == "csv"
         assert fields.tweak_edi is True
         assert fields.split_edi is True
@@ -412,7 +418,7 @@ class TestFolderDataExtractorIntegration:
         extractor = FolderDataExtractor(fields)
         extracted = extractor.extract_all()
 
-        assert extracted.process_edi == "True"
+        assert extracted.process_edi is True
         assert extracted.convert_to_format == "csv"
         assert extracted.tweak_edi is True
         assert extracted.split_edi is False
@@ -454,7 +460,7 @@ class TestFolderConfigurationIntegration:
         result = config.to_dict()
 
         assert result["folder_name"] == "ftp_incoming"
-        assert result["folder_is_active"] == "True"
+        assert result["folder_is_active"] is True
         assert result["process_backend_ftp"] is True
         assert result["ftp_server"] == "ftp.company.com"
         assert result["ftp_port"] == 21
@@ -490,7 +496,7 @@ class TestFolderConfigurationIntegration:
         config = FolderConfiguration.from_dict(original_data)
         result = config.to_dict()
 
-        assert result["process_edi"] == "True"
+        assert result["process_edi"] is True
         assert result["convert_to_format"] == "csv"
         assert result["split_edi"] is True
         assert result["tweak_edi"] is True

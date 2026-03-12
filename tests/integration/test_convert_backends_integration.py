@@ -42,7 +42,7 @@ class TestFintechBackendIntegration:
         return FolderConfiguration(
             folder_name="/test/fintech",
             backend_specific=BackendSpecificConfiguration(fintech_division_id="DIV001"),
-            edi=EDIConfiguration(process_edi="True", convert_to_format="fintech"),
+            edi=EDIConfiguration(process_edi=True, convert_to_format="fintech"),
         )
 
     def test_fintech_with_folder_config(self, finteh_config):
@@ -109,7 +109,7 @@ class TestScannerWareBackendIntegration:
         """Create FolderConfiguration for ScannerWare conversion."""
         return FolderConfiguration(
             folder_name="/test/scannerware",
-            edi=EDIConfiguration(process_edi="True", convert_to_format="ScannerWare"),
+            edi=EDIConfiguration(process_edi=True, convert_to_format="ScannerWare"),
         )
 
     def test_scannerware_with_folder_config(self, scannerware_config):
@@ -117,7 +117,7 @@ class TestScannerWareBackendIntegration:
         config_dict = scannerware_config.to_dict()
 
         assert config_dict["convert_to_format"] == "ScannerWare"
-        assert config_dict["process_edi"] == "True"
+        assert config_dict["process_edi"] is True
 
     def test_scannerware_format_recognized(self, scannerware_config):
         """Test that ScannerWare format is correctly identified."""
@@ -129,7 +129,7 @@ class TestScannerWareBackendIntegration:
         """Test ScannerWare with A-record padding configuration."""
         config = FolderConfiguration(
             folder_name="/test/scannerware",
-            edi=EDIConfiguration(process_edi="True", convert_to_format="ScannerWare"),
+            edi=EDIConfiguration(process_edi=True, convert_to_format="ScannerWare"),
             a_record_padding=ARecordPaddingConfiguration(
                 enabled=True, padding_text="123456", padding_length=6
             ),
@@ -137,7 +137,7 @@ class TestScannerWareBackendIntegration:
 
         config_dict = config.to_dict()
 
-        assert config_dict["pad_a_records"] == "True"
+        assert config_dict["pad_a_records"] is True
         assert config_dict["a_record_padding"] == "123456"
 
 
@@ -149,7 +149,7 @@ class TestProcessEDIToggleIntegration:
         """Create FolderConfiguration with EDI processing enabled."""
         return FolderConfiguration(
             folder_name="/test/edi_enabled",
-            edi=EDIConfiguration(process_edi="True", convert_to_format="csv"),
+            edi=EDIConfiguration(process_edi=True, convert_to_format="csv"),
         )
 
     @pytest.fixture
@@ -157,7 +157,7 @@ class TestProcessEDIToggleIntegration:
         """Create FolderConfiguration with EDI processing disabled."""
         return FolderConfiguration(
             folder_name="/test/edi_disabled",
-            edi=EDIConfiguration(process_edi="False", convert_to_format=""),
+            edi=EDIConfiguration(process_edi=False, convert_to_format=""),
         )
 
     def test_convert_format_toggle(self, edi_config_enabled, edi_config_disabled):
@@ -165,8 +165,8 @@ class TestProcessEDIToggleIntegration:
         enabled_dict = edi_config_enabled.to_dict()
         disabled_dict = edi_config_disabled.to_dict()
 
-        assert enabled_dict["process_edi"] == "True"
-        assert disabled_dict["process_edi"] == "False"
+        assert enabled_dict["process_edi"] is True
+        assert disabled_dict["process_edi"] is False
 
     def test_convert_format_set_when_enabled(self, edi_config_enabled):
         """Test convert_to_format is set when EDI is enabled."""
@@ -190,7 +190,7 @@ class TestSplitEDIIntegration:
         return FolderConfiguration(
             folder_name="/test/split_edi",
             edi=EDIConfiguration(
-                process_edi="True",
+                process_edi=True,
                 split_edi=True,
                 split_edi_include_invoices=True,
                 split_edi_include_credits=True,
@@ -204,7 +204,7 @@ class TestSplitEDIIntegration:
         """Create FolderConfiguration with split EDI disabled."""
         return FolderConfiguration(
             folder_name="/test/no_split",
-            edi=EDIConfiguration(process_edi="True", split_edi=False),
+            edi=EDIConfiguration(process_edi=True, split_edi=False),
         )
 
     def test_split_edi_settings(self, split_edi_config):
@@ -363,29 +363,29 @@ class TestARecordPaddingIntegration:
         """Test A-record padding settings affect record processing."""
         config_dict = a_record_padding_enabled.to_dict()
 
-        assert config_dict["pad_a_records"] == "True"
+        assert config_dict["pad_a_records"] is True
         assert config_dict["a_record_padding"] == "PREFIX"
         assert config_dict["a_record_padding_length"] == 6
-        assert config_dict["append_a_records"] == "True"
+        assert config_dict["append_a_records"] is True
         assert config_dict["a_record_append_text"] == "APPEND"
-        assert config_dict["force_txt_file_ext"] == "True"
+        assert config_dict["force_txt_file_ext"] is True
 
     def test_a_record_disabled_no_padding(self, a_record_padding_disabled):
         """Test disabled A-record padding doesn't affect processing."""
         config_dict = a_record_padding_disabled.to_dict()
 
-        assert config_dict["pad_a_records"] == "False"
+        assert config_dict["pad_a_records"] is False
 
     def test_a_record_padding_affects_conversion(self, a_record_padding_enabled):
         """Test that A-record padding affects conversion output."""
         config_dict = a_record_padding_enabled.to_dict()
 
         # Simulate A-record padding logic
-        if config_dict["pad_a_records"] == "True":
+        if config_dict["pad_a_records"] is True:
             padding_text = config_dict["a_record_padding"]
             padding_length = config_dict["a_record_padding_length"]
-            has_append = config_dict["append_a_records"] == "True"
-            force_ext = config_dict["force_txt_file_ext"] == "True"
+            has_append = config_dict["append_a_records"] is True
+            force_ext = config_dict["force_txt_file_ext"] is True
         else:
             padding_text = ""
             padding_length = 0

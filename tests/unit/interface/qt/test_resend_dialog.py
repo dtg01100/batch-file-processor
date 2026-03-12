@@ -3,6 +3,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
+from PyQt6.QtWidgets import QTableWidget, QLineEdit
+
 
 @pytest.mark.qt
 class TestResendDialogInitialization:
@@ -27,9 +29,9 @@ class TestResendDialogInitialization:
 
         db_conn = MagicMock()
 
-        # Mock the ResendService to avoid database operations
         mock_service = MagicMock()
-        mock_service.get_folders_with_processed_files.return_value = []
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
 
         with patch(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -47,7 +49,14 @@ class TestResendDialogInitialization:
 
         db_conn = MagicMock()
 
-        with patch("interface.qt.dialogs.resend_dialog.ResendService"):
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
+
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
@@ -60,6 +69,9 @@ class TestResendDialogInitialization:
         db_conn = MagicMock()
 
         mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
+
         with patch(
             "interface.qt.dialogs.resend_dialog.ResendService",
             return_value=mock_service,
@@ -70,13 +82,14 @@ class TestResendDialogInitialization:
             mock_service_class.assert_called_once_with(db_conn)
 
     def test_dialog_builds_ui_without_folders(self, qtbot):
-        """Test that dialog builds UI even with no folders."""
+        """Test that dialog builds UI with table and search input."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         db_conn = MagicMock()
 
         mock_service = MagicMock()
-        mock_service.get_folders_with_processed_files.return_value = []
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
 
         with patch(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -85,57 +98,41 @@ class TestResendDialogInitialization:
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
-            # Should build without errors
-            assert dialog._folders_layout is not None
-
-
-@pytest.mark.qt
-class TestResendDialogFolderSelection:
-    """Test suite for folder selection functionality."""
-
-    def test_folder_selection_loads_files(self, qtbot):
-        """Test that selecting a folder loads associated files."""
-        from interface.qt.dialogs.resend_dialog import ResendDialog
-
-        db_conn = MagicMock()
-
-        mock_service = MagicMock()
-        mock_service.get_folders_with_processed_files.return_value = [
-            {"id": 1, "alias": "Test Folder", "file_count": 5},
-        ]
-        mock_service.get_processed_files_for_folder.return_value = []
-
-        with patch(
-            "interface.qt.dialogs.resend_dialog.ResendService",
-            return_value=mock_service,
-        ):
-            dialog = ResendDialog(None, db_conn)
-            qtbot.addWidget(dialog)
-
-            # Simulate folder selection if method exists
-            if hasattr(dialog, "_on_folder_clicked"):
-                dialog._on_folder_clicked(1)
-                assert dialog._folder_id == 1
-                mock_service.get_processed_files_for_folder.assert_called()
+            # Verify the flat table UI was built
+            assert isinstance(dialog._table, QTableWidget)
+            assert isinstance(dialog._search_input, QLineEdit)
+            assert dialog._should_show is True
 
 
 @pytest.mark.qt
 class TestResendDialogFileManagement:
-    """Test suite for file checkbox management."""
+    """Test suite for file management in the flat table."""
 
     def test_checkboxes_created_for_files(self, qtbot):
-        """Test that checkboxes are created for processed files."""
+        """Test that table rows are created for processed files."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         db_conn = MagicMock()
 
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folder_list.return_value = [(1, "Test")]
-        mock_service.count_files_for_folder.return_value = 2
-        mock_service.get_files_for_folder.return_value = [
-            {"id": 10, "file_name": "file1.txt", "resend_flag": 0},
-            {"id": 11, "file_name": "file2.txt", "resend_flag": 1},
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 10,
+                "folder_id": 1,
+                "folder_alias": "Test",
+                "file_name": "file1.txt",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-01T10:00:00",
+            },
+            {
+                "id": 11,
+                "folder_id": 1,
+                "folder_alias": "Test",
+                "file_name": "file2.txt",
+                "resend_flag": True,
+                "sent_date_time": "2025-01-02T10:00:00",
+            },
         ]
 
         with patch(
@@ -145,20 +142,29 @@ class TestResendDialogFileManagement:
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
-            # Trigger file loading
-            dialog._on_folder_selected(1)
-            # File checkboxes should be created for both processed files
-            assert len(dialog._file_checkboxes) == 2
+            # _all_files should be populated from service
+            assert len(dialog._all_files) == 2
+            # Table should have one row per file
+            assert dialog._table.rowCount() == 2
 
     def test_save_updates_resend_flags(self, qtbot):
-        """Test that file toggle updates resend flags."""
+        """Test that selecting files and marking for resend calls the service."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         db_conn = MagicMock()
 
         mock_service = MagicMock()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folder_list.return_value = []
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 10,
+                "folder_id": 1,
+                "folder_alias": "Test",
+                "file_name": "file1.txt",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-01T10:00:00",
+            },
+        ]
 
         with patch(
             "interface.qt.dialogs.resend_dialog.ResendService",
@@ -167,11 +173,15 @@ class TestResendDialogFileManagement:
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
 
-            # Simulate direct toggle handling
-            dialog._on_file_toggled(10, True)
-            dialog._on_file_toggled(11, False)
-            mock_service.set_resend_flag.assert_any_call(10, True)
-            mock_service.set_resend_flag.assert_any_call(11, False)
+            # Select a file via _on_file_selected
+            dialog._on_file_selected(10, True)
+            assert 10 in dialog._selected_files
+
+            # Mark selected for resend
+            with patch.object(dialog, "show_info"):
+                dialog._mark_selected_for_resend()
+
+            mock_service.set_resend_flag.assert_called_once_with(10, True)
 
 
 @pytest.mark.qt
@@ -199,23 +209,3 @@ class TestResendDialogEdgeCases:
             _, title, message = mock_critical.call_args[0]
             assert title == "Database Error"
             assert "Database error" in message
-
-    def test_file_count_spinner_controls_display(self, qtbot):
-        """Test that file count spinner controls how many files are shown."""
-        from interface.qt.dialogs.resend_dialog import ResendDialog
-
-        db_conn = MagicMock()
-
-        mock_service = MagicMock()
-        mock_service.get_folders_with_processed_files.return_value = []
-
-        with patch(
-            "interface.qt.dialogs.resend_dialog.ResendService",
-            return_value=mock_service,
-        ):
-            dialog = ResendDialog(None, db_conn)
-            qtbot.addWidget(dialog)
-
-            # Check if spinner widget exists
-            if hasattr(dialog, "_file_count_spinner"):
-                assert dialog._file_count_spinner is not None

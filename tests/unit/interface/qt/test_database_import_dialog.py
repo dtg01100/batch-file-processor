@@ -108,7 +108,8 @@ class TestDbMigrationJob:
     def test_migrate_folder_merges_copy_ftp_email_fields(self, monkeypatch):
         job = DbMigrationJob("/tmp/original.db", "/tmp/new.db")
 
-        old_folder = {
+        imported = {
+            "id": 99,
             "folder_name": "/same/path",
             "process_backend_copy": True,
             "copy_to_directory": "/copy/dest",
@@ -127,11 +128,20 @@ class TestDbMigrationJob:
             "smtp_password": "smtp_pass",
             "smtp_use_tls": True,
         }
-        old_folders = MagicMock()
-        old_folders.find.return_value = [old_folder]
 
-        folders_table = MagicMock()
-        new_db = {"folders": folders_table}
+        target_folders_table = MagicMock()
+        target_folders_table.find.return_value = [
+            {"id": 99, "folder_name": "/same/path"},
+        ]
+
+        # Build a mock target_db that supports PRAGMA table_info(folders)
+        pragma_columns = [(i, name) for i, name in enumerate(imported.keys())]
+        mock_cursor = MagicMock()
+        mock_cursor.execute.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = pragma_columns
+        target_db = MagicMock()
+        target_db.__getitem__ = MagicMock(side_effect=lambda key: {"folders": target_folders_table}[key])
+        target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
@@ -139,13 +149,13 @@ class TestDbMigrationJob:
         )
 
         job._migrate_folder(
-            folder={"id": 99, "folder_name": "/same/path"},
-            old_folders=old_folders,
-            new_db=new_db,
+            imported_folder=imported,
+            target_folders=target_folders_table,
+            target_db=target_db,
         )
 
-        folders_table.update.assert_called_once()
-        update_payload = folders_table.update.call_args.args[0]
+        target_folders_table.update.assert_called_once()
+        update_payload = target_folders_table.update.call_args.args[0]
         assert update_payload["id"] == 99
         assert update_payload["process_backend_copy"] is True
         assert update_payload["copy_to_directory"] == "/copy/dest"
@@ -158,16 +168,24 @@ class TestDbMigrationJob:
     ):
         job = DbMigrationJob("/tmp/original.db", "/tmp/new.db")
 
-        old_folder = {
+        imported = {
+            "id": 7,
             "folder_name": "C:/shared/path",
             "process_backend_copy": True,
             "copy_to_directory": "D:/copy",
         }
-        old_folders = MagicMock()
-        old_folders.find.return_value = [old_folder]
 
-        folders_table = MagicMock()
-        new_db = {"folders": folders_table}
+        target_folders_table = MagicMock()
+        target_folders_table.find.return_value = [
+            {"id": 7, "folder_name": "C:/shared/path"},
+        ]
+
+        pragma_columns = [(i, name) for i, name in enumerate(imported.keys())]
+        mock_cursor = MagicMock()
+        mock_cursor.execute.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = pragma_columns
+        target_db = MagicMock()
+        target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
@@ -175,24 +193,30 @@ class TestDbMigrationJob:
         )
 
         job._migrate_folder(
-            folder={"id": 7, "folder_name": "C:/shared/path"},
-            old_folders=old_folders,
-            new_db=new_db,
+            imported_folder=imported,
+            target_folders=target_folders_table,
+            target_db=target_db,
         )
 
-        folders_table.update.assert_called_once()
-        update_payload = folders_table.update.call_args.args[0]
+        target_folders_table.update.assert_called_once()
+        update_payload = target_folders_table.update.call_args.args[0]
         assert update_payload["id"] == 7
         assert update_payload["copy_to_directory"] == "D:/copy"
 
     def test_migrate_folder_no_match_skips_update(self, monkeypatch):
         job = DbMigrationJob("/tmp/original.db", "/tmp/new.db")
 
-        old_folders = MagicMock()
-        old_folders.find.return_value = [{"folder_name": "/different/path"}]
+        imported = {"id": 12, "folder_name": "/target/path"}
 
-        folders_table = MagicMock()
-        new_db = {"folders": folders_table}
+        target_folders_table = MagicMock()
+        target_folders_table.find.return_value = [{"folder_name": "/different/path"}]
+
+        pragma_columns = [(i, name) for i, name in enumerate(imported.keys())]
+        mock_cursor = MagicMock()
+        mock_cursor.execute.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = pragma_columns
+        target_db = MagicMock()
+        target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(
             "interface.qt.dialogs.database_import_dialog.os.path.samefile",
@@ -200,9 +224,9 @@ class TestDbMigrationJob:
         )
 
         job._migrate_folder(
-            folder={"id": 12, "folder_name": "/target/path"},
-            old_folders=old_folders,
-            new_db=new_db,
+            imported_folder=imported,
+            target_folders=target_folders_table,
+            target_db=target_db,
         )
 
-        folders_table.update.assert_not_called()
+        target_folders_table.update.assert_not_called()

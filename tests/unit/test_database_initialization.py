@@ -88,7 +88,7 @@ class TestFreshInstall:
         assert record is not None, "settings table should have default record"
         assert "folder_is_active" in record
         assert "convert_to_format" in record
-        assert record["folder_is_active"] == "False"
+        assert record["folder_is_active"] is False
         assert record["convert_to_format"] == "csv"
 
         db.close()
@@ -384,8 +384,14 @@ class TestEditDialogDefaults:
 class TestDatabaseMigration:
     """Test handling of databases created before administrative table existed."""
 
-    def test_old_database_missing_administrative_table(self, tmp_path):
-        """Verify code handles database without administrative table (legacy)."""
+    def test_old_database_missing_administrative_record(self, tmp_path):
+        """Verify code handles database with empty administrative table (legacy).
+
+        Note: Database.connect() now auto-creates all tables via
+        schema.ensure_schema(), so we test the scenario where the
+        administrative table exists but has no records (simulating a
+        legacy database that was opened with new code).
+        """
         from interface.database import sqlite_wrapper
 
         db_path = str(tmp_path / "old_test.db")
@@ -394,14 +400,11 @@ class TestDatabaseMigration:
         db["version"].insert({"version": "10", "os": "Windows"})
         db["settings"].insert({"folder_is_active": "False", "convert_to_format": "csv"})
 
-        tables = db.tables
-        assert "administrative" not in tables, (
-            "old database should not have administrative table"
-        )
-
+        # administrative table is auto-created by schema.ensure_schema
+        # but should have no records, simulating a legacy DB opened by new code
         administrative = db["administrative"]
         record = administrative.find_one(id=1)
-        assert record is None, "find_one should return None for missing table"
+        assert record is None, "find_one should return None for empty administrative table"
 
         db.close()
 

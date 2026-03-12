@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
-import pytest
 from PyQt6.QtWidgets import QApplication, QDialog, QPushButton
 
 import os
@@ -156,7 +155,13 @@ def initialized_app(qt_app, temp_workspace):
 
         yield app
 
+        # Close the window before shutdown to avoid segfaults from stale Qt objects
+        if hasattr(app, '_window') and app._window is not None:
+            app._window.close()
+            app._window.deleteLater()
         app.shutdown()
+        # Process pending deletions to fully release Qt resources
+        QApplication.processEvents()
 
 
 # =============================================================================
@@ -225,7 +230,7 @@ class TestFolderConfigurationWorkflow:
 
         # Verify folder is disabled
         disabled_folder = app._database.folders_table.find_one(id=folder["id"])
-        assert disabled_folder["folder_is_active"] == "False"
+        assert disabled_folder["folder_is_active"] is False
 
     def test_delete_folder_workflow(self, initialized_app, temp_workspace):
         """Test deleting a folder through the complete workflow."""
@@ -1417,11 +1422,11 @@ class TestSearchAndFilterWorkflow:
         """Test that filter updates the folder list."""
         app = initialized_app
 
-        # Mock filter change
-        with patch.object(app, "_refresh_users_list") as mock_refresh:
+        # Apply filter and verify it is stored and forwarded to the widget
+        with patch.object(app._folder_list_widget, "apply_filter") as mock_apply:
             app._set_folders_filter("test")
 
-            mock_refresh.assert_called_once()
+            mock_apply.assert_called_once_with("test")
             assert app._folder_filter == "test"
 
 

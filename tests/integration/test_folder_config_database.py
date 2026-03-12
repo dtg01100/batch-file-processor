@@ -13,10 +13,10 @@ Tests:
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
+import shutil
 import sys
 import os
 from interface.database import sqlite_wrapper
-from schema import ensure_schema
 
 # Add the project root to the path
 sys.path.insert(
@@ -37,13 +37,13 @@ from interface.models.folder_configuration import (
 )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def sample_folder_config():
     """Create a complete FolderConfiguration with all fields populated."""
     return FolderConfiguration(
         # Identity
         folder_name="/home/user/documents/invoices",
-        folder_is_active="True",
+        folder_is_active=True,
         alias="Invoice Processing Folder",
         is_template=False,
         # Backend toggles
@@ -68,7 +68,7 @@ def sample_folder_config():
         copy=CopyConfiguration(destination_directory="/output/processed/"),
         # EDI configuration (11 fields)
         edi=EDIConfiguration(
-            process_edi="True",
+            process_edi=True,
             tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
@@ -123,18 +123,19 @@ def sample_folder_config():
     )
 
 
-@pytest.fixture
-def temp_database(tmp_path):
-    """Create a temporary SQLite database for testing."""
-    db_path = str(tmp_path / "test_folders.db")
-    db_conn = sqlite_wrapper.Database.connect(db_path)
+@pytest.fixture(scope="class")
+def temp_database(db_template, tmp_path_factory):
+    """Create a temporary SQLite database for testing.
 
-    # Initialize database schema
-    ensure_schema(db_conn)
+    Uses the ``db_template`` session fixture which provides a pre-created DB
+    with schema already applied, avoiding the expensive ``ensure_schema()``
+    call per test.
+    """
+    tmp_dir = tmp_path_factory.mktemp("temp_database")
+    db_path = tmp_dir / "test_folders.db"
+    shutil.copy2(str(db_template), str(db_path))
 
-    # Setup version table
-    version_table = db_conn["version"]
-    version_table.insert(dict(version="33", os="Linux"))
+    db_conn = sqlite_wrapper.Database.connect(str(db_path))
 
     yield db_conn
 
@@ -150,7 +151,7 @@ class TestFolderConfigDatabaseMapping:
 
         # Identity fields
         assert config_dict["folder_name"] == "/home/user/documents/invoices"
-        assert config_dict["folder_is_active"] == "True"
+        assert config_dict["folder_is_active"] is True
         assert config_dict["alias"] == "Invoice Processing Folder"
 
         # Backend toggles
@@ -173,7 +174,7 @@ class TestFolderConfigDatabaseMapping:
         assert config_dict["copy_to_directory"] == "/output/processed/"
 
         # EDI fields (all 11)
-        assert config_dict["process_edi"] == "True"
+        assert config_dict["process_edi"] is True
         assert config_dict["tweak_edi"] is True
         assert config_dict["split_edi"] is True
         assert config_dict["split_edi_include_invoices"] is True
@@ -193,12 +194,12 @@ class TestFolderConfigDatabaseMapping:
         assert config_dict["upc_padding_pattern"] == "00000000000"
 
         # A-Record padding fields
-        assert config_dict["pad_a_records"] == "True"
+        assert config_dict["pad_a_records"] is True
         assert config_dict["a_record_padding"] == "PREFIX1"
         assert config_dict["a_record_padding_length"] == 6
-        assert config_dict["append_a_records"] == "True"
+        assert config_dict["append_a_records"] is True
         assert config_dict["a_record_append_text"] == "SUFFIX"
-        assert config_dict["force_txt_file_ext"] == "True"
+        assert config_dict["force_txt_file_ext"] is True
 
         # Invoice date fields
         assert config_dict["invoice_date_offset"] == 7
@@ -213,8 +214,8 @@ class TestFolderConfigDatabaseMapping:
         assert config_dict["fintech_division_id"] == "DIV001"
 
         # CSV fields
-        assert config_dict["include_headers"] == "True"
-        assert config_dict["filter_ampersand"] == "True"
+        assert config_dict["include_headers"] is True
+        assert config_dict["filter_ampersand"] is True
         assert config_dict["include_item_numbers"] is True
         assert config_dict["include_item_description"] is True
         assert config_dict["simple_csv_sort_order"] == "date,amount,description"
@@ -283,7 +284,7 @@ class TestFolderConfigFromDictMapping:
 
         # Identity
         assert config.folder_name == "/home/user/documents/invoices"
-        assert config.folder_is_active == "True"
+        assert config.folder_is_active is True
         assert config.alias == "Invoice Processing Folder"
 
         # Backend toggles
@@ -309,7 +310,7 @@ class TestFolderConfigFromDictMapping:
 
         # EDI
         assert config.edi is not None
-        assert config.edi.process_edi == "True"
+        assert config.edi.process_edi is True
         assert config.edi.split_edi is True
         assert config.edi.convert_to_format == "fintech"
 
@@ -519,7 +520,7 @@ class TestNullAndEmptyHandling:
     def test_minimal_config_roundtrip(self, temp_database):
         """Test roundtrip with minimal (mostly default) config."""
         config = FolderConfiguration(
-            folder_name="/home/user/minimal", folder_is_active="False"
+            folder_name="/home/user/minimal", folder_is_active=False
         )
 
         # Convert and save
@@ -572,13 +573,13 @@ class TestNestedConfigSerialization:
         config = FolderConfiguration(
             folder_name="/test",
             edi=EDIConfiguration(
-                process_edi="True", split_edi=True, convert_to_format="scannerware"
+                process_edi=True, split_edi=True, convert_to_format="scannerware"
             ),
         )
 
         config_dict = config.to_dict()
 
-        assert config_dict["process_edi"] == "True"
+        assert config_dict["process_edi"] is True
         assert config_dict["split_edi"] is True
         assert config_dict["convert_to_format"] == "scannerware"
 
@@ -588,7 +589,7 @@ class TestNestedConfigSerialization:
         loaded_config = FolderConfiguration.from_dict(loaded_dict)
 
         assert loaded_config.edi is not None
-        assert loaded_config.edi.process_edi == "True"
+        assert loaded_config.edi.process_edi is True
         assert loaded_config.edi.convert_to_format == "scannerware"
 
     def test_upc_config_serialization(self, temp_database):
@@ -623,7 +624,7 @@ class TestEDIFieldsMapping:
     def test_all_edi_fields_mapping(self, temp_database):
         """Test all 11 EDI fields map correctly."""
         edi_config = EDIConfiguration(
-            process_edi="True",
+            process_edi=True,
             tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
@@ -642,7 +643,7 @@ class TestEDIFieldsMapping:
 
         # Verify all 11 EDI fields are present
         expected_edi_fields = {
-            "process_edi": "True",
+            "process_edi": True,
             "tweak_edi": True,
             "split_edi": True,
             "split_edi_include_invoices": True,
@@ -692,8 +693,8 @@ class TestCSVFieldsMapping:
 
         # Verify all CSV fields are present
         expected_csv_fields = {
-            "include_headers": "True",  # Stored as string in DB
-            "filter_ampersand": "False",  # Stored as string in DB
+            "include_headers": True,
+            "filter_ampersand": False,
             "include_item_numbers": True,
             "include_item_description": True,
             "simple_csv_sort_order": "item,quantity,price",

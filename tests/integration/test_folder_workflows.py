@@ -20,12 +20,11 @@ from pathlib import Path
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
-from schema import ensure_schema
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 
 
 @pytest.fixture
-def workspace_with_datasets(tmp_path):
+def workspace_with_datasets(fresh_db, tmp_path):
     """Create a test workspace with multiple folder datasets for workflow testing."""
     workspace_dir = tmp_path / "workflow_workspace"
     workspace_dir.mkdir()
@@ -58,16 +57,11 @@ def workspace_with_datasets(tmp_path):
     for dir_path in datasets.values():
         dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Database setup
-    db_path = workspace_dir / "workflow_db.db"
-    db_conn = sqlite_wrapper.Database.connect(str(db_path))
-    ensure_schema(db_conn)
-
-    # Initialize version record
-    db_conn["version"].insert({"id": 1, "version": "41", "os": "Linux"})
+    # Database setup – fresh_db already has schema + version record
+    db_conn = sqlite_wrapper.Database.connect(str(fresh_db))
 
     db = DatabaseObj(
-        database_path=str(db_path),
+        database_path=str(fresh_db),
         database_version=CURRENT_DATABASE_VERSION,
         config_folder=str(workspace_dir),
         running_platform="Linux",
@@ -154,12 +148,12 @@ class TestRealWorldWorkflows:
         # Stage 3: Enable folder
         folder_manager.enable_folder(folder_id)
         folder_enabled = db.folders_table.find_one(id=folder_id)
-        assert folder_enabled["folder_is_active"] == "True"
+        assert folder_enabled["folder_is_active"] is True
 
         # Stage 4: Disable folder
         folder_manager.disable_folder(folder_id)
         folder_disabled = db.folders_table.find_one(id=folder_id)
-        assert folder_disabled["folder_is_active"] == "False"
+        assert folder_disabled["folder_is_active"] is False
 
         # Stage 5: Delete folder
         folder_manager.delete_folder(folder_id)
@@ -255,12 +249,12 @@ class TestComplexStateTransitions:
             # Disable
             folder_manager.disable_folder(folder_id)
             folder = db.folders_table.find_one(id=folder_id)
-            assert folder["folder_is_active"] == "False"
+            assert folder["folder_is_active"] is False
 
             # Enable
             folder_manager.enable_folder(folder_id)
             folder = db.folders_table.find_one(id=folder_id)
-            assert folder["folder_is_active"] == "True"
+            assert folder["folder_is_active"] is True
 
     def test_concurrent_folder_updates(self, workspace_with_datasets):
         """Test updating multiple folders in sequence (simulating concurrent updates)."""
@@ -307,9 +301,9 @@ class TestComplexStateTransitions:
 
         # Update and validate each step
         updates = [
-            {"id": folder_id, "folder_is_active": "True", "process_edi": 1},
+            {"id": folder_id, "folder_is_active": True, "process_edi": 1},
             {"id": folder_id, "convert_to_format": "estore_einvoice"},
-            {"id": folder_id, "folder_is_active": "False"},
+            {"id": folder_id, "folder_is_active": False},
         ]
 
         for update in updates:
@@ -439,7 +433,7 @@ class TestBatchScenarios:
         common_config = {
             "process_edi": 1,
             "convert_to_format": "csv",
-            "folder_is_active": "True",
+            "folder_is_active": True,
         }
 
         for folder in batch_folders:
