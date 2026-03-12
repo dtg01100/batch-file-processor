@@ -67,6 +67,23 @@ a = Analysis(
         'backend.ftp_client',
         'backend.smtp_client',
         'backend.protocols',
+        # Root-level application modules (dynamically imported, not auto-detected by PyInstaller)
+        'utils',
+        'schema',
+        'create_database',
+        'backup_increment',
+        'batch_log_sender',
+        'print_run_log',
+        'folders_database_migrator',
+        'mover',
+        'convert_base',
+        'record_error',
+        'clear_old_files',
+        'rclick_menu',
+        # Interface sub-modules
+        'interface.database.sqlite_wrapper',
+        'migrations',
+        'migrations.add_plugin_config_column',
         # Dynamic converters
         'convert_to_csv',
         'convert_to_estore_einvoice',
