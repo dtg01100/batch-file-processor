@@ -7,5 +7,7 @@ profile = "black"
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
 extend-ignore = ["E203"]
 select = ["E", "F", "W", "C90", "I"]
