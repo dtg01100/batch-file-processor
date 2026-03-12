@@ -611,12 +611,106 @@ class TestConvertFormatFieldPopulation:
 
         assert dialog._fintech_division_field.text() == "DIV001"
 
+    def test_scannerware_format_populates_fields(self, qtbot, sample_folder_config):
+        """ScannerWare format should populate its fields from config."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_edi"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["pad_a_records"] = "True"
+        sample_folder_config["a_record_padding"] = "X"
+        sample_folder_config["a_record_padding_length"] = 30
+        sample_folder_config["append_a_records"] = "True"
+        sample_folder_config["a_record_append_text"] = "APPEND"
+        dialog = create_dialog(qtbot, sample_folder_config)
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._convert_format_combo.setCurrentText("ScannerWare")
 
-# ============================================================================
-# Test Field Population - EDI Options Areas
-# ============================================================================
-@pytest.mark.qt
-class TestEDIOptionsFieldPopulation:
+        assert dialog._sw_pad_arec_check.isChecked()
+        assert dialog._sw_arec_padding_field.text() == "X"
+        assert dialog._tweak_arec_padding_length.currentText() == "30"
+
+    def test_basic_format_shows_no_additional_options(self, qtbot, sample_folder_config):
+        """jolley_custom/stewarts_custom/YellowDog CSV show no extra option fields."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_edi"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        dialog = create_dialog(qtbot, sample_folder_config)
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+
+        for fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
+            dialog._convert_format_combo.setCurrentText(fmt)
+            assert hasattr(dialog, "_convert_sub_container")
+            # Basic formats show a label widget only – no input widgets
+            assert dialog._convert_sub_layout is not None
+
+    def test_do_nothing_sets_process_edi_false(self, qtbot, sample_folder_config):
+        """Selecting 'Do Nothing' should set process_edi=False on apply."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["process_edi"] = "True"
+        dialog = create_dialog(qtbot, sample_folder_config)
+        qtbot.wait(150)  # let the 100ms edi-processing guard timer fire
+        dialog._edi_options_combo.setCurrentText("Do Nothing")
+        dialog.apply()
+
+        assert sample_folder_config["process_edi"] is False
+        assert sample_folder_config["tweak_edi"] is False
+
+    def test_convert_edi_roundtrip_csv(self, qtbot, sample_folder_config):
+        """CSV conversion settings should round-trip through dialog apply()."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_edi"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["convert_to_format"] = "csv"
+        sample_folder_config["calculate_upc_check_digit"] = "True"
+        sample_folder_config["include_headers"] = "True"
+        sample_folder_config["pad_a_records"] = "True"
+        dialog = create_dialog(qtbot, sample_folder_config)
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._convert_format_combo.setCurrentText("csv")
+        dialog.apply()
+
+        assert sample_folder_config["process_edi"] is True
+        assert sample_folder_config["tweak_edi"] is False
+        assert sample_folder_config["calculate_upc_check_digit"] is True
+        assert sample_folder_config["include_headers"] is True
+        assert sample_folder_config["pad_a_records"] is True
+
+    def test_tweak_edi_roundtrip(self, qtbot, sample_folder_config):
+        """Tweak EDI settings should round-trip through dialog apply()."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["tweak_edi"] = True
+        sample_folder_config["calculate_upc_check_digit"] = "True"
+        sample_folder_config["invoice_date_offset"] = 3
+        sample_folder_config["force_txt_file_ext"] = "True"
+        dialog = create_dialog(qtbot, sample_folder_config)
+        dialog.apply()
+
+        assert sample_folder_config["tweak_edi"] is True
+        assert sample_folder_config["process_edi"] is False
+        assert sample_folder_config["calculate_upc_check_digit"] is True
+        assert sample_folder_config["invoice_date_offset"] == 3
+        assert sample_folder_config["force_txt_file_ext"] is True
+
+    def test_estore_einvoice_generic_populates_c_record_oid(self, qtbot, sample_folder_config):
+        """Estore eInvoice Generic should populate the C Record OId field."""
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_edi"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["estore_store_number"] = "99"
+        sample_folder_config["estore_Vendor_OId"] = "VOId"
+        sample_folder_config["estore_vendor_NameVendorOID"] = "VN"
+        sample_folder_config["estore_c_record_OID"] = "COID123"
+        dialog = create_dialog(qtbot, sample_folder_config)
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._convert_format_combo.setCurrentText("Estore eInvoice Generic")
+
+        assert dialog._estore_store_number_field.text() == "99"
+        assert dialog._estore_c_record_oid_field.text() == "COID123"
+
+
+
     """Tests for proper field population when switching EDI options."""
 
     def test_tweak_edi_populates_tweak_fields(self, qtbot, sample_folder_config):
