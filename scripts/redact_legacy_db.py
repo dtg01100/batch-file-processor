@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Redact PII from the legacy v32 database fixture."""
-import sqlite3
 import os
+import sqlite3
 
 DB_PATH = os.path.join(
     os.path.dirname(__file__), "..", "tests", "fixtures", "legacy_v32_folders.db"

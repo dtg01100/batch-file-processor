@@ -4,8 +4,8 @@ This module provides toolkit-agnostic business logic for the resend interface.
 """
 
 import os
-from typing import Any, Dict, List, Tuple
 from operator import itemgetter
+from typing import Any, Dict, List, Tuple
 
 
 class ResendService:
@@ -121,9 +121,7 @@ class ResendService:
             List of dicts with keys: id, folder_id, folder_alias, file_name, resend_flag, sent_date_time
         """
         file_list = []
-        processed_lines = list(
-            self._processed_files.find(order_by="-sent_date_time")
-        )
+        processed_lines = list(self._processed_files.find(order_by="-sent_date_time"))
 
         # Group by file_name and folder to avoid duplicates
         seen_files = set()
@@ -136,14 +134,16 @@ class ResendService:
                 folder_info = self._folders.find_one(id=processed_line["folder_id"])
                 folder_alias = folder_info["alias"] if folder_info else "Unknown"
 
-                file_list.append({
-                    "id": processed_line["id"],
-                    "folder_id": processed_line["folder_id"],
-                    "folder_alias": folder_alias,
-                    "file_name": processed_line["file_name"],
-                    "resend_flag": processed_line["resend_flag"],
-                    "sent_date_time": self._get_sent_timestamp(processed_line),
-                })
+                file_list.append(
+                    {
+                        "id": processed_line["id"],
+                        "folder_id": processed_line["folder_id"],
+                        "folder_alias": folder_alias,
+                        "file_name": processed_line["file_name"],
+                        "resend_flag": processed_line["resend_flag"],
+                        "sent_date_time": self._get_sent_timestamp(processed_line),
+                    }
+                )
                 seen_files.add(file_key)
 
         return file_list

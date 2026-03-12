@@ -4,14 +4,13 @@ This module sends files via FTP or FTPS (FTP over TLS) with
 injectable client support for testing.
 """
 
+import logging
 import os
 import time
-import logging
 from typing import Optional
 
-from backend.protocols import FTPClientProtocol
 from backend.ftp_client import create_ftp_client
-
+from backend.protocols import FTPClientProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
-    ftp_client: Optional[FTPClientProtocol] = None
+    ftp_client: Optional[FTPClientProtocol] = None,
 ) -> bool:
     """Send a file via FTP/FTPS.
 
@@ -50,7 +49,7 @@ def do(
 
     while not file_pass:
         try:
-            with open(filename, 'rb') as send_file:
+            with open(filename, "rb") as send_file:
                 filename_no_path = os.path.basename(filename)
 
                 for provider_index, use_tls in enumerate(use_tls_options):
@@ -61,23 +60,34 @@ def do(
                         client = create_ftp_client(use_tls=use_tls)
 
                     try:
-                        logger.debug("Connecting to ftp server: %s", process_parameters['ftp_server'])
-                        client.connect(
-                            str(process_parameters['ftp_server']),
-                            process_parameters['ftp_port']
+                        logger.debug(
+                            "Connecting to ftp server: %s",
+                            process_parameters["ftp_server"],
                         )
-                        logger.debug("Logging in to %s", process_parameters['ftp_server'])
+                        client.connect(
+                            str(process_parameters["ftp_server"]),
+                            process_parameters["ftp_port"],
+                        )
+                        logger.debug(
+                            "Logging in to %s", process_parameters["ftp_server"]
+                        )
                         client.login(
-                            process_parameters['ftp_username'],
-                            process_parameters['ftp_password']
+                            process_parameters["ftp_username"],
+                            process_parameters["ftp_password"],
                         )
                         logger.debug("Sending File %s...", filename_no_path)
 
                         # Ensure remote directory exists
-                        remote_dir = process_parameters['ftp_folder']
-                        if remote_dir and remote_dir != '/':
+                        remote_dir = process_parameters["ftp_folder"]
+                        if remote_dir and remote_dir != "/":
                             # Normalize path separators and remove leading/trailing slashes for processing
-                            path_parts = [part for part in remote_dir.replace('\\', '/').strip('/').split('/') if part]
+                            path_parts = [
+                                part
+                                for part in remote_dir.replace("\\", "/")
+                                .strip("/")
+                                .split("/")
+                                if part
+                            ]
                             current_path = ""
 
                             for part in path_parts:
@@ -89,10 +99,7 @@ def do(
                                     client.mkd(current_path)
                                     client.cwd(current_path)
 
-                        client.storbinary(
-                            "stor " + filename_no_path,
-                            send_file
-                        )
+                        client.storbinary("stor " + filename_no_path, send_file)
                         logger.info("Successfully sent file %s", filename_no_path)
                         client.close()
                         file_pass = True
@@ -110,7 +117,9 @@ def do(
                 logger.error("Retried 10 times, passing exception to dispatch")
                 raise
             counter += 1
-            logger.warning("Encountered an error. Retry number %d: %s", counter, ftp_error)
+            logger.warning(
+                "Encountered an error. Retry number %d: %s", counter, ftp_error
+            )
             time.sleep(2)
 
     return file_pass
@@ -135,10 +144,7 @@ class FTPBackend:
         self.ftp_client = ftp_client
 
     def send(
-        self,
-        process_parameters: dict,
-        settings_dict: dict,
-        filename: str
+        self, process_parameters: dict, settings_dict: dict, filename: str
     ) -> bool:
         """Send a file via FTP.
 

@@ -7,8 +7,8 @@ This script can be run directly without installation:
     python main_qt.py
 """
 
-import sys
 import os
+import sys
 
 # Ensure the project root is in sys.path so we can import 'interface' package
 # when running as a script without installation
@@ -16,7 +16,7 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
-from batch_file_processor.logging_config import setup_logging, get_logger
+from batch_file_processor.logging_config import get_logger, setup_logging
 from interface.qt.app import QtBatchFileSenderApp
 
 logger = get_logger(__name__)

@@ -1,9 +1,10 @@
 """Qt implementation of the search/filter widget."""
 
-from typing import Optional, Callable
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QStyle
+from typing import Callable, Optional
+
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QShortcut, QKeySequence
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWidgets import QHBoxLayout, QLineEdit, QStyle, QWidget
 
 from interface.qt.theme import Theme
 
@@ -53,8 +54,6 @@ class SearchWidget(QWidget):
         """Get the search entry field."""
         return self._entry
 
-
-
     @property
     def value(self) -> str:
         """Get the current filter text."""
@@ -62,7 +61,11 @@ class SearchWidget(QWidget):
 
     def clear(self) -> None:
         """Clear the search field and fire filter change."""
-        had_content = bool(self._entry.text()) or bool(self._filter_value) or bool(self._pending_filter)
+        had_content = (
+            bool(self._entry.text())
+            or bool(self._filter_value)
+            or bool(self._pending_filter)
+        )
         self._debounce_timer.stop()
         self._entry.blockSignals(True)
         self._entry.clear()
@@ -106,11 +109,15 @@ class SearchWidget(QWidget):
 
         self._entry = QLineEdit()
         self._entry.setPlaceholderText("Search folders...")
-        search_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)
+        search_icon = self.style().standardIcon(
+            QStyle.StandardPixmap.SP_FileDialogContentsView
+        )
         self._entry.addAction(search_icon, QLineEdit.ActionPosition.LeadingPosition)
         self._entry.setToolTip("Type folder name text to filter folders as you type")
         self._entry.setAccessibleName("Folder search")
-        self._entry.setAccessibleDescription("Search folders by alias text (filters automatically as you type)")
+        self._entry.setAccessibleDescription(
+            "Search folders by alias text (filters automatically as you type)"
+        )
         self._entry.setStyleSheet(Theme.get_input_stylesheet())
         self._entry.textChanged.connect(self._on_text_changed)
 

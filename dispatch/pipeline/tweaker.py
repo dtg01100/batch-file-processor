@@ -7,7 +7,7 @@ using the edi_tweaks module.
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, runtime_checkable, Any
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from dispatch.interfaces import FileSystemInterface
 
@@ -206,8 +206,8 @@ class EDITweakerStep:
             file_system: Optional file system interface
         """
         # Import from archive folder (legacy location)
-        import sys
         import os
+        import sys
 
         archive_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "archive"
@@ -263,7 +263,12 @@ class EDITweakerStep:
             try:
                 self._file_system.makedirs(output_dir)
             except Exception as e:
-                logger.error("Failed to create output directory %s: %s", output_dir, e, exc_info=True)
+                logger.error(
+                    "Failed to create output directory %s: %s",
+                    output_dir,
+                    e,
+                    exc_info=True,
+                )
                 error_msg = f"Failed to create output directory: {e}"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -331,8 +336,8 @@ class EDITweakerStep:
             Path to tweaked file, or None if tweaking failed/not needed
         """
         import os
-        import tempfile
         import shutil
+        import tempfile
 
         basename = os.path.basename(file_path)
         logger.debug("Execute tweaker step for %s", basename)
@@ -372,12 +377,14 @@ class EDITweakerStep:
                 return result.output_path
 
             # Cleanup if tweaking didn't produce output
-            logger.debug("Tweaker step produced no output for %s, cleaning up", basename)
+            logger.debug(
+                "Tweaker step produced no output for %s, cleaning up", basename
+            )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)
             return None
-        except Exception as e:
+        except Exception:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:

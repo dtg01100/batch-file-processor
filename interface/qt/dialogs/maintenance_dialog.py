@@ -17,13 +17,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from interface.qt.dialogs.base_dialog import BaseDialog
-
-from interface.qt.theme import Theme
-from interface.ports import UIServiceProtocol
 from interface.operations.maintenance_functions import (
     MaintenanceFunctions,
 )  # Toolkit-agnostic business logic
+from interface.ports import UIServiceProtocol
+from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.theme import Theme
 
 
 class MaintenanceDialog(BaseDialog):
@@ -48,7 +47,9 @@ class MaintenanceDialog(BaseDialog):
 
         self.setMinimumSize(600, 400)
 
-        self._mf.set_operation_callbacks(self._on_operation_start, self._on_operation_end)
+        self._mf.set_operation_callbacks(
+            self._on_operation_start, self._on_operation_end
+        )
 
     def body(self, parent: QWidget) -> Optional[QWidget]:
         button_layout = QVBoxLayout()
@@ -75,7 +76,9 @@ class MaintenanceDialog(BaseDialog):
 
         warning_label = QLabel("WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        warning_label.setStyleSheet(f"color: {Theme.ERROR}; font-weight: bold; font-size: 14pt;")
+        warning_label.setStyleSheet(
+            f"color: {Theme.ERROR}; font-weight: bold; font-size: 14pt;"
+        )
         root_layout.addWidget(warning_label)
 
         parent.layout().addLayout(root_layout)

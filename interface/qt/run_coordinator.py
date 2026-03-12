@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import logging
-import os
 import time
 import traceback
 from typing import Any
@@ -24,12 +23,14 @@ class QtRunCoordinator:
         for folder_test in folders_table_process.find(folder_is_active=True):
             if not self._app._os_module.path.exists(folder_test["folder_name"]):
                 missing_folder = True
-                missing_folder_name = folder_test.get("alias") or folder_test["folder_name"]
+                missing_folder_name = (
+                    folder_test.get("alias") or folder_test["folder_name"]
+                )
 
         if missing_folder:
             self._app._ui_service.show_error(
                 "Error",
-                f"One or more expected folders are missing"
+                "One or more expected folders are missing"
                 + (f" (e.g. '{missing_folder_name}')." if missing_folder_name else "."),
             )
         elif folders_table_process.count(folder_is_active=True) > 0:
@@ -135,7 +136,11 @@ class QtRunCoordinator:
                     self._app._ui_service.show_info(
                         "Run Status", "Run completed with errors."
                     )
-                logger.info("Dispatch completed (errors=%s, summary=%s)", run_error_bool, run_summary_string)
+                logger.info(
+                    "Dispatch completed (errors=%s, summary=%s)",
+                    run_error_bool,
+                    run_summary_string,
+                )
             except Exception as dispatch_error:
                 logger.exception("Run failed: %s", dispatch_error)
                 run_log.write(

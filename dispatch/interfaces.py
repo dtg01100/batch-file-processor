@@ -4,7 +4,7 @@ This module defines Protocol classes for the main dependencies in the dispatch
 system, enabling loose coupling and testability through dependency injection.
 """
 
-from typing import Protocol, runtime_checkable, Any, Optional
+from typing import Any, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable

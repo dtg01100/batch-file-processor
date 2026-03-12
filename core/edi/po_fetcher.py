@@ -5,7 +5,7 @@ data from the database using dependency injection for testability.
 """
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable, Optional
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable

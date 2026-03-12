@@ -9,52 +9,51 @@ Feature Flags:
     DISPATCH_DEBUG_MODE: Set to 'true' for verbose debug logging
 """
 
-from dispatch.hash_utils import generate_match_lists, generate_file_hash
+from dispatch.edi_validator import EDIValidator
+from dispatch.error_handler import ErrorHandler
 from dispatch.feature_flags import (
-    is_legacy_mode,
-    is_pipeline_enabled,
     get_debug_mode,
     get_feature_flags,
+    is_legacy_mode,
+    is_pipeline_enabled,
     set_feature_flag,
 )
 from dispatch.file_utils import (
     build_output_filename,
     do_clear_old_files,
 )
+from dispatch.hash_utils import generate_file_hash, generate_match_lists
 from dispatch.interfaces import (
+    BackendInterface,
     DatabaseInterface,
     FileSystemInterface,
-    BackendInterface,
 )
-from dispatch.edi_validator import EDIValidator
-from dispatch.send_manager import SendManager
-from dispatch.error_handler import ErrorHandler
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.log_sender import (
     EmailConfig,
-    LogSender,
     LogEntry,
-    SMTPEmailService,
+    LogSender,
     MockEmailService,
     MockUIService,
     NullUIService,
+    SMTPEmailService,
 )
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.print_service import (
-    PrintServiceProtocol,
-    WindowsPrintService,
-    UnixPrintService,
     MockPrintService,
     NullPrintService,
+    PrintServiceProtocol,
     RunLogPrinter,
+    UnixPrintService,
+    WindowsPrintService,
 )
 from dispatch.processed_files_tracker import (
-    ProcessedFileRecord,
     InMemoryDatabase,
+    ProcessedFileRecord,
     ProcessedFilesTracker,
 )
+from dispatch.send_manager import SendManager
 
 # Import process function after modules are fully loaded to avoid circular imports
-from dispatch.orchestrator import DispatchOrchestrator
 
 process = DispatchOrchestrator.process
 

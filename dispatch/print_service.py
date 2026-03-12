@@ -5,11 +5,11 @@ using Protocol interfaces for dependency injection and handling
 platform-specific printing operations.
 """
 
+import logging
 import sys
 import textwrap
-import logging
-from typing import Protocol, runtime_checkable, Optional
 from abc import ABC, abstractmethod
+from typing import Optional, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ class UnixPrintService(BasePrintService):
             stdout, stderr = lpr.communicate(input=formatted_log.encode("utf-8"))
 
             if lpr.returncode != 0:
-                logger.error("lpr command failed: %s", stderr.decode('utf-8'))
+                logger.error("lpr command failed: %s", stderr.decode("utf-8"))
                 return False
 
             logger.info("Successfully printed via lpr")

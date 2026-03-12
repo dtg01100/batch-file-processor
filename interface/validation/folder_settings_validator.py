@@ -4,18 +4,18 @@ This module provides validation logic for folder settings, extracted
 from the EditDialog class to enable comprehensive unit testing.
 """
 
-from typing import List, Optional, TYPE_CHECKING
-from dataclasses import dataclass
 import re
-from core.utils.bool_utils import normalize_bool
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, List, Optional
 
+from core.utils.bool_utils import normalize_bool
 from interface.models.folder_configuration import (
     BackendSpecificConfiguration,
     CopyConfiguration,
     EDIConfiguration,
     EmailConfiguration,
-    FTPConfiguration,
     FolderConfiguration,
+    FTPConfiguration,
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
 )
@@ -468,7 +468,9 @@ class FolderSettingsValidator:
                 recipients=extracted_fields.email_to,
                 subject_line=extracted_fields.email_subject_line,
             ),
-            copy=CopyConfiguration(destination_directory=extracted_fields.copy_to_directory),
+            copy=CopyConfiguration(
+                destination_directory=extracted_fields.copy_to_directory
+            ),
             edi=EDIConfiguration(
                 process_edi=extracted_fields.process_edi,
                 tweak_edi=extracted_fields.tweak_edi,

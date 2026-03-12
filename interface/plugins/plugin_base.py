@@ -7,7 +7,7 @@ validation, and UI widget creation.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from .config_schemas import ConfigurationSchema
 from .validation_framework import ValidationResult

@@ -11,14 +11,14 @@ Available operations:
 - QtPluginWidgetPopulator: Qt-specific plugin widget populator
 """
 
-from interface.operations.folder_manager import FolderManager
 from interface.operations.folder_data_extractor import FolderDataExtractor
+from interface.operations.folder_manager import FolderManager
 from interface.operations.plugin_configuration_mapper import (
+    ExtractedPluginConfig,
+    PluginConfigPopulationResult,
     PluginConfigurationMapper,
     QtPluginConfigExtractor,
     QtPluginWidgetPopulator,
-    ExtractedPluginConfig,
-    PluginConfigPopulationResult,
 )
 
 __all__ = [

@@ -112,9 +112,7 @@ class SendManager:
             name for name, success in self.results.items() if not success
         ]
         if failed_backends:
-            logger.warning(
-                "Some backends failed for %s: %s", basename, failed_backends
-            )
+            logger.warning("Some backends failed for %s: %s", basename, failed_backends)
         else:
             logger.info("All backends succeeded for: %s", basename)
 
@@ -246,7 +244,9 @@ class SendManager:
             for name, config in self.DEFAULT_BACKENDS.items()
             if params.get(config["enabled_key"], False)
         }
-        logger.debug("Validating backend config, enabled backends: %s", enabled_backends)
+        logger.debug(
+            "Validating backend config, enabled backends: %s", enabled_backends
+        )
 
         for backend_name, config in self.DEFAULT_BACKENDS.items():
             if params.get(config["enabled_key"], False):

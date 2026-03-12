@@ -187,7 +187,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         else:
             fail(f"config dir missing after makedirs: {config_dir}")
     except Exception as exc:
-        fail(f"config directory creation", str(exc))
+        fail("config directory creation", str(exc))
     print()
 
     # ---------------------------------------- 3. appdirs functionality
@@ -251,8 +251,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     print("[6/14] Constants")
     try:
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
         if CURRENT_DATABASE_VERSION == "42":
-            ok(f"CURRENT_DATABASE_VERSION == '42'")
+            ok("CURRENT_DATABASE_VERSION == '42'")
         else:
             fail(
                 "CURRENT_DATABASE_VERSION",
@@ -266,7 +267,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     print("[7/14] Boolean utilities")
 
     try:
-        from core.utils.bool_utils import normalize_bool as _nb, to_db_bool as _tdb, from_db_bool as _fdb
+        from core.utils.bool_utils import from_db_bool as _fdb
+        from core.utils.bool_utils import normalize_bool as _nb
+        from core.utils.bool_utils import to_db_bool as _tdb
+
         ok("core.utils.bool_utils imported")
     except Exception as exc:
         fail("core.utils.bool_utils import", str(exc))
@@ -292,9 +296,12 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
         # normalize_bool: string inputs
         for val, expected in [
-            ("true", True), ("false", False),
-            ("yes", True), ("no", False),
-            ("1", True), ("0", False),
+            ("true", True),
+            ("false", False),
+            ("yes", True),
+            ("no", False),
+            ("1", True),
+            ("0", False),
             ("", False),
         ]:
             try:
@@ -302,7 +309,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
                 if result is expected:
                     ok(f"normalize_bool({val!r}) == {expected}")
                 else:
-                    fail(f"normalize_bool({val!r})", f"expected {expected}, got {result!r}")
+                    fail(
+                        f"normalize_bool({val!r})",
+                        f"expected {expected}, got {result!r}",
+                    )
             except Exception as exc:
                 fail(f"normalize_bool({val!r})", str(exc))
 
@@ -313,7 +323,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
                 if result is expected:
                     ok(f"normalize_bool({val!r}) == {expected}")
                 else:
-                    fail(f"normalize_bool({val!r})", f"expected {expected}, got {result!r}")
+                    fail(
+                        f"normalize_bool({val!r})",
+                        f"expected {expected}, got {result!r}",
+                    )
             except Exception as exc:
                 fail(f"normalize_bool({val!r})", str(exc))
 
@@ -358,21 +371,42 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
                 if rt is original:
                     ok(f"round-trip to_db_bool/from_db_bool({original}) == {original}")
                 else:
-                    fail(f"round-trip to_db_bool/from_db_bool({original})", f"got {rt!r}")
+                    fail(
+                        f"round-trip to_db_bool/from_db_bool({original})", f"got {rt!r}"
+                    )
         except Exception as exc:
             fail("round-trip to_db_bool/from_db_bool", str(exc))
 
         # Cross-check: utils.normalize_bool gives the same results as core version
         try:
             import utils as _utils
+
             same = all(
                 _utils.normalize_bool(v) == _nb(v)
-                for v in [True, False, "true", "false", "yes", "no", "1", "0", "", 1, 0, None]
+                for v in [
+                    True,
+                    False,
+                    "true",
+                    "false",
+                    "yes",
+                    "no",
+                    "1",
+                    "0",
+                    "",
+                    1,
+                    0,
+                    None,
+                ]
             )
             if same:
-                ok("utils.normalize_bool agrees with core.utils.bool_utils.normalize_bool")
+                ok(
+                    "utils.normalize_bool agrees with core.utils.bool_utils.normalize_bool"
+                )
             else:
-                fail("utils.normalize_bool vs core version", "results differ for some inputs")
+                fail(
+                    "utils.normalize_bool vs core version",
+                    "results differ for some inputs",
+                )
         except Exception as exc:
             fail("utils.normalize_bool cross-check", str(exc))
 
@@ -382,13 +416,21 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     print("[8/14] Date utilities")
 
     try:
+        from datetime import datetime as _dt
+
         from core.utils.date_utils import (
             dactime_from_datetime as _dfd,
-            datetime_from_dactime as _dfd2,
-            datetime_from_invtime as _dfi,
+        )
+        from core.utils.date_utils import (
             dactime_from_invtime as _dacfi,
         )
-        from datetime import datetime as _dt
+        from core.utils.date_utils import (
+            datetime_from_dactime as _dfd2,
+        )
+        from core.utils.date_utils import (
+            datetime_from_invtime as _dfi,
+        )
+
         ok("core.utils.date_utils imported")
     except Exception as exc:
         fail("core.utils.date_utils import", str(exc))
@@ -400,7 +442,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         try:
             result = _dfd(_dt(2024, 1, 1))
             if result == "1240101":
-                ok(f"dactime_from_datetime(2024-01-01) == '1240101'")
+                ok("dactime_from_datetime(2024-01-01) == '1240101'")
             else:
                 fail("dactime_from_datetime(2024-01-01)", f"got {result!r}")
         except Exception as exc:
@@ -411,7 +453,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             result = _dfd2(1240101)
             expected = _dt(2024, 1, 1)
             if result == expected:
-                ok(f"datetime_from_dactime(1240101) == datetime(2024, 1, 1)")
+                ok("datetime_from_dactime(1240101) == datetime(2024, 1, 1)")
             else:
                 fail("datetime_from_dactime(1240101)", f"got {result!r}")
         except Exception as exc:
@@ -458,10 +500,17 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     try:
         from core.edi.upc_utils import (
             calc_check_digit as _ccd,
+        )
+        from core.edi.upc_utils import (
             convert_upce_to_upca as _upce2upca,
-            validate_upc as _vupc,
+        )
+        from core.edi.upc_utils import (
             pad_upc as _pupc,
         )
+        from core.edi.upc_utils import (
+            validate_upc as _vupc,
+        )
+
         ok("core.edi.upc_utils imported")
     except Exception as exc:
         fail("core.edi.upc_utils import", str(exc))
@@ -575,14 +624,29 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
     try:
         from core.edi.edi_parser import (
-            capture_records as _cr,
-            parse_a_record as _par,
-            parse_b_record as _pbr,
-            build_a_record as _bar,
-            build_b_record as _bbr,
-            build_c_record as _bcr,
-            ARecord, BRecord, CRecord,
+            ARecord,
+            BRecord,
+            CRecord,
         )
+        from core.edi.edi_parser import (
+            build_a_record as _bar,
+        )
+        from core.edi.edi_parser import (
+            build_b_record as _bbr,
+        )
+        from core.edi.edi_parser import (
+            build_c_record as _bcr,
+        )
+        from core.edi.edi_parser import (
+            capture_records as _cr,
+        )
+        from core.edi.edi_parser import (
+            parse_a_record as _par,
+        )
+        from core.edi.edi_parser import (
+            parse_b_record as _pbr,
+        )
+
         ok("core.edi.edi_parser imported")
     except Exception as exc:
         fail("core.edi.edi_parser import", str(exc))
@@ -687,7 +751,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if rec.cust_vendor == "VEND01" and rec.invoice_number == "INV0012345":
                 ok("parse_a_record fields correct")
             else:
-                fail("parse_a_record fields", f"cust_vendor={rec.cust_vendor!r}, invoice_number={rec.invoice_number!r}")
+                fail(
+                    "parse_a_record fields",
+                    f"cust_vendor={rec.cust_vendor!r}, invoice_number={rec.invoice_number!r}",
+                )
         except Exception as exc:
             fail("parse_a_record fields", str(exc))
 
@@ -701,7 +768,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if raised:
                 ok("parse_a_record raises ValueError on non-A line")
             else:
-                fail("parse_a_record ValueError", "no exception raised on B-record input")
+                fail(
+                    "parse_a_record ValueError", "no exception raised on B-record input"
+                )
         except Exception as exc:
             fail("parse_a_record ValueError", str(exc))
 
@@ -710,16 +779,16 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # = 1+11+25+6+6+2+6+5+5+3+6 = 76 chars + \n
         _b_line = (
             "B"
-            + "00012345678"   # upc_number (11)
+            + "00012345678"  # upc_number (11)
             + "Item Description         "  # description (25)
-            + "000001"        # vendor_item (6)
-            + "000100"        # unit_cost (6)
-            + "01"            # combo_code (2)
-            + "000001"        # unit_multiplier (6)
-            + "00010"         # qty_of_units (5)
-            + "01000"         # suggested_retail_price (5)
-            + "   "           # price_multi_pack (3)
-            + "      "        # parent_item_number (6)
+            + "000001"  # vendor_item (6)
+            + "000100"  # unit_cost (6)
+            + "01"  # combo_code (2)
+            + "000001"  # unit_multiplier (6)
+            + "00010"  # qty_of_units (5)
+            + "01000"  # suggested_retail_price (5)
+            + "   "  # price_multi_pack (3)
+            + "      "  # parent_item_number (6)
             + "\n"
         )
 
@@ -745,9 +814,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # = 1+3+25+9 = 38 chars + \n
         _c_line = (
             "C"
-            + "TAX"                            # charge_type (3)
-            + "Sales Tax                "       # description (25)
-            + "000001000"                       # amount (9)
+            + "TAX"  # charge_type (3)
+            + "Sales Tax                "  # description (25)
+            + "000001000"  # amount (9)
             + "\n"
         )
 
@@ -835,11 +904,18 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
     try:
         from dispatch.hash_utils import (
-            generate_file_hash as _gfh,
-            generate_match_lists as _gml,
-            check_file_against_processed as _cfap,
             build_hash_dictionaries as _bhd,
         )
+        from dispatch.hash_utils import (
+            check_file_against_processed as _cfap,
+        )
+        from dispatch.hash_utils import (
+            generate_file_hash as _gfh,
+        )
+        from dispatch.hash_utils import (
+            generate_match_lists as _gml,
+        )
+
         ok("dispatch.hash_utils imported")
     except Exception as exc:
         fail("dispatch.hash_utils import", str(exc))
@@ -858,7 +934,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if result == expected_hash:
                 ok(f"generate_file_hash matches expected MD5 ({expected_hash[:8]}...)")
             else:
-                fail("generate_file_hash", f"expected {expected_hash!r}, got {result!r}")
+                fail(
+                    "generate_file_hash", f"expected {expected_hash!r}, got {result!r}"
+                )
             os.remove(_hash_file)
             os.rmdir(_hash_tmpdir)
         except Exception as exc:
@@ -867,9 +945,21 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # generate_match_lists with sample records
         try:
             _records = [
-                {"file_name": "file_a.edi", "file_checksum": "aaaa", "resend_flag": False},
-                {"file_name": "file_b.edi", "file_checksum": "bbbb", "resend_flag": True},
-                {"file_name": "file_c.edi", "file_checksum": "cccc", "resend_flag": False},
+                {
+                    "file_name": "file_a.edi",
+                    "file_checksum": "aaaa",
+                    "resend_flag": False,
+                },
+                {
+                    "file_name": "file_b.edi",
+                    "file_checksum": "bbbb",
+                    "resend_flag": True,
+                },
+                {
+                    "file_name": "file_c.edi",
+                    "file_checksum": "cccc",
+                    "resend_flag": False,
+                },
             ]
             hash_list, name_list, resend_set = _gml(_records)
             # hash_list: list of (file_name, checksum) tuples
@@ -893,8 +983,16 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # build_hash_dictionaries produces dict form
         try:
             _records2 = [
-                {"file_name": "file_x.edi", "file_checksum": "xxxx", "resend_flag": False},
-                {"file_name": "file_y.edi", "file_checksum": "yyyy", "resend_flag": True},
+                {
+                    "file_name": "file_x.edi",
+                    "file_checksum": "xxxx",
+                    "resend_flag": False,
+                },
+                {
+                    "file_name": "file_y.edi",
+                    "file_checksum": "yyyy",
+                    "resend_flag": True,
+                },
             ]
             hash_dict, name_dict, resend_set2 = _bhd(_records2)
             # hash_dict maps file_name -> checksum
@@ -923,7 +1021,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if match is False and should_send is True:
                 ok("check_file_against_processed: new file -> (False, True)")
             else:
-                fail("check_file_against_processed: new file", f"got ({match}, {should_send})")
+                fail(
+                    "check_file_against_processed: new file",
+                    f"got ({match}, {should_send})",
+                )
         except Exception as exc:
             fail("check_file_against_processed: new file", str(exc))
 
@@ -935,7 +1036,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if match2 is True and should_send2 is False:
                 ok("check_file_against_processed: already processed -> (True, False)")
             else:
-                fail("check_file_against_processed: already processed", f"got ({match2}, {should_send2})")
+                fail(
+                    "check_file_against_processed: already processed",
+                    f"got ({match2}, {should_send2})",
+                )
         except Exception as exc:
             fail("check_file_against_processed: already processed", str(exc))
 
@@ -943,11 +1047,16 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         try:
             _nd3 = {"resendchecksum": "resend_file.edi"}
             _rs3 = {"resendchecksum"}
-            match3, should_send3 = _cfap("resend_file.edi", "resendchecksum", _nd3, _rs3)
+            match3, should_send3 = _cfap(
+                "resend_file.edi", "resendchecksum", _nd3, _rs3
+            )
             if match3 is True and should_send3 is True:
                 ok("check_file_against_processed: resend -> (True, True)")
             else:
-                fail("check_file_against_processed: resend", f"got ({match3}, {should_send3})")
+                fail(
+                    "check_file_against_processed: resend",
+                    f"got ({match3}, {should_send3})",
+                )
         except Exception as exc:
             fail("check_file_against_processed: resend", str(exc))
 
@@ -958,12 +1067,21 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
     try:
         from dispatch.feature_flags import (
-            is_legacy_mode as _ilm,
-            is_pipeline_enabled as _ipe,
             get_debug_mode as _gdm,
+        )
+        from dispatch.feature_flags import (
             get_feature_flags as _gff,
+        )
+        from dispatch.feature_flags import (
+            is_legacy_mode as _ilm,
+        )
+        from dispatch.feature_flags import (
+            is_pipeline_enabled as _ipe,
+        )
+        from dispatch.feature_flags import (
             set_feature_flag as _sff,
         )
+
         ok("dispatch.feature_flags imported")
     except Exception as exc:
         fail("dispatch.feature_flags import", str(exc))
@@ -1015,7 +1133,11 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
         try:
             flags = _gff()
-            if flags["legacy_mode"] is False and flags["pipeline_enabled"] is True and flags["debug_mode"] is False:
+            if (
+                flags["legacy_mode"] is False
+                and flags["pipeline_enabled"] is True
+                and flags["debug_mode"] is False
+            ):
                 ok("get_feature_flags() default values correct")
             else:
                 fail("get_feature_flags() default values", f"got {flags!r}")
@@ -1059,7 +1181,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     print("[13/14] Send manager")
 
     try:
-        from dispatch.send_manager import SendManager as _SM, MockBackend as _MB
+        from dispatch.send_manager import MockBackend as _MB
+        from dispatch.send_manager import SendManager as _SM
+
         ok("dispatch.send_manager imported (SendManager, MockBackend)")
     except Exception as exc:
         fail("dispatch.send_manager import", str(exc))
@@ -1069,7 +1193,11 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # SendManager instantiation
         try:
             sm = _SM()
-            if hasattr(sm, "backends") and hasattr(sm, "results") and hasattr(sm, "errors"):
+            if (
+                hasattr(sm, "backends")
+                and hasattr(sm, "results")
+                and hasattr(sm, "errors")
+            ):
                 ok("SendManager() has .backends, .results, .errors")
             else:
                 fail("SendManager() attributes", f"missing attrs on {sm!r}")
@@ -1088,7 +1216,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # get_enabled_backends: copy enabled, ftp disabled
         try:
             sm = _SM()
-            enabled = sm.get_enabled_backends({"process_backend_copy": True, "process_backend_ftp": False})
+            enabled = sm.get_enabled_backends(
+                {"process_backend_copy": True, "process_backend_ftp": False}
+            )
             if "copy" in enabled and "ftp" not in enabled:
                 ok("get_enabled_backends: copy=True,ftp=False -> {'copy'}")
             else:
@@ -1112,9 +1242,13 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             sm = _SM()
             errors = sm.validate_backend_config({"process_backend_copy": True})
             if errors and any("Copy Backend" in e for e in errors):
-                ok("validate_backend_config: copy without directory -> error mentioning 'Copy Backend'")
+                ok(
+                    "validate_backend_config: copy without directory -> error mentioning 'Copy Backend'"
+                )
             else:
-                fail("validate_backend_config: copy without directory", f"got {errors!r}")
+                fail(
+                    "validate_backend_config: copy without directory", f"got {errors!r}"
+                )
         except Exception as exc:
             fail("validate_backend_config: copy without directory", str(exc))
 
@@ -1145,7 +1279,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if len(mb.send_calls) == 1:
                 ok("MockBackend.send() records call (should_succeed=True)")
             else:
-                fail("MockBackend.send() call recording", f"send_calls={mb.send_calls!r}")
+                fail(
+                    "MockBackend.send() call recording", f"send_calls={mb.send_calls!r}"
+                )
         except Exception as exc:
             fail("MockBackend.send() (should_succeed=True)", str(exc))
 
@@ -1168,9 +1304,14 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             mb_fail = _MB(should_succeed=False)
             val_errors = mb_fail.validate({})
             if val_errors and isinstance(val_errors, list):
-                ok("MockBackend(should_succeed=False).validate() returns non-empty error list")
+                ok(
+                    "MockBackend(should_succeed=False).validate() returns non-empty error list"
+                )
             else:
-                fail("MockBackend(should_succeed=False).validate()", f"got {val_errors!r}")
+                fail(
+                    "MockBackend(should_succeed=False).validate()",
+                    f"got {val_errors!r}",
+                )
         except Exception as exc:
             fail("MockBackend(should_succeed=False).validate()", str(exc))
 
@@ -1204,11 +1345,20 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     try:
         from dispatch.orchestrator import (
             DispatchConfig as _DC,
-            FolderResult as _FR,
-            FileResult as _FiR,
-            ProcessingContext as _PC,
+        )
+        from dispatch.orchestrator import (
             DispatchOrchestrator as _DO,
         )
+        from dispatch.orchestrator import (
+            FileResult as _FiR,
+        )
+        from dispatch.orchestrator import (
+            FolderResult as _FR,
+        )
+        from dispatch.orchestrator import (
+            ProcessingContext as _PC,
+        )
+
         ok("dispatch.orchestrator imported")
     except Exception as exc:
         fail("dispatch.orchestrator import", str(exc))
@@ -1218,30 +1368,60 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # DispatchConfig defaults
         try:
             config = _DC()
-            if config.backends == {} and config.settings == {} and config.version == "1.0.0" and config.use_pipeline is True:
-                ok("DispatchConfig() defaults: backends={}, settings={}, version='1.0.0', use_pipeline=True")
+            if (
+                config.backends == {}
+                and config.settings == {}
+                and config.version == "1.0.0"
+                and config.use_pipeline is True
+            ):
+                ok(
+                    "DispatchConfig() defaults: backends={}, settings={}, version='1.0.0', use_pipeline=True"
+                )
             else:
-                fail("DispatchConfig() defaults", f"backends={config.backends!r}, version={config.version!r}, use_pipeline={config.use_pipeline!r}")
+                fail(
+                    "DispatchConfig() defaults",
+                    f"backends={config.backends!r}, version={config.version!r}, use_pipeline={config.use_pipeline!r}",
+                )
         except Exception as exc:
             fail("DispatchConfig() defaults", str(exc))
 
         # FolderResult defaults
         try:
             fr = _FR(folder_name="test", alias="Test")
-            if fr.files_processed == 0 and fr.files_failed == 0 and fr.errors == [] and fr.success is True:
-                ok("FolderResult defaults: files_processed=0, files_failed=0, errors=[], success=True")
+            if (
+                fr.files_processed == 0
+                and fr.files_failed == 0
+                and fr.errors == []
+                and fr.success is True
+            ):
+                ok(
+                    "FolderResult defaults: files_processed=0, files_failed=0, errors=[], success=True"
+                )
             else:
-                fail("FolderResult defaults", f"processed={fr.files_processed}, failed={fr.files_failed}, success={fr.success}")
+                fail(
+                    "FolderResult defaults",
+                    f"processed={fr.files_processed}, failed={fr.files_failed}, success={fr.success}",
+                )
         except Exception as exc:
             fail("FolderResult defaults", str(exc))
 
         # FileResult defaults
         try:
             fir = _FiR(file_name="test.edi", checksum="abc123")
-            if fir.sent is False and fir.validated is True and fir.converted is False and fir.errors == []:
-                ok("FileResult defaults: sent=False, validated=True, converted=False, errors=[]")
+            if (
+                fir.sent is False
+                and fir.validated is True
+                and fir.converted is False
+                and fir.errors == []
+            ):
+                ok(
+                    "FileResult defaults: sent=False, validated=True, converted=False, errors=[]"
+                )
             else:
-                fail("FileResult defaults", f"sent={fir.sent}, validated={fir.validated}, converted={fir.converted}")
+                fail(
+                    "FileResult defaults",
+                    f"sent={fir.sent}, validated={fir.validated}, converted={fir.converted}",
+                )
         except Exception as exc:
             fail("FileResult defaults", str(exc))
 
@@ -1251,7 +1431,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if pc.temp_dirs == [] and pc.temp_files == []:
                 ok("ProcessingContext defaults: temp_dirs=[], temp_files=[]")
             else:
-                fail("ProcessingContext defaults", f"temp_dirs={pc.temp_dirs!r}, temp_files={pc.temp_files!r}")
+                fail(
+                    "ProcessingContext defaults",
+                    f"temp_dirs={pc.temp_dirs!r}, temp_files={pc.temp_files!r}",
+                )
         except Exception as exc:
             fail("ProcessingContext defaults", str(exc))
 
@@ -1259,10 +1442,14 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         try:
             config = _DC()
             orch = _DO(config)
-            if hasattr(orch, "validator") and hasattr(orch, "send_manager") and hasattr(orch, "error_handler"):
+            if (
+                hasattr(orch, "validator")
+                and hasattr(orch, "send_manager")
+                and hasattr(orch, "error_handler")
+            ):
                 ok("DispatchOrchestrator has .validator, .send_manager, .error_handler")
             else:
-                fail("DispatchOrchestrator attributes", f"missing attrs")
+                fail("DispatchOrchestrator attributes", "missing attrs")
         except Exception as exc:
             fail("DispatchOrchestrator instantiation", str(exc))
 
@@ -1270,9 +1457,14 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             config = _DC()
             orch = _DO(config)
             if orch.processed_count == 0 and orch.error_count == 0:
-                ok("DispatchOrchestrator initial counts: processed_count=0, error_count=0")
+                ok(
+                    "DispatchOrchestrator initial counts: processed_count=0, error_count=0"
+                )
             else:
-                fail("DispatchOrchestrator initial counts", f"processed={orch.processed_count}, errors={orch.error_count}")
+                fail(
+                    "DispatchOrchestrator initial counts",
+                    f"processed={orch.processed_count}, errors={orch.error_count}",
+                )
         except Exception as exc:
             fail("DispatchOrchestrator initial counts", str(exc))
 
@@ -1298,7 +1490,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             if orch.processed_count == 0 and orch.error_count == 0:
                 ok("DispatchOrchestrator.reset() resets counts to 0")
             else:
-                fail("DispatchOrchestrator.reset()", f"processed={orch.processed_count}, errors={orch.error_count}")
+                fail(
+                    "DispatchOrchestrator.reset()",
+                    f"processed={orch.processed_count}, errors={orch.error_count}",
+                )
         except Exception as exc:
             fail("DispatchOrchestrator.reset()", str(exc))
 
@@ -1308,23 +1503,31 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # get_enabled_backends defaults to including injected backends that lack an explicit flag.
         try:
             if _MB is None:
-                fail("end-to-end orchestrator test", "MockBackend not available (send_manager import failed)")
+                fail(
+                    "end-to-end orchestrator test",
+                    "MockBackend not available (send_manager import failed)",
+                )
             else:
                 _e2e_tmpdir = tempfile.mkdtemp(prefix="selftest_e2e_")
                 _edi_file = os.path.join(_e2e_tmpdir, "test_invoice.edi")
                 _edi_content = (
-                    "A" + "VEND01" + "INV0012345" + "010124" + "0000000010" + "\n"
+                    "A"
+                    + "VEND01"
+                    + "INV0012345"
+                    + "010124"
+                    + "0000000010"
+                    + "\n"
                     + "B"
-                    + "00012345678"                 # upc_number (11)
-                    + "Item Description         "   # description (25)
-                    + "000001"                       # vendor_item (6)
-                    + "000100"                       # unit_cost (6)
-                    + "01"                           # combo_code (2)
-                    + "000001"                       # unit_multiplier (6)
-                    + "00010"                        # qty_of_units (5)
-                    + "01000"                        # suggested_retail_price (5)
-                    + "   "                          # price_multi_pack (3)
-                    + "      "                       # parent_item_number (6)
+                    + "00012345678"  # upc_number (11)
+                    + "Item Description         "  # description (25)
+                    + "000001"  # vendor_item (6)
+                    + "000100"  # unit_cost (6)
+                    + "01"  # combo_code (2)
+                    + "000001"  # unit_multiplier (6)
+                    + "00010"  # qty_of_units (5)
+                    + "01000"  # suggested_retail_price (5)
+                    + "   "  # price_multi_pack (3)
+                    + "      "  # parent_item_number (6)
                     + "\n"
                 )
                 with open(_edi_file, "w", encoding="utf-8") as _fh:

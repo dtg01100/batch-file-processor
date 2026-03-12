@@ -18,11 +18,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+import utils
 from interface.qt.dialogs.base_dialog import BaseDialog
-
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format
-import utils
 
 
 class EditSettingsDialog(BaseDialog):
@@ -216,9 +215,7 @@ class EditSettingsDialog(BaseDialog):
 
         self._email_destination = QLineEdit()
         self._email_destination.setMinimumWidth(260)
-        self._enable_report_printing_cb = QCheckBox(
-            "Enable Report Printing &Fallback"
-        )
+        self._enable_report_printing_cb = QCheckBox("Enable Report Printing &Fallback")
         self._email_destination.setAccessibleName("Report email destination")
         self._email_destination.setAccessibleDescription(
             "Comma-separated recipient addresses for reports"
@@ -410,7 +407,9 @@ class EditSettingsDialog(BaseDialog):
         }
         first_invalid_widget: Optional[QWidget] = None
 
-        def add_error(section: str, message: str, widget: Optional[QWidget] = None) -> None:
+        def add_error(
+            section: str, message: str, widget: Optional[QWidget] = None
+        ) -> None:
             nonlocal first_invalid_widget
             errors_by_section[section].append(message)
             if first_invalid_widget is None and widget is not None:
@@ -463,7 +462,9 @@ class EditSettingsDialog(BaseDialog):
                     self._email_destination,
                 )
             else:
-                for addr in [a.strip() for a in self._email_destination.text().split(",")]:
+                for addr in [
+                    a.strip() for a in self._email_destination.text().split(",")
+                ]:
                     if not validate_email_format(addr):
                         add_error(
                             "Reporting",
@@ -502,7 +503,8 @@ class EditSettingsDialog(BaseDialog):
                 QMessageBox.critical(
                     self,
                     "SMTP Connection Failed",
-                    "Could not connect to SMTP server:\n" + (error_msg or "Unknown error"),
+                    "Could not connect to SMTP server:\n"
+                    + (error_msg or "Unknown error"),
                 )
                 return False
 
@@ -569,5 +571,3 @@ class EditSettingsDialog(BaseDialog):
             self._on_apply(self._settings_data)
         if self._refresh_callback:
             self._refresh_callback()
-
-

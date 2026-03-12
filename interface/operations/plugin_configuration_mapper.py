@@ -11,16 +11,16 @@ Key components:
 - PluginSectionStateManager: State management for plugin sections with undo/redo support
 """
 
-import json
 import copy
-from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field
+import json
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 from interface.models.folder_configuration import FolderConfiguration
+from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
-from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.ui_abstraction import WidgetBase
 from interface.plugins.validation_framework import ValidationResult
 
@@ -373,7 +373,7 @@ class PluginConfigurationMapper:
                             config[field_name] = self._get_widget_value(
                                 widget, field_name, framework
                             )
-                    except Exception as e:
+                    except Exception:
                         config[field_name] = field.default
 
         return config
@@ -406,12 +406,12 @@ class PluginConfigurationMapper:
             Any: Widget value
         """
         from PyQt6.QtWidgets import (
-            QLineEdit,
-            QSpinBox,
-            QDoubleSpinBox,
-            QComboBox,
             QCheckBox,
+            QComboBox,
+            QDoubleSpinBox,
+            QLineEdit,
             QListWidget,
+            QSpinBox,
             QTextEdit,
         )
 
@@ -538,12 +538,12 @@ class PluginConfigurationMapper:
             value: Value to set
         """
         from PyQt6.QtWidgets import (
-            QLineEdit,
-            QSpinBox,
-            QDoubleSpinBox,
-            QComboBox,
             QCheckBox,
+            QComboBox,
+            QDoubleSpinBox,
+            QLineEdit,
             QListWidget,
+            QSpinBox,
             QTextEdit,
         )
 

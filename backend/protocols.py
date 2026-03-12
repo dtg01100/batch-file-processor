@@ -4,7 +4,7 @@ This module defines Protocol interfaces for external client dependencies,
 enabling dependency injection and testability for send backends.
 """
 
-from typing import Protocol, runtime_checkable, Optional, Any
+from typing import Any, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable

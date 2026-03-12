@@ -41,19 +41,19 @@ Usage Example:
         print(f"Errors: {result.errors}")
 """
 
-from .form_generator import FormGenerator, QtFormGenerator, FormGeneratorFactory
-from .section_factory import (
-    SectionFactory,
-    QtSectionFactory,
-    SectionFactoryRegistry,
-    PluginSectionFactory,
-)
 from .config_section_widgets import (
-    ConfigSectionWidget,
-    QtConfigSectionWidget,
     CollapsibleSectionWidget,
+    ConfigSectionWidget,
     QtCollapsibleSectionWidget,
+    QtConfigSectionWidget,
     TabbedSectionWidget,
+)
+from .form_generator import FormGenerator, FormGeneratorFactory, QtFormGenerator
+from .section_factory import (
+    PluginSectionFactory,
+    QtSectionFactory,
+    SectionFactory,
+    SectionFactoryRegistry,
 )
 
 __all__ = [

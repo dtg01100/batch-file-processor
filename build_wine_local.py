@@ -5,12 +5,12 @@ This builds the Windows executable using Python 3.11 for Windows through Wine.
 """
 
 import os
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
+import time
 import urllib.request
 import zipfile
-import time
 from pathlib import Path
 
 # Configuration
@@ -20,15 +20,18 @@ PYINSTALLER_VERSION = "6.11.0"
 BUILD_DIR = Path(__file__).parent.absolute() / "build_wine"
 DIST_DIR = Path(__file__).parent.absolute() / "dist_windows"
 PYINSTALLER_LOG = BUILD_DIR / "pyinstaller_wine.log"
-WINE_PREFIX = Path(
-    os.environ.get("BFP_WINEPREFIX", str(BUILD_DIR / "wineprefix"))
-).expanduser().resolve()
+WINE_PREFIX = (
+    Path(os.environ.get("BFP_WINEPREFIX", str(BUILD_DIR / "wineprefix")))
+    .expanduser()
+    .resolve()
+)
 
 
 def ensure_wine_prefix() -> None:
     """Ensure Wine prefix directory exists and show location used for build."""
     WINE_PREFIX.mkdir(parents=True, exist_ok=True)
     print(f"Using WINEPREFIX: {WINE_PREFIX}")
+
 
 def run_wine(cmd, cwd=None, check=True, timeout=None):
     """Run a command through Wine."""
@@ -47,6 +50,7 @@ def run_wine(cmd, cwd=None, check=True, timeout=None):
         timeout=timeout,
     )
     return result
+
 
 def setup_python():
     """Download and set up Python for Windows (embeddable)."""
@@ -68,7 +72,7 @@ def setup_python():
 
     # Extract Python
     print("Extracting Python...")
-    with zipfile.ZipFile(python_zip, 'r') as zip_ref:
+    with zipfile.ZipFile(python_zip, "r") as zip_ref:
         zip_ref.extractall(python_dir)
 
     # Enable site-packages by modifying python311._pth
@@ -80,6 +84,7 @@ def setup_python():
 
     print("Python setup complete.")
     return python_dir
+
 
 def install_pip(python_dir):
     """Install pip in the embeddable Python."""
@@ -94,10 +99,7 @@ def install_pip(python_dir):
     get_pip = BUILD_DIR / "get-pip.py"
     if not get_pip.exists():
         print("Downloading get-pip.py...")
-        urllib.request.urlretrieve(
-            "https://bootstrap.pypa.io/get-pip.py",
-            get_pip
-        )
+        urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", get_pip)
 
     # Run get-pip.py through Wine
     python_exe = python_dir / "python.exe"
@@ -108,6 +110,7 @@ def install_pip(python_dir):
 
     print("Pip installed.")
 
+
 def install_dependencies(python_dir):
     """Install project dependencies."""
     print("Installing dependencies...")
@@ -115,7 +118,9 @@ def install_dependencies(python_dir):
     deps_marker = BUILD_DIR / ".deps_installed_py311.txt"
     force_reinstall = os.environ.get("FORCE_WINE_REINSTALL", "").strip() == "1"
     if deps_marker.exists() and not force_reinstall:
-        print("Dependencies already installed (cached). Set FORCE_WINE_REINSTALL=1 to reinstall.")
+        print(
+            "Dependencies already installed (cached). Set FORCE_WINE_REINSTALL=1 to reinstall."
+        )
         return
 
     python_exe = python_dir / "python.exe"
@@ -132,7 +137,13 @@ def install_dependencies(python_dir):
         print("PyInstaller already installed.")
     else:
         run_wine(
-            [str(python_exe), "-m", "pip", "install", f"pyinstaller=={PYINSTALLER_VERSION}"],
+            [
+                str(python_exe),
+                "-m",
+                "pip",
+                "install",
+                f"pyinstaller=={PYINSTALLER_VERSION}",
+            ],
             timeout=900,
         )
 
@@ -141,11 +152,11 @@ def install_dependencies(python_dir):
     if req_file.exists():
         # Create a modified requirements file excluding problematic packages
         modified_req = BUILD_DIR / "requirements_modified.txt"
-        with open(req_file, 'r', encoding='utf-8') as f:
+        with open(req_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         # Filter out packages that may cause issues on Windows
-        skip_packages = ['py3dns', 'pytest', 'pytest-qt', 'pytest-timeout']
+        skip_packages = ["py3dns", "pytest", "pytest-qt", "pytest-timeout"]
         filtered_lines = []
         for line in lines:
             skip = False
@@ -156,7 +167,7 @@ def install_dependencies(python_dir):
             if not skip:
                 filtered_lines.append(line)
 
-        with open(modified_req, 'w', encoding='utf-8') as f:
+        with open(modified_req, "w", encoding="utf-8") as f:
             f.writelines(filtered_lines)
 
         run_wine(
@@ -164,9 +175,12 @@ def install_dependencies(python_dir):
             timeout=1800,
         )
 
-    deps_marker.write_text(f"python={PYTHON_VERSION}\npyinstaller={PYINSTALLER_VERSION}\n")
+    deps_marker.write_text(
+        f"python={PYTHON_VERSION}\npyinstaller={PYINSTALLER_VERSION}\n"
+    )
 
     print("Dependencies installed.")
+
 
 def build_executable(python_dir):
     """Build the Windows executable using PyInstaller."""
@@ -199,11 +213,17 @@ def build_executable(python_dir):
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     with open(PYINSTALLER_LOG, "w", encoding="utf-8", errors="replace") as log_file:
         result = subprocess.run(
-            ["wine", str(python_exe), "-m", "PyInstaller",
-             str(spec_file),
-             "--clean",
-             "--noconfirm",
-             "--distpath", str(run_staging_dir)],
+            [
+                "wine",
+                str(python_exe),
+                "-m",
+                "PyInstaller",
+                str(spec_file),
+                "--clean",
+                "--noconfirm",
+                "--distpath",
+                str(run_staging_dir),
+            ],
             cwd=project_root,
             env=env,
             check=False,
@@ -215,7 +235,9 @@ def build_executable(python_dir):
     if result.returncode != 0:
         print("Build failed!")
         print(f"PyInstaller log: {PYINSTALLER_LOG}")
-        tail_lines = PYINSTALLER_LOG.read_text(encoding="utf-8", errors="replace").splitlines()[-80:]
+        tail_lines = PYINSTALLER_LOG.read_text(
+            encoding="utf-8", errors="replace"
+        ).splitlines()[-80:]
         if tail_lines:
             print("Last PyInstaller lines:")
             for line in tail_lines:
@@ -234,6 +256,7 @@ def build_executable(python_dir):
 
     print("Build completed!")
     return True
+
 
 def verify_build():
     """Verify the build output."""
@@ -263,6 +286,7 @@ def verify_build():
             for item in DIST_DIR.rglob("*"):
                 print(f"  {item.relative_to(DIST_DIR)}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -299,8 +323,10 @@ def main():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

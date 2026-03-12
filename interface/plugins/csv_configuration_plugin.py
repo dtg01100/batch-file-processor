@@ -5,13 +5,13 @@ Implements the ConfigurationPlugin interface for CSV format configuration.
 Provides support for CSV-specific configuration fields and validation.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from .configuration_plugin import ConfigurationPlugin
-from .config_schemas import FieldDefinition, FieldType
-from .validation_framework import ValidationResult
 from ..models.folder_configuration import ConvertFormat, CSVConfiguration
+from .config_schemas import FieldDefinition, FieldType
+from .configuration_plugin import ConfigurationPlugin
 from .ui_abstraction import ConfigurationWidgetBuilder
+from .validation_framework import ValidationResult
 
 
 class CSVConfigurationPlugin(ConfigurationPlugin):

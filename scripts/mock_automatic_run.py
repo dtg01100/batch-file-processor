@@ -131,7 +131,9 @@ def run_mock_automatic(base_dir: str | os.PathLike[str]) -> MockRunResult:
 
     exit_code = 0
     try:
-        with patch("interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)):
+        with patch(
+            "interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)
+        ):
             with patch("dispatch.process", side_effect=_mock_dispatch_process):
                 app.initialize(args=["--automatic"])
     except SystemExit as system_exit:

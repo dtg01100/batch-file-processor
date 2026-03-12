@@ -7,7 +7,7 @@ using dynamic module loading for different output formats.
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, runtime_checkable, Any
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
@@ -412,7 +412,10 @@ class EDIConverterStep:
         except Exception as e:
             error_msg = f"Conversion failed: {e}"
             logger.error(
-                "Conversion failed for %s: %s", os.path.basename(input_path), e, exc_info=True
+                "Conversion failed for %s: %s",
+                os.path.basename(input_path),
+                e,
+                exc_info=True,
             )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -468,12 +471,10 @@ class EDIConverterStep:
         Returns:
             Path to converted file, or None if conversion failed/not needed
         """
-        import tempfile
         import shutil
+        import tempfile
 
-        logger.debug(
-            "Execute converter step for %s", os.path.basename(file_path)
-        )
+        logger.debug("Execute converter step for %s", os.path.basename(file_path))
 
         effective_settings = (
             settings if settings is not None else folder.get("settings", {})
@@ -516,7 +517,7 @@ class EDIConverterStep:
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)
             return None
-        except Exception as e:
+        except Exception:
             # Cleanup on exception
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:

@@ -3,8 +3,8 @@
 Pure functions for parsing EDI A, B, and C records.
 """
 
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 _default_parser = None
 

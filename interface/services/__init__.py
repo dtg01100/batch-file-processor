@@ -11,16 +11,16 @@ Available services:
 """
 
 from interface.services.ftp_service import (
-    FTPService,
     FTPConnectionResult,
+    FTPService,
     MockFTPService,
 )
 from interface.services.reporting_service import ReportingService
 from interface.services.resend_service import ResendService
 from interface.services.smtp_service import (
+    MockSMTPService,
     SMTPService,
     SMTPServiceProtocol,
-    MockSMTPService,
 )
 
 __all__ = [

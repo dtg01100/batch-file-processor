@@ -4,10 +4,10 @@ This module provides a refactored, testable implementation of file tracking,
 using Protocol interfaces for dependency injection and database abstraction.
 """
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Protocol, runtime_checkable, Optional
-import logging
+from typing import Optional, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +311,8 @@ class ProcessedFilesTracker:
         """
         self.database.insert(self.TABLE_NAME, record.to_dict())
         logger.info(
-            "Recorded sent file: %s for folder %s" % (record.file_name, record.folder_id)
+            "Recorded sent file: %s for folder %s"
+            % (record.file_name, record.folder_id)
         )
 
     def record_sent_file_simple(

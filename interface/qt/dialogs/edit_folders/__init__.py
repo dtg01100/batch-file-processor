@@ -11,8 +11,8 @@ Components:
 - layout_builder: Constructs the complete dialog UI layout
 """
 
-from .data_extractor import QtFolderDataExtractor
 from .column_builders import ColumnBuilders
+from .data_extractor import QtFolderDataExtractor
 from .dynamic_edi_builder import DynamicEDIBuilder
 from .event_handlers import EventHandlers
 from .layout_builder import UILayoutBuilder

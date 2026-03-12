@@ -531,8 +531,8 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QListWidget, QAbstractItemView, QListWidgetItem
         from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
 
         self.widget = QListWidget(parent)
         # Use QAbstractItemView.MultiSelection for PyQt6 selection mode

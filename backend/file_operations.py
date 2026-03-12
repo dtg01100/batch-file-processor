@@ -54,7 +54,9 @@ class RealFileOperations:
             dst: Destination directory path
             symlinks: Whether to copy symlinks as symlinks
         """
-        logger.debug("Copying directory tree %s -> %s (symlinks=%s)", src, dst, symlinks)
+        logger.debug(
+            "Copying directory tree %s -> %s (symlinks=%s)", src, dst, symlinks
+        )
         shutil.copytree(src, dst, symlinks=symlinks)
 
     def exists(self, path: str) -> bool:

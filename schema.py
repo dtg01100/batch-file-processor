@@ -10,6 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def ensure_schema(database_connection) -> None:
     """Ensure core tables and columns exist. Uses database_connection.query()."""
     stmts = [
@@ -22,7 +23,6 @@ def ensure_schema(database_connection) -> None:
             notes TEXT
         )
         """,
-
         # settings
         """
         CREATE TABLE IF NOT EXISTS settings (
@@ -69,7 +69,6 @@ def ensure_schema(database_connection) -> None:
             updated_at TEXT
         )
         """,
-
         # administrative (deprecated duplicate of folders, kept for compatibility)
         """
         CREATE TABLE IF NOT EXISTS administrative (
@@ -130,7 +129,6 @@ def ensure_schema(database_connection) -> None:
             ftp_password TEXT
         )
         """,
-
         # folders (main configuration table)
         """
         CREATE TABLE IF NOT EXISTS folders (
@@ -208,7 +206,6 @@ def ensure_schema(database_connection) -> None:
             edi_format TEXT
         )
         """,
-
         # processed_files (legacy tracking of processed files)
         """
         CREATE TABLE IF NOT EXISTS processed_files (
@@ -231,7 +228,6 @@ def ensure_schema(database_connection) -> None:
             invoice_numbers TEXT
         )
         """,
-
         # emails_to_send (queue for emails to be sent)
         """
         CREATE TABLE IF NOT EXISTS emails_to_send (
@@ -241,7 +237,6 @@ def ensure_schema(database_connection) -> None:
             folder_id INTEGER
         )
         """,
-
         # working_batch_emails_to_send (batch email operations)
         """
         CREATE TABLE IF NOT EXISTS working_batch_emails_to_send (
@@ -251,7 +246,6 @@ def ensure_schema(database_connection) -> None:
             folder_id TEXT
         )
         """,
-
         # sent_emails_removal_queue (queue for sent email removal)
         """
         CREATE TABLE IF NOT EXISTS sent_emails_removal_queue (
@@ -270,7 +264,6 @@ def ensure_schema(database_connection) -> None:
         """
         PRAGMA foreign_keys = ON;
         """,
-
         """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -280,7 +273,6 @@ def ensure_schema(database_connection) -> None:
             updated_at TEXT DEFAULT (datetime('now'))
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS organizations (
             id TEXT PRIMARY KEY,
@@ -288,7 +280,6 @@ def ensure_schema(database_connection) -> None:
             created_at TEXT DEFAULT (datetime('now'))
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
@@ -300,7 +291,6 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE SET NULL
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS files (
             id TEXT PRIMARY KEY,
@@ -315,7 +305,6 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS batches (
             id TEXT PRIMARY KEY,
@@ -330,7 +319,6 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS processors (
             id TEXT PRIMARY KEY,
@@ -340,7 +328,6 @@ def ensure_schema(database_connection) -> None:
             created_at TEXT DEFAULT (datetime('now'))
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS processing_jobs (
             id TEXT PRIMARY KEY,
@@ -358,7 +345,6 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (processor_id) REFERENCES processors(id) ON DELETE SET NULL
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS job_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -369,14 +355,12 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (job_id) REFERENCES processing_jobs(id) ON DELETE CASCADE
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS tags (
             id TEXT PRIMARY KEY,
             name TEXT UNIQUE NOT NULL
         )
         """,
-
         """
         CREATE TABLE IF NOT EXISTS file_tags (
             file_id TEXT,
@@ -386,19 +370,15 @@ def ensure_schema(database_connection) -> None:
             FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
         )
         """,
-
         """
         CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id)
         """,
-
         """
         CREATE INDEX IF NOT EXISTS idx_batches_project_id ON batches(project_id)
         """,
-
         """
         CREATE INDEX IF NOT EXISTS idx_jobs_status ON processing_jobs(status)
         """,
-
         """
         CREATE INDEX IF NOT EXISTS idx_jobs_file_id ON processing_jobs(file_id)
         """,
@@ -417,19 +397,31 @@ def ensure_schema(database_connection) -> None:
                     raw.commit()
             except Exception:
                 # last resort: skip silently to avoid breaking upgrades
-                logger.debug("Failed to execute schema statement (may already exist or DB locked)")
+                logger.debug(
+                    "Failed to execute schema statement (may already exist or DB locked)"
+                )
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
     try:
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT")
+        database_connection.query(
+            "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
+        )
         # initialize existing rows with an empty JSON/dict-like string if needed
-        database_connection.query('UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL')
+        database_connection.query(
+            'UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL'
+        )
     except Exception:
         # Ignore failures (column exists or DB locked) — migrations handle this elsewhere
-        logger.debug("Failed to add plugin_configurations column to folders table (may already exist)")
+        logger.debug(
+            "Failed to add plugin_configurations column to folders table (may already exist)"
+        )
 
     try:
-        database_connection.query("ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT")
+        database_connection.query(
+            "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
+        )
     except Exception:
-        logger.debug("Failed to add invoice_numbers column to processed_files table (may already exist)")
+        logger.debug(
+            "Failed to add invoice_numbers column to processed_files table (may already exist)"
+        )

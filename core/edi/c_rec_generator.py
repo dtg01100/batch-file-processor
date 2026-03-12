@@ -5,7 +5,7 @@ for split prepaid/non-prepaid sales tax using dependency injection.
 """
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable, TextIO
+from typing import Protocol, TextIO, runtime_checkable
 
 
 @runtime_checkable

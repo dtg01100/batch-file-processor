@@ -4,26 +4,24 @@ This module contains service classes that provide specialized functionality
 for the dispatch pipeline.
 """
 
-from dispatch.services.upc_service import (
-    QueryRunnerProtocol,
-    UPCServiceResult,
-    MockQueryRunner,
-    UPCService,
+from dispatch.services.file_processor import (
+    FileProcessor,
+    FileProcessorInterface,
+    FileProcessorResult,
+    MockFileProcessor,
 )
-
 from dispatch.services.progress_reporter import (
+    CLIProgressReporter,
+    LoggingProgressReporter,
+    NullProgressReporter,
     ProgressReporter,
     UIProgressReporter,
-    CLIProgressReporter,
-    NullProgressReporter,
-    LoggingProgressReporter,
 )
-
-from dispatch.services.file_processor import (
-    FileProcessorResult,
-    FileProcessorInterface,
-    MockFileProcessor,
-    FileProcessor,
+from dispatch.services.upc_service import (
+    MockQueryRunner,
+    QueryRunnerProtocol,
+    UPCService,
+    UPCServiceResult,
 )
 
 __all__ = [

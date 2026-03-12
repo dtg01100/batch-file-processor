@@ -33,13 +33,13 @@ import csv
 import decimal
 from typing import Any, Dict, List, Tuple
 
+import core.database
 import utils
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
 )
-import core.database
 from core.exceptions import CustomerLookupError
 from core.utils import prettify_dates
 
@@ -68,7 +68,9 @@ class JolleyCustomConverter(BaseEDIConverter):
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
-            database=settings_dict.get('odbc_driver', 'QGPL'),  # Use get() with default to prevent KeyError
+            database=settings_dict.get(
+                "odbc_driver", "QGPL"
+            ),  # Use get() with default to prevent KeyError
         )
 
         # Initialize state
@@ -78,10 +80,7 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         # Open output file and create CSV writer
         context.output_file = open(
-            context.get_output_path(".csv"),
-            "w",
-            newline="\n",
-            encoding="utf-8"
+            context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
         context.csv_writer = csv.writer(context.output_file, dialect="unix")
 
@@ -140,7 +139,7 @@ class JolleyCustomConverter(BaseEDIConverter):
                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
         WHERE ohhst.bthhnb = ?
             """,
-            (invoice_number.lstrip("0"),)
+            (invoice_number.lstrip("0"),),
         )
 
         if len(header_fields) == 0:
@@ -177,12 +176,24 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         # Jolley-specific: fallback corporate fields to customer fields if None
         if header_fields_dict["Corporate_Customer_Number"] is None:
-            header_fields_dict["Corporate_Customer_Number"] = header_fields_dict['Customer_Number']
-            header_fields_dict["Corporate_Customer_Name"] = header_fields_dict["Customer_Name"]
-            header_fields_dict["Corporate_Customer_Address"] = header_fields_dict['Customer_Address']
-            header_fields_dict["Corporate_Customer_Town"] = header_fields_dict['Customer_Town']
-            header_fields_dict['Corporate_Customer_State'] = header_fields_dict['Customer_State']
-            header_fields_dict['Corporate_Customer_Zip'] = header_fields_dict['Customer_Zip']
+            header_fields_dict["Corporate_Customer_Number"] = header_fields_dict[
+                "Customer_Number"
+            ]
+            header_fields_dict["Corporate_Customer_Name"] = header_fields_dict[
+                "Customer_Name"
+            ]
+            header_fields_dict["Corporate_Customer_Address"] = header_fields_dict[
+                "Customer_Address"
+            ]
+            header_fields_dict["Corporate_Customer_Town"] = header_fields_dict[
+                "Customer_Town"
+            ]
+            header_fields_dict["Corporate_Customer_State"] = header_fields_dict[
+                "Customer_State"
+            ]
+            header_fields_dict["Corporate_Customer_Zip"] = header_fields_dict[
+                "Customer_Zip"
+            ]
 
         return header_fields_dict
 
@@ -200,7 +211,7 @@ class JolleyCustomConverter(BaseEDIConverter):
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
             where odhst.buhhnb = ?
             """,
-            (invoice_number,)
+            (invoice_number,),
         )
 
     def _get_uom(self, item_number: str, packsize: str) -> str:
@@ -228,9 +239,11 @@ class JolleyCustomConverter(BaseEDIConverter):
         try:
             return stage_2_list[0][2]
         except IndexError:
-            return '?'
+            return "?"
 
-    def _convert_to_item_total(self, unit_cost: str, qty: str) -> Tuple[decimal.Decimal, int]:
+    def _convert_to_item_total(
+        self, unit_cost: str, qty: str
+    ) -> Tuple[decimal.Decimal, int]:
         """Calculate item total from unit cost and quantity.
 
         Args:
@@ -240,7 +253,7 @@ class JolleyCustomConverter(BaseEDIConverter):
         Returns:
             Tuple of (item_total, qty_as_int)
         """
-        if qty.startswith('-'):
+        if qty.startswith("-"):
             wrkqty = int(qty[1:])
             wrkqtyint = wrkqty - (wrkqty * 2)
         else:
@@ -276,7 +289,9 @@ class JolleyCustomConverter(BaseEDIConverter):
         if blank_upc is False:
             proposed_upc = input_upc
             if len(str(proposed_upc)) == 11:
-                upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
+                upc_string = str(proposed_upc) + str(
+                    utils.calc_check_digit(proposed_upc)
+                )
             else:
                 if len(str(proposed_upc)) == 8:
                     upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
@@ -294,11 +309,11 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         # Fetch customer data from database
         self.header_fields_dict = self._get_customer_header_fields(
-            record.fields['invoice_number']
+            record.fields["invoice_number"]
         )
 
         # Fetch UOM lookup data
-        self.uom_lookup_list = self._get_uom_lookup(record.fields['invoice_number'])
+        self.uom_lookup_list = self._get_uom_lookup(record.fields["invoice_number"])
 
         csv_writer = context.csv_writer
 
@@ -313,36 +328,58 @@ class JolleyCustomConverter(BaseEDIConverter):
                 prettify_dates(self.header_fields_dict["Invoice_Date"]),
                 self.header_fields_dict["Terms_Code"],
                 record.fields["invoice_number"],
-                prettify_dates(self.header_fields_dict["Invoice_Date"],
-                              self.header_fields_dict['Terms_Duration'], -1),
+                prettify_dates(
+                    self.header_fields_dict["Invoice_Date"],
+                    self.header_fields_dict["Terms_Duration"],
+                    -1,
+                ),
             ]
         )
 
         # Build ship-to segment (uses corporate customer if available)
         ship_to_segment = [
-            str(self.header_fields_dict['Corporate_Customer_Number']) + "\n" + \
-            self.header_fields_dict['Corporate_Customer_Name'] + "\n" + \
-            self.header_fields_dict['Corporate_Customer_Address'] + "\n" + \
-            self.header_fields_dict['Corporate_Customer_Town'] + ", " +
-            self.header_fields_dict['Corporate_Customer_State'] + ", " +
-            self.header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
-            "US",
+            str(self.header_fields_dict["Corporate_Customer_Number"])
+            + "\n"
+            + self.header_fields_dict["Corporate_Customer_Name"]
+            + "\n"
+            + self.header_fields_dict["Corporate_Customer_Address"]
+            + "\n"
+            + self.header_fields_dict["Corporate_Customer_Town"]
+            + ", "
+            + self.header_fields_dict["Corporate_Customer_State"]
+            + ", "
+            + self.header_fields_dict["Corporate_Customer_Zip"]
+            + ", "
+            + "\n"
+            + "US",
         ]
 
         # Write bill-to/ship-to section (Jolley layout: Bill To on left, Ship To on right)
         csv_writer.writerow(
-            ["Bill To:",
-            str(self.header_fields_dict['Customer_Number']) + "\n" + \
-            self.header_fields_dict['Customer_Name'] + "\n" + \
-            self.header_fields_dict['Customer_Address'] + "\n" + \
-            self.header_fields_dict['Customer_Town'] + ", " +
-            self.header_fields_dict['Customer_State'] + ", " +
-            self.header_fields_dict['Customer_Zip'] + ", " + "\n" + \
-            "US",
-            "Ship To:"] + ship_to_segment
+            [
+                "Bill To:",
+                str(self.header_fields_dict["Customer_Number"])
+                + "\n"
+                + self.header_fields_dict["Customer_Name"]
+                + "\n"
+                + self.header_fields_dict["Customer_Address"]
+                + "\n"
+                + self.header_fields_dict["Customer_Town"]
+                + ", "
+                + self.header_fields_dict["Customer_State"]
+                + ", "
+                + self.header_fields_dict["Customer_Zip"]
+                + ", "
+                + "\n"
+                + "US",
+                "Ship To:",
+            ]
+            + ship_to_segment
         )
         csv_writer.writerow([""])
-        csv_writer.writerow(["Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
+        csv_writer.writerow(
+            ["Description", "UPC #", "Quantity", "UOM", "Price", "Amount"]
+        )
 
     def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item), writing to CSV.
@@ -352,17 +389,20 @@ class JolleyCustomConverter(BaseEDIConverter):
             context: The conversion context
         """
         total_price, qtyint = self._convert_to_item_total(
-            record.fields['unit_cost'],
-            record.fields['qty_of_units']
+            record.fields["unit_cost"], record.fields["qty_of_units"]
         )
-        context.csv_writer.writerow([
-            record.fields['description'],
-            self._generate_full_upc(record.fields['upc_number']),
-            qtyint,
-            self._get_uom(record.fields['vendor_item'], record.fields['unit_multiplier']),
-            "$" + str(utils.convert_to_price(record.fields['unit_cost'])),
-            "$" + str(total_price)
-        ])
+        context.csv_writer.writerow(
+            [
+                record.fields["description"],
+                self._generate_full_upc(record.fields["upc_number"]),
+                qtyint,
+                self._get_uom(
+                    record.fields["vendor_item"], record.fields["unit_multiplier"]
+                ),
+                "$" + str(utils.convert_to_price(record.fields["unit_cost"])),
+                "$" + str(total_price),
+            ]
+        )
 
     def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax), writing to CSV.
@@ -371,14 +411,16 @@ class JolleyCustomConverter(BaseEDIConverter):
             record: The C record
             context: The conversion context
         """
-        context.csv_writer.writerow([
-            record.fields['description'],
-            '000000000000',
-            1,
-            'EA',
-            "$" + str(utils.convert_to_price(record.fields['amount'])),
-            "$" + str(utils.convert_to_price(record.fields['amount']))
-        ])
+        context.csv_writer.writerow(
+            [
+                record.fields["description"],
+                "000000000000",
+                1,
+                "EA",
+                "$" + str(utils.convert_to_price(record.fields["amount"])),
+                "$" + str(utils.convert_to_price(record.fields["amount"])),
+            ]
+        )
 
     def _finalize_output(self, context: ConversionContext) -> None:
         """Finalize output by writing total row and closing file.
@@ -388,12 +430,21 @@ class JolleyCustomConverter(BaseEDIConverter):
         """
         # Write total row
         if self.header_a_record:
-            context.csv_writer.writerow([
-                "", "", "", "", "Total:",
-                "$" + str(utils.convert_to_price(
-                    self.header_a_record['invoice_total']
-                ).lstrip("0"))
-            ])
+            context.csv_writer.writerow(
+                [
+                    "",
+                    "",
+                    "",
+                    "",
+                    "Total:",
+                    "$"
+                    + str(
+                        utils.convert_to_price(
+                            self.header_a_record["invoice_total"]
+                        ).lstrip("0")
+                    ),
+                ]
+            )
 
         # Close the output file
         if context.output_file is not None:
@@ -401,7 +452,7 @@ class JolleyCustomConverter(BaseEDIConverter):
             context.output_file = None
 
         # Close database connection if it exists
-        if hasattr(self, 'query_object') and self.query_object is not None:
+        if hasattr(self, "query_object") and self.query_object is not None:
             try:
                 self.query_object.close()
             except AttributeError:
@@ -413,12 +464,13 @@ class JolleyCustomConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename: str,
     settings_dict: dict,
     parameters_dict: dict,
-    upc_dict: dict
+    upc_dict: dict,
 ) -> str:
     """Convert EDI file to Jolley Custom CSV format with database lookups.
 
@@ -448,9 +500,5 @@ def edi_convert(
     """
     converter = JolleyCustomConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_dict
+        edi_process, output_filename, settings_dict, parameters_dict, upc_dict
     )

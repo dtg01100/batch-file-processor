@@ -21,13 +21,12 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 from typing import Any, Dict, List, Optional
-import json
 
 from core.utils.bool_utils import normalize_bool, to_db_bool
-
 
 # Thread-local storage for database connections
 _thread_local = threading.local()
@@ -222,7 +221,9 @@ class Table:
 
         return d
 
-    def _serialize_record_value(self, column: str, value: Any, boolean_cols: set) -> Any:
+    def _serialize_record_value(
+        self, column: str, value: Any, boolean_cols: set
+    ) -> Any:
         if column in boolean_cols:
             return to_db_bool(value)
         return self._serialize_value(value)

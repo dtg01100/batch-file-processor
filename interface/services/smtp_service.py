@@ -3,7 +3,7 @@
 Provides toolkit-agnostic SMTP validation, decoupled from any UI framework.
 """
 
-from typing import Protocol, runtime_checkable, Optional, Tuple
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable

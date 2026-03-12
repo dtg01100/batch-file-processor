@@ -34,7 +34,7 @@ from convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    normalize_parameter
+    normalize_parameter,
 )
 
 
@@ -58,67 +58,69 @@ class CSVConverter(BaseEDIConverter):
         # Extract and normalize parameters
         params = context.parameters_dict
 
-        context.user_data['calc_upc'] = normalize_parameter(
-            params.get('calculate_upc_check_digit'), False
+        context.user_data["calc_upc"] = normalize_parameter(
+            params.get("calculate_upc_check_digit"), False
         )
-        context.user_data['inc_arec'] = normalize_parameter(
-            params.get('include_a_records'), False
+        context.user_data["inc_arec"] = normalize_parameter(
+            params.get("include_a_records"), False
         )
-        context.user_data['inc_crec'] = normalize_parameter(
-            params.get('include_c_records'), False
+        context.user_data["inc_crec"] = normalize_parameter(
+            params.get("include_c_records"), False
         )
-        context.user_data['inc_headers'] = normalize_parameter(
-            params.get('include_headers'), True
+        context.user_data["inc_headers"] = normalize_parameter(
+            params.get("include_headers"), True
         )
-        context.user_data['filter_ampersand'] = normalize_parameter(
-            params.get('filter_ampersand'), False
+        context.user_data["filter_ampersand"] = normalize_parameter(
+            params.get("filter_ampersand"), False
         )
-        context.user_data['pad_arec'] = normalize_parameter(
-            params.get('pad_a_records'), False
+        context.user_data["pad_arec"] = normalize_parameter(
+            params.get("pad_a_records"), False
         )
-        context.user_data['arec_padding'] = params.get('a_record_padding', '')
-        context.user_data['override_upc'] = normalize_parameter(
-            params.get('override_upc_bool'), False
+        context.user_data["arec_padding"] = params.get("a_record_padding", "")
+        context.user_data["override_upc"] = normalize_parameter(
+            params.get("override_upc_bool"), False
         )
-        context.user_data['override_upc_level'] = params.get('override_upc_level', 1)
-        context.user_data['override_upc_category_filter'] = params.get(
-            'override_upc_category_filter', 'ALL'
+        context.user_data["override_upc_level"] = params.get("override_upc_level", 1)
+        context.user_data["override_upc_category_filter"] = params.get(
+            "override_upc_category_filter", "ALL"
         )
-        context.user_data['retail_uom'] = normalize_parameter(
-            params.get('retail_uom'), False
+        context.user_data["retail_uom"] = normalize_parameter(
+            params.get("retail_uom"), False
         )
-        context.user_data['upc_target_length'] = int(
-            params.get('upc_target_length', 11)
+        context.user_data["upc_target_length"] = int(
+            params.get("upc_target_length", 11)
         )
-        context.user_data['upc_padding_pattern'] = params.get(
-            'upc_padding_pattern', '           '
+        context.user_data["upc_padding_pattern"] = params.get(
+            "upc_padding_pattern", "           "
         )
 
         # Open output file and create CSV writer
         context.output_file = open(
-            context.get_output_path(".csv"),
-            "w",
-            newline="",
-            encoding="utf-8"
+            context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
             context.output_file,
             dialect="excel",
             lineterminator="\r\n",
-            quoting=csv.QUOTE_ALL
+            quoting=csv.QUOTE_ALL,
         )
 
         # Write headers if enabled
-        if context.user_data['inc_headers']:
-            context.csv_writer.writerow([
-                "UPC", "Qty. Shipped", "Cost", "Suggested Retail",
-                "Description", "Case Pack", "Item Number"
-            ])
+        if context.user_data["inc_headers"]:
+            context.csv_writer.writerow(
+                [
+                    "UPC",
+                    "Qty. Shipped",
+                    "Cost",
+                    "Suggested Retail",
+                    "Description",
+                    "Case Pack",
+                    "Item Number",
+                ]
+            )
 
     def _should_process_record_type(
-        self,
-        record_type: str,
-        context: ConversionContext
+        self, record_type: str, context: ConversionContext
     ) -> bool:
         """Determine if a record type should be processed.
 
@@ -133,9 +135,9 @@ class CSVConverter(BaseEDIConverter):
         """
         user_data = context.user_data
 
-        if record_type == "A" and not user_data['inc_arec']:
+        if record_type == "A" and not user_data["inc_arec"]:
             return False
-        if record_type == "C" and not user_data['inc_crec']:
+        if record_type == "C" and not user_data["inc_crec"]:
             return False
 
         return True
@@ -152,18 +154,20 @@ class CSVConverter(BaseEDIConverter):
         user_data = context.user_data
 
         # Apply padding if enabled
-        if user_data['pad_arec']:
-            cust_vendor = user_data['arec_padding']
+        if user_data["pad_arec"]:
+            cust_vendor = user_data["arec_padding"]
         else:
-            cust_vendor = record.fields['cust_vendor']
+            cust_vendor = record.fields["cust_vendor"]
 
-        context.csv_writer.writerow([
-            record.fields['record_type'],
-            cust_vendor,
-            record.fields['invoice_number'],
-            record.fields['invoice_date'],
-            record.fields['invoice_total']
-        ])
+        context.csv_writer.writerow(
+            [
+                record.fields["record_type"],
+                cust_vendor,
+                record.fields["invoice_number"],
+                record.fields["invoice_date"],
+                record.fields["invoice_total"],
+            ]
+        )
 
         # Store header in context for potential use by other records
         context.arec_header = record.fields
@@ -182,37 +186,38 @@ class CSVConverter(BaseEDIConverter):
         fields = dict(record.fields)  # Copy to allow modification
 
         # Apply retail UOM conversion if enabled
-        if user_data['retail_uom']:
+        if user_data["retail_uom"]:
             fields = self._apply_retail_uom_conversion(fields, context)
 
         # Apply UPC override if enabled
-        if user_data['override_upc']:
+        if user_data["override_upc"]:
             fields = self._apply_upc_override(fields, context)
 
         # Process UPC for output
         upc_in_csv = self._process_upc_for_output(fields, user_data)
 
         # Process other fields
-        quantity_shipped = self._process_quantity(fields['qty_of_units'])
-        cost = utils.convert_to_price(fields['unit_cost'])
-        suggested_retail = utils.convert_to_price(fields['suggested_retail_price'])
+        quantity_shipped = self._process_quantity(fields["qty_of_units"])
+        cost = utils.convert_to_price(fields["unit_cost"])
+        suggested_retail = utils.convert_to_price(fields["suggested_retail_price"])
         description = self._process_description(
-            fields['description'],
-            user_data['filter_ampersand']
+            fields["description"], user_data["filter_ampersand"]
         )
-        case_pack = self._process_quantity(fields['unit_multiplier'])
-        item_number = self._process_quantity(fields['vendor_item'])
+        case_pack = self._process_quantity(fields["unit_multiplier"])
+        item_number = self._process_quantity(fields["vendor_item"])
 
         # Write the CSV row
-        context.csv_writer.writerow([
-            upc_in_csv,
-            quantity_shipped,
-            cost,
-            suggested_retail,
-            description,
-            case_pack,
-            item_number
-        ])
+        context.csv_writer.writerow(
+            [
+                upc_in_csv,
+                quantity_shipped,
+                cost,
+                suggested_retail,
+                description,
+                case_pack,
+                item_number,
+            ]
+        )
 
     def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax).
@@ -221,17 +226,17 @@ class CSVConverter(BaseEDIConverter):
             record: The C record
             context: The conversion context
         """
-        context.csv_writer.writerow([
-            record.fields['record_type'],
-            record.fields['charge_type'],
-            record.fields['description'],
-            record.fields['amount']
-        ])
+        context.csv_writer.writerow(
+            [
+                record.fields["record_type"],
+                record.fields["charge_type"],
+                record.fields["description"],
+                record.fields["amount"],
+            ]
+        )
 
     def _apply_retail_uom_conversion(
-        self,
-        fields: dict,
-        context: ConversionContext
+        self, fields: dict, context: ConversionContext
     ) -> dict:
         """Apply retail UOM conversion to B record fields.
 
@@ -248,19 +253,19 @@ class CSVConverter(BaseEDIConverter):
 
         # Validate fields can be parsed
         try:
-            item_number = int(fields['vendor_item'].strip())
-            float(fields['unit_cost'].strip())
-            unit_multiplier = int(fields['unit_multiplier'].strip())
+            item_number = int(fields["vendor_item"].strip())
+            float(fields["unit_cost"].strip())
+            unit_multiplier = int(fields["unit_multiplier"].strip())
             if unit_multiplier == 0:
                 raise ValueError("Unit multiplier cannot be zero")
-            int(fields['qty_of_units'].strip())
+            int(fields["qty_of_units"].strip())
         except Exception:
             print("cannot parse b record field, skipping retail UOM conversion")
             return fields
 
         # Get UPC for each (retail) from lookup
-        upc_target_length = user_data['upc_target_length']
-        upc_padding = user_data['upc_padding_pattern']
+        upc_target_length = user_data["upc_target_length"]
+        upc_padding = user_data["upc_padding_pattern"]
 
         try:
             each_upc = context.upc_lut[item_number][1][:upc_target_length].ljust(
@@ -272,19 +277,19 @@ class CSVConverter(BaseEDIConverter):
         # Apply conversion
         try:
             # Convert unit cost from case cost to each cost
-            case_cost = Decimal(fields['unit_cost'].strip()) / 100
+            case_cost = Decimal(fields["unit_cost"].strip()) / 100
             each_cost = case_cost / Decimal(unit_multiplier)
-            each_cost_cents = str(each_cost.quantize(Decimal('.01'))).replace(".", "")
-            fields['unit_cost'] = each_cost_cents[-6:].rjust(6, '0')
+            each_cost_cents = str(each_cost.quantize(Decimal(".01"))).replace(".", "")
+            fields["unit_cost"] = each_cost_cents[-6:].rjust(6, "0")
 
             # Convert quantity from cases to eaches
-            case_qty = int(fields['qty_of_units'].strip())
+            case_qty = int(fields["qty_of_units"].strip())
             each_qty = unit_multiplier * case_qty
-            fields['qty_of_units'] = str(each_qty).rjust(5, '0')
+            fields["qty_of_units"] = str(each_qty).rjust(5, "0")
 
             # Set UPC to each UPC and multiplier to 1
-            fields['upc_number'] = each_upc
-            fields['unit_multiplier'] = '000001'
+            fields["upc_number"] = each_upc
+            fields["unit_multiplier"] = "000001"
 
         except Exception as error:
             print(f"Retail UOM conversion error: {error}")
@@ -304,15 +309,15 @@ class CSVConverter(BaseEDIConverter):
         user_data = context.user_data
 
         try:
-            vendor_item = int(fields['vendor_item'].strip())
+            vendor_item = int(fields["vendor_item"].strip())
 
             if vendor_item not in context.upc_lut:
-                fields['upc_number'] = ""
+                fields["upc_number"] = ""
                 return fields
 
             # Check category filter
             do_update = False
-            category_filter = user_data['override_upc_category_filter']
+            category_filter = user_data["override_upc_category_filter"]
             upc_data = context.upc_lut[vendor_item]
 
             if category_filter == "ALL":
@@ -323,13 +328,13 @@ class CSVConverter(BaseEDIConverter):
                     do_update = True
 
             if do_update:
-                upc_level = user_data['override_upc_level']
+                upc_level = user_data["override_upc_level"]
                 if isinstance(upc_level, str):
                     upc_level = int(upc_level)
-                fields['upc_number'] = upc_data[upc_level]
+                fields["upc_number"] = upc_data[upc_level]
 
         except (KeyError, ValueError):
-            fields['upc_number'] = ""
+            fields["upc_number"] = ""
 
         return fields
 
@@ -348,14 +353,14 @@ class CSVConverter(BaseEDIConverter):
         # Check if UPC is blank
         blank_upc = False
         try:
-            int(fields['upc_number'].rstrip())
+            int(fields["upc_number"].rstrip())
         except ValueError:
             blank_upc = True
 
         # Calculate full UPC with check digit
         upc_string = ""
         if not blank_upc:
-            proposed_upc = fields['upc_number'].strip()
+            proposed_upc = fields["upc_number"].strip()
 
             if len(str(proposed_upc)) == 12:
                 upc_string = str(proposed_upc)
@@ -367,11 +372,11 @@ class CSVConverter(BaseEDIConverter):
                 upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
 
         # Apply tab prefix if calc_upc is enabled
-        calc_upc = user_data['calc_upc']
+        calc_upc = user_data["calc_upc"]
         if calc_upc and not blank_upc:
             return "\t" + upc_string
         else:
-            return fields['upc_number']
+            return fields["upc_number"]
 
     @staticmethod
     def _process_quantity(qty_str: str) -> str:
@@ -407,12 +412,13 @@ class CSVConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename: str,
     settings_dict: dict,
     parameters_dict: dict,
-    upc_lut: dict
+    upc_lut: dict,
 ) -> str:
     """Convert EDI file to CSV format with configurable options.
 
@@ -442,9 +448,5 @@ def edi_convert(
     """
     converter = CSVConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_lut
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lut
     )

@@ -133,15 +133,19 @@ class QtBatchFileSenderApp:
 
         self._parse_arguments(args)
 
-        if self._args.self_test:
+        if self._args and self._args.self_test:
             exit_code = self._run_self_test()
             sys.exit(exit_code)
 
-        if self._args.gui_test:
+        if self._args and self._args.gui_test:
             exit_code = self._run_gui_self_test()
             sys.exit(exit_code)
 
         self._setup_config_directories()
+
+        # Ensure config directories are set before database initialization
+        if self._database_path is None or self._config_folder is None:
+            raise RuntimeError("Configuration directories not initialized")
 
         if self._database is None:
             self._database = DatabaseObj(
@@ -164,8 +168,9 @@ class QtBatchFileSenderApp:
         self._logs_directory = oversight
         self._errors_directory = oversight
 
-        if self._args.automatic:
-            self._automatic_process_directories(self._database.folders_table)
+        if self._args and self._args.automatic:
+            if self._database.folders_table:
+                self._automatic_process_directories(self._database.folders_table)
             return
 
         self._bootstrap.build_ui_runtime()
@@ -222,6 +227,8 @@ class QtBatchFileSenderApp:
         self._window_controller.set_main_button_states()
 
     def _select_folder(self) -> None:
+        if self._database is None or self._ui_service is None or self._folder_manager is None:
+            return
         prior_folder = self._database.get_oversight_or_default()
         initial_directory = prior_folder.get("single_add_folder_prior", "")
         if not initial_directory or not os.path.exists(initial_directory):
@@ -233,24 +240,28 @@ class QtBatchFileSenderApp:
         if not selected_folder or not os.path.exists(selected_folder):
             return
 
-        self._database.oversight_and_defaults.update(
-            {"id": 1, "single_add_folder_prior": selected_folder}, ["id"]
-        )
+        if self._database.oversight_and_defaults:
+            self._database.oversight_and_defaults.update(
+                {"id": 1, "single_add_folder_prior": selected_folder}, ["id"]
+            )
         proposed_folder = self._folder_manager.check_folder_exists(selected_folder)
 
         if proposed_folder["truefalse"] is False:
-            self._progress_service.show("Adding Folder...")
+            if self._progress_service:
+                self._progress_service.show("Adding Folder...")
             self._folder_manager.add_folder(selected_folder)
             if self._ui_service.ask_yes_no(
                 "Mark Processed",
                 "Do you want to mark files in folder as processed?",
             ):
-                folder_dict = self._database.folders_table.find_one(
-                    folder_name=selected_folder
-                )
-                if folder_dict:
-                    self._mark_active_as_processed_wrapper(folder_dict["id"])
-            self._progress_service.hide()
+                if self._database.folders_table:
+                    folder_dict = self._database.folders_table.find_one(
+                        folder_name=selected_folder
+                    )
+                    if folder_dict:
+                        self._mark_active_as_processed_wrapper(folder_dict["id"])
+            if self._progress_service:
+                self._progress_service.hide()
             self._refresh_users_list()
         else:
             proposed_folder_dict = proposed_folder["matched_folder"]
@@ -260,6 +271,8 @@ class QtBatchFileSenderApp:
                 self._open_edit_folders_dialog(proposed_folder_dict)
 
     def _batch_add_folders(self) -> None:
+        if self._database is None or self._ui_service is None or self._folder_manager is None:
+            return
         prior_folder = self._database.get_oversight_or_default()
         starting_directory = os.getcwd()
         initial = prior_folder.get("batch_add_folder_prior") or os.path.expanduser("~")
@@ -270,9 +283,10 @@ class QtBatchFileSenderApp:
         if not selection:
             return
 
-        self._database.oversight_and_defaults.update(
-            {"id": 1, "batch_add_folder_prior": selection}, ["id"]
-        )
+        if self._database.oversight_and_defaults:
+            self._database.oversight_and_defaults.update(
+                {"id": 1, "batch_add_folder_prior": selection}, ["id"]
+            )
 
         folders_to_add = [
             os.path.join(selection, f)
@@ -285,12 +299,14 @@ class QtBatchFileSenderApp:
         ):
             return
 
-        self._progress_service.show("Adding folders...")
+        if self._progress_service:
+            self._progress_service.show("Adding folders...")
         added, skipped = 0, 0
         for folder in folders_to_add:
-            self._progress_service.update_message(
-                f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})"
-            )
+            if self._progress_service:
+                self._progress_service.update_message(
+                    f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})"
+                )
             if self._folder_manager.check_folder_exists(folder)["truefalse"]:
                 skipped += 1
             else:
@@ -298,7 +314,8 @@ class QtBatchFileSenderApp:
                 added += 1
 
         print(f"done adding {added} folders")
-        self._progress_service.hide()
+        if self._progress_service:
+            self._progress_service.hide()
         self._ui_service.show_info(
             "Batch Add Complete",
             f"{added} folders added, {skipped} folders skipped.",
@@ -307,7 +324,9 @@ class QtBatchFileSenderApp:
         os.chdir(starting_directory)
 
     def _edit_folder_selector(self, folder_to_be_edited: int) -> None:
-        edit_folder = self._database.folders_table.find_one(id=folder_to_be_edited)
+        if self._database is None or self._ui_service is None:
+            return
+        edit_folder = self._database.folders_table.find_one(id=folder_to_be_edited) if self._database.folders_table else None
         if edit_folder:
             self._open_edit_folders_dialog(edit_folder)
         else:
@@ -316,47 +335,55 @@ class QtBatchFileSenderApp:
             )
 
     def _send_single(self, folder_id: int) -> None:
+        if self._database is None or self._ui_service is None or self._progress_service is None:
+            return
         self._progress_service.show("Working...")
         try:
-            single_table = self._database.session_database["single_table"]
-            single_table.drop()
+            if self._database.session_database:
+                single_table = self._database.session_database["single_table"]
+                single_table.drop()
         finally:
-            self._database.session_database.query(
-                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
-            )
-            self._database.session_database.query(
-                "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
-            )
-            single_table = self._database.session_database["single_table"]
-            table_dict = self._database.folders_table.find_one(id=folder_id)
-            if table_dict:
-                table_dict["old_id"] = table_dict.pop("id")
-                # Filter to columns that exist in single_table to handle
-                # schema differences between main and session databases
-                valid_cols = {
-                    row["name"]
-                    for row in self._database.session_database.query(
-                        "PRAGMA table_info(single_table)"
-                    )
-                }
-                table_dict = {
-                    k: v for k, v in table_dict.items() if k in valid_cols
-                }
-                single_table.insert(table_dict)
-            else:
-                self._ui_service.show_error(
-                    "Error", f"Folder with id {folder_id} not found."
+            if self._database.session_database:
+                self._database.session_database.query(
+                    "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
                 )
-                return
-            self._progress_service.hide()
-            self._graphical_process_directories(single_table)
-            single_table.drop()
+                self._database.session_database.query(
+                    "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
+                )
+                single_table = self._database.session_database["single_table"]
+                if self._database.folders_table:
+                    table_dict = self._database.folders_table.find_one(id=folder_id)
+                    if table_dict:
+                        table_dict["old_id"] = table_dict.pop("id")
+                        # Filter to columns that exist in single_table to handle
+                        # schema differences between main and session databases
+                        valid_cols = {
+                            row["name"]
+                            for row in self._database.session_database.query(
+                                "PRAGMA table_info(single_table)"
+                            )
+                        }
+                        table_dict = {k: v for k, v in table_dict.items() if k in valid_cols}
+                        single_table.insert(table_dict)
+                    else:
+                        self._ui_service.show_error(
+                            "Error", f"Folder with id {folder_id} not found."
+                        )
+                        return
+                self._progress_service.hide()
+                if self._database.session_database:
+                    self._graphical_process_directories(single_table)
+                    single_table.drop()
 
     def _disable_folder(self, folder_id: int) -> None:
+        if self._folder_manager is None:
+            return
         self._folder_manager.disable_folder(folder_id)
         self._refresh_users_list()
 
     def _toggle_folder(self, folder_id: int) -> None:
+        if self._folder_manager is None or self._ui_service is None:
+            return
         folder = self._folder_manager.get_folder_by_id(folder_id)
         if folder:
             if not folder.get("folder_is_active", False):
@@ -400,6 +427,8 @@ class QtBatchFileSenderApp:
     def _delete_folder_entry_wrapper(
         self, folder_to_be_removed: int, alias: str
     ) -> None:
+        if self._ui_service is None or self._folder_manager is None:
+            return
         if self._ui_service.ask_yes_no(
             "Confirm Delete",
             f"Are you sure you want to remove the folder {alias}?",
@@ -440,9 +469,13 @@ class QtBatchFileSenderApp:
                 self._set_main_button_states()
 
     def _on_folder_edit_applied(self, folder_config: dict) -> None:
+        if self._database is None or self._database.folders_table is None:
+            return
         self._database.folders_table.update(folder_config, ["id"])
 
     def _set_defaults_popup(self) -> None:
+        if self._database is None:
+            return
         defaults = self._database.get_oversight_or_default()
         defaults = dict(defaults)
         defaults.setdefault("copy_to_directory", "")
@@ -509,28 +542,30 @@ class QtBatchFileSenderApp:
         self._open_edit_folders_dialog(defaults)
 
     def _show_edit_settings_dialog(self) -> None:
+        if self._database is None:
+            return
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
         EditSettingsDialog(
             self._window,
             self._database.get_oversight_or_default(),
-            settings_provider=lambda: self._database.get_settings_or_default(),
-            oversight_provider=lambda: self._database.get_oversight_or_default(),
-            update_settings=lambda s: self._database.settings.update(s, ["id"]),
+            settings_provider=lambda: self._database.get_settings_or_default() if self._database else {},
+            oversight_provider=lambda: self._database.get_oversight_or_default() if self._database else {},
+            update_settings=lambda s: self._database.settings.update(s, ["id"]) if self._database and self._database.settings else None,
             update_oversight=lambda o: self._database.oversight_and_defaults.update(
                 o, ["id"]
-            ),
+            ) if self._database and self._database.oversight_and_defaults else None,
             on_apply=self._update_reporting,
             refresh_callback=self._refresh_users_list,
             count_email_backends=lambda: self._database.folders_table.count(
                 process_backend_email=True
-            ),
+            ) if self._database and self._database.folders_table else 0,
             count_disabled_folders=lambda: self._database.folders_table.count(
                 process_backend_email=True,
                 process_backend_ftp=False,
                 process_backend_copy=False,
                 folder_is_active=True,
-            ),
+            ) if self._database and self._database.folders_table else 0,
             disable_email_backends=self._disable_all_email_backends,
             disable_folders_without_backends=self._disable_folders_without_backends,
         ).exec()
@@ -545,6 +580,8 @@ class QtBatchFileSenderApp:
         backup_increment.do_backup(self._database_path)
 
         def database_import_callback(selected_import_db_path: str) -> bool:
+            if self._window is None or self._database_path is None:
+                return False
             try:
                 show_database_import_dialog(
                     parent=self._window,
@@ -563,12 +600,12 @@ class QtBatchFileSenderApp:
             database_obj=self._database,
             refresh_callback=self._refresh_users_list,
             set_button_states_callback=self._set_main_button_states,
-            delete_folder_callback=self._folder_manager.delete_folder_with_related,
+            delete_folder_callback=self._folder_manager.delete_folder_with_related if self._folder_manager else None,
             database_path=self._database_path,
             running_platform=self._running_platform,
             database_version=self._database_version,
             progress_callback=self._progress_service,
-            confirm_callback=lambda msg: self._ui_service.ask_ok_cancel("Confirm", msg),
+            confirm_callback=lambda msg: self._ui_service.ask_ok_cancel("Confirm", msg) if self._ui_service else False,
             database_import_callback=database_import_callback,
         )
 
@@ -579,6 +616,8 @@ class QtBatchFileSenderApp:
         )
 
     def _show_processed_files_dialog_wrapper(self) -> None:
+        if self._database is None or self._ui_service is None:
+            return
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
         dlg = ProcessedFilesDialog(
@@ -589,6 +628,8 @@ class QtBatchFileSenderApp:
         dlg.exec()
 
     def _show_resend_dialog(self) -> None:
+        if self._database is None:
+            return
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
         dlg = ResendDialog(
@@ -599,11 +640,15 @@ class QtBatchFileSenderApp:
             dlg.exec()
 
     def _disable_all_email_backends(self) -> None:
+        if self._database is None or self._database.folders_table is None:
+            return
         for row in self._database.folders_table.find(process_backend_email=True):
             row["process_backend_email"] = False
             self._database.folders_table.update(row, ["id"])
 
     def _disable_folders_without_backends(self) -> None:
+        if self._database is None or self._database.folders_table is None:
+            return
         for row in self._database.folders_table.find(
             process_backend_email=False,
             process_backend_ftp=False,
@@ -614,11 +659,15 @@ class QtBatchFileSenderApp:
             self._database.folders_table.update(row, ["id"])
 
     def _update_reporting(self, changes: dict) -> None:
+        if self._database is None or self._database.oversight_and_defaults is None:
+            return
         self._database.oversight_and_defaults.update(changes, ["id"])
 
     def _mark_active_as_processed_wrapper(
         self, selected_folder: Optional[int] = None
     ) -> None:
+        if self._folder_manager is None:
+            return
         from interface.operations.maintenance_functions import MaintenanceFunctions
 
         maintenance = MaintenanceFunctions(
@@ -634,6 +683,8 @@ class QtBatchFileSenderApp:
         maintenance.mark_active_as_processed(selected_folder=selected_folder)
 
     def _check_logs_directory(self) -> bool:
+        if self._logs_directory is None:
+            return False
         try:
             test_file_path = os.path.join(
                 self._logs_directory["logs_directory"], "test_log_file"

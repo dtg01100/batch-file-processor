@@ -13,8 +13,8 @@ import warnings
 from core.database.query_runner import (
     ConnectionConfig,
     DatabaseConnectionProtocol,
-    PyODBCConnection,
     MockConnection,
+    PyODBCConnection,
     QueryRunner,
     create_query_runner,
 )

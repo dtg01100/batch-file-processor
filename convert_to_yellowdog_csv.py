@@ -30,7 +30,7 @@ from convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_csv_writer
+    create_csv_writer,
 )
 from core.edi.inv_fetcher import InvFetcher
 
@@ -65,32 +65,31 @@ class YellowDogConverter(BaseEDIConverter):
 
         # Open output file and create CSV writer
         context.output_file = open(
-            context.get_output_path(".csv"),
-            "w",
-            newline="",
-            encoding="utf-8"
+            context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
             context.output_file,
             dialect="excel",
             lineterminator="\r\n",
-            quoting=csv.QUOTE_ALL
+            quoting=csv.QUOTE_ALL,
         )
 
         # Write headers
-        context.csv_writer.writerow([
-            "Invoice Total",
-            "Description",
-            "Item Number",
-            "Cost",
-            "Quantity",
-            "UOM Desc.",
-            "Invoice Date",
-            "Invoice Number",
-            "Customer Name",
-            "Customer PO Number",
-            "UPC",
-        ])
+        context.csv_writer.writerow(
+            [
+                "Invoice Total",
+                "Description",
+                "Item Number",
+                "Cost",
+                "Quantity",
+                "UOM Desc.",
+                "Invoice Date",
+                "Invoice Number",
+                "Customer Name",
+                "Customer PO Number",
+                "UPC",
+            ]
+        )
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header), flushing previous invoice if exists.
@@ -158,8 +157,7 @@ class YellowDogConverter(BaseEDIConverter):
         # Calculate invoice date
         try:
             invoice_date = datetime.strftime(
-                utils.datetime_from_invtime(self.arec_line['invoice_date']),
-                "%Y%m%d"
+                utils.datetime_from_invtime(self.arec_line["invoice_date"]), "%Y%m%d"
             )
         except (ValueError, KeyError):
             invoice_date = "N/A"
@@ -167,14 +165,14 @@ class YellowDogConverter(BaseEDIConverter):
         # Get invoice total
         try:
             invoice_total = utils.convert_to_price(
-                str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))
+                str(utils.dac_str_int_to_int(self.arec_line["invoice_total"]))
             )
         except (KeyError, ValueError):
             invoice_total = "0.00"
 
         # Get invoice number for lookups
         try:
-            invoice_number = self.arec_line['invoice_number']
+            invoice_number = self.arec_line["invoice_number"]
         except KeyError:
             invoice_number = "0"
 
@@ -189,25 +187,27 @@ class YellowDogConverter(BaseEDIConverter):
 
             # Fetch UOM description
             uom_desc = self.inv_fetcher.fetch_uom_desc(
-                curline['vendor_item'],
-                curline['unit_multiplier'],
+                curline["vendor_item"],
+                curline["unit_multiplier"],
                 lineno,
-                int(invoice_number) if invoice_number.isdigit() else 0
+                int(invoice_number) if invoice_number.isdigit() else 0,
             )
 
-            csv_writer.writerow([
-                invoice_total,
-                curline["description"],
-                curline['vendor_item'],
-                utils.convert_to_price(curline['unit_cost']),
-                utils.dac_str_int_to_int(curline['qty_of_units']),
-                uom_desc,
-                invoice_date,
-                invoice_number,
-                customer_name,
-                customer_po,
-                curline['upc_number']
-            ])
+            csv_writer.writerow(
+                [
+                    invoice_total,
+                    curline["description"],
+                    curline["vendor_item"],
+                    utils.convert_to_price(curline["unit_cost"]),
+                    utils.dac_str_int_to_int(curline["qty_of_units"]),
+                    uom_desc,
+                    invoice_date,
+                    invoice_number,
+                    customer_name,
+                    customer_po,
+                    curline["upc_number"],
+                ]
+            )
             lineno += 1
 
         # Write C records (charges)
@@ -216,35 +216,38 @@ class YellowDogConverter(BaseEDIConverter):
 
             try:
                 charge_amount = utils.convert_to_price(
-                    str(utils.dac_str_int_to_int(self.arec_line['invoice_total']))
+                    str(utils.dac_str_int_to_int(self.arec_line["invoice_total"]))
                 )
             except (KeyError, ValueError):
                 charge_amount = "0.00"
 
-            csv_writer.writerow([
-                charge_amount,
-                curline["description"],
-                9999999,
-                utils.convert_to_price(curline['amount']),
-                1,
-                '',
-                invoice_date,
-                invoice_number,
-                customer_name,
-                ""  # No PO for C records
-            ])
+            csv_writer.writerow(
+                [
+                    charge_amount,
+                    curline["description"],
+                    9999999,
+                    utils.convert_to_price(curline["amount"]),
+                    1,
+                    "",
+                    invoice_date,
+                    invoice_number,
+                    customer_name,
+                    "",  # No PO for C records
+                ]
+            )
 
 
 # =============================================================================
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename: str,
     settings_dict: dict,
     parameters_dict: dict,
-    upc_lookup: dict
+    upc_lookup: dict,
 ) -> str:
     """Convert EDI file to YellowDog CSV format with database lookups.
 
@@ -274,9 +277,5 @@ def edi_convert(
     """
     converter = YellowDogConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_lookup
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
     )

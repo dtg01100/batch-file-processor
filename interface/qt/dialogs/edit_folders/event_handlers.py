@@ -5,11 +5,11 @@ Provides callback functions for various user actions such as button clicks,
 checkbox toggles, and dropdown selections.
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional, Callable
+import os
+from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMessageBox, QCheckBox
+from PyQt6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QWidget
 
 from interface.qt.theme import Theme
 
@@ -70,24 +70,28 @@ class EventHandlers:
         is_active = active_btn.isChecked()
         if is_active:
             active_btn.setText("Folder Is Enabled")
-            active_btn.setStyleSheet(f"""
+            active_btn.setStyleSheet(
+                f"""
                 QCheckBox {{
                     background-color: {Theme.SUCCESS_CONTAINER};
                     color: {Theme.ON_SUCCESS_CONTAINER};
                     padding: 4px;
                     border-radius: 4px;
                 }}
-            """)
+            """
+            )
         else:
             active_btn.setText("Folder Is Disabled")
-            active_btn.setStyleSheet(f"""
+            active_btn.setStyleSheet(
+                f"""
                 QCheckBox {{
                     background-color: {Theme.ERROR_CONTAINER};
                     color: {Theme.ON_ERROR_CONTAINER};
                     padding: 4px;
                     border-radius: 4px;
                 }}
-            """)
+            """
+            )
 
         # Update enabled state of other widgets
         for key in ["process_backend_copy_check", "process_backend_ftp_check"]:

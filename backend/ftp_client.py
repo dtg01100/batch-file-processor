@@ -6,7 +6,7 @@ that conform to the FTPClientProtocol interface.
 
 import ftplib
 import logging
-from typing import Optional, Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 from backend.protocols import FTPClientProtocol
 

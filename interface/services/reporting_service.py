@@ -11,7 +11,7 @@ import os
 import time
 import zipfile
 from io import StringIO
-from typing import Protocol, runtime_checkable, Optional, Any
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from interface.services.progress_service import ProgressCallback
 

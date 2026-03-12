@@ -4,12 +4,12 @@ This module provides maintenance functions for the Batch File Sender application
 extracted from main_interface.py for better testability.
 """
 
-import os
 import datetime
 import hashlib
+import os
 from typing import Any, Callable, Optional
 
-from interface.services.progress_service import ProgressCallback, NullProgressCallback
+from interface.services.progress_service import NullProgressCallback, ProgressCallback
 
 
 class MaintenanceFunctions:

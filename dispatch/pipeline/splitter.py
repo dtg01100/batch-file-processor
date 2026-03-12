@@ -7,7 +7,7 @@ wrapping the existing EDISplitter with pipeline integration.
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, runtime_checkable, Any
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.utils.bool_utils import normalize_bool
@@ -514,7 +514,9 @@ class EDISplitterStep:
                 else:
                     logger.debug("No filtering applied to %s", input_path)
             except Exception as e:
-                logger.error("Category filtering failed for %s: %s", input_path, e, exc_info=True)
+                logger.error(
+                    "Category filtering failed for %s: %s", input_path, e, exc_info=True
+                )
                 error_msg = f"Category filtering failed: {e}"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -551,9 +553,7 @@ class EDISplitterStep:
         )
 
         if include_invoices and include_credits:
-            logger.debug(
-                "After credit/invoice filter: %d files remain", len(files)
-            )
+            logger.debug("After credit/invoice filter: %d files remain", len(files))
             return files
 
         filtered_files = []

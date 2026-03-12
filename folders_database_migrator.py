@@ -180,7 +180,8 @@ def upgrade_database(
         administrative_section = database_connection["administrative"]
 
         database_connection.query("DROP TABLE IF EXISTS settings")
-        database_connection.query("""
+        database_connection.query(
+            """
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 enable_email INTEGER,
@@ -193,7 +194,8 @@ def upgrade_database(
                 backup_counter_maximum INTEGER,
                 enable_interval_backups INTEGER
             )
-        """)
+        """
+        )
 
         settings_table = database_connection["settings"]
         administrative_section_dict = administrative_section.find_one(id=1)
@@ -315,9 +317,7 @@ def upgrade_database(
         database_connection.query(
             "alter table 'administrative' add column 'append_a_records'"
         )
-        database_connection.query(
-            'UPDATE "administrative" SET "append_a_records" = 0'
-        )
+        database_connection.query('UPDATE "administrative" SET "append_a_records" = 0')
         database_connection.query(
             "alter table 'administrative' add column 'a_record_append_text'"
         )
@@ -656,9 +656,7 @@ def upgrade_database(
         database_connection.query(
             "alter table 'administrative' add column 'override_upc_bool'"
         )
-        database_connection.query(
-            'UPDATE "administrative" set "override_upc_bool"=0'
-        )
+        database_connection.query('UPDATE "administrative" set "override_upc_bool"=0')
         database_connection.query(
             "alter table 'administrative' add column 'override_upc_level'"
         )
@@ -681,15 +679,11 @@ def upgrade_database(
         database_connection.query(
             "alter table 'folders' add column 'split_edi_include_invoices'"
         )
-        database_connection.query(
-            'UPDATE "folders" set "split_edi_include_invoices"=1'
-        )
+        database_connection.query('UPDATE "folders" set "split_edi_include_invoices"=1')
         database_connection.query(
             "alter table 'folders' add column 'split_edi_include_credits'"
         )
-        database_connection.query(
-            'UPDATE "folders" set "split_edi_include_credits"=1'
-        )
+        database_connection.query('UPDATE "folders" set "split_edi_include_credits"=1')
         database_connection.query(
             "alter table 'administrative' add column 'split_edi_include_invoices'"
         )
@@ -879,9 +873,11 @@ def upgrade_database(
 
     if db_version_dict["version"] == "37":
         database_connection.query("ALTER TABLE 'version' ADD COLUMN 'notes' TEXT")
-        database_connection.query("""
+        database_connection.query(
+            """
             UPDATE 'version' SET notes='administrative table duplicates folders table. Use folders table for all operations. administrative table deprecated.'
-        """)
+        """
+        )
 
         update_version = dict(id=1, version="38", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -945,7 +941,9 @@ def upgrade_database(
 
             # Copy data (excluding any old id if it existed but was null)
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders")
+            cursor.execute(
+                f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders"
+            )
 
             # Drop old table and rename new one
             cursor.execute("DROP TABLE folders")
@@ -974,7 +972,9 @@ def upgrade_database(
 
             # Copy data
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative")
+            cursor.execute(
+                f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative"
+            )
 
             # Drop old table and rename new one
             cursor.execute("DROP TABLE administrative")
@@ -1037,36 +1037,40 @@ def upgrade_database(
     if db_version_dict["version"] == "41":
         # Normalize string boolean values (True/False) to integer values (1/0)
         boolean_fields = [
-            'folder_is_active',
-            'process_edi',
-            'calculate_upc_check_digit',
-            'include_a_records',
-            'include_c_records',
-            'include_headers',
-            'filter_ampersand',
-            'pad_a_records',
-            'tweak_edi',
-            'split_edi',
-            'force_edi_validation',
-            'append_a_records',
-            'force_txt_file_ext',
-            'prepend_date_files',
-            'override_upc_bool',
-            'split_edi_include_invoices',
-            'split_edi_include_credits',
-            'process_backend_copy',
-            'process_edi_output',
-            'process_backend_email',
-            'process_backend_ftp',
+            "folder_is_active",
+            "process_edi",
+            "calculate_upc_check_digit",
+            "include_a_records",
+            "include_c_records",
+            "include_headers",
+            "filter_ampersand",
+            "pad_a_records",
+            "tweak_edi",
+            "split_edi",
+            "force_edi_validation",
+            "append_a_records",
+            "force_txt_file_ext",
+            "prepend_date_files",
+            "override_upc_bool",
+            "split_edi_include_invoices",
+            "split_edi_include_credits",
+            "process_backend_copy",
+            "process_edi_output",
+            "process_backend_email",
+            "process_backend_ftp",
         ]
 
         # Normalize folders table
         for field in boolean_fields:
             try:
                 # Replace True with 1
-                database_connection.query(f"UPDATE folders SET {field} = 1 WHERE {field} = 'True'")
+                database_connection.query(
+                    f"UPDATE folders SET {field} = 1 WHERE {field} = 'True'"
+                )
                 # Replace False with 0
-                database_connection.query(f"UPDATE folders SET {field} = 0 WHERE {field} = 'False'")
+                database_connection.query(
+                    f"UPDATE folders SET {field} = 0 WHERE {field} = 'False'"
+                )
             except Exception as e:
                 print(f"Error normalizing field {field} in folders: {e}")
                 # Skip fields that don't exist in this version
@@ -1075,19 +1079,31 @@ def upgrade_database(
         for field in boolean_fields:
             try:
                 # Replace True with 1
-                database_connection.query(f"UPDATE administrative SET {field} = 1 WHERE {field} = 'True'")
+                database_connection.query(
+                    f"UPDATE administrative SET {field} = 1 WHERE {field} = 'True'"
+                )
                 # Replace False with 0
-                database_connection.query(f"UPDATE administrative SET {field} = 0 WHERE {field} = 'False'")
+                database_connection.query(
+                    f"UPDATE administrative SET {field} = 0 WHERE {field} = 'False'"
+                )
             except Exception as e:
                 print(f"Error normalizing field {field} in administrative: {e}")
                 # Skip fields that don't exist in this version
 
         # Normalize settings table
         try:
-            database_connection.query("UPDATE settings SET enable_email = 1 WHERE enable_email = 'True'")
-            database_connection.query("UPDATE settings SET enable_email = 0 WHERE enable_email = 'False'")
-            database_connection.query("UPDATE settings SET enable_interval_backups = 1 WHERE enable_interval_backups = 'True'")
-            database_connection.query("UPDATE settings SET enable_interval_backups = 0 WHERE enable_interval_backups = 'False'")
+            database_connection.query(
+                "UPDATE settings SET enable_email = 1 WHERE enable_email = 'True'"
+            )
+            database_connection.query(
+                "UPDATE settings SET enable_email = 0 WHERE enable_email = 'False'"
+            )
+            database_connection.query(
+                "UPDATE settings SET enable_interval_backups = 1 WHERE enable_interval_backups = 'True'"
+            )
+            database_connection.query(
+                "UPDATE settings SET enable_interval_backups = 0 WHERE enable_interval_backups = 'False'"
+            )
         except Exception as e:
             print(f"Error normalizing settings table: {e}")
 

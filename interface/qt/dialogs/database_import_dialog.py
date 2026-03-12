@@ -23,14 +23,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from interface.qt.dialogs.base_dialog import BaseDialog
-from interface.qt.theme import Theme
-
-from interface.database import sqlite_wrapper
-from core.utils.bool_utils import normalize_bool
-
 import backup_increment
 import folders_database_migrator
+from core.utils.bool_utils import normalize_bool
+from interface.database import sqlite_wrapper
+from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.theme import Theme
 
 
 class DatabaseImportDialog(BaseDialog):
@@ -270,7 +268,9 @@ class ImportThread(QThread):
             # Validate database version
             new_db_connection = sqlite_wrapper.Database.connect(self._new_db_path)
             new_db_version_table = new_db_connection["version"]
-            new_db_version_dict = cast(Optional[dict[str, Any]], new_db_version_table.find_one(id=1))
+            new_db_version_dict = cast(
+                Optional[dict[str, Any]], new_db_version_table.find_one(id=1)
+            )
             if new_db_version_dict is None:
                 raise KeyError("version")
             new_db_version = new_db_version_dict["version"]
@@ -354,13 +354,17 @@ class DbMigrationJob:
         modified_new_path = backup_increment.do_backup(self.new_folder_path)
 
         original_db_version = original_db["version"]
-        original_db_version_dict = cast(Optional[dict[str, Any]], original_db_version.find_one(id=1))
+        original_db_version_dict = cast(
+            Optional[dict[str, Any]], original_db_version.find_one(id=1)
+        )
         if original_db_version_dict is None:
             raise KeyError("version")
 
         new_db = sqlite_wrapper.Database.connect(modified_new_path)
         new_db_version = new_db["version"]
-        new_db_version_dict = cast(Optional[dict[str, Any]], new_db_version.find_one(id=1))
+        new_db_version_dict = cast(
+            Optional[dict[str, Any]], new_db_version.find_one(id=1)
+        )
         if new_db_version_dict is None:
             raise KeyError("version")
 

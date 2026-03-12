@@ -13,8 +13,8 @@ from ..plugins.config_schemas import ConfigurationSchema
 from ..plugins.section_registry import SectionRegistry
 from .config_section_widgets import (
     ConfigSectionWidget,
-    QtConfigSectionWidget,
     QtCollapsibleSectionWidget,
+    QtConfigSectionWidget,
     TabbedSectionWidget,
 )
 

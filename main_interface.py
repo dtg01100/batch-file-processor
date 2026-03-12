@@ -19,8 +19,8 @@ Or as a module (if installed):
     python -m main_interface
 """
 
-import sys
 import os
+import sys
 
 # Ensure the project root is in sys.path so we can import 'interface' package
 # when running as a script without installation
@@ -38,7 +38,7 @@ def main() -> None:
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",
         version="(Git Branch: Master)",
-        database_version=CURRENT_DATABASE_VERSION
+        database_version=CURRENT_DATABASE_VERSION,
     )
     app.initialize()
     try:

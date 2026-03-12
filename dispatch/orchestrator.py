@@ -4,23 +4,23 @@ This module provides the main orchestration layer for dispatch operations,
 coordinating validation, conversion, and sending of files.
 """
 
-from dataclasses import dataclass, field
 import datetime
 import logging
+from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional
 
-from dispatch.interfaces import (
-    DatabaseInterface,
-    FileSystemInterface,
-    BackendInterface,
-    ValidatorInterface,
-    ErrorHandlerInterface,
-)
-from dispatch.edi_validator import EDIValidator
-from dispatch.send_manager import SendManager
-from dispatch.error_handler import ErrorHandler
 from core.utils.bool_utils import normalize_bool
+from dispatch.edi_validator import EDIValidator
+from dispatch.error_handler import ErrorHandler
+from dispatch.interfaces import (
+    BackendInterface,
+    DatabaseInterface,
+    ErrorHandlerInterface,
+    FileSystemInterface,
+    ValidatorInterface,
+)
+from dispatch.send_manager import SendManager
 
 logger = logging.getLogger("dispatch.orchestrator")
 
@@ -247,7 +247,11 @@ class DispatchOrchestrator:
             self._log_message(run_log, f"No files in directory: {folder_path}")
             return result
 
-        logger.debug("Found %d files in %s, filtering for already-processed...", len(files), folder_path)
+        logger.debug(
+            "Found %d files in %s, filtering for already-processed...",
+            len(files),
+            folder_path,
+        )
 
         if processed_files:
             files = self._filter_processed_files(files, processed_files, folder)
@@ -346,7 +350,9 @@ class DispatchOrchestrator:
 
         try:
             result.checksum = self._calculate_checksum(file_path)
-            logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
+            logger.debug(
+                "Calculated checksum for %s: %s", file_basename, result.checksum
+            )
             current_file = file_path
 
             # Support both legacy validator and new validator_step
@@ -502,7 +508,8 @@ class DispatchOrchestrator:
 
                         send_result = self._send_pipeline_file(
                             self._apply_file_rename(current_pipeline_file, context),
-                            context.effective_folder, run_log
+                            context.effective_folder,
+                            run_log,
                         )
                         if not send_result:
                             send_errors = self.send_manager.get_errors()
@@ -521,7 +528,9 @@ class DispatchOrchestrator:
                         self._log_message(run_log, f"Success: {file_basename}")
                         invoice_numbers = self._extract_invoice_numbers(file_path)
                         if invoice_numbers:
-                            self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
+                            self._log_message(
+                                run_log, f"Invoice numbers: {invoice_numbers}"
+                            )
                     return result
 
             converter_step = self.config.converter_step
@@ -588,7 +597,8 @@ class DispatchOrchestrator:
             else:
                 result.sent = self._send_pipeline_file(
                     self._apply_file_rename(current_file, context),
-                    context.effective_folder, run_log
+                    context.effective_folder,
+                    run_log,
                 )
 
                 if not result.sent:
@@ -612,7 +622,9 @@ class DispatchOrchestrator:
                     self._log_message(run_log, f"Success: {file_basename}")
                     invoice_numbers = self._extract_invoice_numbers(file_path)
                     if invoice_numbers:
-                        self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
+                        self._log_message(
+                            run_log, f"Invoice numbers: {invoice_numbers}"
+                        )
 
         except Exception as e:
             result.errors.append(str(e))
@@ -756,7 +768,9 @@ class DispatchOrchestrator:
         logger.debug("Renamed %s → %s for send", original_basename, new_name)
         return dest_path
 
-    def _send_pipeline_file(self, file_path: str, folder: dict, run_log: Any = None) -> bool:
+    def _send_pipeline_file(
+        self, file_path: str, folder: dict, run_log: Any = None
+    ) -> bool:
         """Send file through pipeline to backends.
 
         Args:
@@ -777,9 +791,9 @@ class DispatchOrchestrator:
         file_basename = os.path.basename(file_path)
 
         for backend_name in enabled_backends:
-            display_name = self.send_manager.DEFAULT_BACKENDS.get(
-                backend_name, {}
-            ).get("display_name", backend_name)
+            display_name = self.send_manager.DEFAULT_BACKENDS.get(backend_name, {}).get(
+                "display_name", backend_name
+            )
             self._log_message(
                 run_log,
                 f"sending {file_basename} to {display_name}",
@@ -970,7 +984,11 @@ class DispatchOrchestrator:
 
             if self.config.file_system:
                 content_bytes = self.config.file_system.read_file(file_path)
-                content = content_bytes.decode("utf-8", errors="replace") if isinstance(content_bytes, bytes) else content_bytes
+                content = (
+                    content_bytes.decode("utf-8", errors="replace")
+                    if isinstance(content_bytes, bytes)
+                    else content_bytes
+                )
             else:
                 with open(file_path, "r", errors="replace") as f:
                     content = f.read()

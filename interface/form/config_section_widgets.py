@@ -7,7 +7,7 @@ can be reused across different configuration interfaces.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from ..plugins.config_schemas import ConfigurationSchema, FieldType
 from ..plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
@@ -170,7 +170,7 @@ class QtConfigSectionWidget(ConfigSectionWidget):
         Returns:
             Any: Qt widget container
         """
-        from PyQt6.QtWidgets import QVBoxLayout, QFormLayout, QGroupBox, QLabel
+        from PyQt6.QtWidgets import QFormLayout, QGroupBox, QLabel, QVBoxLayout
 
         self.container = QGroupBox(
             self.schema.title if hasattr(self.schema, "title") else "Configuration"
@@ -286,7 +286,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
         Returns:
             Any: Qt widget container
         """
-        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGroupBox
+        from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QWidget
 
         self.container = QGroupBox(
             self.schema.title if hasattr(self.schema, "title") else "Configuration"

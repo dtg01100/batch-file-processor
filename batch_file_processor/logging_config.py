@@ -48,6 +48,7 @@ _VALID_LEVEL_NAMES: set[str] = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 # Public helpers
 # ---------------------------------------------------------------------------
 
+
 def get_logger(name: str) -> logging.Logger:
     """Return a logger with the given *name*.
 
@@ -66,6 +67,7 @@ def get_logger(name: str) -> logging.Logger:
 # ---------------------------------------------------------------------------
 # setup_logging
 # ---------------------------------------------------------------------------
+
 
 def setup_logging(
     level: int | None = None,
@@ -154,6 +156,7 @@ def setup_logging(
 # RunLogHandler
 # ---------------------------------------------------------------------------
 
+
 class RunLogHandler(logging.Handler):
     """Custom handler that writes log records to run-log file objects.
 
@@ -236,6 +239,7 @@ class RunLogHandler(logging.Handler):
 # ---------------------------------------------------------------------------
 # RunLogAdapter
 # ---------------------------------------------------------------------------
+
 
 class RunLogAdapter(logging.LoggerAdapter):
     """Logger adapter that prepends folder/file context to messages.

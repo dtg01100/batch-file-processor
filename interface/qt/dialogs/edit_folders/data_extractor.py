@@ -5,15 +5,14 @@ field name -> QWidget mappings and produces an ExtractedDialogFields dataclass,
 mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from PyQt6.QtWidgets import (
-    QWidget,
-    QLineEdit,
     QCheckBox,
     QComboBox,
-    QSpinBox,
+    QLineEdit,
     QPushButton,
+    QSpinBox,
 )
 
 from interface.operations.folder_data_extractor import ExtractedDialogFields
@@ -77,7 +76,9 @@ class QtFolderDataExtractor:
             force_edi_validation=self._get_bool("force_edi_check_var"),
             pad_a_records=self._get_bool("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
-            a_record_padding_length=int(self._get_combo("a_record_padding_length") or "6"),
+            a_record_padding_length=int(
+                self._get_combo("a_record_padding_length") or "6"
+            ),
             append_a_records=self._get_bool("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
             force_txt_file_ext=self._get_bool("force_txt_file_ext_check"),
@@ -100,7 +101,9 @@ class QtFolderDataExtractor:
             split_prepaid_sales_tax_crec=self._get_bool("split_sales_tax_prepaid_var"),
             estore_store_number=self._get_text("estore_store_number_field"),
             estore_vendor_oid=self._get_text("estore_Vendor_OId_field"),
-            estore_vendor_namevendoroid=self._get_text("estore_vendor_namevendoroid_field"),
+            estore_vendor_namevendoroid=self._get_text(
+                "estore_vendor_namevendoroid_field"
+            ),
             estore_c_record_oid=self._get_text("estore_c_record_oid_field"),
             fintech_division_id=self._get_text("fintech_divisionid_field"),
             copy_to_directory=self._copy_to_directory,

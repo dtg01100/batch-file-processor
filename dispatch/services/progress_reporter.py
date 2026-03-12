@@ -1,6 +1,6 @@
-from typing import Protocol, Optional
 import logging
 import sys
+from typing import Optional, Protocol
 
 
 class ProgressReporter(Protocol):
@@ -111,8 +111,12 @@ class LoggingProgressReporter:
         file_total: int,
         footer: str,
     ) -> None:
-        log_message = (
-            "%s | Folder %d/%d, File %d/%d" % (message, folder_num, folder_total, file_num, file_total)
+        log_message = "%s | Folder %d/%d, File %d/%d" % (
+            message,
+            folder_num,
+            folder_total,
+            file_num,
+            file_total,
         )
         if footer:
             log_message += " | %s" % footer

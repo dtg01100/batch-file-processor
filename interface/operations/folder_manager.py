@@ -8,7 +8,7 @@ enabling testing without actual database connections.
 """
 
 import os
-from typing import Protocol, runtime_checkable, Optional
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable

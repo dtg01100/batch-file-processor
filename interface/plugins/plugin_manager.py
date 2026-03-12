@@ -8,11 +8,11 @@ import importlib
 import inspect
 import os
 import pkgutil
-from typing import Dict, List, Optional, Type, Any
+from typing import Any, Dict, List, Optional, Type
 
-from .plugin_base import PluginBase
-from .configuration_plugin import ConfigurationPlugin
 from ..models.folder_configuration import ConvertFormat
+from .configuration_plugin import ConfigurationPlugin
+from .plugin_base import PluginBase
 from .validation_framework import ValidationResult
 
 

@@ -9,12 +9,12 @@ capabilities.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from .plugin_base import PluginBase
-from .config_schemas import FieldDefinition
-from .validation_framework import ValidationResult
 from ..models.folder_configuration import ConvertFormat
+from .config_schemas import FieldDefinition
+from .plugin_base import PluginBase
+from .validation_framework import ValidationResult
 
 
 class ConfigurationPlugin(PluginBase, ABC):

@@ -27,8 +27,8 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
-import math
 import logging
+import math
 import tempfile
 from typing import Any, Dict, List, Tuple
 
@@ -40,8 +40,8 @@ from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
 from PIL import ImageOps as pil_ImageOps
 
-import utils
 import core.database
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class ScanSheetTypeAConverter:
         output_filename: str,
         settings_dict: Dict[str, Any],
         parameters_dict: Dict[str, Any],
-        upc_lookup: Dict[int, tuple]
+        upc_lookup: Dict[int, tuple],
     ) -> str:
         """Convert EDI file to ScanSheet Type A Excel format.
 
@@ -139,7 +139,9 @@ class ScanSheetTypeAConverter:
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
-            database=settings_dict.get('odbc_driver', 'QGPL'),  # Use get() with default to prevent KeyError
+            database=settings_dict.get(
+                "odbc_driver", "QGPL"
+            ),  # Use get() with default to prevent KeyError
         )
 
     def _initialize_workbook(self, output_filename: str) -> None:
@@ -150,7 +152,7 @@ class ScanSheetTypeAConverter:
         """
         self.output_spreadsheet = openpyxl.Workbook()
         self.output_worksheet = self.output_spreadsheet.worksheets[0]
-        self.output_spreadsheet_name = output_filename + '.xlsx'
+        self.output_spreadsheet_name = output_filename + ".xlsx"
         self.invoice_rows = []
         self.invoice_row_counter = 0
 
@@ -175,7 +177,7 @@ class ScanSheetTypeAConverter:
                             ON odhst.bubacd = dsanrep.anbacd
                     WHERE odhst.buhhnb = ?
                         AND bue4qt <> 0""",
-                (invoice,)
+                (invoice,),
             )
 
             rows_for_export = []
@@ -190,7 +192,7 @@ class ScanSheetTypeAConverter:
                 rows_for_export.append(trow)
                 logger.debug("Row for export: %s", trow)
 
-            self.output_worksheet.append(['', invoice])
+            self.output_worksheet.append(["", invoice])
             self.invoice_row_counter += 1
             self.invoice_rows.append(self.invoice_row_counter)
 
@@ -233,20 +235,30 @@ class ScanSheetTypeAConverter:
                 try:
                     count += 1
                     if count not in self.invoice_rows:
-                        upc_barcode_string = str(self.output_worksheet["B" + str(count)].value)
-                        upc_barcode_string = self._interpret_barcode_string(upc_barcode_string[-12:][:-1])
+                        upc_barcode_string = str(
+                            self.output_worksheet["B" + str(count)].value
+                        )
+                        upc_barcode_string = self._interpret_barcode_string(
+                            upc_barcode_string[-12:][:-1]
+                        )
 
-                        generated_barcode_path, width, height = self._generate_barcode(upc_barcode_string, tempdir)
+                        generated_barcode_path, width, height = self._generate_barcode(
+                            upc_barcode_string, tempdir
+                        )
 
                         # resize cell to size of image
-                        self.output_worksheet.column_dimensions['A'].width = int(math.ceil(float(width) * .15))
-                        self.output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
+                        self.output_worksheet.column_dimensions["A"].width = int(
+                            math.ceil(float(width) * 0.15)
+                        )
+                        self.output_worksheet.row_dimensions[count].height = int(
+                            math.ceil(float(height) * 0.75)
+                        )
 
                         # open image with as openpyxl image object
                         img = OpenPyXlImage(generated_barcode_path)
 
                         # attach image to cell
-                        self.output_worksheet.add_image(img, anchor='A' + str(count))
+                        self.output_worksheet.add_image(img, anchor="A" + str(count))
                         save_counter += 1
                 except Exception as barcode_error:
                     logger.warning("Barcode error: %s", barcode_error)
@@ -270,14 +282,16 @@ class ScanSheetTypeAConverter:
             context: The conversion context (not used in this converter)
         """
         # Close database connection if it exists
-        if hasattr(self, 'query_object') and self.query_object is not None:
+        if hasattr(self, "query_object") and self.query_object is not None:
             try:
                 self.query_object.close()
             except AttributeError:
                 # query_object might not have a close method in some implementations
                 pass
 
-    def _generate_barcode(self, input_string: str, tempdir: str) -> Tuple[str, int, int]:
+    def _generate_barcode(
+        self, input_string: str, tempdir: str
+    ) -> Tuple[str, int, int]:
         """Generate a barcode image for the given UPC string.
 
         Args:
@@ -289,23 +303,29 @@ class ScanSheetTypeAConverter:
         """
         ean = barcode.get_barcode_class("UPCA")
         options = {
-            'dpi': 130,
-            'module_height': 5.0,
-            'text_distance': 2,
-            'font_size': 6,
-            'quiet_zone': 2
+            "dpi": 130,
+            "module_height": 5.0,
+            "text_distance": 2,
+            "font_size": 6,
+            "quiet_zone": 2,
         }
 
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as initial_temp_file:
-            ean(input_string, writer=ImageWriter()).write(initial_temp_file, options=options)
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as initial_temp_file:
+            ean(input_string, writer=ImageWriter()).write(
+                initial_temp_file, options=options
+            )
             filename = initial_temp_file.name
 
         barcode_image = pil_Image.open(str(filename))
 
-        img_save = pil_ImageOps.expand(barcode_image, border=0, fill='white')
+        img_save = pil_ImageOps.expand(barcode_image, border=0, fill="white")
         width, height = img_save.size
 
-        with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as final_barcode_path:
+        with tempfile.NamedTemporaryFile(
+            dir=tempdir, suffix=".png", delete=False
+        ) as final_barcode_path:
             img_save.save(final_barcode_path.name)
 
         return final_barcode_path.name, width, height
@@ -322,16 +342,16 @@ class ScanSheetTypeAConverter:
         Raises:
             ValueError: If the input is empty or invalid
         """
-        if not upc_barcode_string == '':
+        if not upc_barcode_string == "":
             try:
                 _ = int(upc_barcode_string)
             except ValueError:
                 raise ValueError("Input contents are not an integer")
 
             if len(upc_barcode_string) < 10:
-                upc_barcode_string = upc_barcode_string.rjust(11, '0')
+                upc_barcode_string = upc_barcode_string.rjust(11, "0")
             if len(upc_barcode_string) <= 11:
-                upc_barcode_string = upc_barcode_string.ljust(12, '0')
+                upc_barcode_string = upc_barcode_string.ljust(12, "0")
             else:
                 raise ValueError("Input contents are more than 11 characters")
         else:
@@ -344,12 +364,13 @@ class ScanSheetTypeAConverter:
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename: str,
     settings_dict: Dict[str, Any],
     parameters_dict: Dict[str, Any],
-    upc_lookup: Dict[int, tuple]
+    upc_lookup: Dict[int, tuple],
 ) -> str:
     """Convert EDI file to ScanSheet Type A Excel format with barcodes.
 
@@ -379,9 +400,5 @@ def edi_convert(
     """
     converter = ScanSheetTypeAConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_lookup
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
     )

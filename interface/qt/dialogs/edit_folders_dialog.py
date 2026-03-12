@@ -5,25 +5,24 @@ Uses a decomposed architecture with dedicated builders and handlers.
 """
 
 import os
-from typing import Dict, Any, Optional, Callable
+from typing import Any, Callable, Dict, Optional
 
 from PyQt6.QtWidgets import (
-    QWidget,
-    QMessageBox,
     QFileDialog,
+    QMessageBox,
+    QWidget,
 )
 
-from interface.qt.dialogs.base_dialog import BaseDialog
-from interface.validation.folder_settings_validator import FolderSettingsValidator
-from interface.services.ftp_service import FTPServiceProtocol
+from core.utils.bool_utils import normalize_bool
+from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
-from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
-from core.utils.bool_utils import normalize_bool
-
+from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
-from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
+from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
+from interface.services.ftp_service import FTPServiceProtocol
+from interface.validation.folder_settings_validator import FolderSettingsValidator
 
 
 class EditFoldersDialog(BaseDialog):
@@ -421,7 +420,9 @@ class EditFoldersDialog(BaseDialog):
     @property
     def _tweak_override_upc_cat_filter(self):
         if self.dynamic_edi_builder:
-            return self.dynamic_edi_builder.fields.get("override_upc_category_filter_entry")
+            return self.dynamic_edi_builder.fields.get(
+                "override_upc_category_filter_entry"
+            )
         return None
 
     @property

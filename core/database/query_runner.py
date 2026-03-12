@@ -5,8 +5,8 @@ dependency injection through the Protocol pattern, enabling easy testing
 and loose coupling from the underlying database implementation.
 """
 
-from typing import Protocol, runtime_checkable, Optional
 from dataclasses import dataclass
+from typing import Optional, Protocol, runtime_checkable
 
 
 @dataclass
@@ -119,7 +119,9 @@ class PyODBCConnection:
 
             # Get column names from cursor description
             columns = (
-                [column[0] for column in cursor.description] if cursor.description else []
+                [column[0] for column in cursor.description]
+                if cursor.description
+                else []
             )
 
             # Convert rows to dictionaries

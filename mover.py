@@ -10,10 +10,9 @@ import threading
 import time
 from typing import Callable, Optional
 
-from interface.database import sqlite_wrapper
-
 import backup_increment
 import folders_database_migrator
+from interface.database import sqlite_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -56,21 +55,35 @@ class DbMigrationThing:
 
         def database_preimport_operations():
             try:
-                original_database_connection_for_migrate = sqlite_wrapper.Database.connect(original_database_path)
+                original_database_connection_for_migrate = (
+                    sqlite_wrapper.Database.connect(original_database_path)
+                )
                 backup_increment.do_backup(self.original_folder_path)
-                _thread_result["modified_new_folder_path"] = backup_increment.do_backup(self.new_folder_path)
-                original_db_version = original_database_connection_for_migrate['version']
+                _thread_result["modified_new_folder_path"] = backup_increment.do_backup(
+                    self.new_folder_path
+                )
+                original_db_version = original_database_connection_for_migrate[
+                    "version"
+                ]
                 original_db_version_dict = original_db_version.find_one(id=1)
-                _new_db_conn = sqlite_wrapper.Database.connect(_thread_result["modified_new_folder_path"])
-                new_db_version = _new_db_conn['version']
+                _new_db_conn = sqlite_wrapper.Database.connect(
+                    _thread_result["modified_new_folder_path"]
+                )
+                new_db_version = _new_db_conn["version"]
                 new_db_version_dict = new_db_version.find_one(id=1)
-                if int(new_db_version_dict['version']) < int(original_db_version_dict['version']):
+                if int(new_db_version_dict["version"]) < int(
+                    original_db_version_dict["version"]
+                ):
                     logger.info("db needs upgrading")
-                    folders_database_migrator.upgrade_database(_new_db_conn, None, "Null")
+                    folders_database_migrator.upgrade_database(
+                        _new_db_conn, None, "Null"
+                    )
             except Exception as exc:
                 _thread_result["error"] = exc
 
-        preimport_operations_thread_object = threading.Thread(target=database_preimport_operations)
+        preimport_operations_thread_object = threading.Thread(
+            target=database_preimport_operations
+        )
         preimport_operations_thread_object.start()
 
         # Report indeterminate progress
@@ -81,6 +94,7 @@ class DbMigrationThing:
             # Process events if needed (for Qt compatibility)
             try:
                 from PyQt6.QtWidgets import QApplication
+
                 QApplication.processEvents()
             except ImportError:
                 pass
@@ -94,10 +108,14 @@ class DbMigrationThing:
             raise _thread_result["error"]
 
         modified_new_folder_path = _thread_result["modified_new_folder_path"]
-        new_database_connection = sqlite_wrapper.Database.connect(modified_new_folder_path)
-        new_folders_table = new_database_connection['folders']
-        original_database_connection = sqlite_wrapper.Database.connect(original_database_path)
-        old_folders_table = original_database_connection['folders']
+        new_database_connection = sqlite_wrapper.Database.connect(
+            modified_new_folder_path
+        )
+        new_folders_table = new_database_connection["folders"]
+        original_database_connection = sqlite_wrapper.Database.connect(
+            original_database_path
+        )
+        old_folders_table = original_database_connection["folders"]
 
         # Count folders for progress
         active_folders = list(new_folders_table.find(folder_is_active=1))
@@ -117,13 +135,13 @@ class DbMigrationThing:
             new_db_line = None
             for db_line in _get_active_folders(old_folders_table):
                 try:
-                    if os.path.samefile(db_line['folder_name'], line['folder_name']):
+                    if os.path.samefile(db_line["folder_name"], line["folder_name"]):
                         new_db_line = db_line
                         line_match = True
                         break
                 except (OSError, TypeError, ValueError):
                     # Path may not exist on this system; compare as strings
-                    if db_line['folder_name'] == line['folder_name']:
+                    if db_line["folder_name"] == line["folder_name"]:
                         new_db_line = db_line
                         line_match = True
                         break
@@ -135,30 +153,44 @@ class DbMigrationThing:
                 logger.debug("line_match=%s", line_match)
                 if line_match is True:
                     update_db_line = new_db_line
-                    if new_db_line.get('process_backend_copy') in (True, 1, "True"):
+                    if new_db_line.get("process_backend_copy") in (True, 1, "True"):
                         logger.info("merging copy backend settings")
-                        update_db_line.update(dict(process_backend_copy=new_db_line['process_backend_copy'],
-                                                   copy_to_directory=new_db_line['copy_to_directory'],
-                                                   id=line['id']))
-                    if new_db_line.get('process_backend_ftp') in (True, 1, "True"):
+                        update_db_line.update(
+                            dict(
+                                process_backend_copy=new_db_line[
+                                    "process_backend_copy"
+                                ],
+                                copy_to_directory=new_db_line["copy_to_directory"],
+                                id=line["id"],
+                            )
+                        )
+                    if new_db_line.get("process_backend_ftp") in (True, 1, "True"):
                         logger.info("merging ftp backend settings")
-                        update_db_line.update(dict(ftp_server=new_db_line['ftp_server'],
-                                                   ftp_folder=new_db_line['ftp_folder'],
-                                                   ftp_username=new_db_line['ftp_username'],
-                                                   ftp_password=new_db_line['ftp_password'],
-                                                   ftp_port=new_db_line['ftp_port'],
-                                                   id=line['id']))
-                    if new_db_line.get('process_backend_email') in (True, 1, "True"):
+                        update_db_line.update(
+                            dict(
+                                ftp_server=new_db_line["ftp_server"],
+                                ftp_folder=new_db_line["ftp_folder"],
+                                ftp_username=new_db_line["ftp_username"],
+                                ftp_password=new_db_line["ftp_password"],
+                                ftp_port=new_db_line["ftp_port"],
+                                id=line["id"],
+                            )
+                        )
+                    if new_db_line.get("process_backend_email") in (True, 1, "True"):
                         logger.info("merging email backend settings")
-                        update_db_line.update(dict(email_to=new_db_line['email_to'],
-                                                   email_subject_line=new_db_line['email_subject_line'],
-                                                   id=line['id']))
-                    old_folders_table.update(update_db_line, ['id'])
+                        update_db_line.update(
+                            dict(
+                                email_to=new_db_line["email_to"],
+                                email_subject_line=new_db_line["email_subject_line"],
+                                id=line["id"],
+                            )
+                        )
+                    old_folders_table.update(update_db_line, ["id"])
 
                 else:
                     logger.info("adding line")
                     logger.debug("line data: %s", line)
-                    del line['id']
+                    del line["id"]
                     old_folders_table.insert(line)
             except Exception as error:
                 logger.error("import of folder failed with %s", error)

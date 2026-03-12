@@ -1,7 +1,7 @@
 import os
 
-from interface.database import sqlite_wrapper
 import schema
+from interface.database import sqlite_wrapper
 
 
 def do(

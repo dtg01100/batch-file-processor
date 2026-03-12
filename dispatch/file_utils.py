@@ -205,11 +205,13 @@ def do_clear_old_files(folder_path, maximum_files):
         files = os.listdir(folder_path)
         if len(files) <= maximum_files:
             break
+
         def _safe_ctime(f):
             try:
                 return os.path.getctime(os.path.join(folder_path, f))
             except OSError:
-                return float('inf')
+                return float("inf")
+
         oldest = min(files, key=_safe_ctime)
         try:
             os.remove(os.path.join(folder_path, oldest))

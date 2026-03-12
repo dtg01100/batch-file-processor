@@ -26,8 +26,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from interface.qt.theme import Theme
 from core.utils.bool_utils import normalize_bool
+from interface.qt.theme import Theme
 
 
 class FolderTableProtocol(Protocol):
@@ -241,11 +241,11 @@ class FolderListWidget(QWidget):
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setStyleSheet(
-            f"""
-            QScrollArea {{
+            """
+            QScrollArea {
                 border: none;
                 background-color: transparent;
-            }}
+            }
         """
         )
 
@@ -357,13 +357,15 @@ class FolderListWidget(QWidget):
         is_active: bool = normalize_bool(folder.get("folder_is_active"))
 
         # Status toggle button — shows state and toggles on click
-        toggle_symbol = "\u25CF" if is_active else "\u25CB"  # ● active, ○ inactive
+        toggle_symbol = "\u25cf" if is_active else "\u25cb"  # ● active, ○ inactive
         toggle_btn = QPushButton(toggle_symbol)
         toggle_btn.setFixedSize(36, 36)
         toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if is_active:
             toggle_btn.setToolTip("Active — click to disable")
-            toggle_btn.setAccessibleName(f"Disable folder {alias}" if alias else "Disable folder")
+            toggle_btn.setAccessibleName(
+                f"Disable folder {alias}" if alias else "Disable folder"
+            )
             toggle_btn.setAccessibleDescription(
                 f"Folder '{alias}' is active. Click to disable."
             )
@@ -388,7 +390,9 @@ class FolderListWidget(QWidget):
             )
         else:
             toggle_btn.setToolTip("Inactive — click to enable")
-            toggle_btn.setAccessibleName(f"Enable folder {alias}" if alias else "Enable folder")
+            toggle_btn.setAccessibleName(
+                f"Enable folder {alias}" if alias else "Enable folder"
+            )
             toggle_btn.setAccessibleDescription(
                 f"Folder '{alias}' is inactive. Click to enable."
             )
@@ -413,9 +417,7 @@ class FolderListWidget(QWidget):
                 }}
                 """
             )
-        toggle_btn.clicked.connect(
-            lambda _checked, fid=folder_id: self._on_toggle(fid)
-        )
+        toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
         row_layout.addWidget(toggle_btn)
 
         # Edit button (always present, shows folder alias for quick scanning)
@@ -423,7 +425,9 @@ class FolderListWidget(QWidget):
         edit_btn = QPushButton(edit_text)
         edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         edit_btn.setMinimumWidth(edit_button_min_width)
-        edit_btn.setToolTip(f"Edit folder settings for '{alias}'" if alias else "Edit folder settings")
+        edit_btn.setToolTip(
+            f"Edit folder settings for '{alias}'" if alias else "Edit folder settings"
+        )
         edit_btn.setAccessibleName(f"Edit folder {alias}" if alias else "Edit folder")
         edit_btn.setAccessibleDescription(
             f"Open settings for folder '{alias}'" if alias else "Open folder settings"
@@ -439,7 +443,9 @@ class FolderListWidget(QWidget):
             send_btn.setFixedWidth(64)
             send_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             send_btn.setToolTip(f"Process only '{alias}'")
-            send_btn.setAccessibleName(f"Send folder {alias}" if alias else "Send folder")
+            send_btn.setAccessibleName(
+                f"Send folder {alias}" if alias else "Send folder"
+            )
             send_btn.setAccessibleDescription(
                 f"Process only folder '{alias}'" if alias else "Process this folder"
             )
@@ -537,10 +543,7 @@ class FolderListWidget(QWidget):
             else:
                 # Build a mapping of "id:alias" keys so each entry is unique,
                 # then match by folder ID to avoid collisions between duplicate aliases.
-                keyed = {
-                    str(fid): alias
-                    for fid, alias in self._folder_aliases.items()
-                }
+                keyed = {str(fid): alias for fid, alias in self._folder_aliases.items()}
                 fuzzy_matches = list(
                     thefuzz.process.extractWithoutOrder(
                         filter_text, keyed, score_cutoff=80
@@ -584,9 +587,13 @@ class FolderListWidget(QWidget):
         btn.style().unpolish(btn)
         btn.style().polish(btn)
 
-    def _calculate_edit_button_min_width(self, folder_list: List[Dict[str, Any]]) -> int:
+    def _calculate_edit_button_min_width(
+        self, folder_list: List[Dict[str, Any]]
+    ) -> int:
         """Calculate a robust minimum width for edit buttons using font metrics."""
-        edit_texts = [f"Edit: {entry.get('alias') or ''}".rstrip() for entry in folder_list]
+        edit_texts = [
+            f"Edit: {entry.get('alias') or ''}".rstrip() for entry in folder_list
+        ]
         if not edit_texts:
             edit_texts = ["Edit"]
 

@@ -1,6 +1,7 @@
 """Toolkit-agnostic progress reporting service."""
 
 from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 

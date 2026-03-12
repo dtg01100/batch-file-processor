@@ -5,29 +5,29 @@ that appear based on user selections in the EDI options dropdown.
 """
 
 import logging
-from typing import Dict, Optional, Callable, Any, List
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+from PyQt6 import QtCore
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
-    QComboBox,
-    QCheckBox,
     QLineEdit,
-    QGroupBox,
     QSpinBox,
-    QFormLayout,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6 import QtCore
 
-from interface.plugins.plugin_manager import PluginManager
-from interface.plugins.configuration_plugin import ConfigurationPlugin
-from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
-from interface.form.form_generator import FormGeneratorFactory
 from core.utils.bool_utils import normalize_bool
+from interface.form.form_generator import FormGeneratorFactory
+from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 
 
 class DynamicEDIBuilder:

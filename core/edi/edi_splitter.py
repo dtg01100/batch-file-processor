@@ -6,7 +6,7 @@ into individual invoice files with support for category filtering.
 
 import os
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable, Optional
+from typing import Optional, Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
 

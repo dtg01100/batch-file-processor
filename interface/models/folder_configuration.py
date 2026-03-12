@@ -5,10 +5,10 @@ It provides dataclasses for all folder configuration fields with
 validation and serialization/deserialization methods.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
-from enum import Enum
 import re
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from core.utils.bool_utils import normalize_bool
 

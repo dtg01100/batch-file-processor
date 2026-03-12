@@ -29,10 +29,10 @@ Example usage:
             context.output_file.close()
 """
 
+import csv
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, TextIO
-import csv
 
 import utils
 
@@ -46,6 +46,7 @@ class EDIRecord:
         raw_line: The original raw line from the EDI file
         fields: Dictionary of parsed field values from the record
     """
+
     record_type: str
     raw_line: str
     fields: Dict[str, str]
@@ -74,6 +75,7 @@ class ConversionContext:
         csv_writer: CSV writer instance (commonly used, set by _initialize_output)
         user_data: Dictionary for converters to store custom state
     """
+
     # Input parameters
     edi_filename: str
     output_filename: str
@@ -137,7 +139,7 @@ class BaseEDIConverter(ABC):
         output_filename: str,
         settings_dict: Dict[str, Any],
         parameters_dict: Dict[str, Any],
-        upc_lut: Dict[int, tuple]
+        upc_lut: Dict[int, tuple],
     ) -> str:
         """Main entry point - Template Method defining the conversion algorithm.
 
@@ -161,7 +163,7 @@ class BaseEDIConverter(ABC):
             output_filename=output_filename,
             settings_dict=settings_dict,
             parameters_dict=parameters_dict,
-            upc_lut=upc_lut
+            upc_lut=upc_lut,
         )
 
         # Step 1: Initialize output (hook method)
@@ -202,9 +204,9 @@ class BaseEDIConverter(ABC):
                 if input_edi_dict is not None:
                     # Create EDIRecord object
                     record = EDIRecord(
-                        record_type=input_edi_dict['record_type'],
+                        record_type=input_edi_dict["record_type"],
                         raw_line=line,
-                        fields=input_edi_dict
+                        fields=input_edi_dict,
                     )
 
                     # Dispatch to appropriate hook method based on record type
@@ -240,9 +242,7 @@ class BaseEDIConverter(ABC):
             self._handle_unknown_record(record, context)
 
     def _should_process_record_type(
-        self,
-        record_type: str,
-        context: ConversionContext
+        self, record_type: str, context: ConversionContext
     ) -> bool:
         """Determine if a record type should be processed.
 
@@ -352,9 +352,7 @@ class BaseEDIConverter(ABC):
             context.output_file = None
 
     def _handle_unknown_record(
-        self,
-        record: EDIRecord,
-        context: ConversionContext
+        self, record: EDIRecord, context: ConversionContext
     ) -> None:
         """Handle unknown record types.
 
@@ -366,11 +364,7 @@ class BaseEDIConverter(ABC):
             context: The conversion context
         """
 
-    def _cleanup_on_error(
-        self,
-        context: ConversionContext,
-        error: Exception
-    ) -> None:
+    def _cleanup_on_error(self, context: ConversionContext, error: Exception) -> None:
         """Clean up resources when an error occurs.
 
         Args:
@@ -403,11 +397,12 @@ class BaseEDIConverter(ABC):
 # Utility Functions for Converters
 # =============================================================================
 
+
 def create_csv_writer(
     file_handle: TextIO,
     dialect: str = "excel",
     lineterminator: str = "\r\n",
-    quoting: int = csv.QUOTE_ALL
+    quoting: int = csv.QUOTE_ALL,
 ) -> csv.writer:
     """Create a CSV writer with common settings.
 
@@ -424,17 +419,14 @@ def create_csv_writer(
         Configured csv.writer instance
     """
     return csv.writer(
-        file_handle,
-        dialect=dialect,
-        lineterminator=lineterminator,
-        quoting=quoting
+        file_handle, dialect=dialect, lineterminator=lineterminator, quoting=quoting
     )
 
 
 def normalize_parameter(
     value: Any,
     default: Any = None,
-    truthy_values: tuple = ("True", "true", "1", "yes", "on")
+    truthy_values: tuple = ("True", "true", "1", "yes", "on"),
 ) -> Any:
     """Normalize a parameter value from folder configuration.
 

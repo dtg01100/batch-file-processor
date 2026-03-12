@@ -4,9 +4,9 @@ This module provides real and mock SMTP client implementations
 that conform to the SMTPClientProtocol interface.
 """
 
-import smtplib
 import logging
-from typing import Optional, Any, List, Dict
+import smtplib
+from typing import Any, Dict, List, Optional
 
 from backend.protocols import SMTPClientProtocol
 
@@ -111,9 +111,13 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
-        logger.debug("SMTP sending message object from=%s to=%s", msg.get("From", ""), msg.get("To", ""))
+        logger.debug(
+            "SMTP sending message object from=%s to=%s",
+            msg.get("From", ""),
+            msg.get("To", ""),
+        )
         result = self._connection.send_message(msg)
-        logger.info("SMTP message sent successfully to %s", msg['To'])
+        logger.info("SMTP message sent successfully to %s", msg["To"])
         return result
 
     def quit(self) -> None:

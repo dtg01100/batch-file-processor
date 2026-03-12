@@ -8,7 +8,7 @@ import logging
 import os
 import time
 from io import StringIO
-from typing import Optional, Any
+from typing import Any, Optional
 
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
 
@@ -75,9 +75,7 @@ class ErrorHandler:
         }
 
         # Emit through Python logging framework
-        logger.error(
-            "Error in %s processing %s: %s", folder, filename, error
-        )
+        logger.error("Error in %s processing %s: %s", folder, filename, error)
 
         # Add to in-memory list
         self.errors.append(error_record)

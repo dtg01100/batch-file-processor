@@ -5,13 +5,13 @@ Implements the ConfigurationPlugin interface for ScannerWare format configuratio
 Provides support for ScannerWare-specific configuration fields and validation.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from .configuration_plugin import ConfigurationPlugin
-from .config_schemas import FieldDefinition, FieldType
-from .validation_framework import ValidationResult
 from ..models.folder_configuration import ConvertFormat
+from .config_schemas import FieldDefinition, FieldType
+from .configuration_plugin import ConfigurationPlugin
 from .ui_abstraction import ConfigurationWidgetBuilder
+from .validation_framework import ValidationResult
 
 
 class ScannerWareConfiguration:

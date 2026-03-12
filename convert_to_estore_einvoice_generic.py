@@ -171,9 +171,9 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         """
         # Get parameters
         params = context.parameters_dict
-        self.store_number = params['estore_store_number']
-        self.vendor_oid = params['estore_Vendor_OId']
-        self.vendor_name = params['estore_vendor_NameVendorOID']
+        self.store_number = params["estore_store_number"]
+        self.vendor_oid = params["estore_Vendor_OId"]
+        self.vendor_name = params["estore_vendor_NameVendorOID"]
         self.c_record_oid = params.get("estore_c_record_OID", "")
         self.upc_lookup = context.upc_lut
 
@@ -199,15 +199,10 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 
         # Open output file and create CSV writer
         context.output_file = open(
-            self.output_filename,
-            "w",
-            newline="",
-            encoding="utf-8"
+            self.output_filename, "w", newline="", encoding="utf-8"
         )
         context.csv_writer = csv.writer(
-            context.output_file,
-            dialect="excel",
-            lineterminator="\r\n"
+            context.output_file, dialect="excel", lineterminator="\r\n"
         )
 
         # Write CSV header row
@@ -239,7 +234,9 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         """Exit shipper mode and update parent item quantity."""
         if self.shipper_mode:
             # Update the parent item's quantity to the count of children
-            self.row_dict_list[self.shipper_line_number - 1]["QTY"] = len(self.shipper_accum)
+            self.row_dict_list[self.shipper_line_number - 1]["QTY"] = len(
+                self.shipper_accum
+            )
             self.shipper_accum.clear()
             print("leave shipper mode")
             self.shipper_mode = False
@@ -260,16 +257,17 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         output_filename: str,
         settings_dict: Dict[str, Any],
         parameters_dict: Dict[str, Any],
-        upc_lut: Dict[int, tuple]
+        upc_lut: Dict[int, tuple],
     ) -> str:
         """Override to store context reference."""
         from convert_base import ConversionContext
+
         context = ConversionContext(
             edi_filename=edi_process,
             output_filename=output_filename,
             settings_dict=settings_dict,
             parameters_dict=parameters_dict,
-            upc_lut=upc_lut
+            upc_lut=upc_lut,
         )
         self._context = context
 
@@ -309,9 +307,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 
         # Format invoice date
         if not record.fields["invoice_date"] == "000000":
-            invoice_date = datetime.strptime(
-                record.fields["invoice_date"], "%m%d%y"
-            )
+            invoice_date = datetime.strptime(record.fields["invoice_date"], "%m%d%y")
             write_invoice_date = datetime.strftime(invoice_date, "%Y%m%d")
         else:
             write_invoice_date = "00000000"
@@ -321,11 +317,13 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             "Store Number": self.store_number,
             "Vendor OId": self.vendor_oid,
             "Invoice Number": record.fields["invoice_number"],
-            "Purchase Order": self.inv_fetcher.fetch_po(record.fields['invoice_number']),
+            "Purchase Order": self.inv_fetcher.fetch_po(
+                record.fields["invoice_number"]
+            ),
             "Invoice Date": write_invoice_date,
             "Total Invoice Cost": utils.convert_to_price(
-                str(utils.dac_str_int_to_int(record.fields['invoice_total']))
-            )
+                str(utils.dac_str_int_to_int(record.fields["invoice_total"]))
+            ),
         }
         self.invoice_index += 1
 
@@ -358,9 +356,8 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             "Unit Retail": utils.convert_to_price_decimal(
                 record.fields["suggested_retail_price"]
             ),
-            "Extended Cost": utils.convert_to_price_decimal(
-                record.fields["unit_cost"]
-            ) * utils.qty_to_int(record.fields["qty_of_units"]),
+            "Extended Cost": utils.convert_to_price_decimal(record.fields["unit_cost"])
+            * utils.qty_to_int(record.fields["qty_of_units"]),
             "Extended Retail": "",
         }
 
@@ -414,9 +411,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             "QTY": 1,
             "Unit Cost": utils.convert_to_price_decimal(record.fields["amount"]),
             "Unit Retail": 0,
-            "Extended Cost": utils.convert_to_price_decimal(
-                record.fields["amount"]
-            ),
+            "Extended Cost": utils.convert_to_price_decimal(record.fields["amount"]),
             "Extended Retail": "",
         }
 
@@ -455,12 +450,13 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename_initial: str,
     settings_dict: Dict[str, Any],
     parameters_dict: Dict[str, Any],
-    upc_lookup: Dict[int, tuple]
+    upc_lookup: Dict[int, tuple],
 ) -> str:
     """Convert EDI file to EStore E-Invoice Generic CSV format.
 
@@ -497,9 +493,5 @@ def edi_convert(
     """
     converter = EStoreEInvoiceGenericConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename_initial,
-        settings_dict,
-        parameters_dict,
-        upc_lookup
+        edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup
     )

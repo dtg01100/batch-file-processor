@@ -5,13 +5,13 @@ Implements the ConfigurationPlugin interface for Jolley Custom format configurat
 Provides support for Jolley Custom-specific configuration fields and validation.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from .configuration_plugin import ConfigurationPlugin
-from .config_schemas import FieldDefinition
-from .validation_framework import ValidationResult
 from ..models.folder_configuration import ConvertFormat
+from .config_schemas import FieldDefinition
+from .configuration_plugin import ConfigurationPlugin
 from .ui_abstraction import ConfigurationWidgetBuilder
+from .validation_framework import ValidationResult
 
 
 class JolleyCustomConfiguration:

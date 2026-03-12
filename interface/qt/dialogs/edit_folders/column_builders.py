@@ -5,20 +5,20 @@ Qt edit folders dialog. Each column builder is responsible for creating and
 configuring the widgets for a specific section of the dialog.
 """
 
-from typing import Dict, List, Optional, Callable, Any
+from typing import Any, Callable, Dict, List, Optional
 
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QPushButton,
-    QGroupBox,
-    QFormLayout,
-    QCheckBox,
-    QLineEdit,
-    QComboBox,
+    QVBoxLayout,
+    QWidget,
 )
 
 from interface.qt.theme import Theme
@@ -133,9 +133,7 @@ class ColumnBuilders:
 
         ftp_backend_check = QCheckBox("FTP Backend")
         ftp_backend_check.setAccessibleName("Enable FTP backend")
-        ftp_backend_check.setAccessibleDescription(
-            "Enable FTP backend for this folder"
-        )
+        ftp_backend_check.setAccessibleDescription("Enable FTP backend for this folder")
         if self.on_update_backend_states:
             ftp_backend_check.toggled.connect(self.on_update_backend_states)
         self.fields["process_backend_ftp_check"] = ftp_backend_check
@@ -272,9 +270,7 @@ class ColumnBuilders:
 
         force_edi_check = QCheckBox("Force EDI Validation")
         force_edi_check.setAccessibleName("Force EDI validation")
-        force_edi_check.setAccessibleDescription(
-            "Validate EDI input before processing"
-        )
+        force_edi_check.setAccessibleDescription("Validate EDI input before processing")
         self.fields["force_edi_check_var"] = force_edi_check
         layout.addWidget(force_edi_check)
 

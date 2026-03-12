@@ -13,23 +13,17 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QDialogButtonBox,
     QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QScrollArea,
-    QSizePolicy,
-    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
-    QVBoxLayout,
     QWidget,
 )
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
-
 from interface.services.resend_service import ResendService
 
 
@@ -87,15 +81,17 @@ class ResendDialog(BaseDialog):
         # Table
         self._table = QTableWidget()
         self._table.setColumnCount(5)
-        self._table.setHorizontalHeaderLabels([
-            "", "Folder", "File Name", "Sent Date", "Resend"
-        ])
+        self._table.setHorizontalHeaderLabels(
+            ["", "Folder", "File Name", "Sent Date", "Resend"]
+        )
         self._table.setAlternatingRowColors(True)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.setSortingEnabled(True)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.setAccessibleName("Files table")
-        self._table.setAccessibleDescription("Table of processed files with resend options")
+        self._table.setAccessibleDescription(
+            "Table of processed files with resend options"
+        )
         main_layout.addWidget(self._table)
 
         # Status bar
@@ -121,7 +117,9 @@ class ResendDialog(BaseDialog):
 
         self._bulk_mark_resend = QPushButton("&Mark Selected for Resend")
         self._bulk_mark_resend.clicked.connect(self._mark_selected_for_resend)
-        self._bulk_mark_resend.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; }")
+        self._bulk_mark_resend.setStyleSheet(
+            "QPushButton { background-color: #4CAF50; color: white; }"
+        )
         bulk_layout.addWidget(self._bulk_mark_resend)
 
         self._bulk_clear_resend = QPushButton("&Clear Resend Flags")
@@ -168,7 +166,9 @@ class ResendDialog(BaseDialog):
             checkbox = QCheckBox()
             checkbox.setChecked(file_info["id"] in self._selected_files)
             checkbox.stateChanged.connect(
-                lambda state, fid=file_info["id"]: self._on_file_selected(fid, state == Qt.CheckState.Checked)
+                lambda state, fid=file_info["id"]: self._on_file_selected(
+                    fid, state == Qt.CheckState.Checked
+                )
             )
             self._table.setCellWidget(row, 0, checkbox)
 
@@ -183,7 +183,9 @@ class ResendDialog(BaseDialog):
             self._table.setItem(row, 2, file_item)
 
             # Sent date column
-            sent_date = datetime.fromisoformat(file_info["sent_date_time"]).strftime("%Y-%m-%d %H:%M")
+            sent_date = datetime.fromisoformat(file_info["sent_date_time"]).strftime(
+                "%Y-%m-%d %H:%M"
+            )
             date_item = QTableWidgetItem(sent_date)
             date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 3, date_item)
@@ -199,7 +201,7 @@ class ResendDialog(BaseDialog):
         self._table.setColumnWidth(0, 50)  # Checkbox column
         self._table.setColumnWidth(1, 150)  # Folder column
         self._table.setColumnWidth(3, 120)  # Date column
-        self._table.setColumnWidth(4, 80)   # Status column
+        self._table.setColumnWidth(4, 80)  # Status column
         self._table.horizontalHeader().setStretchLastSection(True)
 
     def _on_search_changed(self, text: str) -> None:
@@ -208,8 +210,7 @@ class ResendDialog(BaseDialog):
             self._filtered_files = self._all_files.copy()
         else:
             self._filtered_files = [
-                f for f in self._all_files
-                if text.lower() in f["file_name"].lower()
+                f for f in self._all_files if text.lower() in f["file_name"].lower()
             ]
         self._populate_table()
         self._update_status()

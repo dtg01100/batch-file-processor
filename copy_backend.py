@@ -6,9 +6,8 @@ injectable file operations support for testing.
 
 from typing import Optional
 
-from backend.protocols import FileOperationsProtocol
 from backend.file_operations import create_file_operations
-
+from backend.protocols import FileOperationsProtocol
 
 # this is a testing module for local file copies
 # note: process_parameters is a dict from a row in the database, passed into this module
@@ -18,7 +17,7 @@ def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
-    file_ops: Optional[FileOperationsProtocol] = None
+    file_ops: Optional[FileOperationsProtocol] = None,
 ) -> bool:
     """Copy a file to a local directory.
 
@@ -44,7 +43,7 @@ def do(
         file_ops = create_file_operations()
 
     # Ensure destination directory exists
-    dest_dir = process_parameters['copy_to_directory']
+    dest_dir = process_parameters["copy_to_directory"]
     if not file_ops.exists(dest_dir):
         try:
             file_ops.makedirs(dest_dir)
@@ -82,10 +81,7 @@ class CopyBackend:
         self.file_ops = file_ops
 
     def copy(
-        self,
-        process_parameters: dict,
-        settings_dict: dict,
-        filename: str
+        self, process_parameters: dict, settings_dict: dict, filename: str
     ) -> bool:
         """Copy a file to a local directory.
 
@@ -100,10 +96,7 @@ class CopyBackend:
         return do(process_parameters, settings_dict, filename, self.file_ops)
 
     def send(
-        self,
-        process_parameters: dict,
-        settings_dict: dict,
-        filename: str
+        self, process_parameters: dict, settings_dict: dict, filename: str
     ) -> bool:
         """Send a file via copy (local file copy).
 

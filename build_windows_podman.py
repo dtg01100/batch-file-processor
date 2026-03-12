@@ -4,9 +4,9 @@ Windows build script that uses Podman to create a Windows executable.
 This version does not require sudo.
 """
 
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -22,7 +22,7 @@ def main():
     print("Creating Dockerfile for Windows build...")
 
     # Updated Dockerfile with proper PyInstaller command using Python 3.11
-    dockerfile_content = '''FROM docker.io/batonogov/pyinstaller-windows:v4.0.1
+    dockerfile_content = """FROM docker.io/batonogov/pyinstaller-windows:v4.0.1
 
 # Install git and Python 3.11
 RUN apt-get update && apt-get install -y git software-properties-common && \
@@ -47,7 +47,7 @@ RUN ls -la /src/main_interface.spec
 
 # Run PyInstaller with Python 3.11
 RUN python3.11 -m PyInstaller main_interface.spec --clean --noconfirm
-'''
+"""
 
     dockerfile_path = project_root / "Dockerfile.windows.build"
     with open(dockerfile_path, "w") as f:
@@ -85,14 +85,11 @@ RUN python3.11 -m PyInstaller main_interface.spec --clean --noconfirm
 
         print("Extracting built executable...")
         # Create a temporary container to extract files
-        container_id = (
-            subprocess.check_output(
-                ["podman", "create", "batch-file-processor-windows-build"],
-                cwd=project_root,
-                text=True,
-            )
-            .strip()
-        )
+        container_id = subprocess.check_output(
+            ["podman", "create", "batch-file-processor-windows-build"],
+            cwd=project_root,
+            text=True,
+        ).strip()
 
         try:
             # Copy the dist directory from the container
@@ -161,6 +158,7 @@ RUN python3.11 -m PyInstaller main_interface.spec --clean --noconfirm
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

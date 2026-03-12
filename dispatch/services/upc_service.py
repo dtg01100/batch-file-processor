@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Protocol, Optional
+from typing import Optional, Protocol
 
 
 class QueryRunnerProtocol(Protocol):

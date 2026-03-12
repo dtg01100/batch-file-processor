@@ -135,7 +135,9 @@ def run_graphical_mock_automatic(
 
     exit_code = 0
     try:
-        with patch("interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)):
+        with patch(
+            "interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)
+        ):
             with patch("dispatch.process", side_effect=_mock_dispatch_process):
                 app.initialize(args=["--graphical-automatic"])
                 app.run()

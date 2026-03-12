@@ -12,8 +12,10 @@ except Exception:  # pragma: no cover - best-effort compatibility shim
     class RightClickMenu(object):
         def __init__(self, widget=None):
             self._widget = widget
+
         def __call__(self, event=None):
             return None
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("rclick_menu demo removed — use the Qt demo in interface/qt/widgets instead.")

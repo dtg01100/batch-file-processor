@@ -50,7 +50,12 @@ class QtAppBootstrapService:
             help="Show GUI and automatically start processing all folders",
         )
         parsed_args, _unknown = launch_options.parse_known_args(args)
-        logger.debug("Parsed args: automatic=%s, self_test=%s, gui_test=%s", parsed_args.automatic, parsed_args.self_test, parsed_args.gui_test)
+        logger.debug(
+            "Parsed args: automatic=%s, self_test=%s, gui_test=%s",
+            parsed_args.automatic,
+            parsed_args.self_test,
+            parsed_args.gui_test,
+        )
         return parsed_args
 
     def setup_config_directories(self) -> tuple[str, str]:

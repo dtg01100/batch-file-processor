@@ -4,14 +4,14 @@ This module provides a refactored, testable implementation of log email sending,
 using Protocol interfaces for dependency injection.
 """
 
-from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable, Optional, Any
-import smtplib
-from email.message import EmailMessage
+import logging
 import mimetypes
 import os
+import smtplib
+from dataclasses import dataclass, field
+from email.message import EmailMessage
 from pathlib import Path
-import logging
+from typing import Any, Optional, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 

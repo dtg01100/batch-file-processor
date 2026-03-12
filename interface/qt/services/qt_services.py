@@ -18,9 +18,9 @@ from PyQt6.QtWidgets import (
     QFrame,
     QLabel,
     QMessageBox,
+    QProgressBar,
     QVBoxLayout,
     QWidget,
-    QProgressBar,
 )
 
 from interface.qt.theme import Theme
@@ -246,7 +246,9 @@ class QtProgressService(QObject):
         """Create the centred title label (main message)."""
         label = QLabel(parent)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(f"color: {Theme.TEXT_ON_OVERLAY}; font-size: 16pt; font-weight: bold;")
+        label.setStyleSheet(
+            f"color: {Theme.TEXT_ON_OVERLAY}; font-size: 16pt; font-weight: bold;"
+        )
         label.setWordWrap(True)
         return label
 
@@ -255,7 +257,9 @@ class QtProgressService(QObject):
         """Create a label for detailed progress information."""
         label = QLabel(parent)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(f"color: {Theme.TEXT_ON_OVERLAY_SECONDARY}; font-size: 12pt;")
+        label.setStyleSheet(
+            f"color: {Theme.TEXT_ON_OVERLAY_SECONDARY}; font-size: 12pt;"
+        )
         label.setWordWrap(True)
         return label
 
@@ -264,7 +268,9 @@ class QtProgressService(QObject):
         """Create the footer label for additional context."""
         label = QLabel(parent)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(f"color: {Theme.TEXT_ON_OVERLAY_TERTIARY}; font-size: 11pt; font-style: italic;")
+        label.setStyleSheet(
+            f"color: {Theme.TEXT_ON_OVERLAY_TERTIARY}; font-size: 11pt; font-style: italic;"
+        )
         label.setWordWrap(True)
         return label
 
@@ -273,11 +279,13 @@ class QtProgressService(QObject):
         """Create an animated throbber indicator with pulsing effect."""
         throbber = QLabel("◐", parent)
         throbber.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        throbber.setStyleSheet(f"color: {Theme.TEXT_ON_OVERLAY}; font-size: 36pt; font-weight: bold;")
+        throbber.setStyleSheet(
+            f"color: {Theme.TEXT_ON_OVERLAY}; font-size: 36pt; font-weight: bold;"
+        )
 
         # Create pulsing animation for opacity (ping-pong effect)
         # Use QGraphicsOpacityEffect for proper opacity animation support
-        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+        from PyQt6.QtCore import QEasingCurve, QPropertyAnimation
         from PyQt6.QtWidgets import QGraphicsOpacityEffect
 
         opacity_effect = QGraphicsOpacityEffect(throbber)
@@ -316,7 +324,8 @@ class QtProgressService(QObject):
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(100)
         progress_bar.setValue(0)
-        progress_bar.setStyleSheet(f"""
+        progress_bar.setStyleSheet(
+            f"""
             QProgressBar {{
                 border: 2px solid {Theme.PROGRESS_BAR_BORDER};
                 border-radius: 5px;
@@ -328,7 +337,8 @@ class QtProgressService(QObject):
                 background-color: {Theme.PROGRESS_BAR_CHUNK};
                 border-radius: 3px;
             }}
-        """)
+        """
+        )
         return progress_bar
 
     def _setup_layout(self) -> None:

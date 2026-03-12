@@ -5,8 +5,8 @@ batch file processor application.
 """
 
 from interface.database.database_obj import (
-    DatabaseObj,
     DatabaseConnectionProtocol,
+    DatabaseObj,
     TableProtocol,
 )
 

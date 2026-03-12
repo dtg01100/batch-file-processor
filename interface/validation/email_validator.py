@@ -8,8 +8,7 @@ easy to test and reuse.
 """
 
 import re
-from typing import Optional, Tuple, List
-
+from typing import List, Optional, Tuple
 
 # Default email regex pattern
 DEFAULT_EMAIL_PATTERN = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"

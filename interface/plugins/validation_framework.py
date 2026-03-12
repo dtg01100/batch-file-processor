@@ -6,9 +6,8 @@ custom validation logic for their configuration fields.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Callable, Union
-
 from dataclasses import dataclass
+from typing import Any, Callable, List, Union
 
 
 @dataclass

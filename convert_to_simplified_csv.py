@@ -22,13 +22,12 @@ import csv
 from decimal import Decimal
 
 import utils
-from core.exceptions import CustomerLookupError
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    normalize_parameter
+    normalize_parameter,
 )
 
 
@@ -51,38 +50,37 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         # Extract and normalize parameters
         params = context.parameters_dict
 
-        context.user_data['retail_uom'] = normalize_parameter(
-            params.get('retail_uom'), False
+        context.user_data["retail_uom"] = normalize_parameter(
+            params.get("retail_uom"), False
         )
-        context.user_data['inc_headers'] = normalize_parameter(
-            params.get('include_headers', params.get('simple_csv_include_headers', True))
+        context.user_data["inc_headers"] = normalize_parameter(
+            params.get(
+                "include_headers", params.get("simple_csv_include_headers", True)
+            )
         )
-        context.user_data['inc_item_numbers'] = normalize_parameter(
-            params.get('include_item_numbers'), True
+        context.user_data["inc_item_numbers"] = normalize_parameter(
+            params.get("include_item_numbers"), True
         )
-        context.user_data['inc_item_desc'] = normalize_parameter(
-            params.get('include_item_description'), True
+        context.user_data["inc_item_desc"] = normalize_parameter(
+            params.get("include_item_description"), True
         )
-        context.user_data['column_layout'] = params.get(
-            'simple_csv_sort_order', 'upc_number,qty_of_units,unit_cost,vendor_item'
+        context.user_data["column_layout"] = params.get(
+            "simple_csv_sort_order", "upc_number,qty_of_units,unit_cost,vendor_item"
         )
 
         # Open output file and create CSV writer
         context.output_file = open(
-            context.get_output_path(".csv"),
-            "w",
-            newline="",
-            encoding="utf-8"
+            context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
             context.output_file,
             dialect="excel",
             lineterminator="\r\n",
-            quoting=csv.QUOTE_MINIMAL
+            quoting=csv.QUOTE_MINIMAL,
         )
 
         # Write headers if enabled
-        if context.user_data['inc_headers']:
+        if context.user_data["inc_headers"]:
             self._write_headers(context)
 
     def _write_headers(self, context: ConversionContext) -> None:
@@ -92,26 +90,26 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             context: The conversion context
         """
         user_data = context.user_data
-        column_layout = user_data['column_layout']
-        inc_item_desc = user_data['inc_item_desc']
-        inc_item_numbers = user_data['inc_item_numbers']
+        column_layout = user_data["column_layout"]
+        inc_item_desc = user_data["inc_item_desc"]
+        inc_item_numbers = user_data["inc_item_numbers"]
 
         # Header mapping
         header_map = {
-            'upc_number': 'UPC',
-            'qty_of_units': 'Quantity',
-            'unit_cost': 'Cost',
-            'description': 'Item Description',
-            'vendor_item': 'Item Number'
+            "upc_number": "UPC",
+            "qty_of_units": "Quantity",
+            "unit_cost": "Cost",
+            "description": "Item Description",
+            "vendor_item": "Item Number",
         }
 
         headers = []
         for column in column_layout.split(","):
             column = column.strip()
-            if column in ['description', 'vendor_item']:
-                if inc_item_desc and column == 'description':
+            if column in ["description", "vendor_item"]:
+                if inc_item_desc and column == "description":
                     headers.append(header_map[column])
-                if inc_item_numbers and column == 'vendor_item':
+                if inc_item_numbers and column == "vendor_item":
                     headers.append(header_map[column])
             else:
                 headers.append(header_map.get(column, column))
@@ -126,27 +124,25 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             context: The conversion context
         """
         user_data = context.user_data
-        column_layout = user_data['column_layout']
-        inc_item_desc = user_data['inc_item_desc']
-        inc_item_numbers = user_data['inc_item_numbers']
+        column_layout = user_data["column_layout"]
+        inc_item_desc = user_data["inc_item_desc"]
+        inc_item_numbers = user_data["inc_item_numbers"]
 
         column_list = []
         for column in column_layout.split(","):
             column = column.strip()
-            if column in ['description', 'vendor_item']:
-                if inc_item_desc and column == 'description':
-                    column_list.append(rowdict.get(column, ''))
-                if inc_item_numbers and column == 'vendor_item':
-                    column_list.append(rowdict.get(column, ''))
+            if column in ["description", "vendor_item"]:
+                if inc_item_desc and column == "description":
+                    column_list.append(rowdict.get(column, ""))
+                if inc_item_numbers and column == "vendor_item":
+                    column_list.append(rowdict.get(column, ""))
             else:
-                column_list.append(rowdict.get(column, ''))
+                column_list.append(rowdict.get(column, ""))
 
         context.csv_writer.writerow(column_list)
 
     def _should_process_record_type(
-        self,
-        record_type: str,
-        context: ConversionContext
+        self, record_type: str, context: ConversionContext
     ) -> bool:
         """Only process B records for simplified CSV.
 
@@ -170,24 +166,22 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         fields = dict(record.fields)  # Copy to allow modification
 
         # Apply retail UOM conversion if enabled
-        if user_data['retail_uom']:
+        if user_data["retail_uom"]:
             fields = self._apply_retail_uom_conversion(fields, context)
 
         # Build row dictionary
         row_dict = {
-            'upc_number': fields['upc_number'],
-            'qty_of_units': utils.qty_to_int(fields['qty_of_units']),
-            'unit_cost': utils.convert_to_price(fields['unit_cost']),
-            'description': fields['description'],
-            'vendor_item': int(fields['vendor_item'].strip())
+            "upc_number": fields["upc_number"],
+            "qty_of_units": utils.qty_to_int(fields["qty_of_units"]),
+            "unit_cost": utils.convert_to_price(fields["unit_cost"]),
+            "description": fields["description"],
+            "vendor_item": int(fields["vendor_item"].strip()),
         }
 
         self._add_row(row_dict, context)
 
     def _apply_retail_uom_conversion(
-        self,
-        fields: dict,
-        context: ConversionContext
+        self, fields: dict, context: ConversionContext
     ) -> dict:
         """Apply retail UOM conversion to B record fields.
 
@@ -202,12 +196,12 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         """
         # Validate fields can be parsed
         try:
-            item_number = int(fields['vendor_item'].strip())
-            float(fields['unit_cost'].strip())
-            unit_multiplier = int(fields['unit_multiplier'].strip())
+            item_number = int(fields["vendor_item"].strip())
+            float(fields["unit_cost"].strip())
+            unit_multiplier = int(fields["unit_multiplier"].strip())
             if unit_multiplier == 0:
                 raise ValueError("Unit multiplier cannot be zero")
-            int(fields['qty_of_units'].strip())
+            int(fields["qty_of_units"].strip())
             edi_line_pass = True
         except Exception:
             print("cannot parse b record field, skipping")
@@ -223,20 +217,22 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             # Apply conversion
             try:
                 # Convert unit cost from case cost to each cost
-                case_cost = Decimal(fields['unit_cost'].strip()) / 100
+                case_cost = Decimal(fields["unit_cost"].strip()) / 100
                 each_cost = case_cost / Decimal(unit_multiplier)
-                each_cost_cents = str(
-                    each_cost.quantize(Decimal('.01'))
-                ).replace(".", "")[-6:].rjust(6, "0")
-                fields['unit_cost'] = each_cost_cents
+                each_cost_cents = (
+                    str(each_cost.quantize(Decimal(".01")))
+                    .replace(".", "")[-6:]
+                    .rjust(6, "0")
+                )
+                fields["unit_cost"] = each_cost_cents
 
                 # Convert quantity from cases to eaches
-                case_qty = int(fields['qty_of_units'].strip())
+                case_qty = int(fields["qty_of_units"].strip())
                 each_qty = unit_multiplier * case_qty
-                fields['qty_of_units'] = str(each_qty).rjust(5, '0')
+                fields["qty_of_units"] = str(each_qty).rjust(5, "0")
 
                 # Set UPC to each UPC
-                fields['upc_number'] = each_upc_string
+                fields["upc_number"] = each_upc_string
 
             except Exception as error:
                 print(error)
@@ -248,12 +244,13 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+
 def edi_convert(
     edi_process: str,
     output_filename: str,
     settings_dict: dict,
     parameters_dict: dict,
-    upc_lookup: dict
+    upc_lookup: dict,
 ) -> str:
     """Convert EDI file to simplified CSV format with configurable columns.
 
@@ -283,9 +280,5 @@ def edi_convert(
     """
     converter = SimplifiedCSVConverter()
     return converter.edi_convert(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_lookup
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
     )

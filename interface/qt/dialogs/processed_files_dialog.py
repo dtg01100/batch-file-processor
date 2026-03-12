@@ -27,11 +27,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from interface.operations.processed_files import export_processed_report
+from interface.ports import UIServiceProtocol
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
-
-from interface.ports import UIServiceProtocol
-from interface.operations.processed_files import export_processed_report
 
 
 class ProcessedFilesDialog(BaseDialog):
@@ -84,7 +83,6 @@ class ProcessedFilesDialog(BaseDialog):
         self._actions_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._actions_layout.addWidget(QLabel("Select a Folder."))
         body_layout.addWidget(self._actions_container)
-
 
     def _build_folder_list(self) -> QScrollArea:
         scroll_area = QScrollArea()

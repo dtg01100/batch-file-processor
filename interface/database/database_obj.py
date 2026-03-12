@@ -7,13 +7,14 @@ The class supports dependency injection through the DatabaseConnectionProtocol,
 enabling testing without actual database connections.
 """
 
-from typing import Protocol, runtime_checkable, Optional, Any
+import datetime
 import os
 import sys
-import datetime
 import traceback
-from interface.database import sqlite_wrapper
+from typing import Any, Optional, Protocol, runtime_checkable
+
 import schema
+from interface.database import sqlite_wrapper
 
 
 @runtime_checkable
@@ -429,7 +430,7 @@ class DatabaseObj:
                 log_file.write(f"Program version: {self._database_version}\n")
                 log_file.write(f"Timestamp: {datetime.datetime.now()}\n")
                 log_file.write(f"Error: {str(error)}\n")
-                log_file.write(f"Traceback:\n")
+                log_file.write("Traceback:\n")
                 log_file.write(traceback.format_exc())
                 log_file.write(f"{'='*60}\n")
         except Exception as log_error:

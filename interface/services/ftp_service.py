@@ -1,8 +1,8 @@
 """FTP Service abstraction for testable FTP operations."""
 
 import ftplib
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -58,21 +58,21 @@ class FTPService(FTPServiceProtocol):
                     ftp.cwd(folder)
                     return FTPConnectionResult(success=True)
 
-                except Exception as e:
+                except Exception:
                     return FTPConnectionResult(
                         success=False,
                         error_message="FTP Folder Field Incorrect",
                         error_type="cwd",
                     )
 
-            except Exception as e:
+            except Exception:
                 return FTPConnectionResult(
                     success=False,
                     error_message="FTP Username or Password Incorrect",
                     error_type="login",
                 )
 
-        except Exception as e:
+        except Exception:
             return FTPConnectionResult(
                 success=False,
                 error_message="FTP Server or Port Field Incorrect",

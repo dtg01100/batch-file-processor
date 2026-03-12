@@ -35,7 +35,9 @@ def convert_to_price_decimal(value):
     try:
         return Decimal(retprice)
     except Exception:
-        logger.warning("convert_to_price_decimal: could not convert %r to Decimal", value)
+        logger.warning(
+            "convert_to_price_decimal: could not convert %r to Decimal", value
+        )
         return 0
 
 
@@ -50,7 +52,10 @@ def detect_invoice_is_credit(edi_process):
         return False
 
     if fields is None:
-        logger.warning("detect_invoice_is_credit: capture_records returned None for %r", edi_process)
+        logger.warning(
+            "detect_invoice_is_credit: capture_records returned None for %r",
+            edi_process,
+        )
         return False
 
     if fields["record_type"] != "A":

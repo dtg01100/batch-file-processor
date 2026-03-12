@@ -4,19 +4,19 @@ Constructs the complete UI layout for the Qt edit folders dialog,
 managing widget container creation, spacing, and scroll area setup.
 """
 
-from typing import Dict, Any, Optional, Callable
+from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QWidget,
-    QScrollArea,
-    QDialogButtonBox,
-    QCheckBox,
-    QLabel,
-)
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
 from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
@@ -92,7 +92,10 @@ class UILayoutBuilder:
             if hasattr(self.dialog, "_body_widget"):
                 self.dialog._main_layout.removeWidget(self.dialog._body_widget)
                 self.dialog._body_widget.setParent(None)
-            if hasattr(self.dialog, "_button_box") and self.dialog._button_box is not None:
+            if (
+                hasattr(self.dialog, "_button_box")
+                and self.dialog._button_box is not None
+            ):
                 self.dialog._main_layout.removeWidget(self.dialog._button_box)
                 self.dialog._button_box.setParent(None)
         else:
@@ -108,14 +111,16 @@ class UILayoutBuilder:
 
         # Active state checkbox
         self.active_checkbox = QCheckBox("Folder Is Disabled")
-        self.active_checkbox.setStyleSheet(f"""
+        self.active_checkbox.setStyleSheet(
+            f"""
             QCheckBox {{
                 background-color: {Theme.ERROR_CONTAINER};
                 color: {Theme.ON_ERROR_CONTAINER};
                 padding: 4px;
                 border-radius: 4px;
             }}
-        """)
+        """
+        )
         if self.on_update_backend_states:
             self.active_checkbox.toggled.connect(self.on_update_backend_states)
         self.fields["active_checkbutton"] = self.active_checkbox
