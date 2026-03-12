@@ -11,25 +11,24 @@ The module uses the refactored classes from core.edi.
 import time
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Optional, TextIO
 
 import utils
 from core.database import query_runner
+from core.edi.c_rec_generator import CRecGenerator
 
 # Import refactored classes
-from core.edi.po_fetcher import POFetcher, POData
-from core.edi.c_rec_generator import CRecGenerator, CRecordConfig
+from core.edi.po_fetcher import POFetcher
 
 
 def _create_query_runner_adapter(settings_dict: dict):
     """Create an adapter that wraps legacy query_runner.
-    
+
     This function creates a query runner from settings and wraps it
     with an adapter that implements the QueryRunnerProtocol.
-    
+
     Args:
         settings_dict: Dictionary containing database connection settings
-        
+
     Returns:
         Object implementing QueryRunnerProtocol
     """
@@ -39,17 +38,17 @@ def _create_query_runner_adapter(settings_dict: dict):
         settings_dict["as400_address"],
         f"{settings_dict['odbc_driver']}",
     )
-    
+
     class QueryRunnerAdapter:
         """Adapter wrapping legacy query_runner for protocol compliance."""
-        
+
         def __init__(self, runner):
             self._runner = runner
-        
+
         def run_query(self, query: str, params: tuple = None) -> list:
             # Legacy runner returns list of tuples
             return self._runner.run_arbitrary_query(query)
-    
+
     return QueryRunnerAdapter(legacy_runner)
 
 
@@ -61,42 +60,50 @@ def edi_tweak(
     upc_dict,
 ):
     """Apply EDI tweaks to process an EDI file.
-    
+
     This function processes an EDI file, applying various transformations
     including date offsetting, UPC calculations, and C-record generation.
-    
+
     Args:
         edi_process: Path to input EDI file
         output_filename: Path to output file
         settings_dict: Dictionary containing database and app settings
         parameters_dict: Dictionary containing processing parameters
         upc_dict: Dictionary containing UPC mappings
-        
+
     Returns:
         Path to the output file
     """
-    pad_arec = utils.normalize_bool(parameters_dict['pad_a_records'])
-    arec_padding = parameters_dict['a_record_padding']
-    arec_padding_len = parameters_dict['a_record_padding_length']
-    append_arec = utils.normalize_bool(parameters_dict['append_a_records'])
-    append_arec_text = parameters_dict['a_record_append_text']
-    invoice_date_custom_format = utils.normalize_bool(parameters_dict['invoice_date_custom_format'])
-    invoice_date_custom_format_string = parameters_dict['invoice_date_custom_format_string']
-    force_txt_file_ext = utils.normalize_bool(parameters_dict['force_txt_file_ext'])
-    calc_upc = utils.normalize_bool(parameters_dict['calculate_upc_check_digit'])
-    invoice_date_offset = parameters_dict.get('invoice_date_offset')
-    invoice_date_offset = int(invoice_date_offset) if invoice_date_offset is not None else 0
-    retail_uom = utils.normalize_bool(parameters_dict['retail_uom'])
-    override_upc = utils.normalize_bool(parameters_dict['override_upc_bool'])
-    override_upc_level = parameters_dict['override_upc_level']
-    override_upc_category_filter = parameters_dict['override_upc_category_filter']
-    split_prepaid_sales_tax_crec = utils.normalize_bool(parameters_dict['split_prepaid_sales_tax_crec'])
-    
+    pad_arec = utils.normalize_bool(parameters_dict["pad_a_records"])
+    arec_padding = parameters_dict["a_record_padding"]
+    arec_padding_len = parameters_dict["a_record_padding_length"]
+    append_arec = utils.normalize_bool(parameters_dict["append_a_records"])
+    append_arec_text = parameters_dict["a_record_append_text"]
+    invoice_date_custom_format = utils.normalize_bool(
+        parameters_dict["invoice_date_custom_format"]
+    )
+    invoice_date_custom_format_string = parameters_dict[
+        "invoice_date_custom_format_string"
+    ]
+    force_txt_file_ext = utils.normalize_bool(parameters_dict["force_txt_file_ext"])
+    calc_upc = utils.normalize_bool(parameters_dict["calculate_upc_check_digit"])
+    invoice_date_offset = parameters_dict.get("invoice_date_offset")
+    invoice_date_offset = (
+        int(invoice_date_offset) if invoice_date_offset is not None else 0
+    )
+    retail_uom = utils.normalize_bool(parameters_dict["retail_uom"])
+    override_upc = utils.normalize_bool(parameters_dict["override_upc_bool"])
+    override_upc_level = parameters_dict["override_upc_level"]
+    override_upc_category_filter = parameters_dict["override_upc_category_filter"]
+    split_prepaid_sales_tax_crec = utils.normalize_bool(
+        parameters_dict["split_prepaid_sales_tax_crec"]
+    )
+
     # Safely convert upc_target_length to int, handling None
-    val = parameters_dict.get('upc_target_length')
+    val = parameters_dict.get("upc_target_length")
     upc_target_length = int(val) if val is not None else 11
-    
-    upc_padding_pattern = parameters_dict.get('upc_padding_pattern', '           ')
+
+    upc_padding_pattern = parameters_dict.get("upc_padding_pattern", "           ")
 
     work_file = None
     read_attempt_counter = 1
@@ -105,7 +112,7 @@ def edi_tweak(
             work_file = open(edi_process)  # open work file, overwriting old file
         except Exception as error:
             if read_attempt_counter >= 5:
-                time.sleep(read_attempt_counter*read_attempt_counter)
+                time.sleep(read_attempt_counter * read_attempt_counter)
                 read_attempt_counter += 1
                 print(f"retrying open {edi_process}")
             else:
@@ -121,10 +128,12 @@ def edi_tweak(
     write_attempt_counter = 1
     while f is None:
         try:
-            f = open(output_filename, "w", newline='\r\n')  # open work file, overwriting old file
+            f = open(
+                output_filename, "w", newline="\r\n"
+            )  # open work file, overwriting old file
         except Exception as error:
             if write_attempt_counter >= 5:
-                time.sleep(write_attempt_counter*write_attempt_counter)
+                time.sleep(write_attempt_counter * write_attempt_counter)
                 write_attempt_counter += 1
                 print(f"retrying open {output_filename}")
             else:
@@ -133,7 +142,7 @@ def edi_tweak(
 
     # Create query runner adapter for modern classes
     query_adapter = _create_query_runner_adapter(settings_dict)
-    
+
     # Use modern classes directly
     crec_appender = CRecGenerator(query_adapter)
     po_fetcher = POFetcher(query_adapter)
@@ -143,7 +152,7 @@ def edi_tweak(
         writeable_line = line
         if writeable_line.startswith("A"):
             a_rec_edi_dict = input_edi_dict
-            crec_appender.set_invoice_number(int(a_rec_edi_dict['invoice_number']))
+            crec_appender.set_invoice_number(int(a_rec_edi_dict["invoice_number"]))
             if invoice_date_offset != 0:
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
                 if not invoice_date_string == "000000":
@@ -151,28 +160,37 @@ def edi_tweak(
                     offset_invoice_date = invoice_date + timedelta(
                         days=invoice_date_offset
                     )
-                    a_rec_edi_dict['invoice_date'] = datetime.strftime(offset_invoice_date, "%m%d%y")
+                    a_rec_edi_dict["invoice_date"] = datetime.strftime(
+                        offset_invoice_date, "%m%d%y"
+                    )
             if invoice_date_custom_format:
                 invoice_date_string = a_rec_edi_dict["invoice_date"]
                 try:
                     invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
-                    a_rec_edi_dict['invoice_date'] = datetime.strftime(invoice_date, invoice_date_custom_format_string)
+                    a_rec_edi_dict["invoice_date"] = datetime.strftime(
+                        invoice_date, invoice_date_custom_format_string
+                    )
                 except ValueError:
-                    a_rec_edi_dict['invoice_date'] = "ERROR"
+                    a_rec_edi_dict["invoice_date"] = "ERROR"
             if pad_arec:
                 padding = arec_padding
-                fill = ' '
-                align = '<'
+                fill = " "
+                align = "<"
                 width = arec_padding_len
-                a_rec_edi_dict['cust_vendor'] = f'{padding:{fill}{align}{width}}'
-            a_rec_line_builder = [a_rec_edi_dict['record_type'],
-                    a_rec_edi_dict['cust_vendor'],
-                    a_rec_edi_dict['invoice_number'],
-                    a_rec_edi_dict['invoice_date'],
-                    a_rec_edi_dict['invoice_total']]
+                a_rec_edi_dict["cust_vendor"] = f"{padding:{fill}{align}{width}}"
+            a_rec_line_builder = [
+                a_rec_edi_dict["record_type"],
+                a_rec_edi_dict["cust_vendor"],
+                a_rec_edi_dict["invoice_number"],
+                a_rec_edi_dict["invoice_date"],
+                a_rec_edi_dict["invoice_total"],
+            ]
             if append_arec:
                 if "%po_str%" in append_arec_text:
-                    append_arec_text = append_arec_text.replace("%po_str%", po_fetcher.fetch_po_number(a_rec_edi_dict['invoice_number']))
+                    append_arec_text = append_arec_text.replace(
+                        "%po_str%",
+                        po_fetcher.fetch_po_number(a_rec_edi_dict["invoice_number"]),
+                    )
                 a_rec_line_builder.append(append_arec_text)
             a_rec_line_builder.append("\n")
             writeable_line = "".join(a_rec_line_builder)
@@ -182,23 +200,31 @@ def edi_tweak(
             try:
                 if override_upc:
                     if override_upc_category_filter == "ALL":
-                        b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
+                        b_rec_edi_dict["upc_number"] = upc_dict[
+                            int(b_rec_edi_dict["vendor_item"].strip())
+                        ][override_upc_level]
                     else:
-                        if upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][0] in override_upc_category_filter.split(","):
-                            b_rec_edi_dict['upc_number'] = upc_dict[int(b_rec_edi_dict['vendor_item'].strip())][override_upc_level]
+                        if upc_dict[int(b_rec_edi_dict["vendor_item"].strip())][
+                            0
+                        ] in override_upc_category_filter.split(","):
+                            b_rec_edi_dict["upc_number"] = upc_dict[
+                                int(b_rec_edi_dict["vendor_item"].strip())
+                            ][override_upc_level]
             except KeyError:
-                b_rec_edi_dict['upc_number'] = ""
+                b_rec_edi_dict["upc_number"] = ""
             # Apply padding/truncating to UPC if retail_uom is enabled
             # This runs after override_upc, so padding is applied to whatever UPC is set
             if retail_uom:
                 edi_line_pass = False
                 try:
-                    item_number = int(b_rec_edi_dict['vendor_item'].strip())
-                    float(b_rec_edi_dict['unit_cost'].strip())
-                    test_unit_multiplier = int(b_rec_edi_dict['unit_multiplier'].strip())
+                    item_number = int(b_rec_edi_dict["vendor_item"].strip())
+                    float(b_rec_edi_dict["unit_cost"].strip())
+                    test_unit_multiplier = int(
+                        b_rec_edi_dict["unit_multiplier"].strip()
+                    )
                     if test_unit_multiplier == 0:
                         raise ValueError
-                    int(b_rec_edi_dict['qty_of_units'].strip())
+                    int(b_rec_edi_dict["qty_of_units"].strip())
                     edi_line_pass = True
                 except Exception:
                     print("cannot parse b record field, skipping")
@@ -206,16 +232,36 @@ def edi_tweak(
                     # Apply padding/truncating to whatever UPC is already in the field
                     # This runs after override_upc, so we pad the existing UPC value
                     try:
-                        fill_char = upc_padding_pattern[0] if upc_padding_pattern else ' '
-                        current_upc = b_rec_edi_dict['upc_number'].strip()[:upc_target_length]
-                        b_rec_edi_dict['upc_number'] = current_upc.rjust(upc_target_length, fill_char)
+                        fill_char = (
+                            upc_padding_pattern[0] if upc_padding_pattern else " "
+                        )
+                        current_upc = b_rec_edi_dict["upc_number"].strip()[
+                            :upc_target_length
+                        ]
+                        b_rec_edi_dict["upc_number"] = current_upc.rjust(
+                            upc_target_length, fill_char
+                        )
                     except (AttributeError, TypeError):
                         # Fallback: use padding pattern if UPC is empty/invalid
-                        b_rec_edi_dict['upc_number'] = upc_padding_pattern[:upc_target_length]
+                        b_rec_edi_dict["upc_number"] = upc_padding_pattern[
+                            :upc_target_length
+                        ]
                     try:
-                        b_rec_edi_dict["unit_cost"] = str(Decimal((Decimal(b_rec_edi_dict['unit_cost'].strip()) / 100) / Decimal(b_rec_edi_dict['unit_multiplier'].strip())).quantize(Decimal('.01'))).replace(".", "")[-6:].rjust(6,'0')
-                        b_rec_edi_dict['qty_of_units'] = str(int(b_rec_edi_dict['unit_multiplier'].strip()) * int(b_rec_edi_dict['qty_of_units'].strip())).rjust(5,'0')
-                        b_rec_edi_dict['unit_multiplier'] = '000001'
+                        b_rec_edi_dict["unit_cost"] = (
+                            str(
+                                Decimal(
+                                    (Decimal(b_rec_edi_dict["unit_cost"].strip()) / 100)
+                                    / Decimal(b_rec_edi_dict["unit_multiplier"].strip())
+                                ).quantize(Decimal(".01"))
+                            )
+                            .replace(".", "")[-6:]
+                            .rjust(6, "0")
+                        )
+                        b_rec_edi_dict["qty_of_units"] = str(
+                            int(b_rec_edi_dict["unit_multiplier"].strip())
+                            * int(b_rec_edi_dict["qty_of_units"].strip())
+                        ).rjust(5, "0")
+                        b_rec_edi_dict["unit_multiplier"] = "000001"
                     except Exception as error:
                         print(error)
             if calc_upc:
@@ -229,23 +275,27 @@ def edi_tweak(
                     proposed_upc = b_rec_edi_dict["upc_number"].strip()
                     if len(str(proposed_upc)) == upc_target_length:
                         check_digit = utils.calc_check_digit(proposed_upc)
-                        b_rec_edi_dict['upc_number'] = str(proposed_upc) + str(check_digit)
+                        b_rec_edi_dict["upc_number"] = str(proposed_upc) + str(
+                            check_digit
+                        )
                     else:
                         if len(str(proposed_upc)) == 8:
-                            b_rec_edi_dict['upc_number'] = str(
+                            b_rec_edi_dict["upc_number"] = str(
                                 utils.convert_UPCE_to_UPCA(proposed_upc)
                             )
                 else:
-                    b_rec_edi_dict['upc_number'] = upc_padding_pattern[:upc_target_length]
+                    b_rec_edi_dict["upc_number"] = upc_padding_pattern[
+                        :upc_target_length
+                    ]
 
             if len(writeable_line) < 77:
                 b_rec_edi_dict["parent_item_number"] = ""
 
             digits_fields = [
-            "unit_cost",
-            "unit_multiplier",
-            "qty_of_units",
-            "suggested_retail_price",
+                "unit_cost",
+                "unit_multiplier",
+                "qty_of_units",
+                "suggested_retail_price",
             ]
 
             for field in digits_fields:
@@ -253,23 +303,29 @@ def edi_tweak(
                 if len(tempfield) != len(b_rec_edi_dict[field]):
                     b_rec_edi_dict[field] = "-" + tempfield
 
-            writeable_line = "".join((
-                b_rec_edi_dict["record_type"],
-                b_rec_edi_dict["upc_number"],
-                b_rec_edi_dict["description"],
-                b_rec_edi_dict["vendor_item"],
-                b_rec_edi_dict["unit_cost"],
-                b_rec_edi_dict["combo_code"],
-                b_rec_edi_dict["unit_multiplier"],
-                b_rec_edi_dict["qty_of_units"],
-                b_rec_edi_dict["suggested_retail_price"],
-                b_rec_edi_dict["price_multi_pack"],
-                b_rec_edi_dict["parent_item_number"],
-                "\n")
+            writeable_line = "".join(
+                (
+                    b_rec_edi_dict["record_type"],
+                    b_rec_edi_dict["upc_number"],
+                    b_rec_edi_dict["description"],
+                    b_rec_edi_dict["vendor_item"],
+                    b_rec_edi_dict["unit_cost"],
+                    b_rec_edi_dict["combo_code"],
+                    b_rec_edi_dict["unit_multiplier"],
+                    b_rec_edi_dict["qty_of_units"],
+                    b_rec_edi_dict["suggested_retail_price"],
+                    b_rec_edi_dict["price_multi_pack"],
+                    b_rec_edi_dict["parent_item_number"],
+                    "\n",
+                )
             )
             f.write(writeable_line)
         if writeable_line.startswith("C"):
-            if split_prepaid_sales_tax_crec and crec_appender.unappended_records and writeable_line.startswith("CTABSales Tax"):
+            if (
+                split_prepaid_sales_tax_crec
+                and crec_appender.unappended_records
+                and writeable_line.startswith("CTABSales Tax")
+            ):
                 crec_appender.fetch_splitted_sales_tax_totals(f)
             else:
                 f.write(writeable_line)
