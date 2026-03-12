@@ -112,11 +112,9 @@ class LoggingProgressReporter:
         footer: str,
     ) -> None:
         log_message = (
-            f"{message} | "
-            f"Folder {folder_num}/{folder_total}, "
-            f"File {file_num}/{file_total}"
+            "%s | Folder %d/%d, File %d/%d" % (message, folder_num, folder_total, file_num, file_total)
         )
         if footer:
-            log_message += f" | {footer}"
+            log_message += " | %s" % footer
 
         self._logger.info(log_message)

@@ -937,11 +937,11 @@ class DispatchOrchestrator:
             run_log: Run log to write to
             message: Error message to log
         """
-        logger.error(f"ERROR: {message}")
+        logger.error("ERROR: %s" % message)
         if hasattr(run_log, "write"):
-            run_log.write((f"ERROR: {message}" + "\r\n").encode())
+            run_log.write(("ERROR: %s" % message + "\r\n").encode())
         elif hasattr(run_log, "append"):
-            run_log.append(f"ERROR: {message}")
+            run_log.append("ERROR: %s" % message)
 
     def get_summary(self) -> str:
         """Get a summary of the processing run.

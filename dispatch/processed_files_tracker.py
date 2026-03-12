@@ -311,7 +311,7 @@ class ProcessedFilesTracker:
         """
         self.database.insert(self.TABLE_NAME, record.to_dict())
         logger.info(
-            f"Recorded sent file: {record.file_name} for folder {record.folder_id}"
+            "Recorded sent file: %s for folder %s" % (record.file_name, record.folder_id)
         )
 
     def record_sent_file_simple(
@@ -393,13 +393,13 @@ class ProcessedFilesTracker:
         )
 
         if not record:
-            logger.warning(f"File not found for resend marking: {file_name}")
+            logger.warning("File not found for resend marking: %s" % file_name)
             return False
 
         record["resend_flag"] = True
         self.database.update(self.TABLE_NAME, record, keys=["file_name", "folder_id"])
 
-        logger.info(f"Marked file for resend: {file_name}")
+        logger.info("Marked file for resend: %s" % file_name)
         return True
 
     def clear_resend_flag(self, file_name: str, folder_id: int) -> bool:
@@ -482,7 +482,7 @@ class ProcessedFilesTracker:
             folder_id: ID of the folder
         """
         self.database.delete(self.TABLE_NAME, file_name=file_name, folder_id=folder_id)
-        logger.info(f"Deleted file record: {file_name}")
+        logger.info("Deleted file record: %s" % file_name)
 
 
 def create_processed_files_tracker(
