@@ -197,7 +197,7 @@ class SendManager:
         )
         result = module.do(params, settings, file_path)
 
-        return bool(result) if result is not None else False
+        return True if result is None else bool(result)
 
     def get_enabled_backends(self, params: dict) -> set[str]:
         """Get the set of enabled backends from parameters.

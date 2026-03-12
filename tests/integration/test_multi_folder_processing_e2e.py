@@ -31,11 +31,12 @@ def multiple_folders_workspace():
             output_dir.mkdir()
 
             # Add EDI files to each folder
-            edi_content = f"""A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}
-B00{i}001ITEM001     0000{i}0EA00{i}0Test Item {i}                     00000{i}0000
-B00{i}002ITEM002     0000{i}0EA00{i}0Test Item {i+1}                     00000{i}0000
-C00000003000030000
-"""
+            edi_content = (
+                f"A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}\n"
+                + f"B{i+1:011d}       {i:06d}EA{i:04d}CAT1{'Test Item ' + str(i):<32}{i:010d}\n"
+                + f"B{i+2:011d}       {i:06d}EA{i:04d}CAT2{'Test Item ' + str(i+1):<32}{i:010d}\n"
+                + "C00000003000030000\n"
+            )
             for j in range(3):
                 (input_dir / f"file_{j}.edi").write_text(
                     edi_content.replace("00001", f"{i*10+j+1:05d}")
@@ -433,9 +434,8 @@ class TestLargeScaleMultiFolder:
             # Add 2 files per folder
             for j in range(2):
                 (input_dir / f"file_{j}.edi").write_text(
-                    f"""A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}
-B00{i}001ITEM001     0000{i}0EA00{i}0Test Item                     00000{i}0000
-"""
+                    f"A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}\n"
+                    + f"B{i+1:011d}       {i:06d}EA{i:04d}CAT1{'Test Item ' + str(i):<32}{i:010d}\n"
                 )
 
             folders.append(

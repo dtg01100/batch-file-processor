@@ -471,6 +471,14 @@ class EditFoldersDialog(BaseDialog):
         if self._on_apply_success:
             self._on_apply_success(target)
 
+    def _get_plugin_convert_formats(self) -> list:
+        """Get convert format options from the plugin system."""
+        try:
+            plugins = self.plugin_manager.get_configuration_plugins()
+            return [p.get_format_name() for p in plugins]
+        except Exception:
+            return []
+
     def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
         extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(
             self._fields, framework="qt"

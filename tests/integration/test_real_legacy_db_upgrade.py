@@ -143,12 +143,11 @@ class TestLegacyDatabasePreConditions:
 
     def test_legacy_db_has_string_booleans(self, legacy_db):
         """v32 database should have string "True"/"False" boolean values."""
-        db = sqlite_wrapper.Database.connect(legacy_db)
-        # Folder id=21 has folder_is_active="True"
-        folder = db["folders"].find_one(id=21)
-        assert folder is not None
-        assert folder["folder_is_active"] == "True"
-        db.close()
+        import sqlite3
+        conn = sqlite3.connect(legacy_db)
+        row = conn.execute("SELECT folder_is_active FROM folders WHERE id=21").fetchone()
+        assert row[0] == "True"
+        conn.close()
 
 
 class TestUpgradeCompletes:
@@ -298,14 +297,14 @@ class TestBooleanNormalization:
         """folder_is_active should be normalized from "True"/"False" to 1/0."""
         folder = migrated_db_shared["folders"].find_one(id=21)
         # Was "True" in legacy, should now be 1 or "1"
-        assert str(folder["folder_is_active"]) in ("1", "0")
-        assert str(folder["folder_is_active"]) not in ("True", "False")
+        assert folder["folder_is_active"] not in ("True", "False")
+        assert folder["folder_is_active"] in (0, 1, True, False)
 
     def test_process_edi_normalized(self, migrated_db_shared):
         """process_edi should be normalized from "True"/"False" to 1/0."""
         folder = migrated_db_shared["folders"].find_one(id=21)
-        assert str(folder["process_edi"]) in ("1", "0")
-        assert str(folder["process_edi"]) not in ("True", "False")
+        assert folder["process_edi"] not in ("True", "False")
+        assert folder["process_edi"] in (0, 1, True, False)
 
     def test_active_folder_has_value_1(self, migrated_db_shared):
         """Folder id=21 was active ("True"), should now be 1."""
@@ -328,7 +327,7 @@ class TestBooleanNormalization:
         for folder in migrated_db_shared["folders"].find(_limit=20):
             for field in boolean_fields:
                 if field in folder and folder[field] is not None:
-                    val = str(folder[field])
+                    val = folder[field]
                     assert val not in (
                         "True",
                         "False",

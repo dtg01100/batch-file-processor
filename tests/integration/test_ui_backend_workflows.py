@@ -272,10 +272,12 @@ class TestMultiDialogWorkflow:
         })
 
         from PyQt6.QtWidgets import QWidget, QPushButton
+        from interface.operations.maintenance_functions import MaintenanceFunctions
         parent = QWidget()
         qtbot.addWidget(parent)
 
-        dialog = MaintenanceDialog(parent, database)
+        mf = MaintenanceFunctions(database)
+        dialog = MaintenanceDialog(parent, mf)
         # Do not addWidget here — MaintenanceDialog manages its own lifetime
         # Just verify the dialog has operational buttons
         buttons = dialog.findChildren(QPushButton)

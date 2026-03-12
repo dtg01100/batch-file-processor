@@ -97,11 +97,12 @@ class query_runner:
             return [dict(enumerate(row)) for row in results]
         return results
 
-    def run_arbitrary_query(self, query_string: str) -> list:
+    def run_arbitrary_query(self, query_string: str, params: tuple = None) -> list:
         """Execute an arbitrary query and return results.
 
         Args:
             query_string: SQL query to execute
+            params: Optional query parameters for parameterized queries
 
         Returns:
             List of query results (legacy format as tuples)
@@ -111,7 +112,10 @@ class query_runner:
             self.connection = self._runner.connection._connect()
 
         cursor = self.connection.cursor()
-        query_results = cursor.execute(query_string)
+        if params is not None:
+            query_results = cursor.execute(query_string, params)
+        else:
+            query_results = cursor.execute(query_string)
         query_return_list = []
         for entry in query_results:
             query_return_list.append(entry)

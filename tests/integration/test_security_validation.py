@@ -123,7 +123,7 @@ C00000003000030000
         all_folders = list(db.folders_table.all())
         assert len(all_folders) == 1, "Database should be intact"
 
-    def test_null_byte_injection(self, secure_test_environment):
+    def test_null_byte_injection(self, secure_test_environment, pipeline_steps):
         """Test handling of null byte injection attempts."""
         workspace = secure_test_environment["workspace"]
         db = secure_test_environment["db"]
@@ -229,7 +229,7 @@ class TestFilePathSecurity:
         assert len(folders) == 1
         assert folders[0]["folder_name"] == valid_path
 
-    def test_symlink_attack_prevention(self, secure_test_environment):
+    def test_symlink_attack_prevention(self, secure_test_environment, pipeline_steps):
         """Test prevention of symlink-based attacks."""
         workspace = secure_test_environment["workspace"]
         db = secure_test_environment["db"]
@@ -435,7 +435,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
 class TestErrorHandling:
     """Test secure error handling."""
 
-    def test_error_messages_dont_leak_sensitive_info(self, secure_test_environment):
+    def test_error_messages_dont_leak_sensitive_info(self, secure_test_environment, pipeline_steps):
         """Test that error messages don't expose sensitive information."""
         workspace = secure_test_environment["workspace"]
         db = secure_test_environment["db"]

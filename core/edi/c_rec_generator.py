@@ -87,15 +87,16 @@ class CRecGenerator:
             output_file: File handle to write C records to
         """
         qry_ret = self._query_runner.run_query(
-            f"""
+            """
             SELECT
                 sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
                 sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
             FROM
                 dacdata.odhst odhst
             WHERE
-                odhst.BUHHNB = {self._invoice_number}
-            """
+                odhst.BUHHNB = ?
+            """,
+            params=(self._invoice_number,),
         )
 
         if not qry_ret:

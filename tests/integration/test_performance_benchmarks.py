@@ -262,14 +262,10 @@ class TestDatabasePerformance:
         folders_table = temp_database.folders_table
 
         # Add 10000 records
-        for i in range(10000):
-            temp_database.folders_table.insert(
-                {
-                    "folder_name": f"/folder/{i}",
-                    "alias": f"Folder {i}",
-                    "folder_is_active": True,
-                }
-            )
+        temp_database.folders_table.insert_many([
+            {"folder_name": f"/folder/{i}", "alias": f"Folder {i}", "folder_is_active": True}
+            for i in range(10000)
+        ])
 
         with measure_time() as t:
             # Complex query

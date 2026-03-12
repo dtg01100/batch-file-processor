@@ -396,6 +396,31 @@ class Table:
         self._conn.commit()
         return int(cur.lastrowid or 0)
 
+    def insert_many(self, records: list[dict]) -> None:
+        """Insert multiple records in a single transaction.
+
+        Args:
+            records: List of dicts to insert. All dicts must have the same keys.
+
+        Raises:
+            ValueError: If records is empty
+            sqlite3.OperationalError: If table or column doesn't exist
+        """
+        if not records:
+            return
+        boolean_cols = self._get_boolean_columns()
+        keys = list(records[0].keys())
+        quoted_table = self._quote_identifier(self._name)
+        cols = ", ".join(self._quote_identifier(k) for k in keys)
+        placeholders = ", ".join("?" for _ in keys)
+        sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
+        values = [
+            tuple(self._serialize_record_value(k, r[k], boolean_cols) for k in keys)
+            for r in records
+        ]
+        self._conn.executemany(sql, values)
+        self._conn.commit()
+
     def update(self, record: Dict[str, Any], keys: List[str]) -> None:
         """Update an existing record.
 
