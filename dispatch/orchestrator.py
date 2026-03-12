@@ -645,11 +645,51 @@ class DispatchOrchestrator:
 
         return result
 
+    # Defaults for folder configuration fields that may be NULL in the database.
+    # These mirror the defaults applied by app.py when opening the edit dialog.
+    _FOLDER_DEFAULTS: dict = {
+        "ftp_port": 21,
+        "a_record_padding": "",
+        "a_record_padding_length": 6,
+        "a_record_append_text": "",
+        "invoice_date_offset": 0,
+        "invoice_date_custom_format": False,
+        "invoice_date_custom_format_string": "%Y%m%d",
+        "override_upc_level": 1,
+        "override_upc_category_filter": "",
+        "upc_target_length": 11,
+        "upc_padding_pattern": "           ",
+        "simple_csv_sort_order": "",
+        "split_edi_filter_categories": "ALL",
+        "split_edi_filter_mode": "include",
+        "rename_file": "",
+        "convert_to_format": "",
+        "estore_store_number": "",
+        "estore_Vendor_OId": "",
+        "estore_vendor_NameVendorOID": "",
+        "estore_c_record_OID": "",
+        "fintech_division_id": "",
+    }
+
     def _build_processing_context(
         self, folder: dict, upc_dict: dict
     ) -> ProcessingContext:
         """Build non-mutating per-file processing context."""
         effective_folder = folder.copy()
+
+        # Apply defaults for fields that may be NULL in the database.
+        for key, default in self._FOLDER_DEFAULTS.items():
+            if effective_folder.get(key) is None:
+                effective_folder[key] = default
+
+        # Map DB field process_edi → convert_edi (orchestrator's internal gate).
+        # The database stores process_edi=True to mean "convert EDI to another format".
+        # The orchestrator uses convert_edi to gate the converter step.
+        if "convert_edi" not in effective_folder:
+            effective_folder["convert_edi"] = normalize_bool(
+                effective_folder.get("process_edi", False)
+            )
+
         if "process_edi" not in effective_folder and (
             effective_folder.get("split_edi", False)
             or effective_folder.get("convert_edi", False)
