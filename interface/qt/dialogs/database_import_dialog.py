@@ -9,7 +9,7 @@ import os
 import threading
 from typing import Any, Optional, cast
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -46,7 +46,6 @@ class DatabaseImportDialog(BaseDialog):
         preselected_database_path: Optional[str] = None,
     ) -> None:
         super().__init__(parent, "folders.db merging utility", action_mode="none")
-        self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._original_database_path = original_database_path
         self._running_platform = running_platform
@@ -129,7 +128,7 @@ class DatabaseImportDialog(BaseDialog):
 
         # Set minimum size
         self.setMinimumSize(600, 300)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
     def _select_database(self) -> None:
         """Handle database file selection."""
@@ -200,6 +199,9 @@ class DatabaseImportDialog(BaseDialog):
 
     def _on_error(self, error_message: str) -> None:
         """Handle import error."""
+        self._progress_bar.setRange(0, 1)
+        self._progress_bar.setValue(0)
+        self._db_label.setText("Import failed.")
         self.show_error("Import Error", error_message)
         self._import_button.setEnabled(True)
         self._select_button.setEnabled(True)

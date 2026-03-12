@@ -5,9 +5,12 @@ that conform to the SMTPClientProtocol interface.
 """
 
 import smtplib
+import logging
 from typing import Optional, Any, List, Dict
 
 from backend.protocols import SMTPClientProtocol
+
+logger = logging.getLogger(__name__)
 
 
 class RealSMTPClient:
@@ -41,7 +44,9 @@ class RealSMTPClient:
             host: Server hostname or IP address
             port: Server port number
         """
+        logger.debug("SMTP connecting to %s:%d", host, port)
         self._connection = smtplib.SMTP(host, port)
+        logger.debug("SMTP connected to %s:%d", host, port)
 
     def starttls(self) -> None:
         """Upgrade connection to TLS.
@@ -51,6 +56,7 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
+        logger.debug("SMTP upgrading to TLS")
         self._connection.starttls()
 
     def login(self, user: str, password: str) -> None:
@@ -66,7 +72,9 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
+        logger.debug("SMTP authenticating as: %s", user)
         self._connection.login(user, password)
+        logger.debug("SMTP authentication successful")
 
     def sendmail(self, from_addr: str, to_addrs: list, msg: str) -> dict:
         """Send email message.
@@ -84,7 +92,10 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
-        return self._connection.sendmail(from_addr, to_addrs, msg)
+        logger.debug("SMTP sending email from %s to %s", from_addr, to_addrs)
+        result = self._connection.sendmail(from_addr, to_addrs, msg)
+        logger.info("SMTP email sent successfully to %s", to_addrs)
+        return result
 
     def send_message(self, msg: Any) -> dict:
         """Send EmailMessage object.
@@ -100,11 +111,15 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
-        return self._connection.send_message(msg)
+        logger.debug("SMTP sending message object from=%s to=%s", msg.get("From", ""), msg.get("To", ""))
+        result = self._connection.send_message(msg)
+        logger.info("SMTP message sent successfully")
+        return result
 
     def quit(self) -> None:
         """Send QUIT command and close connection gracefully."""
         if self._connection is not None:
+            logger.debug("SMTP disconnecting (quit)")
             try:
                 self._connection.quit()
             except Exception:

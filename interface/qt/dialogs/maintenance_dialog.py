@@ -44,15 +44,11 @@ class MaintenanceDialog(BaseDialog):
         self._mf = maintenance_functions
         self._ui = ui_service
         self._buttons: list[QPushButton] = []
-        super().__init__(parent, "Maintenance Functions")
+        super().__init__(parent, "Maintenance Functions", action_mode="none")
 
         self.setMinimumSize(600, 400)
 
-        # Maintenance dialog shouldn't have OK/Cancel buttons
-        self._button_box.hide()
-
-        self._mf._on_operation_start = self._on_operation_start
-        self._mf._on_operation_end = self._on_operation_end
+        self._mf.set_operation_callbacks(self._on_operation_start, self._on_operation_end)
 
     def body(self, parent: QWidget) -> Optional[QWidget]:
         button_layout = QVBoxLayout()
@@ -108,7 +104,7 @@ class MaintenanceDialog(BaseDialog):
     def _clear_queued_emails(self) -> None:
         self._set_buttons_enabled(False)
         try:
-            self._mf._database_obj.emails_table.delete()
+            self._mf.get_database().emails_table.delete()
         finally:
             self._set_buttons_enabled(True)
 

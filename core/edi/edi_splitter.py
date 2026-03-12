@@ -307,7 +307,7 @@ def filter_edi_file_by_category(
         # Separate A, B, and C records
         a_record = None
         b_records = []
-        c_record = None
+        c_records = []
 
         for line in invoice_lines:
             if line.startswith("A"):
@@ -315,7 +315,7 @@ def filter_edi_file_by_category(
             elif line.startswith("B"):
                 b_records.append(line)
             elif line.startswith("C"):
-                c_record = line
+                c_records.append(line)
 
         # Filter B records by category
         filtered_b_records = filter_b_records_by_category(
@@ -330,8 +330,8 @@ def filter_edi_file_by_category(
         if filtered_b_records:
             # Rebuild invoice with filtered B records
             filtered_invoice = [a_record] + filtered_b_records
-            if c_record:
-                filtered_invoice.append(c_record)
+            if c_records:
+                filtered_invoice.extend(c_records)
             filtered_invoices.append(filtered_invoice)
         else:
             # Invoice dropped because no matching B records
@@ -445,6 +445,9 @@ class EDISplitter:
                 count += 1
                 prepend_letters = _col_to_excel(count)
                 line_dict = capture_records(line)
+
+                if line_dict is None:
+                    continue
 
                 if int(line_dict["invoice_total"]) < 0:
                     file_name_suffix = ".cr"

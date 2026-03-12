@@ -1,5 +1,6 @@
 """Tests for dispatch/pipeline/converter.py module."""
 
+import logging
 from unittest.mock import MagicMock
 import pytest
 
@@ -414,7 +415,7 @@ class TestEDIConverterStep:
         assert len(result.errors) == 1
         assert "Unsupported conversion format" in result.errors[0]
 
-    def test_convert_with_supported_format_and_mock_module_loader(self):
+    def test_convert_with_supported_format_and_mock_module_loader(self, caplog):
         """Test convert() with supported format and mock module loader."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
         mock_loader = MockModuleLoader({"convert_to_csv": mock_module})
@@ -422,15 +423,17 @@ class TestEDIConverterStep:
         step = EDIConverterStep(module_loader=mock_loader)
 
         params = {"convert_to_format": "csv", "process_edi": "True"}
-        result = step.convert("/input/test.edi", "/output", params, {}, {})
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.converter"):
+            result = step.convert("/input/test.edi", "/output", params, {}, {})
 
         assert result.output_path == "/output/converted.csv"
         assert result.format_used == "csv"
         assert result.success is True
         assert result.errors == []
         assert mock_loader.last_module_name == "convert_to_csv"
+        assert "Converted" in caplog.text
 
-    def test_convert_handles_import_error(self):
+    def test_convert_handles_import_error(self, caplog):
         """Test convert() handles ImportError."""
         mock_loader = MockModuleLoader({})
         mock_error_handler = MockErrorHandler()
@@ -440,13 +443,15 @@ class TestEDIConverterStep:
         )
 
         params = {"convert_to_format": "csv", "process_edi": "True"}
-        result = step.convert("/input/test.edi", "/output", params, {}, {})
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.converter"):
+            result = step.convert("/input/test.edi", "/output", params, {}, {})
 
         assert result.output_path == "/input/test.edi"
         assert result.format_used == "csv"
         assert result.success is False
         assert len(result.errors) == 1
         assert "Conversion module not found" in result.errors[0]
+        assert "Converter module not found" in caplog.text
 
     def test_convert_handles_module_without_edi_convert_function(self):
         """Test convert() handles module without edi_convert function."""

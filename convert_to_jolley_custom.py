@@ -98,7 +98,7 @@ class JolleyCustomConverter(BaseEDIConverter):
             CustomerLookupError: If the order is not found in history
         """
         header_fields = self.query_object.run_arbitrary_query(
-            f"""
+            """
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
         ohhst.btcfdt AS "Invoice Date",
         TRIM(ohhst.btfdtx) AS "Terms Code",
@@ -138,8 +138,9 @@ class JolleyCustomConverter(BaseEDIConverter):
                 ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
             LEFT outer JOIN dacdata.dsadrep dsadrep_corp
                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
-        WHERE ohhst.bthhnb = {invoice_number.lstrip("0")}
-            """
+        WHERE ohhst.bthhnb = ?
+            """,
+            (invoice_number.lstrip("0"),)
         )
 
         if len(header_fields) == 0:
@@ -194,10 +195,13 @@ class JolleyCustomConverter(BaseEDIConverter):
         Returns:
             List of tuples containing (itemno, uom_mult, uom_code)
         """
-        return self.query_object.run_arbitrary_query(f"""
+        return self.query_object.run_arbitrary_query(
+            """
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
-            where odhst.buhhnb = {invoice_number}
-            """)
+            where odhst.buhhnb = ?
+            """,
+            (invoice_number,)
+        )
 
     def _get_uom(self, item_number: str, packsize: str) -> str:
         """Get UOM (Unit of Measure) for an item.

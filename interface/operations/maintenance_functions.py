@@ -75,6 +75,28 @@ class MaintenanceFunctions:
         self._confirm = confirm_callback or (lambda msg: True)
         self._database_import_callback = database_import_callback
 
+    def set_operation_callbacks(
+        self,
+        on_start: Optional[Callable[[], None]],
+        on_end: Optional[Callable[[], None]],
+    ) -> None:
+        """Set callbacks invoked at the start and end of each operation.
+
+        Args:
+            on_start: Called before each maintenance operation begins.
+            on_end: Called after each maintenance operation completes.
+        """
+        self._on_operation_start = on_start
+        self._on_operation_end = on_end
+
+    def get_database(self) -> Any:
+        """Return the underlying database object.
+
+        Returns:
+            The database object passed at construction time.
+        """
+        return self._database_obj
+
     def set_all_inactive(self) -> None:
         """Set all folders to inactive status."""
         if self._on_operation_start:

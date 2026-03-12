@@ -72,6 +72,9 @@ class PyODBCConnection:
 
         Returns:
             pyodbc connection object
+
+        Raises:
+            ConnectionError: If the database connection cannot be established.
         """
         import pyodbc
 
@@ -81,7 +84,12 @@ class PyODBCConnection:
             f"UID={self.config.username};"
             f"PWD={self.config.password}"
         )
-        self._connection = pyodbc.connect(conn_str)
+        try:
+            self._connection = pyodbc.connect(conn_str)
+        except pyodbc.Error as exc:
+            raise ConnectionError(
+                f"Failed to connect to database DSN={self.config.dsn!r}: {exc}"
+            ) from exc
         return self._connection
 
     def _ensure_connection(self):
@@ -103,23 +111,25 @@ class PyODBCConnection:
         conn = self._ensure_connection()
         cursor = conn.cursor()
 
-        if params:
-            cursor.execute(query, params)
-        else:
-            cursor.execute(query)
+        try:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
 
-        # Get column names from cursor description
-        columns = (
-            [column[0] for column in cursor.description] if cursor.description else []
-        )
+            # Get column names from cursor description
+            columns = (
+                [column[0] for column in cursor.description] if cursor.description else []
+            )
 
-        # Convert rows to dictionaries
-        results = []
-        for row in cursor.fetchall():
-            row_dict = dict(zip(columns, row))
-            results.append(row_dict)
+            # Convert rows to dictionaries
+            results = []
+            for row in cursor.fetchall():
+                row_dict = dict(zip(columns, row))
+                results.append(row_dict)
+        finally:
+            cursor.close()
 
-        cursor.close()
         return results
 
     def close(self) -> None:

@@ -4,6 +4,7 @@ This module provides a pipeline step for EDI file validation,
 wrapping the existing EDIValidator with pipeline integration.
 """
 
+import logging
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Optional, Protocol, runtime_checkable
@@ -11,6 +12,8 @@ from typing import Optional, Protocol, runtime_checkable
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import FileSystemInterface
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -185,8 +188,24 @@ class EDIValidationStep:
         Returns:
             ValidationResult with validation outcome
         """
+        logger.debug("Validating file: %s", filename_for_log)
+
         is_valid, errors, warnings = self._validator.validate_with_warnings(file_path)
         has_minor_errors = self._validator.has_minor_errors
+
+        logger.debug(
+            "Validation result for %s: valid=%s, has_minor_errors=%s",
+            filename_for_log,
+            is_valid,
+            has_minor_errors,
+        )
+
+        if is_valid and not has_minor_errors:
+            logger.info("Validation passed for: %s", filename_for_log)
+        if has_minor_errors:
+            logger.warning("Validation warnings for %s: %s", filename_for_log, warnings)
+        if not is_valid:
+            logger.error("Validation failed for %s: %s", filename_for_log, errors)
 
         log_output = self._build_log_output(
             filename_for_log, errors, warnings, self._validator.get_error_log()
@@ -231,10 +250,13 @@ class EDIValidationStep:
         Returns:
             Tuple of (is_valid, errors_or_file_path)
         """
+        logger.debug("Execute validation step for: %s", file_path)
         filename = folder.get("filename_for_log", file_path)
         result = self.validate(file_path, filename)
         if result.is_valid:
+            logger.debug("Execute validation result for %s: valid=True", file_path)
             return True, file_path
+        logger.debug("Execute validation result for %s: valid=False", file_path)
         return False, result.errors
 
     def get_error_log(self) -> str:
@@ -263,6 +285,12 @@ class EDIValidationStep:
         Returns:
             Formatted log output string
         """
+        logger.debug(
+            "Building log output for %s (errors=%d, warnings=%d)",
+            filename,
+            len(errors),
+            len(warnings),
+        )
         output = StringIO()
 
         if errors or warnings:
@@ -281,6 +309,7 @@ class EDIValidationStep:
         if self._error_handler is None:
             return
 
+        logger.debug("Recording %d errors for %s", len(errors), filename)
         for error_msg in errors:
             self._error_handler.record_error(
                 folder="",

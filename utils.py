@@ -27,6 +27,8 @@ from core.utils.date_utils import dactime_from_invtime
 
 from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
 
+from core.database import query_runner
+
 
 def normalize_bool(value) -> bool:
     """Convert any value to Python boolean.
@@ -161,6 +163,8 @@ def detect_invoice_is_credit(edi_process):
     """Detect if an invoice is a credit memo based on negative total."""
     with open(edi_process, encoding="utf-8") as work_file:
         fields = capture_records(work_file.readline())
+        if fields is None:
+            return False
         if fields["record_type"] != "A":
             raise ValueError(
                 "[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen"
@@ -234,8 +238,15 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
                 f = open(output_file_path, "wb")
+            if f is None:
+                raise ValueError(
+                    f"[do_split_edi]: No A record found before line {line_mum}; "
+                    "EDI file must start with an A record"
+                )
             f.write(writeable_line.replace("\n", "\r\n").encode())
             write_counter += 1
+        if f is None:
+            raise ValueError("[do_split_edi]: EDI file contained no A records")
         f.close()  # close output file
         # edi_send_list.append((output_file_path, file_name_prefix, file_name_suffix))
         # edi_send_list.pop(0)

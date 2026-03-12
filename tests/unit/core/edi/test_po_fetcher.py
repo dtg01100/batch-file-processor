@@ -51,14 +51,16 @@ class TestPOFetcher:
         assert len(POFetcher.DEFAULT_PO) == 15
 
     def test_fetch_po_number_converts_to_int(self, fetcher, mock_query_runner):
-        """Test invoice number is converted to int in query."""
+        """Test invoice number is converted to int in query params."""
         mock_query_runner.run_query.return_value = [("PO",)]
 
         fetcher.fetch_po_number("100")
 
-        # Verify query contains int conversion
-        call_args = mock_query_runner.run_query.call_args[0][0]
-        assert "100" in call_args
+        # Verify int conversion is passed as param
+        call_kwargs = mock_query_runner.run_query.call_args
+        params = call_kwargs[0][1] if len(call_kwargs[0]) > 1 else call_kwargs[1].get("params")
+        assert params is not None
+        assert 100 in params
 
     def test_fetch_po_number_handles_string_input(self, fetcher, mock_query_runner):
         """Test fetch_po_number handles string invoice number."""

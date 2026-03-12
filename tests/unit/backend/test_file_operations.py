@@ -1,5 +1,6 @@
 """Unit tests for file operations implementations."""
 
+import logging
 import os
 import pytest
 
@@ -33,13 +34,16 @@ class TestRealFileOperations:
             "tmp_path": str(tmp_path),
         }
 
-    def test_copy_copies_file(self, file_ops, temp_files):
+    def test_copy_copies_file(self, file_ops, temp_files, caplog):
         """Test copy copies a file."""
-        file_ops.copy(temp_files["src"], temp_files["dst"])
+        with caplog.at_level(logging.DEBUG, logger="backend.file_operations"):
+            file_ops.copy(temp_files["src"], temp_files["dst"])
 
         assert os.path.exists(temp_files["dst"])
         with open(temp_files["dst"]) as f:
             assert f.read() == "test content"
+        assert "Copying file" in caplog.text
+        assert "Copied file" in caplog.text
 
     def test_copy2_preserves_metadata(self, file_ops, temp_files):
         """Test copy2 preserves file metadata."""
@@ -55,12 +59,15 @@ class TestRealFileOperations:
         """Test exists returns False for nonexistent path."""
         assert file_ops.exists("/nonexistent/path/file.txt") is False
 
-    def test_makedirs_creates_directory(self, file_ops, tmp_path):
+    def test_makedirs_creates_directory(self, file_ops, tmp_path, caplog):
         """Test makedirs creates directory tree."""
         new_dir = str(tmp_path / "a" / "b" / "c")
-        file_ops.makedirs(new_dir)
+        with caplog.at_level(logging.DEBUG, logger="backend.file_operations"):
+            file_ops.makedirs(new_dir)
 
         assert os.path.isdir(new_dir)
+        assert "Creating directories" in caplog.text
+        assert "Created directories" in caplog.text
 
     def test_makedirs_exist_ok(self, file_ops, tmp_path):
         """Test makedirs with exist_ok=True."""
@@ -133,16 +140,18 @@ class TestRealFileOperations:
         size = file_ops.getsize(temp_files["src"])
         assert size == len("test content")
 
-    def test_move_moves_file(self, file_ops, tmp_path):
+    def test_move_moves_file(self, file_ops, tmp_path, caplog):
         """Test move moves a file."""
         src = tmp_path / "move_src.txt"
         src.write_text("content")
         dst = tmp_path / "move_dst.txt"
-
-        file_ops.move(str(src), str(dst))
+        with caplog.at_level(logging.DEBUG, logger="backend.file_operations"):
+            file_ops.move(str(src), str(dst))
 
         assert not os.path.exists(str(src))
         assert os.path.exists(str(dst))
+        assert "Moving" in caplog.text
+        assert "Moved" in caplog.text
 
     def test_rename_renames_file(self, file_ops, tmp_path):
         """Test rename renames a file."""

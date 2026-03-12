@@ -5,9 +5,12 @@ that conform to the FTPClientProtocol interface.
 """
 
 import ftplib
+import logging
 from typing import Optional, Any, List, Tuple
 
 from backend.protocols import FTPClientProtocol
+
+logger = logging.getLogger(__name__)
 
 
 class RealFTPClient:
@@ -38,6 +41,7 @@ class RealFTPClient:
             port: Server port number
             timeout: Optional connection timeout in seconds
         """
+        logger.debug("FTP connecting to %s:%d (TLS=%s)", host, port, self.use_tls)
         if self.use_tls:
             self._connection = ftplib.FTP_TLS()
         else:
@@ -47,6 +51,7 @@ class RealFTPClient:
             self._connection.connect(host, port, timeout)
         else:
             self._connection.connect(host, port)
+        logger.debug("FTP connected to %s:%d", host, port)
 
     def login(self, user: str, password: str) -> None:
         """Authenticate with FTP server.
@@ -60,7 +65,9 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
+        logger.debug("FTP logging in as user: %s", user)
         self._connection.login(user, password)
+        logger.debug("FTP login successful")
 
     def cwd(self, directory: str) -> None:
         """Change working directory on FTP server.
@@ -73,6 +80,7 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
+        logger.debug("FTP changing directory to: %s", directory)
         self._connection.cwd(directory)
 
     def storbinary(self, cmd: str, fp: Any, blocksize: int = 8192) -> None:
@@ -85,11 +93,14 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
+        filename = cmd.split()[-1] if " " in cmd else cmd
+        logger.debug("FTP storing file: %s", filename)
         self._connection.storbinary(cmd, fp, blocksize)
 
     def quit(self) -> None:
         """Send QUIT command and close connection gracefully."""
         if self._connection is not None:
+            logger.debug("FTP disconnecting (quit)")
             try:
                 self._connection.quit()
             except Exception:
@@ -101,6 +112,7 @@ class RealFTPClient:
     def close(self) -> None:
         """Close connection unconditionally."""
         if self._connection is not None:
+            logger.debug("FTP closing connection")
             try:
                 self._connection.close()
             except Exception:

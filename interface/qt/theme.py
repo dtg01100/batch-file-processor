@@ -96,14 +96,7 @@ class Theme:
     PROGRESS_BAR_CHUNK = "#4CAF50"
 
     # Typography System
-    FONT_FAMILY = (
-        "Segoe UI",
-        "SF Pro Display",
-        "-apple-system",
-        "BlinkMacSystemFont",
-        "Roboto",
-        "sans-serif",
-    )
+    FONT_FAMILY = '"Segoe UI", "SF Pro Display", -apple-system, BlinkMacSystemFont, Roboto, sans-serif'
     FONT_SIZE_XS = "11px"
     FONT_SIZE_SM = "12px"
     FONT_SIZE_BASE = "14px"
@@ -115,14 +108,14 @@ class Theme:
     FONT_SIZE_DISPLAY = "32px"
 
     # Spacing System
-    SPACING_XS = "4px"
-    SPACING_SM = "8px"
-    SPACING_MD = "12px"
-    SPACING_LG = "16px"
-    SPACING_XL = "20px"
-    SPACING_XXL = "24px"
-    SPACING_XXXL = "32px"
-    SPACING_XXXXL = "40px"
+    SPACING_XS = "2px"
+    SPACING_SM = "4px"
+    SPACING_MD = "6px"
+    SPACING_LG = "8px"
+    SPACING_XL = "10px"
+    SPACING_XXL = "12px"
+    SPACING_XXXL = "16px"
+    SPACING_XXXXL = "20px"
 
     # Border Radius
     RADIUS_XS = "4px"
@@ -149,14 +142,14 @@ class Theme:
     TRANSITION_SLOW = "300ms cubic-bezier(0.4, 0.0, 0.2, 1)"
 
     # Spacing Integer Values (for Qt layout methods that require integers)
-    SPACING_XS_INT = 4
-    SPACING_SM_INT = 8
-    SPACING_MD_INT = 12
-    SPACING_LG_INT = 16
-    SPACING_XL_INT = 20
-    SPACING_XXL_INT = 24
-    SPACING_XXXL_INT = 32
-    SPACING_XXXXL_INT = 40
+    SPACING_XS_INT = 2
+    SPACING_SM_INT = 4
+    SPACING_MD_INT = 6
+    SPACING_LG_INT = 8
+    SPACING_XL_INT = 10
+    SPACING_XXL_INT = 12
+    SPACING_XXXL_INT = 16
+    SPACING_XXXXL_INT = 20
 
     @staticmethod
     def get_spacing_int(spacing_str: str) -> int:
@@ -177,7 +170,7 @@ class Theme:
                 font-size: {Theme.FONT_SIZE_BASE};
                 font-family: {Theme.FONT_FAMILY};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
                 min-width: 64px;
             }}
             QPushButton:hover {{
@@ -190,7 +183,7 @@ class Theme:
             }}
             QPushButton:focus {{
                 border: 2px solid {Theme.BORDER_FOCUS};
-                padding: calc({Theme.SPACING_SM} - 1px) calc({Theme.SPACING_XL} - 1px);
+                padding: 3px 9px;
             }}
             QPushButton:disabled {{
                 background-color: {Theme.INPUT_BACKGROUND};
@@ -210,7 +203,7 @@ class Theme:
                     font-size: {Theme.FONT_SIZE_BASE};
                     font-family: {Theme.FONT_FAMILY};
                     font-weight: 500;
-                    min-height: 40px;
+                    min-height: 28px;
                     min-width: 64px;
                 }}
                 QPushButton:hover {{
@@ -223,7 +216,7 @@ class Theme:
                 }}
                 QPushButton:focus {{
                     border: 2px solid {Theme.ON_PRIMARY};
-                    padding: calc({Theme.SPACING_SM} - 2px) calc({Theme.SPACING_XL} - 2px);
+                    padding: 2px 8px;
                 }}
                 QPushButton:disabled {{
                     background-color: {Theme.OUTLINE_VARIANT};
@@ -241,7 +234,7 @@ class Theme:
                     font-size: {Theme.FONT_SIZE_BASE};
                     font-family: {Theme.FONT_FAMILY};
                     font-weight: 500;
-                    min-height: 40px;
+                    min-height: 28px;
                     min-width: 64px;
                 }}
                 QPushButton:hover {{
@@ -254,7 +247,7 @@ class Theme:
                 }}
                 QPushButton:focus {{
                     border: 2px solid {Theme.ON_ERROR};
-                    padding: calc({Theme.SPACING_SM} - 2px) calc({Theme.SPACING_XL} - 2px);
+                    padding: 2px 8px;
                 }}
                 QPushButton:disabled {{
                     background-color: {Theme.OUTLINE_VARIANT};
@@ -272,7 +265,7 @@ class Theme:
                     font-size: {Theme.FONT_SIZE_BASE};
                     font-family: {Theme.FONT_FAMILY};
                     font-weight: 500;
-                    min-height: 40px;
+                    min-height: 28px;
                     min-width: 64px;
                 }}
                 QPushButton:hover {{
@@ -285,7 +278,7 @@ class Theme:
                 }}
                 QPushButton:focus {{
                     border: 2px solid {Theme.ON_SUCCESS};
-                    padding: calc({Theme.SPACING_SM} - 2px) calc({Theme.SPACING_XL} - 2px);
+                    padding: 2px 8px;
                 }}
                 QPushButton:disabled {{
                     background-color: {Theme.OUTLINE_VARIANT};
@@ -304,7 +297,7 @@ class Theme:
                     font-family: {Theme.FONT_FAMILY};
                     font-weight: 400;
                     text-align: left;
-                    min-height: 40px;
+                    min-height: 28px;
                 }}
                 QPushButton:hover {{
                     background-color: {Theme.SIDEBAR_SURFACE};
@@ -332,7 +325,7 @@ class Theme:
                     font-size: {Theme.FONT_SIZE_BASE};
                     font-family: {Theme.FONT_FAMILY};
                     font-weight: 500;
-                    min-height: 40px;
+                    min-height: 28px;
                 }}
                 QPushButton:hover {{
                     background-color: {Theme.PRIMARY_CONTAINER};
@@ -342,7 +335,7 @@ class Theme:
                 }}
                 QPushButton:focus {{
                     border: 2px solid {Theme.BORDER_FOCUS};
-                    padding: calc({Theme.SPACING_SM} - 2px) calc({Theme.SPACING_MD} - 2px);
+                    padding: 2px 4px;
                 }}
                 QPushButton:disabled {{
                     color: {Theme.TEXT_DISABLED};
@@ -369,7 +362,7 @@ class Theme:
             }}
             QLineEdit:focus, QTextEdit:focus {{
                 border: 2px solid {Theme.INPUT_FOCUS_BORDER};
-                padding: calc({Theme.SPACING_SM} - 1px) calc({Theme.SPACING_MD} - 1px);
+                padding: 3px 5px;
                 background-color: {Theme.BACKGROUND};
             }}
             QLineEdit:disabled, QTextEdit:disabled {{
@@ -397,7 +390,7 @@ class Theme:
                 padding: {cls.SPACING_SM} {cls.SPACING_XL};
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
                 min-width: 64px;
             }}
             QPushButton:hover {{
@@ -410,7 +403,7 @@ class Theme:
             }}
             QPushButton:focus {{
                 border: 2px solid {cls.BORDER_FOCUS};
-                padding: calc({cls.SPACING_SM} - 1px) calc({cls.SPACING_XL} - 1px);
+                padding: 3px 9px;
             }}
             QPushButton:disabled {{
                 background-color: {cls.INPUT_BACKGROUND};
@@ -427,7 +420,7 @@ class Theme:
                 padding: {cls.SPACING_SM} {cls.SPACING_XL};
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
                 min-width: 64px;
             }}
             QPushButton[class="primary"]:hover {{
@@ -440,7 +433,7 @@ class Theme:
             }}
             QPushButton[class="primary"]:focus {{
                 border: 2px solid {cls.ON_PRIMARY};
-                padding: calc({cls.SPACING_SM} - 2px) calc({cls.SPACING_XL} - 2px);
+                padding: 2px 8px;
             }}
             QPushButton[class="primary"]:disabled {{
                 background-color: {cls.OUTLINE_VARIANT};
@@ -456,7 +449,7 @@ class Theme:
                 padding: {cls.SPACING_SM} {cls.SPACING_XL};
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
                 min-width: 64px;
             }}
             QPushButton[class="danger"]:hover {{
@@ -469,7 +462,7 @@ class Theme:
             }}
             QPushButton[class="danger"]:focus {{
                 border: 2px solid {cls.ON_ERROR};
-                padding: calc({cls.SPACING_SM} - 2px) calc({cls.SPACING_XL} - 2px);
+                padding: 2px 8px;
             }}
             QPushButton[class="danger"]:disabled {{
                 background-color: {cls.OUTLINE_VARIANT};
@@ -485,7 +478,7 @@ class Theme:
                 padding: {cls.SPACING_SM} {cls.SPACING_XL};
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
                 min-width: 64px;
             }}
             QPushButton[class="success"]:hover {{
@@ -498,7 +491,7 @@ class Theme:
             }}
             QPushButton[class="success"]:focus {{
                 border: 2px solid {cls.ON_SUCCESS};
-                padding: calc({cls.SPACING_SM} - 2px) calc({cls.SPACING_XL} - 2px);
+                padding: 2px 8px;
             }}
             QPushButton[class="success"]:disabled {{
                 background-color: {cls.OUTLINE_VARIANT};
@@ -515,7 +508,7 @@ class Theme:
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 400;
                 text-align: left;
-                min-height: 40px;
+                min-height: 28px;
             }}
             QPushButton[class="sidebar"]:hover {{
                 background-color: {cls.SIDEBAR_SURFACE};
@@ -541,7 +534,7 @@ class Theme:
                 padding: {cls.SPACING_SM} {cls.SPACING_MD};
                 font-size: {cls.FONT_SIZE_BASE};
                 font-weight: 500;
-                min-height: 40px;
+                min-height: 28px;
             }}
             QPushButton[class="text"]:hover {{
                 background-color: {cls.PRIMARY_CONTAINER};
@@ -551,7 +544,7 @@ class Theme:
             }}
             QPushButton[class="text"]:focus {{
                 border: 2px solid {cls.BORDER_FOCUS};
-                padding: calc({cls.SPACING_SM} - 2px) calc({cls.SPACING_MD} - 2px);
+                padding: 2px 4px;
             }}
             QPushButton[class="text"]:disabled {{
                 color: {cls.TEXT_DISABLED};
@@ -572,7 +565,7 @@ class Theme:
             }}
             QLineEdit:focus {{
                 border: 2px solid {cls.INPUT_FOCUS_BORDER};
-                padding: calc({cls.SPACING_SM} - 1px) calc({cls.SPACING_MD} - 1px);
+                padding: 3px 5px;
                 background-color: {cls.BACKGROUND};
             }}
             QLineEdit:disabled {{
@@ -596,7 +589,7 @@ class Theme:
             }}
             QTextEdit:focus {{
                 border: 2px solid {cls.INPUT_FOCUS_BORDER};
-                padding: calc({cls.SPACING_SM} - 1px);
+                padding: 3px;
                 background-color: {cls.BACKGROUND};
             }}
             QTextEdit:disabled {{
@@ -619,7 +612,7 @@ class Theme:
             }}
             QComboBox:focus {{
                 border: 2px solid {cls.INPUT_FOCUS_BORDER};
-                padding: calc({cls.SPACING_SM} - 1px) calc({cls.SPACING_MD} - 1px);
+                padding: 3px 5px;
             }}
             QComboBox::drop-down {{
                 border: none;
@@ -714,7 +707,7 @@ class Theme:
                 border-radius: {cls.RADIUS_LG};
                 padding: {cls.SPACING_LG};
             }}
-            QFrame[frame="separator"] {{
+            QFrame#separator {{
                 background-color: {cls.OUTLINE_VARIANT};
                 border: none;
             }}
@@ -828,7 +821,7 @@ class Theme:
             }}
             QSpinBox:focus, QDoubleSpinBox:focus {{
                 border: 2px solid {cls.INPUT_FOCUS_BORDER};
-                padding: calc({cls.SPACING_SM} - 1px) calc({cls.SPACING_MD} - 1px);
+                padding: 3px 5px;
             }}
             QSpinBox::up-button, QDoubleSpinBox::up-button {{
                 border-left: 1px solid {cls.BORDER};

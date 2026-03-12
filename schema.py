@@ -6,6 +6,9 @@ statements with permissive types (TEXT/INTEGER) so it can be applied
 against older databases without failing.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ensure_schema(database_connection) -> None:
     """Ensure core tables and columns exist. Uses database_connection.query()."""
@@ -224,7 +227,8 @@ def ensure_schema(database_connection) -> None:
             status TEXT,
             error_message TEXT,
             convert_format TEXT,
-            sent_to TEXT
+            sent_to TEXT,
+            invoice_numbers TEXT
         )
         """,
 
@@ -413,7 +417,7 @@ def ensure_schema(database_connection) -> None:
                     raw.commit()
             except Exception:
                 # last resort: skip silently to avoid breaking upgrades
-                pass
+                logger.exception("Schema creation error")
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
@@ -423,4 +427,9 @@ def ensure_schema(database_connection) -> None:
         database_connection.query('UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL')
     except Exception:
         # Ignore failures (column exists or DB locked) — migrations handle this elsewhere
-        pass
+        logger.exception("Schema creation error")
+
+    try:
+        database_connection.query("ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT")
+    except Exception:
+        logger.exception("Schema creation error")

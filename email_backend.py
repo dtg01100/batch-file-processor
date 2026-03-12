@@ -66,7 +66,7 @@ def do(
 
             # Parse recipient addresses
             to_address = process_parameters['email_to']
-            to_address_list = to_address.split(", ")
+            to_address_list = [a.strip() for a in to_address.split(",")]
 
             # Build email message
             message = EmailMessage()

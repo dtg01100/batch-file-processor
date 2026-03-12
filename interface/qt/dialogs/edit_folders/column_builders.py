@@ -66,6 +66,7 @@ class ColumnBuilders:
     def build_others_column(self) -> QWidget:
         """Build the 'Others' column with folder list and copy config functionality."""
         container = QWidget()
+        container.setMinimumWidth(200)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(
             Theme.SPACING_XS_INT,
@@ -108,6 +109,7 @@ class ColumnBuilders:
     def build_folder_column(self) -> QWidget:
         """Build the 'Folder' column with backend selection and folder alias."""
         container = QWidget()
+        container.setMinimumWidth(180)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(
             Theme.SPACING_XS_INT,
@@ -174,6 +176,7 @@ class ColumnBuilders:
     def build_backend_column(self) -> QWidget:
         """Build the 'Backend' column with copy, FTP, and email settings."""
         container = QWidget()
+        container.setMinimumWidth(220)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(
             Theme.SPACING_XS_INT,
@@ -257,6 +260,7 @@ class ColumnBuilders:
     def build_edi_column(self) -> QWidget:
         """Build the base 'EDI' column with force EDI validation and split EDI options."""
         container = QWidget()
+        container.setMinimumWidth(260)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(
             Theme.SPACING_XS_INT,

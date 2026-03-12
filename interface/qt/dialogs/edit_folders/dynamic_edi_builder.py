@@ -23,6 +23,7 @@ from PyQt6 import QtCore
 
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.form.form_generator import FormGeneratorFactory
 from core.utils.bool_utils import normalize_bool
 
@@ -44,6 +45,7 @@ class DynamicEDIBuilder:
         dynamic_layout: QVBoxLayout,
         on_convert_format_changed: Optional[Callable[[str], None]] = None,
         on_dynamic_form_changed: Optional[Callable[[], None]] = None,
+        plugin_manager: Optional["PluginManager"] = None,
     ):
         """Initialize the dynamic EDI builder.
 
@@ -61,12 +63,8 @@ class DynamicEDIBuilder:
         self.on_convert_format_changed = on_convert_format_changed
         self.on_dynamic_form_changed = on_dynamic_form_changed
 
-        # Initialize plugin manager
-        self.plugin_manager = PluginManager()
-        self.plugin_manager.discover_plugins()
-        self.plugin_manager.initialize_plugins()
-
-        # Get all configuration plugins
+        # Use injected plugin manager or fall back to the shared singleton
+        self.plugin_manager = plugin_manager or get_shared_plugin_manager()
         self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
 
         # Widget references
@@ -77,6 +75,30 @@ class DynamicEDIBuilder:
 
         # State tracking
         self._edi_option_processing = False
+
+        # Preserved UPC override values (plain Python, not widgets) so they
+        # survive _clear_dynamic_edi / _clear_convert_sub calls.
+        self._saved_upc_override: dict = {
+            "override_upc_bool": normalize_bool(
+                folder_config.get("override_upc_bool", False)
+            ),
+            "override_upc_level": str(
+                folder_config.get("override_upc_level", 1)
+                if folder_config.get("override_upc_level") is not None
+                else 1
+            ),
+            "override_upc_category_filter_entry": str(
+                folder_config.get("override_upc_category_filter", "")
+            ),
+            "upc_target_length_entry": str(
+                folder_config.get("upc_target_length", 11)
+                if folder_config.get("upc_target_length") is not None
+                else 11
+            ),
+            "upc_padding_pattern_entry": str(
+                folder_config.get("upc_padding_pattern", "           ")
+            ),
+        }
 
     def _get_convert_formats(self) -> List[str]:
         """Get all available convert formats from configuration plugins."""
@@ -112,15 +134,58 @@ class DynamicEDIBuilder:
         self.fields["edi_options_combo"] = self.edi_options_combo
         return self.edi_options_combo
 
+    _UPC_OVERRIDE_KEYS = [
+        "override_upc_bool",
+        "override_upc_level",
+        "override_upc_category_filter_entry",
+        "upc_target_length_entry",
+        "upc_padding_pattern_entry",
+    ]
+
+    def _snapshot_upc_override(self):
+        """Save current UPC override widget values as plain Python values.
+
+        Called before any clear that would destroy these widgets, so that
+        the extractor can still read the last user-chosen values.
+        """
+        from PyQt6.QtWidgets import QCheckBox, QComboBox, QLineEdit
+
+        for key in self._UPC_OVERRIDE_KEYS:
+            widget = self.fields.get(key)
+            if widget is None:
+                continue
+            try:
+                if isinstance(widget, (QCheckBox,)):
+                    self._saved_upc_override[key] = widget.isChecked()
+                elif isinstance(widget, QComboBox):
+                    self._saved_upc_override[key] = widget.currentText().strip()
+                elif isinstance(widget, QLineEdit):
+                    self._saved_upc_override[key] = widget.text().strip()
+                elif isinstance(widget, (bool, int, float, str)):
+                    # Already a plain value — keep as-is
+                    self._saved_upc_override[key] = widget
+            except RuntimeError:
+                pass  # widget already deleted
+
+    def _restore_upc_override_as_plain_values(self):
+        """Write saved UPC override values as plain Python values into self.fields.
+
+        This ensures the data extractor returns the last known user values
+        rather than defaults when the UPC override widgets are absent.
+        """
+        for key, value in self._saved_upc_override.items():
+            self.fields[key] = value
+
     def _clear_dynamic_edi(self):
         """Clear dynamic EDI widgets and clean up field references."""
         logging.debug("Clearing dynamic EDI widgets")
+        self._snapshot_upc_override()
         try:
             keys_to_remove = []
 
             # Store items to remove in a list to avoid modifying the layout during iteration
             items_to_remove = []
-            for i in range(self.dynamic_layout.count()):
+            while self.dynamic_layout.count():
                 items_to_remove.append(self.dynamic_layout.takeAt(0))
 
             # Process the removal of each item
@@ -147,6 +212,7 @@ class DynamicEDIBuilder:
 
         except Exception as e:
             logging.error(f"Error in _clear_dynamic_edi: {e}")
+        self._restore_upc_override_as_plain_values()
 
     def _find_and_track_widget_keys(self, widget, keys_to_remove):
         """Recursively find all descendant widgets and track their field keys."""
@@ -210,24 +276,17 @@ class DynamicEDIBuilder:
         """Clear the EDI processing flag after a delay."""
         self._edi_option_processing = False
 
-    def _make_hidden_check(self, value: bool) -> QCheckBox:
-        """Create a hidden checkbox for internal state tracking."""
-        check = QCheckBox()
-        check.setChecked(value)
-        check.setVisible(False)
-        return check
-
     def _build_do_nothing_area(self):
         """Build the 'Do Nothing' EDI configuration section."""
-        self.fields["process_edi"] = self._make_hidden_check(False)
-        self.fields["tweak_edi"] = self._make_hidden_check(False)
+        self.fields["process_edi"] = False
+        self.fields["tweak_edi"] = False
         label = QLabel("Send As Is")
         self.dynamic_layout.addWidget(label)
 
     def _build_convert_edi_area(self):
         """Build the 'Convert EDI' configuration section."""
-        self.fields["process_edi"] = self._make_hidden_check(True)
-        self.fields["tweak_edi"] = self._make_hidden_check(False)
+        self.fields["process_edi"] = True
+        self.fields["tweak_edi"] = False
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
@@ -297,10 +356,11 @@ class DynamicEDIBuilder:
             return
 
         logging.debug("Clearing convert sub widgets")
+        self._snapshot_upc_override()
         try:
             keys_to_remove = []
             items_to_remove = []
-            for i in range(self.convert_sub_layout.count()):
+            while self.convert_sub_layout.count():
                 items_to_remove.append(self.convert_sub_layout.takeAt(0))
 
             for item in items_to_remove:
@@ -324,6 +384,7 @@ class DynamicEDIBuilder:
 
         except Exception as e:
             logging.error(f"Error in _clear_convert_sub: {e}")
+        self._restore_upc_override_as_plain_values()
 
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
         """Build plugin configuration sub-section."""
@@ -649,8 +710,12 @@ class DynamicEDIBuilder:
 
     def _build_estore_sub(self, fmt: str):
         wrapper = QWidget()
-        layout = QFormLayout(wrapper)
+        wrapper_layout = QVBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        form_widget = QWidget()
+        layout = QFormLayout(form_widget)
         layout.setContentsMargins(0, 0, 0, 0)
+        wrapper_layout.addWidget(form_widget)
 
         estore_store_number_field = QLineEdit()
         self.fields["estore_store_number_field"] = estore_store_number_field
@@ -684,8 +749,12 @@ class DynamicEDIBuilder:
 
     def _build_fintech_sub(self):
         wrapper = QWidget()
-        layout = QFormLayout(wrapper)
+        wrapper_layout = QVBoxLayout(wrapper)
+        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        form_widget = QWidget()
+        layout = QFormLayout(form_widget)
         layout.setContentsMargins(0, 0, 0, 0)
+        wrapper_layout.addWidget(form_widget)
 
         fintech_division_field = QLineEdit()
         self.fields["fintech_divisionid_field"] = fintech_division_field
@@ -707,8 +776,8 @@ class DynamicEDIBuilder:
 
     def _build_tweak_edi_area(self):
         """Build the 'Tweak EDI' configuration section."""
-        self.fields["process_edi"] = self._make_hidden_check(False)
-        self.fields["tweak_edi"] = self._make_hidden_check(True)
+        self.fields["process_edi"] = False
+        self.fields["tweak_edi"] = True
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)

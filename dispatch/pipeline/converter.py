@@ -4,12 +4,15 @@ This module provides a pipeline step for EDI format conversion,
 using dynamic module loading for different output formats.
 """
 
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable, Any
 
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_process_edi_flag(value: Any) -> bool:
@@ -299,13 +302,29 @@ class EDIConverterStep:
         errors: list[str] = []
 
         convert_to_format = params.get("convert_to_format", "")
+        logger.debug(
+            "Converting %s to format '%s'",
+            os.path.basename(input_path),
+            convert_to_format,
+        )
+
         if not convert_to_format:
+            logger.debug(
+                "No convert_to_format set, skipping conversion for %s",
+                os.path.basename(input_path),
+            )
             return ConverterResult(
                 output_path=input_path, format_used="", success=True, errors=errors
             )
 
         process_edi = _normalize_process_edi_flag(params.get("process_edi", False))
+        logger.debug("process_edi flag is %s", process_edi)
+
         if not process_edi:
+            logger.debug(
+                "process_edi is False, skipping conversion for %s",
+                os.path.basename(input_path),
+            )
             return ConverterResult(
                 output_path=input_path,
                 format_used=convert_to_format,
@@ -319,6 +338,7 @@ class EDIConverterStep:
 
         if format_normalized not in SUPPORTED_FORMATS:
             error_msg = f"Unsupported conversion format: {convert_to_format}"
+            logger.error("Unsupported conversion format: %s", convert_to_format)
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -347,6 +367,7 @@ class EDIConverterStep:
                 )
 
         try:
+            logger.debug("Loading converter module: %s", module_name)
             module = self._module_loader.load_module(module_name)
 
             if not hasattr(module, "edi_convert"):
@@ -364,6 +385,12 @@ class EDIConverterStep:
                 input_path, output_filename, settings, params, upc_dict
             )
 
+            logger.info(
+                "Converted %s -> %s (format: %s)",
+                os.path.basename(input_path),
+                converted_path,
+                convert_to_format,
+            )
             return ConverterResult(
                 output_path=converted_path,
                 format_used=convert_to_format,
@@ -373,6 +400,7 @@ class EDIConverterStep:
 
         except ImportError as e:
             error_msg = f"Conversion module not found: {module_name} - {e}"
+            logger.error("Converter module not found: %s", module_name)
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -383,6 +411,9 @@ class EDIConverterStep:
             )
         except Exception as e:
             error_msg = f"Conversion failed: {e}"
+            logger.error(
+                "Conversion failed for %s: %s", os.path.basename(input_path), e
+            )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -440,6 +471,10 @@ class EDIConverterStep:
         import tempfile
         import shutil
 
+        logger.debug(
+            "Execute converter step for %s", os.path.basename(file_path)
+        )
+
         effective_settings = (
             settings if settings is not None else folder.get("settings", {})
         )
@@ -449,6 +484,7 @@ class EDIConverterStep:
 
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_converter_")
+        logger.debug("Created temp dir for conversion: %s", temp_dir)
 
         temp_dirs: Optional[list[str]] = None
         if context is not None and hasattr(context, "temp_dirs"):
@@ -468,9 +504,14 @@ class EDIConverterStep:
             if result.success and result.output_path != file_path:
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
+                logger.debug("Converter step produced: %s", result.output_path)
                 return result.output_path
 
             # Cleanup if conversion didn't produce output
+            logger.debug(
+                "Converter step produced no output for %s, cleaning up",
+                os.path.basename(file_path),
+            )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)

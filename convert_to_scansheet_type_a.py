@@ -28,6 +28,7 @@ Backward Compatibility:
 """
 
 import math
+import logging
 import tempfile
 from typing import Any, Dict, List, Tuple
 
@@ -41,6 +42,8 @@ from PIL import ImageOps as pil_ImageOps
 
 import utils
 import core.database
+
+logger = logging.getLogger(__name__)
 
 
 class ScanSheetTypeAConverter:
@@ -97,6 +100,9 @@ class ScanSheetTypeAConverter:
         # Step 4: Generate and insert barcodes
         self._process_barcodes()
 
+        # Step 5: Finalize (closes DB connection)
+        self._finalize_output(None)
+
         return self.output_spreadsheet_name
 
     def _extract_invoices_from_edi(self, edi_process: str) -> List[str]:
@@ -120,7 +126,7 @@ class ScanSheetTypeAConverter:
                 except TypeError:
                     pass
 
-        print(invoice_list)
+        logger.debug("Extracted invoice list: %s", invoice_list)
         return invoice_list
 
     def _initialize_database(self, settings_dict: Dict[str, Any]) -> None:
@@ -156,7 +162,7 @@ class ScanSheetTypeAConverter:
         """
         for invoice in invoice_list:
             result = self.query_object.run_arbitrary_query(
-                f"""SELECT buj4cd AS "UPC",
+                """SELECT buj4cd AS "UPC",
                     bubacd AS "Item",
                     bufbtx AS "Description",
                     ancctx AS "Pack",
@@ -167,8 +173,9 @@ class ScanSheetTypeAConverter:
                     FROM dacdata.odhst odhst
                         INNER JOIN dacdata.dsanrep dsanrep
                             ON odhst.bubacd = dsanrep.anbacd
-                    WHERE odhst.buhhnb = {invoice}
-                        AND bue4qt <> 0"""
+                    WHERE odhst.buhhnb = ?
+                        AND bue4qt <> 0""",
+                (invoice,)
             )
 
             rows_for_export = []
@@ -181,7 +188,7 @@ class ScanSheetTypeAConverter:
                     except AttributeError:
                         trow.append(entry)
                 rows_for_export.append(trow)
-                print(trow)
+                logger.debug("Row for export: %s", trow)
 
             self.output_worksheet.append(['', invoice])
             self.invoice_row_counter += 1
@@ -200,7 +207,7 @@ class ScanSheetTypeAConverter:
         Args:
             adjust_worksheet: The worksheet to adjust
         """
-        print(f"Adjusting column width for {adjust_worksheet.title} worksheet")
+        logger.debug("Adjusting column width for %s worksheet", adjust_worksheet.title)
         for col in adjust_worksheet.columns:
             max_length = 0
             column = col[0].column_letter  # Get the column name
@@ -210,15 +217,15 @@ class ScanSheetTypeAConverter:
                         # Convert cell contents to str, cannot get len of int
                         max_length = len(str(cell.value))
                 except Exception as resize_error:
-                    print(resize_error)
+                    logger.debug("Column resize error: %s", resize_error)
             adjusted_width = (max_length + 2) * 1.2
             adjust_worksheet.column_dimensions[column].width = adjusted_width
 
     def _process_barcodes(self) -> None:
         """Generate and insert barcodes for each item in the workbook."""
-        print("creating temp directory")
+        logger.debug("creating temp directory")
         with tempfile.TemporaryDirectory() as tempdir:
-            print(f"temp directory created as: {tempdir}")
+            logger.debug("temp directory created as: %s", tempdir)
             count = 0
             save_counter = 0
 
@@ -226,12 +233,12 @@ class ScanSheetTypeAConverter:
                 try:
                     count += 1
                     if count not in self.invoice_rows:
-                        print(f"getting cell contents on line number {count}")
+                        logger.debug("getting cell contents on line number %d", count)
                         upc_barcode_string = str(self.output_worksheet["B" + str(count)].value)
-                        print(f"cell contents are: {upc_barcode_string}")
-                        print(upc_barcode_string[-12:][:-1])
+                        logger.debug("cell contents are: %s", upc_barcode_string)
+                        logger.debug("%s", upc_barcode_string[-12:][:-1])
                         upc_barcode_string = self._interpret_barcode_string(upc_barcode_string[-12:][:-1])
-                        print(upc_barcode_string)
+                        logger.debug("%s", upc_barcode_string)
 
                         generated_barcode_path, width, height = self._generate_barcode(upc_barcode_string, tempdir)
 
@@ -240,29 +247,29 @@ class ScanSheetTypeAConverter:
                         self.output_worksheet.row_dimensions[count].height = int(math.ceil(float(height) * .75))
 
                         # open image with as openpyxl image object
-                        print(f"opening {generated_barcode_path} to insert into output spreadsheet")
+                        logger.debug("opening %s to insert into output spreadsheet", generated_barcode_path)
                         img = OpenPyXlImage(generated_barcode_path)
-                        print("success")
+                        logger.debug("image opened successfully")
 
                         # attach image to cell
-                        print("adding image to cell")
+                        logger.debug("adding image to cell")
                         self.output_worksheet.add_image(img, anchor='A' + str(count))
                         save_counter += 1
-                        print("success")
+                        logger.debug("image added successfully")
                 except Exception as barcode_error:
-                    print(barcode_error)
+                    logger.debug("Barcode error: %s", barcode_error)
 
                 # This save in the loop frees references to the barcode images,
                 # so that python's garbage collector can clear them
                 if save_counter >= 100:
-                    print("saving intermediate workbook to free file handles")
+                    logger.debug("saving intermediate workbook to free file handles")
                     self.output_spreadsheet.save(self.output_spreadsheet_name)
-                    print("success")
+                    logger.debug("intermediate save successful")
                     save_counter = 1
 
-            print("saving workbook to file")
+            logger.debug("saving workbook to file")
             self.output_spreadsheet.save(self.output_spreadsheet_name)
-            print("success")
+            logger.debug("workbook saved successfully")
 
     def _finalize_output(self, context) -> None:
         """Finalize output by closing database connection.
@@ -297,25 +304,25 @@ class ScanSheetTypeAConverter:
             'quiet_zone': 2
         }
 
-        print("generating barcode image")
+        logger.debug("generating barcode image")
         with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as initial_temp_file:
             ean(input_string, writer=ImageWriter()).write(initial_temp_file, options=options)
             filename = initial_temp_file.name
 
-        print(filename)
-        print(f"success, barcode image path is: {filename}")
-        print(f"opening {filename} to add border")
+        logger.debug("%s", filename)
+        logger.debug("success, barcode image path is: %s", filename)
+        logger.debug("opening %s to add border", filename)
 
         barcode_image = pil_Image.open(str(filename))
-        print("success")
-        print("adding barcode and saving")
+        logger.debug("image opened successfully")
+        logger.debug("adding barcode and saving")
 
         img_save = pil_ImageOps.expand(barcode_image, border=0, fill='white')
         width, height = img_save.size
 
         with tempfile.NamedTemporaryFile(dir=tempdir, suffix='.png', delete=False) as final_barcode_path:
             img_save.save(final_barcode_path.name)
-            print(f"success, final barcode path is: {final_barcode_path.name}")
+            logger.debug("success, final barcode path is: %s", final_barcode_path.name)
 
         return final_barcode_path.name, width, height
 

@@ -49,7 +49,7 @@ class QtMainWindowController:
         options_layout.setSpacing(Theme.SPACING_SM_INT)
 
         header_label = QLabel("Batch File Sender")
-        header_label.setObjectName("sidebar")
+        header_label.setObjectName("sidebar_header")
         header_label.setStyleSheet(f"""
             font-size: {Theme.FONT_SIZE_XL};
             font-weight: 700;
@@ -154,7 +154,7 @@ class QtMainWindowController:
             on_toggle=self._app._toggle_folder,
             on_delete=self._app._delete_folder_entry_wrapper,
             filter_value=self._app._folder_filter,
-            total_count_callback=None,
+            total_count_callback=self._app._update_filter_count_label,
         )
 
         self._app._search_widget = SearchWidget(
@@ -166,8 +166,8 @@ class QtMainWindowController:
         if self._app._database.folders_table.count() == 0:
             self._app._search_widget.set_enabled(False)
 
-        parent_layout.addWidget(self._app._folder_list_widget, stretch=1)
         parent_layout.addWidget(self._app._search_widget)
+        parent_layout.addWidget(self._app._folder_list_widget, stretch=1)
 
     def refresh_users_list(self) -> None:
         if self._app._right_panel_widget is None:
@@ -194,13 +194,13 @@ class QtMainWindowController:
             on_toggle=self._app._toggle_folder,
             on_delete=self._app._delete_folder_entry_wrapper,
             filter_value=self._app._folder_filter,
-            total_count_callback=None,
+            total_count_callback=self._app._update_filter_count_label,
         )
 
-        # Insert folder list before the search widget (which stays at the bottom)
+        # Insert folder list after the search widget (search stays at top)
         if self._app._search_widget is not None:
             idx = layout.indexOf(self._app._search_widget)
-            layout.insertWidget(idx, self._app._folder_list_widget, stretch=1)
+            layout.insertWidget(idx + 1, self._app._folder_list_widget, stretch=1)
             has_folders = self._app._database.folders_table.count() > 0
             self._app._search_widget.set_enabled(has_folders)
         else:
@@ -220,7 +220,6 @@ class QtMainWindowController:
         ):
             return
 
-        folder_count = self._app._database.folders_table.count()
         active_count = self._app._database.folders_table.count(folder_is_active=True)
         processed_count = self._app._database.processed_files.count()
 

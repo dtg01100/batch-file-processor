@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timedelta
 
 from dateutil import parser
+
+logger = logging.getLogger(__name__)
 
 
 def dactime_from_datetime(date_time: datetime) -> str:
@@ -48,5 +51,6 @@ def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> st
         )
         formatted_date_string = corrected_date_string.strftime("%m/%d/%y")
     except Exception:
+        logger.warning("prettify_dates: could not parse date string %r", date_string)
         formatted_date_string = "Not Available"
     return formatted_date_string

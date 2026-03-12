@@ -98,15 +98,47 @@ class CRecGenerator:
             """
         )
 
+        if not qry_ret:
+            self.unappended_records = False
+            return
+
         qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]
 
-        if qry_ret_prepaid != 0 and qry_ret_prepaid is not None:
+        if qry_ret_prepaid is not None and qry_ret_prepaid != 0:
             self._write_line("Prepaid Sales Tax", qry_ret_prepaid, output_file)
 
-        if qry_ret_non_prepaid != 0 and qry_ret_non_prepaid is not None:
+        if qry_ret_non_prepaid is not None and qry_ret_non_prepaid != 0:
             self._write_line("Sales Tax", qry_ret_non_prepaid, output_file)
 
         self.unappended_records = False
+
+    @staticmethod
+    def _format_amount_str(amount: float) -> str:
+        """Format an amount float into a 9-character EDI amount string.
+
+        Converts the amount to a fixed-point string (2 decimal places),
+        strips the decimal point, and right-justifies to 9 characters.
+        Negative amounts are represented with a leading '-'.
+
+        Args:
+            amount: Charge amount (may be negative)
+
+        Returns:
+            9-character amount string suitable for EDI output
+        """
+        if amount < 0:
+            amount_builder = amount - (amount * 2)
+        else:
+            amount_builder = amount
+
+        amount_str = f"{amount_builder:.2f}".replace(".", "").rjust(9, "0")
+
+        if amount < 0:
+            temp_list = list(amount_str)
+            temp_list[0] = "-"
+            amount_str = "".join(temp_list)
+
+        return amount_str
 
     def _write_line(self, type_str: str, amount: float, output_file: TextIO) -> None:
         """Write a C record line to the output file.
@@ -117,19 +149,7 @@ class CRecGenerator:
             output_file: File handle to write to
         """
         desc_str = type_str.ljust(25, " ")
-
-        if amount < 0:
-            amount_builder = amount - (amount * 2)
-        else:
-            amount_builder = amount
-
-        amount_str = str(amount_builder).replace(".", "").rjust(9, "0")
-
-        if amount < 0:
-            temp_list = list(amount_str)
-            temp_list[0] = "-"
-            amount_str = "".join(temp_list)
-
+        amount_str = self._format_amount_str(amount)
         line = f"C{self.config.charge_type}{desc_str}{amount_str}\n"
         output_file.write(line)
 
@@ -147,19 +167,7 @@ class CRecGenerator:
             Formatted C record string
         """
         desc_str = description.ljust(25, " ")
-
-        if amount < 0:
-            amount_builder = amount - (amount * 2)
-        else:
-            amount_builder = amount
-
-        amount_str = str(amount_builder).replace(".", "").rjust(9, "0")
-
-        if amount < 0:
-            temp_list = list(amount_str)
-            temp_list[0] = "-"
-            amount_str = "".join(temp_list)
-
+        amount_str = self._format_amount_str(amount)
         return f"C{charge_type}{desc_str}{amount_str}\n"
 
     def generate_c_records_for_invoice(

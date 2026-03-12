@@ -49,11 +49,10 @@ def test_export_processed_report_writes_header_and_formatted_row(tmp_path: Path)
         processed_files=_ProcessedFilesTable(
             rows=[
                 {
-                    "file_name": "invoice-001.pdf",
-                    "sent_date_time": datetime(2026, 3, 10, 12, 34, 56),
-                    "copy_destination": "Archive",
-                    "ftp_destination": "ftp://example",
-                    "email_destination": "ops@example.com",
+                    "file_name": "invoice-001.edi",
+                    "invoice_numbers": "0000000001, 0000000002",
+                    "processed_at": "2026-03-10T12:34:56",
+                    "sent_to": "Copy: /archive",
                 }
             ]
         ),
@@ -64,10 +63,10 @@ def test_export_processed_report_writes_header_and_formatted_row(tmp_path: Path)
     report_path = tmp_path / "Invoices processed report.csv"
     assert report_path.exists()
     lines = report_path.read_text(encoding="utf-8").splitlines()
-    assert lines[0] == "File,Date,Copy Destination,FTP Destination,Email Destination"
+    assert lines[0] == "File,Invoice Numbers,Date,Sent To"
     assert (
         lines[1]
-        == "invoice-001.pdf,2026-03-10 12:34:56,Archive,ftp://example,ops@example.com"
+        == "invoice-001.edi,0000000001, 0000000002,2026-03-10T12:34:56,Copy: /archive"
     )
 
 
@@ -83,7 +82,7 @@ def test_export_processed_report_writes_header_only_when_no_rows(tmp_path: Path)
     assert report_path.exists()
     assert (
         report_path.read_text(encoding="utf-8")
-        == "File,Date,Copy Destination,FTP Destination,Email Destination\n"
+        == "File,Invoice Numbers,Date,Sent To\n"
     )
 
 

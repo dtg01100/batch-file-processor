@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import logging
 import multiprocessing
 import os
 import platform
@@ -32,6 +33,8 @@ from interface.qt.diagnostics import QtDiagnosticsService
 from interface.qt.run_coordinator import QtRunCoordinator
 from interface.qt.window_controller import QtMainWindowController
 from interface.services.reporting_service import ReportingService
+
+logger = logging.getLogger(__name__)
 
 
 class QtBatchFileSenderApp:
@@ -128,8 +131,8 @@ class QtBatchFileSenderApp:
 
         self._configure_qt_platform()
 
-        print(f"{self._appname} Version {self._version}")
-        print(f"Running on {self._running_platform}")
+        logger.info("%s Version %s", self._appname, self._version)
+        logger.info("Running on %s", self._running_platform)
 
         self._parse_arguments(args)
 
@@ -142,6 +145,7 @@ class QtBatchFileSenderApp:
             sys.exit(exit_code)
 
         self._setup_config_directories()
+        logger.debug("Config folder: %s, database: %s", self._config_folder, self._database_path)
 
         if self._database is None:
             self._database = DatabaseObj(
@@ -161,8 +165,8 @@ class QtBatchFileSenderApp:
         )
 
         oversight = self._database.get_oversight_or_default()
-        self._logs_directory = oversight
-        self._errors_directory = oversight
+        self._logs_directory = dict(oversight)
+        self._errors_directory = dict(oversight)
 
         if self._args.automatic:
             self._automatic_process_directories(self._database.folders_table)
@@ -216,7 +220,13 @@ class QtBatchFileSenderApp:
         self._window_controller.refresh_users_list()
 
     def _update_filter_count_label(self, filtered_count: int, total_count: int) -> None:
-        pass
+        if self._search_widget is not None:
+            if filtered_count == total_count:
+                self._search_widget.entry.setPlaceholderText("Search folders...")
+            else:
+                self._search_widget.entry.setPlaceholderText(
+                    f"Search folders... ({filtered_count}/{total_count} shown)"
+                )
 
     def _set_main_button_states(self) -> None:
         self._window_controller.set_main_button_states()
@@ -269,6 +279,7 @@ class QtBatchFileSenderApp:
         )
         if not selection:
             return
+        logger.debug("Batch adding folders from: %s", selection)
 
         self._database.oversight_and_defaults.update(
             {"id": 1, "batch_add_folder_prior": selection}, ["id"]
@@ -297,7 +308,7 @@ class QtBatchFileSenderApp:
                 self._folder_manager.add_folder(folder)
                 added += 1
 
-        print(f"done adding {added} folders")
+        logger.info("Done adding %d folders (%d skipped)", added, skipped)
         self._progress_service.hide()
         self._ui_service.show_info(
             "Batch Add Complete",
@@ -316,30 +327,32 @@ class QtBatchFileSenderApp:
             )
 
     def _send_single(self, folder_id: int) -> None:
+        logger.debug("Sending single folder id: %d", folder_id)
         self._progress_service.show("Working...")
         try:
             single_table = self._database.session_database["single_table"]
             single_table.drop()
-        finally:
-            self._database.session_database.query(
-                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+        except Exception:
+            pass
+        self._database.session_database.query(
+            "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+        )
+        self._database.session_database.query(
+            "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
+        )
+        single_table = self._database.session_database["single_table"]
+        table_dict = self._database.folders_table.find_one(id=folder_id)
+        if table_dict:
+            table_dict["old_id"] = table_dict.pop("id")
+            single_table.insert(table_dict)
+        else:
+            self._ui_service.show_error(
+                "Error", f"Folder with id {folder_id} not found."
             )
-            self._database.session_database.query(
-                "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
-            )
-            single_table = self._database.session_database["single_table"]
-            table_dict = self._database.folders_table.find_one(id=folder_id)
-            if table_dict:
-                table_dict["old_id"] = table_dict.pop("id")
-                single_table.insert(table_dict)
-            else:
-                self._ui_service.show_error(
-                    "Error", f"Folder with id {folder_id} not found."
-                )
-                return
-            self._progress_service.hide()
-            self._graphical_process_directories(single_table)
-            single_table.drop()
+            return
+        self._progress_service.hide()
+        self._graphical_process_directories(single_table)
+        single_table.drop()
 
     def _disable_folder(self, folder_id: int) -> None:
         self._folder_manager.disable_folder(folder_id)
@@ -348,6 +361,7 @@ class QtBatchFileSenderApp:
     def _toggle_folder(self, folder_id: int) -> None:
         folder = self._folder_manager.get_folder_by_id(folder_id)
         if folder:
+            logger.debug("Toggling folder %d (currently active=%s)", folder_id, folder.get('folder_is_active'))
             if not folder.get("folder_is_active", False):
                 has_backend = (
                     folder.get("process_backend_email")
@@ -545,7 +559,7 @@ class QtBatchFileSenderApp:
                 )
                 return True
             except Exception as e:
-                print(f"Database import failed: {e}")
+                logger.error("Database import failed: %s", e)
                 return False
 
         maintenance = MaintenanceFunctions(
@@ -632,12 +646,12 @@ class QtBatchFileSenderApp:
             os.remove(test_file_path)
             return True
         except IOError as log_directory_error:
-            print(str(log_directory_error))
+            logger.warning("Log directory not accessible: %s", log_directory_error)
             return False
 
     def _log_critical_error(self, error) -> None:
         try:
-            print(str(error))
+            logger.critical("Critical error: %s", error)
             with open("critical_error.log", "a", encoding="utf-8") as critical_log:
                 critical_log.write(f"program version is {self._version}")
                 critical_log.write(f"{datetime.datetime.now()}{error}\r\n")
@@ -647,7 +661,7 @@ class QtBatchFileSenderApp:
         except SystemExit:
             raise
         except Exception as big_error:
-            print("error writing critical error log...")
+            logger.error("Error writing critical error log")
             raise SystemExit from big_error
 
 

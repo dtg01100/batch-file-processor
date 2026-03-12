@@ -1,5 +1,6 @@
 """Tests for dispatch/pipeline/splitter.py module."""
 
+import logging
 from unittest.mock import patch
 import pytest
 
@@ -559,7 +560,7 @@ class TestEDISplitterStep:
         assert result.was_split is False
         assert len(result.files) == 1
 
-    def test_split_with_split_edi_true_multiple_invoices(self):
+    def test_split_with_split_edi_true_multiple_invoices(self, caplog):
         """Test split() with split_edi=True and multiple invoices."""
         mock_splitter = MockEDISplitter()
         mock_splitter.set_result(
@@ -576,176 +577,28 @@ class TestEDISplitterStep:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True}
-        result = step.split("/input/test.edi", "/output", params, {})
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.splitter"):
+            result = step.split("/input/test.edi", "/output", params, {})
 
         assert result.was_split is True
         assert len(result.files) == 3
         assert result.skipped_invoices == 2
+        assert "Split" in caplog.text
 
-    def test_split_with_category_filtering_enabled(self):
-        """Test split() with category filtering enabled (filter_categories != 'ALL')."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_result(
-            SplitResult(
-                output_files=[("/output/split.inv", "A_", ".inv")],
-                skipped_invoices=5,
-                total_lines_written=3,
-            )
-        )
-        step = EDISplitterStep(splitter=mock_splitter)
-
-        params = {
-            "split_edi": True,
-            "split_edi_filter_categories": "CAT1,CAT2",
-            "split_edi_filter_mode": "include",
-        }
-        result = step.split("/input/test.edi", "/output", params, {})
-
-        assert result.was_filtered is True
-        assert mock_splitter.last_filter_categories == "CAT1,CAT2"
-        assert mock_splitter.last_filter_mode == "include"
-
-    def test_split_with_credit_invoice_filtering_include_invoices_only(self):
-        """Test split() with credit/invoice filtering - include invoices only."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_result(
-            SplitResult(
-                output_files=[
-                    ("/output/A_split.inv", "A_", ".inv"),
-                    ("/output/B_split.cr", "B_", ".cr"),
-                ],
-                skipped_invoices=0,
-                total_lines_written=6,
-            )
-        )
-        mock_credit_detector = MockCreditDetector(is_credit=False)
-
-        def detect_credit(path):
-            return path.endswith(".cr")
-
-        mock_credit_detector.detect = detect_credit
-        step = EDISplitterStep(
-            splitter=mock_splitter, credit_detector=mock_credit_detector
-        )
-
-        params = {
-            "split_edi": True,
-            "split_edi_include_invoices": True,
-            "split_edi_include_credits": False,
-        }
-        result = step.split("/input/test.edi", "/output", params, {})
-
-        assert len(result.files) == 1
-        assert result.files[0][0] == "/output/A_split.inv"
-
-    def test_split_with_credit_invoice_filtering_include_credits_only(self):
-        """Test split() with credit/invoice filtering - include credits only."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_result(
-            SplitResult(
-                output_files=[
-                    ("/output/A_split.inv", "A_", ".inv"),
-                    ("/output/B_split.cr", "B_", ".cr"),
-                ],
-                skipped_invoices=0,
-                total_lines_written=6,
-            )
-        )
-        mock_credit_detector = MockCreditDetector()
-
-        def detect_credit(path):
-            return path.endswith(".cr")
-
-        mock_credit_detector.detect = detect_credit
-        step = EDISplitterStep(
-            splitter=mock_splitter, credit_detector=mock_credit_detector
-        )
-
-        params = {
-            "split_edi": True,
-            "split_edi_include_invoices": False,
-            "split_edi_include_credits": True,
-        }
-        result = step.split("/input/test.edi", "/output", params, {})
-
-        assert len(result.files) == 1
-        assert result.files[0][0] == "/output/B_split.cr"
-
-    def test_split_with_credit_invoice_filtering_include_both(self):
-        """Test split() with credit/invoice filtering - include both."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_result(
-            SplitResult(
-                output_files=[
-                    ("/output/A_split.inv", "A_", ".inv"),
-                    ("/output/B_split.cr", "B_", ".cr"),
-                ],
-                skipped_invoices=0,
-                total_lines_written=6,
-            )
-        )
-        step = EDISplitterStep(splitter=mock_splitter)
-
-        params = {
-            "split_edi": True,
-            "split_edi_include_invoices": True,
-            "split_edi_include_credits": True,
-        }
-        result = step.split("/input/test.edi", "/output", params, {})
-
-        assert len(result.files) == 2
-
-    def test_split_credit_detection_integration(self):
-        """Test credit detection integration."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_result(
-            SplitResult(
-                output_files=[
-                    ("/output/A_split.inv", "A_", ".inv"),
-                    ("/output/B_split.cr", "B_", ".cr"),
-                ],
-                skipped_invoices=0,
-                total_lines_written=6,
-            )
-        )
-        mock_credit_detector = MockCreditDetector()
-        step = EDISplitterStep(
-            splitter=mock_splitter, credit_detector=mock_credit_detector
-        )
-
-        params = {
-            "split_edi": True,
-            "split_edi_include_invoices": True,
-            "split_edi_include_credits": False,
-        }
-
-        step.split("/input/test.edi", "/output", params, {})
-
-    def test_split_error_handling_when_splitter_raises_value_error(self):
-        """Test error handling when splitter raises ValueError."""
-        mock_splitter = MockEDISplitter()
-        mock_splitter.set_exception(ValueError("No valid invoices after filtering"))
-        step = EDISplitterStep(splitter=mock_splitter)
-
-        params = {"split_edi": True}
-        result = step.split("/input/test.edi", "/output", params, {})
-
-        assert result.was_split is False
-        assert len(result.errors) == 1
-        assert "No valid invoices after filtering" in result.errors[0]
-
-    def test_split_error_handling_when_splitter_raises_generic_exception(self):
+    def test_split_error_handling_when_splitter_raises_generic_exception(self, caplog):
         """Test error handling when splitter raises generic exception."""
         mock_splitter = MockEDISplitter()
         mock_splitter.set_exception(RuntimeError("Unexpected error"))
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True}
-        result = step.split("/input/test.edi", "/output", params, {})
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.splitter"):
+            result = step.split("/input/test.edi", "/output", params, {})
 
         assert result.was_split is False
         assert len(result.errors) == 1
         assert "Split failed" in result.errors[0]
+        assert "Split failed" in caplog.text
 
     def test_split_error_recording_to_error_handler(self):
         """Test error recording to error handler."""

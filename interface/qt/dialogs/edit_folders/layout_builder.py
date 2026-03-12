@@ -90,9 +90,11 @@ class UILayoutBuilder:
             # Clear any existing widgets from the dialog's standard body/button box
             # as we are taking over complete layout management for this complex dialog
             if hasattr(self.dialog, "_body_widget"):
-                self.dialog._body_widget.setVisible(False)
-            if hasattr(self.dialog, "_button_box"):
-                self.dialog._button_box.setVisible(False)
+                self.dialog._main_layout.removeWidget(self.dialog._body_widget)
+                self.dialog._body_widget.setParent(None)
+            if hasattr(self.dialog, "_button_box") and self.dialog._button_box is not None:
+                self.dialog._main_layout.removeWidget(self.dialog._button_box)
+                self.dialog._button_box.setParent(None)
         else:
             outer_layout = QVBoxLayout(self.dialog)
 
@@ -142,8 +144,29 @@ class UILayoutBuilder:
 
         # Build EDI column with dynamic content container
         edi_column = self.column_builders.build_edi_column()
+
+        # Initialize dynamic EDI builder FIRST so combo can be built
+        self.dynamic_edi_builder = DynamicEDIBuilder(
+            fields=self.fields,
+            folder_config=self.folder_config,
+            dynamic_container=None,
+            dynamic_layout=None,
+            on_convert_format_changed=self.on_convert_format_changed,
+            on_dynamic_form_changed=self.on_dynamic_form_changed,
+        )
+
+        # Insert EDI options combo at the TOP of edi_column (index 0)
+        self._add_edi_options_combo(edi_column)
+
+        # Add dynamic container + stretch at the BOTTOM
         self._add_dynamic_edi_container(edi_column)
+
+        # Now wire the dynamic container into the builder
+        self.dynamic_edi_builder.dynamic_container = self.dynamic_edi_container
+        self.dynamic_edi_builder.dynamic_layout = self.dynamic_edi_layout
+
         columns_layout.addWidget(edi_column)
+        columns_layout.addSpacing(Theme.SPACING_MD_INT)
 
         main_layout.addLayout(columns_layout)
 
@@ -159,19 +182,6 @@ class UILayoutBuilder:
         if self.on_cancel:
             button_box.rejected.connect(self.on_cancel)
         outer_layout.addWidget(button_box)
-
-        # Initialize dynamic EDI builder
-        self.dynamic_edi_builder = DynamicEDIBuilder(
-            fields=self.fields,
-            folder_config=self.folder_config,
-            dynamic_container=self.dynamic_edi_container,
-            dynamic_layout=self.dynamic_edi_layout,
-            on_convert_format_changed=self.on_convert_format_changed,
-            on_dynamic_form_changed=self.on_dynamic_form_changed,
-        )
-
-        # Add EDI options combo to EDI column
-        self._add_edi_options_combo(edi_column)
 
         return self
 
@@ -200,7 +210,7 @@ class UILayoutBuilder:
         edi_opt_row.addWidget(QLabel("EDI Options:"))
         edi_combo = self.dynamic_edi_builder.build_edi_options_combo()
         edi_opt_row.addWidget(edi_combo)
-        container_layout.addLayout(edi_opt_row)
+        container_layout.insertLayout(0, edi_opt_row)
 
     def get_column_builders(self) -> ColumnBuilders:
         """Get the column builders instance."""

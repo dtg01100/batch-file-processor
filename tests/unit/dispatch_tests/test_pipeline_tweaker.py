@@ -1,5 +1,6 @@
 """Tests for dispatch/pipeline/tweaker.py - EDITweakerStep and TweakerResult classes."""
 
+import logging
 from unittest.mock import Mock
 from dispatch.pipeline.tweaker import (
     TweakerResult,
@@ -175,19 +176,20 @@ class TestEDITweakerStep:
         assert result.errors == []
         mock_tweak_func.assert_not_called()
 
-    def test_tweak_with_tweak_edi_true(self):
+    def test_tweak_with_tweak_edi_true(self, caplog):
         """Test tweak() with tweak_edi=True calls tweak function."""
         mock_tweak_func = Mock(return_value="/output/dir/file.edi")
         step = EDITweakerStep(tweak_function=mock_tweak_func)
 
         params = {"tweak_edi": True}
-        result = step.tweak(
-            "/input/file.edi",
-            "/output/dir",
-            params,
-            {"setting": "value"},
-            {"upc": "product"},
-        )
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.tweaker"):
+            result = step.tweak(
+                "/input/file.edi",
+                "/output/dir",
+                params,
+                {"setting": "value"},
+                {"upc": "product"},
+            )
 
         assert result.output_path == "/output/dir/file.edi"
         assert result.success is True
@@ -200,8 +202,9 @@ class TestEDITweakerStep:
             params,
             {"upc": "product"},
         )
+        assert "Tweaked" in caplog.text
 
-    def test_tweak_handles_exception_from_tweak_function(self):
+    def test_tweak_handles_exception_from_tweak_function(self, caplog):
         """Test tweak() handles exception from tweak function."""
         mock_tweak_func = Mock(side_effect=Exception("Tweak failed"))
         mock_error_handler = Mock()
@@ -210,7 +213,8 @@ class TestEDITweakerStep:
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.tweaker"):
+            result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         assert result.output_path == "/input/file.edi"
         assert result.success is False
@@ -218,6 +222,7 @@ class TestEDITweakerStep:
         assert "Tweak failed" in result.errors[0]
 
         mock_error_handler.record_error.assert_called_once()
+        assert "Tweaking failed" in caplog.text
 
     def test_tweak_with_tweak_edi_string_true(self):
         """Test tweak() with tweak_edi as string 'True'."""

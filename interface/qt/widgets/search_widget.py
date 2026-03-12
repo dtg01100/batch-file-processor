@@ -31,6 +31,7 @@ class SearchWidget(QWidget):
         super().__init__(parent)
         self._filter_value = initial_value
         self._on_filter_change = on_filter_change
+        self._pending_filter = initial_value
 
         if on_filter_change:
             self.filter_changed.connect(on_filter_change)

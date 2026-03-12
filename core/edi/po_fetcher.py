@@ -76,16 +76,19 @@ class POFetcher:
             PO number string, or default if not found
         """
         qry_ret = self._query_runner.run_query(
-            f"""
+            """
             SELECT ohhst.bte4cd
             FROM dacdata.ohhst ohhst
-            WHERE ohhst.bthhnb = {int(invoice_number)}
-            """
+            WHERE ohhst.bthhnb = ?
+            """,
+            (int(invoice_number),),
         )
 
         if len(qry_ret) == 0:
             return self.DEFAULT_PO
-        return str(qry_ret[0][0])
+        row = qry_ret[0]
+        value = row["bte4cd"] if isinstance(row, dict) else row[0]
+        return str(value)
 
     def fetch_po_data(self, invoice_number: int) -> Optional[POData]:
         """Fetch complete PO data for an invoice.
@@ -97,7 +100,7 @@ class POFetcher:
             POData object if found, None otherwise
         """
         qry_ret = self._query_runner.run_query(
-            f"""
+            """
             SELECT
                 trim(ohhst.bte4cd),
                 trim(ohhst.bthinb),
@@ -105,14 +108,21 @@ class POFetcher:
             FROM
                 dacdata.ohhst ohhst
             WHERE
-                ohhst.bthhnb = {int(invoice_number)}
-            """
+                ohhst.bthhnb = ?
+            """,
+            (int(invoice_number),),
         )
 
         if len(qry_ret) == 0:
             return None
 
         row = qry_ret[0]
+        if isinstance(row, dict):
+            return POData(
+                po_number=str(row["bte4cd"]) if row["bte4cd"] else "",
+                vendor_name=str(row["bthinb"]) if row["bthinb"] else "",
+                vendor_oid=str(row["btabnb"]) if row["btabnb"] else "",
+            )
         return POData(
             po_number=str(row[0]) if row[0] else "",
             vendor_name=str(row[1]) if row[1] else "",
@@ -129,7 +139,7 @@ class POFetcher:
             List of dictionaries containing line item data
         """
         qry_ret = self._query_runner.run_query(
-            f"""
+            """
             SELECT
                 odhst.buhlnb,
                 odhst.buhcdx,
@@ -138,19 +148,30 @@ class POFetcher:
             FROM
                 dacdata.odhst odhst
             WHERE
-                odhst.bte4cd = '{po_number}'
-            """
+                odhst.bte4cd = ?
+            """,
+            (po_number,),
         )
 
         lines = []
         for row in qry_ret:
-            lines.append(
-                {
-                    "line_number": row[0],
-                    "item_code": row[1],
-                    "price": row[2],
-                    "status": row[3],
-                }
-            )
+            if isinstance(row, dict):
+                lines.append(
+                    {
+                        "line_number": row["buhlnb"],
+                        "item_code": row["buhcdx"],
+                        "price": row["bufgpr"],
+                        "status": row["buh6nb"],
+                    }
+                )
+            else:
+                lines.append(
+                    {
+                        "line_number": row[0],
+                        "item_code": row[1],
+                        "price": row[2],
+                        "status": row[3],
+                    }
+                )
 
         return lines

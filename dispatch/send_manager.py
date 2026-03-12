@@ -6,6 +6,7 @@ using dependency injection for testability.
 
 import importlib
 import logging
+import os
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -80,17 +81,42 @@ class SendManager:
         self.results = {}
         self.errors = {}
 
+        basename = os.path.basename(file_path)
+        sorted_backends = sorted(enabled_backends)
+        logger.debug(
+            "Sending %s to %d backend(s): %s",
+            basename,
+            len(enabled_backends),
+            sorted_backends,
+        )
+
         for backend_name in enabled_backends:
             try:
                 success = self._send_to_backend(
                     backend_name, file_path, params, settings
                 )
                 self.results[backend_name] = success
+                logger.debug(
+                    "Backend '%s' result: %s",
+                    backend_name,
+                    "success" if success else "failure",
+                )
             except Exception as e:
                 self.results[backend_name] = False
                 self.errors[backend_name] = str(e)
                 logger.error(f"Backend '{backend_name}' failed to send: {e}")
+                logger.debug("Backend '%s' result: failure", backend_name)
                 # Continue with other backends instead of raising
+
+        failed_backends = [
+            name for name, success in self.results.items() if not success
+        ]
+        if failed_backends:
+            logger.warning(
+                "Some backends failed for %s: %s", basename, failed_backends
+            )
+        else:
+            logger.info("All backends succeeded for: %s", basename)
 
         return self.results
 
@@ -111,8 +137,12 @@ class SendManager:
         Raises:
             Exception: If backend is not found or send fails
         """
+        basename = os.path.basename(file_path)
+        logger.debug("Sending %s via backend '%s'", basename, backend_name)
+
         # Check if we have an injected backend instance
         if backend_name in self.backends:
+            logger.debug("Using injected backend instance for '%s'", backend_name)
             backend = self.backends[backend_name]
             send_result = backend.send(params, settings, file_path)
             if send_result is None:
@@ -121,6 +151,7 @@ class SendManager:
 
         # Fall back to default module-based backend
         if self.use_default_backends and backend_name in self.DEFAULT_BACKENDS:
+            logger.debug("Using default module backend for '%s'", backend_name)
             return self._send_via_module(backend_name, file_path, params, settings)
 
         raise ValueError(f"Unknown backend: {backend_name}")
@@ -151,10 +182,22 @@ class SendManager:
             return False
 
         # Import and call the backend module
-        module = importlib.import_module(config["module"])
-        module.do(params, settings, file_path)
+        logger.debug("Loading backend module: %s", config["module"])
+        try:
+            module = importlib.import_module(config["module"])
+        except ImportError as e:
+            logger.error(
+                "Failed to import backend module '%s': %s", config["module"], e
+            )
+            raise
 
-        return True
+        basename = os.path.basename(file_path)
+        logger.debug(
+            "Calling module.do() for backend '%s', file: %s", backend_name, basename
+        )
+        result = module.do(params, settings, file_path)
+
+        return bool(result) if result is not None else False
 
     def get_enabled_backends(self, params: dict) -> set[str]:
         """Get the set of enabled backends from parameters.
@@ -184,6 +227,7 @@ class SendManager:
                 # Absent flag defaults to enabled for injected backends
                 enabled.add(backend_name)
 
+        logger.debug("Enabled backends for folder: %s", enabled)
         return enabled
 
     def validate_backend_config(self, params: dict) -> list[str]:
@@ -197,15 +241,28 @@ class SendManager:
         """
         errors = []
 
+        enabled_backends = {
+            name
+            for name, config in self.DEFAULT_BACKENDS.items()
+            if params.get(config["enabled_key"], False)
+        }
+        logger.debug("Validating backend config, enabled backends: %s", enabled_backends)
+
         for backend_name, config in self.DEFAULT_BACKENDS.items():
             if params.get(config["enabled_key"], False):
                 # Check if required setting is present
                 setting_value = params.get(config["setting"])
                 if not setting_value:
-                    errors.append(
+                    msg = (
                         f"{config['display_name']} is enabled but "
                         f"{config['setting']} is not configured"
                     )
+                    logger.warning(
+                        "Misconfigured backend '%s': %s is not configured",
+                        backend_name,
+                        config["setting"],
+                    )
+                    errors.append(msg)
 
         return errors
 

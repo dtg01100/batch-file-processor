@@ -4,6 +4,7 @@ This module provides a pipeline step for EDI file splitting,
 wrapping the existing EDISplitter with pipeline integration.
 """
 
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable, Any
@@ -11,6 +12,8 @@ from typing import Optional, Protocol, runtime_checkable, Any
 from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_true_false_only(value: Any) -> bool:
@@ -325,6 +328,19 @@ class EDISplitterStep:
             params.get("split_edi_include_credits", True), default=True
         )
 
+        logger.debug(
+            "Splitting %s (split_edi=%s, filter_categories=%s, filter_mode=%s)",
+            input_path,
+            split_edi,
+            filter_categories,
+            filter_mode,
+        )
+        logger.debug(
+            "include_invoices=%s, include_credits=%s",
+            include_invoices,
+            include_credits,
+        )
+
         if split_edi:
             return self._do_split(
                 input_path,
@@ -376,6 +392,8 @@ class EDISplitterStep:
         try:
             config = SplitConfig(output_directory=output_dir, prepend_date=prepend_date)
 
+            logger.debug("Performing EDI split for %s into %s", input_path, output_dir)
+
             split_result = self._splitter.do_split_edi(
                 input_path,
                 config,
@@ -391,6 +409,14 @@ class EDISplitterStep:
                     split_result.output_files, include_invoices, include_credits
                 )
 
+                logger.info(
+                    "Split %s into %d files (was_filtered=%s, skipped=%d)",
+                    input_path,
+                    len(filtered_files),
+                    was_filtered,
+                    split_result.skipped_invoices,
+                )
+
                 return SplitterResult(
                     files=filtered_files,
                     was_split=True,
@@ -399,6 +425,11 @@ class EDISplitterStep:
                     errors=errors,
                 )
             else:
+                logger.info(
+                    "No split performed for %s (single invoice or no split)",
+                    input_path,
+                )
+
                 return SplitterResult(
                     files=[(input_path, "", "")],
                     was_split=False,
@@ -408,6 +439,7 @@ class EDISplitterStep:
                 )
 
         except ValueError as e:
+            logger.warning("No valid invoices after filtering %s: %s", input_path, e)
             error_msg = f"No valid invoices after filtering: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -419,6 +451,7 @@ class EDISplitterStep:
                 errors=errors,
             )
         except Exception as e:
+            logger.error("Split failed for %s: %s", input_path, e)
             error_msg = f"Split failed: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -456,6 +489,12 @@ class EDISplitterStep:
         output_path = input_path
 
         if filter_categories != "ALL":
+            logger.debug(
+                "Applying category filter to %s (categories=%s, mode=%s)",
+                input_path,
+                filter_categories,
+                filter_mode,
+            )
             try:
                 import utils
 
@@ -470,8 +509,12 @@ class EDISplitterStep:
                     filter_mode,
                 )
                 if was_filtered:
+                    logger.debug("Filtered %s -> %s", input_path, filtered_output)
                     output_path = filtered_output
+                else:
+                    logger.debug("No filtering applied to %s", input_path)
             except Exception as e:
+                logger.error("Category filtering failed for %s: %s", input_path, e)
                 error_msg = f"Category filtering failed: {e}"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -500,7 +543,17 @@ class EDISplitterStep:
         Returns:
             Filtered list of file tuples
         """
+        logger.debug(
+            "Filtering %d files by credit/invoice (include_invoices=%s, include_credits=%s)",
+            len(files),
+            include_invoices,
+            include_credits,
+        )
+
         if include_invoices and include_credits:
+            logger.debug(
+                "After credit/invoice filter: %d files remain", len(files)
+            )
             return files
 
         filtered_files = []
@@ -515,6 +568,9 @@ class EDISplitterStep:
             except Exception:
                 filtered_files.append((file_path, prefix, suffix))
 
+        logger.debug(
+            "After credit/invoice filter: %d files remain", len(filtered_files)
+        )
         return filtered_files
 
     def _record_error(self, filename: str, error_msg: str) -> None:

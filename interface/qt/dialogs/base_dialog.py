@@ -50,14 +50,12 @@ class BaseDialog(QDialog):
         action_mode: Literal["ok_cancel", "close_only", "none"] = "ok_cancel",
     ) -> None:
         super().__init__(parent)
-        self.dialog_result = None
         self._action_mode = action_mode
 
         if title:
             self.setWindowTitle(title)
 
         # Set modal behavior
-        self.setModal(True)
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         # Create main layout

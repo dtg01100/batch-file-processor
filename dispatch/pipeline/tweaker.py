@@ -4,11 +4,14 @@ This module provides a pipeline step for applying EDI tweaks
 using the edi_tweaks module.
 """
 
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable, Any
 
 from dispatch.interfaces import FileSystemInterface
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -240,13 +243,19 @@ class EDITweakerStep:
             TweakerResult with tweak outcome
         """
         tweak_edi = params.get("tweak_edi", False)
+        basename = os.path.basename(input_path)
+
+        logger.debug("Tweaking %s (tweak_edi=%s)", basename, tweak_edi)
 
         if not tweak_edi:
+            logger.debug("tweak_edi is False, skipping tweak for %s", basename)
             return TweakerResult(
                 output_path=input_path, success=True, was_tweaked=False, errors=[]
             )
 
-        output_filename = os.path.join(output_dir, os.path.basename(input_path))
+        output_filename = os.path.join(output_dir, basename)
+
+        logger.debug("Output will be written to: %s", output_filename)
 
         errors: list[str] = []
 
@@ -254,6 +263,7 @@ class EDITweakerStep:
             try:
                 self._file_system.makedirs(output_dir)
             except Exception as e:
+                logger.error("Failed to create output directory %s: %s", output_dir, e)
                 error_msg = f"Failed to create output directory: {e}"
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
@@ -269,11 +279,13 @@ class EDITweakerStep:
                 input_path, output_filename, settings, params, upc_dict
             )
 
+            logger.info("Tweaked %s -> %s", basename, tweaked_path)
             return TweakerResult(
                 output_path=tweaked_path, success=True, was_tweaked=True, errors=errors
             )
 
         except Exception as e:
+            logger.error("Tweaking failed for %s: %s", basename, e)
             error_msg = f"Tweaking failed: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -322,12 +334,16 @@ class EDITweakerStep:
         import tempfile
         import shutil
 
+        basename = os.path.basename(file_path)
+        logger.debug("Execute tweaker step for %s", basename)
+
         effective_settings = (
             settings if settings is not None else folder.get("settings", {})
         )
 
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
+        logger.debug("Created temp dir for tweaking: %s", temp_dir)
 
         temp_dirs: Optional[list[str]] = None
         if context is not None and hasattr(context, "temp_dirs"):
@@ -350,11 +366,13 @@ class EDITweakerStep:
                 and result.output_path != file_path
                 and os.path.exists(result.output_path)
             ):
+                logger.debug("Tweaker step produced: %s", result.output_path)
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
 
             # Cleanup if tweaking didn't produce output
+            logger.debug("Tweaker step produced no output for %s, cleaning up", basename)
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)

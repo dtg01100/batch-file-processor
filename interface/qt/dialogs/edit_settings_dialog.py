@@ -463,8 +463,8 @@ class EditSettingsDialog(BaseDialog):
                     self._email_destination,
                 )
             else:
-                for addr in self._email_destination.text().split(", "):
-                    if not validate_email_format(addr.strip()):
+                for addr in [a.strip() for a in self._email_destination.text().split(",")]:
+                    if not validate_email_format(addr):
                         add_error(
                             "Reporting",
                             "Invalid Email Destination Address",
@@ -494,7 +494,7 @@ class EditSettingsDialog(BaseDialog):
             num_disabled = (
                 self._count_disabled_folders() if self._count_disabled_folders else 0
             )
-            if num_disabled != 0:
+            if num_disabled > 0 or num_backends > 0:
                 result = QMessageBox.question(
                     self,
                     "Confirm",
@@ -537,8 +537,10 @@ class EditSettingsDialog(BaseDialog):
                 self._disable_email_backends()
             if self._disable_folders_without_backends:
                 self._disable_folders_without_backends()
-            self._settings_data["folder_is_active"] = False
-            self._settings_data["process_backend_email"] = False
+            for folder_key, folder_data in self._settings_data.items():
+                if isinstance(folder_data, dict):
+                    folder_data["folder_is_active"] = False
+                    folder_data["process_backend_email"] = False
 
         if self._update_settings:
             self._update_settings(self._settings)
@@ -549,8 +551,4 @@ class EditSettingsDialog(BaseDialog):
         if self._refresh_callback:
             self._refresh_callback()
 
-    def _on_ok(self) -> None:
-        if not self.validate():
-            return
-        self.apply()
-        self.accept()
+

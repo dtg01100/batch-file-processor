@@ -1,5 +1,6 @@
 """Unit tests for SMTP client implementations."""
 
+import logging
 import pytest
 from unittest.mock import MagicMock, patch
 from smtplib import SMTPAuthenticationError
@@ -36,12 +37,15 @@ class TestRealSMTPClient:
         client = RealSMTPClient(config=config)
         assert client.config == config
 
-    def test_connect_creates_smtp_connection(self, mock_smtplib):
+    def test_connect_creates_smtp_connection(self, mock_smtplib, caplog):
         """Test connect creates SMTP connection."""
         client = RealSMTPClient()
-        client.connect("smtp.example.com", 587)
+        with caplog.at_level(logging.DEBUG, logger="backend.smtp_client"):
+            client.connect("smtp.example.com", 587)
 
         mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587)
+        assert "SMTP connecting" in caplog.text
+        assert "SMTP connected" in caplog.text
 
     def test_starttls_delegates_to_connection(self, mock_smtplib):
         """Test starttls delegates to underlying connection."""
@@ -73,17 +77,19 @@ class TestRealSMTPClient:
         with pytest.raises(RuntimeError, match="Not connected"):
             client.login("user@example.com", "password")
 
-    def test_sendmail_delegates_to_connection(self, mock_smtplib):
+    def test_sendmail_delegates_to_connection(self, mock_smtplib, caplog):
         """Test sendmail delegates to underlying connection."""
         client = RealSMTPClient()
         client.connect("smtp.example.com", 587)
-
-        result = client.sendmail(
-            "from@example.com", ["to@example.com"], "Subject: Test\n\nBody"
-        )
+        with caplog.at_level(logging.DEBUG, logger="backend.smtp_client"):
+            result = client.sendmail(
+                "from@example.com", ["to@example.com"], "Subject: Test\n\nBody"
+            )
 
         mock_smtplib.SMTP.return_value.sendmail.assert_called_once()
         assert result == mock_smtplib.SMTP.return_value.sendmail.return_value
+        assert "SMTP sending email" in caplog.text
+        assert "SMTP email sent" in caplog.text
 
     def test_sendmail_raises_when_not_connected(self):
         """Test sendmail raises error when not connected."""
@@ -114,14 +120,16 @@ class TestRealSMTPClient:
         with pytest.raises(RuntimeError, match="Not connected"):
             client.send_message(msg)
 
-    def test_quit_closes_connection(self, mock_smtplib):
+    def test_quit_closes_connection(self, mock_smtplib, caplog):
         """Test quit closes connection gracefully."""
         client = RealSMTPClient()
         client.connect("smtp.example.com", 587)
-        client.quit()
+        with caplog.at_level(logging.DEBUG, logger="backend.smtp_client"):
+            client.quit()
 
         mock_smtplib.SMTP.return_value.quit.assert_called_once()
         assert client._connection is None
+        assert "SMTP disconnecting" in caplog.text
 
     def test_quit_handles_exception(self, mock_smtplib):
         """Test quit handles exceptions gracefully."""

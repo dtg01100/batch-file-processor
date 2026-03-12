@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from typing import Any, Optional
 
 from interface.qt.theme import Theme
+
+logger = logging.getLogger(__name__)
 
 
 class QtAppBootstrapService:
@@ -27,7 +30,7 @@ class QtAppBootstrapService:
 
         if wayland_display and x11_display and not qpa_platform:
             os.environ["QT_QPA_PLATFORM"] = "xcb"
-            print("Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence")
+            logger.info("Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence")
 
     def parse_arguments(self, args: Optional[list[str]] = None) -> argparse.Namespace:
         launch_options = argparse.ArgumentParser()
@@ -47,18 +50,21 @@ class QtAppBootstrapService:
             help="Show GUI and automatically start processing all folders",
         )
         parsed_args, _unknown = launch_options.parse_known_args(args)
+        logger.debug("Parsed args: automatic=%s, self_test=%s, gui_test=%s", parsed_args.automatic, parsed_args.self_test, parsed_args.gui_test)
         return parsed_args
 
     def setup_config_directories(self) -> tuple[str, str]:
         config_folder = self._app._appdirs_module.user_data_dir(self._app._appname)
         database_path = os.path.join(config_folder, "folders.db")
         try:
-            os.makedirs(config_folder)
-        except FileExistsError:
+            os.makedirs(config_folder, exist_ok=True)
+        except (FileExistsError, NotADirectoryError, OSError):
             pass
+        logger.debug("Config directory: %s", config_folder)
         return config_folder, database_path
 
     def build_ui_runtime(self) -> None:
+        logger.debug("Building Qt UI runtime")
         qapplication_cls = self._app._get_qapplication_cls()
         qmainwindow_cls = self._app._get_qmainwindow_cls()
         self._app._app = qapplication_cls.instance() or qapplication_cls(

@@ -10,7 +10,6 @@ Fuzzy matching via the ``thefuzz`` library is used to filter folders by alias
 when a filter value is provided.
 """
 
-from operator import itemgetter
 from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 import thefuzz.process  # type: ignore
@@ -227,7 +226,7 @@ class FolderListWidget(QWidget):
         separator.setObjectName("separator")
         separator.setStyleSheet(
             f"""
-            QFrame[frame="separator"] {{
+            QFrame#separator {{
                 background-color: {Theme.OUTLINE_VARIANT};
                 border: none;
                 height: 1px;
@@ -533,21 +532,21 @@ class FolderListWidget(QWidget):
         if not filter_text:
             visible_ids = set(self._row_widgets.keys())
         else:
-            alias_list = list(self._folder_aliases.values())
-            if not alias_list:
+            if not self._folder_aliases:
                 visible_ids = set()
             else:
+                # Build a mapping of "id:alias" keys so each entry is unique,
+                # then match by folder ID to avoid collisions between duplicate aliases.
+                keyed = {
+                    str(fid): alias
+                    for fid, alias in self._folder_aliases.items()
+                }
                 fuzzy_matches = list(
                     thefuzz.process.extractWithoutOrder(
-                        filter_text, alias_list, score_cutoff=80
+                        filter_text, keyed, score_cutoff=80
                     )
                 )
-                matched_aliases = {m[0] for m in fuzzy_matches}
-                visible_ids = {
-                    fid
-                    for fid, alias in self._folder_aliases.items()
-                    if alias in matched_aliases
-                }
+                visible_ids = {int(m[2]) for m in fuzzy_matches}
 
         visible_count = 0
         for fid, row in self._row_widgets.items():
@@ -562,44 +561,6 @@ class FolderListWidget(QWidget):
         if self._total_count_callback is not None:
             self._total_count_callback(visible_count, len(self._row_widgets))
 
-    def _apply_filter(
-        self,
-        folders_dict_list: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        """Apply fuzzy filtering to the folder list.
-
-        When :attr:`_filter_value` is empty the list is returned unchanged.
-        Otherwise, ``thefuzz.process.extractWithoutOrder`` is used with a
-        ``score_cutoff`` of **80** to match folder aliases.
-
-        Args:
-            folders_dict_list: All folders ordered by alias.
-
-        Returns:
-            A list of filtered folders.
-        """
-        if self._filter_value == "":
-            return list(folders_dict_list)
-
-        folder_alias_list = [folder["alias"] for folder in folders_dict_list]
-
-        fuzzy_filter = list(
-            thefuzz.process.extractWithoutOrder(
-                self._filter_value, folder_alias_list, score_cutoff=80
-            )
-        )
-        fuzzy_filter.sort(key=itemgetter(1), reverse=True)
-        fuzzy_filtered_alias = [match[0] for match in fuzzy_filter]
-
-        # Match folders by alias in the order of fuzzy match scores
-        filtered_folders: List[Dict[str, Any]] = []
-        for alias in fuzzy_filtered_alias:
-            matching = [f for f in folders_dict_list if f["alias"] == alias]
-            if matching:
-                filtered_folders.append(matching[0])
-
-        return filtered_folders
-
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -607,17 +568,21 @@ class FolderListWidget(QWidget):
     def _style_action_button(self, btn: QPushButton, variant: str = "default") -> None:
         """Apply modern styling to an action button.
 
-        Uses compact padding so fixed-width buttons (toggle, send, delete)
-        have room for their text/symbols.
+        Sets a ``compact`` Qt property on the button and uses a QSS property
+        selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        stylesheet = Theme.get_button_stylesheet(variant)
-        # Reduce horizontal padding for compact folder-row action buttons
-        stylesheet = stylesheet.replace(
-            f"padding: {Theme.SPACING_SM} {Theme.SPACING_XL}",
-            f"padding: {Theme.SPACING_SM} {Theme.SPACING_SM}",
-        )
-        btn.setStyleSheet(stylesheet)
+        btn.setProperty("compact", True)
+        base_stylesheet = Theme.get_button_stylesheet(variant)
+        # Append a compact-padding override using the Qt property selector
+        compact_override = f"""
+            QPushButton[compact="true"] {{
+                padding: {Theme.SPACING_SM} {Theme.SPACING_SM};
+            }}
+        """
+        btn.setStyleSheet(base_stylesheet + compact_override)
+        btn.style().unpolish(btn)
+        btn.style().polish(btn)
 
     def _calculate_edit_button_min_width(self, folder_list: List[Dict[str, Any]]) -> int:
         """Calculate a robust minimum width for edit buttons using font metrics."""

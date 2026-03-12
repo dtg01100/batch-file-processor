@@ -1,5 +1,6 @@
 """Tests for dispatch/edi_validator.py module."""
 
+import logging
 import tempfile
 import os
 
@@ -28,7 +29,7 @@ class MockFileSystem:
 class TestEDIValidator:
     """Tests for EDIValidator class."""
 
-    def test_validate_valid_edi_file(self):
+    def test_validate_valid_edi_file(self, caplog):
         """Test validation of a valid EDI file."""
         # Create a valid EDI file content
         # A record (header), B record (detail), C record (footer)
@@ -39,25 +40,29 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/file.edi")
+        with caplog.at_level(logging.DEBUG, logger="dispatch.edi_validator"):
+            is_valid, errors = validator.validate("/test/file.edi")
 
         # This test validates the format check logic
         # If the B record is exactly 77 chars with valid UPC, it should pass format check
         assert is_valid is True
         assert errors == []
+        assert "validation passed" in caplog.text
 
-    def test_validate_invalid_first_char(self):
+    def test_validate_invalid_first_char(self, caplog):
         """Test validation fails when first char is not 'A'."""
         edi_content = "XHEADER\nB1234567890" + " " * 60 + "\n"
 
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/file.edi")
+        with caplog.at_level(logging.DEBUG, logger="dispatch.edi_validator"):
+            is_valid, errors = validator.validate("/test/file.edi")
 
         assert is_valid is False
         assert len(errors) > 0
         assert "line number" in errors[0].lower()
+        assert "failed" in caplog.text
 
     def test_validate_invalid_record_type(self):
         """Test validation fails with invalid record type."""

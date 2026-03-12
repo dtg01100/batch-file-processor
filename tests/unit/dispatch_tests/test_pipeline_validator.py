@@ -1,5 +1,7 @@
 """Tests for dispatch/pipeline/validator.py module."""
 
+import logging
+
 import pytest
 
 from dispatch.pipeline.validator import (
@@ -394,38 +396,44 @@ class TestEDIValidationStep:
         assert step._error_handler is mock_error_handler
         assert step._file_system is mock_fs
 
-    def test_validate_valid_edi_file(self, valid_edi_content):
+    def test_validate_valid_edi_file(self, valid_edi_content, caplog):
         """Test validate() with valid EDI file."""
         mock_fs = MockFileSystem({"/test/valid.edi": valid_edi_content})
 
         step = EDIValidationStep(file_system=mock_fs)
-        result = step.validate("/test/valid.edi", "valid.edi")
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+            result = step.validate("/test/valid.edi", "valid.edi")
 
         assert result.is_valid is True
         assert result.errors == []
+        assert "Validation passed" in caplog.text
 
-    def test_validate_invalid_edi_file(self, invalid_edi_content):
+    def test_validate_invalid_edi_file(self, invalid_edi_content, caplog):
         """Test validate() with invalid EDI file."""
         mock_fs = MockFileSystem({"/test/invalid.edi": invalid_edi_content})
 
         step = EDIValidationStep(file_system=mock_fs)
-        result = step.validate("/test/invalid.edi", "invalid.edi")
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+            result = step.validate("/test/invalid.edi", "invalid.edi")
 
         assert result.is_valid is False
         assert len(result.errors) > 0
+        assert "Validation failed" in caplog.text
 
     def test_validate_with_minor_errors_suppressed_upc(
-        self, edi_content_with_minor_errors
+        self, edi_content_with_minor_errors, caplog
     ):
         """Test validate() with minor errors (suppressed UPC)."""
         mock_fs = MockFileSystem({"/test/minor.edi": edi_content_with_minor_errors})
 
         step = EDIValidationStep(file_system=mock_fs)
-        result = step.validate("/test/minor.edi", "minor.edi")
+        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+            result = step.validate("/test/minor.edi", "minor.edi")
 
         assert result.is_valid is True
         assert result.has_minor_errors is True
         assert any("Suppressed UPC" in w for w in result.warnings)
+        assert "Validation warnings" in caplog.text
 
     def test_validate_with_truncated_upc(self, edi_content_truncated_upc):
         """Test validate() with truncated UPC."""

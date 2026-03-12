@@ -43,21 +43,23 @@ class ProcessedFilesDialog(BaseDialog):
         database_obj: Any,
         ui_service: Optional[UIServiceProtocol] = None,
     ) -> None:
-        super().__init__(parent, "Processed Files Report", action_mode="close_only")
         self._database_obj = database_obj
         self._ui_service = ui_service
 
         self._selected_folder_id: Optional[int] = None
         self._output_folder: str = ""
         self._output_folder_confirmed: bool = False
+        self._button_group = QButtonGroup()
+        self._button_group.setExclusive(True)
+
+        super().__init__(parent, "Processed Files Report", action_mode="close_only")
+
+        self._button_group.setParent(self)
 
         prior = database_obj.get_oversight_or_default()
         self._output_folder = prior.get("export_processed_folder_prior", "")
 
         self.setWindowTitle("Processed Files Report")
-
-        self._button_group = QButtonGroup(self)
-        self._button_group.setExclusive(True)
 
         self.setMinimumSize(600, 450)
         self._build_ui()
@@ -77,6 +79,7 @@ class ProcessedFilesDialog(BaseDialog):
         body_layout.addWidget(self._build_folder_list(), stretch=1)
 
         self._actions_container = QWidget()
+        self._actions_container.setMinimumWidth(160)
         self._actions_layout = QVBoxLayout(self._actions_container)
         self._actions_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._actions_layout.addWidget(QLabel("Select a Folder."))
@@ -218,7 +221,7 @@ class ProcessedFilesDialog(BaseDialog):
         self._output_folder = chosen
         self._output_folder_confirmed = True
 
-        self._database_obj.oversight_and_defaults.update(
+        self._database_obj.oversight_and_defaults.upsert(
             dict(id=1, export_processed_folder_prior=chosen),
             ["id"],
         )

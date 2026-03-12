@@ -5,7 +5,8 @@ Replaces the tkinter-based resend_interface.py with a Qt implementation.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -43,7 +44,7 @@ class ResendDialog(BaseDialog):
         parent: QWidget,
         database_connection: Any,
     ) -> None:
-        super().__init__(parent, "Enable Resend")
+        super().__init__(parent, "Enable Resend", action_mode="none")
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._database_connection = database_connection
@@ -67,12 +68,6 @@ class ResendDialog(BaseDialog):
             Theme.SPACING_MD_INT,
         )
         main_layout.setSpacing(Theme.SPACING_MD_INT)
-
-        # Clear default widgets from BaseDialog
-        while main_layout.count() > 0:
-            item = main_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
 
         # Set minimum size for comfortable viewing
         self.setMinimumSize(900, 600)
@@ -173,7 +168,7 @@ class ResendDialog(BaseDialog):
             checkbox = QCheckBox()
             checkbox.setChecked(file_info["id"] in self._selected_files)
             checkbox.stateChanged.connect(
-                lambda state, fid=file_info["id"]: self._on_file_selected(fid, state == 2)
+                lambda state, fid=file_info["id"]: self._on_file_selected(fid, state == Qt.CheckState.Checked)
             )
             self._table.setCellWidget(row, 0, checkbox)
 
@@ -188,7 +183,6 @@ class ResendDialog(BaseDialog):
             self._table.setItem(row, 2, file_item)
 
             # Sent date column
-            from datetime import datetime
             sent_date = datetime.fromisoformat(file_info["sent_date_time"]).strftime("%Y-%m-%d %H:%M")
             date_item = QTableWidgetItem(sent_date)
             date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -276,9 +270,12 @@ class ResendDialog(BaseDialog):
             for file_info in self._all_files:
                 if file_info["id"] in self._selected_files:
                     file_info["resend_flag"] = True
+            count = len(self._selected_files)
+            self._selected_files.clear()
             self._populate_table()
+            self._update_bulk_actions()
             self._update_status()
-            self.show_info("Success", f"Marked {len(self._selected_files)} files for resend.")
+            self.show_info("Success", f"Marked {count} files for resend.")
         except Exception as e:
             self.show_error("Database Error", f"Database error: {e}")
 
@@ -291,9 +288,12 @@ class ResendDialog(BaseDialog):
             for file_info in self._all_files:
                 if file_info["id"] in self._selected_files:
                     file_info["resend_flag"] = False
+            count = len(self._selected_files)
+            self._selected_files.clear()
             self._populate_table()
+            self._update_bulk_actions()
             self._update_status()
-            self.show_info("Success", f"Cleared resend flags for {len(self._selected_files)} files.")
+            self.show_info("Success", f"Cleared resend flags for {count} files.")
         except Exception as e:
             self.show_error("Database Error", f"Database error: {e}")
 

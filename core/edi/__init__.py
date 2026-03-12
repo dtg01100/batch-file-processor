@@ -13,7 +13,6 @@ from core.edi.upc_utils import (
     convert_upce_to_upca,
     validate_upc,
     apply_retail_uom_transform,
-    apply_upc_override,
 )
 from core.edi.edi_parser import (
     capture_records,
@@ -40,7 +39,6 @@ __all__ = [
     "convert_upce_to_upca",
     "validate_upc",
     "apply_retail_uom_transform",
-    "apply_upc_override",
     # EDI parsing
     "capture_records",
     "parse_a_record",

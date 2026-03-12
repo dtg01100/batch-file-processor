@@ -1,6 +1,7 @@
 """Unit tests for FTP client implementations."""
 
 import io
+import logging
 import pytest
 from unittest.mock import MagicMock, patch
 from ftplib import error_perm
@@ -37,15 +38,18 @@ class TestRealFTPClient:
         assert client.use_tls
         assert client._connection is None
 
-    def test_connect_creates_ftp_connection(self, mock_ftplib):
+    def test_connect_creates_ftp_connection(self, mock_ftplib, caplog):
         """Test connect creates FTP connection."""
         client = RealFTPClient(use_tls=False)
-        client.connect("ftp.example.com", 21)
+        with caplog.at_level(logging.DEBUG, logger="backend.ftp_client"):
+            client.connect("ftp.example.com", 21)
 
         mock_ftplib.FTP.assert_called_once()
         mock_ftplib.FTP.return_value.connect.assert_called_once_with(
             "ftp.example.com", 21
         )
+        assert "FTP connecting" in caplog.text
+        assert "FTP connected" in caplog.text
 
     def test_connect_creates_ftps_connection_when_tls(self, mock_ftplib):
         """Test connect creates FTP_TLS connection when TLS enabled."""
@@ -66,13 +70,16 @@ class TestRealFTPClient:
             "ftp.example.com", 21, 30.0
         )
 
-    def test_login_delegates_to_connection(self, mock_ftplib):
+    def test_login_delegates_to_connection(self, mock_ftplib, caplog):
         """Test login delegates to underlying connection."""
         client = RealFTPClient()
         client.connect("ftp.example.com", 21)
-        client.login("user", "password")
+        with caplog.at_level(logging.DEBUG, logger="backend.ftp_client"):
+            client.login("user", "password")
 
         mock_ftplib.FTP.return_value.login.assert_called_once_with("user", "password")
+        assert "FTP logging in" in caplog.text
+        assert "FTP login successful" in caplog.text
 
     def test_login_raises_when_not_connected(self):
         """Test login raises error when not connected."""
@@ -112,14 +119,16 @@ class TestRealFTPClient:
         with pytest.raises(RuntimeError, match="Not connected"):
             client.storbinary("STOR test.txt", fp)
 
-    def test_quit_closes_connection(self, mock_ftplib):
+    def test_quit_closes_connection(self, mock_ftplib, caplog):
         """Test quit closes connection gracefully."""
         client = RealFTPClient()
         client.connect("ftp.example.com", 21)
-        client.quit()
+        with caplog.at_level(logging.DEBUG, logger="backend.ftp_client"):
+            client.quit()
 
         mock_ftplib.FTP.return_value.quit.assert_called_once()
         assert client._connection is None
+        assert "FTP disconnecting" in caplog.text
 
     def test_quit_handles_exception(self, mock_ftplib):
         """Test quit handles exceptions gracefully."""

@@ -4,10 +4,13 @@ This module provides a testable wrapper around the EDI validation functionality,
 using dependency injection for file system operations.
 """
 
+import logging
 from io import StringIO
 from typing import Optional
 
 from dispatch.interfaces import FileSystemInterface
+
+logger = logging.getLogger(__name__)
 
 
 class EDIValidator:
@@ -44,6 +47,7 @@ class EDIValidator:
             Tuple of (is_valid, errors) where errors is a list of
             error messages (empty if valid)
         """
+        logger.debug("Validating EDI file: %s", file_path)
         self.errors = StringIO()
         self.has_errors = False
         self.has_minor_errors = False
@@ -51,9 +55,11 @@ class EDIValidator:
 
         try:
             # First check if file is valid EDI format
+            logger.debug("Checking EDI format for: %s", file_path)
             is_valid_edi, check_line = self._check_edi_format(file_path)
 
             if not is_valid_edi:
+                logger.error("EDI format check failed at line %d for: %s", check_line, file_path)
                 self.has_errors = True
                 error_msg = f"EDI check failed on line number: {check_line}"
                 self.errors.write(error_msg + "\r\n")
@@ -61,12 +67,30 @@ class EDIValidator:
                 return False, error_list
 
             # Check for specific EDI issues
+            logger.debug("Checking EDI-specific issues for: %s", file_path)
             issues = self._check_edi_issues(file_path)
             error_list.extend(issues)
 
-            return not self.has_errors, error_list
+            is_valid = not self.has_errors
+            if is_valid and self.has_minor_errors:
+                logger.warning(
+                    "EDI validation passed with minor errors for: %s (%d issues)",
+                    file_path,
+                    len(error_list),
+                )
+            elif is_valid:
+                logger.info("EDI validation passed: %s", file_path)
+            else:
+                logger.error(
+                    "EDI validation failed for: %s (%d errors)",
+                    file_path,
+                    len(error_list),
+                )
+
+            return is_valid, error_list
 
         except Exception as e:
+            logger.error("Exception during validation of %s: %s", file_path, e)
             self.has_errors = True
             error_msg = f"Validation error: {str(e)}"
             self.errors.write(error_msg + "\r\n")
@@ -84,6 +108,7 @@ class EDIValidator:
         Returns:
             Tuple of (is_valid, errors, warnings)
         """
+        logger.debug("Validating EDI file (with warnings): %s", file_path)
         self.errors = StringIO()
         self.has_errors = False
         self.has_minor_errors = False
@@ -98,12 +123,29 @@ class EDIValidator:
                 error_msg = f"EDI check failed on line number: {check_line}"
                 self.errors.write(error_msg + "\r\n")
                 errors.append(error_msg)
+                logger.error("EDI validation failed: %s (%d error(s))", file_path, len(errors))
                 return False, errors, warnings
 
             # Check for issues and categorize them
             self._check_edi_issues_with_warnings(file_path, errors, warnings)
 
-            return not self.has_errors, errors, warnings
+            is_valid = not self.has_errors
+            if is_valid and not warnings:
+                logger.info("EDI validation passed (no warnings): %s", file_path)
+            elif is_valid:
+                logger.info(
+                    "EDI validation passed with %d warning(s): %s",
+                    len(warnings),
+                    file_path,
+                )
+            else:
+                logger.error(
+                    "EDI validation failed: %s (%d error(s))",
+                    file_path,
+                    len(errors),
+                )
+
+            return is_valid, errors, warnings
 
         except Exception as e:
             self.has_errors = True
@@ -122,12 +164,14 @@ class EDIValidator:
             Tuple of (is_valid, line_number) where line_number is the
             line where validation failed (0 if valid)
         """
+        logger.debug("Checking EDI format: %s", file_path)
         try:
             content = self.fs.read_file_text(file_path)
             lines = content.split("\n")
 
             # Check first character is 'A'
             if not lines or len(lines[0]) == 0 or lines[0][0] != "A":
+                logger.debug("EDI format check failed at line %d: %s", 1, file_path)
                 return False, 1
 
             # Check each line starts with valid record type
@@ -136,11 +180,13 @@ class EDIValidator:
                     continue
                 first_char = line[0] if line else ""
                 if first_char not in ("A", "B", "C", ""):
+                    logger.debug("EDI format check failed at line %d: %s", line_num, file_path)
                     return False, line_num
 
                 # Validate B records
                 if first_char == "B":
                     if len(line) != 77 and len(line) != 71:
+                        logger.debug("EDI format check failed at line %d: %s", line_num, file_path)
                         return False, line_num
 
                     # Check item number is numeric
@@ -148,12 +194,15 @@ class EDIValidator:
                         _ = int(line[1:12])
                     except ValueError:
                         if line[1:12] != "           ":
+                            logger.debug("EDI format check failed at line %d: %s", line_num, file_path)
                             return False, line_num
 
                     # Check for missing pricing in 71-char lines
                     if len(line) == 71 and line[51:67] != "                ":
+                        logger.debug("EDI format check failed at line %d: %s", line_num, file_path)
                         return False, line_num
 
+            logger.debug("EDI format OK: %s (%d lines)", file_path, len(lines))
             return True, len(lines)
 
         except Exception:
@@ -168,6 +217,7 @@ class EDIValidator:
         Returns:
             List of issue messages
         """
+        logger.debug("Checking EDI issues in: %s", file_path)
         issues: list[str] = []
 
         try:
@@ -200,6 +250,9 @@ class EDIValidator:
                 if len(line) == 71:
                     self.has_minor_errors = True
                     issues.append(f"Missing pricing information in line {line_num}")
+
+            if issues:
+                logger.debug("Found %d issue(s) in: %s", len(issues), file_path)
 
             return issues
 

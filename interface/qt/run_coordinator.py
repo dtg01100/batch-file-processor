@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 import time
 import traceback
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class QtRunCoordinator:
@@ -17,13 +20,17 @@ class QtRunCoordinator:
 
     def graphical_process_directories(self, folders_table_process) -> None:
         missing_folder = False
+        missing_folder_name = None
         for folder_test in folders_table_process.find(folder_is_active=True):
             if not self._app._os_module.path.exists(folder_test["folder_name"]):
                 missing_folder = True
+                missing_folder_name = folder_test.get("alias") or folder_test["folder_name"]
 
         if missing_folder:
             self._app._ui_service.show_error(
-                "Error", "One or more expected folders are missing."
+                "Error",
+                f"One or more expected folders are missing"
+                + (f" (e.g. '{missing_folder_name}')." if missing_folder_name else "."),
             )
         elif folders_table_process.count(folder_is_active=True) > 0:
             self._app._progress_service.show("processing folders...")
@@ -35,6 +42,7 @@ class QtRunCoordinator:
             self._app._ui_service.show_error("Error", "No Active Folders")
 
     def process_directories(self, folders_table_process) -> None:
+        logger.debug("Starting process_directories run")
         original_folder = self._app._os_module.getcwd()
         settings_dict = self._app._database.get_settings_or_default()
 
@@ -60,7 +68,12 @@ class QtRunCoordinator:
         ):
             try:
                 self._app._os_module.mkdir(self._app._logs_directory["logs_directory"])
-            except IOError:
+            except IOError as mkdir_error:
+                logger.error(
+                    "Failed to create log directory '%s': %s",
+                    self._app._logs_directory["logs_directory"],
+                    mkdir_error,
+                )
                 log_folder_creation_error = True
 
         if not self._app._check_logs_directory() or log_folder_creation_error:
@@ -89,6 +102,7 @@ class QtRunCoordinator:
         run_summary_string = ""
 
         with open(run_log_full_path, "wb") as run_log:
+            logger.debug("Run log: %s", run_log_full_path)
             self._app._utils_module.do_clear_old_files(run_log_path, 1000)
             run_log.write(
                 (f"Batch File Sender Version {self._app._version}\r\n").encode()
@@ -103,6 +117,7 @@ class QtRunCoordinator:
             try:
                 from dispatch import process
 
+                run_error_bool = False
                 run_error_bool, run_summary_string = process(
                     self._app._database.database_connection,
                     folders_table_process,
@@ -120,13 +135,9 @@ class QtRunCoordinator:
                     self._app._ui_service.show_info(
                         "Run Status", "Run completed with errors."
                     )
-                self._app._os_module.chdir(original_folder)
+                logger.info("Dispatch completed (errors=%s, summary=%s)", run_error_bool, run_summary_string)
             except Exception as dispatch_error:
-                self._app._os_module.chdir(original_folder)
-                print(
-                    "Run failed, check your configuration \r\n"
-                    f"Error from dispatch module is: \r\n{dispatch_error}\r\n"
-                )
+                logger.error("Run failed: %s", dispatch_error)
                 traceback.print_exc()
                 run_log.write(
                     (
@@ -135,6 +146,8 @@ class QtRunCoordinator:
                     ).encode()
                 )
                 run_log.write(traceback.format_exc().encode())
+            finally:
+                self._app._os_module.chdir(original_folder)
 
         if self._app._utils_module.normalize_bool(reporting["enable_reporting"]):
             self._app._reporting_service.send_report_emails(
@@ -148,12 +161,12 @@ class QtRunCoordinator:
 
     def automatic_process_directories(self, automatic_process_folders_table) -> None:
         if automatic_process_folders_table.count(folder_is_active=True) > 0:
-            print("batch processing configured directories")
+            logger.info("Batch processing configured directories")
             try:
                 self._app._process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
                 self._app._log_critical_error(automatic_process_error)
         else:
-            print("Error, No Active Folders")
+            logger.warning("No active folders configured")
         self._app._database.close()
         self._app._sys_module.exit()

@@ -1,6 +1,7 @@
 """Tests for dispatch/orchestrator.py module."""
 
 import hashlib
+import logging
 from unittest.mock import MagicMock
 
 
@@ -213,7 +214,7 @@ class TestDispatchOrchestrator:
         assert result.success is True
         assert result.files_processed == 0
 
-    def test_process_folder_with_files(self):
+    def test_process_folder_with_files(self, caplog):
         """Test processing a folder with files."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"],
@@ -242,11 +243,13 @@ class TestDispatchOrchestrator:
         run_log = MagicMock()
 
         # Process files
-        result = orchestrator.process_folder(folder, run_log)
+        with caplog.at_level(logging.DEBUG, logger="dispatch.orchestrator"):
+            result = orchestrator.process_folder(folder, run_log)
 
         # Check that files were processed
         assert result.files_processed == 2
         assert result.files_failed == 0
+        assert "Processing folder" in caplog.text
 
     def test_process_file_success(self):
         """Test successful file processing."""
@@ -307,7 +310,7 @@ class TestDispatchOrchestrator:
 
         mock_validator.validate.assert_called_once()
 
-    def test_process_file_validation_failure(self):
+    def test_process_file_validation_failure(self, caplog):
         """Test file processing with validation failure."""
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"invalid content"})
 
@@ -319,10 +322,12 @@ class TestDispatchOrchestrator:
 
         folder = {"folder_name": "/data/input", "process_edi": "True"}
 
-        result = orchestrator.process_file("/data/input/file.edi", folder)
+        with caplog.at_level(logging.DEBUG, logger="dispatch.orchestrator"):
+            result = orchestrator.process_file("/data/input/file.edi", folder)
 
         assert result.validated is False
         assert "Invalid EDI" in result.errors
+        assert "Validation" in caplog.text
 
     def test_get_summary(self):
         """Test getting processing summary."""

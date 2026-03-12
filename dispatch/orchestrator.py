@@ -146,6 +146,13 @@ class DispatchOrchestrator:
         self.run_log: StringIO = StringIO()
         self.processed_count: int = 0
         self.error_count: int = 0
+        logger.debug(
+            "DispatchOrchestrator initialized (pipeline_steps: validator=%s, splitter=%s, converter=%s, tweaker=%s)",
+            bool(config.validator_step),
+            bool(config.splitter_step),
+            bool(config.converter_step),
+            bool(config.tweaker_step),
+        )
 
     def _initialize_pipeline_steps(self) -> None:
         """Initialize optional integration hooks.
@@ -222,6 +229,8 @@ class DispatchOrchestrator:
         folder_path = folder.get("folder_name", "")
         alias = folder.get("alias", folder_path)
 
+        logger.debug("Processing folder: %s (path=%s)", alias, folder_path)
+
         self._log_message(run_log, f"entering folder: {alias}")
 
         if not self._folder_exists(folder_path):
@@ -238,8 +247,12 @@ class DispatchOrchestrator:
             self._log_message(run_log, f"No files in directory: {folder_path}")
             return result
 
+        logger.debug("Found %d files in %s, filtering for already-processed...", len(files), folder_path)
+
         if processed_files:
             files = self._filter_processed_files(files, processed_files, folder)
+
+        logger.debug("After filter: %d files to process in %s", len(files), folder_path)
 
         if not files:
             self._log_message(run_log, f"No new files in directory: {folder_path}")
@@ -291,6 +304,8 @@ class DispatchOrchestrator:
         Returns:
             UPC dictionary
         """
+        logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
+
         if self.config.upc_dict:
             return self.config.upc_dict
 
@@ -299,9 +314,10 @@ class DispatchOrchestrator:
                 upc_dict = self.config.upc_service.get_dictionary()
                 if upc_dict:
                     self.config.upc_dict = upc_dict
+                    logger.debug("UPC dictionary loaded: %d entries", len(upc_dict))
                     return upc_dict
             except Exception:
-                pass
+                logger.exception("Failed to fetch UPC dictionary from upc_service")
 
         return {}
 
@@ -326,15 +342,22 @@ class DispatchOrchestrator:
         context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
         file_basename = os.path.basename(file_path)
 
+        logger.debug("Processing file: %s", file_basename)
+
         try:
             result.checksum = self._calculate_checksum(file_path)
+            logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
             current_file = file_path
 
             # Support both legacy validator and new validator_step
             # Determine which interface to use based on which config field is set
-            if self.config.validator_step and self._should_validate(
-                context.effective_folder
-            ):
+            should_validate = self._should_validate(context.effective_folder)
+            logger.debug(
+                "Validation step: enabled=%s, should_validate=%s",
+                bool(self.config.validator_step or self.config.validator),
+                should_validate,
+            )
+            if self.config.validator_step and should_validate:
                 # New pipeline interface
                 validation_result = self.config.validator_step.execute(
                     current_file, context.effective_folder
@@ -373,9 +396,7 @@ class DispatchOrchestrator:
                         return result
                 elif isinstance(errors_or_file, str):
                     current_file = errors_or_file
-            elif self.config.validator and self._should_validate(
-                context.effective_folder
-            ):
+            elif self.config.validator and should_validate:
                 # Legacy interface
                 is_valid, errors_or_file = self.config.validator.validate(current_file)
                 result.validated = is_valid
@@ -398,9 +419,13 @@ class DispatchOrchestrator:
 
             files_to_send = [current_file]
 
-            if self.config.splitter_step and context.effective_folder.get(
-                "split_edi", False
-            ):
+            split_edi = context.effective_folder.get("split_edi", False)
+            logger.debug(
+                "Splitter step: enabled=%s, split_edi=%s",
+                bool(self.config.splitter_step),
+                split_edi,
+            )
+            if self.config.splitter_step and split_edi:
                 import tempfile
 
                 with tempfile.TemporaryDirectory() as temp_dir:
@@ -422,9 +447,13 @@ class DispatchOrchestrator:
                         current_pipeline_file = pipeline_file
 
                         converter_step = self.config.converter_step
-                        if converter_step is not None and context.effective_folder.get(
-                            "convert_edi", False
-                        ):
+                        convert_edi = context.effective_folder.get("convert_edi", False)
+                        logger.debug(
+                            "Converter step: enabled=%s, convert_edi=%s",
+                            bool(converter_step),
+                            convert_edi,
+                        )
+                        if converter_step is not None and convert_edi:
                             convert_format = context.effective_folder.get(
                                 "convert_to_format", "unknown"
                             )
@@ -447,9 +476,13 @@ class DispatchOrchestrator:
                                 result.converted = True
 
                         tweaker_step = self.config.tweaker_step
-                        if tweaker_step is not None and context.effective_folder.get(
-                            "tweak_edi", False
-                        ):
+                        tweak_edi = context.effective_folder.get("tweak_edi", False)
+                        logger.debug(
+                            "Tweaker step: enabled=%s, tweak_edi=%s",
+                            bool(tweaker_step),
+                            tweak_edi,
+                        )
+                        if tweaker_step is not None and tweak_edi:
                             self._log_message(
                                 run_log,
                                 f"Applying tweaks to {file_basename}",
@@ -485,12 +518,19 @@ class DispatchOrchestrator:
                     result.sent = len(result.errors) == 0
                     if result.sent:
                         self._log_message(run_log, f"Success: {file_basename}")
+                        invoice_numbers = self._extract_invoice_numbers(file_path)
+                        if invoice_numbers:
+                            self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
                     return result
 
             converter_step = self.config.converter_step
-            if converter_step is not None and context.effective_folder.get(
-                "convert_edi", False
-            ):
+            convert_edi = context.effective_folder.get("convert_edi", False)
+            logger.debug(
+                "Converter step: enabled=%s, convert_edi=%s",
+                bool(converter_step),
+                convert_edi,
+            )
+            if converter_step is not None and convert_edi:
                 convert_format = context.effective_folder.get(
                     "convert_to_format", "unknown"
                 )
@@ -513,9 +553,13 @@ class DispatchOrchestrator:
                     result.converted = True
 
             tweaker_step = self.config.tweaker_step
-            if tweaker_step is not None and context.effective_folder.get(
-                "tweak_edi", False
-            ):
+            tweak_edi = context.effective_folder.get("tweak_edi", False)
+            logger.debug(
+                "Tweaker step: enabled=%s, tweak_edi=%s",
+                bool(tweaker_step),
+                tweak_edi,
+            )
+            if tweaker_step is not None and tweak_edi:
                 self._log_message(
                     run_log,
                     f"Applying tweaks to {file_basename}",
@@ -564,6 +608,9 @@ class DispatchOrchestrator:
                         )
                 else:
                     self._log_message(run_log, f"Success: {file_basename}")
+                    invoice_numbers = self._extract_invoice_numbers(file_path)
+                    if invoice_numbers:
+                        self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
 
         except Exception as e:
             result.errors.append(str(e))
@@ -575,6 +622,11 @@ class DispatchOrchestrator:
             )
 
         finally:
+            logger.debug(
+                "Temp cleanup: %d dirs, %d files",
+                len(context.temp_dirs),
+                len(context.temp_files),
+            )
             # Clean up temporary directories from pipeline steps (mkdtemp)
             for temp_dir in context.temp_dirs:
                 try:
@@ -721,6 +773,13 @@ class DispatchOrchestrator:
             f.get("file_checksum") for f in processed if not f.get("resend_flag")
         }
 
+        logger.debug(
+            "Filtering %d files, %d already processed (skip %d checksums)",
+            len(files),
+            len(processed),
+            len(skipped_checksums),
+        )
+
         return [
             f for f in files if self._calculate_checksum(f) not in skipped_checksums
         ]
@@ -752,6 +811,8 @@ class DispatchOrchestrator:
             sent_to.append(f"Email: {folder.get('email_to', 'N/A')}")
         sent_to_str = ", ".join(sent_to) if sent_to else "N/A"
 
+        invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
+
         if existing_resend:
             # Clear resend flag for this specific record
             processed_files.update(
@@ -761,6 +822,7 @@ class DispatchOrchestrator:
                     "processed_at": datetime.datetime.now().isoformat(),
                     "sent_to": sent_to_str,
                     "status": "processed",
+                    "invoice_numbers": invoice_numbers,
                 },
                 ["id"],
             )
@@ -777,6 +839,7 @@ class DispatchOrchestrator:
                     "resend_flag": 0,
                     "sent_to": sent_to_str,
                     "status": "processed",
+                    "invoice_numbers": invoice_numbers,
                 }
             )
 
@@ -791,6 +854,8 @@ class DispatchOrchestrator:
         """
         import hashlib
 
+        logger.debug("Calculating checksum for: %s", file_path)
+
         if self.config.file_system:
             content = self.config.file_system.read_file(file_path)
         else:
@@ -798,6 +863,43 @@ class DispatchOrchestrator:
                 content = f.read()
 
         return hashlib.md5(content).hexdigest()
+
+    def _extract_invoice_numbers(self, file_path: str) -> str:
+        """Extract invoice numbers from EDI A-records in a file.
+
+        Args:
+            file_path: Path to the EDI file
+
+        Returns:
+            Comma-separated string of invoice numbers, or empty string
+        """
+        try:
+            from core.edi.edi_parser import capture_records
+
+            if self.config.file_system:
+                content_bytes = self.config.file_system.read_file(file_path)
+                content = content_bytes.decode("utf-8", errors="replace") if isinstance(content_bytes, bytes) else content_bytes
+            else:
+                with open(file_path, "r", errors="replace") as f:
+                    content = f.read()
+
+            seen = []
+            seen_set = set()
+            for line in content.splitlines():
+                try:
+                    rec = capture_records(line)
+                    if rec and rec.get("record_type") == "A":
+                        inv_num = rec["invoice_number"].strip()
+                        if inv_num and inv_num not in seen_set:
+                            seen.append(inv_num)
+                            seen_set.add(inv_num)
+                except Exception:
+                    continue
+
+            return ", ".join(seen)
+        except Exception:
+            logger.exception("Failed to extract invoice numbers from %s", file_path)
+            return ""
 
     def _should_validate(self, folder: dict) -> bool:
         """Check if a folder's files should be validated.
@@ -917,6 +1019,8 @@ class DispatchOrchestrator:
         # Get all active folders
         folders = list(folders_database.find(folder_is_active=True, order_by="alias"))
 
+        logger.debug("Starting dispatch process for %d active folders", len(folders))
+
         has_errors = False
 
         for folder in folders:
@@ -931,4 +1035,6 @@ class DispatchOrchestrator:
                         f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
                     )
 
-        return has_errors, orchestrator.get_summary()
+        summary = orchestrator.get_summary()
+        logger.info("Dispatch complete: %s", summary)
+        return has_errors, summary

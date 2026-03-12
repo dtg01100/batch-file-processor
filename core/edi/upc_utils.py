@@ -83,22 +83,6 @@ def convert_upce_to_upca(upce_value: str) -> str:
     return newmsg + str(check_digit)
 
 
-def pad_upc(upc: str, target_length: int, fill_char: str = " ") -> str:
-    """Pad or truncate UPC to target length.
-
-    Args:
-        upc: UPC value to pad
-        target_length: Desired length
-        fill_char: Character to use for padding
-
-    Returns:
-        UPC padded/truncated to target length
-    """
-    if len(upc) >= target_length:
-        return upc[:target_length]
-    return upc.rjust(target_length, fill_char)
-
-
 def validate_upc(upc: str) -> bool:
     """Validate a UPC code's check digit.
 
@@ -181,55 +165,4 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         return True
     except Exception as error:
         logger.warning("UPC transformation failed: %s", error)
-        return False
-
-
-def apply_upc_override(
-    record: dict,
-    upc_lookup: dict,
-    override_level: int = 1,
-    category_filter: str = "ALL",
-) -> bool:
-    """Override UPC from lookup table based on vendor_item.
-
-    Modifies record in place: upc_number.
-
-    Args:
-        record: The B record dictionary to modify in place.
-        upc_lookup: Dictionary mapping vendor item numbers to UPC data.
-            Expected format: {vendor_item: [category, upc_level_1, upc_level_2, ...]}
-        override_level: Which UPC level to use from lookup table (default: 1).
-        category_filter: Comma-separated list of categories to filter by,
-            or "ALL" to apply to all categories (default: "ALL").
-
-    Returns:
-        True if override was applied, False otherwise.
-    """
-    try:
-        if not upc_lookup:
-            return False
-
-        vendor_item_int = int(record["vendor_item"].strip())
-
-        if vendor_item_int not in upc_lookup:
-            record["upc_number"] = ""
-            return False
-
-        do_updateupc = False
-        if category_filter == "ALL":
-            do_updateupc = True
-        else:
-            # Check if item's category is in the filter list
-            item_category = upc_lookup[vendor_item_int][0]
-            if item_category in category_filter.split(","):
-                do_updateupc = True
-
-        if do_updateupc:
-            record["upc_number"] = upc_lookup[vendor_item_int][override_level]
-            return True
-        else:
-            return False
-
-    except (KeyError, ValueError, IndexError):
-        record["upc_number"] = ""
         return False

@@ -91,6 +91,7 @@ class ExtractedDialogFields:
     estore_store_number: str = ""
     estore_vendor_oid: str = ""
     estore_vendor_namevendoroid: str = ""
+    estore_c_record_oid: str = ""
     fintech_division_id: str = ""
 
     # Copy destination

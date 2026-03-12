@@ -33,9 +33,11 @@ class QtFolderDataExtractor:
         self,
         fields: Dict[str, Any],
         plugin_manager: Optional[PluginManager] = None,
+        copy_to_directory: str = "",
     ):
         self.fields = fields
         self._plugin_manager = plugin_manager or get_shared_plugin_manager()
+        self._copy_to_directory = copy_to_directory
 
     def extract_all(self) -> ExtractedDialogFields:
         # Extract plugin configurations
@@ -75,7 +77,7 @@ class QtFolderDataExtractor:
             force_edi_validation=self._get_bool("force_edi_check_var"),
             pad_a_records=self._get_bool("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
-            a_record_padding_length=self._get_int("a_record_padding_length", 6),
+            a_record_padding_length=int(self._get_combo("a_record_padding_length") or "6"),
             append_a_records=self._get_bool("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
             force_txt_file_ext=self._get_bool("force_txt_file_ext_check"),
@@ -86,13 +88,22 @@ class QtFolderDataExtractor:
             ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
             override_upc_bool=self._get_bool("override_upc_bool"),
-            override_upc_level=self._get_int("override_upc_level", 1),
+            override_upc_level=int(self._get_combo("override_upc_level") or "1"),
             override_upc_category_filter=self._get_text(
                 "override_upc_category_filter_entry"
             ),
             upc_target_length=self._get_int("upc_target_length_entry", 11),
             upc_padding_pattern=self._get_text("upc_padding_pattern_entry"),
             include_item_numbers=self._get_bool("include_item_numbers"),
+            include_item_description=self._get_bool("include_item_description"),
+            simple_csv_sort_order=self._get_text("simple_csv_column_sorter"),
+            split_prepaid_sales_tax_crec=self._get_bool("split_sales_tax_prepaid_var"),
+            estore_store_number=self._get_text("estore_store_number_field"),
+            estore_vendor_oid=self._get_text("estore_Vendor_OId_field"),
+            estore_vendor_namevendoroid=self._get_text("estore_vendor_namevendoroid_field"),
+            estore_c_record_oid=self._get_text("estore_c_record_oid_field"),
+            fintech_division_id=self._get_text("fintech_divisionid_field"),
+            copy_to_directory=self._copy_to_directory,
             plugin_configurations=plugin_configs,
         )
 
@@ -122,6 +133,8 @@ class QtFolderDataExtractor:
         widget = self.fields.get(key)
         if widget is None:
             return ""
+        if isinstance(widget, str):
+            return widget
         try:
             if isinstance(widget, QLineEdit):
                 return widget.text().strip()
@@ -134,6 +147,8 @@ class QtFolderDataExtractor:
         widget = self.fields.get(key)
         if widget is None:
             return False
+        if isinstance(widget, bool):
+            return widget
         try:
             if isinstance(widget, (QCheckBox, QPushButton)):
                 return widget.isChecked()
@@ -146,6 +161,13 @@ class QtFolderDataExtractor:
         widget = self.fields.get(key)
         if widget is None:
             return default
+        if isinstance(widget, int):
+            return widget
+        if isinstance(widget, (str, float)):
+            try:
+                return int(widget)
+            except (TypeError, ValueError):
+                return default
         try:
             if isinstance(widget, QSpinBox):
                 return widget.value()
@@ -163,6 +185,8 @@ class QtFolderDataExtractor:
         widget = self.fields.get(key)
         if widget is None:
             return ""
+        if isinstance(widget, (str, int, float)):
+            return str(widget).strip()
         try:
             if isinstance(widget, QComboBox):
                 return widget.currentText().strip()

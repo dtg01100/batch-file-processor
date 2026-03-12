@@ -30,6 +30,7 @@ class ProcessedFileRecord:
     file_checksum: str
     sent_date_time: datetime
     resend_flag: bool = False
+    invoice_numbers: str = ""
     additional_data: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -46,6 +47,7 @@ class ProcessedFileRecord:
                 self.sent_date_time.isoformat() if self.sent_date_time else None
             ),
             "resend_flag": self.resend_flag,
+            "invoice_numbers": self.invoice_numbers,
             "additional_data": self.additional_data,
         }
 
@@ -71,6 +73,7 @@ class ProcessedFileRecord:
             file_checksum=data.get("file_checksum", ""),
             sent_date_time=sent_date_time,
             resend_flag=data.get("resend_flag", False),
+            invoice_numbers=data.get("invoice_numbers", ""),
             additional_data=data.get("additional_data", {}),
         )
 

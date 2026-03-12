@@ -5,6 +5,7 @@ injectable client support for testing.
 """
 
 import os
+import time
 import logging
 from typing import Optional
 
@@ -89,7 +90,7 @@ def do(
                                     client.cwd(current_path)
 
                         client.storbinary(
-                            "stor " + process_parameters['ftp_folder'] + filename_no_path,
+                            "stor " + filename_no_path,
                             send_file
                         )
                         logger.info("Success")
@@ -110,6 +111,7 @@ def do(
                 raise
             counter += 1
             logger.warning("Encountered an error. Retry number %d: %s", counter, ftp_error)
+            time.sleep(2)
 
     return file_pass
 

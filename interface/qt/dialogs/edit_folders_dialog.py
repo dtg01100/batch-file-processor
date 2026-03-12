@@ -302,10 +302,11 @@ class EditFoldersDialog(BaseDialog):
             return True
 
         extractor = QtFolderDataExtractor(
-            self._fields, plugin_manager=self.plugin_manager
+            self._fields,
+            plugin_manager=self.plugin_manager,
+            copy_to_directory=self.handlers.copy_to_directory,
         )
         extracted = extractor.extract_all()
-        extracted.copy_to_directory = self.handlers.copy_to_directory
 
         validator = self._create_validator()
         current_alias = self._folder_config.get("alias", "")
@@ -375,7 +376,9 @@ class EditFoldersDialog(BaseDialog):
     def apply(self):
         """Extract data from UI and update the configuration dictionary."""
         extractor = QtFolderDataExtractor(
-            self._fields, plugin_manager=self.plugin_manager
+            self._fields,
+            plugin_manager=self.plugin_manager,
+            copy_to_directory=self.handlers.copy_to_directory,
         )
         extracted = extractor.extract_all()
 
@@ -459,7 +462,7 @@ class EditFoldersDialog(BaseDialog):
         target["estore_store_number"] = extracted.estore_store_number
         target["estore_Vendor_OId"] = extracted.estore_vendor_oid
         target["estore_vendor_NameVendorOID"] = extracted.estore_vendor_namevendoroid
-        target["estore_c_record_OID"] = self._get_estore_c_record_oid_local()
+        target["estore_c_record_OID"] = extracted.estore_c_record_oid
         target["fintech_division_id"] = extracted.fintech_division_id
 
         # Plugins
@@ -467,12 +470,6 @@ class EditFoldersDialog(BaseDialog):
 
         if self._on_apply_success:
             self._on_apply_success(target)
-
-    def _get_estore_c_record_oid_local(self) -> str:
-        widget = self._fields.get("estore_c_record_oid_field")
-        if widget and hasattr(widget, "text"):
-            return widget.text()
-        return self._folder_config.get("estore_c_record_OID", "")
 
     def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
         extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(

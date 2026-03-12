@@ -16,12 +16,20 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
+from batch_file_processor.logging_config import setup_logging, get_logger
 from interface.qt.app import QtBatchFileSenderApp
+
+logger = get_logger(__name__)
 
 
 def main():
     """Initialize and run the Batch File Sender application with Qt UI."""
+    setup_logging()
+    logger.debug("Logging initialized")
+
     from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+
+    logger.info("Starting Batch File Sender")
 
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",

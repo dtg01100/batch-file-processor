@@ -4,14 +4,21 @@ This module provides utilities for migrating and merging database files.
 It has been refactored to remove tkinter dependencies.
 """
 
+import logging
 import os
 import threading
+import time
 from typing import Callable, Optional
 
 from interface.database import sqlite_wrapper
 
 import backup_increment
 import folders_database_migrator
+
+logger = logging.getLogger(__name__)
+
+new_database_connection = None
+modified_new_folder_path = None
 
 
 class DbMigrationThing:
@@ -77,6 +84,7 @@ class DbMigrationThing:
                 QApplication.processEvents()
             except ImportError:
                 pass
+            time.sleep(0.1)
 
         # Report determinate progress
         if progress_callback:

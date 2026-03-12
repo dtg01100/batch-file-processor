@@ -1,5 +1,6 @@
 """Tests for dispatch/send_manager.py module."""
 
+import logging
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -81,7 +82,7 @@ class TestSendManager:
 
         assert enabled == {"copy", "ftp", "email"}
 
-    def test_send_all_with_mock_backends(self):
+    def test_send_all_with_mock_backends(self, caplog):
         """Test sending to all enabled backends with mocks."""
         mock_copy = MockBackend(should_succeed=True)
         mock_ftp = MockBackend(should_succeed=True)
@@ -91,12 +92,14 @@ class TestSendManager:
         params = {"process_backend_copy": True}
         settings = {}
 
-        results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
+        with caplog.at_level(logging.DEBUG, logger="dispatch.send_manager"):
+            results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
 
         assert results["copy"] is True
         assert len(mock_copy.send_calls) == 1
+        assert "succeeded" in caplog.text
 
-    def test_send_all_with_failure(self):
+    def test_send_all_with_failure(self, caplog):
         """Test sending with one backend failing - continues to other backends."""
         mock_copy = MockBackend(should_succeed=False)
 
@@ -106,11 +109,13 @@ class TestSendManager:
         settings = {}
 
         # Should not raise - should continue with other backends
-        results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
+        with caplog.at_level(logging.DEBUG, logger="dispatch.send_manager"):
+            results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
 
         # Backend that failed should be marked as False
         assert results["copy"] is False
         assert len(mock_copy.send_calls) == 1
+        assert "failed" in caplog.text.lower()
 
     def test_send_all_multiple_backends(self):
         """Test sending to multiple backends."""
