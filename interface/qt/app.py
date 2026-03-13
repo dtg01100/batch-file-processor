@@ -169,8 +169,7 @@ class QtBatchFileSenderApp:
         self._errors_directory = oversight
 
         if self._args and self._args.automatic:
-            if self._database.folders_table:
-                self._automatic_process_directories(self._database.folders_table)
+            # Automatic mode: skip GUI setup entirely; run() will process.
             return
 
         self._bootstrap.build_ui_runtime()
@@ -178,9 +177,10 @@ class QtBatchFileSenderApp:
         self._set_main_button_states()
         self._configure_window()
 
-    def run(self) -> None:
+    def run(self) -> int:
         if self._args is not None and self._args.automatic:
-            return
+            self._automatic_process_directories(self._database.folders_table)
+            return 0
         if self._window is None:
             raise RuntimeError("Application not initialized - call initialize() first")
         self._window.show()

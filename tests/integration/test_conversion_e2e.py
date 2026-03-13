@@ -838,8 +838,8 @@ class TestConvertToStewartsCustom:
 
         output_path = str(tmp_path / "output_stewarts")
 
-        # Mock the QueryRunner at the source to avoid database dependency
-        with patch("core.database.query_runner.QueryRunner") as mock_qr_class:
+        # Mock LegacyQueryRunner (core.database.query_runner imported as LegacyQueryRunner)
+        with patch("convert_to_stewarts_custom.LegacyQueryRunner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_arbitrary_query.side_effect = [
@@ -912,9 +912,9 @@ class TestConvertToScansheetTypeA:
         output_path = str(tmp_path / "output_scansheet")
 
         # Mock the QueryRunner at the source to avoid database dependency
-        with patch("core.database.query_runner.QueryRunner") as mock_qr:
-            mock_qr_instance = MagicMock()
-            mock_qr_instance.run_arbitrary_query.return_value = [
+        with patch("core.database.create_query_runner") as mock_create:
+            mock_qr = MagicMock()
+            mock_qr.run_arbitrary_query.return_value = [
                 [
                     "012345678901",
                     "123456",
@@ -926,7 +926,7 @@ class TestConvertToScansheetTypeA:
                     "1.99",
                 ]
             ]
-            mock_qr.return_value = mock_qr_instance
+            mock_create.return_value = mock_qr
 
             result = convert_to_scansheet_type_a.edi_convert(
                 edi_file,
@@ -962,8 +962,8 @@ class TestConvertToJolleyCustom:
 
         output_path = str(tmp_path / "output_jolley")
 
-        # Mock the QueryRunner at the source to avoid database dependency
-        with patch("core.database.query_runner.QueryRunner") as mock_qr_class:
+        # Mock LegacyQueryRunner (core.database.query_runner imported as LegacyQueryRunner)
+        with patch("convert_to_jolley_custom.LegacyQueryRunner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_arbitrary_query.side_effect = [

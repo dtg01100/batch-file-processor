@@ -172,5 +172,3 @@ class QtRunCoordinator:
                 self._app._log_critical_error(automatic_process_error)
         else:
             logger.warning("No active folders configured")
-        self._app._database.close()
-        self._app._sys_module.exit()
