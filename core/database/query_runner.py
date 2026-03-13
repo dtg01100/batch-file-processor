@@ -16,14 +16,16 @@ class ConnectionConfig:
     Attributes:
         username: Database username
         password: Database password
-        dsn: Data Source Name for ODBC connection
-        database: Database name (default: QGPL)
+        dsn: AS/400 hostname or IP address (SYSTEM= in the ODBC connection string)
+        database: Database/library name (default: QGPL)
+        odbc_driver: ODBC driver name (default: IBM i Access ODBC Driver 64-bit)
     """
 
     username: str
     password: str
     dsn: str
     database: str = "QGPL"
+    odbc_driver: str = "IBM i Access ODBC Driver 64-bit"
 
 
 @runtime_checkable
@@ -79,7 +81,8 @@ class PyODBCConnection:
         import pyodbc
 
         conn_str = (
-            f"DSN={self.config.dsn};"
+            f"DRIVER={{{self.config.odbc_driver}}};"
+            f"SYSTEM={self.config.dsn};"
             f"DATABASE={self.config.database};"
             f"UID={self.config.username};"
             f"PWD={self.config.password}"
@@ -88,7 +91,8 @@ class PyODBCConnection:
             self._connection = pyodbc.connect(conn_str)
         except pyodbc.Error as exc:
             raise ConnectionError(
-                f"Failed to connect to database DSN={self.config.dsn!r}: {exc}"
+                f"Failed to connect to database SYSTEM={self.config.dsn!r} "
+                f"DRIVER={self.config.odbc_driver!r}: {exc}"
             ) from exc
         return self._connection
 
@@ -237,7 +241,11 @@ class QueryRunner:
 
 
 def create_query_runner(
-    username: str, password: str, dsn: str, database: str = "QGPL"
+    username: str,
+    password: str,
+    dsn: str,
+    database: str = "QGPL",
+    odbc_driver: str = "IBM i Access ODBC Driver 64-bit",
 ) -> QueryRunner:
     """Create a QueryRunner with real pyodbc connection.
 
@@ -249,10 +257,11 @@ def create_query_runner(
         password: Database password
         dsn: Data Source Name for ODBC connection
         database: Database name (default: QGPL)
+        odbc_driver: ODBC driver name (default: IBM i Access ODBC Driver 64-bit)
 
     Returns:
         QueryRunner instance with PyODBCConnection
     """
-    config = ConnectionConfig(username, password, dsn, database)
+    config = ConnectionConfig(username, password, dsn, database, odbc_driver)
     connection = PyODBCConnection(config)
     return QueryRunner(connection)

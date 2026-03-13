@@ -65,13 +65,17 @@ class query_runner:
             stacklevel=2,
         )
 
-        # Create a new-style runner internally
+        # Create a new-style runner internally, passing driver through
         self._runner = create_query_runner(
-            username=username, password=password, dsn=as400_hostname, database="QGPL"
+            username=username,
+            password=password,
+            dsn=as400_hostname,
+            database="QGPL",
+            odbc_driver=driver,
         )
 
         # Legacy attributes for backward compatibility
-        self.connection = self._runner.connection._connection
+        self.connection = None  # Populated lazily on first query
         self.username = ""
         self.password = ""
         self.host = ""

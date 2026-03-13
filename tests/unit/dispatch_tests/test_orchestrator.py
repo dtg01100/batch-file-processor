@@ -438,7 +438,7 @@ class TestOrchestratorIntegration:
     def test_full_processing_workflow(self):
         """Test full file processing workflow."""
         # Set up mock file system with valid EDI file
-        edi_content = "AHEADER\nB1234567890" + " " * 60 + "\nCFOOTER\n"
+        edi_content = "AHEADER\nB1234567890" + " " * 59 + "\nCFOOTER\n"
         mock_fs = MockFileSystem(
             dirs=["/data/input"],
             files={"/data/input/invoice.edi": edi_content.encode()},

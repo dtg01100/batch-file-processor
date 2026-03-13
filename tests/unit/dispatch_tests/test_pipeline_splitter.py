@@ -169,22 +169,22 @@ class MockEDISplitter:
 @pytest.fixture
 def edi_content_single_invoice():
     """EDI content with single A record (invoice)."""
-    b_record = "B12345678901" + " " * 65
+    b_record = "B12345678901" + " " * 64
     return f"AHEADER001  12345  010123\n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_multiple_invoices():
     """EDI content with multiple A records (invoices)."""
-    b_record1 = "B12345678901" + " " * 65
-    b_record2 = "B12345678902" + " " * 65
+    b_record1 = "B12345678901" + " " * 64
+    b_record2 = "B12345678902" + " " * 64
     return f"AHEADER001  12345  010123\n{b_record1}\nCFOOTER\nAHEADER002  12346  010123\n{b_record2}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_with_credit():
     """EDI content with credit memo (negative invoice total)."""
-    b_record = "B12345678901" + " " * 65
+    b_record = "B12345678901" + " " * 64
     return f"AHEADER001  -1234  010123\n{b_record}\nCFOOTER\n"
 
 
@@ -765,7 +765,7 @@ class TestIntegration:
         """Test that filtering without split uses utils.filter_edi_file_by_category."""
         mock_splitter = MockEDISplitter()
         mock_fs = MockFileSystem(
-            {"/input/test.edi": "AHEADER\nB12345678901" + " " * 65 + "\nCFOOTER\n"}
+            {"/input/test.edi": "AHEADER\nB12345678901" + " " * 64 + "\nCFOOTER\n"}
         )
         step = EDISplitterStep(splitter=mock_splitter, file_system=mock_fs)
 

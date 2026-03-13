@@ -146,11 +146,15 @@ class SplitConfig:
         output_directory: Directory to write split files
         prepend_date: Whether to prepend date to filenames
         max_invoices: Maximum number of invoices (0 = no limit)
+        filename_stem: Original input file stem to prepend to split file names,
+            ensuring uniqueness when multiple files are split to the same directory.
+            If empty, split files are named A_split.inv, B_split.cr, etc.
     """
 
     output_directory: str
     prepend_date: bool = False
     max_invoices: int = 0
+    filename_stem: str = ""
 
 
 @dataclass
@@ -455,6 +459,8 @@ class EDISplitter:
                     file_name_suffix = ".inv"
 
                 file_name_prefix = prepend_letters + "_"
+                if config.filename_stem:
+                    file_name_prefix = config.filename_stem + "_" + file_name_prefix
                 if config.prepend_date:
                     from datetime import datetime
 
@@ -538,4 +544,13 @@ class EDISplitter:
             SplitResult with output files and statistics
         """
         content = self.filesystem.read_file(input_path)
+        # Populate filename_stem from input path so split files get unique names
+        # when multiple source files are split to the same output directory.
+        if not config.filename_stem:
+            config = SplitConfig(
+                output_directory=config.output_directory,
+                prepend_date=config.prepend_date,
+                max_invoices=config.max_invoices,
+                filename_stem=os.path.basename(input_path),
+            )
         return self.split_edi(content, config, upc_dict, filter_categories, filter_mode)

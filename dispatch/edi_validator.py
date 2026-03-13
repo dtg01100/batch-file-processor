@@ -171,6 +171,8 @@ class EDIValidator:
         logger.debug("Checking EDI format: %s", file_path)
         try:
             content = self.fs.read_file_text(file_path)
+            # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
+            content = content.replace("\x1a", "")
             lines = content.split("\n")
 
             # Check first character is 'A'
@@ -191,7 +193,7 @@ class EDIValidator:
 
                 # Validate B records
                 if first_char == "B":
-                    if len(line) != 77 and len(line) != 71:
+                    if len(line) != 76 and len(line) != 70:
                         logger.debug(
                             "EDI format check failed at line %d: %s",
                             line_num,
@@ -211,8 +213,8 @@ class EDIValidator:
                             )
                             return False, line_num
 
-                    # Check for missing pricing in 71-char lines
-                    if len(line) == 71 and line[51:67] != "                ":
+                    # Check for missing pricing in 70-char lines
+                    if len(line) == 70 and line[51:67] != "                ":
                         logger.debug(
                             "EDI format check failed at line %d: %s",
                             line_num,
@@ -240,6 +242,8 @@ class EDIValidator:
 
         try:
             content = self.fs.read_file_text(file_path)
+            # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
+            content = content.replace("\x1a", "")
             lines = content.split("\n")
 
             for line_num, line in enumerate(lines, start=1):
@@ -265,7 +269,7 @@ class EDIValidator:
                     issues.append(f"Blank UPC in line {line_num}")
 
                 # Check for missing pricing
-                if len(line) == 71:
+                if len(line) == 70:
                     self.has_minor_errors = True
                     issues.append(f"Missing pricing information in line {line_num}")
 
@@ -291,6 +295,8 @@ class EDIValidator:
         """
         try:
             content = self.fs.read_file_text(file_path)
+            # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
+            content = content.replace("\x1a", "")
             lines = content.split("\n")
 
             for line_num, line in enumerate(lines, start=1):
@@ -312,7 +318,7 @@ class EDIValidator:
                     self.has_minor_errors = True
                     warnings.append(f"Blank UPC in line {line_num}")
 
-                if len(line) == 71:
+                if len(line) == 70:
                     self.has_minor_errors = True
                     warnings.append(f"Missing pricing information in line {line_num}")
 

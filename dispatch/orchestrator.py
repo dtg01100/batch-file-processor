@@ -452,6 +452,31 @@ class DispatchOrchestrator:
                     for pipeline_file in files_to_send:
                         current_pipeline_file = pipeline_file
 
+                        tweaker_step = self.config.tweaker_step
+                        tweak_edi = context.effective_folder.get("tweak_edi", False)
+                        logger.debug(
+                            "Tweaker step: enabled=%s, tweak_edi=%s",
+                            bool(tweaker_step),
+                            tweak_edi,
+                        )
+                        if tweaker_step is not None and tweak_edi:
+                            self._log_message(
+                                run_log,
+                                f"Applying tweaks to {file_basename}",
+                            )
+                            tweaked_file = tweaker_step.execute(
+                                current_pipeline_file,
+                                context.effective_folder,
+                                context.upc_dict,
+                                context.settings,
+                                context=context,
+                            )
+                            if tweaked_file:
+                                # Track temp files created by tweaker (mkstemp)
+                                if tweaked_file != file_path:
+                                    context.temp_files.append(tweaked_file)
+                                current_pipeline_file = tweaked_file
+
                         converter_step = self.config.converter_step
                         convert_edi = context.effective_folder.get("convert_edi", False)
                         logger.debug(
@@ -481,31 +506,6 @@ class DispatchOrchestrator:
                                 current_pipeline_file = converted_file
                                 result.converted = True
 
-                        tweaker_step = self.config.tweaker_step
-                        tweak_edi = context.effective_folder.get("tweak_edi", False)
-                        logger.debug(
-                            "Tweaker step: enabled=%s, tweak_edi=%s",
-                            bool(tweaker_step),
-                            tweak_edi,
-                        )
-                        if tweaker_step is not None and tweak_edi:
-                            self._log_message(
-                                run_log,
-                                f"Applying tweaks to {file_basename}",
-                            )
-                            tweaked_file = tweaker_step.execute(
-                                current_pipeline_file,
-                                context.effective_folder,
-                                context.upc_dict,
-                                context.settings,
-                                context=context,
-                            )
-                            if tweaked_file:
-                                # Track temp files created by tweaker (mkstemp)
-                                if tweaked_file != file_path:
-                                    context.temp_files.append(tweaked_file)
-                                current_pipeline_file = tweaked_file
-
                         send_result = self._send_pipeline_file(
                             self._apply_file_rename(current_pipeline_file, context),
                             context.effective_folder,
@@ -532,6 +532,31 @@ class DispatchOrchestrator:
                                 run_log, f"Invoice numbers: {invoice_numbers}"
                             )
                     return result
+
+            tweaker_step = self.config.tweaker_step
+            tweak_edi = context.effective_folder.get("tweak_edi", False)
+            logger.debug(
+                "Tweaker step: enabled=%s, tweak_edi=%s",
+                bool(tweaker_step),
+                tweak_edi,
+            )
+            if tweaker_step is not None and tweak_edi:
+                self._log_message(
+                    run_log,
+                    f"Applying tweaks to {file_basename}",
+                )
+                tweaked_file = tweaker_step.execute(
+                    current_file,
+                    context.effective_folder,
+                    context.upc_dict,
+                    context.settings,
+                    context=context,
+                )
+                if tweaked_file:
+                    # Track temp files created by tweaker (mkstemp)
+                    if tweaked_file != file_path:
+                        context.temp_files.append(tweaked_file)
+                    current_file = tweaked_file
 
             converter_step = self.config.converter_step
             convert_edi = context.effective_folder.get("convert_edi", False)
@@ -561,31 +586,6 @@ class DispatchOrchestrator:
                         context.temp_files.append(converted_file)
                     current_file = converted_file
                     result.converted = True
-
-            tweaker_step = self.config.tweaker_step
-            tweak_edi = context.effective_folder.get("tweak_edi", False)
-            logger.debug(
-                "Tweaker step: enabled=%s, tweak_edi=%s",
-                bool(tweaker_step),
-                tweak_edi,
-            )
-            if tweaker_step is not None and tweak_edi:
-                self._log_message(
-                    run_log,
-                    f"Applying tweaks to {file_basename}",
-                )
-                tweaked_file = tweaker_step.execute(
-                    current_file,
-                    context.effective_folder,
-                    context.upc_dict,
-                    context.settings,
-                    context=context,
-                )
-                if tweaked_file:
-                    # Track temp files created by tweaker (mkstemp)
-                    if tweaked_file != file_path:
-                        context.temp_files.append(tweaked_file)
-                    current_file = tweaked_file
 
             # Check if any backends are enabled before attempting to send
             enabled_backends = self.send_manager.get_enabled_backends(
@@ -704,6 +704,10 @@ class DispatchOrchestrator:
         for key, default in self._FOLDER_DEFAULTS.items():
             if effective_folder.get(key) is None:
                 effective_folder[key] = default
+
+        # upc_target_length of 0 is not meaningful — treat as default (11).
+        if not effective_folder.get("upc_target_length"):
+            effective_folder["upc_target_length"] = self._FOLDER_DEFAULTS["upc_target_length"]
 
         # Map DB field process_edi → convert_edi (orchestrator's internal gate).
         # The database stores process_edi=True to mean "convert EDI to another format".

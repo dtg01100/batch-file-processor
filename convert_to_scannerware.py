@@ -89,7 +89,7 @@ class ScannerWareConverter(BaseEDIConverter):
         line_builder_list = [
             fields["record_type"],
             user_data["arec_padding"].ljust(6),
-            fields["invoice_number"][-7:],
+            fields["invoice_number"],
             "   ",
         ]
 

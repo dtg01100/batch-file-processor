@@ -99,9 +99,9 @@ def edi_tweak(
         parameters_dict["split_prepaid_sales_tax_crec"]
     )
 
-    # Safely convert upc_target_length to int, handling None
+    # Safely convert upc_target_length to int, defaulting 0/None to 11
     val = parameters_dict.get("upc_target_length")
-    upc_target_length = int(val) if val is not None else 11
+    upc_target_length = int(val) if val else 11
 
     upc_padding_pattern = parameters_dict.get("upc_padding_pattern", "           ")
 
@@ -288,7 +288,30 @@ def edi_tweak(
                         :upc_target_length
                     ]
 
-            if len(writeable_line) < 77:
+            # Determine parent-item handling AFTER UPC and numeric tweaks.
+            # Historically this check used the original input line length
+            # (len(writeable_line) < 77), which ignored any UPC length
+            # changes applied above (retail_uom / check-digit operations).
+            #
+            # A B-record has parent-item capacity when the transformed record
+            # length is at least 76 chars. If we end up shorter after tweaks,
+            # clear parent_item_number to keep record semantics consistent.
+            projected_b_line = "".join(
+                (
+                    b_rec_edi_dict["record_type"],
+                    b_rec_edi_dict["upc_number"],
+                    b_rec_edi_dict["description"],
+                    b_rec_edi_dict["vendor_item"],
+                    b_rec_edi_dict["unit_cost"],
+                    b_rec_edi_dict["combo_code"],
+                    b_rec_edi_dict["unit_multiplier"],
+                    b_rec_edi_dict["qty_of_units"],
+                    b_rec_edi_dict["suggested_retail_price"],
+                    b_rec_edi_dict["price_multi_pack"],
+                    b_rec_edi_dict["parent_item_number"],
+                )
+            )
+            if len(projected_b_line) < 76:
                 b_rec_edi_dict["parent_item_number"] = ""
 
             digits_fields = [

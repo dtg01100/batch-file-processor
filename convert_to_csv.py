@@ -88,7 +88,7 @@ class CSVConverter(BaseEDIConverter):
             params.get("retail_uom"), False
         )
         context.user_data["upc_target_length"] = int(
-            params.get("upc_target_length", 11)
+            params.get("upc_target_length", 11) or 11
         )
         context.user_data["upc_padding_pattern"] = params.get(
             "upc_padding_pattern", "           "

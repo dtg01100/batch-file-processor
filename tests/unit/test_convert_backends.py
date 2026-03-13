@@ -736,13 +736,6 @@ class TestConvertToSimplifiedCSV:
         assert hasattr(convert_to_simplified_csv, "edi_convert")
         assert callable(convert_to_simplified_csv.edi_convert)
 
-    def test_customer_lookup_error_exists(self):
-        """Test that CustomerLookupError exception exists."""
-        import convert_to_simplified_csv
-
-        assert hasattr(convert_to_simplified_csv, "CustomerLookupError")
-        assert issubclass(convert_to_simplified_csv.CustomerLookupError, Exception)
-
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
         from utils import convert_to_price

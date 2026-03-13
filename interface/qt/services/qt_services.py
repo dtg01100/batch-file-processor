@@ -205,6 +205,9 @@ class QtProgressService(QObject):
         self._file_label = self._build_detail_label(self._overlay)
         self._footer_label = self._build_footer_label(self._overlay)
         self._total = 0  # Initialize total progress value
+        self._current_folder_name = ""
+        self._current_file_index = 0
+        self._current_file_total = 0
         self._setup_layout()
         self._overlay.hide()
         parent.installEventFilter(self)
@@ -499,6 +502,73 @@ class QtProgressService(QObject):
         self._throbber.show()
         self._progress_bar.hide()
         self._progress_bar.setValue(0)
+
+    # -- dispatch compatibility methods --------------------------------------
+
+    def start_folder(self, folder_name: str, total_files: int) -> None:
+        """Start progress reporting for a folder.
+
+        This compatibility method is used by the dispatch orchestrator.
+
+        Args:
+            folder_name: Display name of the folder being processed.
+            total_files: Number of files to process in this folder.
+        """
+        self._current_folder_name = folder_name
+        self._current_file_index = 0
+        self._current_file_total = max(0, total_files)
+
+        self.update_message(f"Processing folder: {folder_name}")
+        self.update_detailed_progress(
+            folder_num=1,
+            folder_total=1,
+            file_num=0,
+            file_total=self._current_file_total,
+            footer="",
+        )
+        self.set_indeterminate()
+
+    def update_file(self, current_file: int, total_files: int) -> None:
+        """Update file-level progress for the current folder.
+
+        Args:
+            current_file: 1-based current file index.
+            total_files: Total files in current folder.
+        """
+        self._current_file_index = max(0, current_file)
+        self._current_file_total = max(0, total_files)
+
+        if self._current_file_total > 0:
+            percentage = int((self._current_file_index / self._current_file_total) * 100)
+            self.update_progress(percentage)
+        else:
+            self.set_indeterminate()
+
+        self.update_detailed_progress(
+            folder_num=1,
+            folder_total=1,
+            file_num=self._current_file_index,
+            file_total=self._current_file_total,
+            footer="",
+        )
+
+    def complete_folder(self, success: bool) -> None:
+        """Complete progress reporting for the current folder.
+
+        Args:
+            success: Whether folder processing succeeded.
+        """
+        status_text = "Completed" if success else "Completed with errors"
+        folder_name = self._current_folder_name or "folder"
+        self.update_message(f"{status_text}: {folder_name}")
+        self.update_detailed_progress(
+            folder_num=1,
+            folder_total=1,
+            file_num=self._current_file_total,
+            file_total=self._current_file_total,
+            footer="",
+        )
+        self.update_progress(100)
 
     # -- geometry management --------------------------------------------------
 

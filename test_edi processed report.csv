@@ -1,0 +1,44 @@
+File,Invoice Numbers,Date,Sent To
+/workspaces/batch-file-processor/test_edi/351018.001,None,2026-03-11T13:56:32.222207,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/351018.002,None,2026-03-11T13:56:32.225524,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/351018.003,None,2026-03-11T13:56:32.229508,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/351018.004,None,None,None
+/workspaces/batch-file-processor/test_edi/351018.005,None,2026-03-11T14:12:13.475181,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/202002.001,None,2026-03-11T14:12:13.465998,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/202002.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202002.003,None,2026-03-11T14:12:13.471031,Copy: /workspaces/batch-file-processor/outdir
+/workspaces/batch-file-processor/test_edi/202002.004,None,None,None
+/workspaces/batch-file-processor/test_edi/202002.005,None,None,None
+/workspaces/batch-file-processor/test_edi/202002.006,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.004,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.005,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.006,None,None,None
+/workspaces/batch-file-processor/test_edi/202005.007,None,None,None
+/workspaces/batch-file-processor/test_edi/202007.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202007.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202007.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202003.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202003.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202003.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202003.004,None,None,None
+/workspaces/batch-file-processor/test_edi/202001.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202001.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202001.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202004.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202004.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202004.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202004.004,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.004,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.005,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.006,None,None,None
+/workspaces/batch-file-processor/test_edi/202008.007,None,None,None
+/workspaces/batch-file-processor/test_edi/202006.001,None,None,None
+/workspaces/batch-file-processor/test_edi/202006.002,None,None,None
+/workspaces/batch-file-processor/test_edi/202006.003,None,None,None
+/workspaces/batch-file-processor/test_edi/202006.004,None,None,None

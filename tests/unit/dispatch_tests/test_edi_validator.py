@@ -32,9 +32,9 @@ class TestEDIValidator:
         """Test validation of a valid EDI file."""
         # Create a valid EDI file content
         # A record (header), B record (detail), C record (footer)
-        # B record must be exactly 77 chars with valid 11-digit numeric UPC
-        # Format: B (1) + UPC (11) + padding (65) = 77 total
-        edi_content = "AHEADER\nB12345678901" + " " * 65 + "\nCFOOTER\n"
+        # B record must be exactly 76 chars with valid 11-digit numeric UPC
+        # Format: B (1) + UPC (11) + padding (64) = 76 total
+        edi_content = "AHEADER\nB12345678901" + " " * 64 + "\nCFOOTER\n"
 
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
@@ -43,7 +43,7 @@ class TestEDIValidator:
             is_valid, errors = validator.validate("/test/file.edi")
 
         # This test validates the format check logic
-        # If the B record is exactly 77 chars with valid UPC, it should pass format check
+        # If the B record is exactly 76 chars with valid UPC, it should pass format check
         assert is_valid is True
         assert errors == []
         assert "validation passed" in caplog.text
@@ -87,8 +87,8 @@ class TestEDIValidator:
 
     def test_validate_with_warnings(self):
         """Test validation with warnings (minor errors)."""
-        # Create EDI with suppressed UPC (8 chars)
-        edi_content = "AHEADER\nB12345678" + " " * 62 + "\nCFOOTER\n"
+        # Create EDI with suppressed UPC (8 chars); 70-char B record (missing pricing format)
+        edi_content = "AHEADER\nB12345678" + " " * 61 + "\nCFOOTER\n"
 
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
@@ -102,7 +102,7 @@ class TestEDIValidator:
 
     def test_validate_blank_upc(self):
         """Test validation detects blank UPC."""
-        # 77-char B record with blank UPC (valid format, minor error)
+        # 76-char B record with blank UPC (valid format, minor error)
         edi_content = "AHEADER\nB           " + " " * 64 + "\nCFOOTER\n"
 
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
@@ -111,15 +111,13 @@ class TestEDIValidator:
         is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         # Blank UPC is a minor error (warning), file is still valid
-        # But the validator may fail the format check if line length is wrong
-        # Let's just check that if it's valid, it has the warning
-        if is_valid:
-            assert any("Blank UPC" in w for w in warnings)
+        assert is_valid is True
+        assert any("Blank UPC" in w for w in warnings)
 
     def test_validate_missing_pricing(self):
-        """Test validation detects missing pricing (71 char line)."""
-        # 71-char B record (valid format, minor error for missing pricing)
-        edi_content = "AHEADER\nB1234567890" + " " * 60 + "\nCFOOTER\n"
+        """Test validation detects missing pricing (70 char line)."""
+        # 70-char B record (valid format, minor error for missing pricing)
+        edi_content = "AHEADER\nB1234567890" + " " * 59 + "\nCFOOTER\n"
 
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
@@ -367,7 +365,7 @@ class TestEDIValidatorEdgeCases:
     def test_unicode_content(self):
         """Test validation with unicode content."""
         mock_fs = MockFileSystem(
-            {"/test/unicode.edi": "AHEADER\nB1234567890" + " " * 60 + "\nCFOOTER\n"}
+            {"/test/unicode.edi": "AHEADER\nB1234567890" + " " * 59 + "\nCFOOTER\n"}
         )
 
         validator = EDIValidator(file_system=mock_fs)

@@ -314,6 +314,41 @@ class TestQtProgressService:
 
         assert service._progress_bar.value() == 25
 
+    def test_start_folder_initializes_dispatch_progress_state(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.start_folder("test_edi", 43)
+
+        assert service._title_label.text() == "Processing folder: test_edi"
+        assert service._file_label.text() == "File 0 of 43"
+
+    def test_update_file_updates_percentage_and_file_label(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.start_folder("test_edi", 10)
+        service.update_file(3, 10)
+
+        assert service._progress_bar.value() == 30
+        assert service._file_label.text() == "File 3 of 10"
+
+    def test_complete_folder_sets_done_message_and_100_percent(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        service.start_folder("test_edi", 5)
+        service.complete_folder(success=False)
+
+        assert service._title_label.text() == "Completed with errors: test_edi"
+        assert service._progress_bar.value() == 100
+
         def test_event_filter_handles_missing_parent_attribute(self, qtbot):
             parent = QWidget()
             qtbot.addWidget(parent)

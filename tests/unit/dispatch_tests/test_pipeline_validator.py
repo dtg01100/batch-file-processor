@@ -86,41 +86,41 @@ class MockErrorHandler:
 @pytest.fixture
 def valid_edi_content():
     """Valid EDI content with A, B, and C records."""
-    b_record = "B12345678901" + " " * 65
+    b_record = "B12345678901" + " " * 64
     return f"AHEADER\n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
 def invalid_edi_content():
     """Invalid EDI content (first char not A)."""
-    return "XINVALID\nB12345678901" + " " * 65 + "\nCFOOTER\n"
+    return "XINVALID\nB12345678901" + " " * 64 + "\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_with_minor_errors():
     """EDI content with minor errors (suppressed UPC - 8 chars)."""
-    b_record = "B12345678" + " " * 62
+    b_record = "B12345678" + " " * 61
     return f"AHEADER\n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_truncated_upc():
     """EDI content with truncated UPC (less than 11 chars)."""
-    b_record = "B12345" + " " * 65
+    b_record = "B12345" + " " * 64
     return f"AHEADER\n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_blank_upc():
     """EDI content with blank UPC (11 spaces for item number)."""
-    b_record = "B" + " " * 11 + " " * 65
+    b_record = "B" + " " * 11 + " " * 64
     return f"AHEADER\n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_missing_pricing():
-    """EDI content with missing pricing (71-char B record)."""
-    b_record = "B1234567890" + " " * 60
+    """EDI content with missing pricing (70-char B record)."""
+    b_record = "B1234567890" + " " * 59
     return f"AHEADER\n{b_record}\nCFOOTER\n"
 
 
@@ -795,7 +795,7 @@ class TestEdgeCases:
 
     def test_very_long_file(self):
         """Test validation of very long EDI file."""
-        b_record = "B12345678901" + " " * 65
+        b_record = "B12345678901" + " " * 64
         lines = ["AHEADER"]
         for i in range(1000):
             lines.append(b_record)
