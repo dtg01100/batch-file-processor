@@ -940,7 +940,6 @@ class DispatchOrchestrator:
                     "folder_id": folder_id,
                     "folder_alias": folder.get("alias", ""),
                     "file_checksum": file_result.checksum,
-                    "md5": file_result.checksum,
                     "processed_at": datetime.datetime.now().isoformat(),
                     "resend_flag": 0,
                     "sent_to": sent_to_str,

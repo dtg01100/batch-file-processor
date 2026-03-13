@@ -641,7 +641,7 @@ class TestProcessedFilesAndCleanupBehavior:
         assert insert_payload["folder_id"] == 123
         assert insert_payload["folder_alias"] == "Inbound"
         assert insert_payload["file_checksum"] == "def456"
-        assert insert_payload["md5"] == "def456"
+        assert "md5" not in insert_payload
         assert insert_payload["resend_flag"] == 0
         assert insert_payload["sent_to"] == "Email: ops@example.com"
         assert insert_payload["status"] == "processed"
