@@ -62,9 +62,6 @@ class DispatchConfig:
     tweaker_step: Optional[Any] = None
     file_processor: Optional[Any] = None
     upc_dict: dict = field(default_factory=dict)
-    # Deprecated: pipeline mode is always enabled in Phase 3.
-    # Retained only for config compatibility with existing callers.
-    use_pipeline: bool = True
 
 
 @dataclass
@@ -153,35 +150,6 @@ class DispatchOrchestrator:
             bool(config.converter_step),
             bool(config.tweaker_step),
         )
-
-    def _initialize_pipeline_steps(self) -> None:
-        """Initialize optional integration hooks.
-
-        Kept for compatibility with older tests/callers.
-        """
-        if self.config.file_processor and hasattr(
-            self.config.file_processor, "initialize"
-        ):
-            self.config.file_processor.initialize()
-
-    def _is_pipeline_ready(self) -> bool:
-        """Phase 3 compatibility shim.
-
-        Pipeline path is now the only runtime path.
-        """
-        return True
-
-    def _process_folder_legacy(self, folder, run_log, processed_files=None):
-        """Deprecated shim that delegates to the pipeline path."""
-        upc_dict = self._get_upc_dictionary(self.config.settings)
-        return self.process_folder_with_pipeline(
-            folder, run_log, processed_files, upc_dict
-        )
-
-    def _process_file_legacy(self, file_path, folder):
-        """Deprecated shim that delegates to the pipeline path."""
-        upc_dict = self._get_upc_dictionary(self.config.settings)
-        return self._process_file_with_pipeline(file_path, folder, upc_dict)
 
     def process_folder(
         self,
@@ -452,31 +420,6 @@ class DispatchOrchestrator:
                     for pipeline_file in files_to_send:
                         current_pipeline_file = pipeline_file
 
-                        tweaker_step = self.config.tweaker_step
-                        tweak_edi = context.effective_folder.get("tweak_edi", False)
-                        logger.debug(
-                            "Tweaker step: enabled=%s, tweak_edi=%s",
-                            bool(tweaker_step),
-                            tweak_edi,
-                        )
-                        if tweaker_step is not None and tweak_edi:
-                            self._log_message(
-                                run_log,
-                                f"Applying tweaks to {file_basename}",
-                            )
-                            tweaked_file = tweaker_step.execute(
-                                current_pipeline_file,
-                                context.effective_folder,
-                                context.upc_dict,
-                                context.settings,
-                                context=context,
-                            )
-                            if tweaked_file:
-                                # Track temp files created by tweaker (mkstemp)
-                                if tweaked_file != file_path:
-                                    context.temp_files.append(tweaked_file)
-                                current_pipeline_file = tweaked_file
-
                         converter_step = self.config.converter_step
                         convert_edi = context.effective_folder.get("convert_edi", False)
                         logger.debug(
@@ -506,6 +449,35 @@ class DispatchOrchestrator:
                                 current_pipeline_file = converted_file
                                 result.converted = True
 
+                        tweaker_step = self.config.tweaker_step
+                        tweak_edi = context.effective_folder.get("tweak_edi", False)
+                        run_tweaker = self._should_apply_tweaker(
+                            tweaker_step, current_pipeline_file
+                        )
+                        logger.debug(
+                            "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
+                            bool(tweaker_step),
+                            tweak_edi,
+                            run_tweaker,
+                        )
+                        if tweaker_step is not None and tweak_edi and run_tweaker:
+                            self._log_message(
+                                run_log,
+                                f"Applying tweaks to {file_basename}",
+                            )
+                            tweaked_file = tweaker_step.execute(
+                                current_pipeline_file,
+                                context.effective_folder,
+                                context.upc_dict,
+                                context.settings,
+                                context=context,
+                            )
+                            if tweaked_file:
+                                # Track temp files created by tweaker (mkstemp)
+                                if tweaked_file != file_path:
+                                    context.temp_files.append(tweaked_file)
+                                current_pipeline_file = tweaked_file
+
                         send_result = self._send_pipeline_file(
                             self._apply_file_rename(current_pipeline_file, context),
                             context.effective_folder,
@@ -532,31 +504,6 @@ class DispatchOrchestrator:
                                 run_log, f"Invoice numbers: {invoice_numbers}"
                             )
                     return result
-
-            tweaker_step = self.config.tweaker_step
-            tweak_edi = context.effective_folder.get("tweak_edi", False)
-            logger.debug(
-                "Tweaker step: enabled=%s, tweak_edi=%s",
-                bool(tweaker_step),
-                tweak_edi,
-            )
-            if tweaker_step is not None and tweak_edi:
-                self._log_message(
-                    run_log,
-                    f"Applying tweaks to {file_basename}",
-                )
-                tweaked_file = tweaker_step.execute(
-                    current_file,
-                    context.effective_folder,
-                    context.upc_dict,
-                    context.settings,
-                    context=context,
-                )
-                if tweaked_file:
-                    # Track temp files created by tweaker (mkstemp)
-                    if tweaked_file != file_path:
-                        context.temp_files.append(tweaked_file)
-                    current_file = tweaked_file
 
             converter_step = self.config.converter_step
             convert_edi = context.effective_folder.get("convert_edi", False)
@@ -586,6 +533,33 @@ class DispatchOrchestrator:
                         context.temp_files.append(converted_file)
                     current_file = converted_file
                     result.converted = True
+
+            tweaker_step = self.config.tweaker_step
+            tweak_edi = context.effective_folder.get("tweak_edi", False)
+            run_tweaker = self._should_apply_tweaker(tweaker_step, current_file)
+            logger.debug(
+                "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
+                bool(tweaker_step),
+                tweak_edi,
+                run_tweaker,
+            )
+            if tweaker_step is not None and tweak_edi and run_tweaker:
+                self._log_message(
+                    run_log,
+                    f"Applying tweaks to {file_basename}",
+                )
+                tweaked_file = tweaker_step.execute(
+                    current_file,
+                    context.effective_folder,
+                    context.upc_dict,
+                    context.settings,
+                    context=context,
+                )
+                if tweaked_file:
+                    # Track temp files created by tweaker (mkstemp)
+                    if tweaked_file != file_path:
+                        context.temp_files.append(tweaked_file)
+                    current_file = tweaked_file
 
             # Check if any backends are enabled before attempting to send
             enabled_backends = self.send_manager.get_enabled_backends(
@@ -809,6 +783,26 @@ class DispatchOrchestrator:
         )
 
         return all(send_results.values())
+
+    def _should_apply_tweaker(self, tweaker_step: Any, file_path: str) -> bool:
+        """Determine whether tweaker should run for a given file.
+
+        The built-in ``EDITweakerStep`` is designed for EDI line-record input.
+        After conversion to non-EDI formats (e.g. CSV), running it can corrupt
+        output. Custom test/dummy tweaker steps are still allowed on any file.
+        """
+        if tweaker_step is None:
+            return False
+
+        file_ext = file_path.lower().rsplit(".", 1)[-1] if "." in file_path else ""
+        if file_ext == "edi":
+            return True
+
+        # Skip built-in EDI tweaker for non-EDI converted outputs.
+        if tweaker_step.__class__.__name__ == "EDITweakerStep":
+            return False
+
+        return True
 
     def process_file(self, file_path: str, folder: dict) -> FileResult:
         """Process a single file via the pipeline path.
@@ -1116,7 +1110,6 @@ class DispatchOrchestrator:
             database=folders_database,
             settings=settings,
             version=version,
-            use_pipeline=True,
             progress_reporter=progress_callback,
             validator_step=EDIValidationStep(),
             splitter_step=EDISplitterStep(),

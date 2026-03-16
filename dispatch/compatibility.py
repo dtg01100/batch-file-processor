@@ -4,10 +4,10 @@ This module provides backward-compatible imports with deprecation warnings.
 All new code should import directly from dispatch package modules.
 
 Migration Guide:
-    OLD: from dispatch import process
-    NEW: from dispatch import DispatchOrchestrator, DispatchConfig
+    Use explicit orchestrator wiring:
+         from dispatch import DispatchOrchestrator, DispatchConfig
          orchestrator = DispatchOrchestrator(config)
-         result = orchestrator.process(...)
+         result = orchestrator.process_folder(...)
 
     OLD: from dispatch import generate_match_lists
     NEW: from dispatch.hash_utils import generate_match_lists
@@ -212,18 +212,6 @@ def __getattr__(name: str) -> Any:
 
         module = importlib.import_module(module_path)
         return getattr(module, name)
-
-    # Special case: process function
-    if name == "process":
-        warnings.warn(
-            _DEPRECATION_MSG.format(name="process")
-            + " Use DispatchOrchestrator.process() instead.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
-        from dispatch.orchestrator import DispatchOrchestrator
-
-        return DispatchOrchestrator.process
 
     raise AttributeError(f"module 'dispatch.compatibility' has no attribute '{name}'")
 

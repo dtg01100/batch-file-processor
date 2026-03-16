@@ -4,8 +4,6 @@ This module contains refactored components for the dispatch system,
 designed for testability and loose coupling.
 
 Feature Flags:
-    USE_LEGACY_DISPATCH: Set to 'true' for legacy behavior during migration
-    DISPATCH_PIPELINE_ENABLED: Set to 'false' to disable new pipeline
     DISPATCH_DEBUG_MODE: Set to 'true' for verbose debug logging
 """
 
@@ -14,8 +12,6 @@ from dispatch.error_handler import ErrorHandler
 from dispatch.feature_flags import (
     get_debug_mode,
     get_feature_flags,
-    is_legacy_mode,
-    is_pipeline_enabled,
     set_feature_flag,
 )
 from dispatch.file_utils import (
@@ -53,10 +49,6 @@ from dispatch.processed_files_tracker import (
 )
 from dispatch.send_manager import SendManager
 
-# Import process function after modules are fully loaded to avoid circular imports
-
-process = DispatchOrchestrator.process
-
 __all__ = [
     # Hash utilities
     "generate_match_lists",
@@ -74,10 +66,7 @@ __all__ = [
     "ErrorHandler",
     "DispatchConfig",
     "DispatchOrchestrator",
-    "process",
     # Feature Flags
-    "is_legacy_mode",
-    "is_pipeline_enabled",
     "get_debug_mode",
     "get_feature_flags",
     "set_feature_flag",
