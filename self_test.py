@@ -1073,42 +1073,16 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
             get_feature_flags as _gff,
         )
         from dispatch.feature_flags import (
-            is_legacy_mode as _ilm,
-        )
-        from dispatch.feature_flags import (
-            is_pipeline_enabled as _ipe,
-        )
-        from dispatch.feature_flags import (
             set_feature_flag as _sff,
         )
 
         ok("dispatch.feature_flags imported")
     except Exception as exc:
         fail("dispatch.feature_flags import", str(exc))
-        _ilm = _ipe = _gdm = _gff = _sff = None
+        _gdm = _gff = _sff = None
 
-    if _ilm is not None:
+    if _gdm is not None:
         # Default values
-        try:
-            # Ensure clean env state first
-            os.environ.pop("USE_LEGACY_DISPATCH", None)
-            result = _ilm()
-            if result is False:
-                ok("is_legacy_mode() == False (default)")
-            else:
-                fail("is_legacy_mode()", f"expected False, got {result!r}")
-        except Exception as exc:
-            fail("is_legacy_mode()", str(exc))
-
-        try:
-            os.environ.pop("DISPATCH_PIPELINE_ENABLED", None)
-            result = _ipe()
-            if result is True:
-                ok("is_pipeline_enabled() == True (default)")
-            else:
-                fail("is_pipeline_enabled()", f"expected True, got {result!r}")
-        except Exception as exc:
-            fail("is_pipeline_enabled()", str(exc))
 
         try:
             os.environ.pop("DISPATCH_DEBUG_MODE", None)
@@ -1123,7 +1097,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         # get_feature_flags() dict shape
         try:
             flags = _gff()
-            required_keys = {"legacy_mode", "pipeline_enabled", "debug_mode"}
+            required_keys = {"debug_mode"}
             if isinstance(flags, dict) and required_keys <= set(flags.keys()):
                 ok(f"get_feature_flags() returns dict with keys {required_keys}")
             else:
@@ -1133,11 +1107,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
 
         try:
             flags = _gff()
-            if (
-                flags["legacy_mode"] is False
-                and flags["pipeline_enabled"] is True
-                and flags["debug_mode"] is False
-            ):
+            if flags["debug_mode"] is False:
                 ok("get_feature_flags() default values correct")
             else:
                 fail("get_feature_flags() default values", f"got {flags!r}")
@@ -1372,15 +1342,14 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
                 config.backends == {}
                 and config.settings == {}
                 and config.version == "1.0.0"
-                and config.use_pipeline is True
             ):
                 ok(
-                    "DispatchConfig() defaults: backends={}, settings={}, version='1.0.0', use_pipeline=True"
+                    "DispatchConfig() defaults: backends={}, settings={}, version='1.0.0'"
                 )
             else:
                 fail(
                     "DispatchConfig() defaults",
-                    f"backends={config.backends!r}, version={config.version!r}, use_pipeline={config.use_pipeline!r}",
+                    f"backends={config.backends!r}, version={config.version!r}",
                 )
         except Exception as exc:
             fail("DispatchConfig() defaults", str(exc))

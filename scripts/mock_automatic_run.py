@@ -22,7 +22,6 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
 from unittest.mock import patch
 
 # Ensure project root is importable when run as a standalone script.
@@ -31,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from dispatch.orchestrator import FolderResult
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 from interface.qt.app import QtBatchFileSenderApp
@@ -49,33 +49,30 @@ class MockRunResult:
     run_log_files: list[Path]
 
 
-def _mock_dispatch_process(
-    _database_connection,
-    _folders_table_process,
-    run_log: BinaryIO,
-    _emails_table,
-    _logs_directory,
-    _reporting,
-    _processed_files,
-    version,
-    _errors_directory,
-    _settings_dict,
-    progress_callback=None,
-):
-    """Mock replacement for dispatch.process used by this harness."""
-    if progress_callback is not None:
-        try:
-            progress_callback.show("Mock dispatch starting...")
-            progress_callback.update_progress(100)
-            progress_callback.update_message("Mock dispatch complete")
-            progress_callback.hide()
-        except Exception:
-            # Progress callback is optional in this harness.
-            pass
+def _mock_orchestrator_process_folder(*args, **kwargs):
+    """Mock replacement for DispatchOrchestrator.process_folder used by harness."""
+    # Bound-method patch can pass (self, folder, run_log, processed_files)
+    # or (folder, run_log, processed_files) depending on call path.
+    if len(args) >= 3 and hasattr(args[0], "config"):
+        folder = args[1]
+        run_log = args[2]
+    else:
+        folder = args[0]
+        run_log = args[1]
 
-    run_log.write(f"[MOCK] dispatch.process called for version {version}\n".encode())
+    alias = folder.get("alias", folder.get("folder_name", "unknown"))
+    run_log.write(
+        f"[MOCK] DispatchOrchestrator.process_folder called for {alias}\n".encode()
+    )
     run_log.write(b"[MOCK] no real conversions or backends were executed\n")
-    return False, "Mock dispatch completed successfully"
+
+    return FolderResult(
+        folder_name=folder.get("folder_name", ""),
+        alias=folder.get("alias", ""),
+        files_processed=1,
+        files_failed=0,
+        success=True,
+    )
 
 
 def run_mock_automatic(base_dir: str | os.PathLike[str]) -> MockRunResult:
@@ -134,8 +131,12 @@ def run_mock_automatic(base_dir: str | os.PathLike[str]) -> MockRunResult:
         with patch(
             "interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)
         ):
-            with patch("dispatch.process", side_effect=_mock_dispatch_process):
+            with patch(
+                "dispatch.orchestrator.DispatchOrchestrator.process_folder",
+                side_effect=_mock_orchestrator_process_folder,
+            ):
                 app.initialize(args=["--automatic"])
+                app.run()
     except SystemExit as system_exit:
         if isinstance(system_exit.code, int):
             exit_code = system_exit.code

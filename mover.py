@@ -153,36 +153,34 @@ class DbMigrationThing:
                 logger.debug("line_match=%s", line_match)
                 if line_match is True:
                     update_db_line = new_db_line
-                    if new_db_line.get("process_backend_copy") in (True, 1, "True"):
+                    if line.get("process_backend_copy") in (True, 1, "True"):
                         logger.info("merging copy backend settings")
                         update_db_line.update(
                             dict(
-                                process_backend_copy=new_db_line[
-                                    "process_backend_copy"
-                                ],
-                                copy_to_directory=new_db_line["copy_to_directory"],
-                                id=line["id"],
+                                process_backend_copy=line["process_backend_copy"],
+                                copy_to_directory=line["copy_to_directory"],
+                                id=new_db_line["id"],
                             )
                         )
-                    if new_db_line.get("process_backend_ftp") in (True, 1, "True"):
+                    if line.get("process_backend_ftp") in (True, 1, "True"):
                         logger.info("merging ftp backend settings")
                         update_db_line.update(
                             dict(
-                                ftp_server=new_db_line["ftp_server"],
-                                ftp_folder=new_db_line["ftp_folder"],
-                                ftp_username=new_db_line["ftp_username"],
-                                ftp_password=new_db_line["ftp_password"],
-                                ftp_port=new_db_line["ftp_port"],
-                                id=line["id"],
+                                ftp_server=line["ftp_server"],
+                                ftp_folder=line["ftp_folder"],
+                                ftp_username=line["ftp_username"],
+                                ftp_password=line["ftp_password"],
+                                ftp_port=line["ftp_port"],
+                                id=new_db_line["id"],
                             )
                         )
-                    if new_db_line.get("process_backend_email") in (True, 1, "True"):
+                    if line.get("process_backend_email") in (True, 1, "True"):
                         logger.info("merging email backend settings")
                         update_db_line.update(
                             dict(
-                                email_to=new_db_line["email_to"],
-                                email_subject_line=new_db_line["email_subject_line"],
-                                id=line["id"],
+                                email_to=line["email_to"],
+                                email_subject_line=line["email_subject_line"],
+                                id=new_db_line["id"],
                             )
                         )
                     old_folders_table.update(update_db_line, ["id"])

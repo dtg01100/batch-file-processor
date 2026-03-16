@@ -139,9 +139,9 @@ class ScanSheetTypeAConverter:
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
-            database=settings_dict.get(
-                "odbc_driver", "QGPL"
-            ),  # Use get() with default to prevent KeyError
+            odbc_driver=settings_dict.get(
+                "odbc_driver", "IBM i Access ODBC Driver 64-bit"
+            ),
         )
 
     def _initialize_workbook(self, output_filename: str) -> None:
