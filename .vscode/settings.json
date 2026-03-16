@@ -4,7 +4,8 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python.defaultInterpreterPath": "./.venv/bin/python",
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
@@ -18,7 +19,12 @@
         "**/backups": true,
         "**/dist_windows": true,
         "**/.kilocode": true,
-        "**/.opencode": true
+        "**/.opencode": true,
+        "**/build_wine": true,
+        "**/dist": true,
+        "**/outdir": true,
+        "**/folders.db": true,
+        "**/folders.db.*": true
     },
     "search.exclude": {
         "**/node_modules": true,
@@ -30,7 +36,12 @@
         "**/backups": true,
         "**/dist_windows": true,
         "**/.kilocode": true,
-        "**/.opencode": true
+        "**/.opencode": true,
+        "**/build_wine": true,
+        "**/dist": true,
+        "**/outdir": true,
+        "**/folders.db": true,
+        "**/folders.db.*": true
     },
     "python.analysis.exclude": [
         "**/.wine",
@@ -38,7 +49,12 @@
         "**/backups",
         "**/dist_windows",
         "**/.kilocode",
-        "**/.opencode"
+        "**/.opencode",
+        "**/build_wine",
+        "**/dist",
+        "**/outdir",
+        "**/folders.db",
+        "**/folders.db.*"
     ],
     "files.watcherExclude": {
         "**/.git/objects/**": true,
@@ -47,7 +63,12 @@
         "**/.wine/**": true,
         "**/backups/**": true,
         "**/dist_windows/**": true,
-        "**/.opencode/**": true
+        "**/.opencode/**": true,
+        "**/build_wine/**": true,
+        "**/dist/**": true,
+        "**/outdir/**": true,
+        "**/folders.db": true,
+        "**/folders.db.*": true
     },
     "search.followSymlinks": false
 }
