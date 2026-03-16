@@ -21,6 +21,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.database]
 import os
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.utils.bool_utils import normalize_bool
 from interface.database import sqlite_wrapper
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
@@ -824,5 +825,5 @@ class TestDefaultsInheritance:
         result = folder_manager.add_folder(folder_path, template_data=custom_template)
 
         # Custom template values should be used
-        assert result["folder_is_active"] == "False"
+        assert normalize_bool(result["folder_is_active"]) is False
         assert result["process_edi"] == 0

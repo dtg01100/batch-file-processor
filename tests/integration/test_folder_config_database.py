@@ -24,6 +24,7 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+from core.utils.bool_utils import normalize_bool
 from interface.models.folder_configuration import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
@@ -475,7 +476,8 @@ class TestNullAndEmptyHandling:
     def test_empty_ftp_config(self, temp_database):
         """Test that None FTP config doesn't add FTP fields."""
         config = FolderConfiguration(
-            folder_name="/test/path", ftp=None  # No FTP config
+            folder_name="/test/path",
+            ftp=None,  # No FTP config
         )
 
         config_dict = config.to_dict()
@@ -669,9 +671,9 @@ class TestEDIFieldsMapping:
         for field, expected_value in expected_edi_fields.items():
             # Navigate to EDI field
             actual_value = getattr(loaded_config.edi, field)
-            assert (
-                actual_value == expected_value
-            ), f"EDI field {field} mismatch after roundtrip"
+            assert actual_value == expected_value, (
+                f"EDI field {field} mismatch after roundtrip"
+            )
 
 
 class TestCSVFieldsMapping:

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [pytest.mark.integration, pytest.mark.pyinstaller, pytest.mark.slow, pytest.mark.timeout(900)]
+
 # Project root is the top-level repo directory
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 EXECUTABLE_PATH = PROJECT_ROOT / "dist" / "Batch File Sender" / "Batch File Sender"
@@ -59,8 +61,6 @@ def built_executable(tmp_path_factory):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.pyinstaller
-@pytest.mark.slow
 def test_executable_exists_and_is_executable(built_executable):
     """The built artifact exists, is a regular file, and has execute permission."""
     exe = Path(built_executable)
@@ -70,8 +70,6 @@ def test_executable_exists_and_is_executable(built_executable):
     assert os.access(exe, os.X_OK), f"Executable lacks execute permission: {exe}"
 
 
-@pytest.mark.pyinstaller
-@pytest.mark.slow
 def test_self_test_passes(built_executable, tmp_path):
     """Running --self-test on the real executable succeeds without UPX corruption."""
     result = subprocess.run(
@@ -95,8 +93,6 @@ def test_self_test_passes(built_executable, tmp_path):
     ), f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
 
 
-@pytest.mark.pyinstaller
-@pytest.mark.slow
 def test_self_test_output_completeness(built_executable, tmp_path):
     """--self-test output contains all expected section headers."""
     result = subprocess.run(
@@ -122,8 +118,6 @@ def test_self_test_output_completeness(built_executable, tmp_path):
         )
 
 
-@pytest.mark.pyinstaller
-@pytest.mark.slow
 def test_help_flag(built_executable, tmp_path):
     """Running --help exits 0 and advertises --self-test and --automatic."""
     result = subprocess.run(

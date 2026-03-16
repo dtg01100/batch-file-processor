@@ -124,6 +124,8 @@ class TestProcessingCallbackCommunication:
     def test_process_directories_passes_progress_callback_to_dispatch_and_reporting(
         self, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        import types
+
         db = MagicMock()
         db.database_connection = MagicMock()
         db.get_settings_or_default.return_value = {
@@ -154,11 +156,21 @@ class TestProcessingCallbackCommunication:
         folders_table = MagicMock()
         folders_table.find.return_value = []
 
-        captured_dispatch_kwargs: dict = {}
+        captured_config_kwargs: dict = {}
 
-        def fake_dispatch(*args, **kwargs):
-            captured_dispatch_kwargs.update(kwargs)
-            return False, "ok"
+        class FakeDispatchConfig:
+            def __init__(self, **kwargs):
+                captured_config_kwargs.update(kwargs)
+
+        class FakeDispatchOrchestrator:
+            def __init__(self, config):
+                self.config = config
+
+            def process_folder(self, folder, run_log, processed_files):
+                return types.SimpleNamespace(success=True)
+
+            def get_summary(self):
+                return "ok"
 
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
@@ -166,11 +178,12 @@ class TestProcessingCallbackCommunication:
         monkeypatch.setattr(
             "interface.qt.app.utils.do_clear_old_files", lambda *_: None
         )
-        monkeypatch.setattr("dispatch.process", fake_dispatch)
+        monkeypatch.setattr("dispatch.DispatchConfig", FakeDispatchConfig)
+        monkeypatch.setattr("dispatch.DispatchOrchestrator", FakeDispatchOrchestrator)
 
         app._process_directories(folders_table)
 
-        assert captured_dispatch_kwargs["progress_callback"] is app._progress_service
+        assert captured_config_kwargs["progress_reporter"] is app._progress_service
 
         app._reporting_service.send_report_emails.assert_called_once()
         reporting_kwargs = app._reporting_service.send_report_emails.call_args.kwargs

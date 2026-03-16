@@ -367,14 +367,19 @@ class TestDiskIO:
             test_files.append(file_path)
 
         # Measure read performance
+        contents = []
         with measure_time() as t:
             for file_path in test_files:
                 content = file_path.read_text()
+                contents.append(content)
 
         elapsed = t()
         total_bytes = file_size * 100
         throughput_mb_s = (total_bytes / 1024 / 1024) / elapsed
         print(f"\nRead throughput: {throughput_mb_s:.2f} MB/s")
+        # Verify files were actually read correctly
+        assert len(contents) == 100, "Should read all 100 files"
+        assert all(len(c) == file_size for c in contents), "Each file should be 1KB"
         assert_perf_threshold(elapsed < 1.0, "Should read 100KB in under 1 second")
 
     def test_write_performance(self, tmp_path):
@@ -395,6 +400,12 @@ class TestDiskIO:
         total_bytes = file_size * num_files
         throughput_mb_s = (total_bytes / 1024 / 1024) / elapsed
         print(f"\nWrite throughput: {throughput_mb_s:.2f} MB/s")
+        # Verify all files were actually written
+        written_files = list(output_dir.glob("test_*.txt"))
+        assert len(written_files) == num_files, "Should write all 100 files"
+        assert all(
+            f.stat().st_size == file_size for f in written_files
+        ), "Each written file should be exactly 1KB"
         assert_perf_threshold(elapsed < 1.0, "Should complete in under 1 second")
 
 

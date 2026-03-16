@@ -33,10 +33,10 @@ class TestEditSettingsDialogStress:
     def test_smtp_connection_timeout_handling(
         self, qtbot, sample_folder_config, monkeypatch
     ):
-        """Test that SMTP connection timeout is handled gracefully.
+        """Test that SMTP connection timeout is handled gracefully by the Test Connection button.
 
         This test verifies that TimeoutError exceptions from SMTP service are
-        caught and treated as validation failures rather than propagating.
+        caught and reported via QMessageBox rather than propagating as unhandled.
         """
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
@@ -50,21 +50,24 @@ class TestEditSettingsDialogStress:
         qtbot.addWidget(dialog)
 
         dialog._enable_email_cb.setChecked(True)
-        dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("smtp.example.com")
         dialog._email_smtp_port.setText("587")
 
-        # Fixed behavior: exception is caught and validation fails gracefully
-        result = dialog.validate()
-        assert result is False
+        # The Test Connection button handler must not let exceptions propagate
+        dialog._test_smtp_connection()
+
+        mock_smtp.test_connection.assert_called_once()
+        mock_critical.assert_called_once()
+        call_args = mock_critical.call_args[0]
+        assert "Connection timed out" in call_args[2]
 
     def test_smtp_connection_exception_handling(
         self, qtbot, sample_folder_config, monkeypatch
     ):
-        """Test that unexpected SMTP exceptions are handled.
+        """Test that unexpected SMTP exceptions are handled by the Test Connection button.
 
         This test verifies that RuntimeError exceptions from SMTP service are
-        caught and treated as validation failures rather than propagating.
+        caught and reported via QMessageBox rather than propagating as unhandled.
         """
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
@@ -78,13 +81,16 @@ class TestEditSettingsDialogStress:
         qtbot.addWidget(dialog)
 
         dialog._enable_email_cb.setChecked(True)
-        dialog._email_address.setText("test@example.com")
         dialog._email_smtp_server.setText("smtp.example.com")
         dialog._email_smtp_port.setText("587")
 
-        # Fixed behavior: exception is caught and validation fails gracefully
-        result = dialog.validate()
-        assert result is False
+        # The Test Connection button handler must not let exceptions propagate
+        dialog._test_smtp_connection()
+
+        mock_smtp.test_connection.assert_called_once()
+        mock_critical.assert_called_once()
+        call_args = mock_critical.call_args[0]
+        assert "Unexpected error" in call_args[2]
 
     def test_invalid_email_formats(self, qtbot, sample_folder_config, monkeypatch):
         """Test various invalid email formats are rejected."""

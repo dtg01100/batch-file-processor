@@ -582,6 +582,36 @@ class TestEDIValidationStep:
         assert result.is_valid is False
         assert len(result.errors) > 0
 
+    def test_execute_returns_true_and_original_path_for_valid_result(self):
+        """Execute should return (True, file_path) when validation passes."""
+        mock_validator = MockValidatorForStep(should_pass=True)
+        step = EDIValidationStep(validator=mock_validator)
+
+        is_valid, path_or_errors = step.execute(
+            "/test/input.edi", {"filename_for_log": "input.edi"}
+        )
+
+        assert is_valid is True
+        assert path_or_errors == "/test/input.edi"
+
+    def test_execute_returns_false_and_errors_for_invalid_result(self):
+        """Execute should return (False, errors) when validation fails."""
+        mock_validator = MockValidatorForStep(should_pass=False, errors=["bad data"])
+        step = EDIValidationStep(validator=mock_validator)
+
+        is_valid, path_or_errors = step.execute("/test/input.edi", {})
+
+        assert is_valid is False
+        assert path_or_errors == ["bad data"]
+
+    def test_build_log_output_empty_when_no_errors_or_warnings(self):
+        """No errors/warnings should produce an empty validation log output."""
+        step = EDIValidationStep()
+
+        log_output = step._build_log_output("file.edi", [], [], "validator log")
+
+        assert log_output == ""
+
     def test_multiple_validations_accumulate_log(self, edi_content_with_minor_errors):
         """Test multiple validations accumulate error log."""
         mock_fs = MockFileSystem(

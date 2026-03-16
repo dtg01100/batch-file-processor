@@ -24,6 +24,7 @@ import sqlite3
 
 import folders_database_migrator
 import schema
+from core.utils.bool_utils import normalize_bool
 from interface.database import sqlite_wrapper
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")
@@ -148,7 +149,7 @@ class TestLegacyDatabasePreConditions:
         row = conn.execute(
             "SELECT folder_is_active FROM folders WHERE id=21"
         ).fetchone()
-        assert row[0] == "True"
+        assert normalize_bool(row[0]) is True
         conn.close()
 
 
@@ -333,7 +334,9 @@ class TestBooleanNormalization:
                     assert val not in (
                         "True",
                         "False",
-                    ), f"Folder {folder['id']}.{field} = {val!r} still has string boolean"
+                    ), (
+                        f"Folder {folder['id']}.{field} = {val!r} still has string boolean"
+                    )
 
 
 class TestIndexesCreated:

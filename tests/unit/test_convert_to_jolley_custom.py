@@ -189,7 +189,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
         assert hasattr(convert_to_jolley_custom, "edi_convert")
         assert hasattr(convert_to_jolley_custom, "CustomerLookupError")
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_edi_convert_returns_csv_filename(
         self,
         mock_query_runner,
@@ -221,7 +221,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
         assert result == output_file + ".csv"
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_creates_csv_file(
         self,
         mock_query_runner,
@@ -255,7 +255,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
     """Test customer lookup functionality."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_customer_lookup_error_when_not_found(
         self,
         mock_query_runner,
@@ -297,7 +297,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
 
         assert "Cannot Find Order" in str(exc_info.value)
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_customer_data_used_in_output(
         self,
         mock_query_runner,
@@ -352,7 +352,7 @@ class TestJolleyCustomPrettifyDates(TestJolleyCustomFixtures):
 class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
     """Test address formatting in output."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_bill_to_address_format(
         self,
         mock_query_runner,
@@ -385,7 +385,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should contain formatted address
             assert "Bill To:" in content or "12345" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_ship_to_address_format(
         self,
         mock_query_runner,
@@ -418,7 +418,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should contain ship to
             assert "Ship To:" in content or "12345" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_corporate_customer_address(
         self,
         mock_query_runner,
@@ -451,7 +451,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             # Should use corporate address when available
             assert "Corporate Customer" in content or "456 Corporate Ave" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_no_corporate_fallback_to_regular(
         self,
         mock_query_runner,
@@ -488,7 +488,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
     """Test item total calculation."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_item_total_calculation(
         self,
         mock_query_runner,
@@ -538,7 +538,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             # Should calculate correct total
             assert "$" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_negative_quantity(
         self,
         mock_query_runner,
@@ -589,7 +589,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
 class TestJolleyCustomUOM(TestJolleyCustomFixtures):
     """Test UOM (Unit of Measure) handling."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_uom_lookup(
         self,
         mock_query_runner,
@@ -640,7 +640,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
 class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
     """Test UPC generation."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_upc_11_digit_with_check_digit(
         self,
         mock_query_runner,
@@ -688,7 +688,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         # Should add check digit to make 12-digit UPC
         assert os.path.exists(result)
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_upc_8_digit_conversion(
         self,
         mock_query_runner,
@@ -736,7 +736,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         # Should convert UPC-E to UPC-A
         assert os.path.exists(result)
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_empty_upc_handling(
         self,
         mock_query_runner,
@@ -788,7 +788,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
 class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
     """Test edge cases and error conditions."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_empty_edi_file(
         self,
         mock_query_runner,
@@ -826,7 +826,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         assert os.path.exists(result)
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_only_header_record(
         self,
         mock_query_runner,
@@ -854,7 +854,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         assert os.path.exists(result)
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_multiple_detail_records(
         self,
         mock_query_runner,
@@ -918,7 +918,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             # Should have multiple data rows
             assert len(rows) > 3  # Header rows + data rows
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_c_record_charges(
         self,
         mock_query_runner,
@@ -972,7 +972,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
     """Test output structure and formatting."""
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_invoice_details_header(
         self,
         mock_query_runner,
@@ -1005,7 +1005,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             content = f.read()
             assert "Invoice Details" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_invoice_total(
         self,
         mock_query_runner,
@@ -1039,7 +1039,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             # Invoice total from header = 0000010000 = $100.00
             assert "Total:" in content
 
-    @patch("core.database.create_query_runner")
+    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_column_headers(
         self,
         mock_query_runner,

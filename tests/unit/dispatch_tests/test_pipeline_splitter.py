@@ -12,6 +12,8 @@ from dispatch.pipeline.splitter import (
     FilesystemAdapter,
     MockSplitter,
     SplitterResult,
+    _normalize_include_flag,
+    _normalize_true_false_only,
 )
 
 
@@ -1002,3 +1004,56 @@ class TestEdgeCases:
             params = {"split_edi": True, "prepend_date_files": value}
             step.split("/input/test.edi", "/output", params, {})
             assert mock_splitter.last_config.prepend_date is False
+
+
+class TestNormalizationHelpers:
+    """Tests for module-level normalization helpers."""
+
+    def test_normalize_true_false_only_strict_string_behavior(self):
+        """Only literal true/false strings are treated as valid string booleans."""
+        assert _normalize_true_false_only("true") is True
+        assert _normalize_true_false_only("FALSE") is False
+        assert _normalize_true_false_only("yes") is False
+
+    def test_normalize_include_flag_handles_none_and_unexpected_strings(self):
+        """Include-flag normalization handles None defaults and arbitrary strings."""
+        assert _normalize_include_flag(None, default=True) is True
+        assert _normalize_include_flag(None, default=False) is False
+        assert _normalize_include_flag("anything") is True
+
+
+class TestExecuteWrapper:
+    """Tests for EDISplitterStep.execute wrapper behavior."""
+
+    def test_execute_returns_output_paths_from_split_result(self):
+        """Execute maps SplitterResult tuples to a flat list of output paths."""
+        step = EDISplitterStep(splitter=MockEDISplitter())
+
+        with patch.object(
+            step,
+            "split",
+            return_value=SplitterResult(
+                files=[
+                    ("/out/one.edi", "A_", ".edi"),
+                    ("/out/two.edi", "B_", ".edi"),
+                ]
+            ),
+        ) as mock_split:
+            result = step.execute("/input/source.edi", {"upc_dict": {"1": "x"}})
+
+        assert result == ["/out/one.edi", "/out/two.edi"]
+        mock_split.assert_called_once()
+
+    def test_execute_defaults_upc_dict_to_empty_dict(self):
+        """Execute uses an empty UPC dict when folder config does not provide one."""
+        step = EDISplitterStep(splitter=MockEDISplitter())
+
+        with patch.object(
+            step,
+            "split",
+            return_value=SplitterResult(files=[("/out/only.edi", "", "")]),
+        ) as mock_split:
+            step.execute("/input/source.edi", {})
+
+        call_args = mock_split.call_args.args
+        assert call_args[3] == {}

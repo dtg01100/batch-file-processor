@@ -222,7 +222,6 @@ def orchestrator(workspace, mock_progress_reporter):
         settings={},
         version="1.0.0",
         progress_reporter=mock_progress_reporter,
-        use_pipeline=True,
     )
 
     orch = DispatchOrchestrator(config)
@@ -942,7 +941,8 @@ class TestEdgeCasesAndErrorHandling:
         )
 
         # Should complete without error but process 0 files
-        assert result is not None
+        assert result.success is True, "Empty folder dispatch should succeed"
+        assert result.files_processed == 0, "Should process no files from empty folder"
 
     def test_nonexistent_folder_path(self, workspace):
         """Test adding a folder with non-existent path."""
@@ -950,18 +950,25 @@ class TestEdgeCasesAndErrorHandling:
 
         # This should still work (path validation happens elsewhere)
         folder = folder_manager.add_folder("/nonexistent/path/folder")
-        assert folder is not None
+        assert folder["folder_name"] == "/nonexistent/path/folder"
+        # Should be persisted in the database
+        db_record = workspace["db"].folders_table.find_one(
+            folder_name="/nonexistent/path/folder"
+        )
+        assert db_record is not None, "Folder should be saved to the database"
 
     def test_folder_without_required_settings(self, workspace):
-        """Test folder with minimal settings."""
+        """Test folder with minimal settings uses defaults from oversight table."""
         folder_manager = FolderManager(workspace["db"])
 
         # Add folder - should use defaults
         folder = folder_manager.add_folder(str(workspace["input_folder"]))
 
-        # Should have a valid record
-        assert folder is not None
+        # Should have a valid record with required keys
         assert "folder_name" in folder
+        assert folder["folder_name"] == str(workspace["input_folder"])
+        # Default convert_to_format should come from oversight defaults
+        assert "convert_to_format" in folder, "Folder should inherit convert_to_format default"
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""

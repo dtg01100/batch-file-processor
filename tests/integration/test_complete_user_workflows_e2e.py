@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from copy_backend import CopyBackend
+from core.utils.bool_utils import normalize_bool
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend
 
@@ -41,7 +42,7 @@ C00000003000030000
 """
         for i in range(5):
             (workspace / "input" / f"invoice_{i:03d}.edi").write_text(
-                edi_content.replace("00001", f"{i+1:05d}")
+                edi_content.replace("00001", f"{i + 1:05d}")
             )
 
         yield workspace
@@ -502,7 +503,7 @@ class TestConfigurationPersistenceWorkflow:
         # Verify all fields persisted
         assert loaded["folder_name"] == config["folder_name"]
         assert loaded["alias"] == config["alias"]
-        assert loaded["process_backend_copy"] == config["process_backend_copy"]
+        assert normalize_bool(loaded["process_backend_copy"]) is True
         assert loaded["convert_to_format"] == config["convert_to_format"]
 
     def test_multiple_folder_configs(self, complete_workspace, temp_database):

@@ -1,7 +1,7 @@
 """Tests for dispatch/pipeline/converter.py module."""
 
 import logging
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -816,3 +816,75 @@ class TestEdgeCases:
         assert result.format_used == "csv"
         assert result.success is True
         assert len(result.errors) == 2
+
+
+class TestExecuteWrapper:
+    """Tests for EDIConverterStep.execute wrapper behavior."""
+
+    def test_execute_returns_output_and_preserves_temp_dir_for_context(self):
+        """Successful execute returns converted path and keeps context temp dir."""
+        step = EDIConverterStep()
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_converter_keep"),
+            patch.object(
+                step,
+                "convert",
+                return_value=ConverterResult(
+                    output_path="/tmp/edi_converter_keep/out.csv",
+                    format_used="csv",
+                    success=True,
+                    errors=[],
+                ),
+            ),
+        ):
+            result = step.execute("/input/file.edi", {}, context=context)
+
+        assert result == "/tmp/edi_converter_keep/out.csv"
+        assert context.temp_dirs == ["/tmp/edi_converter_keep"]
+
+    def test_execute_cleans_temp_dir_when_no_output(self):
+        """Execute cleans temp dir and returns None when no conversion output."""
+        step = EDIConverterStep()
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_converter_cleanup"),
+            patch("shutil.rmtree") as mock_rmtree,
+            patch.object(
+                step,
+                "convert",
+                return_value=ConverterResult(
+                    output_path="/input/file.edi",
+                    format_used="csv",
+                    success=True,
+                    errors=[],
+                ),
+            ),
+        ):
+            result = step.execute("/input/file.edi", {}, context=context)
+
+        assert result is None
+        mock_rmtree.assert_called_once_with(
+            "/tmp/edi_converter_cleanup", ignore_errors=True
+        )
+        assert context.temp_dirs == []
+
+    def test_execute_cleans_temp_dir_and_reraises_on_exception(self):
+        """Execute always cleans temp dir and re-raises conversion exceptions."""
+        step = EDIConverterStep()
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_converter_error"),
+            patch("shutil.rmtree") as mock_rmtree,
+            patch.object(step, "convert", side_effect=RuntimeError("boom")),
+        ):
+            with pytest.raises(RuntimeError, match="boom"):
+                step.execute("/input/file.edi", {}, context=context)
+
+        mock_rmtree.assert_called_once_with(
+            "/tmp/edi_converter_error", ignore_errors=True
+        )
+        assert context.temp_dirs == []

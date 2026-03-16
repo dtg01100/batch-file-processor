@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from scripts.graphical_mock_automatic_run import (
-    _mock_dispatch_process,
+    _mock_orchestrator_process_folder,
     run_graphical_mock_automatic,
 )
 
@@ -21,30 +21,18 @@ pytestmark = [
 ]
 
 
-def test_mock_dispatch_process_updates_progress_and_writes_log() -> None:
+def test_mock_orchestrator_process_folder_writes_log_and_returns_success() -> None:
     run_log = MagicMock()
-    progress = MagicMock()
 
-    has_error, summary = _mock_dispatch_process(
-        _database_connection=MagicMock(),
-        _folders_table_process=MagicMock(),
-        run_log=run_log,
-        _emails_table=MagicMock(),
-        _logs_directory="/tmp/logs",
-        _reporting={},
-        _processed_files=MagicMock(),
-        version="v-test",
-        _errors_directory={},
-        _settings_dict={},
-        progress_callback=progress,
+    result = _mock_orchestrator_process_folder(
+        MagicMock(),
+        {"folder_name": "/tmp/in", "alias": "Mock Alias"},
+        run_log,
+        MagicMock(),
     )
 
-    assert has_error is False
-    assert "Mock graphical dispatch completed successfully" in summary
-    progress.show.assert_called_once()
-    progress.update_progress.assert_called_once_with(100)
-    progress.update_message.assert_called_once()
-    progress.hide.assert_called_once()
+    assert result.success is True
+    assert result.files_processed == 1
     assert run_log.write.call_count >= 2
 
 
@@ -85,4 +73,4 @@ def test_run_graphical_mock_automatic_creates_expected_artifacts(
     assert len(result.run_log_files) >= 1
 
     run_log_text = result.run_log_files[0].read_text(encoding="utf-8")
-    assert "[MOCK] graphical dispatch.process called" in run_log_text
+    assert "[MOCK] graphical DispatchOrchestrator.process_folder called" in run_log_text

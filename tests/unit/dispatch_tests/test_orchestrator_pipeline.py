@@ -51,7 +51,6 @@ class TestDispatchConfigPipelineFields:
         assert config.tweaker_step is None
         assert config.file_processor is None
         assert config.upc_dict == {}
-        assert config.use_pipeline is True
 
     def test_set_pipeline_fields_in_constructor(self):
         """Test setting pipeline fields in constructor."""
@@ -72,7 +71,6 @@ class TestDispatchConfigPipelineFields:
             upc_service=mock_upc_service,
             progress_reporter=mock_progress_reporter,
             upc_dict={"123": "product"},
-            use_pipeline=True,
         )
 
         assert config.validator_step is mock_validator
@@ -83,7 +81,6 @@ class TestDispatchConfigPipelineFields:
         assert config.upc_service is mock_upc_service
         assert config.progress_reporter is mock_progress_reporter
         assert config.upc_dict == {"123": "product"}
-        assert config.use_pipeline is True
 
 
 class TestGetUPCDictionary:
@@ -126,80 +123,6 @@ class TestGetUPCDictionary:
         assert result == {}
 
 
-class TestInitializePipelineSteps:
-    """Tests for _initialize_pipeline_steps method."""
-
-    def test_initialization_with_file_processor(self):
-        """Initialization calls file processor hook when present."""
-        mock_file_processor = MagicMock()
-        mock_file_processor.initialize = MagicMock()
-
-        config = DispatchConfig(file_processor=mock_file_processor)
-        orchestrator = DispatchOrchestrator(config)
-
-        orchestrator._initialize_pipeline_steps()
-
-        mock_file_processor.initialize.assert_called_once()
-
-    def test_lazy_initialization_no_steps(self):
-        """Test lazy initialization when no steps provided."""
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        orchestrator._initialize_pipeline_steps()
-
-
-class TestIsPipelineReady:
-    """Tests for _is_pipeline_ready method."""
-
-    def test_pipeline_ready_with_validator_step(self):
-        """Test pipeline ready with validator step."""
-        mock_validator = MagicMock()
-        config = DispatchConfig(validator_step=mock_validator)
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-    def test_pipeline_ready_with_splitter_step(self):
-        """Test pipeline ready with splitter step."""
-        mock_splitter = MagicMock()
-        config = DispatchConfig(splitter_step=mock_splitter)
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-    def test_pipeline_ready_with_converter_step(self):
-        """Test pipeline ready with converter step."""
-        mock_converter = MagicMock()
-        config = DispatchConfig(converter_step=mock_converter)
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-    def test_pipeline_ready_with_tweaker_step(self):
-        """Test pipeline ready with tweaker step."""
-        mock_tweaker = MagicMock()
-        config = DispatchConfig(tweaker_step=mock_tweaker)
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-    def test_pipeline_ready_with_file_processor(self):
-        """Test pipeline ready with file processor."""
-        mock_file_processor = MagicMock()
-        config = DispatchConfig(file_processor=mock_file_processor)
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-    def test_pipeline_ready_without_steps(self):
-        """Phase 3 always routes through pipeline."""
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        assert orchestrator._is_pipeline_ready() is True
-
-
 class TestProcessFolderWithPipeline:
     """Tests for process_folder_with_pipeline method."""
 
@@ -219,7 +142,6 @@ class TestProcessFolderWithPipeline:
             file_system=mock_fs,
             backends={"copy": mock_backend},
             validator_step=mock_validator,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -256,7 +178,6 @@ class TestProcessFolderWithPipeline:
             backends={"copy": mock_backend},
             validator_step=mock_validator,
             converter_step=mock_converter,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -279,7 +200,7 @@ class TestProcessFolderWithPipeline:
         """Test pipeline processing with non-existent folder."""
         mock_fs = MockFileSystem(dirs=[])
 
-        config = DispatchConfig(file_system=mock_fs, use_pipeline=True)
+        config = DispatchConfig(file_system=mock_fs)
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/notexists", "alias": "Test"}
@@ -295,7 +216,7 @@ class TestProcessFolderWithPipeline:
         """Test pipeline processing with empty folder."""
         mock_fs = MockFileSystem(dirs=["/data/input"])
 
-        config = DispatchConfig(file_system=mock_fs, use_pipeline=True)
+        config = DispatchConfig(file_system=mock_fs)
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/input", "alias": "Test"}
@@ -338,7 +259,6 @@ class TestProcessFileWithPipeline:
             converter_step=mock_converter,
             tweaker_step=mock_tweaker,
             file_processor=mock_file_processor,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -368,7 +288,6 @@ class TestProcessFileWithPipeline:
         config = DispatchConfig(
             file_system=mock_fs,
             validator_step=mock_validator,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -401,7 +320,6 @@ class TestProcessFileWithPipeline:
             file_system=mock_fs,
             backends={"copy": mock_backend},
             splitter_step=mock_splitter,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -438,7 +356,6 @@ class TestProcessFileWithPipeline:
             backends={"copy": mock_backend},
             validator_step=mock_validator,
             converter_step=mock_converter,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -476,7 +393,6 @@ class TestProcessFileWithPipeline:
             backends={"copy": mock_backend},
             validator_step=mock_validator,
             tweaker_step=mock_tweaker,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -505,7 +421,6 @@ class TestProcessFileWithPipeline:
         config = DispatchConfig(
             file_system=mock_fs,
             backends={"copy": mock_backend},
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -530,7 +445,6 @@ class TestProcessFileWithPipeline:
         config = DispatchConfig(
             file_system=mock_fs,
             validator_step=mock_validator,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -660,7 +574,6 @@ class TestProcessedFilesAndCleanupBehavior:
             DispatchConfig(
                 file_system=mock_fs,
                 converter_step=mock_converter,
-                use_pipeline=True,
                 settings={},
             )
         )
@@ -704,7 +617,6 @@ class TestProcessedFilesAndCleanupBehavior:
             DispatchConfig(
                 file_system=mock_fs,
                 converter_step=mock_converter,
-                use_pipeline=True,
                 settings={},
             )
         )
@@ -750,7 +662,6 @@ class TestProcessedFilesAndCleanupBehavior:
             DispatchConfig(
                 file_system=mock_fs,
                 converter_step=mock_converter,
-                use_pipeline=True,
                 settings={},
             )
         )
@@ -821,7 +732,7 @@ class TestProcessFolderPipelineRouting:
     """Tests for routing in process_folder method."""
 
     def test_process_folder_routes_to_pipeline(self):
-        """Test that process_folder routes to pipeline when enabled."""
+        """Test that process_folder routes to pipeline."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -836,7 +747,6 @@ class TestProcessFolderPipelineRouting:
             file_system=mock_fs,
             backends={"copy": mock_backend},
             validator_step=mock_validator,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -858,48 +768,12 @@ class TestProcessFolderPipelineRouting:
 
             mock_pipeline.assert_called_once()
 
-    def test_process_folder_ignores_use_pipeline_and_still_uses_pipeline(self):
-        """Deprecated use_pipeline flag does not change runtime routing."""
-        mock_fs = MockFileSystem(
-            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
-        )
-
-        mock_backend = MagicMock()
-        mock_backend.send.return_value = True
-
-        config = DispatchConfig(
-            file_system=mock_fs,
-            backends={"copy": mock_backend},
-            use_pipeline=True,
-            settings={},
-        )
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {
-            "folder_name": "/data/input",
-            "alias": "Test",
-            "process_backend_copy": True,
-        }
-        run_log = MagicMock()
-
-        with patch.object(orchestrator, "_process_folder_legacy") as mock_legacy:
-            with patch.object(
-                orchestrator, "process_folder_with_pipeline"
-            ) as mock_pipeline:
-                mock_pipeline.return_value = FolderResult(
-                    folder_name="/data/input", alias="Test", files_processed=1
-                )
-                result = orchestrator.process_folder(folder, run_log)
-
-                mock_pipeline.assert_called_once()
-                mock_legacy.assert_not_called()
-
 
 class TestProcessFilePipelineRouting:
     """Tests for routing in process_file method."""
 
     def test_process_file_routes_to_pipeline(self):
-        """Test that process_file routes to pipeline when enabled."""
+        """Test that process_file routes to pipeline."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -909,7 +783,6 @@ class TestProcessFilePipelineRouting:
         config = DispatchConfig(
             file_system=mock_fs,
             validator_step=mock_validator,
-            use_pipeline=True,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -924,35 +797,12 @@ class TestProcessFilePipelineRouting:
 
             mock_pipeline.assert_called_once()
 
-    def test_process_file_ignores_use_pipeline_and_still_uses_pipeline(self):
-        """Deprecated use_pipeline flag does not change file routing."""
-        mock_fs = MockFileSystem(
-            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
-        )
 
-        config = DispatchConfig(file_system=mock_fs, use_pipeline=False, settings={})
-        orchestrator = DispatchOrchestrator(config)
+class TestPipelineOnlyContract:
+    """Tests for the pipeline-only processing contract."""
 
-        folder = {"folder_name": "/data/input"}
-
-        with patch.object(orchestrator, "_process_file_legacy") as mock_legacy:
-            with patch.object(
-                orchestrator, "_process_file_with_pipeline"
-            ) as mock_pipeline:
-                mock_pipeline.return_value = FileResult(
-                    file_name="/data/input/file.edi", checksum="abc123"
-                )
-                result = orchestrator.process_file("/data/input/file.edi", folder)
-
-                mock_pipeline.assert_called_once()
-                mock_legacy.assert_not_called()
-
-
-class TestBackwardCompatibility:
-    """Tests for backward compatibility with legacy processing."""
-
-    def test_process_file_works_when_use_pipeline_false(self):
-        """Compatibility: deprecated flag does not break processing."""
+    def test_process_file_works_without_legacy_toggle(self):
+        """File processing works with the default pipeline-only configuration."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -963,7 +813,6 @@ class TestBackwardCompatibility:
         config = DispatchConfig(
             file_system=mock_fs,
             backends={"copy": mock_backend},
-            use_pipeline=False,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -975,7 +824,7 @@ class TestBackwardCompatibility:
         assert result.file_name == "/data/input/file.edi"
         assert result.checksum is not None
 
-    def test_process_file_with_validation_when_use_pipeline_false(self):
+    def test_process_file_with_validation_runs_pipeline_path(self):
         """Validation still runs through pipeline path."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"valid content"}
@@ -991,7 +840,6 @@ class TestBackwardCompatibility:
             file_system=mock_fs,
             backends={"copy": mock_backend},
             validator_step=mock_validator,
-            use_pipeline=False,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -1006,8 +854,8 @@ class TestBackwardCompatibility:
 
         mock_validator.execute.assert_called_once()
 
-    def test_process_folder_when_use_pipeline_false(self):
-        """Folder processing still routes through consolidated path."""
+    def test_process_folder_routes_through_consolidated_pipeline_path(self):
+        """Folder processing routes through consolidated pipeline path."""
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -1018,7 +866,6 @@ class TestBackwardCompatibility:
         config = DispatchConfig(
             file_system=mock_fs,
             backends={"copy": mock_backend},
-            use_pipeline=False,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -1034,3 +881,66 @@ class TestBackwardCompatibility:
 
         assert result.folder_name == "/data/input"
         assert result.alias == "Test"
+
+
+class TestOrchestratorPipelineHelpers:
+    """Tests for pipeline helper methods in DispatchOrchestrator."""
+
+    def test_should_apply_tweaker_false_when_tweaker_missing(self):
+        """Tweaker should not run when no step is configured."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        assert orchestrator._should_apply_tweaker(None, "/tmp/file.edi") is False
+
+    def test_should_apply_tweaker_false_for_builtin_tweaker_on_non_edi(self):
+        """Built-in EDITweakerStep should be skipped for non-EDI files."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        class EDITweakerStep:
+            pass
+
+        assert (
+            orchestrator._should_apply_tweaker(EDITweakerStep(), "/tmp/file.csv")
+            is False
+        )
+
+    def test_should_apply_tweaker_true_for_custom_tweaker_on_non_edi(self):
+        """Custom tweakers remain eligible for converted/non-EDI outputs."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        class CustomTweaker:
+            pass
+
+        assert (
+            orchestrator._should_apply_tweaker(CustomTweaker(), "/tmp/file.csv")
+            is True
+        )
+
+    def test_build_processing_context_applies_defaults_and_normalization(self):
+        """Context builder should normalize flags/defaults without mutating source."""
+        orchestrator = DispatchOrchestrator(DispatchConfig(settings={"mode": "test"}))
+        folder = {
+            "upc_target_length": 0,
+            "process_edi": "True",
+            "a_record_padding": None,
+            "split_edi": False,
+            "tweak_edi": False,
+        }
+
+        context = orchestrator._build_processing_context(folder, {"u": "p"})
+
+        assert context.effective_folder["a_record_padding"] == ""
+        assert context.effective_folder["upc_target_length"] == 11
+        assert context.effective_folder["convert_edi"] is True
+        assert "convert_edi" not in folder
+
+    def test_build_processing_context_sets_process_edi_when_pipeline_flags_enabled(self):
+        """Missing process_edi is inferred True when split/convert/tweak is enabled."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {"split_edi": True, "convert_edi": False, "tweak_edi": False},
+            {},
+        )
+
+        assert context.effective_folder["process_edi"] is True

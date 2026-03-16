@@ -746,18 +746,8 @@ class TestConvertToSimplifiedCSV:
         assert convert_to_price("000001") == "0.01"
 
     def test_qty_to_int_function(self):
-        """Test the qty_to_int helper function."""
-
-        def qty_to_int(qty):
-            if qty.startswith("-"):
-                wrkqty = int(qty[1:])
-                wrkqtyint = wrkqty - (wrkqty * 2)
-            else:
-                try:
-                    wrkqtyint = int(qty)
-                except ValueError:
-                    wrkqtyint = 0
-            return wrkqtyint
+        """utils.qty_to_int converts quantity strings, including negatives."""
+        from utils import qty_to_int
 
         assert qty_to_int("00010") == 10
         assert qty_to_int("-00010") == -10
@@ -786,33 +776,11 @@ class TestConvertToYellowdogCSV:
         assert hasattr(convert_to_yellowdog_csv, "edi_convert")
         assert callable(convert_to_yellowdog_csv.edi_convert)
 
-    def test_ydog_writer_class_exists(self):
-        """Test that YDogWriter class exists or is implemented differently."""
+    def test_yellowdog_converter_class_exists(self):
+        """YellowDogConverter class must exist in the module."""
         import convert_to_yellowdog_csv
 
-        # The YDogWriter class might be defined differently
-        # Check for any class that handles yellowdog conversion
-        has_converter = hasattr(convert_to_yellowdog_csv, "edi_convert")
-        assert has_converter is True
-
-    def test_yellowdog_csv_headers(self):
-        """Test that yellowdog CSV has expected headers."""
-        expected_headers = [
-            "Invoice Total",
-            "Description",
-            "Item Number",
-            "Cost",
-            "Quantity",
-            "UOM Desc.",
-            "Invoice Date",
-            "Invoice Number",
-            "Customer Name",
-            "Customer PO Number",
-            "UPC",
-        ]
-
-        # Verify headers are defined correctly
-        assert len(expected_headers) == 11
+        assert hasattr(convert_to_yellowdog_csv, "YellowDogConverter")
 
 
 class TestConvertToEstoreEinvoice:
@@ -845,50 +813,12 @@ class TestConvertToEstoreEinvoice:
         assert result == "1.00", f"Expected '1.00', got '{result}'"
 
     def test_qty_to_int_function(self):
-        """Test the qty_to_int helper function."""
-
-        def qty_to_int(qty):
-            if qty.startswith("-"):
-                wrkqty = int(qty[1:])
-                wrkqtyint = wrkqty - (wrkqty * 2)
-            else:
-                try:
-                    wrkqtyint = int(qty)
-                except ValueError:
-                    wrkqtyint = 0
-            return wrkqtyint
+        """utils.qty_to_int converts quantity strings, including negatives."""
+        from utils import qty_to_int
 
         assert qty_to_int("00010") == 10
         assert qty_to_int("-00010") == -10
-
-    def test_estore_parameters_validation(self):
-        """Test estore-specific parameter validation."""
-
-        def validate_estore_params(params):
-            required = [
-                "estore_store_number",
-                "estore_Vendor_OId",
-                "estore_vendor_NameVendorOID",
-            ]
-            for param in required:
-                if param not in params or params[param] is None:
-                    return False
-            return True
-
-        valid_params = {
-            "estore_store_number": "123",
-            "estore_Vendor_OId": "456",
-            "estore_vendor_NameVendorOID": "TestVendor",
-        }
-
-        invalid_params = {
-            "estore_store_number": "123",
-            "estore_Vendor_OId": None,
-            "estore_vendor_NameVendorOID": "TestVendor",
-        }
-
-        assert validate_estore_params(valid_params) is True
-        assert validate_estore_params(invalid_params) is False
+        assert qty_to_int("invalid") == 0
 
 
 class TestConvertToEstoreEinvoiceGeneric:

@@ -26,6 +26,13 @@ from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from interface.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
+from tests.integration.option_matrix import (
+    CSV_OPTION_CASES,
+    FORMAT_OPTION_CASES,
+    OPTION_COMBINATION_CASES,
+    SIMPLIFIED_CSV_OPTION_CASES,
+    TWEAK_OPTION_CASES,
+)
 
 
 @pytest.fixture
@@ -152,7 +159,6 @@ def test_full_real_world_workflow(workspace):
     config = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,  # New pipeline mode
     )
     # Since we use pipeline mode, we need to provide pipeline steps if we want them to work,
     # but for basic sending, it should still work if send_manager is configured.
@@ -276,7 +282,6 @@ def test_tweaking_scenario(workspace):
                 "as400_address": "addr",
                 "odbc_driver": "driver",
             },
-            use_pipeline=True,
             tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
@@ -343,7 +348,6 @@ def test_csv_conversion_with_options(workspace):
     config = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,
         converter_step=EDIConverterStep(),
     )
     orchestrator = DispatchOrchestrator(config)
@@ -410,7 +414,6 @@ def test_all_conversion_formats(workspace):
         config = DispatchConfig(
             database=db,
             settings={},
-            use_pipeline=True,
             converter_step=EDIConverterStep(),
         )
         orchestrator = DispatchOrchestrator(config)
@@ -475,7 +478,6 @@ def test_simplified_csv_with_options(workspace):
     config = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,
         converter_step=EDIConverterStep(),
     )
     orchestrator = DispatchOrchestrator(config)
@@ -558,7 +560,6 @@ def test_email_backend(workspace):
                 "email_smtp_server": "smtp.example.com",
                 "smtp_port": 587,
             },
-            use_pipeline=True,
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -627,7 +628,6 @@ def test_ftp_backend(workspace):
         config = DispatchConfig(
             database=db,
             settings={},
-            use_pipeline=True,
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -700,7 +700,6 @@ def test_conversion_with_tweaking(workspace):
                 "as400_address": "addr",
                 "odbc_driver": "driver",
             },
-            use_pipeline=True,
             tweaker_step=EDITweakerStep(),
             converter_step=EDIConverterStep(),
         )
@@ -732,25 +731,7 @@ def test_conversion_with_tweaking(workspace):
 
 
 # Test CSV Conversion Options Individually
-@pytest.mark.parametrize(
-    "option,value,expected_behavior",
-    [
-        ("include_headers", True, "headers_present"),
-        ("include_headers", False, "no_headers"),
-        ("include_a_records", True, "a_records_present"),
-        ("include_a_records", False, "no_a_records"),
-        ("include_c_records", True, "c_records_present"),
-        ("include_c_records", False, "no_c_records"),
-        ("calculate_upc_check_digit", True, "upc_prefixed_with_tab"),
-        ("calculate_upc_check_digit", False, "upc_normal"),
-        ("pad_a_records", True, "a_record_padded"),
-        ("pad_a_records", False, "a_record_not_padded"),
-        ("override_upc_bool", True, "upc_overridden"),
-        ("override_upc_bool", False, "upc_original"),
-        ("retail_uom", True, "retail_conversion"),
-        ("retail_uom", False, "original_uom"),
-    ],
-)
+@pytest.mark.parametrize(("option", "value", "expected_behavior"), CSV_OPTION_CASES)
 def test_csv_option_individual(workspace, option, value, expected_behavior):
     """Test each CSV conversion option individually to verify correct behavior."""
     db = workspace["db"]
@@ -802,7 +783,6 @@ def test_csv_option_individual(workspace, option, value, expected_behavior):
     config_obj = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,
         converter_step=EDIConverterStep(),
     )
     orchestrator = DispatchOrchestrator(config_obj)
@@ -862,15 +842,7 @@ def test_csv_option_individual(workspace, option, value, expected_behavior):
         ), f"Output file should have content for {option}={value}"
 
 
-@pytest.mark.parametrize(
-    "option,value",
-    [
-        ("include_item_numbers", True),
-        ("include_item_numbers", False),
-        ("include_item_description", True),
-        ("include_item_description", False),
-    ],
-)
+@pytest.mark.parametrize(("option", "value"), SIMPLIFIED_CSV_OPTION_CASES)
 def test_simplified_csv_option_individual(workspace, option, value):
     """Test simplified CSV options individually."""
     db = workspace["db"]
@@ -909,7 +881,6 @@ def test_simplified_csv_option_individual(workspace, option, value):
     config_obj = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,
         converter_step=EDIConverterStep(),
     )
     orchestrator = DispatchOrchestrator(config_obj)
@@ -938,18 +909,7 @@ def test_simplified_csv_option_individual(workspace, option, value):
             assert "TEST ITEM" in output_content, "Description should be present"
 
 
-@pytest.mark.parametrize(
-    "tweak_option,value",
-    [
-        ("calculate_upc_check_digit", True),
-        ("pad_a_records", True),
-        ("append_a_records", True),
-        ("invoice_date_custom_format", True),
-        ("force_txt_file_ext", True),
-        ("retail_uom", True),
-        ("override_upc_bool", True),
-    ],
-)
+@pytest.mark.parametrize(("tweak_option", "value"), TWEAK_OPTION_CASES)
 def test_tweaking_option_individual(workspace, tweak_option, value):
     """Test each EDI tweaking option individually."""
     db = workspace["db"]
@@ -1018,7 +978,6 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
                 "as400_address": "addr",
                 "odbc_driver": "driver",
             },
-            use_pipeline=True,
             tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config_obj)
@@ -1030,7 +989,7 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
     assert result.files_processed == 1, f"Errors: {result.errors}"
 
     # Verify output
-    if tweak_option == "force_txt_file_ext":
+    if tweak_option == "force_txt_file_ext" and value:
         output_files = list(workspace["output_1"].glob("*.txt"))
         assert len(output_files) >= 1, f"Expected .txt output for {tweak_option}"
     else:
@@ -1041,84 +1000,28 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
 
     # Specific validations
     if tweak_option == "calculate_upc_check_digit":
-        assert "B012345678905" in output_content, "UPC check digit should be appended"
+        if value:
+            assert "B012345678905" in output_content, (
+                "UPC check digit should be appended when enabled"
+            )
+        else:
+            assert "B012345678905" not in output_content, (
+                "UPC check digit should not be appended when disabled"
+            )
     elif tweak_option == "append_a_records":
-        assert "APPENDED" in output_content, "A record should have appended text"
+        if value:
+            assert "APPENDED" in output_content, (
+                "A record should have appended text when enabled"
+            )
+        else:
+            assert "APPENDED" not in output_content, (
+                "A record should not have appended text when disabled"
+            )
 
 
 # Test common option combinations
 @pytest.mark.parametrize(
-    "combo_name,config_overrides,description",
-    [
-        (
-            "full_csv_all_options",
-            {
-                "convert_to_format": "csv",
-                "include_headers": 1,
-                "include_a_records": 1,
-                "include_c_records": 1,
-                "pad_a_records": 1,
-                "a_record_padding": " " * 20,
-                "a_record_padding_length": 20,
-            },
-            "CSV with all inclusion options enabled",
-        ),
-        (
-            "csv_minimal",
-            {
-                "convert_to_format": "csv",
-                "include_headers": 0,
-                "include_a_records": 0,
-                "include_c_records": 0,
-            },
-            "CSV with minimal options (B records only)",
-        ),
-        (
-            "csv_with_upc_override",
-            {
-                "convert_to_format": "csv",
-                "include_headers": 1,
-                "override_upc_bool": 1,
-                "override_upc_level": 1,
-                "override_upc_category_filter": "ALL",
-            },
-            "CSV with UPC override from lookup table",
-        ),
-        (
-            "csv_with_retail_uom",
-            {
-                "convert_to_format": "csv",
-                "include_headers": 1,
-                "retail_uom": 1,
-            },
-            "CSV with retail UOM conversion",
-        ),
-        (
-            "tweak_and_convert_full",
-            {
-                "tweak_edi": 1,
-                "convert_to_format": "csv",
-                "calculate_upc_check_digit": 1,
-                "upc_target_length": 11,
-                "include_headers": 1,
-                "pad_a_records": 1,
-                "a_record_padding": " " * 20,
-                "a_record_padding_length": 20,
-            },
-            "Full pipeline: tweak UPC + pad A + convert CSV",
-        ),
-        (
-            "simplified_csv_full",
-            {
-                "convert_to_format": "simplified_csv",
-                "include_headers": 1,
-                "include_item_numbers": 1,
-                "include_item_description": 1,
-                "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost",
-            },
-            "Simplified CSV with all columns and custom sort",
-        ),
-    ],
+    ("combo_name", "config_overrides", "description"), OPTION_COMBINATION_CASES
 )
 def test_option_combinations(workspace, combo_name, config_overrides, description):
     """Test common combinations of options that represent real-world usage patterns."""
@@ -1178,7 +1081,6 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
                     "as400_address": "addr",
                     "odbc_driver": "driver",
                 },
-                use_pipeline=True,
                 tweaker_step=EDITweakerStep(),
                 converter_step=EDIConverterStep(),
             )
@@ -1193,7 +1095,6 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
         config_obj = DispatchConfig(
             database=db,
             settings={},
-            use_pipeline=True,
             converter_step=EDIConverterStep(),
         )
         orchestrator = DispatchOrchestrator(config_obj)
@@ -1213,23 +1114,7 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
 
 
 # Test all conversion formats with key option combinations
-@pytest.mark.parametrize(
-    "format_name,options",
-    [
-        ("csv", {"include_headers": 1, "include_a_records": 1, "include_c_records": 1}),
-        ("csv", {"include_headers": 0, "include_a_records": 0, "include_c_records": 0}),
-        ("simplified_csv", {"include_headers": 1, "include_item_numbers": 1}),
-        ("simplified_csv", {"include_headers": 0, "include_item_description": 1}),
-        ("estore_einvoice", {}),
-        ("estore_einvoice_generic", {}),
-        ("fintech", {}),
-        ("jolley_custom", {}),
-        ("scannerware", {}),
-        ("scansheet_type_a", {}),
-        ("stewarts_custom", {}),
-        ("yellowdog_csv", {}),
-    ],
-)
+@pytest.mark.parametrize(("format_name", "options"), FORMAT_OPTION_CASES)
 def test_all_formats_with_options(workspace, format_name, options):
     """Test all conversion formats with various option combinations."""
     db = workspace["db"]
@@ -1270,7 +1155,6 @@ def test_all_formats_with_options(workspace, format_name, options):
     config_obj = DispatchConfig(
         database=db,
         settings={},
-        use_pipeline=True,
         converter_step=EDIConverterStep(),
     )
     orchestrator = DispatchOrchestrator(config_obj)
@@ -1364,7 +1248,6 @@ def test_backends_with_csv_options(workspace, backend_type, backend_config):
             config_obj = DispatchConfig(
                 database=db,
                 settings={},
-                use_pipeline=True,
                 converter_step=EDIConverterStep(),
             )
             orchestrator = DispatchOrchestrator(config_obj)
@@ -1394,7 +1277,6 @@ def test_backends_with_csv_options(workspace, backend_type, backend_config):
                     "email_smtp_server": "smtp.example.com",
                     "smtp_port": 587,
                 },
-                use_pipeline=True,
                 converter_step=EDIConverterStep(),
             )
             orchestrator = DispatchOrchestrator(config_obj)
@@ -1411,7 +1293,6 @@ def test_backends_with_csv_options(workspace, backend_type, backend_config):
         config_obj = DispatchConfig(
             database=db,
             settings={},
-            use_pipeline=True,
             converter_step=EDIConverterStep(),
         )
         orchestrator = DispatchOrchestrator(config_obj)

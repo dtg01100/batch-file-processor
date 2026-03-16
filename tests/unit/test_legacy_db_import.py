@@ -467,6 +467,8 @@ class TestV32DatabaseMigration:
         db.close()
 
 
+@pytest.mark.slow
+@pytest.mark.database
 class TestV32FixtureDbMigrationAtScale:
     """Test migration at scale using the 530-folder real legacy fixture database."""
 

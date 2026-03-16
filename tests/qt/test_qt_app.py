@@ -246,26 +246,19 @@ class TestQtBatchFileSenderApp:
         assert row2["folder_is_active"] is False
         assert app._database.folders_table.update.call_count == 2
 
-    def test_automatic_process_directories_exits_after_no_active_folders(
-        self, monkeypatch
-    ):
+    def test_automatic_process_directories_delegates_to_run_coordinator(self):
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._run_coordinator = MagicMock()
 
         folders_table = MagicMock()
-        folders_table.count.return_value = 0
 
-        def _raise_exit():
-            raise SystemExit()
+        app._automatic_process_directories(folders_table)
 
-        monkeypatch.setattr("interface.qt.app.sys.exit", _raise_exit)
-
-        with pytest.raises(SystemExit):
-            app._automatic_process_directories(folders_table)
-
-        app._database.close.assert_called_once()
+        app._run_coordinator.automatic_process_directories.assert_called_once_with(
+            folders_table
+        )
 
     def test_check_logs_directory_returns_true_when_writable(self, tmp_path):
         from interface.qt.app import QtBatchFileSenderApp
@@ -572,49 +565,33 @@ class TestQtBatchFileSenderApp:
             {"id": 55, "folder_name": "/tmp/existing"}
         )
 
-    def test_automatic_process_directories_calls_process_and_exits(self, monkeypatch):
+    def test_automatic_process_directories_calls_process_and_exits(self):
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
-        app._process_directories = MagicMock()
+        app._run_coordinator = MagicMock()
 
         folders_table = MagicMock()
-        folders_table.count.return_value = 2
 
-        def _raise_exit():
-            raise SystemExit()
+        app._automatic_process_directories(folders_table)
 
-        monkeypatch.setattr("interface.qt.app.sys.exit", _raise_exit)
+        app._run_coordinator.automatic_process_directories.assert_called_once_with(
+            folders_table
+        )
 
-        with pytest.raises(SystemExit):
-            app._automatic_process_directories(folders_table)
-
-        app._process_directories.assert_called_once_with(folders_table)
-        app._database.close.assert_called_once()
-
-    def test_automatic_process_directories_logs_critical_error_on_exception(
-        self, monkeypatch
-    ):
+    def test_automatic_process_directories_propagates_coordinator_exception(self):
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
-        app._process_directories = MagicMock(side_effect=RuntimeError("boom"))
-        app._log_critical_error = MagicMock()
+        app._run_coordinator = MagicMock()
+        app._run_coordinator.automatic_process_directories.side_effect = RuntimeError(
+            "coordinator error"
+        )
 
         folders_table = MagicMock()
-        folders_table.count.return_value = 2
 
-        def _raise_exit():
-            raise SystemExit()
-
-        monkeypatch.setattr("interface.qt.app.sys.exit", _raise_exit)
-
-        with pytest.raises(SystemExit):
+        with pytest.raises(RuntimeError, match="coordinator error"):
             app._automatic_process_directories(folders_table)
-
-        app._log_critical_error.assert_called_once()
 
     def test_select_folder_adds_new_folder_and_marks_processed(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
@@ -786,6 +763,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr(app, "_setup_config_directories", lambda: None)
 
         app.initialize()
+        app.run()
 
         app._automatic_process_directories.assert_called_once_with(db.folders_table)
         assert app._app is None
@@ -1109,29 +1087,11 @@ class TestQtBatchFileSenderApp:
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._database_path = str(tmp_path / "folders.db")
-        app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
-        app._version = "1.0"
-        app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
-        app._check_logs_directory = MagicMock(return_value=True)
-        app._args = argparse.Namespace(automatic=False)
-
-        mock_process = MagicMock(return_value=(False, "Success"))
-
-        monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
-        monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
-        monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
-        )
-        monkeypatch.setattr("dispatch.process", mock_process)
-
-        (tmp_path / "logs").mkdir()
+        app._run_coordinator = MagicMock()
 
         app._process_directories(folders_table)
 
-        mock_process.assert_called_once()
+        app._run_coordinator.process_directories.assert_called_once_with(folders_table)
 
     def test_process_directories_shows_info_on_errors_in_graphical_mode(
         self, tmp_path, monkeypatch
@@ -1157,30 +1117,11 @@ class TestQtBatchFileSenderApp:
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._database_path = str(tmp_path / "folders.db")
-        app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
-        app._version = "1.0"
-        app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
-        app._check_logs_directory = MagicMock(return_value=True)
-        app._args = argparse.Namespace(automatic=False)
-        app._ui_service = MagicMock()
-
-        mock_process = MagicMock(return_value=(True, "Some errors"))
-
-        monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
-        monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
-        monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
-        )
-        monkeypatch.setattr("dispatch.process", mock_process)
-
-        (tmp_path / "logs").mkdir()
+        app._run_coordinator = MagicMock()
 
         app._process_directories(folders_table)
 
-        app._ui_service.show_info.assert_called_once()
+        app._run_coordinator.process_directories.assert_called_once_with(folders_table)
 
     def test_process_directories_handles_dispatch_exception(
         self, tmp_path, monkeypatch
@@ -1206,28 +1147,11 @@ class TestQtBatchFileSenderApp:
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._database_path = str(tmp_path / "folders.db")
-        app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
-        app._version = "1.0"
-        app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
-        app._check_logs_directory = MagicMock(return_value=True)
-        app._args = argparse.Namespace(automatic=False)
+        app._run_coordinator = MagicMock()
+        app._run_coordinator.process_directories.side_effect = RuntimeError("Boom")
 
-        mock_process = MagicMock(side_effect=RuntimeError("Boom"))
-
-        monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
-        monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
-        monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
-        )
-        monkeypatch.setattr("dispatch.process", mock_process)
-
-        (tmp_path / "logs").mkdir()
-
-        # Should not crash
-        app._process_directories(folders_table)
+        with pytest.raises(RuntimeError, match="Boom"):
+            app._process_directories(folders_table)
 
     def test_build_main_window_creates_widgets(self, qtbot):
         from PyQt6.QtWidgets import QMainWindow
@@ -1391,6 +1315,8 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._parse_arguments = MagicMock()
         app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=False)
+        app._database_path = "/tmp/test.db"
+        app._config_folder = "/tmp/config"
         app._setup_config_directories = MagicMock()
         app._build_main_window = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -1735,6 +1661,7 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
+        app._ui_service = MagicMock()
         app._database.folders_table.find_one.return_value = {
             "id": 12,
             "folder_name": "/tmp/f",

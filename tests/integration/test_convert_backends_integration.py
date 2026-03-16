@@ -17,6 +17,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.backend, pytest.mark.conversi
 import os
 import sys
 
+from core.utils.bool_utils import normalize_bool
+
 # Add the project root to the path
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -1,7 +1,9 @@
 """Tests for dispatch/pipeline/tweaker.py - EDITweakerStep and TweakerResult classes."""
 
 import logging
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+
+import pytest
 
 from dispatch.pipeline.tweaker import (
     EDITweakerStep,
@@ -377,3 +379,79 @@ class TestIntegrationTests:
 
         mock_file_system.makedirs.assert_called_once_with("/output/dir")
         assert result.success is True
+
+
+class TestExecuteWrapper:
+    """Tests for EDITweakerStep.execute wrapper behavior."""
+
+    def test_execute_returns_output_when_tweak_succeeds_and_output_exists(self):
+        """Successful execute returns tweaked path and keeps context temp dir."""
+        step = EDITweakerStep(tweak_function=Mock())
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_tweaker_keep"),
+            patch(
+                "os.path.exists",
+                side_effect=lambda p: p == "/tmp/edi_tweaker_keep/out.edi",
+            ),
+            patch.object(
+                step,
+                "tweak",
+                return_value=TweakerResult(
+                    output_path="/tmp/edi_tweaker_keep/out.edi",
+                    success=True,
+                    was_tweaked=True,
+                    errors=[],
+                ),
+            ),
+        ):
+            result = step.execute(
+                "/input/source.edi", {}, {}, settings={}, context=context
+            )
+
+        assert result == "/tmp/edi_tweaker_keep/out.edi"
+        assert context.temp_dirs == ["/tmp/edi_tweaker_keep"]
+
+    def test_execute_cleans_temp_dir_when_no_output_produced(self):
+        """Execute cleans temp dir and returns None when no usable tweak output."""
+        step = EDITweakerStep(tweak_function=Mock())
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_tweaker_cleanup"),
+            patch("shutil.rmtree") as mock_rmtree,
+            patch.object(
+                step,
+                "tweak",
+                return_value=TweakerResult(
+                    output_path="/input/source.edi",
+                    success=True,
+                    was_tweaked=False,
+                    errors=[],
+                ),
+            ),
+        ):
+            result = step.execute(
+                "/input/source.edi", {}, {}, settings={}, context=context
+            )
+
+        assert result is None
+        mock_rmtree.assert_called_once_with("/tmp/edi_tweaker_cleanup", ignore_errors=True)
+        assert context.temp_dirs == []
+
+    def test_execute_cleans_temp_dir_and_reraises_on_exception(self):
+        """Execute always cleans temp dir and re-raises unexpected tweak errors."""
+        step = EDITweakerStep(tweak_function=Mock())
+        context = type("Ctx", (), {"temp_dirs": []})()
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_tweaker_error"),
+            patch("shutil.rmtree") as mock_rmtree,
+            patch.object(step, "tweak", side_effect=RuntimeError("tweak-crash")),
+        ):
+            with pytest.raises(RuntimeError, match="tweak-crash"):
+                step.execute("/input/source.edi", {}, {}, settings={}, context=context)
+
+        mock_rmtree.assert_called_once_with("/tmp/edi_tweaker_error", ignore_errors=True)
+        assert context.temp_dirs == []

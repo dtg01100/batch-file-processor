@@ -130,15 +130,17 @@ def mock_folder_table():
         },
     ]
 
+    # Filter helpers that ignore non-data kwargs like order_by
+    _DATA_KEYS = {"id", "alias", "folder_is_active", "folder_name"}
+
+    def _match(f, kwargs):
+        return all(f.get(k) == v for k, v in kwargs.items() if k in _DATA_KEYS)
+
     mock_table = MagicMock()
-    mock_table.find.side_effect = lambda **kwargs: (
-        f for f in folders if all(f.get(k) == v for k, v in kwargs.items())
-    )
-    mock_table.count.side_effect = lambda **kwargs: sum(
-        1 for f in folders if all(f.get(k) == v for k, v in kwargs.items())
-    )
+    mock_table.find.side_effect = lambda **kwargs: (f for f in folders if _match(f, kwargs))
+    mock_table.count.side_effect = lambda **kwargs: sum(1 for f in folders if _match(f, kwargs))
     mock_table.find_one.side_effect = lambda **kwargs: next(
-        (f for f in folders if all(f.get(k) == v for k, v in kwargs.items())), None
+        (f for f in folders if _match(f, kwargs)), None
     )
     mock_table.all.return_value = iter(folders)
 
@@ -165,8 +167,9 @@ class TestFolderListWidgetComprehensive:
         )
         qtbot.addWidget(widget)
 
-        assert widget is not None
         assert widget.layout() is not None
+        # All 5 folders from mock should be present as rows
+        assert len(widget._row_widgets) == 5
 
     def test_folder_list_displays_active_folders(self, qtbot, mock_folder_table):
         """Test that active folders are displayed correctly."""
@@ -180,7 +183,9 @@ class TestFolderListWidgetComprehensive:
         )
         qtbot.addWidget(widget)
 
-        # Should display 3 active folders
+        # Widget should have built rows for all 5 folders
+        assert len(widget._row_widgets) == 5
+        # Verify mock fixture itself returns 3 active folders
         active_folders = list(mock_folder_table.find(folder_is_active="True"))
         assert len(active_folders) == 3
 
@@ -209,13 +214,14 @@ class TestFolderListWidgetComprehensive:
             on_edit=lambda x: None,
             on_toggle=lambda x: None,
             on_delete=lambda x, y: None,
-            filter_value="Test",
+            filter_value="Test Folder",
         )
         qtbot.addWidget(widget)
 
-        # Should filter to show folders matching "Test"
-        # The fuzzy matching should find "Test Folder"
-        assert widget is not None
+        # "Test Folder" (id=4) should be visible; unrelated aliases should be hidden
+        assert not widget._row_widgets[4].isHidden(), "Test Folder row should not be hidden"
+        # "Archive" and "Inactive 1" should not match "Test Folder" with score_cutoff=80
+        assert widget._row_widgets[5].isHidden(), "Archive row should be hidden"
 
     def test_total_count_callback_invoked(self, qtbot, mock_folder_table):
         """Test that total count callback is invoked correctly."""
@@ -359,8 +365,8 @@ class TestFolderListWidgetComprehensive:
         )
         qtbot.addWidget(widget)
 
-        # Should not crash with empty data
-        assert widget is not None
+        # Should not crash with empty data and should build no rows
+        assert len(widget._row_widgets) == 0
 
     def test_folder_list_scrollable(self, qtbot, mock_folder_table):
         """Test that folder lists are scrollable."""

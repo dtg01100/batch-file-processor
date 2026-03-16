@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from core.utils.bool_utils import normalize_bool
+
 import pytest
 
 # Add the project root to the Python path
@@ -92,9 +94,9 @@ class TestAutomaticModeIntegration:
             # This is the exact logic from automatic_process_directories
             has_active = mock_table.count(folder_is_active="True") > 0
 
-            assert (
-                has_active == should_process
-            ), f"Failed for {active_count} active folders"
+            assert has_active == should_process, (
+                f"Failed for {active_count} active folders"
+            )
 
 
 class TestSingleFolderModeIntegration:
@@ -312,7 +314,7 @@ class TestDispatchProcessIntegration:
         active_folders = list(mock_folders_table.find(folder_is_active="True"))
 
         assert len(active_folders) == 1
-        assert active_folders[0]["folder_is_active"] == "True"
+        assert normalize_bool(active_folders[0]["folder_is_active"]) is True
 
 
 class TestAutomaticModeCLI:
@@ -362,7 +364,6 @@ class TestErrorHandling:
             patch("os.path.isdir", return_value=False),
             patch("os.mkdir", side_effect=IOError("Cannot create directory")),
         ):
-
             # Simulate the error handling logic from process_directories
             log_folder_creation_error = False
             if not os.path.isdir(mock_reporting["logs_directory"]):
@@ -777,18 +778,18 @@ class TestEDIMode:
 
     def test_edi_enabled_config(self, edi_folder_config):
         """EDI processing should be enabled when configured."""
-        assert edi_folder_config["process_edi"] == "True"
+        assert normalize_bool(edi_folder_config["process_edi"]) is True
         assert edi_folder_config["convert_to_format"] == "csv"
 
     def test_edi_disabled_config(self, non_edi_folder_config):
         """EDI processing should be disabled when not configured."""
-        assert non_edi_folder_config["process_edi"] == "False"
+        assert normalize_bool(non_edi_folder_config["process_edi"]) is False
 
     def test_edi_options_preserved(self, edi_folder_config):
         """EDI options should be preserved in folder config."""
-        assert edi_folder_config["calculate_upc_check_digit"] == "True"
-        assert edi_folder_config["include_a_records"] == "True"
-        assert edi_folder_config["include_c_records"] == "True"
+        assert normalize_bool(edi_folder_config["calculate_upc_check_digit"]) is True
+        assert normalize_bool(edi_folder_config["include_a_records"]) is True
+        assert normalize_bool(edi_folder_config["include_c_records"]) is True
 
     def test_convert_format_options(self):
         """Test different conversion format options."""
