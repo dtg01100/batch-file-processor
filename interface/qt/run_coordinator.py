@@ -116,22 +116,45 @@ class QtRunCoordinator:
                 )
 
             try:
-                from dispatch import process
+                from dispatch import DispatchConfig, DispatchOrchestrator
+                from dispatch.pipeline.converter import EDIConverterStep
+                from dispatch.pipeline.splitter import EDISplitterStep
+                from dispatch.pipeline.tweaker import EDITweakerStep
+                from dispatch.pipeline.validator import EDIValidationStep
 
                 run_error_bool = False
-                run_error_bool, run_summary_string = process(
-                    self._app._database.database_connection,
-                    folders_table_process,
-                    run_log,
-                    self._app._database.emails_table,
-                    reporting["logs_directory"],
-                    reporting,
-                    self._app._database.processed_files,
-                    self._app._version,
-                    self._app._errors_directory,
-                    settings_dict,
-                    progress_callback=self._app._progress_service,
+                config = DispatchConfig(
+                    database=folders_table_process,
+                    settings=settings_dict,
+                    version=self._app._version,
+                    progress_reporter=self._app._progress_service,
+                    validator_step=EDIValidationStep(),
+                    splitter_step=EDISplitterStep(),
+                    converter_step=EDIConverterStep(),
+                    tweaker_step=EDITweakerStep(),
                 )
+
+                orchestrator = DispatchOrchestrator(config)
+                folders = list(
+                    folders_table_process.find(folder_is_active=True, order_by="alias")
+                )
+
+                for folder in folders:
+                    try:
+                        result = orchestrator.process_folder(
+                            folder,
+                            run_log,
+                            self._app._database.processed_files,
+                        )
+                        if not result.success:
+                            run_error_bool = True
+                    except Exception as folder_error:
+                        run_error_bool = True
+                        run_log.write(
+                            f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
+                        )
+
+                run_summary_string = orchestrator.get_summary()
                 if run_error_bool and not self._app._args.automatic:
                     self._app._ui_service.show_info(
                         "Run Status", "Run completed with errors."

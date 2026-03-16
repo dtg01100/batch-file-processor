@@ -6,7 +6,7 @@ Provides a QDialog wrapper around the toolkit-agnostic
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -37,10 +37,15 @@ class MaintenanceDialog(BaseDialog):
     def __init__(
         self,
         parent: Optional[QWidget],
-        maintenance_functions: MaintenanceFunctions,
+        maintenance_functions: Any,
         ui_service: Optional[UIServiceProtocol] = None,
     ) -> None:
-        self._mf = maintenance_functions
+        # Backward compatibility: some legacy call sites/tests still pass a
+        # database object directly. If so, construct MaintenanceFunctions here.
+        if hasattr(maintenance_functions, "set_operation_callbacks"):
+            self._mf = maintenance_functions
+        else:
+            self._mf = MaintenanceFunctions(database_obj=maintenance_functions)
         self._ui = ui_service
         self._buttons: list[QPushButton] = []
         super().__init__(parent, "Maintenance Functions", action_mode="none")

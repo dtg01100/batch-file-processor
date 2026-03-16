@@ -398,6 +398,33 @@ class QtProgressService(QObject):
         """
         self.hide()
 
+    def dispose(self) -> None:
+        """Release Qt resources associated with the overlay.
+
+        Stops any running throbber animation, removes the parent event filter,
+        and schedules overlay deletion. This helps avoid resource leakage in
+        repeated create/destroy test cycles.
+        """
+        animation = getattr(self._throbber, "_animation", None)
+        if animation is not None:
+            try:
+                animation.stop()
+            except Exception:
+                pass
+
+        if self._parent is not None:
+            try:
+                self._parent.removeEventFilter(self)
+            except Exception:
+                pass
+
+        if self._overlay is not None:
+            try:
+                self._overlay.hide()
+                self._overlay.deleteLater()
+            except Exception:
+                pass
+
     def set_message(self, message: str) -> None:
         """Set the progress message.
 

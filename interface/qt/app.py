@@ -143,11 +143,9 @@ class QtBatchFileSenderApp:
 
         self._setup_config_directories()
 
-        # Ensure config directories are set before database initialization
-        if self._database_path is None or self._config_folder is None:
-            raise RuntimeError("Configuration directories not initialized")
-
         if self._database is None:
+            if self._database_path is None or self._config_folder is None:
+                raise RuntimeError("Configuration directories not initialized")
             self._database = DatabaseObj(
                 self._database_path,
                 self._database_version,
@@ -194,6 +192,31 @@ class QtBatchFileSenderApp:
         QApplication.exec()
 
     def shutdown(self) -> None:
+        if self._progress_service is not None:
+            disposer = getattr(self._progress_service, "dispose", None)
+            if callable(disposer):
+                try:
+                    disposer()
+                except Exception:
+                    pass
+
+        if self._window is not None:
+            try:
+                self._window.close()
+                self._window.deleteLater()
+            except Exception:
+                pass
+            self._window = None
+
+        try:
+            if QApplication.instance() is not None:
+                QApplication.processEvents()
+        except Exception:
+            pass
+
+        self._ui_service = None
+        self._progress_service = None
+
         if self._database is not None:
             self._database.close()
 
