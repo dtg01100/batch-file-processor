@@ -28,12 +28,12 @@ from core.utils.bool_utils import normalize_bool
 
 
 def _normalize_legacy_true_false(value: Any) -> bool:
-    """Normalize legacy true/false string flags conservatively."""
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in ("true", "false"):
-            return normalize_bool(lowered)
-        return False
+    """Normalize legacy true/false string flags.
+
+    Handles all stored forms: string "True"/"False" (legacy), integer 1/0
+    (modern), and string "1"/"0" (produced by the v41→v42 migration due to
+    SQLite TEXT affinity converting integer writes back to strings).
+    """
     return normalize_bool(value)
 
 

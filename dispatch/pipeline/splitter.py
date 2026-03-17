@@ -17,15 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_true_false_only(value: Any) -> bool:
-    """Normalize bool while preserving strict legacy string behavior.
+    """Normalize split_edi and prepend_date_files to boolean.
 
-    Legacy behavior accepted only "true"/"false" string values for these flags.
+    Handles all stored forms: string "True"/"False" (legacy), integer 1/0
+    (modern), and string "1"/"0" (produced by the v41→v42 migration due to
+    SQLite TEXT affinity converting integer writes back to strings).
     """
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in ("true", "false"):
-            return normalize_bool(lowered)
-        return False
     return normalize_bool(value)
 
 

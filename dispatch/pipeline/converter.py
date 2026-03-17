@@ -16,16 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_process_edi_flag(value: Any) -> bool:
-    """Normalize process_edi with legacy-compatible semantics.
+    """Normalize process_edi to boolean.
 
-    Legacy behavior treated only string "true" as enabled.
-    Non-string values continue to use general boolean normalization.
+    Handles all stored forms: string "True"/"False" (legacy), integer 1/0
+    (modern), and string "1"/"0" (produced by the v41→v42 migration due to
+    SQLite TEXT affinity converting integer writes back to strings).
     """
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in ("true", "false"):
-            return normalize_bool(lowered)
-        return False
     return normalize_bool(value)
 
 

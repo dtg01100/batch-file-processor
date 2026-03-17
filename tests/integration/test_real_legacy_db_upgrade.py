@@ -888,3 +888,288 @@ class TestRequiredFieldReadability:
             pf = dict(row)
             for field in required:
                 assert field in pf, f"processed_files row missing '{field}'"
+
+
+class TestNoBehavioralChangeAfterUpgrade:
+    """Prove that migration introduces no outside-observable change in behavior.
+
+    Takes a field-level snapshot of all behaviorally-significant values from
+    the raw v32 database, then verifies that every snapshot value is identical
+    in the fully-migrated v42 database.
+
+    "Behaviorally significant" means values that drive dispatch decisions:
+    - Whether a folder is processed (folder_is_active)
+    - Which backends are used (process_backend_*)
+    - Where files are sent (FTP/email/copy destination fields)
+    - What conversion format to use (convert_to_format)
+    - EDI processing flags
+    - File deduplication state (file_name, file_checksum, resend_flag, folder_id)
+    - SMTP credentials used for email reporting (settings table)
+    """
+
+    # All v32 folder columns that are read by the dispatch pipeline or backends.
+    # New columns added by migration are intentionally excluded — they have no
+    # pre-migration state to compare against.
+    _FOLDER_BEHAVIORAL_COLS = [
+        "id",
+        "folder_name",
+        "alias",
+        "folder_is_active",
+        "process_edi",
+        "tweak_edi",
+        "split_edi",
+        "split_edi_include_invoices",
+        "split_edi_include_credits",
+        "force_edi_validation",
+        "convert_to_format",
+        "process_backend_ftp",
+        "process_backend_email",
+        "process_backend_copy",
+        "ftp_server",
+        "ftp_port",
+        "ftp_username",
+        "ftp_password",
+        "ftp_folder",
+        "email_to",
+        "email_subject_line",
+        "copy_to_directory",
+        "prepend_date_files",
+        "rename_file",
+        "retail_uom",
+        "force_each_upc",
+        "include_headers",
+        "filter_ampersand",
+        "include_item_numbers",
+        "include_item_description",
+        "simple_csv_sort_order",
+        "pad_a_records",
+        "a_record_padding",
+        "a_record_padding_length",
+        "a_record_append_text",
+        "append_a_records",
+        "force_txt_file_ext",
+        "invoice_date_offset",
+        "invoice_date_custom_format",
+        "invoice_date_custom_format_string",
+        "override_upc_bool",
+        "override_upc_level",
+        "override_upc_category_filter",
+        "split_prepaid_sales_tax_crec",
+        "estore_store_number",
+        "estore_Vendor_OId",
+        "estore_vendor_NameVendorOID",
+        "estore_c_record_OID",
+        "fintech_division_id",
+        "include_c_records",
+        "include_a_records",
+    ]
+
+    # v41→v42 migration normalises these from TEXT 'True'/'False' → TEXT '1'/'0'.
+    # The stored representation changes but the meaning is identical:
+    # normalize_bool('True') == normalize_bool('1') == True.
+    # Compare these fields by their boolean meaning, not their raw storage value.
+    _BOOL_FOLDER_COLS = {
+        "folder_is_active",
+        "process_edi",
+        "tweak_edi",
+        "split_edi",
+        "split_edi_include_invoices",
+        "split_edi_include_credits",
+        "force_edi_validation",
+        "process_backend_ftp",
+        "process_backend_email",
+        "process_backend_copy",
+        "prepend_date_files",
+        "retail_uom",
+        "force_each_upc",
+        "include_headers",
+        "filter_ampersand",
+        "include_item_numbers",
+        "include_item_description",
+        "pad_a_records",
+        "append_a_records",
+        "force_txt_file_ext",
+        "invoice_date_custom_format",
+        "override_upc_bool",
+        "split_prepaid_sales_tax_crec",
+        "include_c_records",
+        "include_a_records",
+    }
+
+    _PROCESSED_FILES_DEDUP_COLS = [
+        "id",
+        "file_name",
+        "file_checksum",
+        "resend_flag",
+        "folder_id",
+    ]
+
+    _SETTINGS_BEHAVIORAL_COLS = [
+        "id",
+        "enable_email",
+        "email_address",
+        "email_username",
+        "email_smtp_server",
+        "smtp_port",
+    ]
+
+    def _snapshot_folders(self, conn):
+        rows = conn.execute(
+            f"SELECT {', '.join(self._FOLDER_BEHAVIORAL_COLS)} FROM folders ORDER BY id"
+        ).fetchall()
+        return rows
+
+    def _snapshot_processed_files(self, conn):
+        rows = conn.execute(
+            f"SELECT {', '.join(self._PROCESSED_FILES_DEDUP_COLS)} "
+            f"FROM processed_files ORDER BY id"
+        ).fetchall()
+        return rows
+
+    def _snapshot_settings(self, conn):
+        rows = conn.execute(
+            f"SELECT {', '.join(self._SETTINGS_BEHAVIORAL_COLS)} FROM settings ORDER BY id"
+        ).fetchall()
+        return rows
+
+    @pytest.fixture
+    def snapshots_and_migrated(self, legacy_db, tmp_path):
+        """Returns (before_snapshot, migrated_sqlite3_conn)."""
+        # Take snapshot from raw v32 DB via direct sqlite3 (no wrapper transformation)
+        before_conn = sqlite3.connect(legacy_db)
+        before_folders = self._snapshot_folders(before_conn)
+        before_pf = self._snapshot_processed_files(before_conn)
+        before_settings = self._snapshot_settings(before_conn)
+        before_conn.close()
+
+        # Migrate via the wrapper (same path as real app startup)
+        db = sqlite_wrapper.Database.connect(legacy_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+        schema.ensure_schema(db)
+        db.close()
+
+        after_conn = sqlite3.connect(legacy_db)
+        yield (
+            (before_folders, before_pf, before_settings),
+            after_conn,
+        )
+        after_conn.close()
+
+    def test_folder_behavioral_values_unchanged(self, snapshots_and_migrated):
+        """Every folder's dispatch-relevant field values must be identical after migration.
+
+        Boolean fields are compared by their normalized meaning (True/False),
+        not raw storage — the v41→v42 migration intentionally converts string
+        'True'/'False' to '1'/'0' for type consistency; normalize_bool() treats
+        both identically so there is no behavioral change.
+        """
+        (before_folders, _, _), after_conn = snapshots_and_migrated
+        after_folders = self._snapshot_folders(after_conn)
+
+        assert len(after_folders) == len(before_folders), (
+            f"Folder count changed: {len(before_folders)} → {len(after_folders)}"
+        )
+
+        diffs = []
+        for before_row, after_row in zip(before_folders, after_folders):
+            for col_idx, col_name in enumerate(self._FOLDER_BEHAVIORAL_COLS):
+                b_val = before_row[col_idx]
+                a_val = after_row[col_idx]
+                if col_name in self._BOOL_FOLDER_COLS:
+                    # Compare boolean meaning, not raw storage representation
+                    b_bool = normalize_bool(b_val)
+                    a_bool = normalize_bool(a_val)
+                    if b_bool != a_bool:
+                        diffs.append(
+                            f"folder id={before_row[0]}, col='{col_name}' (bool): "
+                            f"{b_val!r}→{b_bool} became {a_val!r}→{a_bool}"
+                        )
+                else:
+                    if b_val != a_val:
+                        diffs.append(
+                            f"folder id={before_row[0]}, col='{col_name}': "
+                            f"{b_val!r} → {a_val!r}"
+                        )
+
+        assert not diffs, (
+            f"{len(diffs)} behavioral field(s) changed after migration:\n"
+            + "\n".join(diffs[:20])
+        )
+
+    def test_processed_files_dedup_state_unchanged(self, snapshots_and_migrated):
+        """file_name, file_checksum, resend_flag, folder_id must be byte-identical after migration.
+
+        Any change here would cause already-processed files to be re-sent.
+        """
+        (_, before_pf, _), after_conn = snapshots_and_migrated
+        after_pf = self._snapshot_processed_files(after_conn)
+
+        assert len(after_pf) == len(before_pf), (
+            f"processed_files count changed: {len(before_pf)} → {len(after_pf)}"
+        )
+
+        diffs = []
+        for before_row, after_row in zip(before_pf, after_pf):
+            for col_idx, col_name in enumerate(self._PROCESSED_FILES_DEDUP_COLS):
+                b_val = before_row[col_idx]
+                a_val = after_row[col_idx]
+                if b_val != a_val:
+                    diffs.append(
+                        f"processed_files id={before_row[0]}, col='{col_name}': "
+                        f"{b_val!r} → {a_val!r}"
+                    )
+                    if len(diffs) >= 5:
+                        break
+            if len(diffs) >= 5:
+                break
+
+        assert not diffs, (
+            f"Deduplication state changed — files will be re-processed:\n"
+            + "\n".join(diffs)
+        )
+
+    def test_settings_behavioral_values_unchanged(self, snapshots_and_migrated):
+        """SMTP settings values in the settings table must be identical after migration."""
+        (_, _, before_settings), after_conn = snapshots_and_migrated
+        after_settings = self._snapshot_settings(after_conn)
+
+        assert len(after_settings) == len(before_settings)
+
+        diffs = []
+        for before_row, after_row in zip(before_settings, after_settings):
+            for col_idx, col_name in enumerate(self._SETTINGS_BEHAVIORAL_COLS):
+                b_val = before_row[col_idx]
+                a_val = after_row[col_idx]
+                if b_val != a_val:
+                    diffs.append(f"settings col='{col_name}': {b_val!r} → {a_val!r}")
+
+        assert not diffs, (
+            f"Settings behavioral values changed after migration:\n" + "\n".join(diffs)
+        )
+
+    def test_no_folder_ids_renumbered(self, snapshots_and_migrated):
+        """Folder IDs must be stable — processed_files.folder_id references them by ID."""
+        (before_folders, _, _), after_conn = snapshots_and_migrated
+        after_folders = self._snapshot_folders(after_conn)
+
+        before_ids = [r[0] for r in before_folders]
+        after_ids = [r[0] for r in after_folders]
+
+        assert before_ids == after_ids, (
+            "Folder IDs changed after migration — processed_files references would break"
+        )
+
+    def test_processed_files_folder_id_referential_integrity(self, snapshots_and_migrated):
+        """Every processed_files.folder_id must still refer to a valid folder after migration."""
+        (_, before_pf, _), after_conn = snapshots_and_migrated
+
+        after_folder_ids = {
+            r[0] for r in after_conn.execute("SELECT id FROM folders").fetchall()
+        }
+        orphaned = [
+            row for row in before_pf
+            if row[4] is not None and row[4] not in after_folder_ids
+        ]
+        assert not orphaned, (
+            f"{len(orphaned)} processed_files rows have orphaned folder_id after migration"
+        )
