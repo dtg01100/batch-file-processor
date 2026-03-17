@@ -332,6 +332,10 @@ class EditFoldersDialog(BaseDialog):
         return self._fields.get("others_list")
 
     @property
+    def _others_search(self):
+        return self._fields.get("others_search")
+
+    @property
     def _folder_alias_field(self):
         return self._fields.get("folder_alias_field")
 

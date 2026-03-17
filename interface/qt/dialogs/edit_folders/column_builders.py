@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.qt.theme import Theme
+from interface.qt.widgets.search_widget import SearchWidget
 
 
 class ColumnBuilders:
@@ -90,6 +91,26 @@ class ColumnBuilders:
             aliases = sorted(self.alias_provider() or [])
         for alias in aliases:
             others_list.addItem(alias)
+
+        def _filter_others(filter_text: str) -> None:
+            text = filter_text.strip().lower()
+            for i in range(others_list.count()):
+                item = others_list.item(i)
+                if item is not None:
+                    item.setHidden(bool(text) and text not in item.text().lower())
+
+        others_search = SearchWidget(
+            parent=container,
+            on_filter_change=_filter_others,
+        )
+        others_search.setMaximumWidth(180)
+        others_search.setAccessibleName("Filter other folders")
+        others_search.setAccessibleDescription(
+            "Type to filter the folder list by alias"
+        )
+        self.fields["others_search"] = others_search
+        layout.addWidget(others_search)
+
         layout.addWidget(others_list)
 
         copy_config_btn = QPushButton("Copy Config")

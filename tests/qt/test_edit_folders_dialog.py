@@ -547,6 +547,86 @@ class TestCopyConfigFromOtherButton:
 
 
 # ============================================================================
+# Test Others List Filter (Search-as-you-type)
+# ============================================================================
+@pytest.mark.qt
+class TestOthersListFilter:
+    """Tests for the search-as-you-type filter on the copy-from list."""
+
+    def _dialog_with_aliases(self, qtbot, sample_folder_config):
+        return create_dialog(
+            qtbot,
+            sample_folder_config,
+            alias_provider=lambda: ["Alpha Store", "Beta Warehouse", "Gamma Shop"],
+        )
+
+    def test_others_search_widget_exists(self, qtbot, sample_folder_config):
+        """A SearchWidget should be present in the dialog."""
+        dialog = self._dialog_with_aliases(qtbot, sample_folder_config)
+
+        assert dialog._others_search is not None
+
+    def test_filter_hides_non_matching_items(self, qtbot, sample_folder_config):
+        """Typing a filter term should hide non-matching list items."""
+        dialog = self._dialog_with_aliases(qtbot, sample_folder_config)
+        others_list = dialog._others_list
+
+        # Emit filter directly (bypasses debounce timer)
+        dialog._others_search.filter_changed.emit("beta")
+
+        visible = [
+            others_list.item(i).text()
+            for i in range(others_list.count())
+            if not others_list.item(i).isHidden()
+        ]
+        assert visible == ["Beta Warehouse"]
+
+    def test_filter_shows_all_on_empty_string(self, qtbot, sample_folder_config):
+        """Clearing the filter should make all items visible again."""
+        dialog = self._dialog_with_aliases(qtbot, sample_folder_config)
+        others_list = dialog._others_list
+
+        dialog._others_search.filter_changed.emit("gamma")
+        dialog._others_search.filter_changed.emit("")
+
+        hidden = [
+            others_list.item(i)
+            for i in range(others_list.count())
+            if others_list.item(i).isHidden()
+        ]
+        assert hidden == []
+
+    def test_filter_is_case_insensitive(self, qtbot, sample_folder_config):
+        """Filter matching should be case-insensitive."""
+        dialog = self._dialog_with_aliases(qtbot, sample_folder_config)
+        others_list = dialog._others_list
+
+        dialog._others_search.filter_changed.emit("ALPHA")
+
+        visible = [
+            others_list.item(i).text()
+            for i in range(others_list.count())
+            if not others_list.item(i).isHidden()
+        ]
+        assert visible == ["Alpha Store"]
+
+    def test_filter_partial_match(self, qtbot, sample_folder_config):
+        """A partial term should match items containing that substring."""
+        dialog = self._dialog_with_aliases(qtbot, sample_folder_config)
+        others_list = dialog._others_list
+
+        dialog._others_search.filter_changed.emit("store")
+
+        visible = [
+            others_list.item(i).text()
+            for i in range(others_list.count())
+            if not others_list.item(i).isHidden()
+        ]
+        assert "Alpha Store" in visible
+        assert "Beta Warehouse" not in visible
+
+
+# ============================================================================
 # Test Field Population - Convert Format Sub-Fields
 # ============================================================================
 @pytest.mark.qt
