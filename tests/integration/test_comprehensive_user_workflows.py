@@ -351,7 +351,7 @@ class TestErrorRetrySuccess:
         assert len(list(workspace["output"].glob("*.edi"))) == 3
 
     def test_partial_backend_failure(self, workspace, edi_files, folder_config):
-        """Copy backend succeeds but FTP fails – result reflects failure."""
+        """Copy backend succeeds but FTP fails -- result reflects failure."""
         folder_config["process_backend_ftp"] = True
         folder_config["ftp_server"] = "ftp.test.example"
 
@@ -517,7 +517,7 @@ class TestCompleteLifecycle:
         out.mkdir()
         (inp / "a.edi").write_text(SAMPLE_EDI)
 
-        # 1 – CREATE
+        # 1 -- CREATE
         db.folders_table.insert(
             {
                 "folder_name": str(inp),
@@ -529,24 +529,24 @@ class TestCompleteLifecycle:
         row = list(db.folders_table.all())[0]
         fid = row["id"]
 
-        # 2 – PROCESS
+        # 2 -- PROCESS
         copy_be = TrackingCopyBackend()
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
         r = orchestrator.process_folder(row, MagicMock())
         assert r.success is True
 
-        # 3 – EDIT
+        # 3 -- EDIT
         row["alias"] = "Life - Renamed"
         db.folders_table.update(row, ["id"])
         assert db.folders_table.find_one(id=fid)["alias"] == "Life - Renamed"
 
-        # 4 – DEACTIVATE
+        # 4 -- DEACTIVATE
         row["folder_is_active"] = False
         db.folders_table.update(row, ["id"])
         assert db.folders_table.find_one(id=fid)["folder_is_active"] is False
 
-        # 5 – DELETE
+        # 5 -- DELETE
         db.folders_table.delete(id=fid)
         assert db.folders_table.find_one(id=fid) is None
 
@@ -644,11 +644,11 @@ class TestProcessedFilesTracking:
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        # First run – process everything
+        # First run -- process everything
         r1 = orchestrator.process_folder(folder_config, MagicMock(), processed_files=db)
         assert r1.files_processed == 3
 
-        # Second run – all should be skipped (already tracked)
+        # Second run -- all should be skipped (already tracked)
         r2 = orchestrator.process_folder(folder_config, MagicMock(), processed_files=db)
         assert r2.files_processed == 0
 

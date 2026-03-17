@@ -807,7 +807,7 @@ class DispatchOrchestrator:
         "estore_vendor_NameVendorOID": "",
         "estore_c_record_OID": "",
         "fintech_division_id": "",
-        # Boolean tweak fields — accessed via direct dict key in archive/edi_tweaks.py;
+        # Boolean tweak fields -- accessed via direct dict key in archive/edi_tweaks.py;
         # must default to False so missing/NULL DB values don't raise KeyError.
         "pad_a_records": False,
         "append_a_records": False,
@@ -829,7 +829,7 @@ class DispatchOrchestrator:
             if effective_folder.get(key) is None:
                 effective_folder[key] = default
 
-        # upc_target_length of 0 is not meaningful — treat as default (11).
+        # upc_target_length of 0 is not meaningful -- treat as default (11).
         if not effective_folder.get("upc_target_length"):
             effective_folder["upc_target_length"] = self._FOLDER_DEFAULTS[
                 "upc_target_length"

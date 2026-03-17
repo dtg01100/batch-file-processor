@@ -40,10 +40,10 @@ def workspace(tmp_path):
     """Provide a temporary workspace dict with a DatabaseObj and I/O directories.
 
     Keys:
-        db       – a DatabaseObj with .folders_table / .processed_files attributes
-        input    – Path to the input directory
-        output_1 – Path to the first output directory
-        output_2 – Path to the second output directory
+        db       -- a DatabaseObj with .folders_table / .processed_files attributes
+        input    -- Path to the input directory
+        output_1 -- Path to the first output directory
+        output_2 -- Path to the second output directory
     """
     input_dir = tmp_path / "input"
     output_1 = tmp_path / "output_1"

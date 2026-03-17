@@ -221,7 +221,7 @@ class TestDoMigrate:
         new_conn.commit()
         new_conn.close()
 
-        # Provide orig_db_2 as override — the folder should land there, not orig_db_1
+        # Provide orig_db_2 as override -- the folder should land there, not orig_db_1
         migrator = mover.DbMigrationThing(str(orig_db_1), str(new_db))
         migrator.do_migrate(original_database_path=str(orig_db_2))
 

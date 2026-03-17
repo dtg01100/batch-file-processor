@@ -103,7 +103,7 @@ def make_temp_log(tmp_path, name="run.log", content="Log line 1\nLog line 2\n"):
 
 
 class TestLogSenderWithMock:
-    """Test LogSender using MockEmailService — no network required."""
+    """Test LogSender using MockEmailService -- no network required."""
 
     def test_log_sender_sends_email_content(self):
         """Verify MockEmailService receives correct to/subject/body."""
@@ -392,7 +392,7 @@ class TestLogSenderWithRealSMTP:
     def test_smtp_auth_failure_graceful(self, smtp_server):
         """No-auth server should accept messages when no credentials are supplied."""
         host, port, handler = smtp_server
-        # aiosmtpd default handler does not enforce auth — connection succeeds.
+        # aiosmtpd default handler does not enforce auth -- connection succeeds.
         # Use empty credentials so SMTPEmailService skips the login() call,
         # which aiosmtpd does not support (no AUTH extension).
         config = EmailConfig(

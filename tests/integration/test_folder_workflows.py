@@ -58,7 +58,7 @@ def workspace_with_datasets(fresh_db, tmp_path):
     for dir_path in datasets.values():
         dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Database setup – fresh_db already has schema + version record
+    # Database setup -- fresh_db already has schema + version record
     db_conn = sqlite_wrapper.Database.connect(str(fresh_db))
 
     db = DatabaseObj(

@@ -782,7 +782,7 @@ class TestConvertFormatFieldPopulation:
         for fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
             dialog._convert_format_combo.setCurrentText(fmt)
             assert hasattr(dialog, "_convert_sub_container")
-            # Basic formats show a label widget only – no input widgets
+            # Basic formats show a label widget only -- no input widgets
             assert dialog._convert_sub_layout is not None
 
     def test_do_nothing_sets_process_edi_false(self, qtbot, sample_folder_config):

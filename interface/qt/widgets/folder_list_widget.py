@@ -356,13 +356,13 @@ class FolderListWidget(QWidget):
         alias: str = folder["alias"]
         is_active: bool = normalize_bool(folder.get("folder_is_active"))
 
-        # Status toggle button — shows state and toggles on click
+        # Status toggle button -- shows state and toggles on click
         toggle_symbol = "\u25cf" if is_active else "\u25cb"  # ● active, ○ inactive
         toggle_btn = QPushButton(toggle_symbol)
         toggle_btn.setFixedSize(36, 36)
         toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if is_active:
-            toggle_btn.setToolTip("Active — click to disable")
+            toggle_btn.setToolTip("Active -- click to disable")
             toggle_btn.setAccessibleName(
                 f"Disable folder {alias}" if alias else "Disable folder"
             )
@@ -389,7 +389,7 @@ class FolderListWidget(QWidget):
                 """
             )
         else:
-            toggle_btn.setToolTip("Inactive — click to enable")
+            toggle_btn.setToolTip("Inactive -- click to enable")
             toggle_btn.setAccessibleName(
                 f"Enable folder {alias}" if alias else "Enable folder"
             )

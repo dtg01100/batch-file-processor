@@ -164,7 +164,7 @@ class DynamicEDIBuilder:
                 elif isinstance(widget, QLineEdit):
                     self._saved_upc_override[key] = widget.text().strip()
                 elif isinstance(widget, (bool, int, float, str)):
-                    # Already a plain value — keep as-is
+                    # Already a plain value -- keep as-is
                     self._saved_upc_override[key] = widget
             except RuntimeError:
                 pass  # widget already deleted

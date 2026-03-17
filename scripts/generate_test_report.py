@@ -7,8 +7,8 @@ Usage
 
 Outputs (written to the same directory as the XML file)
 -------
-    human_summary.txt        — readable pass/fail summary with slow-test table
-    enhancement_suggestions.txt — static list of improvement ideas
+    human_summary.txt        -- readable pass/fail summary with slow-test table
+    enhancement_suggestions.txt -- static list of improvement ideas
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ def _section(title: str, width: int = 60) -> str:
 def build_human_summary(stats: SuiteStats, xml_path: Path) -> str:
     lines: list[str] = []
 
-    lines.append("Batch File Processor — Test Run Report")
+    lines.append("Batch File Processor -- Test Run Report")
     lines.append(f"Source XML : {xml_path}")
     lines.append("")
 
@@ -192,7 +192,7 @@ def build_human_summary(stats: SuiteStats, xml_path: Path) -> str:
 
 
 ENHANCEMENT_SUGGESTIONS = """\
-Batch File Processor — Test Enhancement Suggestions
+Batch File Processor -- Test Enhancement Suggestions
 ====================================================
 
 The following improvements are recommended for the test suite:

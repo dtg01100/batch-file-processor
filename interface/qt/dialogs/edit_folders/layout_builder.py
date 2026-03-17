@@ -106,7 +106,7 @@ class UILayoutBuilder:
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        # Active state toggle — full-width checkable button pinned above the
+        # Active state toggle -- full-width checkable button pinned above the
         # scroll area so it is always visible (never scrolls away).
         # QPushButton with setCheckable(True) makes the entire surface clickable.
         self.active_checkbox = QPushButton("Folder Is Disabled")

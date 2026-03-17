@@ -559,7 +559,7 @@ class TestResendLogic:
         assert record["resend_flag"] == 0
 
     def test_multiple_files_some_resend(self, tmp_path):
-        """Mix of new, processed, and resend files — only correct ones sent."""
+        """Mix of new, processed, and resend files -- only correct ones sent."""
         folder_dir = tmp_path / "multi"
         folder_dir.mkdir()
 

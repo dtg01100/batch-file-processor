@@ -1205,7 +1205,7 @@ class TestRealLegacyDbViaDatabaseObj:
             pytest.skip("Legacy v32 database fixture not found")
         dest = str(tmp_path / "folders.db")
         shutil.copy2(LEGACY_DB_PATH, dest)
-        # The real fixture was created on Windows – patch OS to Linux so
+        # The real fixture was created on Windows -- patch OS to Linux so
         # DatabaseObj doesn't reject it for OS mismatch.
         conn = sqlite_wrapper.Database.connect(dest)
         ver = conn["version"].find_one(id=1)

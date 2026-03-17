@@ -84,7 +84,7 @@ def base_folder_params(edi_dir):
         "convert_edi": True,  # orchestrator gate
         "tweak_edi": False,
         "split_edi": False,
-        # Backend – we use a capture backend, not the real copy backend
+        # Backend -- we use a capture backend, not the real copy backend
         "process_backend_copy": True,
         "copy_to_directory": "/tmp",
         # Converter defaults

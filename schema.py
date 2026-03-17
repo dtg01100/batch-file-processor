@@ -412,7 +412,7 @@ def ensure_schema(database_connection) -> None:
             'UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL'
         )
     except Exception:
-        # Ignore failures (column exists or DB locked) — migrations handle this elsewhere
+        # Ignore failures (column exists or DB locked) -- migrations handle this elsewhere
         logger.debug(
             "Failed to add plugin_configurations column to folders table (may already exist)"
         )

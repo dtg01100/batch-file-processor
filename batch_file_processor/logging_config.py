@@ -167,10 +167,10 @@ class RunLogHandler(logging.Handler):
 
     The handler supports two back-end modes:
 
-    * **File mode** – *run_log* has a ``write`` attribute (a binary-mode
+    * **File mode** -- *run_log* has a ``write`` attribute (a binary-mode
       file object).  Each formatted message is encoded to bytes and written
       with ``\\r\\n`` line endings.
-    * **List mode** – *run_log* has an ``append`` attribute (typically a
+    * **List mode** -- *run_log* has an ``append`` attribute (typically a
       plain ``list``).  This is used during threaded dispatch where results
       are collected in memory first.
 
@@ -256,8 +256,8 @@ class RunLogAdapter(logging.LoggerAdapter):
     extra:
         Context dictionary.  Recognised keys:
 
-        * ``"folder"`` – name of the folder currently being processed.
-        * ``"file"`` – name of the file currently being processed.
+        * ``"folder"`` -- name of the folder currently being processed.
+        * ``"file"`` -- name of the file currently being processed.
 
     Example::
 

@@ -1,4 +1,4 @@
-"""Deprecated demo shim — right-click menu demo was Tk-based and has been replaced by the Qt implementation.
+"""Deprecated demo shim -- right-click menu demo was Tk-based and has been replaced by the Qt implementation.
 
 This module now re-exports the Qt `RightClickMenu` where possible to preserve import compatibility
 for any remaining legacy code. Importing this module in a non-GUI/test environment is a no-op.
@@ -18,4 +18,4 @@ except Exception:  # pragma: no cover - best-effort compatibility shim
 
 
 if __name__ == "__main__":
-    print("rclick_menu demo removed — use the Qt demo in interface/qt/widgets instead.")
+    print("rclick_menu demo removed -- use the Qt demo in interface/qt/widgets instead.")

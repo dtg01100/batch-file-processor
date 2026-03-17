@@ -62,7 +62,7 @@ class ColumnBuilders:
         self.on_update_backend_states = on_update_backend_states
 
     # ------------------------------------------------------------------
-    # Column 1 – Others List
+    # Column 1 -- Others List
     # ------------------------------------------------------------------
     def build_others_column(self) -> QWidget:
         """Build the 'Others' column with folder list and copy config functionality."""
@@ -126,7 +126,7 @@ class ColumnBuilders:
         return container
 
     # ------------------------------------------------------------------
-    # Column 2 – Folder Settings
+    # Column 2 -- Folder Settings
     # ------------------------------------------------------------------
     def build_folder_column(self) -> QWidget:
         """Build the 'Folder' column with backend selection and folder alias."""
@@ -191,7 +191,7 @@ class ColumnBuilders:
         return container
 
     # ------------------------------------------------------------------
-    # Column 3 – Backend Settings
+    # Column 3 -- Backend Settings
     # ------------------------------------------------------------------
     def build_backend_column(self) -> QWidget:
         """Build the 'Backend' column with copy, FTP, and email settings."""
@@ -275,7 +275,7 @@ class ColumnBuilders:
         return container
 
     # ------------------------------------------------------------------
-    # Column 4 – EDI Settings (base column, dynamic sections added separately)
+    # Column 4 -- EDI Settings (base column, dynamic sections added separately)
     # ------------------------------------------------------------------
     def build_edi_column(self) -> QWidget:
         """Build the base 'EDI' column with force EDI validation and split EDI options."""

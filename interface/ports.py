@@ -227,7 +227,7 @@ class ProgressServiceProtocol(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Null (no-op) implementation — for headless / testing use
+# Null (no-op) implementation -- for headless / testing use
 # ---------------------------------------------------------------------------
 
 
@@ -240,13 +240,13 @@ class NullUIService:
     """
 
     def show_info(self, title: str, message: str) -> None:
-        """No-op — silently ignores the info message."""
+        """No-op -- silently ignores the info message."""
 
     def show_error(self, title: str, message: str) -> None:
-        """No-op — silently ignores the error message."""
+        """No-op -- silently ignores the error message."""
 
     def show_warning(self, title: str, message: str) -> None:
-        """No-op — silently ignores the warning message."""
+        """No-op -- silently ignores the warning message."""
 
     def ask_yes_no(self, title: str, message: str) -> bool:
         """Returns ``False`` (the safe/conservative default)."""
@@ -284,7 +284,7 @@ class NullUIService:
         return ""
 
     def pump_events(self) -> None:
-        """No-op — nothing to pump."""
+        """No-op -- nothing to pump."""
 
 
 # ---------------------------------------------------------------------------

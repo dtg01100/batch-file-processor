@@ -363,7 +363,7 @@ class TestMultiFolderIsolation:
         assert backend_a.received[0][0].endswith(".csv")
         assert backend_b.received[0][0].endswith(".csv")
 
-        # CSV has "Qty. Shipped"; YellowDog CSV has different columns – just verify
+        # CSV has "Qty. Shipped"; YellowDog CSV has different columns -- just verify
         # both produced non-empty output with at least one data row
         rows_a = backend_a.first_csv_rows()
         rows_b = backend_b.first_csv_rows()

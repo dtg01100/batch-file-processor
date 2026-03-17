@@ -47,7 +47,7 @@ def workspace(fresh_db, tmp_path):
     for dir_path in test_dirs.values():
         dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Database setup — fresh_db already has the schema and version record
+    # Database setup -- fresh_db already has the schema and version record
     db_path = fresh_db
     db_conn = sqlite_wrapper.Database.connect(str(db_path))
 

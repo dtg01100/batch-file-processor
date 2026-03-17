@@ -109,7 +109,7 @@ def _build_orchestrator(
         no_backends: If True, creates an orchestrator with no backends injected.
 
     Returns:
-        (orchestrator, backend) – backend is the MockBackend or None.
+        (orchestrator, backend) -- backend is the MockBackend or None.
     """
     if no_backends:
         config = DispatchConfig(settings={})
@@ -287,7 +287,7 @@ class TestMultiFolderWorkflows:
         assert len(backend.send_calls) == 12
 
     def test_multi_folder_with_mixed_results(self, tmp_path):
-        """One folder with files, one empty, one non-existent – verify each result individually."""
+        """One folder with files, one empty, one non-existent -- verify each result individually."""
         backend = MockBackend(should_succeed=True)
         config = DispatchConfig(settings={}, backends={"mock": backend})
         orch = DispatchOrchestrator(config)
@@ -333,12 +333,12 @@ class TestDeduplication:
         db = InMemoryProcessedFiles()
         folder_cfg = {"folder_name": folder, "alias": "dedup", "id": 1}
 
-        # First run – should send
+        # First run -- should send
         result1 = orch.process_folder(folder_cfg, BytesIO(), processed_files=db)
         assert result1.files_processed == 1
         assert len(backend.send_calls) == 1
 
-        # Second run with same DB – should skip
+        # Second run with same DB -- should skip
         orch2 = DispatchOrchestrator(config)
         result2 = orch2.process_folder(folder_cfg, BytesIO(), processed_files=db)
         assert result2.files_processed == 0
@@ -356,7 +356,7 @@ class TestDeduplication:
         db = InMemoryProcessedFiles()
         folder_cfg = {"folder_name": folder, "alias": "incremental", "id": 1}
 
-        # Run 1 – processes the old file
+        # Run 1 -- processes the old file
         orch1 = DispatchOrchestrator(config)
         result1 = orch1.process_folder(folder_cfg, BytesIO(), processed_files=db)
         assert result1.files_processed == 1
@@ -364,7 +364,7 @@ class TestDeduplication:
         # Add a new file
         _make_file(folder, "new.txt", b"brand new content")
 
-        # Run 2 – only the new file should be processed
+        # Run 2 -- only the new file should be processed
         orch2 = DispatchOrchestrator(config)
         result2 = orch2.process_folder(folder_cfg, BytesIO(), processed_files=db)
         assert result2.files_processed == 1
@@ -391,14 +391,14 @@ class TestDeduplication:
         db = InMemoryProcessedFiles()
         folder_cfg = {"folder_name": folder, "alias": "twin", "id": 1}
 
-        # Run 1 – first file records checksum, second is filtered
+        # Run 1 -- first file records checksum, second is filtered
         orch1 = DispatchOrchestrator(config)
         result1 = orch1.process_folder(folder_cfg, BytesIO(), processed_files=db)
         # At least one should be sent; the second may be skipped after the first
         # records its checksum mid-run (implementation detail), so just check ≥1
         assert result1.files_processed >= 1
 
-        # Run 2 – nothing new
+        # Run 2 -- nothing new
         orch2 = DispatchOrchestrator(config)
         result2 = orch2.process_folder(folder_cfg, BytesIO(), processed_files=db)
         assert result2.files_processed == 0
@@ -431,7 +431,7 @@ class TestDeduplication:
 
 
 class TestSingleFileMode:
-    """Tests for process_file() – direct single-file processing."""
+    """Tests for process_file() -- direct single-file processing."""
 
     def test_single_mode_single_file(self, tmp_path):
         """process_file() on a specific file produces FileResult.sent=True and 1 send call."""

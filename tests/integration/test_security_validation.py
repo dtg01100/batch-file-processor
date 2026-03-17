@@ -119,7 +119,7 @@ C00000003000030000
         # Result must be a FolderResult with defined outcome (success or failure with errors)
         assert hasattr(result, "success"), "process_folder must return a FolderResult"
         assert hasattr(result, "errors")
-        # If it failed, errors should explain why (validation/conversion) — not a crash
+        # If it failed, errors should explain why (validation/conversion) -- not a crash
         if not result.success:
             assert len(result.errors) > 0, "Failed result must have error details"
 
@@ -172,7 +172,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         folders = list(db.folders_table.all())
         result = orchestrator.process_folder(folders[0], MagicMock())
 
-        # Should complete without errors — normal EDI must process successfully
+        # Should complete without errors -- normal EDI must process successfully
         assert hasattr(result, "success"), "process_folder must return a FolderResult"
         assert (
             result.success is True
@@ -327,7 +327,7 @@ class TestDatabaseSecurity:
             try:
                 db.folders_table.insert(folder_config)
 
-                # Verify injection string was stored literally — not executed
+                # Verify injection string was stored literally -- not executed
                 folders = list(db.folders_table.all())
                 assert len(folders) >= 1, "Folder must exist after insert"
                 last_folder = folders[-1]

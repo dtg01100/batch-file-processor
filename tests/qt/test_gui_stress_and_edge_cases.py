@@ -1289,7 +1289,7 @@ class TestEditFoldersDialogStress:
 
         # Verify robust boolean/int conversion
         # "NotABool" is a non-empty string → truthy → True per normalize_bool
-        # "TrueString" is similar — non-empty string → True
+        # "TrueString" is similar -- non-empty string → True
         assert dialog._active_checkbox.isChecked() is True
 
         # Switch to Tweak EDI to check string-to-int conversion for offset

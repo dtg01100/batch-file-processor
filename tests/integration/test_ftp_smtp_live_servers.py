@@ -61,7 +61,7 @@ class _NoTLSSMTPClient(RealSMTPClient):
         try:
             super().starttls()
         except smtplib.SMTPNotSupportedError:
-            pass  # test server doesn't support TLS — that's fine
+            pass  # test server doesn't support TLS -- that's fine
 
 
 # ---------------------------------------------------------------------------

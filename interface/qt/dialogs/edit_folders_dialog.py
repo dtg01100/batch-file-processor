@@ -191,7 +191,7 @@ class EditFoldersDialog(BaseDialog):
             else:
                 edi_combo.setCurrentText("Do Nothing")
 
-        # Convert format combo + sub-form — updated *after* folder_config is already
+        # Convert format combo + sub-form -- updated *after* folder_config is already
         # reflecting the new values so the sub-form builders read the right data.
         convert_combo = self.dynamic_edi_builder.convert_format_combo
         if convert_combo:
@@ -317,7 +317,7 @@ class EditFoldersDialog(BaseDialog):
             widget.setText(value)
 
     # ------------------------------------------------------------------
-    # Convenience properties – expose commonly accessed widgets directly
+    # Convenience properties -- expose commonly accessed widgets directly
     # so tests and external code can reference them without knowing the
     # internal fields-dict keys or sub-builder structure.
     # ------------------------------------------------------------------
@@ -482,7 +482,7 @@ class EditFoldersDialog(BaseDialog):
     def _email_subject_field(self):
         return self._fields.get("email_sender_subject_field")
 
-    # EDI Convert – CSV fields
+    # EDI Convert -- CSV fields
     @property
     def _csv_upc_check(self):
         return self._fields.get("upc_var_check")
@@ -499,7 +499,7 @@ class EditFoldersDialog(BaseDialog):
     def _csv_pad_arec_check(self):
         return self._fields.get("pad_arec_check")
 
-    # EDI Convert – ScannerWare fields (share keys with other formats)
+    # EDI Convert -- ScannerWare fields (share keys with other formats)
     @property
     def _sw_pad_arec_check(self):
         return self._fields.get("pad_arec_check")
@@ -508,7 +508,7 @@ class EditFoldersDialog(BaseDialog):
     def _sw_arec_padding_field(self):
         return self._fields.get("a_record_padding_field")
 
-    # EDI Convert – simplified_csv fields
+    # EDI Convert -- simplified_csv fields
     @property
     def _simp_headers_check(self):
         return self._fields.get("headers_check")
@@ -525,7 +525,7 @@ class EditFoldersDialog(BaseDialog):
     def _simp_column_sort_field(self):
         return self._fields.get("simple_csv_column_sorter")
 
-    # EDI Convert – Estore fields
+    # EDI Convert -- Estore fields
     @property
     def _estore_store_number_field(self):
         return self._fields.get("estore_store_number_field")
@@ -542,7 +542,7 @@ class EditFoldersDialog(BaseDialog):
     def _estore_c_record_oid_field(self):
         return self._fields.get("estore_c_record_oid_field")
 
-    # EDI Convert – fintech fields
+    # EDI Convert -- fintech fields
     @property
     def _fintech_division_field(self):
         return self._fields.get("fintech_divisionid_field")

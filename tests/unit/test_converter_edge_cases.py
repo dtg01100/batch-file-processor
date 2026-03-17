@@ -131,9 +131,9 @@ def default_parameters_dict():
         "calculate_upc_check_digit": "False",
         "retail_uom": "False",
         "override_upc_bool": "False",
-        "override_upc_level": 1,  # int – used as tuple index in convert_to_csv
+        "override_upc_level": 1,  # int -- used as tuple index in convert_to_csv
         "override_upc_category_filter": "ALL",
-        "invoice_date_offset": 0,  # int – used in timedelta(days=...) in scannerware
+        "invoice_date_offset": 0,  # int -- used in timedelta(days=...) in scannerware
         "invoice_date_custom_format": "False",
         "invoice_date_custom_format_string": "",
         "pad_a_records": "False",
@@ -248,7 +248,7 @@ class TestConverterEmptyFileHandling:
     Some converters produce empty output; others may raise exceptions.
     The key requirement is that no *unhandled* exception escapes.
     Converters that require a non-empty first line (stewarts, jolley) are
-    expected to raise an IndexError / similar when the file is empty – that
+    expected to raise an IndexError / similar when the file is empty -- that
     is an acceptable, documented failure mode and is tested with pytest.raises.
     """
 
@@ -669,7 +669,7 @@ class TestConverterMalformedInput:
         """A B record shorter than 76 chars should not crash convert_to_csv."""
         import convert_to_csv
 
-        # Truncated B record – only 20 chars
+        # Truncated B record -- only 20 chars
         truncated_b = "B01234567890Test Ite"
         content = make_a_record() + "\n" + truncated_b + "\n"
         edi_file = self._write_edi(tmp_path, content)
@@ -685,7 +685,7 @@ class TestConverterMalformedInput:
             )
             assert os.path.exists(result)
         except Exception:
-            pass  # Acceptable – truncated records may raise
+            pass  # Acceptable -- truncated records may raise
 
     def test_csv_whitespace_only_lines(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -1063,7 +1063,7 @@ class TestConverterRetailUomMode:
         """
         import convert_to_csv
 
-        # B record with unit_multiplier=000000 (zero) – triggers ValueError at line 67
+        # B record with unit_multiplier=000000 (zero) -- triggers ValueError at line 67
         b_rec = make_b_record(
             vendor_item="123456",
             unit_multiplier="000000",
@@ -1077,7 +1077,7 @@ class TestConverterRetailUomMode:
         output_base = str(tmp_path / "output_zero_mult")
         upc_lut = {123456: ("BEER", "01234567890", "01234567890")}
 
-        # Should NOT raise – the ValueError is caught internally and the line is skipped
+        # Should NOT raise -- the ValueError is caught internally and the line is skipped
         result = convert_to_csv.edi_convert(
             str(edi_file),
             output_base,
@@ -1104,7 +1104,7 @@ class TestConverterRetailUomMode:
         edi_file.write_text(content, encoding="utf-8")
 
         output_base = str(tmp_path / "output_no_upc_match")
-        # Empty upc_lut – no match for vendor_item 999999
+        # Empty upc_lut -- no match for vendor_item 999999
         upc_lut = {}
 
         result = convert_to_csv.edi_convert(
@@ -1348,7 +1348,7 @@ class TestScannerwareInvoiceDateOffset:
         import convert_to_scannerware
 
         params = dict(default_parameters_dict)
-        params["invoice_date_offset"] = 7  # integer (not string) – also valid
+        params["invoice_date_offset"] = 7  # integer (not string) -- also valid
 
         content = make_a_record(invoice_date="010125") + "\n" + make_b_record() + "\n"
         edi_file = tmp_path / "offset.edi"
@@ -1572,7 +1572,7 @@ class TestCsvConverterOutputContent:
         with open(result, encoding="utf-8") as f:
             content = f.read()
 
-        # The B record's vendor_item is "123456" – should appear in output
+        # The B record's vendor_item is "123456" -- should appear in output
         assert "123456" in content
 
 

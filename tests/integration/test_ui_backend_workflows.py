@@ -309,7 +309,7 @@ class TestMultiDialogWorkflow:
 
         mf = MaintenanceFunctions(database)
         dialog = MaintenanceDialog(parent, mf)
-        # Do not addWidget here — MaintenanceDialog manages its own lifetime
+        # Do not addWidget here -- MaintenanceDialog manages its own lifetime
         # Just verify the dialog has operational buttons
         buttons = dialog.findChildren(QPushButton)
         assert len(buttons) > 0

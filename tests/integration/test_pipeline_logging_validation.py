@@ -656,7 +656,7 @@ class TestMultiBackendLogging:
         assert "FTP Backend" in joined
 
     def test_partial_backend_failure_logged(self, tmp_path, log_capture):
-        """One backend succeeds, one fails — both outcomes logged."""
+        """One backend succeeds, one fails -- both outcomes logged."""
         inp = tmp_path / "input"
         _make_edi(inp, "partial.edi")
         (tmp_path / "out").mkdir()
@@ -1054,7 +1054,7 @@ class TestReprocessAfterFailure:
     """Verify that reprocessing after a failure produces clean log output."""
 
     def test_reprocess_succeeds_after_backend_fix(self, tmp_path, log_capture):
-        """First run fails, second run succeeds — log shows recovery."""
+        """First run fails, second run succeeds -- log shows recovery."""
         inp = tmp_path / "input"
         _make_edi(inp, "retry.edi")
         (tmp_path / "out").mkdir()
