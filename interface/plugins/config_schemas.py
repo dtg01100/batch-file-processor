@@ -99,68 +99,7 @@ class FieldDefinition:
         if value is None:
             return ValidationResult(success=True, errors=[])
 
-        # Type validation
-        errors = []
-
-        if self.field_type == FieldType.STRING:
-            if not isinstance(value, str):
-                errors.append(f"Field '{self.name}' must be a string")
-            elif self.min_length is not None and len(value) < self.min_length:
-                errors.append(
-                    f"Field '{self.name}' must be at least {self.min_length} characters long"
-                )
-            elif self.max_length is not None and len(value) > self.max_length:
-                errors.append(
-                    f"Field '{self.name}' must be at most {self.max_length} characters long"
-                )
-
-        elif self.field_type == FieldType.INTEGER:
-            if not isinstance(value, int):
-                errors.append(f"Field '{self.name}' must be an integer")
-            elif self.min_value is not None and value < self.min_value:
-                errors.append(f"Field '{self.name}' must be at least {self.min_value}")
-            elif self.max_value is not None and value > self.max_value:
-                errors.append(f"Field '{self.name}' must be at most {self.max_value}")
-
-        elif self.field_type == FieldType.FLOAT:
-            if not isinstance(value, (int, float)) or isinstance(value, bool):
-                errors.append(f"Field '{self.name}' must be a number")
-            elif self.min_value is not None and value < self.min_value:
-                errors.append(f"Field '{self.name}' must be at least {self.min_value}")
-            elif self.max_value is not None and value > self.max_value:
-                errors.append(f"Field '{self.name}' must be at most {self.max_value}")
-
-        elif self.field_type == FieldType.BOOLEAN:
-            if not isinstance(value, bool):
-                errors.append(f"Field '{self.name}' must be a boolean")
-
-        elif self.field_type == FieldType.LIST:
-            if not isinstance(value, list):
-                errors.append(f"Field '{self.name}' must be a list")
-
-        elif self.field_type == FieldType.DICT:
-            if not isinstance(value, dict):
-                errors.append(f"Field '{self.name}' must be a dictionary")
-
-        elif self.field_type == FieldType.SELECT:
-            if not isinstance(value, str):
-                errors.append(f"Field '{self.name}' must be a string")
-            elif self.choices and value not in [c["value"] for c in self.choices]:
-                valid_choices = ", ".join([c["value"] for c in self.choices])
-                errors.append(f"Field '{self.name}' must be one of: {valid_choices}")
-
-        elif self.field_type == FieldType.MULTI_SELECT:
-            if not isinstance(value, list):
-                errors.append(f"Field '{self.name}' must be a list")
-            elif self.choices:
-                valid_values = [c["value"] for c in self.choices]
-                invalid_values = [v for v in value if v not in valid_values]
-                if invalid_values:
-                    valid_choices = ", ".join(valid_values)
-                    errors.append(
-                        f"Field '{self.name}' contains invalid values: {', '.join(invalid_values)}. "
-                        f"Valid choices are: {valid_choices}"
-                    )
+        errors = self._validate_by_type(value)
 
         # Custom validators
         for validator in self.validators:
@@ -169,6 +108,100 @@ class FieldDefinition:
                 errors.extend(validation.errors)
 
         return ValidationResult(success=len(errors) == 0, errors=errors)
+
+    def _validate_by_type(self, value: Any) -> List[str]:
+        """Validate value according to configured field type."""
+        validators = {
+            FieldType.STRING: self._validate_string,
+            FieldType.INTEGER: self._validate_integer,
+            FieldType.FLOAT: self._validate_float,
+            FieldType.BOOLEAN: self._validate_boolean,
+            FieldType.LIST: self._validate_list,
+            FieldType.DICT: self._validate_dict,
+            FieldType.SELECT: self._validate_select,
+            FieldType.MULTI_SELECT: self._validate_multi_select,
+        }
+        validator = validators.get(self.field_type)
+        if validator is None:
+            return []
+        return validator(value)
+
+    def _validate_string(self, value: Any) -> List[str]:
+        errors = []
+        if not isinstance(value, str):
+            errors.append(f"Field '{self.name}' must be a string")
+            return errors
+
+        if self.min_length is not None and len(value) < self.min_length:
+            errors.append(
+                f"Field '{self.name}' must be at least {self.min_length} characters long"
+            )
+        elif self.max_length is not None and len(value) > self.max_length:
+            errors.append(
+                f"Field '{self.name}' must be at most {self.max_length} characters long"
+            )
+        return errors
+
+    def _validate_integer(self, value: Any) -> List[str]:
+        errors = []
+        if not isinstance(value, int):
+            errors.append(f"Field '{self.name}' must be an integer")
+            return errors
+
+        if self.min_value is not None and value < self.min_value:
+            errors.append(f"Field '{self.name}' must be at least {self.min_value}")
+        elif self.max_value is not None and value > self.max_value:
+            errors.append(f"Field '{self.name}' must be at most {self.max_value}")
+        return errors
+
+    def _validate_float(self, value: Any) -> List[str]:
+        errors = []
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            errors.append(f"Field '{self.name}' must be a number")
+            return errors
+
+        if self.min_value is not None and value < self.min_value:
+            errors.append(f"Field '{self.name}' must be at least {self.min_value}")
+        elif self.max_value is not None and value > self.max_value:
+            errors.append(f"Field '{self.name}' must be at most {self.max_value}")
+        return errors
+
+    def _validate_boolean(self, value: Any) -> List[str]:
+        return [f"Field '{self.name}' must be a boolean"] if not isinstance(value, bool) else []
+
+    def _validate_list(self, value: Any) -> List[str]:
+        return [f"Field '{self.name}' must be a list"] if not isinstance(value, list) else []
+
+    def _validate_dict(self, value: Any) -> List[str]:
+        return [f"Field '{self.name}' must be a dictionary"] if not isinstance(value, dict) else []
+
+    def _validate_select(self, value: Any) -> List[str]:
+        errors = []
+        if not isinstance(value, str):
+            errors.append(f"Field '{self.name}' must be a string")
+            return errors
+
+        if self.choices and value not in [c["value"] for c in self.choices]:
+            valid_choices = ", ".join([c["value"] for c in self.choices])
+            errors.append(f"Field '{self.name}' must be one of: {valid_choices}")
+        return errors
+
+    def _validate_multi_select(self, value: Any) -> List[str]:
+        errors = []
+        if not isinstance(value, list):
+            errors.append(f"Field '{self.name}' must be a list")
+            return errors
+
+        if self.choices:
+            valid_values = [c["value"] for c in self.choices]
+            invalid_values = [v for v in value if v not in valid_values]
+            if invalid_values:
+                valid_choices = ", ".join(valid_values)
+                errors.append(
+                    f"Field '{self.name}' contains invalid values: {', '.join(invalid_values)}. "
+                    f"Valid choices are: {valid_choices}"
+                )
+        return errors
 
 
 class ConfigurationSchema:
