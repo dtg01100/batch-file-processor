@@ -6,12 +6,15 @@ from ConfigurationSchema definitions. Supports the Qt framework
 through the existing UI abstraction layer.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from interface.plugins.config_schemas import ConfigurationSchema
 from interface.plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
 from interface.plugins.validation_framework import ValidationResult
+
+logger = logging.getLogger(__name__)
 
 
 class FormGenerator(ABC):
@@ -396,7 +399,7 @@ class QtFormGenerator(FormGenerator):
                     section_layout.addWidget(native_widget)
 
         except Exception as e:
-            print(f"Error rendering plugin sections: {e}")
+            logger.error("Error rendering plugin sections: %s", e, exc_info=True)
 
     def get_values(self) -> Dict[str, Any]:
         """
@@ -461,15 +464,15 @@ class QtFormGenerator(FormGenerator):
                 # Connect value change signals
                 if hasattr(native_widget, "textChanged"):
                     native_widget.textChanged.connect(
-                        lambda: self._update_dependent_fields(trigger_field)
+                        lambda f=trigger_field: self._update_dependent_fields(f)
                     )
                 elif hasattr(native_widget, "valueChanged"):
                     native_widget.valueChanged.connect(
-                        lambda: self._update_dependent_fields(trigger_field)
+                        lambda f=trigger_field: self._update_dependent_fields(f)
                     )
                 elif hasattr(native_widget, "stateChanged"):
                     native_widget.stateChanged.connect(
-                        lambda: self._update_dependent_fields(trigger_field)
+                        lambda f=trigger_field: self._update_dependent_fields(f)
                     )
 
 

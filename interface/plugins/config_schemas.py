@@ -167,13 +167,25 @@ class FieldDefinition:
         return errors
 
     def _validate_boolean(self, value: Any) -> List[str]:
-        return [f"Field '{self.name}' must be a boolean"] if not isinstance(value, bool) else []
+        return (
+            [f"Field '{self.name}' must be a boolean"]
+            if not isinstance(value, bool)
+            else []
+        )
 
     def _validate_list(self, value: Any) -> List[str]:
-        return [f"Field '{self.name}' must be a list"] if not isinstance(value, list) else []
+        return (
+            [f"Field '{self.name}' must be a list"]
+            if not isinstance(value, list)
+            else []
+        )
 
     def _validate_dict(self, value: Any) -> List[str]:
-        return [f"Field '{self.name}' must be a dictionary"] if not isinstance(value, dict) else []
+        return (
+            [f"Field '{self.name}' must be a dictionary"]
+            if not isinstance(value, dict)
+            else []
+        )
 
     def _validate_select(self, value: Any) -> List[str]:
         errors = []

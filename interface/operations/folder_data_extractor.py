@@ -120,8 +120,6 @@ class FolderDataExtractor:
 
     def extract_all(self) -> ExtractedDialogFields:
         """Extract all field values from the dialog."""
-        plugin_configs = self._extract_plugin_configurations()
-
         return ExtractedDialogFields(
             # Identity
             folder_name=self._get_text("foldersnameinput", "folder_name"),
@@ -198,20 +196,7 @@ class FolderDataExtractor:
             fintech_division_id=self._get_text("fintech_divisionid_field"),
             # Copy destination
             copy_to_directory=self._get_text("copy_to_directory_field"),
-            # Plugin configurations
-            plugin_configurations=plugin_configs,
         )
-
-    def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
-        """Extract plugin configurations from the form."""
-        plugin_configs = {}
-
-        # We need to find all form generators that might have been created
-        # This is a bit tricky since they're stored in the builder, but we can
-        # look for them in the fields dict or use the plugin manager to find
-        # all available plugins and check if their widgets exist
-
-        return plugin_configs
 
     def _get_alias(self, extracted: ExtractedDialogFields) -> str:
         """Get alias value, using folder name basename if empty."""

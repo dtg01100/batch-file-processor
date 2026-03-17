@@ -9,8 +9,9 @@ This theme system implements contemporary design principles including:
 - Modern button and input styling
 """
 
-from PyQt6.QtWidgets import QApplication
 import re
+
+from PyQt6.QtWidgets import QApplication
 
 
 class Theme:
