@@ -495,10 +495,20 @@ class QtBatchFileSenderApp:
     def _open_edit_folders_dialog(self, folder_config: dict) -> None:
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
+        def _get_aliases() -> list:
+            if self._database and self._database.folders_table:
+                return [
+                    row["alias"]
+                    for row in self._database.folders_table.find()
+                    if row.get("alias")
+                ]
+            return []
+
         dlg = EditFoldersDialog(
             self._window,
             folder_config,
             on_apply_success=self._on_folder_edit_applied,
+            alias_provider=_get_aliases,
         )
         if dlg.exec():
             folder_id = folder_config.get("id")
