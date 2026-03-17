@@ -601,8 +601,7 @@ class TestCopyConfigFromOtherButton:
         assert dialog._folder_config["id"] == sample_folder_config["id"]
         assert dialog._folder_config["alias"] == sample_folder_config["alias"]
         assert (
-            dialog._folder_config["folder_name"]
-            == sample_folder_config["folder_name"]
+            dialog._folder_config["folder_name"] == sample_folder_config["folder_name"]
         )
 
 

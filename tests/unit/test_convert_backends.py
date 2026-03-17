@@ -661,6 +661,7 @@ class TestConvertToYellowdogCSV:
             "\n"
         )
 
+
 class TestConvertToEstoreEinvoice:
     """Test suite for convert_to_estore_einvoice conversion."""
 
@@ -707,6 +708,7 @@ class TestConvertToEstoreEinvoiceGeneric:
             "\n"
         )
 
+
 class TestConvertToCSV:
     """Test suite for convert_to_csv conversion."""
 
@@ -721,6 +723,7 @@ class TestConvertToCSV:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
+
 
 class TestConvertToScannerware:
     """Test suite for convert_to_scannerware conversion."""
@@ -737,6 +740,7 @@ class TestConvertToScannerware:
             "\n"
         )
 
+
 class TestConvertToScansheetTypeA:
     """Test suite for convert_to_scansheet_type_a conversion."""
 
@@ -751,6 +755,7 @@ class TestConvertToScansheetTypeA:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
+
 
 class TestConvertToJolleyCustom:
     """Test suite for convert_to_jolley_custom conversion."""
@@ -767,6 +772,7 @@ class TestConvertToJolleyCustom:
             "\n"
         )
 
+
 class TestConvertToStewartsCustom:
     """Test suite for convert_to_stewarts_custom conversion."""
 
@@ -781,6 +787,7 @@ class TestConvertToStewartsCustom:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
+
 
 class TestConvertFormatConfiguration:
     """Test suite for format configuration validation."""

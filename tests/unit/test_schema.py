@@ -736,12 +736,18 @@ class TestSchemaConstraints:
         """Duplicate user emails must be rejected."""
         import sqlite3
 
-        database["users"].insert(dict(id="u1", email="dup@example.com", display_name="A"))
+        database["users"].insert(
+            dict(id="u1", email="dup@example.com", display_name="A")
+        )
         with pytest.raises((Exception, sqlite3.IntegrityError)):
-            database["users"].insert(dict(id="u2", email="dup@example.com", display_name="B"))
+            database["users"].insert(
+                dict(id="u2", email="dup@example.com", display_name="B")
+            )
 
         # Only the first insert must be present
-        users = list(database.query("SELECT * FROM users WHERE email = 'dup@example.com'"))
+        users = list(
+            database.query("SELECT * FROM users WHERE email = 'dup@example.com'")
+        )
         assert len(users) == 1
         assert users[0]["id"] == "u1"
 
@@ -766,7 +772,9 @@ class TestSchemaConstraints:
 
     def test_schema_idempotent_with_existing_users(self, database):
         """ensure_schema() called twice must not lose existing user data."""
-        database["users"].insert(dict(id="persist", email="keep@example.com", display_name="Keep"))
+        database["users"].insert(
+            dict(id="persist", email="keep@example.com", display_name="Keep")
+        )
         schema.ensure_schema(database)
         user = database["users"].find_one(id="persist")
         assert user is not None
