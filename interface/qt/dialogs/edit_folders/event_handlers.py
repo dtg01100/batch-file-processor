@@ -9,7 +9,7 @@ import logging
 import os
 from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QWidget
+from PyQt6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QPushButton, QWidget
 
 from interface.qt.theme import Theme
 
@@ -64,19 +64,23 @@ class EventHandlers:
     def update_active_state(self):
         """Update the active state of the folder and all child widgets."""
         active_btn = self.fields.get("active_checkbutton")
-        if not isinstance(active_btn, QCheckBox):
+        if not isinstance(active_btn, (QCheckBox, QPushButton)):
             return
 
         is_active = active_btn.isChecked()
+        selector = "QPushButton" if isinstance(active_btn, QPushButton) else "QCheckBox"
         if is_active:
             active_btn.setText("Folder Is Enabled")
             active_btn.setStyleSheet(
                 f"""
-                QCheckBox {{
+                {selector} {{
                     background-color: {Theme.SUCCESS_CONTAINER};
                     color: {Theme.ON_SUCCESS_CONTAINER};
-                    padding: 4px;
+                    padding: 6px 8px;
                     border-radius: 4px;
+                    font-weight: bold;
+                    text-align: left;
+                    border: none;
                 }}
             """
             )
@@ -84,11 +88,14 @@ class EventHandlers:
             active_btn.setText("Folder Is Disabled")
             active_btn.setStyleSheet(
                 f"""
-                QCheckBox {{
+                {selector} {{
                     background-color: {Theme.ERROR_CONTAINER};
                     color: {Theme.ON_ERROR_CONTAINER};
-                    padding: 4px;
+                    padding: 6px 8px;
                     border-radius: 4px;
+                    font-weight: bold;
+                    text-align: left;
+                    border: none;
                 }}
             """
             )

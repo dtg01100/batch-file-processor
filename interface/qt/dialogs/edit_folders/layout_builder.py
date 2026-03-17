@@ -8,11 +8,11 @@ from typing import Any, Callable, Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -106,17 +106,21 @@ class UILayoutBuilder:
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        # Active state checkbox — pinned above the scroll area so it is
-        # always visible regardless of scroll position (banner style).
-        self.active_checkbox = QCheckBox("Folder Is Disabled")
+        # Active state toggle — full-width checkable button pinned above the
+        # scroll area so it is always visible (never scrolls away).
+        # QPushButton with setCheckable(True) makes the entire surface clickable.
+        self.active_checkbox = QPushButton("Folder Is Disabled")
+        self.active_checkbox.setCheckable(True)
         self.active_checkbox.setStyleSheet(
             f"""
-            QCheckBox {{
+            QPushButton {{
                 background-color: {Theme.ERROR_CONTAINER};
                 color: {Theme.ON_ERROR_CONTAINER};
                 padding: 6px 8px;
                 border-radius: 4px;
                 font-weight: bold;
+                text-align: left;
+                border: none;
             }}
         """
         )
@@ -227,7 +231,7 @@ class UILayoutBuilder:
         """Get the dynamic EDI builder instance."""
         return self.dynamic_edi_builder
 
-    def get_active_checkbox(self) -> QCheckBox:
+    def get_active_checkbox(self) -> QPushButton:
         """Get the active state checkbox widget."""
         return self.active_checkbox
 
