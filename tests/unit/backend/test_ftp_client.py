@@ -47,7 +47,7 @@ class TestRealFTPClient:
 
         mock_ftplib.FTP.assert_called_once()
         mock_ftplib.FTP.return_value.connect.assert_called_once_with(
-            "ftp.example.com", 21
+            "ftp.example.com", 21, 30
         )
         assert "FTP connecting" in caplog.text
         assert "FTP connected" in caplog.text
@@ -59,7 +59,7 @@ class TestRealFTPClient:
 
         mock_ftplib.FTP_TLS.assert_called_once()
         mock_ftplib.FTP_TLS.return_value.connect.assert_called_once_with(
-            "ftp.example.com", 990
+            "ftp.example.com", 990, 30
         )
 
     def test_connect_with_timeout(self, mock_ftplib):

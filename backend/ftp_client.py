@@ -50,7 +50,7 @@ class RealFTPClient:
         if timeout is not None:
             self._connection.connect(host, port, timeout)
         else:
-            self._connection.connect(host, port)
+            self._connection.connect(host, port, 30)  # 30s default
         logger.debug("FTP connected to %s:%d", host, port)
 
     def login(self, user: str, password: str) -> None:

@@ -44,7 +44,7 @@ class TestRealSMTPClient:
         with caplog.at_level(logging.DEBUG, logger="backend.smtp_client"):
             client.connect("smtp.example.com", 587)
 
-        mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587)
+        mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587, timeout=30)
         assert "SMTP connecting" in caplog.text
         assert "SMTP connected" in caplog.text
 
@@ -196,7 +196,7 @@ class TestRealSMTPClient:
 
         client = RealSMTPClient.from_config(config)
 
-        mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587)
+        mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587, timeout=30)
         assert mock_smtplib.SMTP.return_value.starttls.call_count == 1
         mock_smtplib.SMTP.return_value.login.assert_called_once_with(
             "user@example.com", "password"

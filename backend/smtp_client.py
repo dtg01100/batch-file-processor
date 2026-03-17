@@ -37,15 +37,16 @@ class RealSMTPClient:
         self.config = config or {}
         self._connection: Optional[smtplib.SMTP] = None
 
-    def connect(self, host: str, port: int) -> None:
+    def connect(self, host: str, port: int = 587, timeout: float = 30) -> None:
         """Connect to SMTP server.
 
         Args:
             host: Server hostname or IP address
             port: Server port number
+            timeout: Connection timeout in seconds (default 30)
         """
         logger.debug("SMTP connecting to %s:%d", host, port)
-        self._connection = smtplib.SMTP(host, port)
+        self._connection = smtplib.SMTP(host, port, timeout=timeout)
         logger.debug("SMTP connected to %s:%d", host, port)
 
     def starttls(self) -> None:
