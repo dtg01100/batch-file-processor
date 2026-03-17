@@ -10,6 +10,7 @@ This theme system implements contemporary design principles including:
 """
 
 from PyQt6.QtWidgets import QApplication
+import re
 
 
 class Theme:
@@ -191,9 +192,9 @@ class Theme:
                 border-color: {Theme.OUTLINE_VARIANT};
             }}
         """
-
+        # Variant-specific additions
         if variant == "primary":
-            return f"""
+            styles = f"""
                 QPushButton {{
                     background-color: {Theme.PRIMARY};
                     color: {Theme.ON_PRIMARY};
@@ -224,7 +225,7 @@ class Theme:
                 }}
             """
         elif variant == "danger":
-            return f"""
+            styles = f"""
                 QPushButton {{
                     background-color: {Theme.ERROR};
                     color: {Theme.ON_ERROR};
@@ -255,7 +256,7 @@ class Theme:
                 }}
             """
         elif variant == "success":
-            return f"""
+            styles = f"""
                 QPushButton {{
                     background-color: {Theme.SUCCESS};
                     color: {Theme.ON_SUCCESS};
@@ -286,7 +287,7 @@ class Theme:
                 }}
             """
         elif variant == "sidebar":
-            return f"""
+            styles = f"""
                 QPushButton {{
                     background-color: transparent;
                     color: {Theme.TEXT_ON_SIDEBAR};
@@ -315,7 +316,7 @@ class Theme:
                 }}
             """
         elif variant == "text":
-            return f"""
+            styles = f"""
                 QPushButton {{
                     background-color: transparent;
                     color: {Theme.PRIMARY};
@@ -341,11 +342,15 @@ class Theme:
                     color: {Theme.TEXT_DISABLED};
                 }}
             """
-        return base
+        else:
+            styles = base
+
+        # Sanitize stylesheet to remove properties unsupported by Qt (e.g., box-shadow)
+        return Theme._sanitize_stylesheet(styles)
 
     @staticmethod
     def get_input_stylesheet():
-        return f"""
+        styles = f"""
             QLineEdit, QTextEdit {{
                 background-color: {Theme.INPUT_BACKGROUND};
                 color: {Theme.TEXT_PRIMARY};
@@ -371,10 +376,11 @@ class Theme:
                 border-color: {Theme.OUTLINE_VARIANT};
             }}
         """
+        return Theme._sanitize_stylesheet(styles)
 
     @classmethod
     def get_stylesheet(cls):
-        return f"""
+        raw = f"""
             * {{
                 font-family: {cls.FONT_FAMILY};
                 font-size: {cls.FONT_SIZE_BASE};
@@ -943,9 +949,25 @@ class Theme:
                 font-size: {cls.FONT_SIZE_SM};
             }}
         """
+        # Strip unsupported CSS properties before returning
+        return cls._sanitize_stylesheet(raw)
 
     @staticmethod
     def apply_theme(widget):
         app = QApplication.instance()
         if app:
+            # Apply a sanitized stylesheet to avoid Qt warnings about unsupported properties
             app.setStyleSheet(Theme.get_stylesheet())
+
+    @staticmethod
+    def _sanitize_stylesheet(css: str) -> str:
+        """Remove or neutralize CSS properties unsupported by Qt stylesheets.
+
+        Currently strips vendor-prefixed and standard `box-shadow` declarations which
+        Qt's stylesheet parser does not recognize and causes console warnings.
+        """
+        if not isinstance(css, str):
+            return css
+        # Remove -webkit- and -moz- vendor prefixed and standard box-shadow declarations
+        pattern = r"(?:-webkit-|-moz-)?box-shadow\s*:[^;]+;"
+        return re.sub(pattern, "", css, flags=re.IGNORECASE)
