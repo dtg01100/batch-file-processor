@@ -27,7 +27,6 @@ import csv
 import decimal
 from typing import Any, Dict, List, Tuple
 
-import core.database
 import utils
 from convert_base import (
     BaseEDIConverter,

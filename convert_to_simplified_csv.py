@@ -64,9 +64,13 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         context.user_data["inc_item_desc"] = normalize_parameter(
             params.get("include_item_description"), True
         )
-        context.user_data["column_layout"] = params.get(
-            "simple_csv_sort_order", "upc_number,qty_of_units,unit_cost,description,vendor_item"
-        ) or "upc_number,qty_of_units,unit_cost,description,vendor_item"
+        context.user_data["column_layout"] = (
+            params.get(
+                "simple_csv_sort_order",
+                "upc_number,qty_of_units,unit_cost,description,vendor_item",
+            )
+            or "upc_number,qty_of_units,unit_cost,description,vendor_item"
+        )
 
         # Open output file and create CSV writer
         context.output_file = open(

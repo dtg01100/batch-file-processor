@@ -566,7 +566,9 @@ class QtProgressService(QObject):
         self._current_file_total = max(0, total_files)
 
         if self._current_file_total > 0:
-            percentage = int((self._current_file_index / self._current_file_total) * 100)
+            percentage = int(
+                (self._current_file_index / self._current_file_total) * 100
+            )
             self.update_progress(percentage)
         else:
             self.set_indeterminate()

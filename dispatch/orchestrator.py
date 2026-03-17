@@ -681,7 +681,9 @@ class DispatchOrchestrator:
 
         # upc_target_length of 0 is not meaningful — treat as default (11).
         if not effective_folder.get("upc_target_length"):
-            effective_folder["upc_target_length"] = self._FOLDER_DEFAULTS["upc_target_length"]
+            effective_folder["upc_target_length"] = self._FOLDER_DEFAULTS[
+                "upc_target_length"
+            ]
 
         # Map DB field process_edi → convert_edi (orchestrator's internal gate).
         # The database stores process_edi=True to mean "convert EDI to another format".
