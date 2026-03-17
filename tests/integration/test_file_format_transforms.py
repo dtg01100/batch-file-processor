@@ -8,10 +8,8 @@ types, and valid structure (parseable JSON / well-formed XML / valid ZIP).
 import hashlib
 import io
 import json
-import os
-import tempfile
-import zipfile
 import xml.etree.ElementTree as ET
+import zipfile
 from typing import Optional
 
 import pytest

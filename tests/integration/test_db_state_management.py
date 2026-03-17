@@ -17,8 +17,6 @@ import shutil
 import sqlite3
 import sys
 import threading
-import time
-from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -30,11 +28,9 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend
-
+from interface.database import sqlite_wrapper
 
 # ---------------------------------------------------------------------------
 # Helpers

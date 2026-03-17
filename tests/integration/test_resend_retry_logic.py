@@ -10,8 +10,6 @@ import ftplib
 import os
 import smtplib
 import sys
-import tempfile
-from io import StringIO
 from unittest.mock import patch
 
 import pytest

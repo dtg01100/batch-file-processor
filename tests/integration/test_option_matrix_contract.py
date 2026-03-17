@@ -29,8 +29,8 @@ from tests.integration.option_matrix import (
     CSV_OPTION_CASES,
     EXCLUDED_CONVERSION_TWEAK_OPTION_KEYS,
     FORMAT_OPTION_CASES,
-    SIMPLIFIED_CSV_OPTION_CASES,
     REQUIRED_COMBINATION_OPTION_KEYS,
+    SIMPLIFIED_CSV_OPTION_CASES,
     TRACKED_CONVERSION_TWEAK_OPTION_KEYS,
     TWEAK_OPTION_CASES,
 )
@@ -106,7 +106,9 @@ def test_model_field_to_db_key_mapping_is_complete() -> None:
 def test_all_mapped_options_are_accounted_for() -> None:
     """Mapped option keys must be either tested by matrix or intentionally excluded."""
     mapped_keys = {
-        db_key for mapping in MODEL_FIELD_TO_DB_KEY.values() for db_key in mapping.values()
+        db_key
+        for mapping in MODEL_FIELD_TO_DB_KEY.values()
+        for db_key in mapping.values()
     }
     covered_or_excluded = (
         TRACKED_CONVERSION_TWEAK_OPTION_KEYS | EXCLUDED_CONVERSION_TWEAK_OPTION_KEYS
@@ -144,8 +146,7 @@ def test_boolean_option_cases_include_both_states() -> None:
         option for option, states in seen_states.items() if states != {False, True}
     ]
     assert not missing_two_state, (
-        "Options missing True/False coverage: "
-        f"{sorted(missing_two_state)}"
+        "Options missing True/False coverage: " f"{sorted(missing_two_state)}"
     )
 
 
@@ -176,6 +177,6 @@ def test_real_world_scenarios_use_shared_option_matrices() -> None:
         parametrize_marks = [m for m in marks if m.name == "parametrize"]
         assert parametrize_marks, f"{func_name} missing @pytest.mark.parametrize"
         actual_values = parametrize_marks[0].args[1]
-        assert actual_values == expected_values, (
-            f"{func_name} must use shared matrix constants; found non-matching values."
-        )
+        assert (
+            actual_values == expected_values
+        ), f"{func_name} must use shared matrix constants; found non-matching values."

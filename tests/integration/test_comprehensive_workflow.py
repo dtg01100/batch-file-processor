@@ -968,7 +968,9 @@ class TestEdgeCasesAndErrorHandling:
         assert "folder_name" in folder
         assert folder["folder_name"] == str(workspace["input_folder"])
         # Default convert_to_format should come from oversight defaults
-        assert "convert_to_format" in folder, "Folder should inherit convert_to_format default"
+        assert (
+            "convert_to_format" in folder
+        ), "Folder should inherit convert_to_format default"
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""

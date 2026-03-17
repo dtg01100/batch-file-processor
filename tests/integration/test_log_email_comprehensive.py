@@ -7,13 +7,10 @@ Tests cover:
 - SMTPEmailService error handling
 """
 
-import asyncio
 import logging
 import os
-import smtplib
 import socket
 import sys
-import tempfile
 import threading
 import time
 
@@ -442,9 +439,10 @@ class TestLoggingLevels:
 
     def test_ftp_backend_logs_connect_attempt(self, tmp_path, caplog):
         """ftp_backend.do() should log a debug message about connecting."""
+        from unittest.mock import patch
+
         import ftp_backend
         from backend.ftp_client import MockFTPClient
-        from unittest.mock import patch
 
         test_file = str(tmp_path / "f.txt")
         with open(test_file, "wb") as fh:
@@ -472,9 +470,10 @@ class TestLoggingLevels:
 
     def test_email_backend_logs_send_via_caplog(self, tmp_path, caplog):
         """email_backend.do() should not suppress all log output at INFO level."""
+        from unittest.mock import patch
+
         import email_backend
         from backend.smtp_client import MockSMTPClient
-        from unittest.mock import patch
 
         test_file = str(tmp_path / "mail.txt")
         with open(test_file, "wb") as fh:

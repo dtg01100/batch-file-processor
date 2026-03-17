@@ -11,15 +11,13 @@ Tests the DispatchOrchestrator end-to-end with MockBackend, covering:
 
 import hashlib
 import os
-import tempfile
-import shutil
-from io import BytesIO, StringIO
+from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 import pytest
 
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FolderResult
-from dispatch.send_manager import MockBackend, SendManager
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.send_manager import MockBackend
 
 pytestmark = [pytest.mark.integration, pytest.mark.dispatch]
 

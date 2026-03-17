@@ -334,9 +334,7 @@ class TestBooleanNormalization:
                     assert val not in (
                         "True",
                         "False",
-                    ), (
-                        f"Folder {folder['id']}.{field} = {val!r} still has string boolean"
-                    )
+                    ), f"Folder {folder['id']}.{field} = {val!r} still has string boolean"
 
 
 class TestIndexesCreated:

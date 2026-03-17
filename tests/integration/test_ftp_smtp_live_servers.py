@@ -9,9 +9,8 @@ import ftplib
 import hashlib
 import io
 import os
-import shutil
+import smtplib
 import socket
-import tempfile
 import threading
 import time
 import zipfile
@@ -24,13 +23,11 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-import smtplib
-
 import email_backend
 import ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient, RealSMTPClient
-from dispatch.send_manager import MockBackend, SendManager
+from dispatch.send_manager import SendManager
 from email_backend import EmailBackend
 
 pytestmark = [pytest.mark.integration, pytest.mark.backend]
@@ -373,9 +370,9 @@ class TestFTPLiveServer:
             ftp_backend.time.sleep = original_sleep
 
         assert result is True
-        assert mock.connect_count == 3, (
-            f"Expected 3 connect attempts, got {mock.connect_count}"
-        )
+        assert (
+            mock.connect_count == 3
+        ), f"Expected 3 connect attempts, got {mock.connect_count}"
         assert len(mock.files_sent) == 1
         assert mock.files_sent[0][1] == content
 
@@ -396,7 +393,6 @@ class TestFTPLiveServer:
 
     def test_ftp_file_rename(self, ftp_server, tmp_path):
         """Send file via orchestrator with rename_file template; verify renamed file arrives."""
-        from io import StringIO
 
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
@@ -423,9 +419,9 @@ class TestFTPLiveServer:
         assert file_result.sent is True
         uploaded_files = srv.list_uploaded_files("upload")
         # The rename template produces "renamed_output.txt"
-        assert any("renamed_output" in f for f in uploaded_files), (
-            f"No renamed file found in {uploaded_files}"
-        )
+        assert any(
+            "renamed_output" in f for f in uploaded_files
+        ), f"No renamed file found in {uploaded_files}"
 
     def test_ftp_username_password_verified(self, tmp_path):
         """Verify that ftp_backend sends the correct credentials to the FTP client."""
@@ -619,9 +615,9 @@ class TestSMTPLiveServer:
             parsed = message_from_bytes(msg_data["data"])
             received_subjects.append(parsed["Subject"])
         for name in files_to_send:
-            assert any(name in s for s in received_subjects), (
-                f"No email found for {name} in {received_subjects}"
-            )
+            assert any(
+                name in s for s in received_subjects
+            ), f"No email found for {name} in {received_subjects}"
 
     def test_smtp_subject_line_template(self, smtp_server, tmp_path):
         """Verify %filename% and %datetime% substitutions in the email subject."""
@@ -666,9 +662,9 @@ class TestSMTPLiveServer:
         msg_data = handler.messages[0]
         # All recipients should appear in SMTP envelope
         for addr in ["alice@test.com", "bob@test.com", "charlie@test.com"]:
-            assert addr in msg_data["rcpt_tos"], (
-                f"{addr} not in rcpt_tos: {msg_data['rcpt_tos']}"
-            )
+            assert (
+                addr in msg_data["rcpt_tos"]
+            ), f"{addr} not in rcpt_tos: {msg_data['rcpt_tos']}"
 
     def test_smtp_retry_on_connection_failure(self, tmp_path):
         """Verify email_backend retries after initial MockSMTPClient connect failure."""

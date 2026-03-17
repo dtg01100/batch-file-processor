@@ -17,9 +17,9 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.utils.bool_utils import normalize_bool
-
 import pytest
+
+from core.utils.bool_utils import normalize_bool
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent.resolve()
@@ -94,9 +94,9 @@ class TestAutomaticModeIntegration:
             # This is the exact logic from automatic_process_directories
             has_active = mock_table.count(folder_is_active="True") > 0
 
-            assert has_active == should_process, (
-                f"Failed for {active_count} active folders"
-            )
+            assert (
+                has_active == should_process
+            ), f"Failed for {active_count} active folders"
 
 
 class TestSingleFolderModeIntegration:

@@ -11,7 +11,12 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.pyinstaller, pytest.mark.slow, pytest.mark.timeout(900)]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.pyinstaller,
+    pytest.mark.slow,
+    pytest.mark.timeout(900),
+]
 
 # Project root is the top-level repo directory
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

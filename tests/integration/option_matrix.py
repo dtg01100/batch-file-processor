@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Final
 
-
 # ---------------------------------------------------------------------------
 # Individual option coverage
 # ---------------------------------------------------------------------------
@@ -62,9 +61,7 @@ TWEAK_OPTION_CASES: Final[list[tuple[str, bool]]] = [
 # Combination coverage
 # ---------------------------------------------------------------------------
 
-OPTION_COMBINATION_CASES: Final[
-    list[tuple[str, dict[str, int | str], str]]
-] = [
+OPTION_COMBINATION_CASES: Final[list[tuple[str, dict[str, int | str], str]]] = [
     (
         "full_csv_all_options",
         {
@@ -216,7 +213,8 @@ REQUIRED_COMBINATION_OPTION_KEYS: Final[set[str]] = {
 }
 
 COMBINATION_MATRIX_OPTION_KEYS: Final[set[str]] = (
-    _extract_option_keys_from_combo_overrides() | _extract_option_keys_from_format_options()
+    _extract_option_keys_from_combo_overrides()
+    | _extract_option_keys_from_format_options()
 )
 
 # Explicitly tracked but currently outside this conversion/tweak matrix scope.

@@ -1001,22 +1001,22 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
     # Specific validations
     if tweak_option == "calculate_upc_check_digit":
         if value:
-            assert "B012345678905" in output_content, (
-                "UPC check digit should be appended when enabled"
-            )
+            assert (
+                "B012345678905" in output_content
+            ), "UPC check digit should be appended when enabled"
         else:
-            assert "B012345678905" not in output_content, (
-                "UPC check digit should not be appended when disabled"
-            )
+            assert (
+                "B012345678905" not in output_content
+            ), "UPC check digit should not be appended when disabled"
     elif tweak_option == "append_a_records":
         if value:
-            assert "APPENDED" in output_content, (
-                "A record should have appended text when enabled"
-            )
+            assert (
+                "APPENDED" in output_content
+            ), "A record should have appended text when enabled"
         else:
-            assert "APPENDED" not in output_content, (
-                "A record should not have appended text when disabled"
-            )
+            assert (
+                "APPENDED" not in output_content
+            ), "A record should not have appended text when disabled"
 
 
 # Test common option combinations
