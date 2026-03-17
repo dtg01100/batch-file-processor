@@ -75,37 +75,62 @@ class EventHandlers:
             return
 
         is_active = active_btn.isChecked()
-        selector = "QPushButton" if isinstance(active_btn, QPushButton) else "QCheckBox"
-        if is_active:
-            active_btn.setText("Folder Is Enabled")
-            active_btn.setStyleSheet(
-                f"""
-                {selector} {{
-                    background-color: {Theme.SUCCESS_CONTAINER};
-                    color: {Theme.ON_SUCCESS_CONTAINER};
-                    padding: 6px 8px;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    text-align: left;
-                    border: none;
-                }}
-            """
-            )
+        if isinstance(active_btn, QPushButton):
+            if is_active:
+                active_btn.setText("Folder Is Enabled")
+                active_btn.setStyleSheet(
+                    f"""
+                    QPushButton {{
+                        background-color: {Theme.SUCCESS_CONTAINER};
+                        color: {Theme.ON_SUCCESS_CONTAINER};
+                        padding: 6px 8px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                        text-align: left;
+                        border: none;
+                    }}
+                """
+                )
+            else:
+                active_btn.setText("Folder Is Disabled")
+                active_btn.setStyleSheet(
+                    f"""
+                    QPushButton {{
+                        background-color: {Theme.ERROR_CONTAINER};
+                        color: {Theme.ON_ERROR_CONTAINER};
+                        padding: 6px 8px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                        text-align: left;
+                        border: none;
+                    }}
+                """
+                )
         else:
-            active_btn.setText("Folder Is Disabled")
-            active_btn.setStyleSheet(
-                f"""
-                {selector} {{
-                    background-color: {Theme.ERROR_CONTAINER};
-                    color: {Theme.ON_ERROR_CONTAINER};
-                    padding: 6px 8px;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    text-align: left;
-                    border: none;
-                }}
-            """
-            )
+            if is_active:
+                active_btn.setText("Folder Is Enabled")
+                active_btn.setStyleSheet(
+                    f"""
+                    QCheckBox {{
+                        background-color: transparent;
+                        color: {Theme.ON_SUCCESS_CONTAINER};
+                        font-weight: bold;
+                        border: none;
+                    }}
+                """
+                )
+            else:
+                active_btn.setText("Folder Is Disabled")
+                active_btn.setStyleSheet(
+                    f"""
+                    QCheckBox {{
+                        background-color: transparent;
+                        color: {Theme.ON_ERROR_CONTAINER};
+                        font-weight: bold;
+                        border: none;
+                    }}
+                """
+                )
 
         # Update enabled state of other widgets
         for key in ["process_backend_copy_check", "process_backend_ftp_check"]:

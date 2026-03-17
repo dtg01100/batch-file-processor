@@ -10,6 +10,7 @@ This theme system implements contemporary design principles including:
 """
 
 import re
+from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
@@ -159,6 +160,11 @@ class Theme:
         if isinstance(spacing_str, int):
             return spacing_str
         return int(spacing_str.replace("px", ""))
+
+    @staticmethod
+    def _asset_uri(filename: str) -> str:
+        """Return an absolute path for a theme asset located under interface/qt/assets."""
+        return str((Path(__file__).resolve().parent / "assets" / filename).resolve())
 
     @staticmethod
     def get_button_stylesheet(variant="default"):
@@ -627,11 +633,12 @@ class Theme:
                 padding-right: {cls.SPACING_SM};
             }}
             QComboBox::down-arrow {{
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid {cls.TEXT_SECONDARY};
-                margin-right: {cls.SPACING_SM};
+                image: url({cls._asset_uri("dropdown_arrow.svg")});
+                width: 16px;
+                height: 16px;
+            }}
+            QComboBox::down-arrow:disabled {{
+                image: url({cls._asset_uri("dropdown_arrow_disabled.svg")});
             }}
             QComboBox QAbstractItemView {{
                 background-color: {cls.BACKGROUND};
@@ -653,8 +660,18 @@ class Theme:
             /* Check Box */
             QCheckBox {{
                 color: {cls.TEXT_PRIMARY};
+                background-color: transparent;
+                border: none;
+                padding: 0;
                 spacing: {cls.SPACING_SM};
                 font-size: {cls.FONT_SIZE_BASE};
+            }}
+            QCheckBox:hover,
+            QCheckBox:checked,
+            QCheckBox:unchecked,
+            QCheckBox:focus {{
+                background-color: transparent;
+                border: none;
             }}
             QCheckBox::indicator {{
                 width: 20px;
@@ -662,6 +679,8 @@ class Theme:
                 border: 2px solid {cls.OUTLINE};
                 border-radius: {cls.RADIUS_XS};
                 background-color: transparent;
+                margin-right: {cls.SPACING_XS};
+                image: none;
             }}
             QCheckBox::indicator:hover {{
                 border-color: {cls.TEXT_SECONDARY};
@@ -669,16 +688,30 @@ class Theme:
             QCheckBox::indicator:checked {{
                 background-color: {cls.PRIMARY};
                 border-color: {cls.PRIMARY};
+                image: url({cls._asset_uri("checkbox_checked.svg")});
             }}
             QCheckBox::indicator:checked:hover {{
-                background-color: {cls.ON_PRIMARY_CONTAINER};
+                background-color: {cls.PRIMARY};
+                border-color: {cls.PRIMARY};
+                image: url({cls._asset_uri("checkbox_checked.svg")});
+            }}
+            QCheckBox::indicator:unchecked {{
+                background-color: transparent;
+                border: 2px solid {cls.OUTLINE};
+                image: none;
             }}
             QCheckBox:disabled {{
                 color: {cls.TEXT_DISABLED};
             }}
-            QCheckBox:disabled::indicator {{
+            QCheckBox::indicator:disabled {{
                 background-color: {cls.SURFACE_VARIANT};
                 border-color: {cls.OUTLINE_VARIANT};
+                image: none;
+            }}
+            QCheckBox::indicator:disabled:checked {{
+                background-color: {cls.SURFACE_VARIANT};
+                border-color: {cls.OUTLINE_VARIANT};
+                image: url({cls._asset_uri("checkbox_checked.svg")});
             }}
 
             /* Label */
@@ -847,6 +880,27 @@ class Theme:
             QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
             QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
                 background-color: {cls.SURFACE_VARIANT};
+            }}
+            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+                image: url({cls._asset_uri("spinbox_up.svg")});
+                width: 12px;
+                height: 8px;
+            }}
+            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+                image: url({cls._asset_uri("spinbox_down.svg")});
+                width: 12px;
+                height: 8px;
+            }}
+            QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled,
+            QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {{
+                width: 12px;
+                height: 8px;
+            }}
+            QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled {{
+                image: url({cls._asset_uri("spinbox_up_disabled.svg")});
+            }}
+            QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {{
+                image: url({cls._asset_uri("spinbox_down_disabled.svg")});
             }}
 
             /* Dialog */
