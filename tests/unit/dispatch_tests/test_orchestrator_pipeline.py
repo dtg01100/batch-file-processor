@@ -912,8 +912,7 @@ class TestOrchestratorPipelineHelpers:
             pass
 
         assert (
-            orchestrator._should_apply_tweaker(CustomTweaker(), "/tmp/file.csv")
-            is True
+            orchestrator._should_apply_tweaker(CustomTweaker(), "/tmp/file.csv") is True
         )
 
     def test_build_processing_context_applies_defaults_and_normalization(self):
@@ -934,7 +933,9 @@ class TestOrchestratorPipelineHelpers:
         assert context.effective_folder["convert_edi"] is True
         assert "convert_edi" not in folder
 
-    def test_build_processing_context_sets_process_edi_when_pipeline_flags_enabled(self):
+    def test_build_processing_context_sets_process_edi_when_pipeline_flags_enabled(
+        self,
+    ):
         """Missing process_edi is inferred True when split/convert/tweak is enabled."""
         orchestrator = DispatchOrchestrator(DispatchConfig())
 

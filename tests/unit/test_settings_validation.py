@@ -12,7 +12,6 @@ import pytest
 
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 
-
 pytestmark = [pytest.mark.unit]
 
 
@@ -112,9 +111,7 @@ class TestFolderSettingsValidatorEmail:
         assert result.is_valid
 
     def test_empty_recipients_adds_error(self):
-        result = self.validator.validate_email_settings(
-            recipients="", enabled=True
-        )
+        result = self.validator.validate_email_settings(recipients="", enabled=True)
         assert not result.is_valid
         assert any(e.field == "email_recipient" for e in result.errors)
 
@@ -206,4 +203,3 @@ class TestFolderSettingsValidatorInvoiceDateOffset:
         result = self.validator.validate_invoice_date_offset(offset)
         assert not result.is_valid
         assert any(e.field == "invoice_date_offset" for e in result.errors)
-

@@ -437,7 +437,9 @@ class TestExecuteWrapper:
             )
 
         assert result is None
-        mock_rmtree.assert_called_once_with("/tmp/edi_tweaker_cleanup", ignore_errors=True)
+        mock_rmtree.assert_called_once_with(
+            "/tmp/edi_tweaker_cleanup", ignore_errors=True
+        )
         assert context.temp_dirs == []
 
     def test_execute_cleans_temp_dir_and_reraises_on_exception(self):
@@ -453,5 +455,7 @@ class TestExecuteWrapper:
             with pytest.raises(RuntimeError, match="tweak-crash"):
                 step.execute("/input/source.edi", {}, {}, settings={}, context=context)
 
-        mock_rmtree.assert_called_once_with("/tmp/edi_tweaker_error", ignore_errors=True)
+        mock_rmtree.assert_called_once_with(
+            "/tmp/edi_tweaker_error", ignore_errors=True
+        )
         assert context.temp_dirs == []

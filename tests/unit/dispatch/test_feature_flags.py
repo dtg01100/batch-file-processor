@@ -57,7 +57,9 @@ class TestSetFeatureFlag:
         assert os.environ.get("DISPATCH_DEBUG_MODE") == "false"
         assert get_debug_mode() is False
 
-    @pytest.mark.parametrize("unknown_flag", ["legacy_mode", "pipeline_enabled", "unknown_flag"])
+    @pytest.mark.parametrize(
+        "unknown_flag", ["legacy_mode", "pipeline_enabled", "unknown_flag"]
+    )
     def test_unknown_flag_raises_error(self, unknown_flag):
         with pytest.raises(ValueError) as exc_info:
             set_feature_flag(unknown_flag, True)
