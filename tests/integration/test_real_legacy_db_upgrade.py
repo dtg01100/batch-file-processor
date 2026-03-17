@@ -223,6 +223,37 @@ class TestDataPreservation:
         assert "working_batch_emails_to_send" in tables
         assert "sent_emails_removal_queue" in tables
 
+    def test_legacy_email_origin_columns_preserved(self, migrated_db_shared):
+        """Legacy email_origin_* columns that were in the v32 schema must not
+        be dropped by migration — the raw data must survive even though the
+        current app reads SMTP credentials from the global settings table.
+        """
+        conn = migrated_db_shared.raw_connection
+        cursor = conn.execute("PRAGMA table_info(folders)")
+        columns = {row[1] for row in cursor.fetchall()}
+        legacy_cols = {
+            "email_origin_address",
+            "email_origin_password",
+            "email_origin_username",
+            "email_origin_smtp_server",
+            "email_smtp_port",
+            "reporting_smtp_port",
+        }
+        for col in legacy_cols:
+            assert col in columns, f"Legacy column '{col}' was dropped during migration"
+
+    def test_legacy_email_origin_data_values_preserved(self, migrated_db_shared):
+        """Data in legacy email_origin_* columns should be unchanged after migration."""
+        conn = migrated_db_shared.raw_connection
+        row = conn.execute(
+            "SELECT email_origin_address, email_origin_username, email_origin_smtp_server "
+            "FROM folders WHERE id=21"
+        ).fetchone()
+        assert row is not None
+        assert row[0] == "user21@example.com"
+        assert row[1] == "user21@example.com"
+        assert row[2] == "smtp.example.com"
+
 
 class TestNewColumnsAdded:
     """Test that migration adds all expected new columns."""
@@ -472,6 +503,52 @@ class TestTableRebuild:
         create_sql = cursor.fetchone()[0]
         conn.close()
         assert "PRIMARY KEY" in create_sql.upper()
+
+    def test_rebuild_recovers_from_stale_new_table(self, tmp_path):
+        """If a previous migration attempt left a folders_new table behind,
+        the rebuild must silently clean it up and complete successfully,
+        preserving all data in the original 'folders' table.
+        """
+        db_path = str(tmp_path / "test_stale.db")
+        conn = sqlite3.connect(db_path)
+        # folders WITHOUT an id column — triggers the rebuild path
+        conn.execute("CREATE TABLE folders (folder_name TEXT, alias TEXT)")
+        conn.execute("INSERT INTO folders VALUES ('path/a', 'ALPHA')")
+        conn.execute("INSERT INTO folders VALUES ('path/b', 'BETA')")
+        # Simulate a leftover from a previously aborted migration attempt
+        conn.execute(
+            "CREATE TABLE folders_new (id INTEGER PRIMARY KEY, folder_name TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE version "
+            "(id INTEGER PRIMARY KEY, version TEXT, os TEXT, notes TEXT)"
+        )
+        conn.execute("INSERT INTO version VALUES (1, '39', 'Linux', NULL)")
+        conn.execute(
+            "CREATE TABLE administrative (id INTEGER PRIMARY KEY, folder_name TEXT)"
+        )
+        conn.execute("INSERT INTO administrative VALUES (1, 'admin')")
+        conn.commit()
+        conn.close()
+
+        db = sqlite_wrapper.Database.connect(db_path)
+        # Must NOT raise — stale folders_new is cleaned up automatically
+        folders_database_migrator.upgrade_database(
+            db, str(tmp_path), "Linux", target_version="40"
+        )
+        db.close()
+
+        # All original folder data must be preserved
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            "SELECT folder_name, alias FROM folders ORDER BY folder_name"
+        ).fetchall()
+        version = conn.execute("SELECT version FROM version WHERE id=1").fetchone()[0]
+        conn.close()
+        assert version == "40", "Migration should have reached v40"
+        assert len(rows) == 2, "All folder rows must survive after stale-table recovery"
+        assert rows[0] == ("path/a", "ALPHA")
+        assert rows[1] == ("path/b", "BETA")
 
 
 class TestMigratedDatabaseCRUD:

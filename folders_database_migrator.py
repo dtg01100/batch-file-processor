@@ -916,71 +916,48 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "39":
-        # Check if 'id' column exists in folders table
-        cursor = database_connection.raw_connection.cursor()
-        cursor.execute("PRAGMA table_info(folders)")
-        columns = [row[1] for row in cursor.fetchall()]
+        conn = database_connection.raw_connection
 
-        if "id" not in columns:
-            # SQLite doesn't support adding PRIMARY KEY via ALTER TABLE
-            # We need to recreate the table with the id column
+        def _rebuild_table_with_pk(table_name):
+            """Atomically rebuild *table_name* to add INTEGER PRIMARY KEY id.
 
-            # Get current table info
-            cursor.execute("PRAGMA table_info(folders)")
+            Wrapped in an explicit BEGIN/COMMIT so that if anything fails after
+            the old table has been dropped but before the rename completes, the
+            whole operation is rolled back and no data is lost.
+            """
+            cursor = conn.cursor()
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            existing = [row[1] for row in cursor.fetchall()]
+            if "id" in existing:
+                return  # already has primary key – nothing to do
+
+            cursor.execute(f"PRAGMA table_info({table_name})")
             old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
 
-            # Build column definitions
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
                 col_defs.append(f'"{col_name}" {col_type}')
-
             columns_sql = ", ".join(col_defs)
 
-            # Create new table with id column
-            cursor.execute(f"CREATE TABLE folders_new ({columns_sql})")
-
-            # Copy data (excluding any old id if it existed but was null)
             old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(
-                f"INSERT INTO folders_new ({old_cols}) SELECT {old_cols} FROM folders"
-            )
+            new_table = f"{table_name}_new"
 
-            # Drop old table and rename new one
-            cursor.execute("DROP TABLE folders")
-            cursor.execute("ALTER TABLE folders_new RENAME TO folders")
+            cursor.execute("BEGIN")
+            try:
+                cursor.execute(f"DROP TABLE IF EXISTS {new_table}")
+                cursor.execute(f"CREATE TABLE {new_table} ({columns_sql})")
+                cursor.execute(
+                    f"INSERT INTO {new_table} ({old_cols}) SELECT {old_cols} FROM {table_name}"
+                )
+                cursor.execute(f"DROP TABLE {table_name}")
+                cursor.execute(f"ALTER TABLE {new_table} RENAME TO {table_name}")
+                cursor.execute("COMMIT")
+            except Exception:
+                cursor.execute("ROLLBACK")
+                raise
 
-            database_connection.raw_connection.commit()
-
-        # Also ensure administrative table has id column (for consistency)
-        cursor.execute("PRAGMA table_info(administrative)")
-        admin_columns = [row[1] for row in cursor.fetchall()]
-
-        if "id" not in admin_columns:
-            # Get current table info
-            cursor.execute("PRAGMA table_info(administrative)")
-            old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
-
-            # Build column definitions
-            col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
-            for col_name, col_type in old_columns:
-                col_defs.append(f'"{col_name}" {col_type}')
-
-            columns_sql = ", ".join(col_defs)
-
-            # Create new table with id column
-            cursor.execute(f"CREATE TABLE administrative_new ({columns_sql})")
-
-            # Copy data
-            old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            cursor.execute(
-                f"INSERT INTO administrative_new ({old_cols}) SELECT {old_cols} FROM administrative"
-            )
-
-            # Drop old table and rename new one
-            cursor.execute("DROP TABLE administrative")
-            cursor.execute("ALTER TABLE administrative_new RENAME TO administrative")
-
-            database_connection.raw_connection.commit()
+        _rebuild_table_with_pk("folders")
+        _rebuild_table_with_pk("administrative")
 
         update_version = dict(id=1, version="40", os=running_platform)
         db_version.update(update_version, ["id"])
