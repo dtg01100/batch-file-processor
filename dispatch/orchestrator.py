@@ -242,6 +242,30 @@ class DispatchOrchestrator:
 
         effective_upc_dict = upc_dict if upc_dict is not None else self.config.upc_dict
 
+        self._process_folder_files(
+            files=files,
+            folder=folder,
+            effective_upc_dict=effective_upc_dict,
+            processed_files=processed_files,
+            run_log=run_log,
+            result=result,
+            total_files=total_files,
+        )
+        self._finalize_folder_result(result)
+
+        return result
+
+    def _process_folder_files(
+        self,
+        files: list[str],
+        folder: dict,
+        effective_upc_dict: dict,
+        processed_files: Optional[DatabaseInterface],
+        run_log: Any,
+        result: FolderResult,
+        total_files: int,
+    ) -> None:
+        """Process all files in folder and update result counters in place."""
         for idx, file_path in enumerate(files):
             if self.config.progress_reporter:
                 self.config.progress_reporter.update_file(idx + 1, total_files)
@@ -260,12 +284,11 @@ class DispatchOrchestrator:
                 self.error_count += 1
                 result.errors.extend(file_result.errors)
 
+    def _finalize_folder_result(self, result: FolderResult) -> None:
+        """Finalize folder result and notify progress reporter."""
         result.success = result.files_failed == 0
-
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(result.success)
-
-        return result
 
     def _get_upc_dictionary(self, settings: dict) -> dict:
         """Get or fetch UPC dictionary.
@@ -317,288 +340,13 @@ class DispatchOrchestrator:
         logger.debug("Processing file: %s", file_basename)
 
         try:
-            result.checksum = self._calculate_checksum(file_path)
-            logger.debug(
-                "Calculated checksum for %s: %s", file_basename, result.checksum
+            self._execute_file_pipeline(
+                file_path=file_path,
+                file_basename=file_basename,
+                context=context,
+                result=result,
+                run_log=run_log,
             )
-            current_file = file_path
-
-            # Support both legacy validator and new validator_step
-            # Determine which interface to use based on which config field is set
-            should_validate = self._should_validate(context.effective_folder)
-            logger.debug(
-                "Validation step: enabled=%s, should_validate=%s",
-                bool(self.config.validator_step or self.config.validator),
-                should_validate,
-            )
-            if self.config.validator_step and should_validate:
-                # New pipeline interface
-                validation_result = self.config.validator_step.execute(
-                    current_file, context.effective_folder
-                )
-                # Handle both tuple return (old) and ValidationResult object (new)
-                if isinstance(validation_result, tuple):
-                    is_valid, errors_or_file = validation_result
-                else:
-                    from dispatch.pipeline.validator import ValidationResult
-
-                    if isinstance(validation_result, ValidationResult):
-                        is_valid = validation_result.is_valid
-                        errors_or_file = (
-                            validation_result.errors
-                            if not validation_result.is_valid
-                            else current_file
-                        )
-                    else:
-                        is_valid = bool(validation_result)
-                        errors_or_file = current_file
-
-                result.validated = is_valid
-
-                if not is_valid:
-                    if isinstance(errors_or_file, list):
-                        result.errors.extend(errors_or_file)
-                    else:
-                        result.errors.append(str(errors_or_file))
-
-                    self._log_message(
-                        run_log,
-                        f"Validation failed for {file_basename}: {result.errors}",
-                    )
-
-                    if not context.effective_folder.get("force_edi_validation", False):
-                        return result
-                elif isinstance(errors_or_file, str):
-                    current_file = errors_or_file
-            elif self.config.validator and should_validate:
-                # Legacy interface
-                is_valid, errors_or_file = self.config.validator.validate(current_file)
-                result.validated = is_valid
-
-                if not is_valid:
-                    if isinstance(errors_or_file, list):
-                        result.errors.extend(errors_or_file)
-                    else:
-                        result.errors.append(str(errors_or_file))
-
-                    self._log_message(
-                        run_log,
-                        f"Validation failed for {file_basename}: {result.errors}",
-                    )
-
-                    if not context.effective_folder.get("force_edi_validation", False):
-                        return result
-                elif isinstance(errors_or_file, str):
-                    current_file = errors_or_file
-
-            files_to_send = [current_file]
-
-            split_edi = context.effective_folder.get("split_edi", False)
-            logger.debug(
-                "Splitter step: enabled=%s, split_edi=%s",
-                bool(self.config.splitter_step),
-                split_edi,
-            )
-            if self.config.splitter_step and split_edi:
-                import tempfile
-
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    split_result = self.config.splitter_step.split(
-                        current_file,
-                        temp_dir,
-                        context.effective_folder,
-                        context.upc_dict,
-                    )
-                    if hasattr(split_result, "files"):
-                        split_files = [f[0] for f in split_result.files]
-                    else:
-                        split_files = split_result
-
-                    if split_files and isinstance(split_files, list):
-                        files_to_send = split_files
-
-                    for pipeline_file in files_to_send:
-                        current_pipeline_file = pipeline_file
-
-                        converter_step = self.config.converter_step
-                        convert_edi = context.effective_folder.get("convert_edi", False)
-                        logger.debug(
-                            "Converter step: enabled=%s, convert_edi=%s",
-                            bool(converter_step),
-                            convert_edi,
-                        )
-                        if converter_step is not None and convert_edi:
-                            convert_format = context.effective_folder.get(
-                                "convert_to_format", "unknown"
-                            )
-                            self._log_message(
-                                run_log,
-                                f"Converting {file_basename} to {convert_format}",
-                            )
-                            converted_file = converter_step.execute(
-                                current_pipeline_file,
-                                context.effective_folder,
-                                context.settings,
-                                context.upc_dict,
-                                context=context,
-                            )
-                            if converted_file:
-                                # Track temp files created by converter (mkstemp persistent files)
-                                if converted_file != file_path:
-                                    context.temp_files.append(converted_file)
-                                current_pipeline_file = converted_file
-                                result.converted = True
-
-                        tweaker_step = self.config.tweaker_step
-                        tweak_edi = context.effective_folder.get("tweak_edi", False)
-                        run_tweaker = self._should_apply_tweaker(
-                            tweaker_step, current_pipeline_file
-                        )
-                        logger.debug(
-                            "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
-                            bool(tweaker_step),
-                            tweak_edi,
-                            run_tweaker,
-                        )
-                        if tweaker_step is not None and tweak_edi and run_tweaker:
-                            self._log_message(
-                                run_log,
-                                f"Applying tweaks to {file_basename}",
-                            )
-                            tweaked_file = tweaker_step.execute(
-                                current_pipeline_file,
-                                context.effective_folder,
-                                context.upc_dict,
-                                context.settings,
-                                context=context,
-                            )
-                            if tweaked_file:
-                                # Track temp files created by tweaker (mkstemp)
-                                if tweaked_file != file_path:
-                                    context.temp_files.append(tweaked_file)
-                                current_pipeline_file = tweaked_file
-
-                        send_result = self._send_pipeline_file(
-                            self._apply_file_rename(current_pipeline_file, context),
-                            context.effective_folder,
-                            run_log,
-                        )
-                        if not send_result:
-                            send_errors = self.send_manager.get_errors()
-                            if send_errors:
-                                for backend_name, error_message in send_errors.items():
-                                    result.errors.append(
-                                        f"Failed to send split file via {backend_name}: {error_message}"
-                                    )
-                            else:
-                                result.errors.append(
-                                    f"Failed to send split file: {current_pipeline_file}"
-                                )
-
-                    result.sent = len(result.errors) == 0
-                    if result.sent:
-                        self._log_message(run_log, f"Success: {file_basename}")
-                        invoice_numbers = self._extract_invoice_numbers(file_path)
-                        if invoice_numbers:
-                            self._log_message(
-                                run_log, f"Invoice numbers: {invoice_numbers}"
-                            )
-                    return result
-
-            converter_step = self.config.converter_step
-            convert_edi = context.effective_folder.get("convert_edi", False)
-            logger.debug(
-                "Converter step: enabled=%s, convert_edi=%s",
-                bool(converter_step),
-                convert_edi,
-            )
-            if converter_step is not None and convert_edi:
-                convert_format = context.effective_folder.get(
-                    "convert_to_format", "unknown"
-                )
-                self._log_message(
-                    run_log,
-                    f"Converting {file_basename} to {convert_format}",
-                )
-                converted_file = converter_step.execute(
-                    current_file,
-                    context.effective_folder,
-                    context.settings,
-                    context.upc_dict,
-                    context=context,
-                )
-                if converted_file:
-                    # Track temp files created by converter (mkstemp persistent files)
-                    if converted_file != file_path:
-                        context.temp_files.append(converted_file)
-                    current_file = converted_file
-                    result.converted = True
-
-            tweaker_step = self.config.tweaker_step
-            tweak_edi = context.effective_folder.get("tweak_edi", False)
-            run_tweaker = self._should_apply_tweaker(tweaker_step, current_file)
-            logger.debug(
-                "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
-                bool(tweaker_step),
-                tweak_edi,
-                run_tweaker,
-            )
-            if tweaker_step is not None and tweak_edi and run_tweaker:
-                self._log_message(
-                    run_log,
-                    f"Applying tweaks to {file_basename}",
-                )
-                tweaked_file = tweaker_step.execute(
-                    current_file,
-                    context.effective_folder,
-                    context.upc_dict,
-                    context.settings,
-                    context=context,
-                )
-                if tweaked_file:
-                    # Track temp files created by tweaker (mkstemp)
-                    if tweaked_file != file_path:
-                        context.temp_files.append(tweaked_file)
-                    current_file = tweaked_file
-
-            # Check if any backends are enabled before attempting to send
-            enabled_backends = self.send_manager.get_enabled_backends(
-                context.effective_folder
-            )
-            if not enabled_backends:
-                result.sent = False
-                result.errors.append("No backends enabled")
-            else:
-                result.sent = self._send_pipeline_file(
-                    self._apply_file_rename(current_file, context),
-                    context.effective_folder,
-                    run_log,
-                )
-
-                if not result.sent:
-                    send_errors = self.send_manager.get_errors()
-                    if send_errors:
-                        for backend_name, error_message in send_errors.items():
-                            result.errors.append(
-                                f"Failed to send file via {backend_name}: {error_message}"
-                            )
-                            self._log_message(
-                                run_log,
-                                f"FAILED sending {file_basename} via {backend_name}: {error_message}",
-                            )
-                    else:
-                        result.errors.append(f"Failed to send file: {current_file}")
-                        self._log_message(
-                            run_log,
-                            f"FAILED sending {file_basename}",
-                        )
-                else:
-                    self._log_message(run_log, f"Success: {file_basename}")
-                    invoice_numbers = self._extract_invoice_numbers(file_path)
-                    if invoice_numbers:
-                        self._log_message(
-                            run_log, f"Invoice numbers: {invoice_numbers}"
-                        )
 
         except Exception as e:
             result.errors.append(str(e))
@@ -610,28 +358,423 @@ class DispatchOrchestrator:
             )
 
         finally:
-            logger.debug(
-                "Temp cleanup: %d dirs, %d files",
-                len(context.temp_dirs),
-                len(context.temp_files),
-            )
-            # Clean up temporary directories from pipeline steps (mkdtemp)
-            for temp_dir in context.temp_dirs:
-                try:
-                    if os.path.exists(temp_dir):
-                        shutil.rmtree(temp_dir, ignore_errors=True)
-                except Exception:
-                    pass  # Best effort cleanup
-
-            # Clean up temporary files created by pipeline steps (mkstemp)
-            for temp_file in context.temp_files:
-                try:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                except Exception:
-                    pass  # Best effort cleanup
+            self._cleanup_temp_artifacts(context)
 
         return result
+
+    def _execute_file_pipeline(
+        self,
+        file_path: str,
+        file_basename: str,
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: Any,
+    ) -> None:
+        """Execute core file pipeline and update result in place."""
+        result.checksum = self._calculate_checksum(file_path)
+        logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
+        current_file = file_path
+
+        continue_processing, current_file = self._run_validation_pipeline(
+            current_file=current_file,
+            context=context,
+            result=result,
+            run_log=run_log,
+            file_basename=file_basename,
+        )
+        if not continue_processing:
+            return
+
+        if self._process_split_pipeline(
+            current_file=current_file,
+            file_path=file_path,
+            file_basename=file_basename,
+            context=context,
+            result=result,
+            run_log=run_log,
+        ):
+            return
+
+        current_file, did_convert = self._apply_conversion_and_tweaks(
+            current_file=current_file,
+            file_basename=file_basename,
+            original_file_path=file_path,
+            context=context,
+            run_log=run_log,
+        )
+        if did_convert:
+            result.converted = True
+
+        self._send_single_pipeline_file(
+            current_file=current_file,
+            file_path=file_path,
+            file_basename=file_basename,
+            context=context,
+            result=result,
+            run_log=run_log,
+        )
+
+    def _send_single_pipeline_file(
+        self,
+        current_file: str,
+        file_path: str,
+        file_basename: str,
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: Any,
+    ) -> None:
+        """Send a single (non-split) pipeline output file."""
+        enabled_backends = self.send_manager.get_enabled_backends(context.effective_folder)
+        if not enabled_backends:
+            result.sent = False
+            result.errors.append("No backends enabled")
+            return
+
+        result.sent = self._send_pipeline_file(
+            self._apply_file_rename(current_file, context),
+            context.effective_folder,
+            run_log,
+        )
+
+        if not result.sent:
+            self._record_send_failure(
+                result=result,
+                file_basename=file_basename,
+                current_file=current_file,
+                run_log=run_log,
+            )
+            return
+
+        self._log_success_with_invoices(
+            run_log=run_log,
+            file_basename=file_basename,
+            file_path=file_path,
+        )
+
+    def _cleanup_temp_artifacts(self, context: ProcessingContext) -> None:
+        """Best-effort cleanup for pipeline temporary directories and files."""
+        logger.debug(
+            "Temp cleanup: %d dirs, %d files",
+            len(context.temp_dirs),
+            len(context.temp_files),
+        )
+
+        for temp_dir in context.temp_dirs:
+            try:
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+        for temp_file in context.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except Exception:
+                pass
+
+    def _process_split_pipeline(
+        self,
+        current_file: str,
+        file_path: str,
+        file_basename: str,
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: Any,
+    ) -> bool:
+        """Process split pipeline path. Returns True if split flow was executed."""
+        split_edi = context.effective_folder.get("split_edi", False)
+        logger.debug(
+            "Splitter step: enabled=%s, split_edi=%s",
+            bool(self.config.splitter_step),
+            split_edi,
+        )
+        if not (self.config.splitter_step and split_edi):
+            return False
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            split_result = self.config.splitter_step.split(
+                current_file,
+                temp_dir,
+                context.effective_folder,
+                context.upc_dict,
+            )
+            split_files = self._extract_split_files(split_result)
+            files_to_send = split_files if split_files else [current_file]
+
+            for pipeline_file in files_to_send:
+                current_pipeline_file, did_convert = self._apply_conversion_and_tweaks(
+                    current_file=pipeline_file,
+                    file_basename=file_basename,
+                    original_file_path=file_path,
+                    context=context,
+                    run_log=run_log,
+                )
+                if did_convert:
+                    result.converted = True
+
+                send_result = self._send_pipeline_file(
+                    self._apply_file_rename(current_pipeline_file, context),
+                    context.effective_folder,
+                    run_log,
+                )
+                if not send_result:
+                    self._record_split_send_failure(result, current_pipeline_file)
+
+            result.sent = len(result.errors) == 0
+            if result.sent:
+                self._log_success_with_invoices(
+                    run_log=run_log,
+                    file_basename=file_basename,
+                    file_path=file_path,
+                )
+            return True
+
+    def _extract_split_files(self, split_result: Any) -> list[str]:
+        """Extract output split file paths from splitter result."""
+        if hasattr(split_result, "files"):
+            return [f[0] for f in split_result.files]
+        if isinstance(split_result, list):
+            return split_result
+        return []
+
+    def _record_split_send_failure(
+        self,
+        result: FileResult,
+        current_pipeline_file: str,
+    ) -> None:
+        """Record split-file send failures from send manager errors."""
+        send_errors = self.send_manager.get_errors()
+        if send_errors:
+            for backend_name, error_message in send_errors.items():
+                result.errors.append(
+                    f"Failed to send split file via {backend_name}: {error_message}"
+                )
+            return
+
+        result.errors.append(f"Failed to send split file: {current_pipeline_file}")
+
+    def _record_send_failure(
+        self,
+        result: FileResult,
+        file_basename: str,
+        current_file: str,
+        run_log: Any,
+    ) -> None:
+        """Record non-split send failures and corresponding log messages."""
+        send_errors = self.send_manager.get_errors()
+        if send_errors:
+            for backend_name, error_message in send_errors.items():
+                result.errors.append(
+                    f"Failed to send file via {backend_name}: {error_message}"
+                )
+                self._log_message(
+                    run_log,
+                    f"FAILED sending {file_basename} via {backend_name}: {error_message}",
+                )
+            return
+
+        result.errors.append(f"Failed to send file: {current_file}")
+        self._log_message(
+            run_log,
+            f"FAILED sending {file_basename}",
+        )
+
+    def _log_success_with_invoices(
+        self,
+        run_log: Any,
+        file_basename: str,
+        file_path: str,
+    ) -> None:
+        """Log success and any extracted invoice numbers."""
+        self._log_message(run_log, f"Success: {file_basename}")
+        invoice_numbers = self._extract_invoice_numbers(file_path)
+        if invoice_numbers:
+            self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
+
+    def _run_validation_pipeline(
+        self,
+        current_file: str,
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: Any,
+        file_basename: str,
+    ) -> tuple[bool, str]:
+        """Run validation and update processing state.
+
+        Returns:
+            Tuple of (continue_processing, current_file_path)
+        """
+        should_validate = self._should_validate(context.effective_folder)
+        logger.debug(
+            "Validation step: enabled=%s, should_validate=%s",
+            bool(self.config.validator_step or self.config.validator),
+            should_validate,
+        )
+
+        if not should_validate:
+            return True, current_file
+
+        if self.config.validator_step:
+            validation_output = self.config.validator_step.execute(
+                current_file, context.effective_folder
+            )
+            is_valid, errors_or_file = self._normalize_validation_output(
+                validation_output=validation_output,
+                current_file=current_file,
+            )
+            return self._apply_validation_outcome(
+                is_valid=is_valid,
+                errors_or_file=errors_or_file,
+                current_file=current_file,
+                result=result,
+                run_log=run_log,
+                file_basename=file_basename,
+                context=context,
+            )
+
+        if self.config.validator:
+            is_valid, errors_or_file = self.config.validator.validate(current_file)
+            return self._apply_validation_outcome(
+                is_valid=is_valid,
+                errors_or_file=errors_or_file,
+                current_file=current_file,
+                result=result,
+                run_log=run_log,
+                file_basename=file_basename,
+                context=context,
+            )
+
+        return True, current_file
+
+    def _apply_conversion_and_tweaks(
+        self,
+        current_file: str,
+        file_basename: str,
+        original_file_path: str,
+        context: ProcessingContext,
+        run_log: Any,
+    ) -> tuple[str, bool]:
+        """Apply converter and tweaker steps for a single file path.
+
+        Returns:
+            Tuple of (final_file_path, did_convert)
+        """
+        did_convert = False
+
+        converter_step = self.config.converter_step
+        convert_edi = context.effective_folder.get("convert_edi", False)
+        logger.debug(
+            "Converter step: enabled=%s, convert_edi=%s",
+            bool(converter_step),
+            convert_edi,
+        )
+        if converter_step is not None and convert_edi:
+            convert_format = context.effective_folder.get("convert_to_format", "unknown")
+            self._log_message(
+                run_log,
+                f"Converting {file_basename} to {convert_format}",
+            )
+            converted_file = converter_step.execute(
+                current_file,
+                context.effective_folder,
+                context.settings,
+                context.upc_dict,
+                context=context,
+            )
+            if converted_file:
+                # Track temp files created by converter (mkstemp persistent files)
+                if converted_file != original_file_path:
+                    context.temp_files.append(converted_file)
+                current_file = converted_file
+                did_convert = True
+
+        tweaker_step = self.config.tweaker_step
+        tweak_edi = context.effective_folder.get("tweak_edi", False)
+        run_tweaker = self._should_apply_tweaker(tweaker_step, current_file)
+        logger.debug(
+            "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
+            bool(tweaker_step),
+            tweak_edi,
+            run_tweaker,
+        )
+        if tweaker_step is not None and tweak_edi and run_tweaker:
+            self._log_message(
+                run_log,
+                f"Applying tweaks to {file_basename}",
+            )
+            tweaked_file = tweaker_step.execute(
+                current_file,
+                context.effective_folder,
+                context.upc_dict,
+                context.settings,
+                context=context,
+            )
+            if tweaked_file:
+                # Track temp files created by tweaker (mkstemp)
+                if tweaked_file != original_file_path:
+                    context.temp_files.append(tweaked_file)
+                current_file = tweaked_file
+
+        return current_file, did_convert
+
+    def _normalize_validation_output(
+        self,
+        validation_output: Any,
+        current_file: str,
+    ) -> tuple[bool, Any]:
+        """Normalize validator step output to `(is_valid, errors_or_file)` tuple."""
+        if isinstance(validation_output, tuple):
+            return validation_output
+
+        from dispatch.pipeline.validator import ValidationResult
+
+        if isinstance(validation_output, ValidationResult):
+            return (
+                validation_output.is_valid,
+                validation_output.errors if not validation_output.is_valid else current_file,
+            )
+
+        return bool(validation_output), current_file
+
+    def _apply_validation_outcome(
+        self,
+        is_valid: bool,
+        errors_or_file: Any,
+        current_file: str,
+        result: FileResult,
+        run_log: Any,
+        file_basename: str,
+        context: ProcessingContext,
+    ) -> tuple[bool, str]:
+        """Apply validation result to file result and control flow.
+
+        Returns:
+            Tuple of (continue_processing, current_file_path)
+        """
+        result.validated = is_valid
+
+        if is_valid:
+            if isinstance(errors_or_file, str):
+                return True, errors_or_file
+            return True, current_file
+
+        if isinstance(errors_or_file, list):
+            result.errors.extend(errors_or_file)
+        else:
+            result.errors.append(str(errors_or_file))
+
+        self._log_message(
+            run_log,
+            f"Validation failed for {file_basename}: {result.errors}",
+        )
+
+        if not context.effective_folder.get("force_edi_validation", False):
+            return False, current_file
+
+        return True, current_file
 
     # Defaults for folder configuration fields that may be NULL in the database.
     # These mirror the defaults applied by app.py when opening the edit dialog.
