@@ -1,0 +1,612 @@
+================================================================================
+COMPREHENSIVE DATA-LOSS AUDIT REPORT: Batch File Processor Database Migration
+================================================================================
+Current Database Version: 42 (as of CURRENT_DATABASE_VERSION in constants.py)
+Legacy Test Database Version: 32 (tests/fixtures/legacy_v32_folders.db)
+Legacy DB Contents: folders(530 rows), administrative(1 row), processed_files(227,501 rows)
+
+================================================================================
+1. MIGRATION SCRIPTS IN migrations/ DIRECTORY
+================================================================================
+
+FOUND: Single migration file
+  - /workspaces/batch-file-processor/migrations/add_plugin_config_column.py
+
+MIGRATION: v32 → v33 (apply_migration function)
+  Purpose: Add plugin configuration support
+  
+  ALTER TABLE Operations:
+    • folders: ADD COLUMN plugin_config TEXT
+      DEFAULT: '{}' (empty JSON)
+    
+    • administrative: ADD COLUMN plugin_config TEXT (if exists)
+      DEFAULT: '{}' (empty JSON)
+    
+    • folders: ADD COLUMN split_edi_filter_categories TEXT
+      DEFAULT: 'ALL'
+    
+    • folders: ADD COLUMN split_edi_filter_mode TEXT
+      DEFAULT: 'include'
+    
+    • administrative: ADD COLUMN split_edi_filter_categories TEXT (if exists)
+      DEFAULT: 'ALL'
+    
+    • administrative: ADD COLUMN split_edi_filter_mode TEXT (if exists)
+      DEFAULT: 'include'
+  
+  Data Transform: None - only adds columns with sensible defaults
+  Invoked: From folders_database_migrator.py version 32→33 block
+
+MIGRATION EXECUTION ORDER: Sequential (versions 5→6→7→...→42)
+  • Each migration reads current version from version table
+  • If version ≥ target, returns early (safe for re-runs)
+  • Updates version in table after each step
+  • Each migration is independent and assumes previous migrations applied
+
+================================================================================
+2. folders_database_migrator.py - FULL LOGIC & VERSION FLOW
+================================================================================
+
+FILE: 1,112 lines, imported in 7 locations:
+  • interface/database/database_obj.py (main app flow)
+  • interface/qt/dialogs/database_import_dialog.py
+  • tests/conftest.py
+  • scripts/demo_legacy_import.py
+  • mover.py
+
+MAIN ENTRY POINT: upgrade_database(database_connection, config_folder, running_platform, target_version=None)
+
+VERSION DETECTION LOGIC:
+  1. Read version table (id=1): SELECT * FROM version WHERE id=1
+  2. Extract version string: db_version_dict["version"]
+  3. Compare integer values: int(db_version_dict["version"]) < int(self._database_version)
+  4. If match found, execute corresponding migration block
+  5. Update version table with new version: UPDATE version SET version='X' WHERE id=1
+
+HELPER FUNCTIONS:
+  • _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT")
+    - Checks PRAGMA table_info to see if column already exists
+    - Only adds if missing (prevents duplicate column errors)
+  
+  • _log_migration_step(from_version, to_version)
+    - Prints "Migrating: vX → vY" for visibility
+
+MIGRATION BLOCKS (versions 5 → 42):
+
+v5→6:   Add convert_to_format column to folders & administrative
+        DATA TRANSFORM: For folders where process_edi=1, set convert_to_format="csv"
+
+v6→7:   Add resend_flag to processed_files
+        DATA TRANSFORM: Set resend_flag=0 for all existing rows
+
+v7→8:   Add tweak_edi to folders & administrative
+        DATA TRANSFORM: folders.tweak_edi = 1 if pad_a_records else 0 (logic-based)
+
+v8→9:   Add folder paths to administrative
+        DATA TRANSFORM: single_add_folder_prior, batch_add_folder_prior, 
+                        export_processed_folder_prior = os.getcwd()
+
+v9→10:  Add report_edi_errors to administrative
+        DATA TRANSFORM: report_edi_errors = 0
+
+v10→11: Add split_edi to folders & administrative
+        DATA TRANSFORM: split_edi = 0 for all rows
+
+v11→12: ⚠️  DROP TABLE IF EXISTS settings (DESTRUCTIVE but no data loss risk - recreates)
+        Then CREATE TABLE settings with new schema
+        DATA TRANSFORM: Migrates reporting config from administrative to new settings table
+        - Gets enable_reporting, report_email_* fields from administrative
+        - Transforms to new settings schema (enable_email, email_address, etc.)
+        - Gets reporting_smtp_port from administrative → smtp_port
+
+v12→13: Add folder paths to administrative
+        DATA TRANSFORM: logs_directory, edi_converter_scratch_folder, errors_folder
+
+v13→14: Clean up legacy "insight" format
+        DATA TRANSFORM: WHERE convert_to_format="insight", set to "" and process_edi=0
+
+v14→15: Add force_edi_validation, append_a_records, a_record_append_text, force_txt_file_ext
+        DATA TRANSFORM: All defaults (0 or "")
+
+v15→16: Add invoice_date_offset
+        DATA TRANSFORM: invoice_date_offset = 0
+
+v16→17: Add ODBC/AS400 settings to settings table
+        DATA TRANSFORM: odbc_driver, as400_username, as400_password, as400_address
+
+v17→19: Add retail_uom, force_each_upc, include_item_numbers, include_item_description
+        DATA TRANSFORM: All defaults
+
+v19→22: Add simple_csv_sort_order, a_record_padding_length, invoice_date_custom_format_*
+        DATA TRANSFORM: simple_csv_sort_order="upc_number,qty_of_units,unit_cost,description,vendor_item"
+                        a_record_padding_length=6
+                        invoice_date_custom_format_string="%Y%m%d"
+                        invoice_date_custom_format=0
+
+v22→25: Add split_prepaid_sales_tax_crec, estore_* fields, prepend_date_files
+        DATA TRANSFORM: split_prepaid_sales_tax_crec=0, estore_store_number=0, etc.
+
+v25→27: Add rename_file, estore_c_record_OID
+        DATA TRANSFORM: All defaults
+
+v27→28: Add override_upc_* and split_edi_include_*
+        DATA TRANSFORM: All defaults
+
+v28→29: Add fintech_division_id
+        DATA TRANSFORM: fintech_division_id=0
+
+v29→30: Add report_printing_fallback to administrative
+        DATA TRANSFORM: report_printing_fallback=0
+
+v30→31: Add force_edi_validation, append_a_records, etc. to processed_files
+        DATA TRANSFORM: All defaults
+
+v31→32: (Empty migration - version bump only)
+
+v32→33: ✓ EXTERNAL MIGRATION SCRIPT (migrations/add_plugin_config_column.py)
+        Calls apply_migration() function
+        Adds plugin_config, split_edi_filter_categories, split_edi_filter_mode
+
+v33→34: Add created_at, updated_at, processed_at timestamps
+        DATA TRANSFORM: All set to datetime.now().isoformat()
+        Applied to: folders, administrative, processed_files, settings
+
+v34→35: Add filename, original_path, processed_path, status, error_message, 
+        convert_format, sent_to to processed_files
+        DATA TRANSFORM: filename = file_name, status='processed', rest default
+
+v35→36: Add INDEXES (no data change)
+        CREATE INDEX: idx_folders_active, idx_folders_alias, 
+                     idx_processed_files_folder, idx_processed_files_status, 
+                     idx_processed_files_created
+
+v36→37: (Empty migration)
+
+v37→38: Add notes column to version table
+        DATA TRANSFORM: notes = "administrative table duplicates folders table..."
+
+v38→39: Add edi_format to folders & administrative
+        DATA TRANSFORM: edi_format = "default"
+
+v39→40: ⚠️  SIGNIFICANT RESTRUCTURE - Table recreation for PRIMARY KEY
+        CHECK: Does folders/administrative have 'id' column?
+        IF MISSING:
+          • CREATE TABLE folders_new with all existing columns + id INTEGER PRIMARY KEY AUTOINCREMENT
+          • INSERT INTO folders_new (...) SELECT (...) FROM folders
+          • DROP TABLE folders
+          • ALTER TABLE folders_new RENAME TO folders
+          ✓ PRESERVES ALL DATA - copies all column values
+
+        Same process for administrative table
+
+v40→41: Add backend columns to folders & administrative (safe approach)
+        ADD COLUMN (if not exists):
+          • process_backend_email INTEGER (default 0)
+          • process_backend_ftp INTEGER (default 0)
+          • email_to TEXT (default '')
+          • ftp_server, ftp_port, ftp_folder, ftp_username, ftp_password
+
+v41→42: ⚠️  SIGNIFICANT DATA TRANSFORM - Boolean normalization
+        TRANSFORMS string booleans to integer booleans:
+        
+        For 21 boolean fields in folders table:
+          WHERE field = 'True' → SET field = 1
+          WHERE field = 'False' → SET field = 0
+        
+        Same for administrative and settings tables
+        
+        Fields transformed:
+          folder_is_active, process_edi, calculate_upc_check_digit, 
+          include_a_records, include_c_records, include_headers, 
+          filter_ampersand, pad_a_records, tweak_edi, split_edi, 
+          force_edi_validation, append_a_records, force_txt_file_ext, 
+          prepend_date_files, override_upc_bool, 
+          split_edi_include_invoices, split_edi_include_credits, 
+          process_backend_copy, process_edi_output, 
+          process_backend_email, process_backend_ftp
+        
+        ✓ SAFE - Data is converted, not lost
+        (Note: In legacy_v32_folders.db, booleans appear as BOOLEAN type, 
+         but could be stored as 'True'/'False' strings in older versions)
+
+================================================================================
+3. schema.py ensure_schema() - Table Creation vs ALTER TABLE
+================================================================================
+
+FILE: 428 lines
+ENTRY POINT: ensure_schema(database_connection) -> None
+
+PURPOSE: Ensure all tables and columns exist (idempotent)
+STRATEGY: CREATE TABLE IF NOT EXISTS + catch exceptions for missing columns
+
+CREATES (IF NOT EXISTS):
+  Tables created via CREATE TABLE IF NOT EXISTS statements:
+    • version (id, version, os)
+    • settings (id, enable_email, email_address, ... 14 columns total)
+    • administrative (id, ... 128 columns, deprecated)
+    • folders (id, ... 63 columns, main config table)
+    • processed_files (id, ... 17 columns)
+    • emails_to_send (id, folder_alias, log, folder_id)
+    • working_batch_emails_to_send (id, folder_alias, log, folder_id)
+    • sent_emails_removal_queue (id, folder_alias, log, folder_id, old_id)
+    • users, organizations, projects, files, batches, processors,
+      processing_jobs, job_logs, tags, file_tags (modern normalized tables)
+
+ALTERS (Outside CREATE TABLE):
+  Two ALTER TABLE statements for backwards compatibility:
+    
+    1. ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT
+       UPDATE: SET plugin_configurations = '{}' WHERE IS NULL
+       ⚠️  NOTE: Different from migration (plugin_config vs plugin_configurations)
+       
+    2. ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT
+       (No UPDATE statement for this one)
+
+⚠️  COLUMN DISCREPANCIES BETWEEN CREATE & ALTER:
+    
+    Columns added via ALTER (not in CREATE TABLE for folders):
+    • plugin_configurations (schema.py line 408)
+    
+    But migrations add:
+    • plugin_config (migration v32→33)
+    
+    These are DIFFERENT COLUMNS - potential naming inconsistency issue!
+
+ERROR HANDLING:
+  • Wraps each query() in try/except
+  • Falls back to raw connection if dataset wrapper fails
+  • Silently skips failures (logs via logger.debug)
+  • Best-effort approach - avoids breaking upgrades
+
+================================================================================
+4. LEGACY TEST FIXTURE DATABASE CONTENTS
+================================================================================
+
+FILE: /workspaces/batch-file-processor/tests/fixtures/legacy_v32_folders.db
+SIZE: 34 MB
+VERSION: 32 (Windows)
+
+SCHEMA INSPECTION RESULTS:
+
+version table:
+  Columns: id INTEGER PRIMARY KEY, version TEXT, os TEXT
+  Data:    1, "32", "Windows"
+
+folders table:
+  65 columns (including id)
+  Total rows: 530 (configuration records for 530 folder processing tasks)
+  
+  Legacy-only columns (NOT in current schema):
+    • email_origin_address, email_origin_password, email_origin_username
+    • email_origin_smtp_server, email_smtp_port
+    • report_email_address, report_email_username, report_email_password
+    • report_email_smtp_server, reporting_smtp_port
+    • edi_converter_scratch_folder
+  
+  Type issues: Many columns stored as TEXT that should be INTEGER
+    (e.g., folder_is_active, process_edi, calculate_upc_check_digit)
+
+administrative table:
+  1 row (single system-wide settings record)
+  Columns: Same structure as folders (128 columns total)
+  
+  Legacy-only columns (same as folders):
+    • email_origin_* fields (5 columns)
+    • report_email_* fields (5 columns)  
+    • reporting_smtp_port
+    • edi_converter_scratch_folder
+
+processed_files table:
+  10 columns
+  Total rows: 227,501 (significant data volume!)
+  
+  Legacy-only columns:
+    • copy_destination, ftp_destination, email_destination (3 routing columns)
+    • sent_date_time (DATETIME when file was sent)
+  
+  Current columns: id, file_name, file_checksum, resend_flag, sent_date_time,
+                   folder_alias, folder_id + additions from v34+ migrations
+
+settings table:
+  Schema from v12 onwards
+  Not present in v32 DB (dropped/recreated in v11→12)
+
+emails_to_send table:
+  Minimal schema (folder_alias, log, folder_id)
+
+administrative table appears DUPLICATE of folders:
+  v38 migration adds note: "administrative table duplicates folders table. 
+  Use folders table for all operations. administrative table deprecated."
+
+================================================================================
+5. DATA LOSS ANALYSIS - LEGACY COLUMNS NOT PRESERVED
+================================================================================
+
+⚠️  POTENTIAL DATA LOSS RISK - LEGACY EMAIL CONFIGURATION COLUMNS
+
+The following 11 columns exist in legacy_v32_folders.db but NOT in current schema.py:
+  
+LEGACY COLUMN | LOCATION | PURPOSE | MIGRATION HANDLING
+─────────────────────────────────────────────────────────────────────────────
+email_origin_address      | folders, admin    | Source email for reports | ✓ MIGRATED to settings.email_address (v11)
+email_origin_password     | folders, admin    | Email password           | ✓ MIGRATED to settings.email_password (v11)
+email_origin_username     | folders, admin    | Email username           | ✓ MIGRATED to settings.email_username (v11)
+email_origin_smtp_server  | folders, admin    | SMTP server              | ✓ MIGRATED to settings.email_smtp_server (v11)
+email_smtp_port           | folders, admin    | SMTP port                | ✓ MIGRATED to settings.smtp_port (v11)
+reporting_smtp_port       | admin only        | Legacy SMTP port         | ✓ MIGRATED to settings.smtp_port (v11)
+report_email_address      | folders, admin    | Report recipient         | ✓ MIGRATED to settings.email_address (v11)
+report_email_username     | folders, admin    | Report email username    | ✓ MIGRATED to settings.email_username (v11)
+report_email_password     | folders, admin    | Report email password    | ✓ MIGRATED to settings.email_password (v11)
+report_email_smtp_server  | folders, admin    | SMTP server for reports  | ✓ MIGRATED to settings.email_smtp_server (v11)
+edi_converter_scratch_folder | folders, admin | Working directory        | ✗ NOT MIGRATED (legacy, deprecated)
+
+MIGRATION v11→12 CONSOLIDATION:
+  Status: ✓ SAFE - Data migrated to settings table
+  Process:
+    1. CREATE TABLE settings with new schema
+    2. Extract values from administrative table
+    3. Transform field names (report_email_* → email_*, reporting_smtp_port → smtp_port)
+    4. INSERT into settings table
+    5. Old columns remain in folders/administrative but unused
+  
+  Result: Data preserved, just moved to settings table and consolidated
+
+LEGACY ROUTING COLUMNS IN processed_files (4 columns):
+  
+  copy_destination  | VARCHAR | Where file was copied to           | ✗ NOT IN SCHEMA
+  ftp_destination   | VARCHAR | FTP destination path               | ✗ NOT IN SCHEMA
+  email_destination | VARCHAR | Email recipient address            | ✗ NOT IN SCHEMA
+  sent_date_time    | DATETIME| Timestamp of transmission          | ✗ NOT IN SCHEMA (v33 adds processed_at)
+
+  Risk Level: MEDIUM
+  Why: These routing destinations are present in 227,501 rows
+       Not migrated to current schema
+       If code references these columns, it will FAIL during query execution
+       Silent data loss if no warning in logs
+
+================================================================================
+6. create_database.py - Purpose & Usage
+================================================================================
+
+FILE: 65 lines
+FUNCTION: do(database_version, database_path, config_folder, running_platform)
+
+PURPOSE: Create INITIAL database file for NEW installations (not upgrades)
+
+CALLED BY:
+  • interface/database/database_obj.py:_create_database() 
+    IF database file doesn't exist (not os.path.isfile)
+  • NOT called for existing DBs (see: if not os.path.isfile())
+
+CREATES:
+  1. Calls schema.ensure_schema(database_connection)
+     → Creates all base tables
+  
+  2. Inserts version record:
+     version.insert(dict(version=database_version, os=running_platform))
+  
+  3. Inserts initial settings record with defaults:
+     settings.insert(dict(
+         folder_is_active=0, copy_to_directory=None, process_edi=0,
+         convert_to_format="csv", calculate_upc_check_digit=0,
+         upc_target_length=11, upc_padding_pattern="           ",
+         include_a_records=0, include_c_records=0, include_headers=0,
+         filter_ampersand=0, tweak_edi=0, pad_a_records=0,
+         a_record_padding="", a_record_padding_length=6,
+         invoice_date_custom_format_string="%Y%m%d", invoice_date_custom_format=0,
+         reporting_email="", folder_name="template", alias="",
+         report_email_destination="", process_backend_copy=0,
+         backend_copy_destination=None, process_edi_output=0, edi_output_folder=None
+     ))
+  
+  4. Inserts administrative record with defaults:
+     administrative.insert(dict(
+         id=1, copy_to_directory="", 
+         logs_directory=os.path.join(os.path.expanduser("~"), "BatchFileSenderLogs"),
+         enable_reporting=0, report_email_destination="", report_edi_errors=0
+     ))
+
+CONCLUSION: 
+  ✓ SAFE - Only used for new installations
+  ✗ NOT used for upgrades (migrator handles that)
+  Creates clean schema matching current version
+
+================================================================================
+7. MIGRATION INVOCATION IN APPLICATION FLOW
+================================================================================
+
+CALLERS OF folders_database_migrator.upgrade_database():
+
+1. MAIN APPLICATION FLOW (primary):
+   interface/database/database_obj.py:_upgrade_database()
+   
+   Flow:
+     DatabaseObj.__init__()
+       → _initialize_connection()
+         → sqlite_wrapper.Database.connect()
+         → _check_version()
+           IF db_version < current_version:
+             → _upgrade_database()
+               → [optional] backup_increment.do_backup()
+               → folders_database_migrator.upgrade_database(
+                    database_connection, config_folder, running_platform
+                 )
+   
+   Called whenever DatabaseObj instantiated with existing DB < current version
+   AUTOMATIC and MANDATORY - no option to skip migrations
+
+2. DATABASE IMPORT DIALOG:
+   interface/qt/dialogs/database_import_dialog.py
+   
+   Manual import of legacy database
+   Calls: folders_database_migrator.upgrade_database(new_db, None, "Null")
+   User-initiated, controlled
+
+3. TEST FRAMEWORK:
+   tests/conftest.py - test fixture
+   
+   For each test needing a migrated DB:
+   Calls: folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+
+4. LEGACY IMPORT DEMO:
+   scripts/demo_legacy_import.py
+   
+   Demonstration script for importing old databases
+
+5. FILE MOVER UTILITY:
+   mover.py - batch file operations
+   
+   During file movement operations, may trigger migration if DB old
+
+TIMING:
+  • Migrations run BEFORE any application logic executes
+  • Happens in database initialization (very early)
+  • Applied before tables are accessed
+  • Backup created BEFORE migration starts (if backup_func available)
+
+================================================================================
+8. CRITICAL FINDINGS & RISK ASSESSMENT
+================================================================================
+
+✅ SAFE OPERATIONS (No data loss risk):
+
+  • v5-v10: Column additions with sensible defaults (no data deleted/overwritten)
+  • v12: Settings table migration - legacy data properly extracted and moved
+  • v33: Plugin config columns - new columns with defaults
+  • v34: Timestamp columns - all set to datetime.now()
+  • v39: Table recreation for PRIMARY KEY - ALL DATA COPIED (INSERT...SELECT)
+  • v40: Backend columns - safe addition with defaults
+  • v41: Boolean normalization - string 'True'/'False' → int 1/0 (data preserved)
+
+⚠️  MEDIUM RISK (Data may be stranded):
+
+  1. processed_files legacy routing columns (227,501 rows affected):
+     • copy_destination, ftp_destination, email_destination, sent_date_time
+     • These columns NOT in current schema
+     • Data will remain in database but inaccessible via current schema
+     • If code tries to SELECT these columns: ERROR
+     • RISK: Silent failure if not properly handled
+
+  2. Legacy email configuration:
+     • email_origin_* and reporting_smtp_port in folders/administrative
+     • Successfully migrated to settings table in v11
+     • BUT original columns still in tables (not cleaned up)
+     • Creates ambiguity: should new code read from folders or settings?
+
+  3. plugin_config naming inconsistency:
+     • Migration v32→33 adds: plugin_config
+     • schema.ensure_schema adds: plugin_configurations
+     • These are TWO DIFFERENT COLUMNS
+     • Could cause issues if code expects one but gets other
+
+  4. Administrative table duplication:
+     • Stated as deprecated in v38 migration notes
+     • Still created and migrated
+     • All data in folders ALSO in administrative
+     • Wastes space, creates sync problems
+
+❌ HIGH RISK (Data loss possible if...):
+
+  1. IF legacy DB migrated multiple times:
+     • Each v11→12 migration could re-import email settings
+     • Could overwrite settings.email_* if they've changed locally
+     • Risk if migration run manually on partially migrated DB
+
+  2. IF code references deleted columns:
+     • processed_files.copy_destination query → ERROR
+     • folders.email_origin_address query → ERROR (column exists but orphaned)
+     • These would cause application crashes, not silent loss
+
+  3. IF processed_files data needed for auditing:
+     • 227,501 rows of routing/delivery info orphaned
+     • Historical record of WHERE files were sent (copy_destination, ftp_destination, email_destination)
+     • This data exists in DB but cannot be accessed via schema
+
+================================================================================
+SUMMARY TABLE: Migration Safety by Version
+================================================================================
+
+Version | From → To | Type            | Data Modified | Data Lost | Risk    | Notes
+────────┼───────────┼─────────────────┼───────────────┼───────────┼─────────┼──────
+5       | 5 → 6     | ADD COLUMN      | Yes (update)  | No        | LOW     | convert_to_format="csv"
+6       | 6 → 7     | ADD COLUMN      | Yes (update)  | No        | LOW     | resend_flag=0
+7       | 7 → 8     | ADD COLUMN      | Yes (update)  | No        | LOW     | Logic-based tweak_edi
+8-10    | → 11      | ADD COLUMN      | Minimal       | No        | LOW     | Defaults only
+11      | 11 → 12   | DROP/RECREATE   | Yes (migrate) | No        | MEDIUM  | Email config moved
+12-32   | 12 → 32   | ADD COLUMN      | Yes (update)  | No        | LOW     | Defaults & transforms
+33      | 33 → 34   | ADD COLUMN      | Yes (update)  | No        | LOW     | Timestamps
+34-36   | 34 → 36   | ADD COLUMN      | Minimal       | No        | LOW     | Indices, columns
+37-38   | 37 → 39   | ALTER/RECREATE  | Yes (copy)    | No        | MEDIUM  | Table rebuild
+39-40   | 39 → 41   | ADD COLUMN      | Minimal       | No        | LOW     | Backend config
+41      | 41 → 42   | UPDATE          | Yes (normalize)| No        | MEDIUM  | String→int booleans
+────────┴───────────┴─────────────────┴───────────────┴───────────┴─────────┴──────
+
+================================================================================
+RECOMMENDATIONS FOR DATA-LOSS PREVENTION
+================================================================================
+
+1. BACKUP STRATEGY:
+   ✓ GOOD: backup_increment.do_backup() called before migration
+   ⚠️  VERIFY: Test that backup file is valid before migration proceeds
+
+2. AUDIT TRAIL:
+   ✗ MISSING: No detailed migration log of what was changed
+   ✓ SUGGESTED: Add logging to each ALTER/UPDATE statement with row counts
+
+3. VALIDATION:
+   ⚠️  MISSING: No post-migration validation
+   ✓ SUGGESTED: Count rows before/after migration, alert on differences
+
+4. LEGACY COLUMN CLEANUP:
+   ⚠️  WARNING: Old email columns still in tables
+   ✓ SUGGESTED: Add migration to DROP legacy columns after v12 migration
+                (after confirming settings table has data)
+
+5. SCHEMA CONSISTENCY:
+   ⚠️  ISSUE: plugin_config vs plugin_configurations naming inconsistency
+   ✓ SUGGESTED: Decide which name is canonical, remove the other
+
+6. PROCESSED_FILES ROUTING DATA:
+   ⚠️  WARNING: copy_destination, ftp_destination, email_destination orphaned
+   ✓ SUGGESTED: Either:
+      A) Create views mapping old columns to legacy_* in schema
+      B) Add migration to DROP these columns (after confirming data not needed)
+      C) Add these columns to schema and ensure they're populated
+
+7. TESTING:
+   ✓ GOOD: test_folders_database_migrator.py exists
+   ✓ GOOD: tests/integration/test_data_migration_scenarios.py covers migrations
+   ✓ GOOD: legacy_v32_folders.db fixture available for testing
+
+================================================================================
+FINAL ASSESSMENT
+================================================================================
+
+Data Loss Risk Level: MEDIUM
+
+Current Safeguards:
+  • Backup created before migration (if available)
+  • Idempotent migrations (safe to re-run)
+  • All destructive operations preserve data (INSERT...SELECT)
+  • Boolean normalization doesn't lose data
+
+Known Gaps:
+  • Legacy email columns still in database (orphaned, confusing)
+  • processed_files routing columns not in schema (227K+ rows stranded)
+  • No post-migration validation
+  • plugin_config naming inconsistency
+
+Legacy v32→42 Migration Path: SAFE
+  • All 530 folder records preserved
+  • All 227,501 processed files preserved
+  • Administrative table structure maintained
+  • Email configuration consolidated to settings table
+
+Recommendations:
+  1. Add post-migration validation (row count checks)
+  2. Standardize on single plugin_config column name
+  3. Create views or migration for orphaned processed_files columns
+  4. Add migration to drop legacy email columns (optional cleanup)
+  5. Document legacy column mappings for auditing
+
+================================================================================

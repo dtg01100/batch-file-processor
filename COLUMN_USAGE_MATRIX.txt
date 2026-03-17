@@ -1,0 +1,236 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        COLUMN USAGE MATRIX
+    What the Running Application Actually Reads from Each Table
+═══════════════════════════════════════════════════════════════════════════════
+
+LEGEND:
+  ✓ REQUIRED    — app crashes if NULL/missing (no fallback provided)
+  ⚠ CONDITIONAL — required only if parent flag is TRUE
+  ○ OPTIONAL    — has default, app continues if missing
+  • LEGACY      — in schema but never read by running code
+  ✗ MISPLACED   — column is in wrong table
+
+
+TABLE: FOLDERS (60+ columns in schema)
+════════════════════════════════════════════════════════════════════════════════
+
+COLUMN NAME                          | STATUS      | DEFAULT | WHERE READ
+─────────────────────────────────────────────────────────────────────────────
+folder_name                          | ✓ REQUIRED  | —       | orchestrator.py:45
+alias                                | ✓ REQUIRED  | —       | orchestrator.py:47
+folder_is_active                     | ✓ REQUIRED  | —       | run_coordinator.py:23
+id                                   | ✓ REQUIRED  | —       | orchestrator.py:1058
+old_id                               | ⚠ FALLBACK  | —       | orchestrator.py:1058
+
+--- EDI Processing Pipeline ---
+process_edi                          | ○ OPTIONAL  | False   | orchestrator.py:849
+tweak_edi                            | ○ OPTIONAL  | False   | orchestrator.py:847
+split_edi                            | ○ OPTIONAL  | False   | orchestrator.py:761
+split_edi_include_invoices           | ○ OPTIONAL  | True    | splitter.py
+split_edi_include_credits            | ○ OPTIONAL  | True    | splitter.py
+convert_to_format                    | ○ OPTIONAL  | unknown | orchestrator.py:849
+force_edi_validation                 | ○ OPTIONAL  | False   | orchestrator.py:762
+rename_file                          | ○ OPTIONAL  | ""      | orchestrator.py:1034
+split_edi_filter_categories          | ○ OPTIONAL  | ALL     | splitter.py
+split_edi_filter_mode                | ○ OPTIONAL  | include | splitter.py
+
+--- Copy Backend ---
+process_backend_copy                 | ○ OPTIONAL  | False   | orchestrator.py:776
+copy_to_directory                    | ⚠ CONDITIONAL | N/A   | orchestrator.py:777
+                                       (required if copy=True)
+
+--- FTP Backend ---
+process_backend_ftp                  | ○ OPTIONAL  | False   | orchestrator.py:778
+ftp_server                           | ⚠ CONDITIONAL | —     | ftp_backend.py:68
+ftp_port                             | ⚠ CONDITIONAL | —     | ftp_backend.py:70
+ftp_username                         | ⚠ CONDITIONAL | —     | ftp_backend.py:75
+ftp_password                         | ⚠ CONDITIONAL | —     | ftp_backend.py:76
+ftp_folder                           | ⚠ CONDITIONAL | —     | ftp_backend.py:81
+
+--- Email Backend ---
+process_backend_email                | ○ OPTIONAL  | False   | orchestrator.py:780
+email_to                             | ⚠ CONDITIONAL | —     | email_backend.py:67
+email_subject_line                   | ○ OPTIONAL  | (auto)  | email_backend.py:57
+
+--- UPC Configuration ---
+calculate_upc_check_digit            | ○ OPTIONAL  | —       | from_dict():
+upc_target_length                    | ○ OPTIONAL  | (dflt)  | orchestrator.py:770
+upc_padding_pattern                  | ○ OPTIONAL  | "    "  | from_dict():417
+override_upc_bool                    | ○ OPTIONAL  | False   | from_dict():411
+override_upc_level                   | ○ OPTIONAL  | 1       | from_dict():414
+override_upc_category_filter         | ○ OPTIONAL  | ""      | from_dict():415
+
+--- A-Record Configuration ---
+pad_a_records                        | ○ OPTIONAL  | False   | from_dict():422
+a_record_padding                     | ○ OPTIONAL  | ""      | from_dict():423
+a_record_padding_length              | ○ OPTIONAL  | 6       | from_dict():424
+append_a_records                     | ○ OPTIONAL  | False   | from_dict():426
+a_record_append_text                 | ○ OPTIONAL  | ""      | from_dict():425
+force_txt_file_ext                   | ○ OPTIONAL  | False   | from_dict():427
+
+--- Invoice Date Configuration ---
+invoice_date_offset                  | ○ OPTIONAL  | 0       | from_dict():432
+invoice_date_custom_format           | ○ OPTIONAL  | False   | from_dict():433
+invoice_date_custom_format_string    | ○ OPTIONAL  | ""      | from_dict():434
+retail_uom                           | ○ OPTIONAL  | False   | from_dict():435
+
+--- CSV Configuration ---
+include_headers                      | ○ OPTIONAL  | False   | from_dict():448
+filter_ampersand                     | ○ OPTIONAL  | False   | from_dict():449
+include_item_numbers                 | ○ OPTIONAL  | False   | from_dict():450
+include_item_description             | ○ OPTIONAL  | False   | from_dict():451
+simple_csv_sort_order                | ○ OPTIONAL  | ""      | from_dict():452
+split_prepaid_sales_tax_crec         | ○ OPTIONAL  | False   | from_dict():453
+
+--- eStore Configuration ---
+estore_store_number                  | ○ OPTIONAL  | ""      | from_dict():440
+estore_Vendor_OId                    | ○ OPTIONAL  | ""      | from_dict():441
+estore_vendor_NameVendorOID          | ○ OPTIONAL  | ""      | from_dict():442
+estore_c_record_OID                  | • LEGACY    | —       | NOT READ
+
+--- Fintech Configuration ---
+fintech_division_id                  | ○ OPTIONAL  | ""      | from_dict():443
+
+--- Plugin Configuration ---
+plugin_configurations                | ○ OPTIONAL  | {}      | from_dict():475
+
+--- Deprecated/Incomplete ---
+reporting_email                      | • LEGACY    | —       | incomplete
+report_email_destination             | • LEGACY    | —       | incomplete
+process_edi_output                   | • LEGACY    | —       | NOT USED
+edi_output_folder                    | • LEGACY    | —       | NOT USED
+edi_format                           | • LEGACY    | default | minimal use
+
+--- Misplaced Columns (SCHEMA ERROR) ---
+filename                             | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+original_path                        | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+processed_path                       | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+status                               | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+error_message                        | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+convert_format                       | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+sent_to                              | ✗ MISPLACED | —       | NOT READ (belongs in processed_files)
+
+--- Metadata ---
+created_at                           | ○ OPTIONAL  | auto    | auto-managed
+updated_at                           | ○ OPTIONAL  | auto    | auto-managed
+
+
+TABLE: SETTINGS (60+ columns in schema, only 8 actually used)
+════════════════════════════════════════════════════════════════════════════════
+
+COLUMN NAME                          | STATUS      | DEFAULT | WHERE READ
+─────────────────────────────────────────────────────────────────────────────
+--- Email Configuration ---
+email_address                        | ⚠ CONDITIONAL | —     | email_backend.py:73
+email_smtp_server                    | ⚠ CONDITIONAL | —     | email_backend.py:101
+smtp_port                            | ⚠ CONDITIONAL | —     | email_backend.py:101
+enable_email                         | ○ OPTIONAL  | —       | run_coordinator.py:113
+email_username                       | ○ OPTIONAL  | ""      | email_backend.py:107
+email_password                       | ○ OPTIONAL  | ""      | email_backend.py:108
+
+--- Reporting ---
+enable_reporting                     | ○ OPTIONAL  | —       | run_coordinator.py:113
+
+--- Backup Management ---
+backup_counter                       | ○ OPTIONAL  | —       | run_coordinator.py:52,57
+backup_counter_maximum               | ○ OPTIONAL  | —       | run_coordinator.py:53
+enable_interval_backups              | ○ OPTIONAL  | —       | run_coordinator.py:51
+
+--- Metadata ---
+id                                   | ○ OPTIONAL  | 1       | update context
+created_at                           | ○ OPTIONAL  | auto    | auto-managed
+updated_at                           | ○ OPTIONAL  | auto    | auto-managed
+
+--- Deprecated Folder-Level Fields (SCHEMA ERROR) ---
+folder_is_active                     | ✗ MISPLACED | —       | NOT READ (belongs in folders)
+copy_to_directory                    | ✗ MISPLACED | —       | NOT READ (belongs in folders)
+convert_to_format                    | ✗ MISPLACED | —       | NOT READ (belongs in folders)
+process_edi                          | ✗ MISPLACED | —       | NOT READ (belongs in folders)
+[all other EDI/UPC/A-Record fields]  | ✗ MISPLACED | —       | NOT READ (belong in folders)
+
+--- Deprecated AS/400 Fields (LEGACY) ---
+odbc_driver                          | • LEGACY    | —       | NOT READ
+as400_address                        | • LEGACY    | —       | NOT READ
+as400_username                       | • LEGACY    | —       | NOT READ
+as400_password                       | • LEGACY    | —       | NOT READ
+
+
+TABLE: PROCESSED_FILES (17 columns, only 4 actually used)
+════════════════════════════════════════════════════════════════════════════════
+
+COLUMN NAME                          | STATUS      | DEFAULT | WHERE READ
+─────────────────────────────────────────────────────────────────────────────
+id                                   | ✓ REQUIRED  | auto    | orchestrator.py:1078
+file_checksum                        | ✓ REQUIRED  | —       | orchestrator.py:1070
+resend_flag                          | ✓ REQUIRED  | —       | orchestrator.py:1070,1078
+folder_id                            | ✓ REQUIRED  | —       | implicit in queries
+
+--- Legacy Fields ---
+file_name                            | • LEGACY    | —       | NOT READ
+folder_alias                         | • LEGACY    | —       | NOT READ
+md5                                  | • LEGACY    | —       | NOT READ
+created_at                           | • LEGACY    | —       | auto-managed
+processed_at                         | • LEGACY    | —       | auto-managed
+
+--- New Fields (v34+, minimal usage) ---
+filename                             | ○ OPTIONAL  | —       | minimal use
+original_path                        | ○ OPTIONAL  | —       | minimal use
+processed_path                       | ○ OPTIONAL  | —       | minimal use
+status                               | ○ OPTIONAL  | —       | minimal use
+error_message                        | ○ OPTIONAL  | —       | minimal use
+convert_format                       | ○ OPTIONAL  | —       | minimal use
+sent_to                              | ○ OPTIONAL  | —       | minimal use
+invoice_numbers                      | ○ OPTIONAL  | —       | minimal use
+
+
+TABLE: ADMINISTRATIVE
+════════════════════════════════════════════════════════════════════════════════
+
+STATUS: ✗ DEPRECATED
+  This is a legacy duplicate of the folders table.
+  Migration v37 marks it as deprecated.
+  
+  DO NOT USE — The application should never read from this table.
+  Use folders table exclusively for all operations.
+  
+  All ~60 columns mirror those in folders table with identical naming.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SUMMARY STATISTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+folders table:
+  • Total columns in schema: 60+
+  • Actually read by code: 45+
+  • Must exist (REQUIRED): 4
+  • Conditional (backend-dependent): 5
+  • Optional (has defaults): 36
+  • Never read (LEGACY): 10+
+  • Misplaced (wrong table): 7
+
+settings table:
+  • Total columns in schema: 60+
+  • Actually read by code: 8
+  • Must exist when enabled: 3
+  • Optional: 5
+  • Never read (LEGACY): 52+
+  • Misplaced (wrong table): 50+
+
+processed_files table:
+  • Total columns in schema: 17
+  • Actually read by code: 4
+  • Must exist: 4
+  • Legacy/minimal: 13
+
+administrative table:
+  • Status: COMPLETELY DEPRECATED (do not use)
+
+═══════════════════════════════════════════════════════════════════════════════
+KEY INSIGHT: The application is highly tolerant of missing optional fields
+but strict about REQUIRED and CONDITIONAL fields when features are enabled.
+
+Missing a CONDITIONAL field (e.g., ftp_password when process_backend_ftp=True)
+will cause a runtime exception.
+
+═══════════════════════════════════════════════════════════════════════════════

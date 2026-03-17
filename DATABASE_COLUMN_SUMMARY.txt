@@ -1,0 +1,209 @@
+================================================================================
+DEFINITIVE DATABASE COLUMN READ MAP - Batch File Processor Application
+================================================================================
+
+TABLE: folders
+================================================================================
+
+REQUIRED (app crashes/misbehaves if absent or None):
+  ✓ folder_name          — dispatch/orchestrator.py:45
+  ✓ alias                — dispatch/orchestrator.py:47 (fallback: folder_name)
+  ✓ folder_is_active     — interface/qt/run_coordinator.py:23
+  ✓ id (or old_id)       — dispatch/orchestrator.py:1058
+
+OPTIONAL - EDI Processing (all default to False):
+  ○ process_edi              — orchestrator.py:849
+  ○ tweak_edi                — orchestrator.py:847
+  ○ split_edi                — orchestrator.py:761
+  ○ split_edi_include_invoices    — dispatch/pipeline/splitter.py (default: True)
+  ○ split_edi_include_credits     — dispatch/pipeline/splitter.py (default: True)
+  ○ convert_to_format        — orchestrator.py:849 (default: "unknown")
+  ○ force_edi_validation     — orchestrator.py:762
+  ○ rename_file              — orchestrator.py:1034 (default: "")
+  ○ split_edi_filter_categories   — dispatch/pipeline/splitter.py (default: "ALL")
+  ○ split_edi_filter_mode         — dispatch/pipeline/splitter.py (default: "include")
+
+OPTIONAL - UPC Configuration:
+  ○ upc_target_length             — orchestrator.py:770 (via _FOLDER_DEFAULTS)
+  ○ upc_padding_pattern           — FolderConfiguration.from_dict():417 (default: "           ")
+  ○ calculate_upc_check_digit     — FolderConfiguration.from_dict()
+  ○ override_upc_bool             — FolderConfiguration.from_dict():411
+  ○ override_upc_level            — FolderConfiguration.from_dict():414 (default: 1)
+  ○ override_upc_category_filter  — FolderConfiguration.from_dict():415 (default: "")
+
+OPTIONAL - Backend Configuration:
+  ○ process_backend_copy    — orchestrator.py:776 (default: False)
+  ○ copy_to_directory       — orchestrator.py:777 (default: "N/A")
+  
+  ○ process_backend_ftp     — orchestrator.py:778 (default: False)
+  ○ ftp_server              — ftp_backend.py:68 (REQUIRED if enabled)
+  ○ ftp_port                — ftp_backend.py:70 (REQUIRED if enabled)
+  ○ ftp_username            — ftp_backend.py:75 (REQUIRED if enabled)
+  ○ ftp_password            — ftp_backend.py:76 (REQUIRED if enabled)
+  ○ ftp_folder              — ftp_backend.py:81 (REQUIRED if enabled)
+  
+  ○ process_backend_email   — orchestrator.py:780 (default: False)
+  ○ email_to                — email_backend.py:67 (REQUIRED if enabled)
+  ○ email_subject_line      — email_backend.py:57 (default: filename + " Attached")
+
+OPTIONAL - A-Record Configuration:
+  ○ pad_a_records           — FolderConfiguration.from_dict():422 (default: False)
+  ○ a_record_padding        — FolderConfiguration.from_dict():423 (default: "")
+  ○ a_record_padding_length — FolderConfiguration.from_dict():424 (default: 6)
+  ○ append_a_records        — FolderConfiguration.from_dict():426 (default: False)
+  ○ a_record_append_text    — FolderConfiguration.from_dict():425 (default: "")
+  ○ force_txt_file_ext      — FolderConfiguration.from_dict():427 (default: False)
+
+OPTIONAL - Invoice Date Configuration:
+  ○ invoice_date_offset              — FolderConfiguration.from_dict():432 (default: 0)
+  ○ invoice_date_custom_format       — FolderConfiguration.from_dict():433 (default: False)
+  ○ invoice_date_custom_format_string — FolderConfiguration.from_dict():434 (default: "")
+  ○ retail_uom                       — FolderConfiguration.from_dict():435 (default: False)
+
+OPTIONAL - CSV Configuration:
+  ○ include_headers         — FolderConfiguration.from_dict():448 (default: False)
+  ○ filter_ampersand        — FolderConfiguration.from_dict():449 (default: False)
+  ○ include_item_numbers    — FolderConfiguration.from_dict():450 (default: False)
+  ○ include_item_description — FolderConfiguration.from_dict():451 (default: False)
+  ○ simple_csv_sort_order   — FolderConfiguration.from_dict():452 (default: "")
+  ○ split_prepaid_sales_tax_crec — FolderConfiguration.from_dict():453 (default: False)
+
+OPTIONAL - Backend-Specific Configuration:
+  ○ estore_store_number          — FolderConfiguration.from_dict():440 (default: "")
+  ○ estore_Vendor_OId            — FolderConfiguration.from_dict():441 (default: "")
+  ○ estore_vendor_NameVendorOID  — FolderConfiguration.from_dict():442 (default: "")
+  ○ fintech_division_id          — FolderConfiguration.from_dict():443 (default: "")
+  ○ estore_c_record_OID          — (in schema, NOT read by from_dict())
+
+OPTIONAL - Plugin & Metadata:
+  ○ plugin_configurations   — FolderConfiguration.from_dict():475 (default: {})
+  ○ created_at, updated_at  — timestamps, auto-managed
+
+NOT ACCESSED (in schema but code doesn't read):
+  • reporting_email, report_email_destination  — incomplete logic
+  • process_edi_output, edi_output_folder      — defined but unused
+  • edi_format                                 — added v38, minimal usage
+  • filename, original_path, processed_path, status, error_message, convert_format, sent_to
+    (MISPLACED: belong in processed_files table, not folders)
+
+
+TABLE: settings
+================================================================================
+
+REQUIRED (if email feature enabled):
+  ✓ email_address      — email_backend.py:73
+  ✓ email_smtp_server  — email_backend.py:101
+  ✓ smtp_port          — email_backend.py:101
+
+OPTIONAL (has fallback/defaults):
+  ○ enable_email              — run_coordinator.py:113
+  ○ email_username            — email_backend.py:107 (default: "")
+  ○ email_password            — email_backend.py:108 (default: "")
+  ○ enable_reporting          — run_coordinator.py:113
+  ○ enable_interval_backups   — run_coordinator.py:51
+  ○ backup_counter            — run_coordinator.py:52,57
+  ○ backup_counter_maximum    — run_coordinator.py:53
+  ○ created_at, updated_at    — timestamps
+
+NOT ACCESSED (legacy fields):
+  • odbc_driver, as400_address, as400_username, as400_password  — AS/400 legacy
+  • folder_is_active, copy_to_directory, convert_to_format, process_edi, etc.
+    (WRONG TABLE: these are folder-level, should not be in settings)
+
+
+TABLE: processed_files
+================================================================================
+
+ACTUALLY READ:
+  ✓ id                 — orchestrator.py:1078 (record identifier)
+  ✓ file_checksum      — orchestrator.py:1070 (duplicate detection)
+  ✓ resend_flag        — orchestrator.py:1070,1078 (reprocess marker)
+  ✓ folder_id          — implicit in queries
+
+LEGACY/MINIMAL USAGE:
+  ○ file_name, folder_alias, md5           — old tracking
+  ○ created_at, processed_at               — timestamps
+  ○ filename, original_path, processed_path, status, error_message, 
+    convert_format, sent_to, invoice_numbers  — added v34+, not heavily used yet
+
+
+TABLE: administrative
+================================================================================
+STATUS: DEPRECATED ❌
+  This table is a legacy duplicate of folders table.
+  Migration v37 marks it as deprecated.
+  DO NOT READ FROM THIS TABLE - use folders exclusively.
+  All columns mirror those in folders table.
+
+
+================================================================================
+CONDITIONAL FIELD REQUIREMENTS
+================================================================================
+
+EMAIL BACKEND (if process_backend_email = TRUE):
+  REQUIRED:
+    - folder.email_to (from folders table)
+    - settings.email_address (from settings table)
+    - settings.email_smtp_server (from settings table)
+    - settings.smtp_port (from settings table)
+  
+  OPTIONAL:
+    - folder.email_subject_line (default: filename + " Attached")
+    - settings.email_username (default: "")
+    - settings.email_password (default: "")
+
+FTP BACKEND (if process_backend_ftp = TRUE):
+  REQUIRED:
+    - folder.ftp_server
+    - folder.ftp_port
+    - folder.ftp_username
+    - folder.ftp_password
+    - folder.ftp_folder
+
+COPY BACKEND (if process_backend_copy = TRUE):
+  REQUIRED:
+    - folder.copy_to_directory
+
+
+================================================================================
+SCHEMA CONSISTENCY ISSUES
+================================================================================
+
+⚠️  ISSUE #1 - Misplaced Columns
+    Location: schema.py, folders table definition
+    Problem: Columns filename, original_path, processed_path, status, 
+             error_message, convert_format, sent_to defined in folders table
+             but should only be in processed_files
+    Impact: Schema noise; never read from folders table in actual execution
+
+⚠️  ISSUE #2 - Settings Table Contains Folder-Level Fields
+    Location: schema.py, settings table definition
+    Problem: Settings table defines copy_to_directory, convert_to_format, 
+             process_edi, pad_a_records, etc. which are folder-specific
+    Impact: Code never reads these from settings; they're only in folders
+
+⚠️  ISSUE #3 - Legacy AS/400 Fields
+    Location: schema.py, settings table
+    Problem: odbc_driver, as400_address, as400_username, as400_password
+    Impact: No code path reads these; dead schema columns
+
+⚠️  ISSUE #4 - FolderConfiguration.from_dict() Gap
+    Location: interface/models/folder_configuration.py:355
+    Problem: Does not read: reporting_email, report_email_destination, 
+             process_edi_output, edi_output_folder, estore_c_record_OID
+    Impact: These columns exist in DB but are ignored by configuration parser
+
+⚠️  ISSUE #5 - Deprecated Table Still in Schema
+    Location: schema.py, administrative table
+    Problem: Table still created and maintained but marked deprecated in v37
+    Impact: Maintenance burden; should be removed or explicitly deprecated
+
+
+================================================================================
+RECOMMENDED DB VERSION: v40+ (v32 minimum)
+================================================================================
+
+Migration v34: Added processed_files tracking fields
+Migration v38: Added edi_format column
+Migration v39: Proper PRIMARY KEY constraints
+Migration v40: Backend column consolidation
