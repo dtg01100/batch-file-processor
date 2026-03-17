@@ -718,3 +718,56 @@ class TestSchemaColumnDefinitions:
         assert "job_id" in column_names
         assert "level" in column_names
         assert "message" in column_names
+
+
+class TestSchemaConstraints:
+    """Test that schema constraints are actually enforced."""
+
+    @pytest.fixture
+    def database(self, tmp_path):
+        """Create a database with schema applied."""
+        db_path = str(tmp_path / "constraints_test.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+        yield db_conn
+        db_conn.close()
+
+    def test_users_email_unique_constraint(self, database):
+        """Duplicate user emails must be rejected."""
+        import sqlite3
+
+        database["users"].insert(dict(id="u1", email="dup@example.com", display_name="A"))
+        with pytest.raises((Exception, sqlite3.IntegrityError)):
+            database["users"].insert(dict(id="u2", email="dup@example.com", display_name="B"))
+
+        # Only the first insert must be present
+        users = list(database.query("SELECT * FROM users WHERE email = 'dup@example.com'"))
+        assert len(users) == 1
+        assert users[0]["id"] == "u1"
+
+    def test_organizations_name_not_null_constraint(self, database):
+        """Organization name must not be null (NOT NULL constraint)."""
+        import sqlite3
+
+        with pytest.raises((Exception, sqlite3.IntegrityError)):
+            database["organizations"].insert(dict(id="org1", name=None))
+
+        orgs = list(database["organizations"].all())
+        assert len(orgs) == 0, "Failed insert must not persist partial data"
+
+    def test_processed_files_table_accepts_multiple_files_same_folder(self, database):
+        """Multiple processed files for the same folder must be allowed."""
+        for i in range(3):
+            database["processed_files"].insert(
+                dict(file_name=f"file{i}.edi", md5=f"hash{i}", folder_id=1)
+            )
+        records = list(database["processed_files"].all())
+        assert len(records) == 3
+
+    def test_schema_idempotent_with_existing_users(self, database):
+        """ensure_schema() called twice must not lose existing user data."""
+        database["users"].insert(dict(id="persist", email="keep@example.com", display_name="Keep"))
+        schema.ensure_schema(database)
+        user = database["users"].find_one(id="persist")
+        assert user is not None
+        assert user["email"] == "keep@example.com"

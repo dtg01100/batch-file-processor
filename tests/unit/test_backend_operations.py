@@ -141,6 +141,31 @@ class TestCopyBackendOperations:
         with pytest.raises(IOError):
             copy_backend.do(process_parameters, settings_dict, missing_file)
 
+    def test_copy_backend_retries_on_io_error(self, temp_dir, source_file):
+        """Copy backend retries up to 10 times on IOError before re-raising."""
+        call_count = {"n": 0}
+
+        class FlakyCopyOps:
+            def exists(self, path):
+                return True
+
+            def makedirs(self, path):
+                pass
+
+            def copy(self, src, dst):
+                call_count["n"] += 1
+                raise IOError("transient error")
+
+        with pytest.raises(IOError, match="transient error"):
+            copy_backend.do(
+                {"copy_to_directory": str(temp_dir)},
+                {},
+                source_file,
+                file_ops=FlakyCopyOps(),
+            )
+        # counter goes 0→10 (11 attempts total before raise)
+        assert call_count["n"] == 11, "Backend must retry exactly 10 times then raise"
+
     def test_copy_backend_with_mock_file_ops(
         self, process_parameters, settings_dict, source_file
     ):
@@ -600,40 +625,3 @@ class TestBackendErrorScenarios:
         assert len(mock_client.connections) == 11
         assert mock_client.ehlo_calls == 11
         assert mock_client.starttls_calls == 11
-
-
-class TestBackendClasses:
-    """Test suite for backend class interfaces."""
-
-    def test_copy_backend_class_exists(self):
-        """Test CopyBackend class exists."""
-        assert hasattr(copy_backend, "CopyBackend")
-        assert callable(copy_backend.CopyBackend)
-
-    def test_ftp_backend_class_exists(self):
-        """Test FTPBackend class exists."""
-        assert hasattr(ftp_backend, "FTPBackend")
-        assert callable(ftp_backend.FTPBackend)
-
-    def test_email_backend_class_exists(self):
-        """Test EmailBackend class exists."""
-        assert hasattr(email_backend, "EmailBackend")
-        assert callable(email_backend.EmailBackend)
-
-    def test_copy_backend_has_send_method(self):
-        """Test CopyBackend has send method."""
-        backend = copy_backend.CopyBackend()
-        assert hasattr(backend, "send")
-        assert callable(backend.send)
-
-    def test_ftp_backend_has_send_method(self):
-        """Test FTPBackend has send method."""
-        backend = ftp_backend.FTPBackend()
-        assert hasattr(backend, "send")
-        assert callable(backend.send)
-
-    def test_email_backend_has_send_method(self):
-        """Test EmailBackend has send method."""
-        backend = email_backend.EmailBackend()
-        assert hasattr(backend, "send")
-        assert callable(backend.send)

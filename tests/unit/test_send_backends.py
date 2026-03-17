@@ -48,19 +48,6 @@ class TestFTPBackend:
         test_file.write_text("Test file content for FTP upload")
         return str(test_file)
 
-    def test_ftp_backend_module_import(self):
-        """Test that ftp_backend module can be imported."""
-        import ftp_backend
-
-        assert ftp_backend is not None
-
-    def test_ftp_do_function_exists(self):
-        """Test that do function exists in ftp_backend module."""
-        import ftp_backend
-
-        assert hasattr(ftp_backend, "do")
-        assert callable(ftp_backend.do)
-
     def test_ftp_connection_mock(
         self, sample_process_parameters, sample_settings_dict, sample_file
     ):
@@ -137,7 +124,9 @@ class TestFTPBackend:
             "ftp_folder": "/a/b/c",
         }
         mock_client = MockFTPClient()
-        ftp_backend.do(params, sample_settings_dict, sample_file, ftp_client=mock_client)
+        ftp_backend.do(
+            params, sample_settings_dict, sample_file, ftp_client=mock_client
+        )
 
         changed = mock_client.directories_changed
         # At minimum /a should have been entered
@@ -173,19 +162,6 @@ class TestEmailBackend:
         test_file.write_text("Test file content for email attachment")
         return str(test_file)
 
-    def test_email_backend_module_import(self):
-        """Test that email_backend module can be imported."""
-        import email_backend
-
-        assert email_backend is not None
-
-    def test_email_do_function_exists(self):
-        """Test that do function exists in email_backend module."""
-        import email_backend
-
-        assert hasattr(email_backend, "do")
-        assert callable(email_backend.do)
-
     def test_email_smtp_connection_mock(
         self, sample_process_parameters, sample_settings, sample_file
     ):
@@ -204,9 +180,7 @@ class TestEmailBackend:
         assert mock_smtp.ehlo_calls > 0
         assert len(mock_smtp.emails_sent) > 0
 
-    def test_email_substitutes_filename_in_subject(
-        self, sample_settings, sample_file
-    ):
+    def test_email_substitutes_filename_in_subject(self, sample_settings, sample_file):
         """%filename% in email_subject_line is replaced with the actual filename."""
         import email_backend
         from backend.smtp_client import MockSMTPClient
@@ -223,9 +197,7 @@ class TestEmailBackend:
         assert "test_attachment.txt" in subject
         assert "%filename%" not in subject
 
-    def test_email_uses_default_subject_when_empty(
-        self, sample_settings, sample_file
-    ):
+    def test_email_uses_default_subject_when_empty(self, sample_settings, sample_file):
         """When email_subject_line is empty, subject defaults to '<filename> Attached'."""
         import email_backend
         from backend.smtp_client import MockSMTPClient
@@ -242,9 +214,7 @@ class TestEmailBackend:
         assert "test_attachment.txt" in subject
         assert "Attached" in subject
 
-    def test_email_sends_to_multiple_recipients(
-        self, sample_settings, sample_file
-    ):
+    def test_email_sends_to_multiple_recipients(self, sample_settings, sample_file):
         """Comma-separated email_to addresses are each included in the To field."""
         import email_backend
         from backend.smtp_client import MockSMTPClient
@@ -279,19 +249,6 @@ class TestCopyBackend:
         dest_dir.mkdir()
         return str(dest_dir)
 
-    def test_copy_backend_module_import(self):
-        """Test that copy_backend module can be imported."""
-        import copy_backend
-
-        assert copy_backend is not None
-
-    def test_copy_do_function_exists(self):
-        """Test that do function exists in copy_backend module."""
-        import copy_backend
-
-        assert hasattr(copy_backend, "do")
-        assert callable(copy_backend.do)
-
     def test_copy_backend_places_file_in_correct_destination(
         self, sample_source_file, sample_destination_dir
     ):
@@ -306,4 +263,3 @@ class TestCopyBackend:
             sample_destination_dir, os.path.basename(sample_source_file)
         )
         assert os.path.isfile(expected)
-

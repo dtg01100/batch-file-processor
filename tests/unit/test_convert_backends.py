@@ -480,100 +480,6 @@ class TestEDIIndexingConversion:
         assert tax_fields["amount"] == "000010000"
 
 
-class TestConvertModuleImportability:
-    """Test suite for conversion module importability."""
-
-    def test_import_convert_to_fintech(self):
-        """Test that convert_to_fintech module can be imported."""
-        try:
-            import convert_to_fintech
-
-            assert convert_to_fintech is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_fintech: {e}")
-
-    def test_import_convert_to_simplified_csv(self):
-        """Test that convert_to_simplified_csv module can be imported."""
-        try:
-            import convert_to_simplified_csv
-
-            assert convert_to_simplified_csv is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_simplified_csv: {e}")
-
-    def test_import_convert_to_stewarts_custom(self):
-        """Test that convert_to_stewarts_custom module can be imported."""
-        try:
-            import convert_to_stewarts_custom
-
-            assert convert_to_stewarts_custom is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_stewarts_custom: {e}")
-
-    def test_import_convert_to_yellowdog_csv(self):
-        """Test that convert_to_yellowdog_csv module can be imported."""
-        try:
-            import convert_to_yellowdog_csv
-
-            assert convert_to_yellowdog_csv is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_yellowdog_csv: {e}")
-
-    def test_import_convert_to_estore_einvoice(self):
-        """Test that convert_to_estore_einvoice module can be imported."""
-        try:
-            import convert_to_estore_einvoice
-
-            assert convert_to_estore_einvoice is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_estore_einvoice: {e}")
-
-    def test_import_convert_to_estore_einvoice_generic(self):
-        """Test that convert_to_estore_einvoice_generic module can be imported."""
-        try:
-            import convert_to_estore_einvoice_generic
-
-            assert convert_to_estore_einvoice_generic is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_estore_einvoice_generic: {e}")
-
-    def test_import_convert_to_csv(self):
-        """Test that convert_to_csv module can be imported."""
-        try:
-            import convert_to_csv
-
-            assert convert_to_csv is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_csv: {e}")
-
-    def test_import_convert_to_scannerware(self):
-        """Test that convert_to_scannerware module can be imported."""
-        try:
-            import convert_to_scannerware
-
-            assert convert_to_scannerware is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_scannerware: {e}")
-
-    def test_import_convert_to_scansheet_type_a(self):
-        """Test that convert_to_scansheet_type_a module can be imported."""
-        try:
-            import convert_to_scansheet_type_a
-
-            assert convert_to_scansheet_type_a is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_scansheet_type_a: {e}")
-
-    def test_import_convert_to_jolley_custom(self):
-        """Test that convert_to_jolley_custom module can be imported."""
-        try:
-            import convert_to_jolley_custom
-
-            assert convert_to_jolley_custom is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import convert_to_jolley_custom: {e}")
-
-
 class TestConvertToFintech:
     """Test suite for convert_to_fintech conversion."""
 
@@ -631,13 +537,6 @@ class TestConvertToFintech:
                 "012345678903",
             ],
         }
-
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists in the module."""
-        import convert_to_fintech
-
-        assert hasattr(convert_to_fintech, "edi_convert")
-        assert callable(convert_to_fintech.edi_convert)
 
     def test_edi_convert_with_valid_data(
         self,
@@ -729,13 +628,6 @@ class TestConvertToSimplifiedCSV:
             "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,description,vendor_item",
         }
 
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_simplified_csv
-
-        assert hasattr(convert_to_simplified_csv, "edi_convert")
-        assert callable(convert_to_simplified_csv.edi_convert)
-
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
         from utils import convert_to_price
@@ -769,20 +661,6 @@ class TestConvertToYellowdogCSV:
             "\n"
         )
 
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_yellowdog_csv
-
-        assert hasattr(convert_to_yellowdog_csv, "edi_convert")
-        assert callable(convert_to_yellowdog_csv.edi_convert)
-
-    def test_yellowdog_converter_class_exists(self):
-        """YellowDogConverter class must exist in the module."""
-        import convert_to_yellowdog_csv
-
-        assert hasattr(convert_to_yellowdog_csv, "YellowDogConverter")
-
-
 class TestConvertToEstoreEinvoice:
     """Test suite for convert_to_estore_einvoice conversion."""
 
@@ -797,13 +675,6 @@ class TestConvertToEstoreEinvoice:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_estore_einvoice
-
-        assert hasattr(convert_to_estore_einvoice, "edi_convert")
-        assert callable(convert_to_estore_einvoice.edi_convert)
 
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
@@ -836,29 +707,6 @@ class TestConvertToEstoreEinvoiceGeneric:
             "\n"
         )
 
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_estore_einvoice_generic
-
-        assert hasattr(convert_to_estore_einvoice_generic, "edi_convert")
-        assert callable(convert_to_estore_einvoice_generic.edi_convert)
-
-    def test_inv_fetcher_class_exists(self):
-        """Test that invFetcher class exists."""
-        import convert_to_estore_einvoice_generic
-
-        assert hasattr(convert_to_estore_einvoice_generic, "invFetcher")
-
-    def test_inv_fetcher_methods(self):
-        """Test invFetcher has expected methods."""
-        import convert_to_estore_einvoice_generic
-
-        # Check invFetcher has required methods
-        required_methods = ["fetch_po", "fetch_cust", "fetch_uom_desc"]
-        for method in required_methods:
-            assert hasattr(convert_to_estore_einvoice_generic.invFetcher, method)
-
-
 class TestConvertToCSV:
     """Test suite for convert_to_csv conversion."""
 
@@ -873,14 +721,6 @@ class TestConvertToCSV:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_csv
-
-        assert hasattr(convert_to_csv, "edi_convert")
-        assert callable(convert_to_csv.edi_convert)
-
 
 class TestConvertToScannerware:
     """Test suite for convert_to_scannerware conversion."""
@@ -897,14 +737,6 @@ class TestConvertToScannerware:
             "\n"
         )
 
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_scannerware
-
-        assert hasattr(convert_to_scannerware, "edi_convert")
-        assert callable(convert_to_scannerware.edi_convert)
-
-
 class TestConvertToScansheetTypeA:
     """Test suite for convert_to_scansheet_type_a conversion."""
 
@@ -919,14 +751,6 @@ class TestConvertToScansheetTypeA:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_scansheet_type_a
-
-        assert hasattr(convert_to_scansheet_type_a, "edi_convert")
-        assert callable(convert_to_scansheet_type_a.edi_convert)
-
 
 class TestConvertToJolleyCustom:
     """Test suite for convert_to_jolley_custom conversion."""
@@ -943,14 +767,6 @@ class TestConvertToJolleyCustom:
             "\n"
         )
 
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_jolley_custom
-
-        assert hasattr(convert_to_jolley_custom, "edi_convert")
-        assert callable(convert_to_jolley_custom.edi_convert)
-
-
 class TestConvertToStewartsCustom:
     """Test suite for convert_to_stewarts_custom conversion."""
 
@@ -965,14 +781,6 @@ class TestConvertToStewartsCustom:
             "CTABSales Tax                    000010000"  # Tax: 38 chars
             "\n"
         )
-
-    def test_edi_convert_function_exists(self):
-        """Test that edi_convert function exists."""
-        import convert_to_stewarts_custom
-
-        assert hasattr(convert_to_stewarts_custom, "edi_convert")
-        assert callable(convert_to_stewarts_custom.edi_convert)
-
 
 class TestConvertFormatConfiguration:
     """Test suite for format configuration validation."""

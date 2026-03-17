@@ -116,12 +116,17 @@ C00000003000030000
         # Should process without executing malicious content
         result = orchestrator.process_folder(folders[0], MagicMock())
 
-        # Verify processing completed (may fail validation, but shouldn't crash)
-        assert result is not None
+        # Result must be a FolderResult with defined outcome (success or failure with errors)
+        assert hasattr(result, "success"), "process_folder must return a FolderResult"
+        assert hasattr(result, "errors")
+        # If it failed, errors should explain why (validation/conversion) — not a crash
+        if not result.success:
+            assert len(result.errors) > 0, "Failed result must have error details"
 
-        # Verify database is intact (no SQL injection)
+        # Verify database is intact (SQL in EDI content must not have executed)
         all_folders = list(db.folders_table.all())
-        assert len(all_folders) == 1, "Database should be intact"
+        assert len(all_folders) == 1, "SQL injection in EDI content must not drop the folders table"
+        assert all_folders[0]["alias"] == "Security Test", "Folder record must be unchanged"
 
     def test_null_byte_injection(self, secure_test_environment, pipeline_steps):
         """Test handling of null byte injection attempts."""
@@ -163,8 +168,10 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         folders = list(db.folders_table.all())
         result = orchestrator.process_folder(folders[0], MagicMock())
 
-        # Should complete without errors
-        assert result is not None
+        # Should complete without errors — normal EDI must process successfully
+        assert hasattr(result, "success"), "process_folder must return a FolderResult"
+        assert result.success is True, f"Normal EDI processing must succeed; errors: {result.errors}"
+        assert result.files_processed >= 1, "At least one file must have been processed"
 
 
 class TestFilePathSecurity:
@@ -314,13 +321,17 @@ class TestDatabaseSecurity:
             try:
                 db.folders_table.insert(folder_config)
 
-                # Verify database integrity
+                # Verify injection string was stored literally — not executed
                 folders = list(db.folders_table.all())
-                # Should have folders, but injection should not have executed
-                assert len(folders) >= 1
+                assert len(folders) >= 1, "Folder must exist after insert"
+                last_folder = folders[-1]
+                assert last_folder["folder_name"] == injection, (
+                    f"Injection string must be stored verbatim, not executed. "
+                    f"Stored: {last_folder['folder_name']!r}, expected: {injection!r}"
+                )
 
                 # Clean up
-                db.folders_table.delete(id=folders[-1]["id"])
+                db.folders_table.delete(id=last_folder["id"])
             except Exception:
                 # Exception is acceptable - better to reject than execute
                 pass

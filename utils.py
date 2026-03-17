@@ -20,12 +20,12 @@ from core.database import query_runner
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
-from core.edi.inv_fetcher import InvFetcher as invFetcher  # Backward compatibility re-export
-from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA
-from core.utils.date_utils import dactime_from_datetime
-from core.utils.date_utils import datetime_from_dactime
-from core.utils.date_utils import datetime_from_invtime
-from core.utils.date_utils import dactime_from_invtime
+from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
+from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA  # noqa: F401
+from core.utils.date_utils import dactime_from_datetime  # noqa: F401
+from core.utils.date_utils import datetime_from_dactime  # noqa: F401
+from core.utils.date_utils import datetime_from_invtime  # noqa: F401
+from core.utils.date_utils import dactime_from_invtime  # noqa: F401
 
 
 def normalize_bool(value) -> bool:
