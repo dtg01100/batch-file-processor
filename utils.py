@@ -21,11 +21,16 @@ from core.database import query_runner
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
-from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca as convert_UPCE_to_UPCA  # noqa: F401
-from core.utils.date_utils import dactime_from_datetime  # noqa: F401
-from core.utils.date_utils import datetime_from_dactime  # noqa: F401
-from core.utils.date_utils import datetime_from_invtime  # noqa: F401
-from core.utils.date_utils import dactime_from_invtime  # noqa: F401
+from core.edi.upc_utils import (
+    calc_check_digit,  # noqa: F401
+    convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
+)
+from core.utils.date_utils import (
+    dactime_from_datetime,  # noqa: F401
+    dactime_from_invtime,  # noqa: F401
+    datetime_from_dactime,  # noqa: F401
+    datetime_from_invtime,  # noqa: F401
+)
 
 
 def normalize_bool(value) -> bool:
@@ -717,7 +722,9 @@ def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
     return invoices
 
 
-def _split_invoice_records(invoice_lines: list[str]) -> tuple[str | None, list[str], str | None]:
+def _split_invoice_records(
+    invoice_lines: list[str],
+) -> tuple[str | None, list[str], str | None]:
     """Split invoice lines into A, B, and C record collections."""
     a_record = None
     b_records = []

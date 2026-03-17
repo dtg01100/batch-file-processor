@@ -320,7 +320,9 @@ def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
     return invoices
 
 
-def _split_invoice_records(invoice_lines: list[str]) -> tuple[str | None, list[str], list[str]]:
+def _split_invoice_records(
+    invoice_lines: list[str],
+) -> tuple[str | None, list[str], list[str]]:
     """Split invoice lines into A record, B records, and C records."""
     a_record = None
     b_records = []
