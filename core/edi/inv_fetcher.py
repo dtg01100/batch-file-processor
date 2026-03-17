@@ -80,7 +80,7 @@ class InvFetcher:
             return ""
 
         qry_ret = self._query_runner.run_query(
-            f"""
+            """
             SELECT
                 trim(ohhst.bte4cd),
                 trim(ohhst.bthinb),
@@ -88,8 +88,9 @@ class InvFetcher:
             FROM
                 dacdata.ohhst ohhst
             WHERE
-                ohhst.BTHHNB = {int(invoice_number)}
-            """
+                ohhst.BTHHNB = ?
+            """,
+            (int(invoice_number),),
         )
         self.last_invoice_number = invoice_number
         try:
@@ -159,16 +160,16 @@ class InvFetcher:
                 return ""
 
             try:
-                qry = f"""
+                qry = """
                     SELECT
                         BUHUNB,
                         BUHXTX
                     FROM
                         dacdata.odhst odhst
                     WHERE
-                        odhst.BUHHNB = {int(invno)}
+                        odhst.BUHHNB = ?
                 """
-                qry_ret = self._query_runner.run_query(qry)
+                qry_ret = self._query_runner.run_query(qry, (int(invno),))
                 # Convert results to dict lookup
                 self.uom_lut = {}
                 for row in qry_ret:
@@ -209,9 +210,9 @@ class InvFetcher:
             qry = f"""
                 SELECT dsanrep.{field}
                 FROM dacdata.dsanrep dsanrep
-                WHERE dsanrep.ANBACD = {int(itemno)}
+                WHERE dsanrep.ANBACD = ?
             """
-            qry_ret = self._query_runner.run_query(qry)
+            qry_ret = self._query_runner.run_query(qry, (int(itemno),))
             if qry_ret:
                 row = qry_ret[0]
                 if isinstance(row, dict):

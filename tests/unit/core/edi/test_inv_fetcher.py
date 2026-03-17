@@ -164,7 +164,7 @@ class TestInvFetcher:
         ]
 
         # Need to set up for second query (item master)
-        def side_effect(query):
+        def side_effect(query, params=None):
             if "odhst" in query:
                 return [{"BUHUNB": 99, "BUHXTX": "OTHER"}]
             elif "dsanrep" in query:
@@ -251,7 +251,7 @@ class TestInvFetcherIntegration:
         """Create mock query runner with realistic data."""
         runner = MagicMock()
 
-        def query_side_effect(query):
+        def query_side_effect(query, params=None):
             if "ohhst" in query:
                 return [
                     {
