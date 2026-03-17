@@ -106,25 +106,27 @@ class UILayoutBuilder:
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        scroll_content = QWidget()
-        main_layout = QVBoxLayout(scroll_content)
-
-        # Active state checkbox
+        # Active state checkbox — pinned above the scroll area so it is
+        # always visible regardless of scroll position (banner style).
         self.active_checkbox = QCheckBox("Folder Is Disabled")
         self.active_checkbox.setStyleSheet(
             f"""
             QCheckBox {{
                 background-color: {Theme.ERROR_CONTAINER};
                 color: {Theme.ON_ERROR_CONTAINER};
-                padding: 4px;
+                padding: 6px 8px;
                 border-radius: 4px;
+                font-weight: bold;
             }}
         """
         )
         if self.on_update_backend_states:
             self.active_checkbox.toggled.connect(self.on_update_backend_states)
         self.fields["active_checkbutton"] = self.active_checkbox
-        main_layout.addWidget(self.active_checkbox)
+        outer_layout.addWidget(self.active_checkbox)
+
+        scroll_content = QWidget()
+        main_layout = QVBoxLayout(scroll_content)
 
         # Create column builders
         self.column_builders = ColumnBuilders(
