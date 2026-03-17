@@ -36,24 +36,9 @@ from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.widgets.folder_list_widget import FolderListWidget
 from interface.qt.widgets.search_widget import SearchWidget
 
-pytestmark = pytest.mark.qt
-
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
-
-
-@pytest.fixture
-def qt_app():
-    """Create QApplication instance for tests."""
-    if not QApplication.instance():
-        app = QApplication([])
-    else:
-        app = QApplication.instance()
-    yield app
-    # Process events to clean up
-    QApplication.processEvents()
 
 
 @pytest.fixture
@@ -137,8 +122,12 @@ def mock_folder_table():
         return all(f.get(k) == v for k, v in kwargs.items() if k in _DATA_KEYS)
 
     mock_table = MagicMock()
-    mock_table.find.side_effect = lambda **kwargs: (f for f in folders if _match(f, kwargs))
-    mock_table.count.side_effect = lambda **kwargs: sum(1 for f in folders if _match(f, kwargs))
+    mock_table.find.side_effect = lambda **kwargs: (
+        f for f in folders if _match(f, kwargs)
+    )
+    mock_table.count.side_effect = lambda **kwargs: sum(
+        1 for f in folders if _match(f, kwargs)
+    )
     mock_table.find_one.side_effect = lambda **kwargs: next(
         (f for f in folders if _match(f, kwargs)), None
     )
@@ -219,7 +208,9 @@ class TestFolderListWidgetComprehensive:
         qtbot.addWidget(widget)
 
         # "Test Folder" (id=4) should be visible; unrelated aliases should be hidden
-        assert not widget._row_widgets[4].isHidden(), "Test Folder row should not be hidden"
+        assert not widget._row_widgets[
+            4
+        ].isHidden(), "Test Folder row should not be hidden"
         # "Archive" and "Inactive 1" should not match "Test Folder" with score_cutoff=80
         assert widget._row_widgets[5].isHidden(), "Archive row should be hidden"
 
@@ -738,63 +729,69 @@ class TestQtUIServiceComprehensive:
 class TestMainAppComprehensive:
     """Comprehensive tests for main app window and initialization."""
 
-    def test_app_initialization(self, temp_database):
+    def test_app_initialization(self, qtbot, temp_database):
         """Test app initializes correctly."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             assert app.database is not None
             assert app.folder_manager is not None
 
             app.shutdown()
 
-    def test_app_window_creation(self, temp_database):
+    def test_app_window_creation(self, qtbot, temp_database):
         """Test app creates main window."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             assert app._window is not None
             assert app._app is not None
 
             app.shutdown()
 
-    def test_app_folder_list_widget_exists(self, temp_database):
+    def test_app_folder_list_widget_exists(self, qtbot, temp_database):
         """Test app creates folder list widget."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             assert app._folder_list_widget is not None
 
             app.shutdown()
 
-    def test_app_search_widget_exists(self, temp_database):
+    def test_app_search_widget_exists(self, qtbot, temp_database):
         """Test app creates search widget."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             assert app._search_widget is not None
 
             app.shutdown()
 
-    def test_app_process_button_exists(self, temp_database):
+    def test_app_process_button_exists(self, qtbot, temp_database):
         """Test app creates process button."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             assert app._process_folder_button is not None
 
             app.shutdown()
 
-    def test_app_button_states_initial(self, temp_database):
+    def test_app_button_states_initial(self, qtbot, temp_database):
         """Test initial button states."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             # Buttons should exist
             assert app._process_folder_button is not None
@@ -803,11 +800,12 @@ class TestMainAppComprehensive:
 
             app.shutdown()
 
-    def test_app_refresh_folders(self, temp_database):
+    def test_app_refresh_folders(self, qtbot, temp_database):
         """Test refreshing folder list."""
         with patch("sys.argv", ["test"]):
             app = QtBatchFileSenderApp(database_obj=temp_database)
             app.initialize()
+            qtbot.addWidget(app._window)
 
             # Add a test folder
             test_path = "/test/folder"
@@ -927,7 +925,7 @@ class TestDialogStateValidation:
             }
         )
 
-        dialog = ResendDialog(None, temp_database)
+        dialog = ResendDialog(None, temp_database.database_connection)
         qtbot.addWidget(dialog)
 
         # Dialog should display
@@ -948,17 +946,16 @@ class TestKeyboardAndAccessibility:
 
         widget = SearchWidget(on_filter_change=filter_values.append)
         qtbot.addWidget(widget)
+        widget.show()
 
         # Focus on entry
         widget.entry.setFocus()
 
-        # Type text
-        qtbot.keyClicks(widget.entry, "test")
+        # Type text and wait for debounce timer to emit the filter
+        with qtbot.waitSignal(widget.filter_changed, timeout=500):
+            qtbot.keyClicks(widget.entry, "test")
+
         assert widget.entry.text() == "test"
-
-        # Press Enter
-        qtbot.keyClick(widget.entry, Qt.Key.Key_Return)
-
         assert filter_values[-1] == "test"
 
     def test_search_widget_escape_clears(self, qtbot):
@@ -967,8 +964,9 @@ class TestKeyboardAndAccessibility:
         qtbot.addWidget(widget)
         widget.show()
 
-        widget.entry.setFocus()
-        qtbot.keyClick(widget, Qt.Key.Key_Escape)
+        # Activate the escape shortcut directly (keyClick cannot reliably
+        # trigger QShortcut in a headless virtual display)
+        widget._escape_shortcut.activated.emit()
 
         assert widget.value == ""
 
