@@ -9,7 +9,14 @@ import logging
 import os
 from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QPushButton, QWidget
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QFileDialog,
+    QMessageBox,
+    QPushButton,
+    QWidget,
+)
 
 from interface.qt.theme import Theme
 
@@ -192,30 +199,19 @@ class EventHandlers:
         selected_alias = current_item.text()
         other_config = None
 
-        if self.alias_provider and self.settings_provider:
-            all_aliases = self.alias_provider() or []
-            if selected_alias in all_aliases:
-                settings = self.settings_provider()
-                if settings and "folders" in settings:
-                    for folder in settings["folders"]:
-                        if folder.get("alias") == selected_alias:
-                            other_config = folder
-                            break
+        if self.settings_provider:
+            settings = self.settings_provider()
+            if settings and "folders" in settings:
+                for folder in settings["folders"]:
+                    if folder.get("alias") == selected_alias:
+                        other_config = folder
+                        break
 
         if other_config is None:
-            try:
-                import database_import
+            logger.warning("Could not find config for folder alias: %s", selected_alias)
+            return
 
-                other_config = (
-                    database_import.database_obj_instance.folders_table.find_one(
-                        alias=selected_alias
-                    )
-                )
-            except Exception as e:
-                logger.exception("Error finding config for %s: %s", selected_alias, e)
-                return
-
-        if other_config and hasattr(self.dialog, "_populate_fields_from_config"):
+        if hasattr(self.dialog, "_populate_fields_from_config"):
             self.dialog._populate_fields_from_config(other_config)
 
     def show_folder_path(self):

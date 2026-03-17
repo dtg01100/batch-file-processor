@@ -504,11 +504,17 @@ class QtBatchFileSenderApp:
                 ]
             return []
 
+        def _get_settings() -> dict:
+            if self._database and self._database.folders_table:
+                return {"folders": self._database.folders_table.find()}
+            return {}
+
         dlg = EditFoldersDialog(
             self._window,
             folder_config,
             on_apply_success=self._on_folder_edit_applied,
             alias_provider=_get_aliases,
+            settings_provider=_get_settings,
         )
         if dlg.exec():
             folder_id = folder_config.get("id")
