@@ -37,7 +37,7 @@ class UPCService:
 from dacdata.dsanrep dsanrep"""
 
         try:
-            results = self._query_runner.execute(query)
+            results = self._query_runner.execute(query, params={})
             upc_dict: dict[int, list] = {}
             for row in results:
                 item_number = row[0]

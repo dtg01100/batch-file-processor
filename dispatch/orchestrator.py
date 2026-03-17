@@ -331,7 +331,6 @@ class DispatchOrchestrator:
             FileResult with processing outcome
         """
         import os
-        import shutil
 
         result = FileResult(file_name=file_path, checksum="")
         context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
@@ -424,7 +423,9 @@ class DispatchOrchestrator:
         run_log: Any,
     ) -> None:
         """Send a single (non-split) pipeline output file."""
-        enabled_backends = self.send_manager.get_enabled_backends(context.effective_folder)
+        enabled_backends = self.send_manager.get_enabled_backends(
+            context.effective_folder
+        )
         if not enabled_backends:
             result.sent = False
             result.errors.append("No backends enabled")
@@ -672,7 +673,9 @@ class DispatchOrchestrator:
             convert_edi,
         )
         if converter_step is not None and convert_edi:
-            convert_format = context.effective_folder.get("convert_to_format", "unknown")
+            convert_format = context.effective_folder.get(
+                "convert_to_format", "unknown"
+            )
             self._log_message(
                 run_log,
                 f"Converting {file_basename} to {convert_format}",
@@ -734,7 +737,11 @@ class DispatchOrchestrator:
         if isinstance(validation_output, ValidationResult):
             return (
                 validation_output.is_valid,
-                validation_output.errors if not validation_output.is_valid else current_file,
+                (
+                    validation_output.errors
+                    if not validation_output.is_valid
+                    else current_file
+                ),
             )
 
         return bool(validation_output), current_file
