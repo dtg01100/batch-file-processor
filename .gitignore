@@ -122,3 +122,9 @@ coverage_*/
 # Build artifacts
 outdir/
 settings_dialog_screenshot.png
+
+# Hypothesis property-based testing
+.hypothesis/
+
+# Test result artifacts
+test_results/
