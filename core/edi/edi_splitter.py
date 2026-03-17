@@ -267,86 +267,193 @@ def filter_edi_file_by_category(
     Returns:
         True if any filtering was applied, False if no filtering occurred
     """
-    # Handle ALL mode - no filtering needed
     if filter_categories == "ALL":
-        # Just copy file unchanged
-        with open(input_file, "r") as infile:
-            content = infile.read()
-        with open(output_file, "w") as outfile:
-            outfile.write(content)
+        _copy_file(input_file, output_file)
         return False
 
-    # Read input file
-    with open(input_file, "r") as infile:
-        lines = infile.readlines()
-
+    lines = _read_lines(input_file)
     if not lines:
-        # Empty file - just copy it
-        with open(output_file, "w") as outfile:
-            pass
+        _write_invoices(output_file, [])
         return False
 
-    # Group lines into invoices (each starts with 'A' record)
+    invoices = _group_lines_by_invoice(lines)
+    filtered_invoices, any_filtered = _filter_invoices(
+        invoices,
+        upc_dict,
+        filter_categories,
+        filter_mode,
+    )
+    _write_invoices(output_file, filtered_invoices)
+    return any_filtered
+
+
+def _copy_file(input_file: str, output_file: str) -> None:
+    """Copy input text file to output file."""
+    with open(input_file, "r") as infile:
+        content = infile.read()
+    with open(output_file, "w") as outfile:
+        outfile.write(content)
+
+
+def _read_lines(input_file: str) -> list[str]:
+    """Read all text lines from an input file."""
+    with open(input_file, "r") as infile:
+        return infile.readlines()
+
+
+def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
+    """Group EDI lines into invoice chunks starting with A records."""
     invoices = []
     current_invoice = []
 
     for line in lines:
         if line.startswith("A"):
-            # Start of new invoice - save previous if exists
             if current_invoice:
                 invoices.append(current_invoice)
             current_invoice = [line]
-        elif line.strip():  # Non-empty line
+        elif line.strip():
             current_invoice.append(line)
 
-    # Don't forget last invoice
     if current_invoice:
         invoices.append(current_invoice)
 
-    # Process each invoice
+    return invoices
+
+
+def _split_invoice_records(invoice_lines: list[str]) -> tuple[str | None, list[str], list[str]]:
+    """Split invoice lines into A record, B records, and C records."""
+    a_record = None
+    b_records = []
+    c_records = []
+
+    for line in invoice_lines:
+        if line.startswith("A"):
+            a_record = line
+        elif line.startswith("B"):
+            b_records.append(line)
+        elif line.startswith("C"):
+            c_records.append(line)
+
+    return a_record, b_records, c_records
+
+
+def _filter_invoices(
+    invoices: list[list[str]],
+    upc_dict: dict,
+    filter_categories: str,
+    filter_mode: str,
+) -> tuple[list[list[str]], bool]:
+    """Filter B records per invoice and drop invoices with no remaining B records."""
     filtered_invoices = []
     any_filtered = False
 
     for invoice_lines in invoices:
-        # Separate A, B, and C records
-        a_record = None
-        b_records = []
-        c_records = []
-
-        for line in invoice_lines:
-            if line.startswith("A"):
-                a_record = line
-            elif line.startswith("B"):
-                b_records.append(line)
-            elif line.startswith("C"):
-                c_records.append(line)
-
-        # Filter B records by category
+        a_record, b_records, c_records = _split_invoice_records(invoice_lines)
         filtered_b_records = filter_b_records_by_category(
             b_records, upc_dict, filter_categories, filter_mode
         )
 
-        # Check if any B records were filtered out
         if len(filtered_b_records) != len(b_records):
             any_filtered = True
 
-        # Only keep invoice if it has at least one B record after filtering
-        if filtered_b_records:
-            # Rebuild invoice with filtered B records
-            filtered_invoice = [a_record] + filtered_b_records
-            if c_records:
-                filtered_invoice.extend(c_records)
-            filtered_invoices.append(filtered_invoice)
-        else:
-            # Invoice dropped because no matching B records
+        if not filtered_b_records:
             any_filtered = True
+            continue
 
-    # Write output file
+        filtered_invoice = [a_record] + filtered_b_records
+        if c_records:
+            filtered_invoice.extend(c_records)
+        filtered_invoices.append(filtered_invoice)
+
+    return filtered_invoices, any_filtered
+
+
+def _write_invoices(output_file: str, invoices: list[list[str]]) -> None:
+    """Write invoice line groups to output file."""
     with open(output_file, "w") as outfile:
-        for invoice in filtered_invoices:
+        for invoice in invoices:
             outfile.writelines(invoice)
 
-    return any_filtered
+
+def _build_split_filename(
+    line_dict: dict,
+    count: int,
+    config: SplitConfig,
+) -> tuple[str, str, str]:
+    """Build output path, prefix, and suffix for a split invoice file."""
+    prepend_letters = _col_to_excel(count)
+    file_name_suffix = ".cr" if int(line_dict["invoice_total"]) < 0 else ".inv"
+
+    file_name_prefix = prepend_letters + "_"
+    if config.filename_stem:
+        file_name_prefix = config.filename_stem + "_" + file_name_prefix
+
+    if config.prepend_date:
+        from datetime import datetime
+
+        datetime_from_arec = datetime.strptime(line_dict["invoice_date"], "%m%d%y")
+        inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
+        file_name_prefix = inv_date + "_" + file_name_prefix
+
+    output_path = os.path.join(
+        config.output_directory,
+        file_name_prefix + "split" + file_name_suffix,
+    )
+    return output_path, file_name_prefix, file_name_suffix
+
+
+def _write_invoice_binary(
+    filesystem: FilesystemProtocol,
+    output_path: str,
+    a_record: str,
+    b_records: list[str],
+    c_records: list[str],
+) -> int:
+    """Write one invoice to binary output and return line count written."""
+    output_chunks: list[bytes] = []
+    output_chunks.append(a_record.replace("\n", "\r\n").encode())
+
+    for b_rec in b_records:
+        output_chunks.append(b_rec.replace("\n", "\r\n").encode())
+    for c_rec in c_records:
+        output_chunks.append(c_rec.replace("\n", "\r\n").encode())
+
+    filesystem.write_binary(output_path, b"".join(output_chunks))
+    return 1 + len(b_records) + len(c_records)
+
+
+def _finalize_current_invoice(
+    filesystem: FilesystemProtocol,
+    current_a_record: Optional[str],
+    current_b_records: list[str],
+    current_c_records: list[str],
+    current_output_path: Optional[str],
+    output_files: list[tuple[str, str, str]],
+    upc_dict: dict,
+    filter_categories: str,
+    filter_mode: str,
+) -> tuple[int, int]:
+    """Finalize current invoice; returns (skipped_delta, written_lines_delta)."""
+    if current_a_record is None or current_output_path is None:
+        return 0, 0
+
+    filtered_b_records = filter_b_records_by_category(
+        current_b_records, upc_dict, filter_categories, filter_mode
+    )
+
+    if not filtered_b_records:
+        if output_files:
+            output_files.pop()
+        return 1, 0
+
+    written_lines = _write_invoice_binary(
+        filesystem,
+        current_output_path,
+        current_a_record,
+        filtered_b_records,
+        current_c_records,
+    )
+    return 0, written_lines
 
 
 class EDISplitter:
@@ -406,44 +513,23 @@ class EDISplitter:
         current_a_record: Optional[str] = None
         current_c_records: list[str] = []
         current_output_path: Optional[str] = None
-        current_file_content: list[bytes] = []
         count = 0
 
         for line in lines:
             if line.startswith("A"):
-                # Process previous invoice if exists
-                if current_a_record is not None and current_output_path is not None:
-                    filtered_b_records = filter_b_records_by_category(
-                        current_b_records, upc_dict, filter_categories, filter_mode
-                    )
-
-                    if filtered_b_records:
-                        # Write A record
-                        current_file_content.append(
-                            current_a_record.replace("\n", "\r\n").encode()
-                        )
-                        write_counter += 1
-                        # Write filtered B records
-                        for b_rec in filtered_b_records:
-                            current_file_content.append(
-                                b_rec.replace("\n", "\r\n").encode()
-                            )
-                            write_counter += 1
-                        # Write C records
-                        for c_rec in current_c_records:
-                            current_file_content.append(
-                                c_rec.replace("\n", "\r\n").encode()
-                            )
-                            write_counter += 1
-                        # Write to filesystem
-                        self.filesystem.write_binary(
-                            current_output_path, b"".join(current_file_content)
-                        )
-                    else:
-                        # No B records after filtering - skip this invoice
-                        skipped_invoices += 1
-                        if output_files:
-                            output_files.pop()
+                skipped_delta, written_delta = _finalize_current_invoice(
+                    self.filesystem,
+                    current_a_record,
+                    current_b_records,
+                    current_c_records,
+                    current_output_path,
+                    output_files,
+                    upc_dict,
+                    filter_categories,
+                    filter_mode,
+                )
+                skipped_invoices += skipped_delta
+                write_counter += written_delta
 
                 # Start new invoice
                 count += 1
@@ -453,26 +539,10 @@ class EDISplitter:
                 if line_dict is None:
                     continue
 
-                if int(line_dict["invoice_total"]) < 0:
-                    file_name_suffix = ".cr"
-                else:
-                    file_name_suffix = ".inv"
-
-                file_name_prefix = prepend_letters + "_"
-                if config.filename_stem:
-                    file_name_prefix = config.filename_stem + "_" + file_name_prefix
-                if config.prepend_date:
-                    from datetime import datetime
-
-                    datetime_from_arec = datetime.strptime(
-                        line_dict["invoice_date"], "%m%d%y"
-                    )
-                    inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
-                    file_name_prefix = inv_date + "_" + file_name_prefix
-
-                output_path = os.path.join(
-                    config.output_directory,
-                    file_name_prefix + "split" + file_name_suffix,
+                output_path, file_name_prefix, file_name_suffix = _build_split_filename(
+                    line_dict,
+                    count,
+                    config,
                 )
                 output_files.append((output_path, file_name_prefix, file_name_suffix))
 
@@ -481,7 +551,6 @@ class EDISplitter:
                 current_b_records = []
                 current_c_records = []
                 current_output_path = output_path
-                current_file_content = []
 
             elif line.startswith("B"):
                 current_b_records.append(line)
@@ -489,34 +558,19 @@ class EDISplitter:
                 current_c_records.append(line)
 
         # Process last invoice
-        if current_a_record is not None and current_output_path is not None:
-            filtered_b_records = filter_b_records_by_category(
-                current_b_records, upc_dict, filter_categories, filter_mode
-            )
-
-            if filtered_b_records:
-                # Write A record
-                current_file_content.append(
-                    current_a_record.replace("\n", "\r\n").encode()
-                )
-                write_counter += 1
-                # Write filtered B records
-                for b_rec in filtered_b_records:
-                    current_file_content.append(b_rec.replace("\n", "\r\n").encode())
-                    write_counter += 1
-                # Write C records
-                for c_rec in current_c_records:
-                    current_file_content.append(c_rec.replace("\n", "\r\n").encode())
-                    write_counter += 1
-                # Write to filesystem
-                self.filesystem.write_binary(
-                    current_output_path, b"".join(current_file_content)
-                )
-            else:
-                # No B records after filtering - skip this invoice
-                skipped_invoices += 1
-                if output_files:
-                    output_files.pop()
+        skipped_delta, written_delta = _finalize_current_invoice(
+            self.filesystem,
+            current_a_record,
+            current_b_records,
+            current_c_records,
+            current_output_path,
+            output_files,
+            upc_dict,
+            filter_categories,
+            filter_mode,
+        )
+        skipped_invoices += skipped_delta
+        write_counter += written_delta
 
         if not output_files:
             raise ValueError("No Split EDIs (all invoices may have been filtered out)")
