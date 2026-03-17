@@ -191,9 +191,36 @@ class EditFoldersDialog(BaseDialog):
             else:
                 edi_combo.setCurrentText("Do Nothing")
 
+        # Convert format combo + sub-form — updated *after* folder_config is already
+        # reflecting the new values so the sub-form builders read the right data.
+        convert_combo = self.dynamic_edi_builder.convert_format_combo
+        if convert_combo:
+            new_fmt = str(config.get("convert_to_format") or "csv")
+            idx = convert_combo.findText(new_fmt)
+            if idx >= 0:
+                # Changing the index fires handle_convert_format_changed which rebuilds
+                # the sub-form widgets from self.dynamic_edi_builder.folder_config.
+                convert_combo.setCurrentIndex(idx)
+            else:
+                # Format not found; force a rebuild of whatever is currently selected.
+                self.dynamic_edi_builder.handle_convert_format_changed(
+                    convert_combo.currentText()
+                )
+
     def _populate_fields_from_config(self, config: Dict[str, Any]):
-        """Reload the dialog with a new configuration (e.g. after 'Copy Config')."""
+        """Reload the dialog with a new configuration (e.g. after 'Copy Config').
+
+        Identity fields (id, alias, folder_name) are preserved from the current
+        folder so copying another folder's settings never renames or re-IDs this one.
+        """
+        # Keep this folder's own identity
+        _preserve = {
+            k: self._folder_config[k]
+            for k in ("id", "alias", "folder_name")
+            if k in self._folder_config
+        }
         self._folder_config.update(config)
+        self._folder_config.update(_preserve)
         self._populate_fields(self._folder_config)
         self.handlers.update_active_state()
         self._refresh_tab_order()

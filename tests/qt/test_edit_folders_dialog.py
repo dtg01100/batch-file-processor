@@ -545,6 +545,66 @@ class TestCopyConfigFromOtherButton:
 
         assert hasattr(dialog, "_copy_config_btn")
 
+    def test_copy_config_updates_ftp_fields(self, qtbot, sample_folder_config):
+        """Copying another folder's config should populate FTP fields."""
+        source = dict(sample_folder_config)
+        source.update(
+            {
+                "id": 99,
+                "alias": "Source Folder",
+                "folder_name": "/source/path",
+                "ftp_server": "ftp.example.com",
+                "ftp_port": 2121,
+                "process_backend_ftp": True,
+                "convert_to_format": "csv",
+            }
+        )
+        settings_provider = lambda: {"folders": [source]}  # noqa: E731
+        dialog = create_dialog(
+            qtbot,
+            sample_folder_config,
+            alias_provider=lambda: ["Source Folder"],
+            settings_provider=settings_provider,
+        )
+        dialog._others_list.setCurrentRow(0)
+
+        dialog._copy_config_from_other()
+
+        assert dialog._fields["ftp_server_field"].text() == "ftp.example.com"
+        assert dialog._fields["ftp_port_field"].text() == "2121"
+
+    def test_copy_config_preserves_current_alias_and_id(
+        self, qtbot, sample_folder_config
+    ):
+        """Copying another folder's config must NOT overwrite alias, id, folder_name."""
+        source = dict(sample_folder_config)
+        source.update(
+            {
+                "id": 99,
+                "alias": "Source Folder",
+                "folder_name": "/source/path",
+                "convert_to_format": "csv",
+            }
+        )
+        settings_provider = lambda: {"folders": [source]}  # noqa: E731
+        dialog = create_dialog(
+            qtbot,
+            sample_folder_config,
+            alias_provider=lambda: ["Source Folder"],
+            settings_provider=settings_provider,
+        )
+        dialog._others_list.setCurrentRow(0)
+
+        dialog._copy_config_from_other()
+
+        # The current folder's identity must be unchanged
+        assert dialog._folder_config["id"] == sample_folder_config["id"]
+        assert dialog._folder_config["alias"] == sample_folder_config["alias"]
+        assert (
+            dialog._folder_config["folder_name"]
+            == sample_folder_config["folder_name"]
+        )
+
 
 # ============================================================================
 # Test Others List Filter (Search-as-you-type)
