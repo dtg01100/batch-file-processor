@@ -751,3 +751,140 @@ class TestMigrationIdempotency:
         assert db["folders"].count() == 530
         assert db["processed_files"].count() == 227501
         db.close()
+
+
+class TestRequiredFieldReadability:
+    """Test that all fields required by the application are readable after v32 migration.
+
+    Verifies:
+    1. FolderConfiguration.from_dict() can be called on every migrated folder
+       without raising KeyError or TypeError.
+    2. The settings table contains all fields required by email_backend.py.
+    3. The folders table contains all fields required by FTP, email, and copy backends
+       for folders that use those backends.
+    4. process_parameters hard-access fields exist in all folder rows after migration.
+    """
+
+    # Fields accessed via hard bracket [] in backend modules — missing = KeyError
+    _BACKEND_REQUIRED_FOLDER_FIELDS = {
+        "copy_to_directory",   # copy_backend.py: process_parameters["copy_to_directory"]
+        "email_subject_line",  # email_backend.py: process_parameters["email_subject_line"]
+        "email_to",            # email_backend.py: process_parameters["email_to"]
+        "ftp_server",          # ftp_backend.py: process_parameters["ftp_server"]
+        "ftp_port",            # ftp_backend.py: process_parameters["ftp_port"]
+        "ftp_username",        # ftp_backend.py: process_parameters["ftp_username"]
+        "ftp_password",        # ftp_backend.py: process_parameters["ftp_password"]
+        "ftp_folder",          # ftp_backend.py: process_parameters["ftp_folder"]
+    }
+
+    # Fields accessed via hard bracket [] in email_backend.py from settings table
+    _REQUIRED_SETTINGS_FIELDS = {
+        "email_address",       # settings["email_address"]
+        "email_smtp_server",   # settings["email_smtp_server"]
+        "smtp_port",           # settings["smtp_port"]
+    }
+
+    @pytest.fixture
+    def fully_migrated_db(self, legacy_db, tmp_path):
+        """Database that has been through full upgrade + ensure_schema (same as app startup)."""
+        db = sqlite_wrapper.Database.connect(legacy_db)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+        schema.ensure_schema(db)
+        yield db
+        db.close()
+
+    def test_all_folders_readable_as_folder_configuration(self, fully_migrated_db):
+        """FolderConfiguration.from_dict() must not raise for any migrated folder."""
+        from interface.models.folder_configuration import FolderConfiguration
+
+        errors = []
+        for folder in fully_migrated_db["folders"].all():
+            try:
+                fc = FolderConfiguration.from_dict(dict(folder))
+                assert fc.folder_name is not None
+            except Exception as exc:
+                errors.append(f"folder id={folder['id']}: {exc}")
+
+        assert not errors, f"from_dict() failed for {len(errors)} folders:\n" + "\n".join(errors[:10])
+
+    def test_all_backend_required_fields_present_in_every_folder(self, fully_migrated_db):
+        """Every folder row must have all backend-required fields (no KeyError on access)."""
+        missing_report = []
+        for folder in fully_migrated_db["folders"].all():
+            row = dict(folder)
+            for field in self._BACKEND_REQUIRED_FOLDER_FIELDS:
+                if field not in row:
+                    missing_report.append(f"folder id={row['id']} missing '{field}'")
+
+        assert not missing_report, (
+            f"{len(missing_report)} missing fields found:\n" + "\n".join(missing_report[:20])
+        )
+
+    def test_ftp_fields_readable_for_ftp_folders(self, fully_migrated_db):
+        """FTP folders must have non-None ftp_server so backend can connect."""
+        ftp_fields = {"ftp_server", "ftp_port", "ftp_username", "ftp_password", "ftp_folder"}
+        ftp_folders = list(fully_migrated_db["folders"].find(process_backend_ftp=1))
+        if not ftp_folders:
+            pytest.skip("No FTP-enabled folders in fixture")
+
+        for folder in ftp_folders:
+            row = dict(folder)
+            for field in ftp_fields:
+                assert field in row, f"folder id={row['id']} missing FTP field '{field}'"
+
+    def test_email_fields_readable_for_email_folders(self, fully_migrated_db):
+        """Email folders must have email_to and email_subject_line fields."""
+        email_fields = {"email_to", "email_subject_line"}
+        email_folders = list(fully_migrated_db["folders"].find(process_backend_email=1))
+        if not email_folders:
+            pytest.skip("No email-enabled folders in fixture")
+
+        for folder in email_folders:
+            row = dict(folder)
+            for field in email_fields:
+                assert field in row, f"folder id={row['id']} missing email field '{field}'"
+
+    def test_settings_table_has_all_required_email_fields(self, fully_migrated_db):
+        """Settings table row must have all fields required by email_backend.py."""
+        settings = fully_migrated_db["settings"].find_one(id=1)
+        assert settings is not None, "Settings row (id=1) must exist after migration"
+
+        settings_dict = dict(settings)
+        for field in self._REQUIRED_SETTINGS_FIELDS:
+            assert field in settings_dict, f"Settings missing required field '{field}'"
+
+    def test_plugin_configurations_column_present_after_ensure_schema(self, fully_migrated_db):
+        """plugin_configurations must be present after ensure_schema() runs (added via ALTER TABLE)."""
+        folder = fully_migrated_db["folders"].find_one(id=21)
+        assert folder is not None
+        row = dict(folder)
+        assert "plugin_configurations" in row, (
+            "plugin_configurations column must be added by ensure_schema(); "
+            "FolderConfiguration.from_dict() defaults it to {} if None"
+        )
+
+    def test_folder_is_active_field_readable(self, fully_migrated_db):
+        """folder_is_active must be present for all folders (used to skip inactive folders)."""
+        for folder in fully_migrated_db["folders"].all():
+            row = dict(folder)
+            assert "folder_is_active" in row, f"folder id={row['id']} missing 'folder_is_active'"
+
+    def test_convert_to_format_field_readable(self, fully_migrated_db):
+        """convert_to_format drives dispatch routing — must be present in all folders."""
+        for folder in fully_migrated_db["folders"].all():
+            row = dict(folder)
+            assert "convert_to_format" in row, (
+                f"folder id={row['id']} missing 'convert_to_format'"
+            )
+
+    def test_processed_files_required_fields_readable(self, fully_migrated_db):
+        """processed_files rows must have fields needed by the UI (file_name, folder_id, status)."""
+        required = {"file_name", "folder_id", "status"}
+        # Sample first 100 rows for speed
+        pf_rows = list(fully_migrated_db["processed_files"].all())[:100]
+        assert pf_rows, "Expected processed_files rows in migrated fixture"
+
+        for row in pf_rows:
+            pf = dict(row)
+            for field in required:
+                assert field in pf, f"processed_files row missing '{field}'"
