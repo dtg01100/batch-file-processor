@@ -6,6 +6,8 @@ coordinating validation, conversion, and sending of files.
 
 import datetime
 import logging
+import os
+import shutil
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional

@@ -23,6 +23,8 @@ from core.edi.edi_parser import capture_records
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
 from core.edi.upc_utils import (
     calc_check_digit,  # noqa: F401
+)
+from core.edi.upc_utils import (
     convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
 )
 from core.utils.date_utils import (

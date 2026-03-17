@@ -225,28 +225,24 @@ class TestEditFoldersDialogRegression:
     Tests to prevent known bugs from reoccurring.
     """
 
-    def test_active_checkbutton_is_qcheckbox_not_qpushbutton(self, qtbot):
-        """Regression: Verify active_checkbutton is QCheckBox, not QPushButton.
+    def test_active_checkbutton_is_checkable_qpushbutton(self, qtbot):
+        """Verify active_checkbutton is a checkable QPushButton (full-width toggle).
 
-        Bug: The update_active_state() method had an isinstance check for QPushButton
-        but the active_checkbutton is created as a QCheckBox. This caused the method
-        to return early, breaking widget state updates.
-
-        This test ensures the widget type doesn't regress.
+        The active state widget is intentionally a QPushButton with setCheckable(True)
+        so it fills the full dialog width and provides a more prominent toggle. The
+        event_handlers.update_active_state() explicitly handles QPushButton with
+        text/style updates for enabled/disabled states.
         """
-        from PyQt6.QtWidgets import QCheckBox, QPushButton
+        from PyQt6.QtWidgets import QPushButton
 
         dialog = _make_dialog(qtbot)
 
-        # Get the active_checkbutton widget
         active_btn = dialog._fields.get("active_checkbutton")
         assert active_btn is not None, "active_checkbutton should exist in fields"
         assert isinstance(
-            active_btn, QCheckBox
-        ), "active_checkbutton must be QCheckBox, not QPushButton or other types"
-        assert not isinstance(
             active_btn, QPushButton
-        ), "active_checkbutton should not be a QPushButton"
+        ), "active_checkbutton must be a QPushButton (checkable full-width toggle)"
+        assert active_btn.isCheckable(), "active_checkbutton QPushButton must be checkable"
 
     def test_update_active_state_works_with_qcheckbox(self, qtbot):
         """Regression: Verify update_active_state() properly handles QCheckBox.

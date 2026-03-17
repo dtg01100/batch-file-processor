@@ -1,0 +1,252 @@
+================================================================================
+                    API CONTRACT CONSISTENCY REVIEW
+                           FINAL SUMMARY
+================================================================================
+
+DATE: 2026-03-17
+STATUS: COMPLETED - CRITICAL ISSUES IDENTIFIED
+
+================================================================================
+                           REVIEW CHECKLIST
+================================================================================
+
+[✓] 1. PIPELINE INTERFACE CONSISTENCY
+    Status: PASS
+    
+    All 4 pipeline steps correctly implement their protocols:
+    - EDIValidationStep   (validator.py)    ✓ ValidatorStepInterface
+    - EDIConverterStep    (converter.py)    ✓ ConverterInterface  
+    - EDISplitterStep     (splitter.py)     ✓ SplitterInterface
+    - EDITweakerStep      (tweaker.py)      ✓ TweakerInterface
+    
+    All required methods present: validate/convert/split/tweak with proper signatures.
+    No inconsistencies detected.
+
+[✓] 2. PLUGIN SYSTEM CONSISTENCY
+    Status: PASS
+    
+    All 10 plugins correctly implement ConfigurationPlugin:
+    - CSVConfigurationPlugin ✓
+    - FintechConfigurationPlugin ✓
+    - JolleyCustomConfigurationPlugin ✓
+    - StewartCustomConfigurationPlugin ✓
+    - SimplifiedCSVConfigurationPlugin ✓
+    - ScannerwareConfigurationPlugin ✓
+    - ScansheetTypeAConfigurationPlugin ✓
+    - EStoreEInvoiceConfigurationPlugin ✓
+    - EStoreEInvoiceGenericConfigurationPlugin ✓
+    - YellowdogCSVConfigurationPlugin ✓
+    
+    All required abstract methods implemented.
+    No inconsistencies detected.
+
+[✗] 3. DATABASE SCHEMA CONSISTENCY
+    Status: FAIL - CRITICAL ISSUES
+    
+    Issue #1: Column Mismatch (schema.py vs actual database)
+    --------
+    Missing FROM database (14 columns):
+    - backend_copy_destination
+    - convert_format
+    - edi_output_folder
+    - error_message
+    - filename
+    - original_path
+    - process_edi_output
+    - processed_path
+    - sent_to
+    - split_edi_filter_categories  ← CRITICAL: Used in migrations
+    - split_edi_filter_mode        ← CRITICAL: Used in migrations
+    - status
+    - upc_padding_pattern
+    - upc_target_length
+    
+    Extra IN database (11 columns - not in schema.py):
+    - edi_converter_scratch_folder
+    - email_origin_address
+    - email_origin_password
+    - email_origin_smtp_server
+    - email_origin_username
+    - email_smtp_port
+    - report_email_address
+    - report_email_password
+    - report_email_smtp_server
+    - report_email_username
+    - reporting_smtp_port
+    
+    Risk: Runtime AttributeError when accessing missing columns.
+    
+    Issue #2: Plugin Configuration Column Naming (CRITICAL)
+    --------
+    - schema.py defines:     plugin_config
+    - migrations try to add: plugin_configurations
+    - actual database has:   plugin_config
+    - code references:       plugin_configurations
+    
+    Risk: FolderConfiguration model won't find database column.
+    
+    Issue #3: Migration Columns Not in ensure_schema()
+    --------
+    migration/add_plugin_config_column.py adds:
+    - split_edi_filter_categories (not in schema.py CREATE TABLE)
+    - split_edi_filter_mode (not in schema.py CREATE TABLE)
+    
+    Risk: New databases won't have these columns if created via schema.py only.
+
+[⚠] 4. IMPORT CONSISTENCY
+    Status: CONDITIONAL PASS
+    
+    Issue: Missing Module Export
+    -----
+    batch_file_processor/__init__.py declares export of 'dispatch_process'
+    but module does not exist at repository root.
+    
+    Risk: Import errors for code using batch_file_processor.dispatch_process
+    
+    Tested imports:
+    - dispatch ✓
+    - core ✓
+    - backend ✓
+    - interface ✓
+    - utils ✓
+    - create_database ✓
+    - dispatch_process ✗ MISSING
+
+[⚠] 5. DISPATCHCONFIG COMPLETENESS
+    Status: CONDITIONAL PASS
+    
+    Issue: Unused Configuration Fields
+    -----
+    3 fields defined but never used in orchestrator.py:
+    - database: Optional[DatabaseInterface]
+    - file_processor: Optional[Any]
+    - version: str = "1.0.0"
+    
+    Risk: API confusion - developers may provide these expecting them to work.
+
+================================================================================
+                        CRITICAL ISSUES SUMMARY
+================================================================================
+
+SEVERITY: CRITICAL (Must fix before release)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Database Schema Mismatch
+   File: schema.py
+   Lines: 113, 196, 408-427
+   
+   Action Required:
+   - Reconcile schema.py with actual database
+   - Add missing columns OR remove from database
+   - Standardize split_edi_filter_* columns in schema
+   - FIX plugin_config vs plugin_configurations naming
+
+2. Migration Consistency
+   File: migrations/add_plugin_config_column.py
+   Lines: 1-78
+   
+   Action Required:
+   - Add split_edi_filter_categories to schema.py CREATE TABLE
+   - Add split_edi_filter_mode to schema.py CREATE TABLE
+   - Fix plugin_configurations → plugin_config naming
+   - Test migration path on fresh database
+
+3. Column Naming Consistency
+   Files: schema.py, migrations/, interface/models/folder_configuration.py
+   
+   Action Required:
+   - CHOOSE: Use plugin_config OR plugin_configurations (not both)
+   - Recommended: plugin_configurations (more descriptive)
+   - Update all three files consistently
+   - Test database access with correct column name
+
+
+SEVERITY: MEDIUM (Should fix before release)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4. Missing Module Export
+   File: batch_file_processor/__init__.py
+   Line: 42
+   
+   Action Required:
+   - Option A: Remove "dispatch_process" from __all__
+   - Option B: Create proper dispatch_process module/re-export
+   - Delete line 42 (easiest if module truly unused)
+
+5. Unused Configuration Fields
+   File: dispatch/orchestrator.py
+   Lines: 30-66 (DispatchConfig dataclass)
+   
+   Action Required:
+   - Document purpose of unused fields OR
+   - Remove database, file_processor, version if not needed
+   - Add comments explaining field usage
+   - Update docstring to clarify reserved fields
+
+
+================================================================================
+                        TESTING CHECKLIST
+================================================================================
+
+Before Release:
+□ Test new database creation with ensure_schema()
+□ Test migration from old schema to new
+□ Test plugin_configurations column persistence
+□ Test all imports from batch_file_processor work
+□ Test orchestrator with complete DispatchConfig
+□ Verify split_edi_filter_categories/mode in database
+□ Verify no AttributeError on configuration access
+□ Test with both csv and plugin-based configurations
+
+
+================================================================================
+                        FILES TO MODIFY
+================================================================================
+
+CRITICAL (Must Change):
+- /workspaces/batch-file-processor/schema.py
+- /workspaces/batch-file-processor/migrations/add_plugin_config_column.py
+- /workspaces/batch-file-processor/interface/models/folder_configuration.py (verify)
+
+IMPORTANT (Should Change):
+- /workspaces/batch-file-processor/batch_file_processor/__init__.py
+- /workspaces/batch-file-processor/dispatch/orchestrator.py
+
+INFORMATIONAL:
+- /workspaces/batch-file-processor/API_CONTRACT_REVIEW.md (detailed report)
+
+
+================================================================================
+                        RELEASE READINESS
+================================================================================
+
+Current Status: ❌ NOT READY FOR RELEASE
+
+Blocker Issues: 3 critical, 2 medium
+
+Release Criteria:
+[  ] All schema inconsistencies resolved
+[  ] Plugin configuration column naming standardized
+[  ] Migration columns defined in ensure_schema()
+[  ] dispatch_process module exists or export removed
+[  ] DispatchConfig fields documented
+[  ] All test checklist items passed
+[  ] Code review of schema changes completed
+
+Estimated Fix Time: 2-4 hours
+Risk Level Without Fixes: HIGH (will cause production errors)
+
+
+================================================================================
+                        CONCLUSION
+================================================================================
+
+The API contracts for pipeline and plugin systems are WELL-DESIGNED and
+CONSISTENT. However, CRITICAL DATABASE SCHEMA INCONSISTENCIES must be
+resolved immediately before release.
+
+Once the schema issues are fixed, the system is production-ready.
+
+For detailed findings, see: API_CONTRACT_REVIEW.md
+
+================================================================================

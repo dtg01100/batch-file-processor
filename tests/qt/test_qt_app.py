@@ -685,7 +685,6 @@ class TestQtBatchFileSenderApp:
             "folders_database_migrator",
             "mover",
             "clear_old_files",
-            "rclick_menu",
             "copy_backend",
             "ftp_backend",
             "email_backend",

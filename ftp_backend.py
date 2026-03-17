@@ -101,7 +101,6 @@ def do(
 
                         client.storbinary("stor " + filename_no_path, send_file)
                         logger.info("Successfully sent file %s", filename_no_path)
-                        client.close()
                         file_pass = True
                         break
                     except Exception as error:
@@ -111,6 +110,11 @@ def do(
                         logger.debug("Falling back to non-TLS...")
                         # Reset file pointer for retry
                         send_file.seek(0)
+                    finally:
+                        try:
+                            client.close()
+                        except Exception:
+                            pass
 
         except Exception as ftp_error:
             if counter == 10:

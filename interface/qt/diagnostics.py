@@ -68,7 +68,6 @@ class QtDiagnosticsService:
             "folders_database_migrator",
             "mover",
             "clear_old_files",
-            "rclick_menu",
             "convert_to_csv",
             "convert_to_fintech",
             "convert_to_simplified_csv",

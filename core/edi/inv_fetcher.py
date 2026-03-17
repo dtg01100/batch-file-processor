@@ -203,10 +203,12 @@ class InvFetcher:
             return "HI" if int(uommult) > 1 else "LO"
 
         try:
+            _ALLOWED_UOM_FIELDS = {"ANB9TX", "ANB8TX"}
             if int(uommult) > 1:
                 field = "ANB9TX"
             else:
                 field = "ANB8TX"
+            assert field in _ALLOWED_UOM_FIELDS, f"Unexpected UOM field: {field}"
             qry = f"""
                 SELECT dsanrep.{field}
                 FROM dacdata.dsanrep dsanrep

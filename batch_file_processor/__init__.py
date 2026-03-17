@@ -39,7 +39,6 @@ __all__ = [
     "query_runner",
     "record_error",
     "utils",
-    "dispatch_process",
     "main_interface",
     "main_qt",
     "resend_interface",

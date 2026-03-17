@@ -20,9 +20,9 @@ class TestAssetUri:
         result = Theme._asset_uri("checkbox_checked.svg")
 
         # Should NOT contain file:// scheme - Qt stylesheets don't handle URIs correctly
-        assert not result.startswith("file://"), (
-            f"Expected path string, got URI: {result}"
-        )
+        assert not result.startswith(
+            "file://"
+        ), f"Expected path string, got URI: {result}"
         assert "file:" not in result, f"Path should not contain file: scheme: {result}"
 
     def test_asset_uri_points_to_existing_file(self):
@@ -53,6 +53,6 @@ class TestAssetUri:
         result = Theme._asset_uri("checkbox_checked.svg")
 
         assert "assets" in result, f"Path should contain 'assets' directory: {result}"
-        assert result.endswith("checkbox_checked.svg"), (
-            f"Path should end with filename: {result}"
-        )
+        assert result.endswith(
+            "checkbox_checked.svg"
+        ), f"Path should end with filename: {result}"

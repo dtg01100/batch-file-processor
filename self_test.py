@@ -150,7 +150,6 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         "folders_database_migrator",
         "mover",
         "clear_old_files",
-        "rclick_menu",
         # Converter entry points
         "convert_to_csv",
         "convert_to_fintech",
