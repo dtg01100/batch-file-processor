@@ -93,7 +93,7 @@ class Theme:
     BORDER_HOVER = "#C4B5E0"
 
     # Overlay Colors
-    OVERLAY_BACKGROUND = "rgba(0, 0, 0, 160)"
+    OVERLAY_BACKGROUND = "rgba(0, 0, 0, 230)"
     PROGRESS_BAR_BORDER = "#666666"
     PROGRESS_BAR_CHUNK = "#4CAF50"
 

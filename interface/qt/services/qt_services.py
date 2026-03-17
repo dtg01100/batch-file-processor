@@ -237,7 +237,7 @@ class QtProgressService(QObject):
         overlay.setAutoFillBackground(True)
 
         palette = overlay.palette()
-        color = QColor(0, 0, 0, 180)  # Semi-transparent black
+        color = QColor(0, 0, 0, 230)  # Semi-transparent black
         palette.setColor(QPalette.ColorRole.Window, color)
         overlay.setPalette(palette)
 
