@@ -4,11 +4,13 @@ This module provides centralized error handling and logging,
 using dependency injection for testability.
 """
 
+import datetime
 import os
 import time
 from io import StringIO
 from typing import Any, Optional
 
+import record_error
 from batch_file_processor.structured_logging import (
     get_logger,
     log_with_context,
@@ -16,6 +18,63 @@ from batch_file_processor.structured_logging import (
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
 
 logger = get_logger(__name__)
+
+
+class ErrorLogger:
+    """Legacy error logger preserved for compatibility."""
+
+    def __init__(self, errors_folder: str = "", run_log: Any = None):
+        self.errors_folder = errors_folder
+        self.run_log = run_log
+        self.folder_errors_log = StringIO()
+
+    def log_error(self, error_message: str, filename: str, module: str) -> None:
+        record_error.do(
+            self.run_log,
+            self.folder_errors_log,
+            error_message,
+            filename,
+            module,
+        )
+
+    def log_folder_error(
+        self, error_message: str, folder_name: str, module: str = "Dispatch"
+    ) -> None:
+        self.log_error(error_message, folder_name, module)
+
+    def log_file_error(
+        self, error_message: str, filename: str, module: str = "Dispatch"
+    ) -> None:
+        self.log_error(error_message, filename, module)
+
+    def get_errors(self) -> str:
+        return self.folder_errors_log.getvalue()
+
+    def has_errors(self) -> bool:
+        return len(self.get_errors()) > 0
+
+    def close(self) -> None:
+        self.folder_errors_log.close()
+
+
+class ReportGenerator:
+    """Legacy report generator preserved for compatibility."""
+
+    @staticmethod
+    def generate_edi_validation_report(errors: str) -> str:
+        timestamp = datetime.datetime.now().isoformat().replace(":", "-")
+        report = f"EDI Validation Report - {timestamp}\r\n"
+        report += "=" * 50 + "\r\n"
+        report += errors
+        return report
+
+    @staticmethod
+    def generate_processing_report(errors: str, version: str) -> str:
+        report = f"Program Version = {version}\r\n\r\n"
+        report += "Processing Errors\r\n"
+        report += "=" * 30 + "\r\n"
+        report += errors
+        return report
 
 
 class ErrorHandler:
@@ -33,6 +92,9 @@ class ErrorHandler:
 
     def __init__(
         self,
+        errors_folder: Optional[str] = None,
+        run_log: Any = None,
+        run_log_directory: Optional[str] = None,
         database: Optional[DatabaseInterface] = None,
         log_path: Optional[str] = None,
         file_system: Optional[FileSystemInterface] = None,
@@ -44,11 +106,16 @@ class ErrorHandler:
             log_path: Optional path for error log files
             file_system: Optional file system interface (uses RealFileSystem if None)
         """
+        self.errors_folder = errors_folder or ""
+        self.run_log = run_log
+        self.run_log_directory = run_log_directory or ""
         self.db = database
         self.log_path = log_path
         self.fs = file_system or RealFileSystem()
         self.errors: list[dict] = []
         self.error_log: StringIO = StringIO()
+        self.logger = ErrorLogger(self.errors_folder, self.run_log)
+        self.report_generator = ReportGenerator()
 
     def record_error(
         self,
@@ -257,6 +324,37 @@ class ErrorHandler:
             Number of errors
         """
         return len(self.errors)
+
+    def log_error(self, error_message: str, filename: str, module: str) -> None:
+        self.logger.log_error(error_message, filename, module)
+
+    def log_folder_error(
+        self, error_message: str, folder_name: str, module: str = "Dispatch"
+    ) -> None:
+        self.logger.log_folder_error(error_message, folder_name, module)
+
+    def log_file_error(
+        self, error_message: str, filename: str, module: str = "Dispatch"
+    ) -> None:
+        self.logger.log_file_error(error_message, filename, module)
+
+    def write_validation_report(self, errors: str) -> str:
+        validator_log_name = (
+            f"Validator Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
+        )
+        validator_log_path = os.path.join(self.run_log_directory, validator_log_name)
+        content = self.report_generator.generate_edi_validation_report(errors)
+        self.fs.write_file_text(validator_log_path, content)
+        return validator_log_path
+
+    def write_processing_report(self, errors: str, version: str) -> str:
+        folder_log_name = (
+            f"Folder Errors Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
+        )
+        folder_log_path = os.path.join(self.run_log_directory, folder_log_name)
+        content = self.report_generator.generate_processing_report(errors, version)
+        self.fs.write_file_text(folder_log_path, content)
+        return folder_log_path
 
 
 class RealFileSystem:
