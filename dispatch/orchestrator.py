@@ -23,6 +23,7 @@ from core.database import query_runner as LegacyQueryRunner
 from core.utils.bool_utils import normalize_bool
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
+from dispatch.feature_flags import get_strict_testing_mode
 from dispatch.interfaces import (
     BackendInterface,
     DatabaseInterface,
@@ -429,6 +430,7 @@ class DispatchOrchestrator:
         """
         logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
         strict_db_mode = self._is_strict_database_lookup(settings)
+        strict_testing_mode = get_strict_testing_mode()
 
         if self.config.upc_dict:
             return self.config.upc_dict
@@ -440,9 +442,13 @@ class DispatchOrchestrator:
                     self.config.upc_dict = upc_dict
                     logger.debug("UPC dictionary loaded: %d entries", len(upc_dict))
                     return upc_dict
-            except Exception:
+            except Exception as exc:
                 if strict_db_mode:
                     raise
+                if strict_testing_mode:
+                    raise RuntimeError(
+                        "Failed to fetch UPC dictionary from upc_service"
+                    ) from exc
                 logger.exception("Failed to fetch UPC dictionary from upc_service")
 
         # Backward-compatible fallback for app/runtime usage where no explicit
@@ -468,6 +474,34 @@ class DispatchOrchestrator:
             )
         return {}
 
+    def _parse_upc_query_rows(
+        self, rows: list[Any], strict_testing_mode: bool
+    ) -> dict[int, list[Any]]:
+        """Build UPC lookup data from raw query rows."""
+        upc_dict = {}
+        for row in rows:
+            try:
+                item_number = int(row[0])
+                upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
+            except (TypeError, ValueError, IndexError) as exc:
+                if strict_testing_mode:
+                    raise RuntimeError(
+                        f"Malformed UPC row returned from fallback query: {row!r}"
+                    ) from exc
+                continue
+        return upc_dict
+
+    def _close_legacy_upc_runner(
+        self, legacy_runner: Any, strict_testing_mode: bool
+    ) -> None:
+        """Close legacy UPC query runner, surfacing failures in strict mode."""
+        try:
+            # legacy wrapper keeps the new-style runner in _runner
+            legacy_runner._runner.close()
+        except Exception as exc:
+            if strict_testing_mode:
+                raise RuntimeError("Failed to close legacy UPC query runner") from exc
+
     def _fetch_upc_dictionary_from_settings(self, settings: dict) -> dict:
         """Fetch UPC dictionary directly from AS400 using app settings.
 
@@ -481,6 +515,7 @@ class DispatchOrchestrator:
             "odbc_driver",
         )
         strict_db_mode = self._is_strict_database_lookup(settings)
+        strict_testing_mode = get_strict_testing_mode()
         missing_keys = [key for key in required_keys if not settings.get(key)]
         if missing_keys:
             if strict_db_mode:
@@ -520,26 +555,21 @@ class DispatchOrchestrator:
                     "database_lookup_mode is strict but UPC query returned no rows"
                 )
 
-            upc_dict = {}
-            for row in rows:
-                try:
-                    item_number = int(row[0])
-                    upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
-                except (TypeError, ValueError, IndexError):
-                    continue
-
-            return upc_dict
-        except Exception:
+            return self._parse_upc_query_rows(rows, strict_testing_mode)
+        except Exception as exc:
             if strict_db_mode:
                 raise
+            # Preserve RuntimeError messages that already have specific context
+            if strict_testing_mode:
+                if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
+                    raise
+                raise RuntimeError(
+                    "Failed to fetch UPC dictionary via fallback query"
+                ) from exc
             logger.exception("Failed to fetch UPC dictionary via fallback query")
             return {}
         finally:
-            try:
-                # legacy wrapper keeps the new-style runner in _runner
-                legacy_runner._runner.close()
-            except Exception:
-                pass
+            self._close_legacy_upc_runner(legacy_runner, strict_testing_mode)
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
@@ -687,6 +717,8 @@ class DispatchOrchestrator:
 
     def _cleanup_temp_artifacts(self, context: ProcessingContext) -> None:
         """Best-effort cleanup for pipeline temporary directories and files."""
+        strict_testing_mode = get_strict_testing_mode()
+        cleanup_errors = []
         logger.debug(
             "Temp cleanup: %d dirs, %d files",
             len(context.temp_dirs),
@@ -696,16 +728,27 @@ class DispatchOrchestrator:
         for temp_dir in context.temp_dirs:
             try:
                 if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir, ignore_errors=True)
-            except Exception:
-                pass
+                    shutil.rmtree(temp_dir, ignore_errors=not strict_testing_mode)
+            except Exception as exc:
+                if strict_testing_mode:
+                    cleanup_errors.append(
+                        f"directory '{temp_dir}' could not be removed: {exc}"
+                    )
 
         for temp_file in context.temp_files:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except Exception:
-                pass
+            except Exception as exc:
+                if strict_testing_mode:
+                    cleanup_errors.append(
+                        f"file '{temp_file}' could not be removed: {exc}"
+                    )
+
+        if cleanup_errors:
+            raise RuntimeError(
+                "Failed to clean up temporary artifacts: " + "; ".join(cleanup_errors)
+            )
 
     def _process_split_pipeline(
         self,

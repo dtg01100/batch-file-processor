@@ -47,6 +47,12 @@ from dacdata.dsanrep dsanrep"""
             self._upc_cache = upc_dict
             return UPCServiceResult(upc_dict=upc_dict, success=True, errors=[])
         except Exception as e:
+            from dispatch.feature_flags import get_strict_testing_mode
+
+            if get_strict_testing_mode():
+                raise RuntimeError(
+                    "Failed to fetch UPC dictionary from database"
+                ) from e
             return UPCServiceResult(upc_dict={}, success=False, errors=[str(e)])
 
     def get_upc_for_item(self, item_number: int) -> Optional[str]:
