@@ -1,8 +1,9 @@
-"""Plugin Configuration Data Mapping Layer.
+"""Plugin configuration data mapping layer.
 
-This module provides a centralized data mapping layer for handling plugin configurations
-between the UI dialogs and the FolderConfiguration model. It supports the Qt
-widget system, providing methods to extract, populate, and validate plugin configurations.
+This module provides a centralized mapping layer for handling plugin
+configurations between the UI dialogs and the FolderConfiguration model. It
+supports the Qt widget system and provides methods to extract, populate, and
+validate plugin configurations.
 
 Key components:
 - PluginConfigurationMapper: Core class for handling plugin configuration mapping
@@ -17,6 +18,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from dispatch.feature_flags import get_strict_testing_mode
 from interface.models.folder_configuration import FolderConfiguration
 from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.plugin_manager import PluginManager
@@ -283,7 +285,7 @@ class PluginSectionStateManager:
 
 class PluginConfigurationMapper:
     """
-    Data mapping layer for plugin configurations between dialogs and FolderConfiguration model.
+    Data mapping layer for plugin configurations between dialogs and models.
 
     Handles the extraction, population, and validation of plugin configurations from the
     Qt widget system, providing a unified interface for working with plugin data.
@@ -305,7 +307,8 @@ class PluginConfigurationMapper:
             framework: UI framework to use ('qt')
 
         Returns:
-            List[ExtractedPluginConfig]: Extracted plugin configurations with validation errors
+            List[ExtractedPluginConfig]: Extracted plugin configurations with
+            validation errors
         """
         extracted_configs = []
 
@@ -332,6 +335,11 @@ class PluginConfigurationMapper:
                     validation.errors,
                 )
             except Exception as e:
+                if get_strict_testing_mode():
+                    raise RuntimeError(
+                        "Error extracting configuration for "
+                        f"{plugin.get_format_name()}"
+                    ) from e
                 extracted_configs.append(
                     ExtractedPluginConfig(
                         format_name=plugin.get_format_name(),
@@ -373,7 +381,12 @@ class PluginConfigurationMapper:
                             config[field_name] = self._get_widget_value(
                                 widget, field_name, framework
                             )
-                    except Exception:
+                    except Exception as exc:
+                        if get_strict_testing_mode():
+                            raise RuntimeError(
+                                "Error reading widget "
+                                f"'{field_name}' for {plugin.get_format_name()}"
+                            ) from exc
                         config[field_name] = field.default
 
         return config
@@ -391,16 +404,35 @@ class PluginConfigurationMapper:
             Any: Widget value
         """
         if framework == "qt":
-            return self._get_qt_widget_value(widget)
+            return self._get_qt_widget_value(widget, field_name)
         else:
             raise ValueError(f"Unsupported UI framework: {framework}")
 
-    def _get_qt_widget_value(self, widget: Any) -> Any:
+    def _get_qt_list_widget_value(self, widget: Any) -> list[Any]:
+        """Get selected values from a Qt list widget."""
+        selected = []
+        for item in widget.selectedItems():
+            selected.append(item.data(0))
+        return selected
+
+    def _get_qt_text_edit_value(self, widget: Any, field_name: str) -> Any:
+        """Deserialize JSON data from a Qt text edit widget."""
+        try:
+            return json.loads(widget.toPlainText())
+        except Exception as exc:
+            if get_strict_testing_mode():
+                raise ValueError(
+                    f"Invalid JSON in QTextEdit for field '{field_name}'"
+                ) from exc
+            return {}
+
+    def _get_qt_widget_value(self, widget: Any, field_name: str) -> Any:
         """
         Get value from a Qt widget.
 
         Args:
             widget: Qt widget instance
+            field_name: Field name for error reporting
 
         Returns:
             Any: Widget value
@@ -424,16 +456,15 @@ class PluginConfigurationMapper:
         elif isinstance(widget, QCheckBox):
             return widget.isChecked()
         elif isinstance(widget, QListWidget):
-            selected = []
-            for item in widget.selectedItems():
-                selected.append(item.data(0))
-            return selected
+            return self._get_qt_list_widget_value(widget)
         elif isinstance(widget, QTextEdit):
-            try:
-                return json.loads(widget.toPlainText())
-            except Exception:
-                return {}
+            return self._get_qt_text_edit_value(widget, field_name)
         else:
+            if get_strict_testing_mode():
+                raise TypeError(
+                    "Unsupported Qt widget type for field "
+                    f"'{field_name}': {type(widget).__name__}"
+                )
             return ""
 
     def populate_plugin_widgets(
@@ -481,7 +512,9 @@ class PluginConfigurationMapper:
                                     result.widget_count += 1
                                 except Exception as e:
                                     result.errors.append(
-                                        f"Error setting '{field_name}' for {plugin.get_format_name()}: {str(e)}"
+                                        "Error setting "
+                                        f"'{field_name}' for "
+                                        f"{plugin.get_format_name()}: {e}"
                                     )
 
                     self.state_manager.initialize_state(

@@ -7,6 +7,8 @@ import os
 import sys
 from typing import Any, Optional
 
+from dispatch.feature_flags import get_strict_testing_mode
+
 from batch_file_processor.structured_logging import (
     get_logger,
     get_correlation_id,
@@ -93,8 +95,11 @@ class QtAppBootstrapService:
         database_path = os.path.join(config_folder, "folders.db")
         try:
             os.makedirs(config_folder, exist_ok=True)
-        except (FileExistsError, NotADirectoryError, OSError):
-            pass
+        except (FileExistsError, NotADirectoryError, OSError) as error:
+            if get_strict_testing_mode():
+                raise RuntimeError(
+                    f"Failed to create config directory '{config_folder}'"
+                ) from error
         log_with_context(
             logger,
             10,  # DEBUG
