@@ -6,6 +6,7 @@ variables or database settings.
 
 Environment Variables:
     DISPATCH_DEBUG_MODE: If 'true', enable verbose debug logging
+    DISPATCH_STRICT_TESTING_MODE: If 'true', enable fail-fast testing behavior
 
 Usage:
     from dispatch.feature_flags import (
@@ -28,6 +29,18 @@ def get_debug_mode() -> bool:
     return os.environ.get("DISPATCH_DEBUG_MODE", "false").lower() == "true"
 
 
+def get_strict_testing_mode() -> bool:
+    """Check if strict testing mode is enabled for dispatch.
+
+    Strict testing mode enables fail-fast behavior during test runs while
+    preserving the default production behavior when the flag is unset.
+
+    Returns:
+        True if DISPATCH_STRICT_TESTING_MODE is 'true'
+    """
+    return os.environ.get("DISPATCH_STRICT_TESTING_MODE", "false").lower() == "true"
+
+
 def get_feature_flags() -> dict:
     """Get all feature flag values.
 
@@ -36,6 +49,7 @@ def get_feature_flags() -> dict:
     """
     return {
         "debug_mode": get_debug_mode(),
+        "strict_testing_mode": get_strict_testing_mode(),
     }
 
 
@@ -51,7 +65,10 @@ def set_feature_flag(name: str, value: bool) -> None:
     Raises:
         ValueError: If the feature flag name is unknown
     """
-    flag_map = {"debug_mode": "DISPATCH_DEBUG_MODE"}
+    flag_map = {
+        "debug_mode": "DISPATCH_DEBUG_MODE",
+        "strict_testing_mode": "DISPATCH_STRICT_TESTING_MODE",
+    }
 
     if name not in flag_map:
         raise ValueError(
@@ -63,6 +80,7 @@ def set_feature_flag(name: str, value: bool) -> None:
 
 __all__ = [
     "get_debug_mode",
+    "get_strict_testing_mode",
     "get_feature_flags",
     "set_feature_flag",
 ]

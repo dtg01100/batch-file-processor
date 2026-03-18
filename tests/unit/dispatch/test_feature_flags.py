@@ -1,6 +1,6 @@
 """Unit tests for dispatch/feature_flags.py after hard cutover.
 
-The only supported feature flag is DISPATCH_DEBUG_MODE.
+Supported feature flags are DISPATCH_DEBUG_MODE and DISPATCH_STRICT_TESTING_MODE.
 """
 
 import os
@@ -10,6 +10,7 @@ import pytest
 from dispatch.feature_flags import (
     get_debug_mode,
     get_feature_flags,
+    get_strict_testing_mode,
     set_feature_flag,
 )
 
@@ -37,11 +38,41 @@ class TestGetFeatureFlags:
 
     def test_returns_debug_only_default(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
-        assert get_feature_flags() == {"debug_mode": False}
+        monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
+        assert get_feature_flags() == {
+            "debug_mode": False,
+            "strict_testing_mode": False,
+        }
 
     def test_returns_debug_only_custom(self, monkeypatch):
         monkeypatch.setenv("DISPATCH_DEBUG_MODE", "true")
-        assert get_feature_flags() == {"debug_mode": True}
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        assert get_feature_flags() == {
+            "debug_mode": True,
+            "strict_testing_mode": True,
+        }
+
+
+class TestGetStrictTestingMode:
+    """Test suite for get_strict_testing_mode()."""
+
+    def test_pytest_enables_strict_testing_mode(self):
+        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
+        assert get_strict_testing_mode() is True
+
+    def test_default_false(self, monkeypatch):
+        monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
+        assert get_strict_testing_mode() is False
+
+    def test_true_when_set_to_true_case_insensitive(self, monkeypatch):
+        for value in ["true", "TRUE", "TrUe"]:
+            monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
+            assert get_strict_testing_mode() is True
+
+    def test_false_for_false_or_other_values(self, monkeypatch):
+        for value in ["false", "FALSE", "random_value", "1"]:
+            monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
+            assert get_strict_testing_mode() is False
 
 
 class TestSetFeatureFlag:
@@ -57,6 +88,16 @@ class TestSetFeatureFlag:
         assert os.environ.get("DISPATCH_DEBUG_MODE") == "false"
         assert get_debug_mode() is False
 
+    def test_set_strict_testing_mode_true(self):
+        set_feature_flag("strict_testing_mode", True)
+        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
+        assert get_strict_testing_mode() is True
+
+    def test_set_strict_testing_mode_false(self):
+        set_feature_flag("strict_testing_mode", False)
+        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "false"
+        assert get_strict_testing_mode() is False
+
     @pytest.mark.parametrize(
         "unknown_flag", ["legacy_mode", "pipeline_enabled", "unknown_flag"]
     )
@@ -67,3 +108,4 @@ class TestSetFeatureFlag:
         error_msg = str(exc_info.value)
         assert "Unknown feature flag" in error_msg
         assert "debug_mode" in error_msg
+        assert "strict_testing_mode" in error_msg
