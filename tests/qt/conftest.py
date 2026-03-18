@@ -5,6 +5,10 @@ pytest-qt is used for Qt widget testing. It automatically provides the
 
 Configuration in pytest.ini:
     qt_api = pyqt6
+    QT_QPA_PLATFORM=offscreen
+
+Note: Tests should use real Qt widgets, not mocks. Database operations
+should use real DatabaseObj with temporary databases where possible.
 """
 
 import os
@@ -13,43 +17,13 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from tests.fakes import (
-    FakeDatabaseObj,
-    FakeMaintenanceFunctions,
-    FakeProgressService,
-    FakeResendService,
-    FakeTable,
-    FakeUIService,
-)
-
-
-@pytest.fixture
-def mock_database_obj():
-    """Create a fake DatabaseObj with all required table attributes."""
-    return FakeDatabaseObj()
-
-
-@pytest.fixture
-def fake_database_obj():
-    """Create a fake DatabaseObj with a more descriptive name."""
-    return FakeDatabaseObj()
-
-
-@pytest.fixture
-def mock_ui_service():
-    """Create a fake UI service."""
-    return FakeUIService()
-
-
-@pytest.fixture
-def mock_progress_service():
-    """Create a fake progress service."""
-    return FakeProgressService()
-
 
 @pytest.fixture
 def sample_folder_config():
-    """Create a sample folder configuration dict."""
+    """Create a sample folder configuration dict.
+    
+    This is pure data - no fakes needed.
+    """
     return {
         "id": 1,
         "folder_name": "/path/to/folder",
@@ -107,21 +81,3 @@ def sample_folder_config():
         "estore_c_record_OID": "",
         "fintech_division_id": "",
     }
-
-
-@pytest.fixture
-def mock_folders_table():
-    """Create a fake folders table for FolderListWidget tests."""
-    return FakeTable()
-
-
-@pytest.fixture
-def mock_resend_service():
-    """Create a fake ResendService."""
-    return FakeResendService()
-
-
-@pytest.fixture
-def mock_maintenance_functions():
-    """Create a fake MaintenanceFunctions."""
-    return FakeMaintenanceFunctions()

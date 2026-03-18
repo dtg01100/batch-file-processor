@@ -1,6 +1,10 @@
 """Tests for plugin configuration mapper integration and state management."""
 
 import unittest
+from unittest.mock import MagicMock
+
+import pytest
+from PyQt6.QtWidgets import QApplication, QTextEdit
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
@@ -9,6 +13,13 @@ from interface.operations.plugin_configuration_mapper import (
     PluginConfigurationMapper,
     PluginSectionStateManager,
 )
+from interface.plugins.config_schemas import (
+    ConfigurationSchema,
+    FieldDefinition,
+    FieldType,
+)
+from interface.plugins.ui_abstraction import WidgetBase
+from interface.plugins.validation_framework import ValidationResult
 
 
 class TestPluginSectionStateManager(unittest.TestCase):
@@ -371,6 +382,140 @@ class TestPluginConfigPopulationResult(unittest.TestCase):
 
         self.assertEqual(result.widget_count, 0)
         self.assertEqual(result.errors, [])
+
+
+@pytest.fixture
+def qapp():
+    """Provide a Qt application for widget-based tests."""
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
+
+
+class BrokenWidget(WidgetBase):
+    """Widget abstraction that fails when read."""
+
+    def get_widget(self):
+        return None
+
+    def set_value(self, value):
+        return None
+
+    def get_value(self):
+        raise RuntimeError("widget exploded")
+
+    def set_label(self, label):
+        return None
+
+    def set_description(self, description):
+        return None
+
+    def set_enabled(self, enabled):
+        return None
+
+    def set_visible(self, visible):
+        return None
+
+    def validate(self):
+        return True
+
+    def get_validation_errors(self):
+        return []
+
+
+def _build_test_plugin(field_name="test_field", default="fallback"):
+    plugin = MagicMock()
+    plugin.get_format_name.return_value = "csv"
+    plugin.get_configuration_schema.return_value = ConfigurationSchema(
+        [
+            FieldDefinition(
+                name=field_name,
+                field_type=FieldType.STRING,
+                label=field_name,
+                default=default,
+            )
+        ]
+    )
+    plugin.validate_config.return_value = ValidationResult(success=True, errors=[])
+    return plugin
+
+
+def test_extract_plugin_configurations_uses_defaults_when_not_strict(monkeypatch):
+    """Non-strict mode should keep legacy defaulting on widget access failures."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+    plugin = _build_test_plugin()
+    plugin_manager = MagicMock()
+    plugin_manager.get_configuration_plugins.return_value = [plugin]
+    mapper = PluginConfigurationMapper(plugin_manager=plugin_manager)
+
+    extracted = mapper.extract_plugin_configurations(
+        {"test_field": BrokenWidget()}, framework="qt"
+    )
+
+    assert extracted[0].config == {"test_field": "fallback"}
+    assert extracted[0].validation_errors == []
+
+
+def test_extract_plugin_configurations_raise_in_strict_mode(monkeypatch):
+    """Strict testing mode should surface widget read failures."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+    plugin = _build_test_plugin()
+    plugin_manager = MagicMock()
+    plugin_manager.get_configuration_plugins.return_value = [plugin]
+    mapper = PluginConfigurationMapper(plugin_manager=plugin_manager)
+
+    with pytest.raises(RuntimeError, match="Error extracting configuration for csv"):
+        mapper.extract_plugin_configurations({"test_field": BrokenWidget()}, "qt")
+
+
+@pytest.mark.qt
+def test_get_qt_widget_value_returns_empty_dict_when_not_strict(monkeypatch, qapp):
+    """Non-strict mode should keep legacy JSON fallback behavior."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+    widget = QTextEdit()
+    widget.setPlainText("{not-json")
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+
+    assert mapper._get_qt_widget_value(widget, "json_field") == {}
+
+
+@pytest.mark.qt
+def test_get_qt_widget_value_raises_on_invalid_json_in_strict_mode(monkeypatch, qapp):
+    """Strict testing mode should surface invalid JSON in QTextEdit widgets."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+    widget = QTextEdit()
+    widget.setPlainText("{not-json")
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+
+    with pytest.raises(
+        ValueError, match="Invalid JSON in QTextEdit for field 'json_field'"
+    ):
+        mapper._get_qt_widget_value(widget, "json_field")
+
+
+def test_get_qt_widget_value_returns_empty_string_for_unsupported_widget_when_not_strict(
+    monkeypatch,
+):
+    """Non-strict mode should keep legacy fallback for unknown widgets."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+
+    assert mapper._get_qt_widget_value(object(), "unknown_field") == ""
+
+
+def test_get_qt_widget_value_raises_for_unsupported_widget_in_strict_mode(
+    monkeypatch,
+):
+    """Strict testing mode should surface unsupported widget types."""
+    monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+
+    with pytest.raises(
+        TypeError,
+        match="Unsupported Qt widget type for field 'unknown_field': object",
+    ):
+        mapper._get_qt_widget_value(object(), "unknown_field")
 
 
 if __name__ == "__main__":

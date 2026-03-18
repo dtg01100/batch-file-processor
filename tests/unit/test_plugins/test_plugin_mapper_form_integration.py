@@ -19,61 +19,34 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
     """Integration tests for plugin mapper with form generator."""
 
     def test_form_generator_integration(self):
-        """Test that plugin mapper works with form generator output."""
+        """Test that plugin mapper works with real Qt widgets."""
+        from PyQt6.QtWidgets import (
+            QApplication,
+            QCheckBox,
+            QLineEdit,
+            QSpinBox,
+        )
+
+        # Ensure QApplication exists for offscreen testing
+        app = QApplication.instance() or QApplication(["test"])
+
         mapper = PluginConfigurationMapper()
 
-        field_defs = [
-            FieldDefinition(
-                name="include_headers",
-                field_type=FieldType.BOOLEAN,
-                label="Include Headers",
-                description="Include column headers in output",
-                default=False,
-            ),
-            FieldDefinition(
-                name="delimiter",
-                field_type=FieldType.STRING,
-                label="Delimiter",
-                description="CSV delimiter character",
-                default=",",
-                max_length=1,
-            ),
-            FieldDefinition(
-                name="numeric_precision",
-                field_type=FieldType.INTEGER,
-                label="Numeric Precision",
-                description="Decimal places for numbers",
-                default=2,
-                min_value=0,
-                max_value=10,
-            ),
-        ]
+        # Create real Qt widgets
+        include_headers_checkbox = QCheckBox()
+        include_headers_checkbox.setChecked(True)
 
-        schema = ConfigurationSchema(fields=field_defs)
+        delimiter_edit = QLineEdit()
+        delimiter_edit.setText(";")
 
-        form_generator_mock = MagicMock()
-        form_generator_mock.get_values.return_value = {
-            "include_headers": True,
-            "delimiter": ";",
-            "numeric_precision": 4,
-        }
-
-        dialog_fields = {
-            "include_headers": MagicMock(),
-            "delimiter": MagicMock(),
-            "numeric_precision": MagicMock(),
-        }
-
-        class MockWidget:
-            def __init__(self, name):
-                self.name = name
-
-            def get_value(self):
-                return form_generator_mock.get_values()[self.name]
+        precision_spin = QSpinBox()
+        precision_spin.setRange(0, 10)
+        precision_spin.setValue(4)
 
         widget_fields = {
-            name: MockWidget(name)
-            for name in ["include_headers", "delimiter", "numeric_precision"]
+            "include_headers": include_headers_checkbox,
+            "delimiter": delimiter_edit,
+            "numeric_precision": precision_spin,
         }
 
         with patch(
@@ -84,8 +57,6 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
             mock_manager.discover_plugins = MagicMock()
             mock_manager.initialize_plugins = MagicMock()
             mock_manager.get_configuration_plugins = MagicMock(return_value=[])
-
-            mapper = PluginConfigurationMapper()
 
             extracted = mapper.extract_plugin_configurations(
                 widget_fields, framework="qt"

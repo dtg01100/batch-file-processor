@@ -112,8 +112,9 @@ class TestGetUPCDictionary:
         assert config.upc_dict == {"789": "product3"}
         mock_upc_service.get_dictionary.assert_called_once()
 
-    def test_service_exception_returns_empty_dict(self):
+    def test_service_exception_returns_empty_dict(self, monkeypatch):
         """Test that service exception returns empty dict."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         mock_upc_service = MagicMock()
         mock_upc_service.get_dictionary.side_effect = Exception("Service unavailable")
 
@@ -123,6 +124,20 @@ class TestGetUPCDictionary:
         result = orchestrator._get_upc_dictionary({})
 
         assert result == {}
+
+    def test_service_exception_raises_in_strict_testing_mode(self, monkeypatch):
+        """Strict testing mode should surface UPC service failures."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        mock_upc_service = MagicMock()
+        mock_upc_service.get_dictionary.side_effect = Exception("Service unavailable")
+
+        config = DispatchConfig(upc_service=mock_upc_service)
+        orchestrator = DispatchOrchestrator(config)
+
+        with pytest.raises(
+            RuntimeError, match="Failed to fetch UPC dictionary from upc_service"
+        ):
+            orchestrator._get_upc_dictionary({})
 
     def test_without_service_uses_settings_fallback_query(self):
         """When no upc_service is set, fallback query should populate UPC dict."""
@@ -150,6 +165,111 @@ class TestGetUPCDictionary:
 
         assert result == {123456: ["CAT", "11111111111", "22222222222", "", ""]}
         assert config.upc_dict == result
+
+    def test_fallback_query_exception_returns_empty_dict_when_not_strict(
+        self, monkeypatch
+    ):
+        """Non-strict mode should preserve legacy suppression for query failures."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.side_effect = RuntimeError(
+            "query failed"
+        )
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            result = orchestrator._get_upc_dictionary(
+                {
+                    "as400_username": "user",
+                    "as400_password": "pass",
+                    "as400_address": "host",
+                    "odbc_driver": "driver",
+                }
+            )
+
+        assert result == {}
+
+    def test_fallback_query_exception_raises_in_strict_testing_mode(
+        self, monkeypatch
+    ):
+        """Strict testing mode should surface fallback query failures."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.side_effect = RuntimeError(
+            "query failed"
+        )
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            with pytest.raises(
+                RuntimeError, match="Failed to fetch UPC dictionary via fallback query"
+            ):
+                orchestrator._get_upc_dictionary(
+                    {
+                        "as400_username": "user",
+                        "as400_password": "pass",
+                        "as400_address": "host",
+                        "odbc_driver": "driver",
+                    }
+                )
+
+    def test_malformed_fallback_query_row_is_skipped_when_not_strict(self, monkeypatch):
+        """Non-strict mode should keep legacy behavior for malformed UPC rows."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = [
+            ("bad-item", "CAT", "11111111111", "22222222222", "", ""),
+            (123456, "CAT", "11111111111", "22222222222", "", ""),
+        ]
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            result = orchestrator._get_upc_dictionary(
+                {
+                    "as400_username": "user",
+                    "as400_password": "pass",
+                    "as400_address": "host",
+                    "odbc_driver": "driver",
+                }
+            )
+
+        assert result == {123456: ["CAT", "11111111111", "22222222222", "", ""]}
+
+    def test_malformed_fallback_query_row_raises_in_strict_testing_mode(
+        self, monkeypatch
+    ):
+        """Strict testing mode should surface malformed UPC query rows."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = [
+            ("bad-item", "CAT", "11111111111", "22222222222", "", ""),
+        ]
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            with pytest.raises(
+                RuntimeError, match="Malformed UPC row returned from fallback query"
+            ):
+                orchestrator._get_upc_dictionary(
+                    {
+                        "as400_username": "user",
+                        "as400_password": "pass",
+                        "as400_address": "host",
+                        "odbc_driver": "driver",
+                    }
+                )
 
     def test_strict_mode_raises_when_as400_settings_missing(self):
         """Strict database mode should fail fast when settings are incomplete."""
@@ -181,6 +301,61 @@ class TestGetUPCDictionary:
 
             with pytest.raises(LookupError, match="UPC query returned no rows"):
                 orchestrator._get_upc_dictionary(config.settings)
+
+    def test_close_failure_is_suppressed_outside_strict_testing_mode(self, monkeypatch):
+        """Legacy runner close failures remain backward compatible when strict mode is off."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = [
+            (123456, "CAT", "11111111111", "22222222222", "", ""),
+        ]
+        mock_legacy_runner_instance._runner.close.side_effect = RuntimeError(
+            "close failed"
+        )
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            result = orchestrator._get_upc_dictionary(
+                {
+                    "as400_username": "user",
+                    "as400_password": "pass",
+                    "as400_address": "host",
+                    "odbc_driver": "driver",
+                }
+            )
+
+        assert result == {123456: ["CAT", "11111111111", "22222222222", "", ""]}
+
+    def test_close_failure_raises_in_strict_testing_mode(self, monkeypatch):
+        """Strict testing mode should surface close failures for UPC fallback."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = [
+            (123456, "CAT", "11111111111", "22222222222", "", ""),
+        ]
+        mock_legacy_runner_instance._runner.close.side_effect = RuntimeError(
+            "close failed"
+        )
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            orchestrator = DispatchOrchestrator(DispatchConfig())
+            with pytest.raises(
+                RuntimeError, match="Failed to close legacy UPC query runner"
+            ):
+                orchestrator._get_upc_dictionary(
+                    {
+                        "as400_username": "user",
+                        "as400_password": "pass",
+                        "as400_address": "host",
+                        "odbc_driver": "driver",
+                    }
+                )
 
 
 class TestProcessFolderWithPipeline:
@@ -623,8 +798,10 @@ class TestProcessedFilesAndCleanupBehavior:
 
     def test_process_file_with_pipeline_cleans_context_registered_temp_dirs_in_finally(
         self,
+        monkeypatch,
     ):
         """Context-tracked pipeline temp dirs are removed during finally cleanup."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -664,8 +841,10 @@ class TestProcessedFilesAndCleanupBehavior:
 
     def test_process_file_with_pipeline_cleanup_best_effort_when_remove_rmtree_raises(
         self,
+        monkeypatch,
     ):
         """Cleanup exceptions are suppressed so processing remains best-effort."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         mock_fs = MockFileSystem(
             dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
         )
@@ -707,6 +886,48 @@ class TestProcessedFilesAndCleanupBehavior:
         mock_rmtree.assert_called_once_with("/tmp/pipeline-dir", ignore_errors=True)
         mock_remove.assert_called_once_with("/tmp/converted.edi")
         assert "_pipeline_temp_dirs" not in folder
+
+    def test_process_file_with_pipeline_cleanup_raises_in_strict_testing_mode(
+        self,
+        monkeypatch,
+    ):
+        """Strict testing mode should fail fast when temp cleanup fails."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
+        mock_fs = MockFileSystem(
+            dirs=["/data/input"], files={"/data/input/file.edi": b"content"}
+        )
+
+        mock_converter = MagicMock()
+        mock_converter.execute.return_value = "/tmp/converted.edi"
+
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(
+                file_system=mock_fs,
+                converter_step=mock_converter,
+                settings={},
+            )
+        )
+
+        folder = {
+            "folder_name": "/data/input",
+            "convert_edi": True,
+        }
+
+        def converter_with_context(
+            file_path, folder_cfg, settings, upc_dict, context=None
+        ):
+            context.temp_dirs.append("/tmp/pipeline-dir")
+            return "/tmp/converted.edi"
+
+        mock_converter.execute.side_effect = converter_with_context
+
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("shutil.rmtree", side_effect=OSError("rmtree failed")),
+            patch("os.remove", side_effect=OSError("remove failed")),
+            pytest.raises(RuntimeError, match="Failed to clean up temporary artifacts"),
+        ):
+            orchestrator._process_file_with_pipeline("/data/input/file.edi", folder, {})
 
     def test_process_file_with_pipeline_uses_effective_folder_without_mutating_source(
         self,

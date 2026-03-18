@@ -1,31 +1,50 @@
 """Protocol-compliant fake implementations for testing.
 
+.. deprecated::
+    These fakes are deprecated in favor of real implementations.
+    Use real Qt widgets (with QT_QPA_PLATFORM=offscreen) and real DatabaseObj
+    with temporary databases instead of these fakes.
+    
+    See:
+    - tests/conftest.py for temp_database fixture
+    - pytest.ini for qt marker with offscreen mode
+    - tests/qt/test_qt_widgets.py for examples using real widgets
+
 This module provides fake classes that implement the protocols defined in the
 application, allowing tests to use real-like objects instead of MagicMocks.
 
-Benefits over MagicMock:
-1. Runtime protocol checking works correctly (isinstance() returns True)
-2. Better IDE support and type checking
-3. More explicit test intent
-4. Catches protocol violations at test time
+Migration guide:
+- Instead of FakeTable/FakeDatabaseObj: Use temp_database fixture from conftest.py
+- Instead of FakeEvent/FakeWidget: Use real Qt widgets with qtbot fixture
+- Instead of FakeUIService: Use real Qt dialogs or monkeypatch specific methods
+- Instead of MagicMock: Use real objects where possible, minimal mocking otherwise
 """
 
+import warnings
 from typing import Any, Callable, Optional
+
+# Emit deprecation warning when this module is imported
+warnings.warn(
+    "tests.fakes is deprecated. Use real implementations instead: "
+    "temp_database fixture for database, real Qt widgets with qtbot for UI. "
+    "See tests/qt/test_qt_widgets.py for examples.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class FakeTable:
     """A fake table implementation that satisfies TableProtocol.
 
-    Stores data in memory and provides all required table operations.
-    Can be pre-populated with test data.
+    .. deprecated:: Use real database via temp_database fixture instead.
     """
 
     def __init__(self, initial_data: list[dict] | None = None):
-        """Initialize the fake table with optional initial data.
-
-        Args:
-            initial_data: List of dicts to pre-populate the table
-        """
+        warnings.warn(
+            "FakeTable is deprecated. Use temp_database fixture instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._data: list[dict] = []
         self._next_id = 1
         self._call_tracker: dict[str, int] = {}
@@ -89,7 +108,6 @@ class FakeTable:
         """Delete records matching criteria."""
         self._track_call("delete")
         if not kwargs:
-            # Delete all records when no criteria provided
             self._data = []
         else:
             self._data = [
@@ -118,10 +136,7 @@ class FakeTable:
         self.insert(record)
 
     def distinct(self, column: str) -> list[dict]:
-        """Get distinct values for a column (used in processed_files).
-
-        Returns a list of dicts with the column as key, matching dataset behavior.
-        """
+        """Get distinct values for a column."""
         self._track_call("distinct")
         seen = set()
         results = []
@@ -134,74 +149,62 @@ class FakeTable:
         return results
 
     def reset_mock(self) -> None:
-        """Reset call tracker (for compatibility with test patterns)."""
+        """Reset call tracker."""
         self._call_tracker.clear()
 
     @property
     def call_count(self) -> int:
-        """Total number of calls (for compatibility with test patterns)."""
+        """Total number of calls."""
         return sum(self._call_tracker.values())
 
 
 class FakeConnection:
-    """A fake database connection that satisfies DatabaseConnectionProtocol.
+    """A fake database connection.
 
-    Provides table access via __getitem__ and manages tables in memory.
+    .. deprecated:: Use real database via temp_database fixture instead.
     """
 
     def __init__(self, tables: dict[str, FakeTable] | None = None):
-        """Initialize with optional pre-configured tables.
-
-        Args:
-            tables: Dict mapping table names to FakeTable instances
-        """
         self._tables: dict[str, FakeTable] = tables or {}
         self._closed = False
         self._call_tracker: dict[str, int] = {}
 
     def _track_call(self, method: str) -> None:
-        """Track method calls for assertion purposes."""
         self._call_tracker[method] = self._call_tracker.get(method, 0) + 1
 
     def __getitem__(self, table_name: str) -> FakeTable:
-        """Get a table by name, creating it if it doesn't exist."""
         self._track_call(f"__getitem__:{table_name}")
         if table_name not in self._tables:
             self._tables[table_name] = FakeTable()
         return self._tables[table_name]
 
     def close(self) -> None:
-        """Close the database connection."""
         self._track_call("close")
         self._closed = True
 
     @property
     def closed(self) -> bool:
-        """Check if the connection is closed."""
         return self._closed
 
     def reset_mock(self) -> None:
-        """Reset call tracker (for compatibility with test patterns)."""
         self._call_tracker.clear()
 
 
 class FakeDatabaseObj:
-    """A fake DatabaseObj that provides table access with realistic behavior.
+    """A fake DatabaseObj.
 
-    This class mimics the interface of DatabaseObj without requiring an actual
-    database connection. It uses FakeTable instances for all tables.
+    .. deprecated:: Use temp_database fixture instead for real database testing.
     """
 
     def __init__(self, data: dict[str, list[dict]] | None = None):
-        """Initialize with optional pre-populated data.
-
-        Args:
-            data: Dict mapping table names to lists of records
-        """
+        warnings.warn(
+            "FakeDatabaseObj is deprecated. Use temp_database fixture instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._connection = FakeConnection()
         self._tables: dict[str, FakeTable] = {}
 
-        # Initialize standard tables
         self.folders_table = FakeTable(data.get("folders") if data else None)
         self.emails_table = FakeTable(data.get("emails_to_send") if data else None)
         self.emails_table_batch = FakeTable(
@@ -216,56 +219,40 @@ class FakeDatabaseObj:
         self.processed_files = FakeTable(data.get("processed_files") if data else None)
         self.settings = FakeTable(data.get("settings") if data else None)
         self.session_database = FakeTable()
-
-        # Version table for compatibility
         self._version_table = FakeTable([{"version": "42", "os": "Linux"}])
 
     @property
     def connection(self) -> FakeConnection:
-        """Get the underlying connection."""
         return self._connection
 
     @property
     def database_connection(self) -> FakeConnection:
-        """Alias for connection (for compatibility)."""
         return self._connection
 
     def get_folder(self, folder_name: str) -> Optional[dict]:
-        """Get a folder by name."""
         return self.folders_table.find_one(folder_name=folder_name)
 
     def get_all_folders(self) -> list[dict]:
-        """Get all folders."""
         return self.folders_table.all()
 
     def get_setting(self, key: str) -> Optional[str]:
-        """Get a setting by key."""
         result = self.settings.find_one(key=key)
         return result.get("value") if result else None
 
     def set_setting(self, key: str, value: str) -> None:
-        """Set a setting value."""
         self.settings.upsert({"key": key, "value": value}, ["key"])
 
     def get_default_settings(self) -> Optional[dict]:
-        """Get default settings."""
         return self.oversight_and_defaults.find_one(id=1)
 
     def update_default_settings(self, settings: dict) -> None:
-        """Update default settings."""
         self.oversight_and_defaults.update({**settings, "id": 1}, ["id"])
 
     def get_oversight_or_default(self) -> dict:
-        """Get oversight settings or return empty dict."""
         result = self.oversight_and_defaults.find_one(id=1)
         return result if result else {}
 
     def __getitem__(self, table_name: str) -> FakeTable:
-        """Get a table by name (for compatibility with dataset-like access).
-
-        This allows FakeDatabaseObj to be used as a drop-in replacement
-        for the raw database connection in services like ResendService.
-        """
         table_map = {
             "folders": self.folders_table,
             "processed_files": self.processed_files,
@@ -277,18 +264,16 @@ class FakeDatabaseObj:
         }
         if table_name in table_map:
             return table_map[table_name]
-        # Fall back to connection's __getitem__ for unknown tables
         return self._connection[table_name]
 
     def close(self) -> None:
-        """Close the database connection."""
         self._connection.close()
 
 
 class FakeEvent:
     """A fake Qt event for testing event handlers.
 
-    Provides realistic event attributes without requiring Qt.
+    .. deprecated:: Use real Qt events with qtbot fixture instead.
     """
 
     def __init__(
@@ -300,7 +285,11 @@ class FakeEvent:
         num: int = 4,
         delta: int = 120,
     ):
-        """Initialize the fake event with realistic defaults."""
+        warnings.warn(
+            "FakeEvent is deprecated. Use real Qt widgets with qtbot instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.x = x
         self.y = y
         self.x_root = x_root
@@ -311,10 +300,12 @@ class FakeEvent:
 
 
 class FakeWidget:
-    """A fake Qt widget for testing."""
+    """A fake Qt widget for testing.
+
+    .. deprecated:: Use real Qt widgets with qtbot fixture instead.
+    """
 
     def __init__(self):
-        """Initialize the fake widget."""
         self._visible = True
         self._enabled = True
         self._text = ""
@@ -339,13 +330,17 @@ class FakeWidget:
 
 
 class FakeUIService:
-    """A fake UI service that satisfies UIServiceProtocol.
+    """A fake UI service.
 
-    Records all interactions for test assertions.
+    .. deprecated:: Use real Qt dialogs or minimal monkeypatching instead.
     """
 
     def __init__(self):
-        """Initialize the fake UI service."""
+        warnings.warn(
+            "FakeUIService is deprecated. Use real Qt dialogs or monkeypatch instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._calls: dict[str, list[tuple]] = {}
         self._return_values: dict[str, Any] = {
             "ask_yes_no": False,
@@ -356,13 +351,11 @@ class FakeUIService:
         }
 
     def _record_call(self, method: str, *args, **kwargs) -> None:
-        """Record a method call."""
         if method not in self._calls:
             self._calls[method] = []
         self._calls[method].append((args, kwargs))
 
     def set_return_value(self, method: str, value: Any) -> None:
-        """Set a return value for a method."""
         self._return_values[method] = value
 
     def show_info(self, title: str, message: str) -> None:
@@ -398,29 +391,27 @@ class FakeUIService:
         self._record_call("pump_events")
 
     def get_calls(self, method: str) -> list[tuple]:
-        """Get all calls to a method."""
         return self._calls.get(method, [])
 
     def was_called(self, method: str) -> bool:
-        """Check if a method was called."""
         return method in self._calls and len(self._calls[method]) > 0
 
     def reset(self) -> None:
-        """Reset all recorded calls."""
         self._calls.clear()
 
 
 class FakeProgressService:
-    """A fake progress service that satisfies ProgressServiceProtocol."""
+    """A fake progress service.
+
+    .. deprecated:: Use real progress dialogs with qtbot or minimal mocking.
+    """
 
     def __init__(self):
-        """Initialize the fake progress service."""
         self._visible = False
         self._message = ""
         self._calls: dict[str, list[tuple]] = {}
 
     def _record_call(self, method: str, *args, **kwargs) -> None:
-        """Record a method call."""
         if method not in self._calls:
             self._calls[method] = []
         self._calls[method].append((args, kwargs))
@@ -445,22 +436,22 @@ class FakeProgressService:
         return self._message
 
     def reset(self) -> None:
-        """Reset all state."""
         self._visible = False
         self._message = ""
         self._calls.clear()
 
 
 class FakeMaintenanceFunctions:
-    """A fake MaintenanceFunctions for testing maintenance dialogs."""
+    """A fake MaintenanceFunctions for testing maintenance dialogs.
+
+    .. deprecated:: Use real MaintenanceFunctions with temp_database instead.
+    """
 
     def __init__(self, database_obj: FakeDatabaseObj | None = None):
-        """Initialize the fake maintenance functions."""
         self._calls: dict[str, int] = {}
         self._database_obj: FakeDatabaseObj = database_obj or FakeDatabaseObj()
 
     def _track_call(self, method: str) -> None:
-        """Track a method call."""
         self._calls[method] = self._calls.get(method, 0) + 1
 
     def set_all_active(self) -> None:
@@ -482,15 +473,12 @@ class FakeMaintenanceFunctions:
         self._track_call("mark_active_as_processed")
 
     def database_import_wrapper(self, *args, **kwargs) -> None:
-        """Import wrapper for database import."""
         self._track_call("database_import_wrapper")
 
     def was_called(self, method: str) -> bool:
-        """Check if a method was called."""
         return self._calls.get(method, 0) > 0
 
     def call_count(self, method: str) -> int:
-        """Get the number of times a method was called."""
         return self._calls.get(method, 0)
 
     def set_operation_callbacks(
@@ -498,24 +486,23 @@ class FakeMaintenanceFunctions:
         on_start: Optional[Callable[[], None]],
         on_end: Optional[Callable[[], None]],
     ) -> None:
-        """Store callbacks invoked at the start and end of each operation."""
         self._on_operation_start = on_start
         self._on_operation_end = on_end
 
     def get_database(self) -> "FakeDatabaseObj":
-        """Return the underlying fake database object."""
         return self._database_obj
 
     def reset(self) -> None:
-        """Reset all tracked calls."""
         self._calls.clear()
 
 
 class FakeResendService:
-    """A fake ResendService for testing resend dialogs."""
+    """A fake ResendService for testing resend dialogs.
+
+    .. deprecated:: Use real ResendService with temp_database instead.
+    """
 
     def __init__(self, database_obj: FakeDatabaseObj | None = None):
-        """Initialize with optional database."""
         self._database_obj = database_obj or FakeDatabaseObj()
         self._calls: dict[str, int] = {}
         self._has_processed_files = True
@@ -523,33 +510,26 @@ class FakeResendService:
         self._files: list[dict] = []
 
     def _track_call(self, method: str) -> None:
-        """Track a method call."""
         self._calls[method] = self._calls.get(method, 0) + 1
 
     def has_processed_files(self) -> bool:
-        """Check if there are processed files."""
         self._track_call("has_processed_files")
         return self._has_processed_files
 
     def get_folder_list(self) -> list[tuple[int, str]]:
-        """Get list of folders with processed files."""
         self._track_call("get_folder_list")
         return self._folder_list
 
     def get_files_for_folder(self, folder_id: int, limit: int = 100) -> list[dict]:
-        """Get processed files for a folder."""
         self._track_call("get_files_for_folder")
         return self._files[:limit]
 
     def count_files_for_folder(self, folder_id: int) -> int:
-        """Count files for a folder."""
         self._track_call("count_files_for_folder")
         return len(self._files)
 
     def set_resend_flag(self, file_id: int, flag: bool) -> None:
-        """Set resend flag for a file."""
         self._track_call("set_resend_flag")
 
     def reset(self) -> None:
-        """Reset all tracked calls."""
         self._calls.clear()
