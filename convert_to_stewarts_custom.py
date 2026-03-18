@@ -28,6 +28,11 @@ import decimal
 from typing import Any, Dict, List, Tuple
 
 import utils
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -36,6 +41,8 @@ from convert_base import (
 from core.database import query_runner as LegacyQueryRunner
 from core.exceptions import CustomerLookupError
 from core.utils import prettify_dates
+
+logger = get_logger(__name__)
 
 
 class StewartsCustomConverter(BaseEDIConverter):
@@ -136,6 +143,10 @@ class StewartsCustomConverter(BaseEDIConverter):
         )
 
         if len(header_fields) == 0:
+            logger.error(
+                "Stewart custom converter: Cannot find order %s in AS400 history",
+                invoice_number,
+            )
             raise CustomerLookupError(f"Cannot Find Order {invoice_number} In History.")
 
         header_fields_list = [
@@ -177,13 +188,19 @@ class StewartsCustomConverter(BaseEDIConverter):
         Returns:
             List of tuples containing (itemno, uom_mult, uom_code)
         """
-        return self.query_object.run_arbitrary_query(
+        uom_list = self.query_object.run_arbitrary_query(
             """
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
             where odhst.buhhnb = ?
             """,
             (invoice_number,),
         )
+        if not uom_list:
+            logger.warning(
+                "Stewart custom converter: No UOM data found for invoice %s",
+                invoice_number,
+            )
+        return uom_list
 
     def _get_uom(self, item_number: str, packsize: str) -> str:
         """Get UOM (Unit of Measure) for an item.
@@ -505,7 +522,76 @@ def edi_convert(
         >>> print(result)
         'output.csv'
     """
-    converter = StewartsCustomConverter()
-    return converter.edi_convert(
-        edi_process, output_filename, settings_dict, parameters_dict, upc_dict
+    import os
+    import time
+
+    from batch_file_processor.structured_logging import get_or_create_correlation_id
+
+    correlation_id = get_or_create_correlation_id()
+    start_time = time.perf_counter()
+
+    import logging
+
+    log_with_context(
+        logger,
+        logging.INFO,
+        "Starting Stewarts Custom conversion",
+        operation="edi_convert",
+        context={
+            "input_file": os.path.basename(edi_process),
+            "output_file": os.path.basename(output_filename) + ".csv",
+            "format": "stewarts_custom",
+        },
     )
+    log_file_operation(
+        logger,
+        "read",
+        edi_process,
+        file_type="edi",
+        correlation_id=correlation_id,
+    )
+
+    try:
+        converter = StewartsCustomConverter()
+        result = converter.edi_convert(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_dict
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            "Stewarts Custom conversion completed",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "output_file": os.path.basename(result),
+                "format": "stewarts_custom",
+                "duration_ms": round(duration_ms, 2),
+            },
+        )
+        log_file_operation(
+            logger,
+            "write",
+            result,
+            file_type="csv",
+            success=True,
+            duration_ms=duration_ms,
+            correlation_id=correlation_id,
+        )
+        return result
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"Stewarts Custom conversion failed: {e}",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "format": "stewarts_custom",
+                "duration_ms": round(duration_ms, 2),
+                "error": str(e),
+            },
+        )
+        raise

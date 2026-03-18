@@ -5,13 +5,17 @@ using dependency injection for testability.
 """
 
 import importlib
-import logging
 import os
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_backend_call,
+    log_with_context,
+)
 from dispatch.interfaces import BackendInterface
+
+logger = get_logger(__name__)
 
 
 class SendManager:
@@ -81,6 +85,8 @@ class SendManager:
         self.results = {}
         self.errors = {}
 
+        import logging
+
         basename = os.path.basename(file_path)
         sorted_backends = sorted(enabled_backends)
         logger.debug(
@@ -91,11 +97,26 @@ class SendManager:
         )
 
         for backend_name in enabled_backends:
+            log_backend_call(
+                logger,
+                backend_name,
+                "send",
+                endpoint=params.get(
+                    f"{backend_name}_server",
+                    params.get(f"{backend_name}_to_directory", ""),
+                ),
+            )
             try:
                 success = self._send_to_backend(
                     backend_name, file_path, params, settings
                 )
                 self.results[backend_name] = success
+                log_backend_call(
+                    logger,
+                    backend_name,
+                    "send",
+                    success=success,
+                )
                 logger.debug(
                     "Backend '%s' result: %s",
                     backend_name,
@@ -104,6 +125,13 @@ class SendManager:
             except Exception as e:
                 self.results[backend_name] = False
                 self.errors[backend_name] = str(e)
+                log_backend_call(
+                    logger,
+                    backend_name,
+                    "send",
+                    success=False,
+                    error=e,
+                )
                 logger.error("Backend '%s' failed to send: %s" % (backend_name, e))
                 logger.debug("Backend '%s' result: failure", backend_name)
                 # Continue with other backends instead of raising
@@ -112,9 +140,19 @@ class SendManager:
             name for name, success in self.results.items() if not success
         ]
         if failed_backends:
-            logger.warning("Some backends failed for %s: %s", basename, failed_backends)
+            log_with_context(
+                logger,
+                logging.WARNING,
+                f"Some backends failed for {basename}: {failed_backends}",
+                context={"failed_backends": failed_backends, "file": basename},
+            )
         else:
-            logger.info("All backends succeeded for: %s", basename)
+            log_with_context(
+                logger,
+                logging.INFO,
+                f"All backends succeeded for: {basename}",
+                context={"file": basename, "backends": list(enabled_backends)},
+            )
 
         return self.results
 

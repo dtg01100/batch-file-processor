@@ -5,7 +5,6 @@ Provides callback functions for various user actions such as button clicks,
 checkbox toggles, and dropdown selections.
 """
 
-import logging
 import os
 from typing import Any, Callable, Dict, Optional
 
@@ -18,9 +17,17 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_correlation_id,
+    set_correlation_id,
+    generate_correlation_id,
+    log_with_context,
+)
+
 from interface.qt.theme import Theme
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EventHandlers:
@@ -67,6 +74,22 @@ class EventHandlers:
         self.on_apply_success = on_apply_success
         self.data_extractor = data_extractor
         self.ftp_service = ftp_service
+
+        # Set correlation ID for this dialog session
+        self._correlation_id = generate_correlation_id()
+        set_correlation_id(self._correlation_id)
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Event handlers initialized for edit folders dialog",
+            correlation_id=self._correlation_id,
+            component="edit_folders_dialog",
+            operation="event_handlers_init",
+            context={
+                "folder_alias": folder_config.get("alias", "unknown"),
+                "folder_name": folder_config.get("folder_name", "unknown"),
+            },
+        )
 
     def update_active_state(self):
         """Update the active state of the folder and all child widgets."""
@@ -222,6 +245,18 @@ class EventHandlers:
             return
 
         selected_alias = current_item.text()
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            f"Copying config from folder: {selected_alias}",
+            correlation_id=get_correlation_id(),
+            component="edit_folders_dialog",
+            operation="copy_config_from_other",
+            context={
+                "source_alias": selected_alias,
+                "target_alias": self.folder_config.get("alias", "unknown"),
+            },
+        )
         other_config = None
 
         if self.settings_provider:
@@ -233,7 +268,15 @@ class EventHandlers:
                         break
 
         if other_config is None:
-            logger.warning("Could not find config for folder alias: %s", selected_alias)
+            log_with_context(
+                logger,
+                30,  # WARNING
+                f"Could not find config for folder alias: {selected_alias}",
+                correlation_id=get_correlation_id(),
+                component="edit_folders_dialog",
+                operation="copy_config_from_other",
+                context={"source_alias": selected_alias},
+            )
             return
 
         if hasattr(self.dialog, "_populate_fields_from_config"):
@@ -242,6 +285,18 @@ class EventHandlers:
     def show_folder_path(self):
         """Show the full path of the current folder."""
         path = self.folder_config.get("folder_name", "Unknown")
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Showing folder path dialog",
+            correlation_id=get_correlation_id(),
+            component="edit_folders_dialog",
+            operation="show_folder_path",
+            context={
+                "folder_path": path,
+                "folder_alias": self.folder_config.get("alias", "unknown"),
+            },
+        )
         QMessageBox.information(self.dialog, "Folder Path", path)
 
     def select_copy_directory(self):
@@ -250,16 +305,45 @@ class EventHandlers:
         if not initial or not os.path.isdir(initial):
             initial = os.getcwd()
 
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Opening copy directory selection dialog",
+            correlation_id=get_correlation_id(),
+            component="edit_folders_dialog",
+            operation="select_copy_directory",
+            context={"initial_directory": initial},
+        )
         folder = QFileDialog.getExistingDirectory(
             self.dialog, "Select Copy Backend Destination Folder", initial
         )
         if folder:
+            log_with_context(
+                logger,
+                20,  # INFO
+                f"Selected copy directory: {folder}",
+                correlation_id=get_correlation_id(),
+                component="edit_folders_dialog",
+                operation="select_copy_directory",
+                context={"selected_directory": folder},
+            )
             self.copy_to_directory = folder
             if hasattr(self.dialog, "copy_to_directory"):
                 self.dialog.copy_to_directory = folder
 
     def on_ok(self):
         """Handle OK button click - validate and apply settings."""
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "OK button clicked - validating and applying settings",
+            correlation_id=get_correlation_id(),
+            component="edit_folders_dialog",
+            operation="on_ok",
+            context={
+                "folder_alias": self.folder_config.get("alias", "unknown"),
+            },
+        )
         if hasattr(self.dialog, "_on_ok"):
             self.dialog._on_ok()
         else:
@@ -267,4 +351,15 @@ class EventHandlers:
 
     def on_cancel(self):
         """Handle Cancel button click."""
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Cancel button clicked - discarding changes",
+            correlation_id=get_correlation_id(),
+            component="edit_folders_dialog",
+            operation="on_cancel",
+            context={
+                "folder_alias": self.folder_config.get("alias", "unknown"),
+            },
+        )
         self.dialog.reject()

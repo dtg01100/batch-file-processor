@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dispatch.orchestrator import (
     DispatchConfig,
     DispatchOrchestrator,
@@ -121,6 +123,64 @@ class TestGetUPCDictionary:
         result = orchestrator._get_upc_dictionary({})
 
         assert result == {}
+
+    def test_without_service_uses_settings_fallback_query(self):
+        """When no upc_service is set, fallback query should populate UPC dict."""
+
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = [
+            (123456, "CAT", "11111111111", "22222222222", "", ""),
+        ]
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            config = DispatchConfig()
+            orchestrator = DispatchOrchestrator(config)
+
+            settings = {
+                "as400_username": "user",
+                "as400_password": "pass",
+                "as400_address": "host",
+                "odbc_driver": "driver",
+            }
+
+            result = orchestrator._get_upc_dictionary(settings)
+
+        assert result == {123456: ["CAT", "11111111111", "22222222222", "", ""]}
+        assert config.upc_dict == result
+
+    def test_strict_mode_raises_when_as400_settings_missing(self):
+        """Strict database mode should fail fast when settings are incomplete."""
+        config = DispatchConfig(settings={"database_lookup_mode": "strict"})
+        orchestrator = DispatchOrchestrator(config)
+
+        with pytest.raises(ValueError, match="AS400 settings are missing"):
+            orchestrator._get_upc_dictionary(config.settings)
+
+    def test_strict_mode_raises_when_query_returns_no_rows(self):
+        """Strict mode should fail when UPC query returns an empty dataset."""
+        mock_legacy_runner_instance = MagicMock()
+        mock_legacy_runner_instance.run_arbitrary_query.return_value = []
+
+        with patch(
+            "dispatch.orchestrator.LegacyQueryRunner",
+            return_value=mock_legacy_runner_instance,
+        ):
+            config = DispatchConfig(
+                settings={
+                    "database_lookup_mode": "strict",
+                    "as400_username": "user",
+                    "as400_password": "pass",
+                    "as400_address": "host",
+                    "odbc_driver": "driver",
+                }
+            )
+            orchestrator = DispatchOrchestrator(config)
+
+            with pytest.raises(LookupError, match="UPC query returned no rows"):
+                orchestrator._get_upc_dictionary(config.settings)
 
 
 class TestProcessFolderWithPipeline:
@@ -945,3 +1005,98 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["process_edi"] is True
+
+
+class TestOrchestratorProgressPhases:
+    """Tests for discovery/sending phase orchestration support."""
+
+    def test_discover_pending_files_reports_progress_and_filters_processed(self):
+        mock_fs = MockFileSystem(
+            dirs=["/data/a", "/data/b"],
+            files={
+                "/data/a/new.edi": b"new-a",
+                "/data/a/old.edi": b"old-a",
+                "/data/b/new.edi": b"new-b",
+            },
+        )
+        config = DispatchConfig(file_system=mock_fs)
+        orchestrator = DispatchOrchestrator(config)
+
+        folders = [
+            {"id": 1, "folder_name": "/data/a", "alias": "A"},
+            {"id": 2, "folder_name": "/data/b", "alias": "B"},
+        ]
+
+        processed_files = MagicMock()
+        processed_files.find.side_effect = [
+            [{"file_checksum": "old-checksum", "resend_flag": False}],
+            [],
+        ]
+
+        progress = MagicMock()
+
+        with patch.object(
+            orchestrator,
+            "_calculate_checksum",
+            side_effect=["new-checksum", "old-checksum", "new-b-checksum"],
+        ):
+            pending_lists, total_pending = orchestrator.discover_pending_files(
+                folders,
+                processed_files=processed_files,
+                progress_reporter=progress,
+            )
+
+        assert pending_lists == [["/data/a/new.edi"], ["/data/b/new.edi"]]
+        assert total_pending == 2
+        progress.start_discovery.assert_called_once_with(folder_total=2)
+        assert progress.update_discovery_progress.call_count == 2
+        progress.finish_discovery.assert_called_once_with(total_pending=2)
+
+    def test_process_folder_uses_legacy_start_folder_signature_when_needed(self):
+        class LegacyProgress:
+            def __init__(self):
+                self.calls = []
+
+            def start_folder(self, folder_name: str, total_files: int) -> None:
+                self.calls.append((folder_name, total_files))
+
+            def update_file(self, current_file: int, total_files: int) -> None:
+                return None
+
+            def complete_folder(self, success: bool) -> None:
+                return None
+
+        mock_fs = MockFileSystem(
+            dirs=["/data/input"],
+            files={"/data/input/file.edi": b"content"},
+        )
+        mock_backend = MagicMock()
+        mock_backend.send.return_value = True
+
+        progress = LegacyProgress()
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(
+                file_system=mock_fs,
+                backends={"copy": mock_backend},
+                progress_reporter=progress,
+                settings={},
+            )
+        )
+
+        folder = {
+            "folder_name": "/data/input",
+            "alias": "Input",
+            "process_backend_copy": True,
+        }
+
+        result = orchestrator.process_folder(
+            folder,
+            run_log=MagicMock(),
+            processed_files=None,
+            pre_discovered_files=["/data/input/file.edi"],
+            folder_num=1,
+            folder_total=1,
+        )
+
+        assert result.files_processed == 1
+        assert progress.calls == [("Input", 1)]

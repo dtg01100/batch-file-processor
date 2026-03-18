@@ -4,15 +4,19 @@ This module sends files via FTP or FTPS (FTP over TLS) with
 injectable client support for testing.
 """
 
-import logging
 import os
 import time
 from typing import Optional
 
 from backend.ftp_client import create_ftp_client
 from backend.protocols import FTPClientProtocol
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_backend_call,
+    log_file_operation,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def do(
@@ -43,14 +47,24 @@ def do(
     """
     file_pass = False
     counter = 0
+    correlation_id = os.urandom(4).hex()
 
     # Try TLS first, then fall back to non-TLS
     use_tls_options = [True, False]
+
+    log_file_operation(
+        logger,
+        "read",
+        filename,
+        file_type="edi",
+        correlation_id=correlation_id,
+    )
 
     while not file_pass:
         try:
             with open(filename, "rb") as send_file:
                 filename_no_path = os.path.basename(filename)
+                file_size = os.path.getsize(filename)
 
                 for provider_index, use_tls in enumerate(use_tls_options):
                     # Create client - either injected or real
@@ -64,6 +78,7 @@ def do(
                             "Connecting to ftp server: %s",
                             process_parameters["ftp_server"],
                         )
+                        start_time = time.perf_counter()
                         client.connect(
                             str(process_parameters["ftp_server"]),
                             process_parameters["ftp_port"],
@@ -100,11 +115,42 @@ def do(
                                     client.cwd(current_path)
 
                         client.storbinary("stor " + filename_no_path, send_file)
+                        duration_ms = (time.perf_counter() - start_time) * 1000
                         logger.info("Successfully sent file %s", filename_no_path)
+                        log_backend_call(
+                            logger,
+                            "ftp",
+                            "upload",
+                            endpoint=f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}/{process_parameters.get('ftp_folder', '')}",
+                            success=True,
+                            duration_ms=duration_ms,
+                            correlation_id=correlation_id,
+                        )
+                        log_file_operation(
+                            logger,
+                            "write",
+                            filename_no_path,
+                            file_size=file_size,
+                            file_type="edi",
+                            success=True,
+                            correlation_id=correlation_id,
+                        )
                         file_pass = True
                         break
                     except Exception as error:
+                        duration_ms = (time.perf_counter() - start_time) * 1000
                         logger.warning("FTP error: %s", error)
+                        log_backend_call(
+                            logger,
+                            "ftp",
+                            "upload",
+                            endpoint=f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}",
+                            success=False,
+                            error=error,
+                            duration_ms=duration_ms,
+                            retry_count=counter,
+                            correlation_id=correlation_id,
+                        )
                         if provider_index + 1 == len(use_tls_options):
                             raise
                         logger.debug("Falling back to non-TLS...")
@@ -119,6 +165,16 @@ def do(
         except Exception as ftp_error:
             if counter == 10:
                 logger.error("Retried 10 times, passing exception to dispatch")
+                log_backend_call(
+                    logger,
+                    "ftp",
+                    "upload",
+                    endpoint=f"{process_parameters.get('ftp_server', '')}",
+                    success=False,
+                    error=ftp_error,
+                    retry_count=counter,
+                    correlation_id=correlation_id,
+                )
                 raise
             counter += 1
             logger.warning(

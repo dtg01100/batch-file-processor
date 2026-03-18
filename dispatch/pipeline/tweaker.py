@@ -4,14 +4,19 @@ This module provides a pipeline step for applying EDI tweaks
 using the edi_tweaks module.
 """
 
-import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from batch_file_processor.structured_logging import (
+    StructuredLogger,
+    get_logger,
+    get_or_create_correlation_id,
+)
 from dispatch.interfaces import FileSystemInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -242,34 +247,77 @@ class EDITweakerStep:
         Returns:
             TweakerResult with tweak outcome
         """
+        correlation_id = get_or_create_correlation_id()
+        start_time = time.perf_counter()
+
         tweak_edi = params.get("tweak_edi", False)
         basename = os.path.basename(input_path)
 
-        logger.debug("Tweaking %s (tweak_edi=%s)", basename, tweak_edi)
+        StructuredLogger.log_debug(
+            logger,
+            "tweak",
+            __name__,
+            f"Starting tweak for {basename}",
+            input_path=basename,
+            tweak_edi=tweak_edi,
+            correlation_id=correlation_id,
+        )
 
         if not tweak_edi:
-            logger.debug("tweak_edi is False, skipping tweak for %s", basename)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "tweak",
+                __name__,
+                f"tweak_edi is False, skipping tweak for {basename}",
+                decision="tweak_edi_false",
+                input_path=basename,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
+            )
             return TweakerResult(
                 output_path=input_path, success=True, was_tweaked=False, errors=[]
             )
 
         output_filename = os.path.join(output_dir, basename)
 
-        logger.debug("Output will be written to: %s", output_filename)
+        StructuredLogger.log_debug(
+            logger,
+            "tweak",
+            __name__,
+            f"Output will be written to: {output_filename}",
+            input_path=basename,
+            output_path=output_filename,
+            correlation_id=correlation_id,
+        )
 
         errors: list[str] = []
 
         if self._file_system and not self._file_system.dir_exists(output_dir):
+            StructuredLogger.log_debug(
+                logger,
+                "tweak",
+                __name__,
+                f"Creating output directory: {output_dir}",
+                output_dir=output_dir,
+                correlation_id=correlation_id,
+            )
             try:
                 self._file_system.makedirs(output_dir)
             except Exception as e:
-                logger.error(
-                    "Failed to create output directory %s: %s",
-                    output_dir,
-                    e,
-                    exc_info=True,
-                )
+                duration_ms = (time.perf_counter() - start_time) * 1000
                 error_msg = f"Failed to create output directory: {e}"
+                StructuredLogger.log_error(
+                    logger,
+                    "tweak",
+                    __name__,
+                    e,
+                    {
+                        "input_path": basename,
+                        "output_dir": output_dir,
+                    },
+                    duration_ms,
+                )
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
                 return TweakerResult(
@@ -280,16 +328,48 @@ class EDITweakerStep:
                 )
 
         try:
+            StructuredLogger.log_debug(
+                logger,
+                "tweak",
+                __name__,
+                f"Calling tweak function for {basename}",
+                input_path=basename,
+                output_path=output_filename,
+                correlation_id=correlation_id,
+            )
+
             tweaked_path = self._tweak_function(
                 input_path, output_filename, settings, params, upc_dict
             )
 
-            logger.info("Tweaked %s -> %s", basename, tweaked_path)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "tweak",
+                __name__,
+                f"Tweaked {basename} -> {tweaked_path}",
+                input_path=basename,
+                output_path=tweaked_path,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
+            )
             return TweakerResult(
                 output_path=tweaked_path, success=True, was_tweaked=True, errors=errors
             )
 
         except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_error(
+                logger,
+                "tweak",
+                __name__,
+                e,
+                {
+                    "input_path": basename,
+                    "output_path": output_filename,
+                },
+                duration_ms,
+            )
             logger.error("Tweaking failed for %s: %s", basename, e, exc_info=True)
             error_msg = f"Tweaking failed: {e}"
             errors.append(error_msg)
@@ -339,8 +419,19 @@ class EDITweakerStep:
         import shutil
         import tempfile
 
+        correlation_id = get_or_create_correlation_id()
+        start_time = time.perf_counter()
+
         basename = os.path.basename(file_path)
-        logger.debug("Execute tweaker step for %s", basename)
+
+        StructuredLogger.log_debug(
+            logger,
+            "execute",
+            __name__,
+            f"Execute tweaker step for {basename}",
+            file_path=basename,
+            correlation_id=correlation_id,
+        )
 
         effective_settings = (
             settings if settings is not None else folder.get("settings", {})
@@ -348,7 +439,15 @@ class EDITweakerStep:
 
         # Create a TEMPORARY directory for intermediate processing
         temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
-        logger.debug("Created temp dir for tweaking: %s", temp_dir)
+        StructuredLogger.log_debug(
+            logger,
+            "execute",
+            __name__,
+            f"Created temp dir for tweaking: {temp_dir}",
+            temp_dir=temp_dir,
+            file_path=basename,
+            correlation_id=correlation_id,
+        )
 
         temp_dirs: Optional[list[str]] = None
         if context is not None and hasattr(context, "temp_dirs"):
@@ -371,21 +470,50 @@ class EDITweakerStep:
                 and result.output_path != file_path
                 and os.path.exists(result.output_path)
             ):
-                logger.debug("Tweaker step produced: %s", result.output_path)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                StructuredLogger.log_debug(
+                    logger,
+                    "execute",
+                    __name__,
+                    f"Tweaker step produced: {result.output_path}",
+                    file_path=basename,
+                    output_path=result.output_path,
+                    correlation_id=correlation_id,
+                    duration_ms=duration_ms,
+                )
                 # Return the output path directly while temp_dir still exists
                 # The path is inside temp_dir which we'll keep until orchestrator sends it
                 return result.output_path
 
             # Cleanup if tweaking didn't produce output
-            logger.debug(
-                "Tweaker step produced no output for %s, cleaning up", basename
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "execute",
+                __name__,
+                f"Tweaker step produced no output for {basename}, cleaning up",
+                file_path=basename,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
             )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)
             return None
-        except Exception:
+        except Exception as e:
             # Cleanup on exception
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_error(
+                logger,
+                "execute",
+                __name__,
+                e,
+                {
+                    "file_path": basename,
+                    "temp_dir": temp_dir,
+                },
+                duration_ms,
+            )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)

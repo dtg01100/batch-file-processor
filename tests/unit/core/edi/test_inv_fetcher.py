@@ -225,6 +225,28 @@ class TestInvFetcher:
 
         assert result == "NA"
 
+    def test_strict_mode_raises_when_query_runner_missing_for_po(self):
+        """Strict mode should fail fast when PO lookup has no query runner."""
+        fetcher = InvFetcher(None, {"database_lookup_mode": "strict"})
+
+        with pytest.raises(RuntimeError, match="no query_runner"):
+            fetcher.fetch_po(12345)
+
+    def test_strict_mode_raises_when_po_query_fails(self, mock_query_runner):
+        """Strict mode should propagate query errors for PO lookup."""
+        mock_query_runner.run_query.side_effect = RuntimeError("ODBC unavailable")
+        fetcher = InvFetcher(mock_query_runner, {"database_lookup_mode": "strict"})
+
+        with pytest.raises(RuntimeError, match="ODBC unavailable"):
+            fetcher.fetch_po(12345)
+
+    def test_strict_mode_raises_when_uom_query_runner_missing(self):
+        """Strict mode should fail fast when UOM lookup has no query runner."""
+        fetcher = InvFetcher(None, {"database_lookup_mode": "strict"})
+
+        with pytest.raises(RuntimeError, match="no query_runner"):
+            fetcher.fetch_uom_desc(123, 1, 0, 99999)
+
 
 class TestInvFetcherProtocolCompliance:
     """Tests for protocol compliance."""

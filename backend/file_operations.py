@@ -4,14 +4,20 @@ This module provides real and mock file operation implementations
 that conform to the FileOperationsProtocol interface.
 """
 
-import logging
 import os
 import shutil
+import time
 from typing import List, Optional
 
 from backend.protocols import FileOperationsProtocol
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_or_create_correlation_id,
+    log_backend_call,
+    log_file_operation,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RealFileOperations:
@@ -32,9 +38,35 @@ class RealFileOperations:
             FileNotFoundError: If source file doesn't exist
             PermissionError: If permission denied
         """
+        get_or_create_correlation_id()
+        start_time = time.perf_counter()
         logger.debug("Copying file %s -> %s", src, dst)
-        shutil.copy(src, dst)
-        logger.debug("Copied file %s -> %s", src, dst)
+        log_file_operation(logger, "copy", src, file_type=None, success=None)
+
+        try:
+            shutil.copy(src, dst)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "copy",
+                src,
+                file_type=None,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("Copied file %s -> %s", src, dst)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "copy",
+                src,
+                file_type=None,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def copy2(self, src: str, dst: str) -> None:
         """Copy a file with metadata preserved.
@@ -93,8 +125,53 @@ class RealFileOperations:
             FileNotFoundError: If file doesn't exist
             PermissionError: If permission denied
         """
+        get_or_create_correlation_id()
+        start_time = time.perf_counter()
         logger.debug("Removing file %s", path)
-        os.remove(path)
+        log_file_operation(logger, "delete", path, file_type=None, success=None)
+        log_backend_call(logger, "file", "delete", endpoint=path, success=None)
+
+        try:
+            os.remove(path)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "delete",
+                path,
+                file_type=None,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            log_backend_call(
+                logger,
+                "file",
+                "delete",
+                endpoint=path,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("Removed file %s", path)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "delete",
+                path,
+                file_type=None,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            log_backend_call(
+                logger,
+                "file",
+                "delete",
+                endpoint=path,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def rmtree(self, path: str) -> None:
         """Remove directory and all contents.
@@ -197,9 +274,55 @@ class RealFileOperations:
             src: Source path
             dst: Destination path
         """
+        get_or_create_correlation_id()
+        start_time = time.perf_counter()
         logger.debug("Moving %s -> %s", src, dst)
-        shutil.move(src, dst)
-        logger.debug("Moved %s -> %s", src, dst)
+        log_file_operation(logger, "move", src, file_type=None, success=None)
+        log_backend_call(
+            logger, "file", "move", endpoint=f"{src} -> {dst}", success=None
+        )
+
+        try:
+            shutil.move(src, dst)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "move",
+                src,
+                file_type=None,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            log_backend_call(
+                logger,
+                "file",
+                "move",
+                endpoint=f"{src} -> {dst}",
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("Moved %s -> %s", src, dst)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_file_operation(
+                logger,
+                "move",
+                src,
+                file_type=None,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            log_backend_call(
+                logger,
+                "file",
+                "move",
+                endpoint=f"{src} -> {dst}",
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def rename(self, src: str, dst: str) -> None:
         """Rename a file or directory.

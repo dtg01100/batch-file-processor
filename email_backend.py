@@ -4,6 +4,7 @@ This module sends files as email attachments with
 injectable client support for testing.
 """
 
+import errno
 import mimetypes
 import os
 import time
@@ -12,9 +13,39 @@ from typing import Optional
 
 from backend.protocols import SMTPClientProtocol
 from backend.smtp_client import create_smtp_client
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_backend_call,
+    log_file_operation,
+)
+
+logger = get_logger(__name__)
 
 # this module sends the file specified in filename to the address specified in the dict process_parameters via email
 # note: process_parameters is a dict from a row in the database, passed into this module
+
+
+def _is_network_unreachable(error: Exception) -> bool:
+    """Return True when error indicates a network-unreachable condition.
+
+    Traverses wrapped exceptions to catch nested socket errors.
+    """
+    visited: set[int] = set()
+    current: Optional[BaseException] = error
+
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+
+        if isinstance(current, OSError) and current.errno == errno.ENETUNREACH:
+            return True
+
+        smtp_code = getattr(current, "smtp_code", None)
+        if smtp_code == errno.ENETUNREACH:
+            return True
+
+        current = current.__cause__ or current.__context__
+
+    return False
 
 
 def do(
@@ -47,8 +78,20 @@ def do(
     """
     file_pass = False
     counter = 0
+    correlation_id = os.urandom(4).hex()
+    file_size = os.path.getsize(filename)
+
+    log_file_operation(
+        logger,
+        "read",
+        filename,
+        file_size=file_size,
+        file_type="attachment",
+        correlation_id=correlation_id,
+    )
 
     while not file_pass:
+        start_time = time.perf_counter()
         try:
             filename_no_path = os.path.basename(filename)
             filename_no_path_str = str(filename_no_path)
@@ -111,12 +154,54 @@ def do(
 
             server.send_message(message)
             server.close()
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                endpoint=f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}",
+                request_size=file_size,
+                success=True,
+                duration_ms=duration_ms,
+                correlation_id=correlation_id,
+            )
 
             file_pass = True
 
         except Exception as email_error:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            if _is_network_unreachable(email_error):
+                log_backend_call(
+                    logger,
+                    "smtp",
+                    "send",
+                    endpoint=f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}",
+                    success=False,
+                    error=email_error,
+                    duration_ms=duration_ms,
+                    correlation_id=correlation_id,
+                )
+                raise RuntimeError(
+                    "Network is unreachable (Errno 101) while connecting to SMTP "
+                    f"server {settings.get('email_smtp_server', '')}:"
+                    f"{settings.get('smtp_port', '')}. "
+                    "Check internet/VPN connectivity and SMTP server settings."
+                ) from email_error
+
             if counter == 10:
                 print("Retried 10 times, passing exception to dispatch")
+                log_backend_call(
+                    logger,
+                    "smtp",
+                    "send",
+                    endpoint=f"{settings.get('email_smtp_server', '')}",
+                    success=False,
+                    error=email_error,
+                    retry_count=counter,
+                    correlation_id=correlation_id,
+                )
                 raise
             counter += 1
             time.sleep(counter * counter)

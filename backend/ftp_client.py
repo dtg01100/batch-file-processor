@@ -5,12 +5,17 @@ that conform to the FTPClientProtocol interface.
 """
 
 import ftplib
-import logging
+import time
 from typing import Any, List, Optional, Tuple
 
 from backend.protocols import FTPClientProtocol
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_or_create_correlation_id,
+    log_backend_call,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RealFTPClient:
@@ -41,17 +46,45 @@ class RealFTPClient:
             port: Server port number
             timeout: Optional connection timeout in seconds
         """
-        logger.debug("FTP connecting to %s:%d (TLS=%s)", host, port, self.use_tls)
-        if self.use_tls:
-            self._connection = ftplib.FTP_TLS()
-        else:
-            self._connection = ftplib.FTP()
+        get_or_create_correlation_id()
+        start_time = time.perf_counter()
+        endpoint = f"{host}:{port}"
+        logger.debug("FTP connecting to %s (TLS=%s)", endpoint, self.use_tls)
+        log_backend_call(logger, "ftp", "connect", endpoint=endpoint, success=None)
 
-        if timeout is not None:
-            self._connection.connect(host, port, timeout)
-        else:
-            self._connection.connect(host, port, 30)  # 30s default
-        logger.debug("FTP connected to %s:%d", host, port)
+        try:
+            if self.use_tls:
+                self._connection = ftplib.FTP_TLS()
+            else:
+                self._connection = ftplib.FTP()
+
+            if timeout is not None:
+                self._connection.connect(host, port, timeout)
+            else:
+                self._connection.connect(host, port, 30)  # 30s default
+
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "connect",
+                endpoint=endpoint,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("FTP connected to %s", endpoint)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "connect",
+                endpoint=endpoint,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def login(self, user: str, password: str) -> None:
         """Authenticate with FTP server.
@@ -65,9 +98,34 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
+        start_time = time.perf_counter()
         logger.debug("FTP logging in as user: %s", user)
-        self._connection.login(user, password)
-        logger.debug("FTP login successful")
+        log_backend_call(logger, "ftp", "login", context={"user": user}, success=None)
+
+        try:
+            self._connection.login(user, password)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "login",
+                context={"user": user},
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("FTP login successful")
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "login",
+                context={"user": user},
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def cwd(self, directory: str) -> None:
         """Change working directory on FTP server.
@@ -94,8 +152,34 @@ class RealFTPClient:
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
         filename = cmd.split()[-1] if " " in cmd else cmd
+        start_time = time.perf_counter()
         logger.debug("FTP storing file: %s", filename)
-        self._connection.storbinary(cmd, fp, blocksize)
+        log_backend_call(logger, "ftp", "upload", endpoint=filename, success=None)
+
+        try:
+            self._connection.storbinary(cmd, fp, blocksize)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "upload",
+                endpoint=filename,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("FTP stored file: %s", filename)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "upload",
+                endpoint=filename,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def quit(self) -> None:
         """Send QUIT command and close connection gracefully."""
@@ -152,7 +236,35 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
-        self._connection.retrbinary(cmd, callback, blocksize)
+        filename = cmd.split()[-1] if " " in cmd else cmd
+        start_time = time.perf_counter()
+        logger.debug("FTP retrieving file: %s", filename)
+        log_backend_call(logger, "ftp", "download", endpoint=filename, success=None)
+
+        try:
+            self._connection.retrbinary(cmd, callback, blocksize)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "download",
+                endpoint=filename,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("FTP retrieved file: %s", filename)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "download",
+                endpoint=filename,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def mkd(self, directory: str) -> str:
         """Create a directory on the FTP server.
@@ -175,7 +287,34 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
-        self._connection.delete(filename)
+        start_time = time.perf_counter()
+        logger.debug("FTP deleting file: %s", filename)
+        log_backend_call(logger, "ftp", "delete", endpoint=filename, success=None)
+
+        try:
+            self._connection.delete(filename)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "delete",
+                endpoint=filename,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("FTP deleted file: %s", filename)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "ftp",
+                "delete",
+                endpoint=filename,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     @property
     def connected(self) -> bool:

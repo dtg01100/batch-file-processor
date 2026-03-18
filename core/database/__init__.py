@@ -16,6 +16,7 @@ from core.database.query_runner import (
     MockConnection,
     PyODBCConnection,
     QueryRunner,
+    assert_read_only_sql,
     create_query_runner,
 )
 
@@ -111,6 +112,8 @@ class query_runner:
         Returns:
             List of query results (legacy format as tuples)
         """
+        assert_read_only_sql(query_string)
+
         # Use the new runner's connection directly for legacy tuple format
         if self.connection is None:
             self.connection = self._runner.connection._connect()

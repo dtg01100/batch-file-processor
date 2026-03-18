@@ -6,15 +6,22 @@ from ConfigurationSchema definitions. Supports the Qt framework
 through the existing UI abstraction layer.
 """
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_correlation_id,
+    set_correlation_id,
+    generate_correlation_id,
+    log_with_context,
+)
 
 from interface.plugins.config_schemas import ConfigurationSchema
 from interface.plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
 from interface.plugins.validation_framework import ValidationResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FormGenerator(ABC):
@@ -46,6 +53,21 @@ class FormGenerator(ABC):
         self._plugin_sections: List[WidgetBase] = []
         self._plugin_schemas: Dict[str, ConfigurationSchema] = {}
         self._plugin_configs: Dict[str, Dict[str, Any]] = {}
+        self._correlation_id = generate_correlation_id()
+        set_correlation_id(self._correlation_id)
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Form generator initialized",
+            correlation_id=self._correlation_id,
+            component="form_generator",
+            operation="__init__",
+            context={
+                "schema_name": getattr(schema, "name", "unknown"),
+                "framework": framework,
+                "field_count": len(getattr(schema, "fields", [])),
+            },
+        )
 
     @abstractmethod
     def build_form(self, config: dict = None, parent: Any = None) -> Any:
@@ -399,7 +421,19 @@ class QtFormGenerator(FormGenerator):
                     section_layout.addWidget(native_widget)
 
         except Exception as e:
-            logger.error("Error rendering plugin sections: %s", e, exc_info=True)
+            log_with_context(
+                logger,
+                40,  # ERROR
+                f"Error rendering plugin sections: {e}",
+                correlation_id=get_correlation_id(),
+                component="form_generator",
+                operation="_render_plugin_sections",
+                context={
+                    "error_type": type(e).__name__,
+                    "section_count": len(self._plugin_schemas),
+                },
+                exc_info=True,
+            )
 
     def get_values(self) -> Dict[str, Any]:
         """
@@ -436,7 +470,20 @@ class QtFormGenerator(FormGenerator):
             if not widget.validate():
                 all_errors.extend(widget.get_validation_errors())
 
-        return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
+        is_valid = len(all_errors) == 0
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            f"Form validation {'succeeded' if is_valid else 'failed'}",
+            correlation_id=get_correlation_id(),
+            component="form_generator",
+            operation="validate",
+            context={
+                "error_count": len(all_errors),
+                "field_count": len(self.widgets),
+            },
+        )
+        return ValidationResult(success=is_valid, errors=all_errors)
 
     def get_validation_errors(self) -> List[str]:
         """
@@ -498,6 +545,19 @@ class FormGeneratorFactory:
         Raises:
             ValueError: If framework is not supported
         """
+        correlation_id = get_correlation_id() or generate_correlation_id()
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            f"Creating form generator for framework: {framework}",
+            correlation_id=correlation_id,
+            component="form_generator",
+            operation="create_form_generator",
+            context={
+                "framework": framework,
+                "schema_name": getattr(schema, "name", "unknown"),
+            },
+        )
         if framework == "qt":
             return QtFormGenerator(schema, framework)
         else:

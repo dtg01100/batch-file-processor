@@ -9,7 +9,9 @@ Reference:
 
 import logging
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import get_logger, log_with_context
+
+logger = get_logger(__name__)
 
 
 def calc_check_digit(value: str | int) -> int:
@@ -158,15 +160,44 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         if test_unit_multiplier == 0:
             raise ValueError("unit_multiplier cannot be zero")
         int(record["qty_of_units"].strip())
-    except Exception:
-        logger.warning("cannot parse b record field, skipping")
+    except Exception as e:
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "B record parse failed",
+            operation="apply_retail_uom_transform",
+            context={
+                "error_type": type(e).__name__,
+                "record_fields": list(record.keys()),
+            },
+        )
         return False
 
     # Get the each-level UPC from lookup
     try:
         each_upc_string = upc_lookup[item_number][1][:11].ljust(11)
+        log_with_context(
+            logger,
+            logging.DEBUG,
+            "UPC lookup successful",
+            operation="apply_retail_uom_transform",
+            context={
+                "item_number": item_number,
+                "upc_found": each_upc_string.strip() != "",
+            },
+        )
     except (KeyError, IndexError):
         each_upc_string = "           "
+        log_with_context(
+            logger,
+            logging.DEBUG,
+            "UPC lookup failed - item not in dictionary",
+            operation="apply_retail_uom_transform",
+            context={
+                "item_number": item_number,
+                "upc_dict_keys_count": len(upc_lookup),
+            },
+        )
 
     # Apply the transformation
     try:
@@ -187,5 +218,15 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         record["unit_multiplier"] = "000001"
         return True
     except Exception as error:
-        logger.warning("UPC transformation failed: %s", error)
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "UPC transformation failed",
+            operation="apply_retail_uom_transform",
+            context={
+                "item_number": item_number,
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+            },
+        )
         return False

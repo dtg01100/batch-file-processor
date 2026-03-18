@@ -3,6 +3,9 @@ import shutil
 import time
 
 import utils
+from batch_file_processor.structured_logging import get_logger, log_file_operation
+
+logger = get_logger(__name__)
 
 
 def do_backup(input_file):
@@ -27,6 +30,25 @@ def do_backup(input_file):
         + "-"
         + str(time.ctime()).replace(":", "-"),
     )
+
+    log_file_operation(
+        logger,
+        "copy",
+        input_file,
+        file_size=os.path.getsize(input_file) if os.path.exists(input_file) else None,
+        file_type="backup",
+    )
+
     shutil.copy(input_file, backup_path)
+
+    log_file_operation(
+        logger,
+        "write",
+        backup_path,
+        file_size=os.path.getsize(backup_path) if os.path.exists(backup_path) else None,
+        file_type="backup",
+        success=True,
+    )
+
     utils.do_clear_old_files(os.path.dirname(backup_path), 50)
     return backup_path

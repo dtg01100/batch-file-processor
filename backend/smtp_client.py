@@ -4,13 +4,18 @@ This module provides real and mock SMTP client implementations
 that conform to the SMTPClientProtocol interface.
 """
 
-import logging
 import smtplib
+import time
 from typing import Any, Dict, List, Optional
 
 from backend.protocols import SMTPClientProtocol
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_or_create_correlation_id,
+    log_backend_call,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RealSMTPClient:
@@ -45,9 +50,36 @@ class RealSMTPClient:
             port: Server port number
             timeout: Connection timeout in seconds (default 30)
         """
-        logger.debug("SMTP connecting to %s:%d", host, port)
-        self._connection = smtplib.SMTP(host, port, timeout=timeout)
-        logger.debug("SMTP connected to %s:%d", host, port)
+        get_or_create_correlation_id()
+        start_time = time.perf_counter()
+        endpoint = f"{host}:{port}"
+        logger.debug("SMTP connecting to %s", endpoint)
+        log_backend_call(logger, "smtp", "connect", endpoint=endpoint, success=None)
+
+        try:
+            self._connection = smtplib.SMTP(host, port, timeout=timeout)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "connect",
+                endpoint=endpoint,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("SMTP connected to %s", endpoint)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "connect",
+                endpoint=endpoint,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def starttls(self) -> None:
         """Upgrade connection to TLS.
@@ -73,9 +105,34 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
+        start_time = time.perf_counter()
         logger.debug("SMTP authenticating as: %s", user)
-        self._connection.login(user, password)
-        logger.debug("SMTP authentication successful")
+        log_backend_call(logger, "smtp", "login", context={"user": user}, success=None)
+
+        try:
+            self._connection.login(user, password)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "login",
+                context={"user": user},
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.debug("SMTP authentication successful")
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "login",
+                context={"user": user},
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def sendmail(self, from_addr: str, to_addrs: list, msg: str) -> dict:
         """Send email message.
@@ -93,10 +150,45 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
+        start_time = time.perf_counter()
+        request_size = len(msg) if msg else 0
         logger.debug("SMTP sending email from %s to %s", from_addr, to_addrs)
-        result = self._connection.sendmail(from_addr, to_addrs, msg)
-        logger.info("SMTP email sent successfully to %s", to_addrs)
-        return result
+        log_backend_call(
+            logger,
+            "smtp",
+            "send",
+            context={"from": from_addr, "to": to_addrs},
+            request_size=request_size,
+            success=None,
+        )
+
+        try:
+            result = self._connection.sendmail(from_addr, to_addrs, msg)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                context={"from": from_addr, "to": to_addrs},
+                request_size=request_size,
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.info("SMTP email sent successfully to %s", to_addrs)
+            return result
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                context={"from": from_addr, "to": to_addrs},
+                request_size=request_size,
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def send_message(self, msg: Any) -> dict:
         """Send EmailMessage object.
@@ -112,14 +204,47 @@ class RealSMTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
+        start_time = time.perf_counter()
+        from_addr = msg.get("From", "")
+        to_addrs = msg.get("To", "")
         logger.debug(
             "SMTP sending message object from=%s to=%s",
-            msg.get("From", ""),
-            msg.get("To", ""),
+            from_addr,
+            to_addrs,
         )
-        result = self._connection.send_message(msg)
-        logger.info("SMTP message sent successfully to %s", msg["To"])
-        return result
+        log_backend_call(
+            logger,
+            "smtp",
+            "send",
+            context={"from": from_addr, "to": to_addrs},
+            success=None,
+        )
+
+        try:
+            result = self._connection.send_message(msg)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                context={"from": from_addr, "to": to_addrs},
+                success=True,
+                duration_ms=duration_ms,
+            )
+            logger.info("SMTP message sent successfully to %s", to_addrs)
+            return result
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                context={"from": from_addr, "to": to_addrs},
+                success=False,
+                error=e,
+                duration_ms=duration_ms,
+            )
+            raise
 
     def quit(self) -> None:
         """Send QUIT command and close connection gracefully."""

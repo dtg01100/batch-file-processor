@@ -661,6 +661,39 @@ class TestConvertToYellowdogCSV:
             "\n"
         )
 
+    def test_strict_mode_requires_as400_settings(self, tmp_path):
+        """Strict DB mode should fail fast when AS400 credentials are missing."""
+        import convert_to_yellowdog_csv
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text("AVENDOR 00000000010101250000010000\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="strict database_lookup_mode"):
+            convert_to_yellowdog_csv.edi_convert(
+                str(input_file),
+                str(tmp_path / "out"),
+                {},
+                {"database_lookup_mode": "strict"},
+                {},
+            )
+
+    def test_optional_mode_allows_missing_db_credentials(self, tmp_path):
+        """Optional DB mode should still generate output with fallback values."""
+        import convert_to_yellowdog_csv
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text("AVENDOR 00000000010101250000010000\n", encoding="utf-8")
+
+        result = convert_to_yellowdog_csv.edi_convert(
+            str(input_file),
+            str(tmp_path / "out"),
+            {},
+            {"database_lookup_mode": "optional"},
+            {},
+        )
+
+        assert os.path.exists(result)
+
 
 class TestConvertToEstoreEinvoice:
     """Test suite for convert_to_estore_einvoice conversion."""

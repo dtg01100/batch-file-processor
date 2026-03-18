@@ -4,16 +4,19 @@ This module provides a pipeline step for EDI file splitting,
 wrapping the existing EDISplitter with pipeline integration.
 """
 
-import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+)
 from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _normalize_true_false_only(value: Any) -> bool:
@@ -325,6 +328,17 @@ class EDISplitterStep:
             params.get("split_edi_include_credits", True), default=True
         )
 
+        log_file_operation(
+            logger,
+            "split",
+            input_path,
+            file_type="edi",
+            context={
+                "split_edi": split_edi,
+                "filter_categories": filter_categories,
+                "filter_mode": filter_mode,
+            },
+        )
         logger.debug(
             "Splitting %s (split_edi=%s, filter_categories=%s, filter_mode=%s)",
             input_path,
@@ -406,6 +420,18 @@ class EDISplitterStep:
                     split_result.output_files, include_invoices, include_credits
                 )
 
+                log_file_operation(
+                    logger,
+                    "split",
+                    input_path,
+                    file_type="edi",
+                    success=True,
+                    context={
+                        "output_files": len(filtered_files),
+                        "was_filtered": was_filtered,
+                        "skipped_invoices": split_result.skipped_invoices,
+                    },
+                )
                 logger.info(
                     "Split %s into %d files (was_filtered=%s, skipped=%d)",
                     input_path,

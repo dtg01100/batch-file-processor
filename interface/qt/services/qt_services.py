@@ -200,14 +200,27 @@ class QtProgressService(QObject):
         self._overlay = self._build_overlay(parent)
         self._title_label = self._build_title_label(self._overlay)
         self._throbber = self._build_throbber(self._overlay)
+        self._discovery_progress_label = self._build_phase_label(
+            self._overlay,
+            "Finding files to send",
+        )
+        self._discovery_progress_bar = self._build_progress_bar(self._overlay)
+        self._send_progress_label = self._build_phase_label(
+            self._overlay,
+            "Sending files",
+        )
         self._progress_bar = self._build_progress_bar(self._overlay)
         self._folder_label = self._build_detail_label(self._overlay)
         self._file_label = self._build_detail_label(self._overlay)
         self._footer_label = self._build_footer_label(self._overlay)
         self._total = 0  # Initialize total progress value
         self._current_folder_name = ""
+        self._current_folder_num = 1
+        self._current_folder_total = 1
         self._current_file_index = 0
         self._current_file_total = 0
+        self._overall_file_total = 0
+        self._completed_files_before_current = 0
         self._setup_layout()
         self._overlay.hide()
         parent.installEventFilter(self)
@@ -235,6 +248,11 @@ class QtProgressService(QObject):
         overlay = QFrame(parent)
         overlay.setObjectName("qt_progress_overlay")
         overlay.setAutoFillBackground(True)
+        # Ensure stylesheet background gets painted even with global QFrame styles.
+        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        overlay.setStyleSheet(
+            f"QFrame#qt_progress_overlay {{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
+        )
 
         palette = overlay.palette()
         color = QColor(0, 0, 0, 230)  # Semi-transparent black
@@ -275,6 +293,16 @@ class QtProgressService(QObject):
             f"color: {Theme.TEXT_ON_OVERLAY_TERTIARY}; font-size: 11pt; font-style: italic;"
         )
         label.setWordWrap(True)
+        return label
+
+    @staticmethod
+    def _build_phase_label(parent: QWidget, text: str) -> QLabel:
+        """Create a label for a progress phase bar."""
+        label = QLabel(text, parent)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet(
+            f"color: {Theme.TEXT_ON_OVERLAY_SECONDARY}; font-size: 11pt; font-weight: 600;"
+        )
         return label
 
     @staticmethod
@@ -349,6 +377,10 @@ class QtProgressService(QObject):
         layout = QVBoxLayout(self._overlay)
         layout.addStretch()
         layout.addWidget(self._throbber)
+        layout.addWidget(self._discovery_progress_label)
+        layout.addWidget(self._discovery_progress_bar)
+        layout.addSpacing(Theme.SPACING_MD_INT)
+        layout.addWidget(self._send_progress_label)
         layout.addWidget(self._progress_bar)
         layout.addSpacing(Theme.SPACING_LG_INT)
         layout.addWidget(self._title_label)
@@ -522,17 +554,125 @@ class QtProgressService(QObject):
         progress = max(0, min(100, progress))
         self._progress_bar.setValue(progress)
         self._throbber.hide()
+        self._send_progress_label.show()
         self._progress_bar.show()
+
+    def update_discovery_progress(
+        self,
+        folder_num: int,
+        folder_total: int,
+        folder_name: str,
+        pending_for_folder: int,
+        pending_total: int,
+    ) -> None:
+        """Update phase-1 (file discovery) progress.
+
+        Args:
+            folder_num: Current folder index (1-based)
+            folder_total: Total folders being scanned
+            folder_name: Current folder display name
+            pending_for_folder: Pending files found in current folder
+            pending_total: Accumulated pending files found so far
+        """
+        if folder_total <= 0:
+            self._discovery_progress_bar.setValue(0)
+        else:
+            discovery_pct = int((folder_num / folder_total) * 100)
+            self._discovery_progress_bar.setValue(max(0, min(100, discovery_pct)))
+
+        self._discovery_progress_label.setText(
+            f"Finding files to send ({folder_num}/{folder_total})"
+        )
+        self._title_label.setText("Finding files to send...")
+        self._folder_label.setText(f"Folder: {folder_name}")
+        self._folder_label.show()
+        self._file_label.setText(
+            f"Pending in folder: {pending_for_folder} | Pending total: {pending_total}"
+        )
+        self._file_label.show()
+        self._footer_label.hide()
+        self._throbber.hide()
+        self._discovery_progress_label.show()
+        self._discovery_progress_bar.show()
+        self._send_progress_label.show()
+        self._progress_bar.show()
+
+    def start_discovery(self, folder_total: int) -> None:
+        """Begin phase-1 (file discovery) tracking."""
+        self.show("Finding files to send...")
+        self._discovery_progress_bar.setValue(0)
+        self._progress_bar.setValue(0)
+        self._discovery_progress_label.setText(
+            f"Finding files to send (0/{folder_total})"
+        )
+        self._send_progress_label.setText("Sending files")
+        self._throbber.hide()
+        self._discovery_progress_label.show()
+        self._discovery_progress_bar.show()
+        self._send_progress_label.show()
+        self._progress_bar.show()
+
+    def finish_discovery(self, total_pending: int) -> None:
+        """Complete phase-1 discovery tracking."""
+        self._discovery_progress_bar.setValue(100)
+        self._footer_label.setText(f"Found {total_pending} file(s) ready to send")
+        self._footer_label.show()
+
+    def start_sending(self, total_files: int, total_folders: int) -> None:
+        """Begin phase-2 (sending) tracking."""
+        self._overall_file_total = max(0, total_files)
+        self._completed_files_before_current = 0
+        self._current_folder_num = 1
+        self._current_folder_total = max(1, total_folders)
+        self._progress_bar.setValue(0)
+        self._send_progress_label.setText(
+            f"Sending files (0/{self._overall_file_total})"
+        )
+        self._title_label.setText("Sending files...")
+        self._throbber.hide()
+        self._discovery_progress_label.show()
+        self._discovery_progress_bar.show()
+        self._send_progress_label.show()
+        self._progress_bar.show()
+
+    def set_folder_context(
+        self,
+        folder_num: int,
+        folder_total: int,
+        folder_name: str,
+        file_total: int,
+    ) -> None:
+        """Set active folder metadata for phase-2 sending progress."""
+        self._current_folder_num = max(1, folder_num)
+        self._current_folder_total = max(1, folder_total)
+        self._current_folder_name = folder_name
+        self._current_file_total = max(0, file_total)
+        self._current_file_index = 0
+
+        self.update_detailed_progress(
+            folder_num=self._current_folder_num,
+            folder_total=self._current_folder_total,
+            file_num=0,
+            file_total=self._current_file_total,
+            footer="",
+        )
 
     def set_indeterminate(self) -> None:
         """Switch to indeterminate mode (show throbber, hide progress bar)."""
         self._throbber.show()
+        self._send_progress_label.hide()
         self._progress_bar.hide()
         self._progress_bar.setValue(0)
 
     # -- dispatch compatibility methods --------------------------------------
 
-    def start_folder(self, folder_name: str, total_files: int) -> None:
+    def start_folder(
+        self,
+        folder_name: str,
+        total_files: int,
+        folder_num: int | None = None,
+        folder_total: int | None = None,
+    ) -> None:
         """Start progress reporting for a folder.
 
         This compatibility method is used by the dispatch orchestrator.
@@ -542,18 +682,23 @@ class QtProgressService(QObject):
             total_files: Number of files to process in this folder.
         """
         self._current_folder_name = folder_name
+        if folder_num is not None:
+            self._current_folder_num = max(1, folder_num)
+        if folder_total is not None:
+            self._current_folder_total = max(1, folder_total)
         self._current_file_index = 0
         self._current_file_total = max(0, total_files)
 
         self.update_message(f"Processing folder: {folder_name}")
         self.update_detailed_progress(
-            folder_num=1,
-            folder_total=1,
+            folder_num=self._current_folder_num,
+            folder_total=self._current_folder_total,
             file_num=0,
             file_total=self._current_file_total,
             footer="",
         )
-        self.set_indeterminate()
+        if self._overall_file_total <= 0:
+            self.set_indeterminate()
 
     def update_file(self, current_file: int, total_files: int) -> None:
         """Update file-level progress for the current folder.
@@ -565,17 +710,24 @@ class QtProgressService(QObject):
         self._current_file_index = max(0, current_file)
         self._current_file_total = max(0, total_files)
 
-        if self._current_file_total > 0:
-            percentage = int(
-                (self._current_file_index / self._current_file_total) * 100
+        if self._overall_file_total > 0:
+            absolute_progress = self._completed_files_before_current + min(
+                self._current_file_index, self._current_file_total
             )
+            percentage = int((absolute_progress / self._overall_file_total) * 100)
+            self._send_progress_label.setText(
+                f"Sending files ({absolute_progress}/{self._overall_file_total})"
+            )
+            self.update_progress(percentage)
+        elif self._current_file_total > 0:
+            percentage = int((self._current_file_index / self._current_file_total) * 100)
             self.update_progress(percentage)
         else:
             self.set_indeterminate()
 
         self.update_detailed_progress(
-            folder_num=1,
-            folder_total=1,
+            folder_num=self._current_folder_num,
+            folder_total=self._current_folder_total,
             file_num=self._current_file_index,
             file_total=self._current_file_total,
             footer="",
@@ -590,14 +742,31 @@ class QtProgressService(QObject):
         status_text = "Completed" if success else "Completed with errors"
         folder_name = self._current_folder_name or "folder"
         self.update_message(f"{status_text}: {folder_name}")
+
+        if self._overall_file_total > 0:
+            self._completed_files_before_current = min(
+                self._overall_file_total,
+                self._completed_files_before_current + self._current_file_total,
+            )
+            self._send_progress_label.setText(
+                "Sending files "
+                f"({self._completed_files_before_current}/{self._overall_file_total})"
+            )
+
         self.update_detailed_progress(
-            folder_num=1,
-            folder_total=1,
+            folder_num=self._current_folder_num,
+            folder_total=self._current_folder_total,
             file_num=self._current_file_total,
             file_total=self._current_file_total,
             footer="",
         )
-        self.update_progress(100)
+        if self._overall_file_total > 0:
+            overall_percentage = int(
+                (self._completed_files_before_current / self._overall_file_total) * 100
+            )
+            self.update_progress(overall_percentage)
+        else:
+            self.update_progress(100)
 
     # -- geometry management --------------------------------------------------
 

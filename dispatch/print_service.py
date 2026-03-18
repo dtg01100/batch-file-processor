@@ -5,13 +5,14 @@ using Protocol interfaces for dependency injection and handling
 platform-specific printing operations.
 """
 
-import logging
 import sys
 import textwrap
 from abc import ABC, abstractmethod
 from typing import Optional, Protocol, runtime_checkable
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @runtime_checkable

@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import datetime
-import logging
 import time
 import traceback
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_correlation_id,
+    set_correlation_id,
+    generate_correlation_id,
+    log_with_context,
+)
+
+logger = get_logger(__name__)
 
 
 class QtRunCoordinator:
@@ -18,6 +25,16 @@ class QtRunCoordinator:
         self._app = app
 
     def graphical_process_directories(self, folders_table_process) -> None:
+        correlation_id = generate_correlation_id()
+        set_correlation_id(correlation_id)
+        logger.info(
+            "Starting graphical directory processing",
+            extra={
+                "correlation_id": correlation_id,
+                "operation": "graphical_process_directories",
+                "component": "qt_run_coordinator",
+            },
+        )
         missing_folder = False
         missing_folder_name = None
         for folder_test in folders_table_process.find(folder_is_active=True):
@@ -34,7 +51,7 @@ class QtRunCoordinator:
                 + (f" (e.g. '{missing_folder_name}')." if missing_folder_name else "."),
             )
         elif folders_table_process.count(folder_is_active=True) > 0:
-            self._app._progress_service.show("processing folders...")
+            self._app._progress_service.show("Preparing run...")
             self._app._process_directories(folders_table_process)
             self._app._refresh_users_list()
             self._app._set_main_button_states()
@@ -43,7 +60,19 @@ class QtRunCoordinator:
             self._app._ui_service.show_error("Error", "No Active Folders")
 
     def process_directories(self, folders_table_process) -> None:
-        logger.debug("Starting process_directories run")
+        correlation_id = get_correlation_id() or generate_correlation_id()
+        set_correlation_id(correlation_id)
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Starting process_directories run",
+            correlation_id=correlation_id,
+            component="qt_run_coordinator",
+            operation="process_directories",
+            context={
+                "folder_count": folders_table_process.count(folder_is_active=True)
+            },
+        )
         original_folder = self._app._os_module.getcwd()
         settings_dict = self._app._database.get_settings_or_default()
 
@@ -70,10 +99,18 @@ class QtRunCoordinator:
             try:
                 self._app._os_module.mkdir(self._app._logs_directory["logs_directory"])
             except IOError as mkdir_error:
-                logger.error(
-                    "Failed to create log directory '%s': %s",
-                    self._app._logs_directory["logs_directory"],
-                    mkdir_error,
+                log_with_context(
+                    logger,
+                    40,  # ERROR
+                    f"Failed to create log directory: {mkdir_error}",
+                    correlation_id=get_correlation_id(),
+                    component="qt_run_coordinator",
+                    operation="process_directories",
+                    context={
+                        "log_directory": self._app._logs_directory["logs_directory"],
+                        "error_type": type(mkdir_error).__name__,
+                    },
+                    exc_info=True,
                 )
                 log_folder_creation_error = True
 
@@ -139,12 +176,45 @@ class QtRunCoordinator:
                     folders_table_process.find(folder_is_active=True, order_by="alias")
                 )
 
-                for folder in folders:
+                pending_files_by_folder, total_pending_files = (
+                    orchestrator.discover_pending_files(
+                        folders,
+                        self._app._database.processed_files,
+                        progress_reporter=self._app._progress_service,
+                    )
+                )
+
+                if self._app._progress_service and hasattr(
+                    self._app._progress_service, "start_sending"
+                ):
+                    self._app._progress_service.start_sending(
+                        total_files=total_pending_files,
+                        total_folders=len(folders),
+                    )
+
+                for folder_index, folder in enumerate(folders, start=1):
+                    pending_files = pending_files_by_folder[folder_index - 1]
+
+                    if self._app._progress_service and hasattr(
+                        self._app._progress_service, "set_folder_context"
+                    ):
+                        self._app._progress_service.set_folder_context(
+                            folder_num=folder_index,
+                            folder_total=len(folders),
+                            folder_name=folder.get(
+                                "alias", folder.get("folder_name", "")
+                            ),
+                            file_total=len(pending_files),
+                        )
+
                     try:
                         result = orchestrator.process_folder(
                             folder,
                             run_log,
                             self._app._database.processed_files,
+                            pre_discovered_files=pending_files,
+                            folder_num=folder_index,
+                            folder_total=len(folders),
                         )
                         if not result.success:
                             run_error_bool = True
@@ -159,13 +229,30 @@ class QtRunCoordinator:
                     self._app._ui_service.show_info(
                         "Run Status", "Run completed with errors."
                     )
-                logger.info(
-                    "Dispatch completed (errors=%s, summary=%s)",
-                    run_error_bool,
-                    run_summary_string,
+                log_with_context(
+                    logger,
+                    20,  # INFO
+                    "Dispatch completed",
+                    correlation_id=get_correlation_id(),
+                    component="qt_run_coordinator",
+                    operation="process_directories",
+                    context={
+                        "run_error": run_error_bool,
+                        "summary": run_summary_string,
+                        "folders_processed": len(folders),
+                    },
                 )
             except Exception as dispatch_error:
-                logger.exception("Run failed: %s", dispatch_error)
+                log_with_context(
+                    logger,
+                    40,  # ERROR
+                    f"Run failed: {dispatch_error}",
+                    correlation_id=get_correlation_id(),
+                    component="qt_run_coordinator",
+                    operation="process_directories",
+                    context={"error_type": type(dispatch_error).__name__},
+                    exc_info=True,
+                )
                 run_log.write(
                     (
                         "Run failed, check your configuration \r\n"
@@ -187,11 +274,39 @@ class QtRunCoordinator:
             )
 
     def automatic_process_directories(self, automatic_process_folders_table) -> None:
-        if automatic_process_folders_table.count(folder_is_active=True) > 0:
-            logger.info("Batch processing configured directories")
+        correlation_id = generate_correlation_id()
+        set_correlation_id(correlation_id)
+        active_count = automatic_process_folders_table.count(folder_is_active=True)
+        if active_count > 0:
+            log_with_context(
+                logger,
+                20,  # INFO
+                "Batch processing configured directories",
+                correlation_id=correlation_id,
+                component="qt_run_coordinator",
+                operation="automatic_process_directories",
+                context={"active_folders": active_count},
+            )
             try:
                 self._app._process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:
+                log_with_context(
+                    logger,
+                    50,  # CRITICAL
+                    f"Automatic processing failed: {automatic_process_error}",
+                    correlation_id=get_correlation_id(),
+                    component="qt_run_coordinator",
+                    operation="automatic_process_directories",
+                    context={"error_type": type(automatic_process_error).__name__},
+                    exc_info=True,
+                )
                 self._app._log_critical_error(automatic_process_error)
         else:
-            logger.warning("No active folders configured")
+            log_with_context(
+                logger,
+                30,  # WARNING
+                "No active folders configured",
+                correlation_id=get_correlation_id(),
+                component="qt_run_coordinator",
+                operation="automatic_process_directories",
+            )

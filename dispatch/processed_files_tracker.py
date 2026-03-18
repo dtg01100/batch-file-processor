@@ -4,12 +4,17 @@ This module provides a refactored, testable implementation of file tracking,
 using Protocol interfaces for dependency injection and database abstraction.
 """
 
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Protocol, runtime_checkable
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -309,10 +314,29 @@ class ProcessedFilesTracker:
         Args:
             record: The processed file record to store
         """
+        import logging
+
         self.database.insert(self.TABLE_NAME, record.to_dict())
-        logger.info(
-            "Recorded sent file: %s for folder %s"
-            % (record.file_name, record.folder_id)
+        log_file_operation(
+            logger,
+            "record",
+            record.file_name,
+            file_type="edi",
+            success=True,
+            context={
+                "folder_id": record.folder_id,
+                "checksum": record.file_checksum,
+            },
+        )
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Recorded sent file: {record.file_name} for folder {record.folder_id}",
+            context={
+                "file_name": record.file_name,
+                "folder_id": record.folder_id,
+                "checksum": record.file_checksum,
+            },
         )
 
     def record_sent_file_simple(
@@ -482,8 +506,23 @@ class ProcessedFilesTracker:
             file_name: Name of the file
             folder_id: ID of the folder
         """
+        import logging
+
         self.database.delete(self.TABLE_NAME, file_name=file_name, folder_id=folder_id)
-        logger.info("Deleted file record: %s" % file_name)
+        log_file_operation(
+            logger,
+            "delete_record",
+            file_name,
+            file_type="record",
+            success=True,
+            context={"folder_id": folder_id},
+        )
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Deleted file record: {file_name}",
+            context={"file_name": file_name, "folder_id": folder_id},
+        )
 
 
 def create_processed_files_tracker(

@@ -4,10 +4,17 @@ Handles the construction and management of dynamic EDI configuration sections
 that appear based on user selections in the EDI options dropdown.
 """
 
-import logging
 from typing import Any, Callable, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_correlation_id,
+    set_correlation_id,
+    generate_correlation_id,
+    log_with_context,
+)
+
+logger = get_logger(__name__)
 
 from PyQt6 import QtCore
 from PyQt6.QtWidgets import (
@@ -77,6 +84,20 @@ class DynamicEDIBuilder:
 
         # State tracking
         self._edi_option_processing = False
+        self._correlation_id = generate_correlation_id()
+        set_correlation_id(self._correlation_id)
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Dynamic EDI Builder initialized",
+            correlation_id=self._correlation_id,
+            component="dynamic_edi_builder",
+            operation="__init__",
+            context={
+                "folder_alias": folder_config.get("alias", "unknown"),
+                "convert_to_format": folder_config.get("convert_to_format", "csv"),
+            },
+        )
 
         # Preserved UPC override values (plain Python, not widgets) so they
         # survive _clear_dynamic_edi / _clear_convert_sub calls.
@@ -180,7 +201,14 @@ class DynamicEDIBuilder:
 
     def _clear_dynamic_edi(self):
         """Clear dynamic EDI widgets and clean up field references."""
-        logger.debug("Clearing dynamic EDI widgets")
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Clearing dynamic EDI widgets",
+            correlation_id=get_correlation_id(),
+            component="dynamic_edi_builder",
+            operation="_clear_dynamic_edi",
+        )
         self._snapshot_upc_override()
         try:
             keys_to_remove = []
@@ -213,7 +241,16 @@ class DynamicEDIBuilder:
                     del self.fields[key]
 
         except Exception as e:
-            logger.exception("Error in _clear_dynamic_edi: %s", e)
+            log_with_context(
+                logger,
+                40,  # ERROR
+                f"Error in _clear_dynamic_edi: {e}",
+                correlation_id=get_correlation_id(),
+                component="dynamic_edi_builder",
+                operation="_clear_dynamic_edi",
+                context={"error_type": type(e).__name__},
+                exc_info=True,
+            )
         self._restore_upc_override_as_plain_values()
 
     def _find_and_track_widget_keys(self, widget, keys_to_remove):
@@ -259,6 +296,15 @@ class DynamicEDIBuilder:
             return
 
         self._edi_option_processing = True
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            f"EDI option changed to: {option}",
+            correlation_id=get_correlation_id(),
+            component="dynamic_edi_builder",
+            operation="_on_edi_option_changed",
+            context={"edi_option": option},
+        )
         try:
             self._clear_dynamic_edi()
             if option == "Do Nothing":
@@ -325,6 +371,15 @@ class DynamicEDIBuilder:
 
     def handle_convert_format_changed(self, fmt: str):
         """Handle convert format selection changes."""
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            f"Convert format changed to: {fmt}",
+            correlation_id=get_correlation_id(),
+            component="dynamic_edi_builder",
+            operation="handle_convert_format_changed",
+            context={"format": fmt},
+        )
         self._clear_convert_sub()
         fmt_lower = (fmt or "").lower()
 
@@ -357,7 +412,14 @@ class DynamicEDIBuilder:
         if not self.convert_sub_layout:
             return
 
-        logger.debug("Clearing convert sub widgets")
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Clearing convert sub widgets",
+            correlation_id=get_correlation_id(),
+            component="dynamic_edi_builder",
+            operation="_clear_convert_sub",
+        )
         self._snapshot_upc_override()
         try:
             keys_to_remove = []
@@ -385,7 +447,16 @@ class DynamicEDIBuilder:
                     del self.fields[key]
 
         except Exception as e:
-            logger.exception("Error in _clear_convert_sub: %s", e)
+            log_with_context(
+                logger,
+                40,  # ERROR
+                f"Error in _clear_convert_sub: {e}",
+                correlation_id=get_correlation_id(),
+                component="dynamic_edi_builder",
+                operation="_clear_convert_sub",
+                context={"error_type": type(e).__name__},
+                exc_info=True,
+            )
         self._restore_upc_override_as_plain_values()
 
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):

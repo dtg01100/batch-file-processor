@@ -4,16 +4,20 @@ This module provides a pipeline step for EDI file validation,
 wrapping the existing EDIValidator with pipeline integration.
 """
 
-import logging
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Optional, Protocol, runtime_checkable
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import FileSystemInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -188,6 +192,14 @@ class EDIValidationStep:
         Returns:
             ValidationResult with validation outcome
         """
+        import logging
+
+        log_file_operation(
+            logger,
+            "validate",
+            file_path,
+            file_type="edi",
+        )
         logger.debug("Validating file: %s", filename_for_log)
 
         is_valid, errors, warnings = self._validator.validate_with_warnings(file_path)
@@ -201,11 +213,35 @@ class EDIValidationStep:
         )
 
         if is_valid and not has_minor_errors:
+            log_file_operation(
+                logger,
+                "validate",
+                file_path,
+                file_type="edi",
+                success=True,
+            )
             logger.info("Validation passed for: %s", filename_for_log)
         if has_minor_errors:
-            logger.warning("Validation warnings for %s: %s", filename_for_log, warnings)
+            log_with_context(
+                logger,
+                logging.WARNING,
+                f"Validation warnings for {filename_for_log}: {warnings}",
+                context={"file_path": file_path, "warnings": warnings},
+            )
         if not is_valid:
-            logger.error("Validation failed for %s: %s", filename_for_log, errors)
+            log_file_operation(
+                logger,
+                "validate",
+                file_path,
+                file_type="edi",
+                success=False,
+            )
+            log_with_context(
+                logger,
+                logging.ERROR,
+                f"Validation failed for {filename_for_log}: {errors}",
+                context={"file_path": file_path, "errors": errors},
+            )
 
         log_output = self._build_log_output(
             filename_for_log, errors, warnings, self._validator.get_error_log()

@@ -22,17 +22,26 @@ Backward Compatibility:
 """
 
 import csv
+import logging
 from datetime import datetime
 from typing import Dict, List
 
 import utils
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
     create_csv_writer,
 )
+from core.database import query_runner as LegacyQueryRunner
 from core.edi.inv_fetcher import InvFetcher
+
+logger = get_logger(__name__)
 
 
 class YellowDogConverter(BaseEDIConverter):
@@ -53,9 +62,53 @@ class YellowDogConverter(BaseEDIConverter):
         """
         # Initialize invFetcher for database lookups
         settings_dict = context.settings_dict
-        # Note: InvFetcher requires a query_runner parameter, but for this converter
-        # we don't actually need database lookups, so we pass None
-        self.inv_fetcher = InvFetcher(None, settings_dict)
+        params = context.parameters_dict or {}
+        mode_raw = params.get(
+            "database_lookup_mode",
+            settings_dict.get("database_lookup_mode", "optional"),
+        )
+        self.database_lookup_mode = str(mode_raw).strip().lower()
+        strict_db_mode = self.database_lookup_mode in {"strict", "required", "test"}
+
+        required_keys = (
+            "as400_username",
+            "as400_password",
+            "as400_address",
+            "odbc_driver",
+        )
+        missing_keys = [key for key in required_keys if not settings_dict.get(key)]
+
+        if strict_db_mode and missing_keys:
+            raise ValueError(
+                "YellowDog strict database_lookup_mode is enabled but missing "
+                f"AS400 settings: {', '.join(missing_keys)}"
+            )
+
+        query_runner = None
+        if not missing_keys:
+            try:
+                query_runner = LegacyQueryRunner(
+                    settings_dict["as400_username"],
+                    settings_dict["as400_password"],
+                    settings_dict["as400_address"],
+                    settings_dict["odbc_driver"],
+                )
+                logger.debug("YellowDog database lookup runner initialized")
+            except Exception:
+                if strict_db_mode:
+                    raise
+                logger.exception(
+                    "YellowDog could not initialize DB query runner; continuing in optional mode"
+                )
+
+        if query_runner is None and strict_db_mode:
+            raise RuntimeError(
+                "YellowDog strict database_lookup_mode requires a working AS400 query runner"
+            )
+
+        inv_fetcher_settings = dict(settings_dict)
+        inv_fetcher_settings["database_lookup_mode"] = self.database_lookup_mode
+        self.inv_fetcher = InvFetcher(query_runner, inv_fetcher_settings)
 
         # Initialize batching state
         self.arec_line: Dict[str, str] = {}
@@ -179,7 +232,6 @@ class YellowDogConverter(BaseEDIConverter):
         # Fetch customer info from database
         customer_name = self.inv_fetcher.fetch_cust_name(invoice_number)
         customer_po = self.inv_fetcher.fetch_po(invoice_number)
-
         # Write B records (line items)
         lineno = 0
         while self.brec_lines:
@@ -275,7 +327,74 @@ def edi_convert(
         >>> print(result)
         'output.csv'
     """
-    converter = YellowDogConverter()
-    return converter.edi_convert(
-        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+    import os
+    import time
+
+    from batch_file_processor.structured_logging import get_or_create_correlation_id
+
+    correlation_id = get_or_create_correlation_id()
+    start_time = time.perf_counter()
+
+    log_with_context(
+        logger,
+        logging.INFO,
+        "Starting YellowDog CSV conversion",
+        operation="edi_convert",
+        context={
+            "input_file": os.path.basename(edi_process),
+            "output_file": os.path.basename(output_filename) + ".csv",
+            "format": "yellowdog_csv",
+        },
     )
+    log_file_operation(
+        logger,
+        "read",
+        edi_process,
+        file_type="edi",
+        correlation_id=correlation_id,
+    )
+
+    try:
+        converter = YellowDogConverter()
+        result = converter.edi_convert(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            "YellowDog CSV conversion completed",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "output_file": os.path.basename(result),
+                "format": "yellowdog_csv",
+                "duration_ms": round(duration_ms, 2),
+            },
+        )
+        log_file_operation(
+            logger,
+            "write",
+            result,
+            file_type="csv",
+            success=True,
+            duration_ms=duration_ms,
+            correlation_id=correlation_id,
+        )
+        return result
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"YellowDog CSV conversion failed: {e}",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "format": "yellowdog_csv",
+                "duration_ms": round(duration_ms, 2),
+                "error": str(e),
+            },
+        )
+        raise

@@ -7,7 +7,15 @@ extracted from dispatch.py for testability.
 import datetime
 import os
 import re
+import time
 from typing import Optional
+
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+)
+
+logger = get_logger(__name__)
 
 
 def build_output_filename(
@@ -213,11 +221,26 @@ def do_clear_old_files(folder_path, maximum_files):
                 return float("inf")
 
         oldest = min(files, key=_safe_ctime)
+        oldest_path = os.path.join(folder_path, oldest)
         try:
-            os.remove(os.path.join(folder_path, oldest))
+            os.remove(oldest_path)
+            log_file_operation(
+                logger,
+                "delete",
+                oldest_path,
+                file_type="log",
+                success=True,
+                context={"reason": "cleanup", "max_files": maximum_files},
+            )
         except FileNotFoundError:
             pass  # already deleted by another process
-
-
-# Import time module for build_error_log_filename
-import time
+        except Exception as e:
+            log_file_operation(
+                logger,
+                "delete",
+                oldest_path,
+                file_type="log",
+                success=False,
+                error=e,
+                context={"reason": "cleanup", "max_files": maximum_files},
+            )

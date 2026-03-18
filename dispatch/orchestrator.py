@@ -5,13 +5,21 @@ coordinating validation, conversion, and sending of files.
 """
 
 import datetime
-import logging
 import os
 import shutil
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional
 
+from batch_file_processor.structured_logging import (
+    CorrelationContext,
+    get_logger,
+    get_or_create_correlation_id,
+    log_backend_call,
+    log_file_operation,
+    log_with_context,
+)
+from core.database import query_runner as LegacyQueryRunner
 from core.utils.bool_utils import normalize_bool
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
@@ -24,7 +32,7 @@ from dispatch.interfaces import (
 )
 from dispatch.send_manager import SendManager
 
-logger = logging.getLogger("dispatch.orchestrator")
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -146,7 +154,8 @@ class DispatchOrchestrator:
         self.processed_count: int = 0
         self.error_count: int = 0
         logger.debug(
-            "DispatchOrchestrator initialized (pipeline_steps: validator=%s, splitter=%s, converter=%s, tweaker=%s)",
+            "DispatchOrchestrator initialized (pipeline_steps: "
+            "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
             bool(config.validator_step),
             bool(config.splitter_step),
             bool(config.converter_step),
@@ -158,6 +167,9 @@ class DispatchOrchestrator:
         folder: dict,
         run_log: Any,
         processed_files: Optional[DatabaseInterface] = None,
+        pre_discovered_files: Optional[list[str]] = None,
+        folder_num: Optional[int] = None,
+        folder_total: Optional[int] = None,
     ) -> FolderResult:
         """Process a single folder via the pipeline path.
 
@@ -169,10 +181,37 @@ class DispatchOrchestrator:
         Returns:
             FolderResult with processing outcome
         """
-        upc_dict = self._get_upc_dictionary(self.config.settings)
-        return self.process_folder_with_pipeline(
-            folder, run_log, processed_files, upc_dict
+        correlation_id = get_or_create_correlation_id()
+        folder_path = folder.get("folder_name", "")
+        alias = folder.get("alias", folder_path)
+
+        import logging
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Starting folder processing: {alias}",
+            correlation_id=correlation_id,
+            operation="process_folder",
+            context={
+                "folder_name": folder_path,
+                "folder_alias": alias,
+                "folder_num": folder_num,
+                "folder_total": folder_total,
+            },
         )
+
+        with CorrelationContext(correlation_id):
+            upc_dict = self._get_upc_dictionary(self.config.settings)
+            return self.process_folder_with_pipeline(
+                folder,
+                run_log,
+                processed_files,
+                upc_dict,
+                pre_discovered_files=pre_discovered_files,
+                folder_num=folder_num,
+                folder_total=folder_total,
+            )
 
     def process_folder_with_pipeline(
         self,
@@ -180,6 +219,9 @@ class DispatchOrchestrator:
         run_log: Any,
         processed_files: Optional[DatabaseInterface] = None,
         upc_dict: Optional[dict] = None,
+        pre_discovered_files: Optional[list[str]] = None,
+        folder_num: Optional[int] = None,
+        folder_total: Optional[int] = None,
     ) -> FolderResult:
         """Process folder using new pipeline steps.
 
@@ -211,20 +253,23 @@ class DispatchOrchestrator:
             self._log_error(run_log, error_msg)
             return result
 
-        files = self._get_files_in_folder(folder_path)
+        files = list(pre_discovered_files) if pre_discovered_files is not None else None
 
-        if not files:
-            self._log_message(run_log, f"No files in directory: {folder_path}")
-            return result
+        if files is None:
+            files = self._get_files_in_folder(folder_path)
 
-        logger.debug(
-            "Found %d files in %s, filtering for already-processed...",
-            len(files),
-            folder_path,
-        )
+            if not files:
+                self._log_message(run_log, f"No files in directory: {folder_path}")
+                return result
 
-        if processed_files:
-            files = self._filter_processed_files(files, processed_files, folder)
+            logger.debug(
+                "Found %d files in %s, filtering for already-processed...",
+                len(files),
+                folder_path,
+            )
+
+            if processed_files:
+                files = self._filter_processed_files(files, processed_files, folder)
 
         logger.debug("After filter: %d files to process in %s", len(files), folder_path)
 
@@ -238,9 +283,19 @@ class DispatchOrchestrator:
 
         total_files = len(files)
         if self.config.progress_reporter:
-            self.config.progress_reporter.start_folder(
-                folder.get("alias", folder_path), total_files
-            )
+            progress = self.config.progress_reporter
+            if hasattr(progress, "start_folder"):
+                try:
+                    progress.start_folder(
+                        folder.get("alias", folder_path),
+                        total_files,
+                        folder_num=folder_num,
+                        folder_total=folder_total,
+                    )
+                except TypeError:
+                    # Backward compatibility for callbacks that only accept
+                    # (folder_name, total_files).
+                    progress.start_folder(folder.get("alias", folder_path), total_files)
 
         effective_upc_dict = upc_dict if upc_dict is not None else self.config.upc_dict
 
@@ -256,6 +311,71 @@ class DispatchOrchestrator:
         self._finalize_folder_result(result)
 
         return result
+
+    def discover_pending_files(
+        self,
+        folders: list[dict],
+        processed_files: Optional[DatabaseInterface] = None,
+        progress_reporter: Optional[Any] = None,
+    ) -> tuple[list[list[str]], int]:
+        """Discover files pending send for each folder.
+
+        Performs a lightweight pre-pass that identifies files to be sent for each
+        active folder, including already-processed filtering. This enables a
+        dedicated "finding files" progress phase and avoids duplicate discovery
+        work during processing by reusing the returned file lists.
+
+        Args:
+            folders: Active folder configuration rows in processing order.
+            processed_files: Optional processed-files table for resend filtering.
+            progress_reporter: Optional progress reporter that may expose
+                discovery-specific methods.
+
+        Returns:
+            Tuple of:
+                - List of pending-file lists aligned with ``folders`` order.
+                - Total number of pending files across all folders.
+        """
+        folder_total = len(folders)
+        pending_lists: list[list[str]] = []
+        total_pending = 0
+
+        if progress_reporter and hasattr(progress_reporter, "start_discovery"):
+            progress_reporter.start_discovery(folder_total=folder_total)
+
+        for folder_index, folder in enumerate(folders, start=1):
+            folder_path = folder.get("folder_name", "")
+            alias = folder.get("alias", folder_path)
+
+            if not self._folder_exists(folder_path):
+                pending: list[str] = []
+            else:
+                pending = self._get_files_in_folder(folder_path)
+                if processed_files and pending:
+                    pending = self._filter_processed_files(
+                        pending,
+                        processed_files,
+                        folder,
+                    )
+
+            pending_lists.append(pending)
+            total_pending += len(pending)
+
+            if progress_reporter and hasattr(
+                progress_reporter, "update_discovery_progress"
+            ):
+                progress_reporter.update_discovery_progress(
+                    folder_num=folder_index,
+                    folder_total=folder_total,
+                    folder_name=alias,
+                    pending_for_folder=len(pending),
+                    pending_total=total_pending,
+                )
+
+        if progress_reporter and hasattr(progress_reporter, "finish_discovery"):
+            progress_reporter.finish_discovery(total_pending=total_pending)
+
+        return pending_lists, total_pending
 
     def _process_folder_files(
         self,
@@ -292,6 +412,12 @@ class DispatchOrchestrator:
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(result.success)
 
+    @staticmethod
+    def _is_strict_database_lookup(settings: dict) -> bool:
+        """Return True when database lookup mode requires fail-fast behavior."""
+        mode = str(settings.get("database_lookup_mode", "optional")).strip().lower()
+        return mode in {"strict", "required", "test"}
+
     def _get_upc_dictionary(self, settings: dict) -> dict:
         """Get or fetch UPC dictionary.
 
@@ -299,9 +425,10 @@ class DispatchOrchestrator:
             settings: Application settings
 
         Returns:
-            UPC dictionary
+            UPC dictionary (may be empty if initialization fails)
         """
         logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
+        strict_db_mode = self._is_strict_database_lookup(settings)
 
         if self.config.upc_dict:
             return self.config.upc_dict
@@ -314,9 +441,105 @@ class DispatchOrchestrator:
                     logger.debug("UPC dictionary loaded: %d entries", len(upc_dict))
                     return upc_dict
             except Exception:
+                if strict_db_mode:
+                    raise
                 logger.exception("Failed to fetch UPC dictionary from upc_service")
 
+        # Backward-compatible fallback for app/runtime usage where no explicit
+        # upc_service is injected into DispatchConfig.
+        fallback_dict = self._fetch_upc_dictionary_from_settings(settings)
+        if fallback_dict:
+            self.config.upc_dict = fallback_dict
+            logger.debug(
+                "UPC dictionary loaded via fallback query: %d entries",
+                len(fallback_dict),
+            )
+            return fallback_dict
+
+        # UPC dict could not be loaded - converters needing UPC data will fail
+        # silently or produce degraded output
+        logger.warning(
+            "UPC dictionary is empty: no service configured and fallback query "
+            "failed (check AS400 credentials in settings)"
+        )
+        if strict_db_mode:
+            raise RuntimeError(
+                "database_lookup_mode is strict but UPC dictionary could not be loaded"
+            )
         return {}
+
+    def _fetch_upc_dictionary_from_settings(self, settings: dict) -> dict:
+        """Fetch UPC dictionary directly from AS400 using app settings.
+
+        This mirrors legacy dispatch behavior and serves as a fallback path when
+        no ``upc_service`` is configured in ``DispatchConfig``.
+        """
+        required_keys = (
+            "as400_username",
+            "as400_password",
+            "as400_address",
+            "odbc_driver",
+        )
+        strict_db_mode = self._is_strict_database_lookup(settings)
+        missing_keys = [key for key in required_keys if not settings.get(key)]
+        if missing_keys:
+            if strict_db_mode:
+                raise ValueError(
+                    "database_lookup_mode is strict but AS400 settings are missing: "
+                    + ", ".join(missing_keys)
+                )
+            logger.warning(
+                "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
+                ", ".join(missing_keys),
+            )
+            return {}
+
+        legacy_runner = LegacyQueryRunner(
+            settings["as400_username"],
+            settings["as400_password"],
+            settings["as400_address"],
+            settings["odbc_driver"],
+        )
+
+        try:
+            rows = legacy_runner.run_arbitrary_query(
+                """
+                select
+                    dsanrep.anbacd,
+                    dsanrep.anbbcd,
+                    strip(dsanrep.anbgcd),
+                    strip(dsanrep.anbhcd),
+                    strip(dsanrep.anbicd),
+                    strip(dsanrep.anbjcd)
+                from dacdata.dsanrep dsanrep
+                """
+            )
+
+            if strict_db_mode and not rows:
+                raise LookupError(
+                    "database_lookup_mode is strict but UPC query returned no rows"
+                )
+
+            upc_dict = {}
+            for row in rows:
+                try:
+                    item_number = int(row[0])
+                    upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
+                except (TypeError, ValueError, IndexError):
+                    continue
+
+            return upc_dict
+        except Exception:
+            if strict_db_mode:
+                raise
+            logger.exception("Failed to fetch UPC dictionary via fallback query")
+            return {}
+        finally:
+            try:
+                # legacy wrapper keeps the new-style runner in _runner
+                legacy_runner._runner.close()
+            except Exception:
+                pass
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
@@ -334,10 +557,18 @@ class DispatchOrchestrator:
         """
         import os
 
+        correlation_id = get_or_create_correlation_id()
         result = FileResult(file_name=file_path, checksum="")
         context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
         file_basename = os.path.basename(file_path)
 
+        log_file_operation(
+            logger,
+            "process",
+            file_path,
+            correlation_id=correlation_id,
+            file_type="edi",
+        )
         logger.debug("Processing file: %s", file_basename)
 
         try:
@@ -575,7 +806,8 @@ class DispatchOrchestrator:
                 )
                 self._log_message(
                     run_log,
-                    f"FAILED sending {file_basename} via {backend_name}: {error_message}",
+                    f"FAILED sending {file_basename} via {backend_name}: "
+                    f"{error_message}",
                 )
             return
 
@@ -930,13 +1162,33 @@ class DispatchOrchestrator:
                 run_log,
                 f"sending {file_basename} to {display_name}",
             )
+            log_backend_call(
+                logger,
+                backend_name,
+                "send",
+                endpoint=folder.get(
+                    f"{backend_name}_server",
+                    folder.get(f"{backend_name}_to_directory", ""),
+                ),
+                correlation_id=get_or_create_correlation_id(),
+            )
 
         settings = self.config.settings
         send_results = self.send_manager.send_all(
             enabled_backends, file_path, folder, settings
         )
 
-        return all(send_results.values())
+        success = all(send_results.values())
+        for backend_name, backend_success in send_results.items():
+            log_backend_call(
+                logger,
+                backend_name,
+                "send",
+                success=backend_success,
+                correlation_id=get_or_create_correlation_id(),
+            )
+
+        return success
 
     def _should_apply_tweaker(self, tweaker_step: Any, file_path: str) -> bool:
         """Determine whether tweaker should run for a given file.
@@ -968,8 +1220,28 @@ class DispatchOrchestrator:
         Returns:
             FileResult with processing outcome
         """
-        upc_dict = self._get_upc_dictionary(self.config.settings)
-        return self._process_file_with_pipeline(file_path, folder, upc_dict)
+        correlation_id = get_or_create_correlation_id()
+        folder_path = folder.get("folder_name", "")
+        alias = folder.get("alias", folder_path)
+
+        import logging
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Starting file processing: {file_path}",
+            correlation_id=correlation_id,
+            operation="process_file",
+            context={
+                "file_path": file_path,
+                "folder_name": folder_path,
+                "folder_alias": alias,
+            },
+        )
+
+        with CorrelationContext(correlation_id):
+            upc_dict = self._get_upc_dictionary(self.config.settings)
+            return self._process_file_with_pipeline(file_path, folder, upc_dict)
 
     def _folder_exists(self, path: str) -> bool:
         """Check if a folder exists.
@@ -1111,6 +1383,13 @@ class DispatchOrchestrator:
         """
         import hashlib
 
+        log_file_operation(
+            logger,
+            "read",
+            file_path,
+            correlation_id=get_or_create_correlation_id(),
+            file_type="edi",
+        )
         logger.debug("Calculating checksum for: %s", file_path)
 
         if self.config.file_system:
@@ -1119,7 +1398,16 @@ class DispatchOrchestrator:
             with open(file_path, "rb") as f:
                 content = f.read()
 
-        return hashlib.md5(content).hexdigest()
+        checksum = hashlib.md5(content).hexdigest()
+        log_file_operation(
+            logger,
+            "read",
+            file_path,
+            success=True,
+            correlation_id=get_or_create_correlation_id(),
+            file_type="edi",
+        )
+        return checksum
 
     def _extract_invoice_numbers(self, file_path: str) -> str:
         """Extract invoice numbers from EDI A-records in a file.
@@ -1185,7 +1473,15 @@ class DispatchOrchestrator:
             run_log: Run log to write to
             message: Message to log
         """
-        logger.info(message)
+        import logging
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            message,
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log",
+        )
         if hasattr(run_log, "write"):
             run_log.write((message + "\r\n").encode())
         elif hasattr(run_log, "append"):
@@ -1198,7 +1494,15 @@ class DispatchOrchestrator:
             run_log: Run log to write to
             message: Error message to log
         """
-        logger.error("ERROR: %s" % message)
+        import logging
+
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"ERROR: {message}",
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log",
+        )
         if hasattr(run_log, "write"):
             run_log.write(("ERROR: %s" % message + "\r\n").encode())
         elif hasattr(run_log, "append"):

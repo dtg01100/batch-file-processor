@@ -7,6 +7,7 @@ Tests cover:
 """
 
 import ftplib
+import errno
 import os
 import smtplib
 import sys
@@ -365,6 +366,19 @@ class TestEmailRetryLogic:
             )
 
         assert result is True
+
+    def test_email_network_unreachable_fails_fast(self, test_file):
+        """Errno 101 should fail immediately without retry backoff."""
+        mock_client = MockSMTPClient()
+        mock_client.add_error(OSError(errno.ENETUNREACH, "Network is unreachable"))
+
+        with patch("email_backend.time.sleep") as mock_sleep:
+            with pytest.raises(RuntimeError, match="Network is unreachable"):
+                email_backend.do(
+                    EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
+                )
+
+        mock_sleep.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

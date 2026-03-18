@@ -4,15 +4,21 @@ This module provides a pipeline step for EDI format conversion,
 using dynamic module loading for different output formats.
 """
 
-import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from batch_file_processor.structured_logging import (
+    StructuredLogger,
+    get_logger,
+    get_or_create_correlation_id,
+    redact_sensitive_data,
+)
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _normalize_process_edi_flag(value: Any) -> bool:
@@ -295,31 +301,66 @@ class EDIConverterStep:
         Returns:
             ConverterResult with conversion outcome
         """
+        correlation_id = get_or_create_correlation_id()
+        start_time = time.perf_counter()
+
         errors: list[str] = []
 
         convert_to_format = params.get("convert_to_format", "")
-        logger.debug(
-            "Converting %s to format '%s'",
-            os.path.basename(input_path),
-            convert_to_format,
+        input_basename = os.path.basename(input_path)
+
+        StructuredLogger.log_debug(
+            logger,
+            "convert",
+            __name__,
+            f"Starting conversion for {input_basename}",
+            input_path=input_basename,
+            output_dir=output_dir,
+            format=convert_to_format,
+            process_edi=params.get("process_edi"),
+            correlation_id=correlation_id,
         )
 
         if not convert_to_format:
-            logger.debug(
-                "No convert_to_format set, skipping conversion for %s",
-                os.path.basename(input_path),
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"No convert_to_format set, skipping conversion for {input_basename}",
+                decision="no_format",
+                input_path=input_basename,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
             )
             return ConverterResult(
                 output_path=input_path, format_used="", success=True, errors=errors
             )
 
         process_edi = _normalize_process_edi_flag(params.get("process_edi", False))
-        logger.debug("process_edi flag is %s", process_edi)
+
+        StructuredLogger.log_debug(
+            logger,
+            "convert",
+            __name__,
+            f"process_edi flag is {process_edi}",
+            process_edi=process_edi,
+            input_path=input_basename,
+            correlation_id=correlation_id,
+        )
 
         if not process_edi:
-            logger.debug(
-                "process_edi is False, skipping conversion for %s",
-                os.path.basename(input_path),
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"process_edi is False, skipping conversion for {input_basename}",
+                decision="process_edi_false",
+                input_path=input_basename,
+                format=convert_to_format,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
             )
             return ConverterResult(
                 output_path=input_path,
@@ -333,8 +374,31 @@ class EDIConverterStep:
         )
 
         if format_normalized not in SUPPORTED_FORMATS:
+            duration_ms = (time.perf_counter() - start_time) * 1000
             error_msg = f"Unsupported conversion format: {convert_to_format}"
-            logger.error("Unsupported conversion format: %s", convert_to_format)
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"Unsupported format: {convert_to_format}",
+                decision="unsupported_format",
+                input_path=input_basename,
+                format=convert_to_format,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
+            )
+            StructuredLogger.log_error(
+                logger,
+                "convert",
+                __name__,
+                Exception(error_msg),
+                {
+                    "input_path": input_basename,
+                    "format": convert_to_format,
+                    "supported_formats": SUPPORTED_FORMATS,
+                },
+                duration_ms,
+            )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -352,7 +416,20 @@ class EDIConverterStep:
             try:
                 self._file_system.makedirs(output_dir)
             except Exception as e:
+                duration_ms = (time.perf_counter() - start_time) * 1000
                 error_msg = f"Failed to create output directory: {e}"
+                StructuredLogger.log_error(
+                    logger,
+                    "convert",
+                    __name__,
+                    e,
+                    {
+                        "input_path": input_basename,
+                        "output_dir": output_dir,
+                        "format": convert_to_format,
+                    },
+                    duration_ms,
+                )
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
                 return ConverterResult(
@@ -363,11 +440,28 @@ class EDIConverterStep:
                 )
 
         try:
-            logger.debug("Loading converter module: %s", module_name)
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"Loading converter module: {module_name}",
+                module_name=module_name,
+                input_path=input_basename,
+                correlation_id=correlation_id,
+            )
             module = self._module_loader.load_module(module_name)
 
             if not hasattr(module, "edi_convert"):
+                duration_ms = (time.perf_counter() - start_time) * 1000
                 error_msg = f"Module {module_name} does not have edi_convert function"
+                StructuredLogger.log_error(
+                    logger,
+                    "convert",
+                    __name__,
+                    Exception(error_msg),
+                    {"input_path": input_basename, "module_name": module_name},
+                    duration_ms,
+                )
                 errors.append(error_msg)
                 self._record_error(input_path, error_msg)
                 return ConverterResult(
@@ -377,9 +471,34 @@ class EDIConverterStep:
                     errors=errors,
                 )
 
+            if not upc_dict:
+                StructuredLogger.log_debug(
+                    logger,
+                    "convert",
+                    __name__,
+                    f"Converting {input_basename} with empty UPC dictionary",
+                    decision="empty_upc_dict",
+                    input_path=input_basename,
+                    format=convert_to_format,
+                    correlation_id=correlation_id,
+                )
+
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"Calling edi_convert for {input_basename}",
+                input_path=input_basename,
+                output_path=output_filename,
+                format=convert_to_format,
+                correlation_id=correlation_id,
+            )
+
             converted_path = module.edi_convert(
                 input_path, output_filename, settings, params, upc_dict
             )
+
+            duration_ms = (time.perf_counter() - start_time) * 1000
 
             logger.info(
                 "Converted %s -> %s (format: %s)",
@@ -387,6 +506,20 @@ class EDIConverterStep:
                 converted_path,
                 convert_to_format,
             )
+
+            StructuredLogger.log_debug(
+                logger,
+                "convert",
+                __name__,
+                f"Conversion successful for {input_basename}",
+                input_path=input_basename,
+                output_path=converted_path,
+                format=convert_to_format,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
+                success=True,
+            )
+
             return ConverterResult(
                 output_path=converted_path,
                 format_used=convert_to_format,
@@ -395,8 +528,22 @@ class EDIConverterStep:
             )
 
         except ImportError as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
             error_msg = f"Conversion module not found: {module_name} - {e}"
             logger.error("Converter module not found: %s", module_name, exc_info=True)
+            StructuredLogger.log_error(
+                logger,
+                "convert",
+                __name__,
+                e,
+                {
+                    "input_path": input_basename,
+                    "module_name": module_name,
+                    "format": convert_to_format,
+                    "settings_redacted": redact_sensitive_data(settings),
+                },
+                duration_ms,
+            )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
             return ConverterResult(
@@ -406,12 +553,21 @@ class EDIConverterStep:
                 errors=errors,
             )
         except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
             error_msg = f"Conversion failed: {e}"
-            logger.error(
-                "Conversion failed for %s: %s",
-                os.path.basename(input_path),
+            StructuredLogger.log_error(
+                logger,
+                "convert",
+                __name__,
                 e,
-                exc_info=True,
+                {
+                    "input_path": input_basename,
+                    "output_dir": output_dir,
+                    "format": convert_to_format,
+                    "settings_redacted": redact_sensitive_data(settings),
+                    "params_redacted": redact_sensitive_data(params),
+                },
+                duration_ms,
             )
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -470,7 +626,18 @@ class EDIConverterStep:
         import shutil
         import tempfile
 
-        logger.debug("Execute converter step for %s", os.path.basename(file_path))
+        correlation_id = get_or_create_correlation_id()
+        start_time = time.perf_counter()
+        file_basename = os.path.basename(file_path)
+
+        StructuredLogger.log_debug(
+            logger,
+            "execute",
+            __name__,
+            f"Execute converter step for {file_basename}",
+            file_path=file_basename,
+            correlation_id=correlation_id,
+        )
 
         effective_settings = (
             settings if settings is not None else folder.get("settings", {})
@@ -479,9 +646,27 @@ class EDIConverterStep:
             upc_dict if upc_dict is not None else folder.get("upc_dict", {})
         )
 
-        # Create a TEMPORARY directory for intermediate processing
+        if upc_dict is None and not effective_upc_dict:
+            StructuredLogger.log_debug(
+                logger,
+                "execute",
+                __name__,
+                f"Converter step for {file_basename} using empty UPC dictionary",
+                decision="empty_upc_dict_fallback",
+                file_path=file_basename,
+                correlation_id=correlation_id,
+            )
+
         temp_dir = tempfile.mkdtemp(prefix="edi_converter_")
-        logger.debug("Created temp dir for conversion: %s", temp_dir)
+        StructuredLogger.log_debug(
+            logger,
+            "execute",
+            __name__,
+            f"Created temp dir for conversion: {temp_dir}",
+            temp_dir=temp_dir,
+            file_path=file_basename,
+            correlation_id=correlation_id,
+        )
 
         temp_dirs: Optional[list[str]] = None
         if context is not None and hasattr(context, "temp_dirs"):
@@ -499,22 +684,51 @@ class EDIConverterStep:
                 file_path, temp_dir, folder, effective_settings, effective_upc_dict
             )
             if result.success and result.output_path != file_path:
-                # Return the output path directly while temp_dir still exists
-                # The path is inside temp_dir which we'll keep until orchestrator sends it
-                logger.debug("Converter step produced: %s", result.output_path)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                StructuredLogger.log_debug(
+                    logger,
+                    "execute",
+                    __name__,
+                    f"Converter step produced output for {file_basename}",
+                    file_path=file_basename,
+                    output_path=result.output_path,
+                    format=result.format_used,
+                    correlation_id=correlation_id,
+                    duration_ms=duration_ms,
+                )
                 return result.output_path
 
-            # Cleanup if conversion didn't produce output
-            logger.debug(
-                "Converter step produced no output for %s, cleaning up",
-                os.path.basename(file_path),
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "execute",
+                __name__,
+                f"Converter step produced no output for {file_basename}",
+                decision="no_output",
+                file_path=file_basename,
+                format=result.format_used,
+                success=result.success,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
             )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)
             return None
-        except Exception:
-            # Cleanup on exception
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_error(
+                logger,
+                "execute",
+                __name__,
+                e,
+                {
+                    "file_path": file_basename,
+                    "temp_dir": temp_dir,
+                    "settings_redacted": redact_sensitive_data(effective_settings),
+                },
+                duration_ms,
+            )
             shutil.rmtree(temp_dir, ignore_errors=True)
             if temp_dirs is not None and temp_dir in temp_dirs:
                 temp_dirs.remove(temp_dir)

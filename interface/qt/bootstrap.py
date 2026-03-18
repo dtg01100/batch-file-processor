@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import argparse
-import logging
 import os
 import sys
 from typing import Any, Optional
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    get_correlation_id,
+    set_correlation_id,
+    generate_correlation_id,
+    log_with_context,
+)
+
 from interface.qt.theme import Theme
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class QtAppBootstrapService:
@@ -30,9 +37,22 @@ class QtAppBootstrapService:
 
         if wayland_display and x11_display and not qpa_platform:
             os.environ["QT_QPA_PLATFORM"] = "xcb"
-            logger.info("Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence")
+            log_with_context(
+                logger,
+                20,  # INFO
+                "Qt platform: Forcing XCB (X11) due to Wayland/X11 coexistence",
+                correlation_id=get_correlation_id(),
+                component="qt_bootstrap",
+                operation="configure_qt_platform",
+                context={
+                    "wayland_display": wayland_display,
+                    "x11_display": x11_display,
+                },
+            )
 
     def parse_arguments(self, args: Optional[list[str]] = None) -> argparse.Namespace:
+        correlation_id = generate_correlation_id()
+        set_correlation_id(correlation_id)
         launch_options = argparse.ArgumentParser()
         launch_options.add_argument("-a", "--automatic", action="store_true")
         launch_options.add_argument(
@@ -50,11 +70,21 @@ class QtAppBootstrapService:
             help="Show GUI and automatically start processing all folders",
         )
         parsed_args, _unknown = launch_options.parse_known_args(args)
-        logger.debug(
-            "Parsed args: automatic=%s, self_test=%s, gui_test=%s",
-            parsed_args.automatic,
-            parsed_args.self_test,
-            parsed_args.gui_test,
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Parsed command line arguments",
+            correlation_id=correlation_id,
+            component="qt_bootstrap",
+            operation="parse_arguments",
+            context={
+                "automatic": parsed_args.automatic,
+                "self_test": parsed_args.self_test,
+                "gui_test": parsed_args.gui_test,
+                "graphical_automatic": getattr(
+                    parsed_args, "graphical_automatic", False
+                ),
+            },
         )
         return parsed_args
 
@@ -65,11 +95,29 @@ class QtAppBootstrapService:
             os.makedirs(config_folder, exist_ok=True)
         except (FileExistsError, NotADirectoryError, OSError):
             pass
-        logger.debug("Config directory: %s", config_folder)
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Config directories setup complete",
+            correlation_id=get_correlation_id(),
+            component="qt_bootstrap",
+            operation="setup_config_directories",
+            context={
+                "config_folder": config_folder,
+                "database_path": database_path,
+            },
+        )
         return config_folder, database_path
 
     def build_ui_runtime(self) -> None:
-        logger.debug("Building Qt UI runtime")
+        log_with_context(
+            logger,
+            10,  # DEBUG
+            "Building Qt UI runtime",
+            correlation_id=get_correlation_id(),
+            component="qt_bootstrap",
+            operation="build_ui_runtime",
+        )
         qapplication_cls = self._app._get_qapplication_cls()
         qmainwindow_cls = self._app._get_qmainwindow_cls()
         self._app._app = qapplication_cls.instance() or qapplication_cls(

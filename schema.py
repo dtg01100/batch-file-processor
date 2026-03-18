@@ -6,9 +6,9 @@ statements with permissive types (TEXT/INTEGER) so it can be applied
 against older databases without failing.
 """
 
-import logging
+from batch_file_processor.structured_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def ensure_schema(database_connection) -> None:

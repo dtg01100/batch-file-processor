@@ -27,9 +27,10 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
-import logging
 import math
+import os
 import tempfile
+import time
 from typing import Any, Dict, List, Tuple
 
 import barcode
@@ -42,8 +43,13 @@ from PIL import ImageOps as pil_ImageOps
 
 import core.database
 import utils
+from batch_file_processor.structured_logging import (
+    StructuredLogger,
+    get_logger,
+    get_or_create_correlation_id,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ScanSheetTypeAConverter:
@@ -66,6 +72,8 @@ class ScanSheetTypeAConverter:
         self.output_spreadsheet_name = ""
         self.invoice_rows: List[int] = []
         self.invoice_row_counter = 0
+        self._correlation_id = get_or_create_correlation_id()
+        self._start_time = None
 
     def edi_convert(
         self,
@@ -87,23 +95,124 @@ class ScanSheetTypeAConverter:
         Returns:
             Path to the generated Excel file
         """
-        # Step 1: Extract invoice numbers from EDI file
-        invoice_list = self._extract_invoices_from_edi(edi_process)
+        self._start_time = time.perf_counter()
+        correlation_id = self._correlation_id
 
-        # Step 2: Initialize database connection
-        self._initialize_database(settings_dict)
+        # Log entry with sanitized settings
+        StructuredLogger.log_entry(
+            logger,
+            "edi_convert",
+            __name__,
+            args=(edi_process, output_filename),
+            kwargs={
+                "settings_keys": list(settings_dict.keys()),
+                "parameters_keys": list(parameters_dict.keys()),
+                "upc_lookup_size": len(upc_lookup) if upc_lookup else 0,
+            },
+        )
 
-        # Step 3: Create Excel workbook and populate with data
-        self._initialize_workbook(output_filename)
-        self._populate_workbook(invoice_list)
+        StructuredLogger.log_debug(
+            logger,
+            "edi_convert",
+            __name__,
+            f"Starting ScanSheet Type A conversion: {os.path.basename(edi_process)}",
+            input_file=os.path.basename(edi_process),
+            output_file=os.path.basename(output_filename) + ".xlsx",
+            correlation_id=correlation_id,
+        )
 
-        # Step 4: Generate and insert barcodes
-        self._process_barcodes()
+        try:
+            # Step 1: Extract invoice numbers from EDI file
+            invoice_list = self._extract_invoices_from_edi(edi_process)
 
-        # Step 5: Finalize (closes DB connection)
-        self._finalize_output(None)
+            StructuredLogger.log_intermediate(
+                logger,
+                "edi_convert",
+                __name__,
+                "extract_invoices",
+                {"invoice_count": len(invoice_list)},
+                "completed",
+            )
 
-        return self.output_spreadsheet_name
+            # Step 2: Initialize database connection
+            self._initialize_database(settings_dict)
+
+            StructuredLogger.log_intermediate(
+                logger,
+                "edi_convert",
+                __name__,
+                "db_connection",
+                {"status": "connected"},
+                "completed",
+            )
+
+            # Step 3: Create Excel workbook and populate with data
+            self._initialize_workbook(output_filename)
+            self._populate_workbook(invoice_list)
+
+            StructuredLogger.log_intermediate(
+                logger,
+                "edi_convert",
+                __name__,
+                "populate_workbook",
+                {"invoices": len(invoice_list), "rows": self.invoice_row_counter},
+                "completed",
+            )
+
+            # Step 4: Generate and insert barcodes
+            self._process_barcodes()
+
+            StructuredLogger.log_intermediate(
+                logger,
+                "edi_convert",
+                __name__,
+                "barcode_generation",
+                {"status": "completed"},
+                "completed",
+            )
+
+            # Step 5: Finalize (closes DB connection)
+            self._finalize_output(None)
+
+            # Log final result
+            duration_ms = (time.perf_counter() - self._start_time) * 1000
+
+            StructuredLogger.log_debug(
+                logger,
+                "edi_convert",
+                __name__,
+                f"ScanSheet conversion completed: {self.output_spreadsheet_name}",
+                output_file=self.output_spreadsheet_name,
+                invoices=len(invoice_list),
+                total_rows=self.invoice_row_counter,
+                duration_ms=round(duration_ms, 2),
+                correlation_id=correlation_id,
+            )
+
+            StructuredLogger.log_exit(
+                logger,
+                "edi_convert",
+                __name__,
+                self.output_spreadsheet_name,
+                duration_ms,
+            )
+
+            return self.output_spreadsheet_name
+
+        except Exception as e:
+            duration_ms = (time.perf_counter() - self._start_time) * 1000
+            StructuredLogger.log_error(
+                logger,
+                "edi_convert",
+                __name__,
+                e,
+                {
+                    "input_file": edi_process,
+                    "output_file": output_filename,
+                },
+                duration_ms,
+            )
+            raise
 
     def _extract_invoices_from_edi(self, edi_process: str) -> List[str]:
         """Extract invoice numbers from the EDI file.
@@ -126,7 +235,11 @@ class ScanSheetTypeAConverter:
                 except TypeError:
                     pass
 
-        logger.debug("Extracted invoice list: %s", invoice_list)
+        logger.debug(
+            "Extracted %d invoice numbers from %s",
+            len(invoice_list),
+            os.path.basename(edi_process),
+        )
         return invoice_list
 
     def _initialize_database(self, settings_dict: Dict[str, Any]) -> None:
@@ -135,6 +248,15 @@ class ScanSheetTypeAConverter:
         Args:
             settings_dict: Application settings with DB credentials
         """
+        StructuredLogger.log_debug(
+            logger,
+            "_initialize_database",
+            __name__,
+            "Initializing database connection",
+            db_server=settings_dict.get("as400_address", ""),
+            correlation_id=self._correlation_id,
+        )
+
         self.query_object = core.database.create_query_runner(
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
@@ -156,13 +278,35 @@ class ScanSheetTypeAConverter:
         self.invoice_rows = []
         self.invoice_row_counter = 0
 
+        StructuredLogger.log_debug(
+            logger,
+            "_initialize_workbook",
+            __name__,
+            f"Created Excel workbook: {self.output_spreadsheet_name}",
+            output_file=self.output_spreadsheet_name,
+            correlation_id=self._correlation_id,
+        )
+
     def _populate_workbook(self, invoice_list: List[str]) -> None:
         """Populate the workbook with data from the database.
 
         Args:
             invoice_list: List of invoice numbers to query
         """
-        for invoice in invoice_list:
+        total_rows = 0
+
+        for idx, invoice in enumerate(invoice_list):
+            # Log progress every 10 invoices
+            if idx > 0 and idx % 10 == 0:
+                StructuredLogger.log_debug(
+                    logger,
+                    "_populate_workbook",
+                    __name__,
+                    f"Processing invoices: {idx}/{len(invoice_list)}",
+                    progress={"current": idx, "total": len(invoice_list)},
+                    correlation_id=self._correlation_id,
+                )
+
             result = self.query_object.run_arbitrary_query(
                 """SELECT buj4cd AS "UPC",
                     bubacd AS "Item",
@@ -190,7 +334,6 @@ class ScanSheetTypeAConverter:
                     except AttributeError:
                         trow.append(entry)
                 rows_for_export.append(trow)
-                logger.debug("Row for export: %s", trow)
 
             self.output_worksheet.append(["", invoice])
             self.invoice_row_counter += 1
@@ -199,9 +342,20 @@ class ScanSheetTypeAConverter:
             for items_list_entry in rows_for_export:
                 self.output_worksheet.append(items_list_entry)
                 self.invoice_row_counter += 1
+                total_rows += 1
 
             self._adjust_column_width(self.output_worksheet)
             self.output_spreadsheet.save(self.output_spreadsheet_name)
+
+        StructuredLogger.log_debug(
+            logger,
+            "_populate_workbook",
+            __name__,
+            f"Populated {len(invoice_list)} invoices, {total_rows} rows",
+            invoices=len(invoice_list),
+            total_rows=total_rows,
+            correlation_id=self._correlation_id,
+        )
 
     def _adjust_column_width(self, adjust_worksheet) -> None:
         """Adjust column widths to fit content.
@@ -230,6 +384,8 @@ class ScanSheetTypeAConverter:
             logger.debug("temp directory created as: %s", tempdir)
             count = 0
             save_counter = 0
+            barcodes_generated = 0
+            barcodes_skipped = 0
 
             for _ in self.output_worksheet.iter_rows():
                 try:
@@ -239,7 +395,7 @@ class ScanSheetTypeAConverter:
                             self.output_worksheet["B" + str(count)].value
                         )
                         upc_barcode_string = self._interpret_barcode_string(
-                            upc_barcode_string[-12:][:-1]
+                            upc_barcode_string
                         )
 
                         generated_barcode_path, width, height = self._generate_barcode(
@@ -260,13 +416,23 @@ class ScanSheetTypeAConverter:
                         # attach image to cell
                         self.output_worksheet.add_image(img, anchor="A" + str(count))
                         save_counter += 1
+                        barcodes_generated += 1
+                except ValueError as barcode_error:
+                    # Non-numeric or empty UPC values can occur in real data.
+                    # Skip barcode generation for those rows without spamming
+                    # warning-level logs during large automatic runs.
+                    barcodes_skipped += 1
+                    logger.debug("Skipping barcode generation: %s", barcode_error)
                 except Exception as barcode_error:
+                    barcodes_skipped += 1
                     logger.warning("Barcode error: %s", barcode_error)
 
                 # This save in the loop frees references to the barcode images,
                 # so that python's garbage collector can clear them
                 if save_counter >= 100:
-                    logger.debug("saving intermediate workbook to free file handles")
+                    logger.debug(
+                        "saving intermediate workbook to free file handles (batch of 100)"
+                    )
                     self.output_spreadsheet.save(self.output_spreadsheet_name)
                     logger.debug("intermediate save successful")
                     save_counter = 1
@@ -274,6 +440,16 @@ class ScanSheetTypeAConverter:
             logger.debug("saving workbook to file")
             self.output_spreadsheet.save(self.output_spreadsheet_name)
             logger.debug("workbook saved successfully")
+
+            StructuredLogger.log_debug(
+                logger,
+                "_process_barcodes",
+                __name__,
+                f"Barcode generation completed: {barcodes_generated} generated, {barcodes_skipped} skipped",
+                barcodes_generated=barcodes_generated,
+                barcodes_skipped=barcodes_skipped,
+                correlation_id=self._correlation_id,
+            )
 
     def _finalize_output(self, context) -> None:
         """Finalize output by closing database connection.
@@ -285,6 +461,13 @@ class ScanSheetTypeAConverter:
         if hasattr(self, "query_object") and self.query_object is not None:
             try:
                 self.query_object.close()
+                StructuredLogger.log_debug(
+                    logger,
+                    "_finalize_output",
+                    __name__,
+                    "Database connection closed",
+                    correlation_id=self._correlation_id,
+                )
             except AttributeError:
                 # query_object might not have a close method in some implementations
                 pass
@@ -342,22 +525,22 @@ class ScanSheetTypeAConverter:
         Raises:
             ValueError: If the input is empty or invalid
         """
-        if not upc_barcode_string == "":
-            try:
-                _ = int(upc_barcode_string)
-            except ValueError:
-                raise ValueError("Input contents are not an integer")
-
-            if len(upc_barcode_string) < 10:
-                upc_barcode_string = upc_barcode_string.rjust(11, "0")
-            if len(upc_barcode_string) <= 11:
-                upc_barcode_string = upc_barcode_string.ljust(12, "0")
-            else:
-                raise ValueError("Input contents are more than 11 characters")
-        else:
+        if upc_barcode_string is None:
             raise ValueError("Input is empty")
 
-        return upc_barcode_string
+        normalized = "".join(
+            ch for ch in str(upc_barcode_string).strip() if ch.isdigit()
+        )
+        if normalized == "":
+            raise ValueError("Input contents are not an integer")
+
+        # python-barcode UPCA class expects 11 digits (without checksum).
+        if len(normalized) < 11:
+            normalized = normalized.zfill(11)
+        elif len(normalized) > 11:
+            normalized = normalized[-11:]
+
+        return normalized
 
 
 # =============================================================================

@@ -6,7 +6,79 @@ and loose coupling from the underlying database implementation.
 """
 
 from dataclasses import dataclass
+import re
 from typing import Optional, Protocol, runtime_checkable
+
+
+_READ_ONLY_SQL_START = {"SELECT", "WITH"}
+_MUTATING_SQL_START = {
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "MERGE",
+    "ALTER",
+    "DROP",
+    "CREATE",
+    "TRUNCATE",
+    "REPLACE",
+    "CALL",
+    "EXEC",
+    "EXECUTE",
+}
+
+
+def _strip_sql_leading_comments(query: str) -> str:
+    """Strip leading SQL comments/whitespace for statement classification."""
+    remaining = query or ""
+
+    while True:
+        stripped = remaining.lstrip()
+        if not stripped:
+            return ""
+
+        if stripped.startswith("--"):
+            newline_index = stripped.find("\n")
+            if newline_index == -1:
+                return ""
+            remaining = stripped[newline_index + 1 :]
+            continue
+
+        if stripped.startswith("/*"):
+            end_index = stripped.find("*/")
+            if end_index == -1:
+                return ""
+            remaining = stripped[end_index + 2 :]
+            continue
+
+        return stripped
+
+
+def assert_read_only_sql(query: str) -> None:
+    """Raise ValueError when SQL is not read-only.
+
+    This guard prevents accidental writes against AS/400 ODBC connections.
+    Only statements beginning with SELECT or WITH are allowed.
+    """
+    normalized = _strip_sql_leading_comments(query)
+    if not normalized:
+        raise ValueError("ODBC query must not be empty")
+
+    keyword_match = re.match(r"([A-Za-z]+)", normalized)
+    first_keyword = keyword_match.group(1).upper() if keyword_match else ""
+
+    if first_keyword in _READ_ONLY_SQL_START:
+        return
+
+    if first_keyword in _MUTATING_SQL_START:
+        raise ValueError(
+            "Mutating SQL is forbidden for AS400 ODBC query paths. "
+            f"Blocked statement starting with {first_keyword!r}."
+        )
+
+    raise ValueError(
+        "Only read-only SELECT/WITH SQL is allowed for AS400 ODBC query paths. "
+        f"Blocked statement starting with {first_keyword or 'unknown token'!r}."
+    )
 
 
 @dataclass
@@ -112,14 +184,22 @@ class PyODBCConnection:
         Returns:
             List of dictionaries with column names as keys
         """
+        assert_read_only_sql(query)
+
         conn = self._ensure_connection()
         cursor = conn.cursor()
 
         try:
-            if params:
+            if params is not None:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
+
+            # Statements like UPDATE/INSERT/DELETE may not return rows.
+            # In that case cursor.description is None and fetchall() can raise
+            # for drivers that enforce result-set semantics.
+            if not cursor.description:
+                return []
 
             # Get column names from cursor description
             columns = (
@@ -207,6 +287,7 @@ class QueryRunner:
         Returns:
             List of dictionaries representing query results
         """
+        assert_read_only_sql(query)
         return self.connection.execute(query, params)
 
     def run_query_single(self, query: str, params: tuple = None) -> Optional[dict]:

@@ -6,6 +6,10 @@ enabling dependency injection and testability for send backends.
 
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from batch_file_processor.structured_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @runtime_checkable
 class FTPClientProtocol(Protocol):

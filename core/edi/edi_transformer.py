@@ -1,7 +1,9 @@
 import logging
 from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import get_logger, log_with_context
+
+logger = get_logger(__name__)
 
 
 def dac_str_int_to_int(dacstr: str) -> int:
@@ -35,8 +37,12 @@ def convert_to_price_decimal(value):
     try:
         return Decimal(retprice)
     except Exception:
-        logger.warning(
-            "convert_to_price_decimal: could not convert %r to Decimal", value
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "Price conversion failed",
+            operation="convert_to_price_decimal",
+            context={"input_value": value, "parsed_value": retprice},
         )
         return 0
 
@@ -47,14 +53,23 @@ def detect_invoice_is_credit(edi_process):
     try:
         with open(edi_process, encoding="utf-8") as work_file:  # open input file
             fields = capture_records(work_file.readline())
-    except (OSError, IOError):
-        logger.warning("detect_invoice_is_credit: could not open file %r", edi_process)
+    except (OSError, IOError) as e:
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "Credit detection failed - file error",
+            operation="detect_invoice_is_credit",
+            context={"file_path": edi_process, "error_type": type(e).__name__},
+        )
         return False
 
     if fields is None:
-        logger.warning(
-            "detect_invoice_is_credit: capture_records returned None for %r",
-            edi_process,
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "Credit detection failed - no fields parsed",
+            operation="detect_invoice_is_credit",
+            context={"file_path": edi_process},
         )
         return False
 

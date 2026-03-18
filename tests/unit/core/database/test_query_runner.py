@@ -1,11 +1,15 @@
 """Unit tests for core.database.query_runner module."""
 
+import pytest
+
+import core.database
 from core.database.query_runner import (
     ConnectionConfig,
     DatabaseConnectionProtocol,
     MockConnection,
     PyODBCConnection,
     QueryRunner,
+    assert_read_only_sql,
     create_query_runner,
 )
 
@@ -144,6 +148,78 @@ class TestPyODBCConnection:
         conn = PyODBCConnection(config)
         conn.close()  # Should not raise
 
+    def test_execute_returns_empty_when_driver_has_no_result_metadata(self):
+        """If driver reports no result metadata, fetchall should not be called."""
+
+        class FakeCursor:
+            description = None
+
+            def __init__(self):
+                self.fetchall_called = False
+
+            def execute(self, query, params=None):
+                return None
+
+            def fetchall(self):
+                self.fetchall_called = True
+                raise RuntimeError("fetchall() should not be called")
+
+            def close(self):
+                pass
+
+        class FakeConnection:
+            def __init__(self):
+                self.cursor_instance = FakeCursor()
+
+            def cursor(self):
+                return self.cursor_instance
+
+        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
+        conn = PyODBCConnection(config)
+        fake_connection = FakeConnection()
+        conn._connection = fake_connection
+
+        result = conn.execute("SELECT 1", ())
+
+        assert result == []
+        assert fake_connection.cursor_instance.fetchall_called is False
+
+    def test_execute_passes_empty_tuple_params(self):
+        """Empty tuple params should still use parameterized execute path."""
+
+        class FakeCursor:
+            description = [("id",)]
+
+            def __init__(self):
+                self.execute_calls = []
+
+            def execute(self, query, params=None):
+                self.execute_calls.append((query, params))
+                return None
+
+            def fetchall(self):
+                return [(1,)]
+
+            def close(self):
+                pass
+
+        class FakeConnection:
+            def __init__(self):
+                self.cursor_instance = FakeCursor()
+
+            def cursor(self):
+                return self.cursor_instance
+
+        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
+        conn = PyODBCConnection(config)
+        fake_connection = FakeConnection()
+        conn._connection = fake_connection
+
+        result = conn.execute("SELECT 1", ())
+
+        assert fake_connection.cursor_instance.execute_calls == [("SELECT 1", ())]
+        assert result == [{"id": 1}]
+
 
 class TestCreateQueryRunner:
     """Tests for create_query_runner factory function."""
@@ -161,6 +237,53 @@ class TestCreateQueryRunner:
         # Cast to PyODBCConnection to access config
         assert isinstance(runner.connection, PyODBCConnection)
         assert runner.connection.config.database == "QGPL"
+
+
+class TestReadOnlySqlPolicy:
+    """Tests for ODBC read-only SQL contract."""
+
+    def test_assert_read_only_accepts_select(self):
+        """SELECT statements should be accepted."""
+        assert_read_only_sql("SELECT * FROM my_table")
+
+    def test_assert_read_only_accepts_with(self):
+        """WITH CTE statements should be accepted."""
+        assert_read_only_sql("WITH cte AS (SELECT 1 AS id) SELECT * FROM cte")
+
+    def test_assert_read_only_rejects_update(self):
+        """Mutating statements must be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("UPDATE my_table SET col = 1")
+
+    def test_query_runner_rejects_insert_before_execution(self):
+        """QueryRunner should block INSERT statements before delegating."""
+        mock_conn = MockConnection()
+        runner = QueryRunner(mock_conn)
+
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            runner.run_query("INSERT INTO x (a) VALUES (1)")
+
+        assert mock_conn.executed_queries == []
+
+    def test_legacy_query_runner_rejects_delete(self, monkeypatch):
+        """Legacy compatibility runner must enforce read-only policy too."""
+
+        class DummyConnection:
+            def _connect(self):
+                raise AssertionError("Should not connect for blocked SQL")
+
+        class DummyRunner:
+            def __init__(self):
+                self.connection = DummyConnection()
+
+        def _create_dummy_runner(**kwargs):
+            return DummyRunner()
+
+        monkeypatch.setattr(core.database, "create_query_runner", _create_dummy_runner)
+        legacy_runner = core.database.query_runner("u", "p", "h", "driver")
+
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            legacy_runner.run_arbitrary_query("DELETE FROM my_table")
 
 
 class TestProtocolCompliance:

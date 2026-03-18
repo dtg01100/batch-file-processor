@@ -4,15 +4,18 @@ This module provides centralized error handling and logging,
 using dependency injection for testability.
 """
 
-import logging
 import os
 import time
 from io import StringIO
 from typing import Any, Optional
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_with_context,
+)
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
 
-logger = logging.getLogger("dispatch.error_handler")
+logger = get_logger(__name__)
 
 
 class ErrorHandler:
@@ -64,6 +67,8 @@ class ErrorHandler:
             context: Optional additional context
             error_source: Source module/component name
         """
+        import logging
+
         error_record = {
             "timestamp": time.ctime(),
             "folder": folder,
@@ -75,7 +80,19 @@ class ErrorHandler:
         }
 
         # Emit through Python logging framework
-        logger.error("Error in %s processing %s: %s", folder, filename, error)
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"Error in {folder} processing {filename}: {error}",
+            context={
+                "folder": folder,
+                "filename": filename,
+                "error_type": type(error).__name__,
+                "error_source": error_source,
+                **(context or {}),
+            },
+            exc_info=True,
+        )
 
         # Add to in-memory list
         self.errors.append(error_record)

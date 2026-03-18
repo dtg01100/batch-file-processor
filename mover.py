@@ -4,7 +4,6 @@ This module provides utilities for migrating and merging database files.
 It has been refactored to remove tkinter dependencies.
 """
 
-import logging
 import os
 import threading
 import time
@@ -12,9 +11,10 @@ from typing import Callable, Optional
 
 import backup_increment
 import folders_database_migrator
+from batch_file_processor.structured_logging import get_logger
 from interface.database import sqlite_wrapper
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DbMigrationThing:

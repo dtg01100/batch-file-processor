@@ -4,13 +4,17 @@ This module provides a testable wrapper around the EDI validation functionality,
 using dependency injection for file system operations.
 """
 
-import logging
 from io import StringIO
 from typing import Optional
 
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
 from dispatch.interfaces import FileSystemInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EDIValidator:
@@ -47,6 +51,14 @@ class EDIValidator:
             Tuple of (is_valid, errors) where errors is a list of
             error messages (empty if valid)
         """
+        import logging
+
+        log_file_operation(
+            logger,
+            "validate",
+            file_path,
+            file_type="edi",
+        )
         logger.debug("Validating EDI file: %s", file_path)
         self.errors = StringIO()
         self.has_errors = False
@@ -75,18 +87,41 @@ class EDIValidator:
 
             is_valid = not self.has_errors
             if is_valid and self.has_minor_errors:
-                logger.warning(
-                    "EDI validation passed with minor errors for: %s (%d issues)",
-                    file_path,
-                    len(error_list),
+                log_with_context(
+                    logger,
+                    logging.WARNING,
+                    f"EDI validation passed with minor errors for: {file_path} "
+                    f"({len(error_list)} issues)",
+                    context={
+                        "file_path": file_path,
+                        "issues": len(error_list),
+                        "warnings": error_list,
+                    },
                 )
             elif is_valid:
+                log_file_operation(
+                    logger,
+                    "validate",
+                    file_path,
+                    file_type="edi",
+                    success=True,
+                )
                 logger.info("EDI validation passed: %s", file_path)
             else:
-                logger.error(
-                    "EDI validation failed for: %s (%d errors)",
+                log_file_operation(
+                    logger,
+                    "validate",
                     file_path,
-                    len(error_list),
+                    file_type="edi",
+                    success=False,
+                    context={"errors": error_list},
+                )
+                log_with_context(
+                    logger,
+                    logging.ERROR,
+                    f"EDI validation failed for: {file_path} "
+                    f"({len(error_list)} errors)",
+                    context={"file_path": file_path, "errors": error_list},
                 )
 
             return is_valid, error_list

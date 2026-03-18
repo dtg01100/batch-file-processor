@@ -4,7 +4,6 @@ This module provides a refactored, testable implementation of log email sending,
 using Protocol interfaces for dependency injection.
 """
 
-import logging
 import mimetypes
 import os
 import smtplib
@@ -13,7 +12,12 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Optional, Protocol, runtime_checkable
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_backend_call,
+)
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -156,9 +160,13 @@ class SMTPEmailService:
                         )
 
             # Connect and send
-            server = smtplib.SMTP(
-                str(self.config.smtp_server), str(self.config.smtp_port)
+            log_backend_call(
+                logger,
+                "smtp",
+                "connect",
+                endpoint=f"{self.config.smtp_server}:{self.config.smtp_port}",
             )
+            server = smtplib.SMTP(str(self.config.smtp_server), self.config.smtp_port)
             try:
                 server.ehlo()
                 if self.config.use_tls:
@@ -167,6 +175,14 @@ class SMTPEmailService:
                 if self.config.smtp_username and self.config.smtp_password:
                     server.login(self.config.smtp_username, self.config.smtp_password)
                 server.send_message(message)
+                log_backend_call(
+                    logger,
+                    "smtp",
+                    "send",
+                    endpoint=f"{self.config.smtp_server}:{self.config.smtp_port}",
+                    success=True,
+                    context={"recipients": to, "subject": subject},
+                )
             finally:
                 server.close()
 
@@ -174,6 +190,15 @@ class SMTPEmailService:
             return True
 
         except Exception as e:
+            log_backend_call(
+                logger,
+                "smtp",
+                "send",
+                endpoint=f"{self.config.smtp_server}:{self.config.smtp_port}",
+                success=False,
+                error=e,
+                context={"recipients": to, "subject": subject},
+            )
             logger.error("Failed to send email: %s", e, exc_info=True)
             return False
 

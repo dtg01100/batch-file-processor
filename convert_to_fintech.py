@@ -27,6 +27,11 @@ import csv
 import logging
 
 import utils
+from batch_file_processor.structured_logging import (
+    get_logger,
+    log_file_operation,
+    log_with_context,
+)
 from convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -35,7 +40,7 @@ from convert_base import (
 )
 from core.edi.inv_fetcher import InvFetcher
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FintechConverter(BaseEDIConverter):
@@ -283,7 +288,78 @@ def edi_convert(
         >>> print(result)
         'output.csv'
     """
-    converter = FintechConverter()
-    return converter.edi_convert(
-        edi_process, output_filename, settings_dict, parameters_dict, upc_lut
+    import os
+    import time
+
+    from batch_file_processor.structured_logging import get_or_create_correlation_id
+
+    correlation_id = get_or_create_correlation_id()
+    start_time = time.perf_counter()
+    division_id = parameters_dict.get("fintech_division_id", "")
+
+    log_with_context(
+        logger,
+        logging.INFO,
+        "Starting Fintech conversion",
+        operation="edi_convert",
+        context={
+            "input_file": os.path.basename(edi_process),
+            "output_file": os.path.basename(output_filename) + ".csv",
+            "format": "fintech",
+            "division_id": division_id,
+        },
     )
+    log_file_operation(
+        logger,
+        "read",
+        edi_process,
+        file_type="edi",
+        correlation_id=correlation_id,
+    )
+
+    try:
+        converter = FintechConverter()
+        result = converter.edi_convert(
+            edi_process, output_filename, settings_dict, parameters_dict, upc_lut
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            "Fintech conversion completed",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "output_file": os.path.basename(result),
+                "format": "fintech",
+                "division_id": division_id,
+                "duration_ms": round(duration_ms, 2),
+            },
+        )
+        log_file_operation(
+            logger,
+            "write",
+            result,
+            file_type="csv",
+            success=True,
+            duration_ms=duration_ms,
+            correlation_id=correlation_id,
+        )
+        return result
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"Fintech conversion failed: {e}",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "format": "fintech",
+                "division_id": division_id,
+                "duration_ms": round(duration_ms, 2),
+                "error": str(e),
+            },
+        )
+        raise

@@ -4,6 +4,7 @@ import pytest
 from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
+from interface.qt.theme import Theme
 from interface.qt.services.qt_services import QtProgressService, QtUIService
 
 pytestmark = pytest.mark.qt
@@ -349,15 +350,53 @@ class TestQtProgressService:
         assert service._title_label.text() == "Completed with errors: test_edi"
         assert service._progress_bar.value() == 100
 
-        def test_event_filter_handles_missing_parent_attribute(self, qtbot):
-            parent = QWidget()
-            qtbot.addWidget(parent)
-            parent.show()
+    def test_overlay_has_explicit_background_style(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
 
-            service = QtProgressService(parent)
-            delattr(service, "_parent")
+        service = QtProgressService(parent)
 
-            event = QEvent(QEvent.Type.Resize)
-            # Should not raise even when _parent is missing.
-            handled = service.eventFilter(parent, event)
-            assert isinstance(handled, bool)
+        assert service._overlay.objectName() == "qt_progress_overlay"
+        assert Theme.OVERLAY_BACKGROUND in service._overlay.styleSheet()
+
+    def test_discovery_and_sending_use_distinct_progress_bars(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+
+        service.start_discovery(folder_total=2)
+        service.update_discovery_progress(
+            folder_num=1,
+            folder_total=2,
+            folder_name="Folder A",
+            pending_for_folder=3,
+            pending_total=3,
+        )
+        service.finish_discovery(total_pending=5)
+
+        assert service._discovery_progress_bar.value() == 100
+
+        service.start_sending(total_files=5, total_folders=2)
+        service.start_folder("Folder A", total_files=3, folder_num=1, folder_total=2)
+        service.update_file(2, 3)
+
+        assert service._progress_bar.value() == 40
+        assert service._send_progress_label.text() == "Sending files (2/5)"
+        assert service._folder_label.text() == "Folder 1 of 2"
+        assert service._file_label.text() == "File 2 of 3"
+
+    def test_event_filter_handles_missing_parent_attribute(self, qtbot):
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        parent.show()
+
+        service = QtProgressService(parent)
+        delattr(service, "_parent")
+
+        event = QEvent(QEvent.Type.Resize)
+        # Should not raise even when _parent is missing.
+        handled = service.eventFilter(parent, event)
+        assert isinstance(handled, bool)

@@ -3,7 +3,9 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 
-logger = logging.getLogger(__name__)
+from batch_file_processor.structured_logging import get_logger, log_with_context
+
+logger = get_logger(__name__)
 
 
 def dactime_from_datetime(date_time: datetime) -> str:
@@ -50,7 +52,18 @@ def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> st
             days=int(offset) + adj_offset
         )
         formatted_date_string = corrected_date_string.strftime("%m/%d/%y")
-    except Exception:
-        logger.warning("prettify_dates: could not parse date string %r", date_string)
+    except Exception as e:
+        log_with_context(
+            logger,
+            logging.WARNING,
+            "Date parsing failed",
+            operation="prettify_dates",
+            context={
+                "input_date": date_string,
+                "offset": offset,
+                "adj_offset": adj_offset,
+                "error_type": type(e).__name__,
+            },
+        )
         formatted_date_string = "Not Available"
     return formatted_date_string

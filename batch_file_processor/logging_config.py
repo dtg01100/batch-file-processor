@@ -27,6 +27,12 @@ import os
 import sys
 from typing import IO, Union
 
+from batch_file_processor.structured_logging import (
+    JSONFormatter,
+    StructuredLogAdapter,
+    get_correlation_id,
+)
+
 # ---------------------------------------------------------------------------
 # Module-level constants
 # ---------------------------------------------------------------------------
@@ -62,6 +68,12 @@ def get_logger(name: str) -> logging.Logger:
     valid and will return the exact same logger instance.
     """
     return logging.getLogger(name)
+
+
+def get_structured_logger(name: str, extra: dict | None = None) -> StructuredLogAdapter:
+    """Return a structured logger adapter with automatic context injection."""
+    logger = get_logger(name)
+    return StructuredLogAdapter(logger, extra=extra)
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +144,11 @@ def setup_logging(
     # ------------------------------------------------------------------
     # Shared formatter
     # ------------------------------------------------------------------
-    formatter = logging.Formatter(DEFAULT_FORMAT, datefmt=DEFAULT_DATEFMT)
+    use_json = os.environ.get("BFS_LOG_FORMAT", "").lower() == "json"
+    if use_json:
+        formatter = JSONFormatter()
+    else:
+        formatter = logging.Formatter(DEFAULT_FORMAT, datefmt=DEFAULT_DATEFMT)
 
     # ------------------------------------------------------------------
     # Console handler (stderr)
@@ -150,6 +166,39 @@ def setup_logging(
         root_logger.addHandler(file_handler)
 
     return root_logger
+
+
+def setup_structured_logging(
+    level: int | None = None,
+    log_file: str | None = None,
+) -> logging.Logger:
+    """Configure the root logger with JSON structured output.
+
+    This is a convenience wrapper around setup_logging that forces JSON
+    formatting regardless of the BFS_LOG_FORMAT environment variable.
+
+    Parameters
+    ----------
+    level:
+        Explicit logging level (e.g. ``logging.DEBUG``).
+    log_file:
+        Optional path to a log file.
+
+    Returns
+    -------
+    logging.Logger
+        The root logger instance.
+    """
+    # Temporarily force JSON format
+    original_format = os.environ.get("BFS_LOG_FORMAT")
+    os.environ["BFS_LOG_FORMAT"] = "json"
+    try:
+        return setup_logging(level=level, log_file=log_file)
+    finally:
+        if original_format is None:
+            os.environ.pop("BFS_LOG_FORMAT", None)
+        else:
+            os.environ["BFS_LOG_FORMAT"] = original_format
 
 
 # ---------------------------------------------------------------------------

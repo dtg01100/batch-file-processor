@@ -4,7 +4,12 @@ This module provides the InvFetcher class for fetching invoice-related
 data from the database using dependency injection for testability.
 """
 
+import logging
 from typing import Protocol, runtime_checkable
+
+from batch_file_processor.structured_logging import get_logger, log_with_context
+
+logger = get_logger(__name__)
 
 
 @runtime_checkable
@@ -54,6 +59,14 @@ class InvFetcher:
         """
         self._query_runner = query_runner
         self.settings = settings or {}
+        self._database_lookup_mode = (
+            str(self.settings.get("database_lookup_mode", "optional")).strip().lower()
+        )
+        self._strict_database_lookup = self._database_lookup_mode in {
+            "strict",
+            "required",
+            "test",
+        }
         self.last_invoice_number = 0
         self.uom_lut = {0: "N/A"}
         self.last_invno = 0
@@ -77,21 +90,55 @@ class InvFetcher:
 
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:
+            msg = "InvFetcher.fetch_po() called with no query_runner"
+            if self._strict_database_lookup:
+                raise RuntimeError(msg)
+            logger.warning("%s - returning empty PO", msg)
             return ""
 
-        qry_ret = self._query_runner.run_query(
-            """
-            SELECT
-                trim(ohhst.bte4cd),
-                trim(ohhst.bthinb),
-                ohhst.btabnb
-            FROM
-                dacdata.ohhst ohhst
-            WHERE
-                ohhst.BTHHNB = ?
-            """,
-            (int(invoice_number),),
-        )
+        try:
+            qry_ret = self._query_runner.run_query(
+                """
+                SELECT
+                    trim(ohhst.bte4cd),
+                    trim(ohhst.bthinb),
+                    ohhst.btabnb
+                FROM
+                    dacdata.ohhst ohhst
+                WHERE
+                    ohhst.BTHHNB = ?
+                """,
+                (int(invoice_number),),
+            )
+            log_with_context(
+                logger,
+                logging.DEBUG,
+                "PO fetch query executed",
+                operation="fetch_po",
+                context={
+                    "invoice_number": invoice_number,
+                    "query_type": "SELECT",
+                    "table": "dacdata.ohhst",
+                    "params": (int(invoice_number),),
+                    "result_count": len(qry_ret),
+                },
+            )
+        except Exception:
+            if self._strict_database_lookup:
+                raise
+            log_with_context(
+                logger,
+                logging.ERROR,
+                "PO fetch query failed",
+                operation="fetch_po",
+                context={
+                    "invoice_number": invoice_number,
+                    "query_type": "SELECT",
+                    "table": "dacdata.ohhst",
+                },
+                exc_info=True,
+            )
+            return ""
         self.last_invoice_number = invoice_number
         try:
             # Results are list of dicts, get first row values
@@ -109,7 +156,13 @@ class InvFetcher:
                     self.po = row[0]
                     self.custname = row[1]
                     self.custno = row[2]
+            elif self._strict_database_lookup:
+                raise LookupError(
+                    f"No invoice header found in AS400 for invoice {invoice_number}"
+                )
         except (IndexError, KeyError):
+            if self._strict_database_lookup:
+                raise
             self.po = ""
         return self.po
 
@@ -157,6 +210,10 @@ class InvFetcher:
 
             # Handle case where no query_runner is provided (for testing)
             if self._query_runner is None:
+                msg = "InvFetcher.fetch_uom_desc() called with no query_runner"
+                if self._strict_database_lookup:
+                    raise RuntimeError(msg)
+                logger.warning("%s - returning empty UOM", msg)
                 return ""
 
             try:
@@ -178,15 +235,58 @@ class InvFetcher:
                         self.uom_lut[values[0]] = values[1] if len(values) > 1 else ""
                     else:
                         self.uom_lut[row[0]] = row[1]
+                log_with_context(
+                    logger,
+                    logging.DEBUG,
+                    "UOM lookup query executed",
+                    operation="fetch_uom_desc",
+                    context={
+                        "invoice_number": invno,
+                        "query_type": "SELECT",
+                        "table": "dacdata.odhst",
+                        "params": (int(invno),),
+                        "uom_count": len(self.uom_lut),
+                    },
+                )
             except Exception:
-                # On error, keep default uom_lut
-                pass
+                if self._strict_database_lookup:
+                    raise
+                log_with_context(
+                    logger,
+                    logging.ERROR,
+                    "UOM lookup query failed",
+                    operation="fetch_uom_desc",
+                    context={
+                        "invoice_number": invno,
+                        "query_type": "SELECT",
+                        "table": "dacdata.odhst",
+                    },
+                    exc_info=True,
+                )
             self.last_invno = invno
 
         try:
             return self.uom_lut[lineno + 1]
         except KeyError:
-            return self._fetch_uom_from_item(itemno, uommult)
+            uom_result = self._fetch_uom_from_item(itemno, uommult)
+            if not uom_result:
+                log_with_context(
+                    logger,
+                    logging.DEBUG,
+                    "UOM lookup failed",
+                    operation="fetch_uom_desc",
+                    context={
+                        "item_number": itemno,
+                        "uom_multiplier": uommult,
+                        "line_number": lineno,
+                        "invoice_number": invno,
+                    },
+                )
+                if self._strict_database_lookup:
+                    raise LookupError(
+                        f"No UOM found for item {itemno} multiplier {uommult}"
+                    )
+            return uom_result
 
     def _fetch_uom_from_item(self, itemno: int, uommult: int) -> str:
         """Fetch UOM from item master.
@@ -200,6 +300,10 @@ class InvFetcher:
         """
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:
+            if self._strict_database_lookup:
+                raise RuntimeError(
+                    "InvFetcher._fetch_uom_from_item() called with no query_runner"
+                )
             return "HI" if int(uommult) > 1 else "LO"
 
         try:
@@ -220,8 +324,14 @@ class InvFetcher:
                 if isinstance(row, dict):
                     return list(row.values())[0]
                 return row[0]
+            if self._strict_database_lookup:
+                raise LookupError(
+                    f"No item-master UOM found in AS400 for item {itemno}"
+                )
             return "HI" if int(uommult) > 1 else "LO"
         except Exception:
+            if self._strict_database_lookup:
+                raise
             try:
                 if int(uommult) > 1:
                     return "HI"
