@@ -1,0 +1,200 @@
+{
+  "format_id": "default",
+  "format_name": "Default Fixed-Width Format",
+  "format_version": "1.0",
+  "description": "Original proprietary fixed-width EDI format with A/B/C record types",
+  "encoding": "utf-8",
+  "record_types": {
+    "A": {
+      "name": "Invoice Header",
+      "description": "Invoice header record containing customer, invoice number, date, and total",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "A"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier"
+        },
+        {
+          "name": "cust_vendor",
+          "position": 1,
+          "length": 6,
+          "type": "string",
+          "description": "Customer or vendor code"
+        },
+        {
+          "name": "invoice_number",
+          "position": 7,
+          "length": 10,
+          "type": "string",
+          "description": "Invoice number"
+        },
+        {
+          "name": "invoice_date",
+          "position": 17,
+          "length": 6,
+          "type": "string",
+          "description": "Invoice date (MMDDYY format)"
+        },
+        {
+          "name": "invoice_total",
+          "position": 23,
+          "length": 10,
+          "type": "string",
+          "description": "Invoice total amount"
+        }
+      ],
+      "total_length": 33
+    },
+    "B": {
+      "name": "Line Item",
+      "description": "Line item record containing product details, pricing, and quantities",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "B"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier"
+        },
+        {
+          "name": "upc_number",
+          "position": 1,
+          "length": 11,
+          "type": "string",
+          "description": "UPC barcode number"
+        },
+        {
+          "name": "description",
+          "position": 12,
+          "length": 25,
+          "type": "string",
+          "description": "Product description"
+        },
+        {
+          "name": "vendor_item",
+          "position": 37,
+          "length": 6,
+          "type": "string",
+          "description": "Vendor item number"
+        },
+        {
+          "name": "unit_cost",
+          "position": 43,
+          "length": 6,
+          "type": "string",
+          "description": "Unit cost"
+        },
+        {
+          "name": "combo_code",
+          "position": 49,
+          "length": 2,
+          "type": "string",
+          "description": "Combo code indicator"
+        },
+        {
+          "name": "unit_multiplier",
+          "position": 51,
+          "length": 6,
+          "type": "string",
+          "description": "Unit multiplier for pack sizes"
+        },
+        {
+          "name": "qty_of_units",
+          "position": 57,
+          "length": 5,
+          "type": "string",
+          "description": "Quantity of units"
+        },
+        {
+          "name": "suggested_retail_price",
+          "position": 62,
+          "length": 5,
+          "type": "string",
+          "description": "Suggested retail price"
+        },
+        {
+          "name": "price_multi_pack",
+          "position": 67,
+          "length": 3,
+          "type": "string",
+          "description": "Multi-pack price"
+        },
+        {
+          "name": "parent_item_number",
+          "position": 70,
+          "length": 6,
+          "type": "string",
+          "description": "Parent item number for combo items"
+        }
+      ],
+      "total_length": 76,
+      "optional_fields": {
+        "description": "B records can be 71 or 77 characters (with line ending)",
+        "alternate_length": 70
+      }
+    },
+    "C": {
+      "name": "Charge/Fee",
+      "description": "Charge or fee record for additional invoice charges",
+      "identifier": {
+        "position": 0,
+        "length": 1,
+        "value": "C"
+      },
+      "fields": [
+        {
+          "name": "record_type",
+          "position": 0,
+          "length": 1,
+          "type": "string",
+          "description": "Record type identifier"
+        },
+        {
+          "name": "charge_type",
+          "position": 1,
+          "length": 3,
+          "type": "string",
+          "description": "Type of charge or fee"
+        },
+        {
+          "name": "description",
+          "position": 4,
+          "length": 25,
+          "type": "string",
+          "description": "Charge description"
+        },
+        {
+          "name": "amount",
+          "position": 29,
+          "length": 9,
+          "type": "string",
+          "description": "Charge amount"
+        }
+      ],
+      "total_length": 38
+    }
+  },
+  "validation_rules": {
+    "file_must_start_with": "A",
+    "allowed_record_types": ["A", "B", "C"],
+    "record_order": "A records followed by B and/or C records",
+    "b_record_lengths": [71, 77],
+    "upc_validation": {
+      "blank_allowed": true,
+      "suppressed_length": 8,
+      "truncated_threshold": 11
+    }
+  }
+}
