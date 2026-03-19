@@ -35,9 +35,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, TextIO
 
 import utils
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from edi_format_parser import EDIFormatParser
 from plugin_config import PluginConfigMixin
-from query_runner import query_runner
 
 
 @dataclass
@@ -653,17 +653,19 @@ class DBEnabledConverter(CSVConverter):
         super().__init__(
             edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
         )
-        self.query_object: Optional[query_runner] = None
+        self.query_object: Optional[LegacyQueryRunnerAdapter] = None
         self._db_connected = False
 
     def connect_db(self) -> None:
         if not self._db_connected:
-            self.query_object = query_runner(
-                self.settings_dict["as400_username"],
-                self.settings_dict["as400_password"],
-                self.settings_dict["as400_address"],
-                f"{self.settings_dict['odbc_driver']}",
+            runner = create_query_runner(
+                username=self.settings_dict["as400_username"],
+                password=self.settings_dict["as400_password"],
+                dsn=self.settings_dict["as400_address"],
+                database="QGPL",
+                odbc_driver=f"{self.settings_dict['odbc_driver']}",
             )
+            self.query_object = LegacyQueryRunnerAdapter(runner)
             self._db_connected = True
 
     def run_query(self, query_string: str) -> list:

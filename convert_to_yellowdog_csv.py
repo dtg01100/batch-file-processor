@@ -38,7 +38,7 @@ from convert_base import (
     EDIRecord,
     create_csv_writer,
 )
-from core.database import query_runner as LegacyQueryRunner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 
 logger = get_logger(__name__)
@@ -87,12 +87,14 @@ class YellowDogConverter(BaseEDIConverter):
         query_runner = None
         if not missing_keys:
             try:
-                query_runner = LegacyQueryRunner(
-                    settings_dict["as400_username"],
-                    settings_dict["as400_password"],
-                    settings_dict["as400_address"],
-                    settings_dict["odbc_driver"],
+                runner = create_query_runner(
+                    username=settings_dict["as400_username"],
+                    password=settings_dict["as400_password"],
+                    dsn=settings_dict["as400_address"],
+                    database="QGPL",
+                    odbc_driver=settings_dict["odbc_driver"],
                 )
+                query_runner = LegacyQueryRunnerAdapter(runner)
                 logger.debug("YellowDog database lookup runner initialized")
             except Exception:
                 if strict_db_mode:

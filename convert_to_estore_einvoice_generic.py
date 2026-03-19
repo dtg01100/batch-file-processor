@@ -52,7 +52,7 @@ from convert_base import (
     ConversionContext,
     EDIRecord,
 )
-from core.database import query_runner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 
 
@@ -76,15 +76,17 @@ class invFetcher:
                 Must include: as400_username, as400_password, as400_address, odbc_driver
         """
         self.settings = settings_dict
-        # Create a legacy query_runner for the core InvFetcher
-        self._legacy_runner = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
+        # Create a new QueryRunner with legacy adapter for the core InvFetcher
+        runner = create_query_runner(
+            username=self.settings["as400_username"],
+            password=self.settings["as400_password"],
+            dsn=self.settings["as400_address"],
+            database="QGPL",
+            odbc_driver=f"{self.settings['odbc_driver']}",
         )
+        legacy_adapter = LegacyQueryRunnerAdapter(runner)
         # Create adapter for the core InvFetcher's protocol
-        self._fetcher = InvFetcher(self._legacy_runner, settings_dict)
+        self._fetcher = InvFetcher(legacy_adapter, settings_dict)
 
     @property
     def last_invoice_number(self):

@@ -44,7 +44,7 @@ from convert_base import (
     ConversionContext,
     EDIRecord,
 )
-from core.database import query_runner as LegacyQueryRunner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.exceptions import CustomerLookupError
 from core.utils import prettify_dates
 
@@ -69,14 +69,18 @@ class JolleyCustomConverter(BaseEDIConverter):
         Args:
             context: The conversion context
         """
-        # Initialize database connection using legacy runner (returns tuples)
+        # Initialize database connection using new QueryRunner with legacy adapter
         settings_dict = context.settings_dict
-        self.query_object = LegacyQueryRunner(
-            settings_dict["as400_username"],
-            settings_dict["as400_password"],
-            settings_dict["as400_address"],
-            settings_dict.get("odbc_driver", "IBM i Access ODBC Driver 64-bit"),
+        runner = create_query_runner(
+            username=settings_dict["as400_username"],
+            password=settings_dict["as400_password"],
+            dsn=settings_dict["as400_address"],
+            database="QGPL",
+            odbc_driver=settings_dict.get(
+                "odbc_driver", "IBM i Access ODBC Driver 64-bit"
+            ),
         )
+        self.query_object = LegacyQueryRunnerAdapter(runner)
 
         # Initialize state
         self.header_fields_dict: Dict[str, Any] = {}
