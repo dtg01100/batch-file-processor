@@ -217,7 +217,7 @@ class TestEditFolderPersistence:
         """Insert, read, update, delete a folder in DatabaseObj."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -263,7 +263,7 @@ class TestEditFolderPersistence:
         """Toggle folder active ↔ inactive and verify persistence."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -296,7 +296,7 @@ class TestEditFolderPersistence:
         """Read and update global settings."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -411,7 +411,7 @@ class TestBulkOperations:
         """Create N folders in DB, process all, verify all succeed."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -457,7 +457,7 @@ class TestBulkOperations:
         """Deactivate then delete multiple folder configs."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -500,7 +500,7 @@ class TestCompleteLifecycle:
         """Walk through the entire folder lifecycle."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")

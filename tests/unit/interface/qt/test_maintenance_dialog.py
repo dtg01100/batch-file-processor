@@ -42,7 +42,7 @@ class TestMaintenanceDialogIntegration:
     def test_dependencies_can_be_imported(self):
         """Test that required dependencies exist."""
         # Test that required modules can be imported
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
         from interface.services.reporting_service import ReportingService
 
         assert ReportingService is not None

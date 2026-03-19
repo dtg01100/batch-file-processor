@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import folders_database_migrator
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 from tests.fakes import FakeEvent
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
@@ -176,7 +176,7 @@ def temp_database(tmp_path):
         DatabaseObj: Temporary database object
     """
     from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-    from interface.database.database_obj import DatabaseObj
+    from backend.database.database_obj import DatabaseObj
 
     db_path = tmp_path / "test_folders.db"
 

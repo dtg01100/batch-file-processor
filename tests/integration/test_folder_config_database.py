@@ -17,7 +17,7 @@ import os
 import shutil
 import sys
 
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 # Add the project root to the path
 sys.path.insert(

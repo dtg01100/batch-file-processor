@@ -775,7 +775,7 @@ class TestQtAppIntegration:
 
     def test_app_has_required_dependencies(self):
         """Test that required dependencies can be imported."""
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
         from interface.operations.folder_manager import FolderManager
         from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 

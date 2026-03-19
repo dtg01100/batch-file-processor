@@ -34,7 +34,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.database]
 from unittest.mock import MagicMock
 
 import schema
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 
 class TestSchemaCreation:

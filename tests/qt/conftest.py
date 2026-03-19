@@ -18,10 +18,60 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
+# ---------------------------------------------------------------------------
+# _SpyMaintenanceFunctions — thin spy subclass for maintenance dialog tests
+# ---------------------------------------------------------------------------
+
+
+class _SpyMaintenanceFunctions:
+    """Thin spy wrapper that records which methods were called.
+
+    Instantiated lazily inside mock_maintenance_functions to avoid importing
+    MaintenanceFunctions at module load time.
+    """
+
+    # The actual class body is built at fixture-creation time; see fixture below.
+
+
+def _build_spy_class():
+    from interface.operations.maintenance_functions import MaintenanceFunctions
+
+    class SpyMaintenanceFunctions(MaintenanceFunctions):
+        """Thin spy wrapper that records which methods were called."""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._called: set = set()
+
+        def _record(self, name: str):
+            self._called.add(name)
+
+        def was_called(self, name: str) -> bool:
+            return name in self._called
+
+        def set_all_active(self):
+            self._record("set_all_active")
+            super().set_all_active()
+
+        def set_all_inactive(self):
+            self._record("set_all_inactive")
+            super().set_all_inactive()
+
+        def clear_resend_flags(self):
+            self._record("clear_resend_flags")
+            super().clear_resend_flags()
+
+        def database_import_wrapper(self, path):
+            self._record("database_import_wrapper")
+            super().database_import_wrapper(path)
+
+    return SpyMaintenanceFunctions
+
+
 @pytest.fixture
 def sample_folder_config():
     """Create a sample folder configuration dict.
-    
+
     This is pure data - no fakes needed.
     """
     return {
@@ -81,3 +131,48 @@ def sample_folder_config():
         "estore_c_record_OID": "",
         "fintech_division_id": "",
     }
+
+
+@pytest.fixture
+def mock_database_obj(tmp_path):
+    """Create a real database object for Qt tests using a temporary database.
+
+    This fixture creates a real DatabaseObj with a temporary SQLite database,
+    allowing tests to perform actual database operations without mocks.
+    Each test gets an isolated database that is cleaned up automatically.
+
+    Returns:
+        DatabaseObj: A real database object with initialized tables including
+        processed_files and folders_table.
+    """
+    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+    from backend.database.database_obj import DatabaseObj
+
+    db_path = tmp_path / "test_folders.db"
+
+    db = DatabaseObj(
+        database_path=str(db_path),
+        database_version=CURRENT_DATABASE_VERSION,
+        config_folder=str(tmp_path),
+        running_platform="Linux",
+    )
+
+    return db
+
+
+@pytest.fixture
+def mock_maintenance_functions(tmp_path):
+    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+    from backend.database.database_obj import DatabaseObj
+
+    db_path = tmp_path / "maint_test.db"
+    db = DatabaseObj(
+        database_path=str(db_path),
+        database_version=CURRENT_DATABASE_VERSION,
+        config_folder=str(tmp_path),
+        running_platform="Linux",
+    )
+    SpyMaintenanceFunctions = _build_spy_class()
+    mf = SpyMaintenanceFunctions(database_obj=db)
+    yield mf
+    db.close()

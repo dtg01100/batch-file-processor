@@ -10,7 +10,7 @@ import tempfile
 import pytest
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
 
 
 class TestSafeDatabaseAccessors:

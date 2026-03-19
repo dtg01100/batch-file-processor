@@ -483,9 +483,12 @@ class TestResendDialogStress:
         """Test dialog handles database errors during load."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        # Make processed_files.count raise an error (used by has_processed_files)
-        mock_database_obj.processed_files.count = MagicMock(
-            side_effect=RuntimeError("DB Error")
+        # Simulate a DB error at the service level — patch has_processed_files
+        # directly because ResendService creates its own table reference from
+        # the connection, so patching the table on mock_database_obj has no effect.
+        monkeypatch.setattr(
+            "interface.services.resend_service.ResendService.has_processed_files",
+            lambda self: (_ for _ in ()).throw(RuntimeError("DB Error")),
         )
 
         # Patch QMessageBox where base_dialog imported it
@@ -493,10 +496,10 @@ class TestResendDialogStress:
         monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", mock_msgbox)
 
         # Should handle database error gracefully
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
-        # Dialog should indicate it shouldn't be shown
+        # Should handle database error gracefully
         assert dialog._should_show is False
         # QMessageBox.critical should have been called
         mock_msgbox.critical.assert_called_once()
@@ -505,17 +508,20 @@ class TestResendDialogStress:
         """Test dialog when there are no processed files."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        # Empty processed_files table
-        mock_msgbox = MagicMock()
-        monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", mock_msgbox)
+        # Empty processed_files table - mock QMessageBox to avoid blocking dialog
+        mock_msgbox_class = MagicMock()
+        mock_msgbox_class.information = MagicMock(return_value=None)
+        monkeypatch.setattr(
+            "interface.qt.dialogs.base_dialog.QMessageBox", mock_msgbox_class
+        )
 
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
         # Dialog should indicate it shouldn't be shown
         assert dialog._should_show is False
         # QMessageBox.information should have been called
-        mock_msgbox.information.assert_called_once()
+        mock_msgbox_class.information.assert_called_once()
 
     def test_very_long_file_names(self, qtbot, mock_database_obj, tmp_path):
         """Test dialog with very long file names."""
@@ -531,12 +537,12 @@ class TestResendDialogStress:
                 "folder_id": 1,
                 "file_name": long_name,
                 "resend_flag": False,
-                "sent_date_time": "2024-01-01T00:00:00",
+                "processed_at": "2024-01-01T00:00:00",
             }
         )
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
         # Should load without crash and show the file
@@ -562,13 +568,13 @@ class TestResendDialogStress:
                     "folder_id": 1,
                     "file_name": full_path,
                     "resend_flag": False,
-                    "sent_date_time": f"2024-01-0{i}T00:00:00",
+                    "processed_at": f"2024-01-0{i}T00:00:00",
                 }
             )
 
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
         # Should load without crash
@@ -586,12 +592,12 @@ class TestResendDialogStress:
                 "folder_id": 1,
                 "file_name": str(f1),
                 "resend_flag": False,
-                "sent_date_time": "2024-01-01T00:00:00",
+                "processed_at": "2024-01-01T00:00:00",
             }
         )
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
         # Search with various inputs should not crash
@@ -610,12 +616,12 @@ class TestResendDialogStress:
                 "folder_id": 1,
                 "file_name": str(f1),
                 "resend_flag": False,
-                "sent_date_time": "2024-01-01T00:00:00",
+                "processed_at": "2024-01-01T00:00:00",
             }
         )
         mock_database_obj.folders_table.insert({"id": 1, "alias": "Test"})
 
-        dialog = ResendDialog(None, mock_database_obj)
+        dialog = ResendDialog(None, mock_database_obj.database_connection)
         qtbot.addWidget(dialog)
 
         # Rapidly apply different search filters
@@ -1150,7 +1156,7 @@ class TestAppSmokeActions:
         import appdirs
 
         import create_database
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
         from interface.qt.app import QtBatchFileSenderApp
 
         # Mock appdirs to return tmp_path

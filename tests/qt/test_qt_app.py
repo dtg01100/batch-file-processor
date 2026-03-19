@@ -225,7 +225,7 @@ class TestQtBatchFileSenderApp:
 
         app._graphical_process_directories(folders_table)
 
-        app._progress_service.show.assert_called_once_with("processing folders...")
+        app._progress_service.show.assert_called_once_with("Preparing run...")
         app._process_directories.assert_called_once_with(folders_table)
         app._refresh_users_list.assert_called_once()
         app._set_main_button_states.assert_called_once()

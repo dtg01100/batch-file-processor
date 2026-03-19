@@ -387,7 +387,7 @@ class TestConcurrentDatabaseAccess:
         """Multiple threads read and one writes; no crashes."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -436,7 +436,7 @@ class TestConcurrentDatabaseAccess:
         """Insert many folders quickly; verify all are present."""
         import create_database
         from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-        from interface.database.database_obj import DatabaseObj
+        from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")

@@ -22,7 +22,7 @@ from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.pipeline.validator import EDIValidationStep
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
 
 
 @pytest.fixture

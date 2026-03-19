@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 
 import create_database
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog

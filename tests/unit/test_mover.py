@@ -17,7 +17,7 @@ import pytest
 
 import mover
 import schema
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 

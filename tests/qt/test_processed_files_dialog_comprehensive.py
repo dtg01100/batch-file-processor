@@ -41,7 +41,7 @@ def populated_database(mock_database_obj):
                 "folder_id": folder_id,
                 "filename": f"file_{i}.edi",
                 "md5": f"hash_{i:04d}",
-                "processed_date": "2024-01-01",
+                "processed_at": "2024-01-01T00:00:00",
                 "resend_flag": False,
             }
         )
@@ -245,7 +245,7 @@ class TestProcessedFilesDialogBulkOperations:
                     "folder_id": i + 1,
                     "filename": f"file_{i}.edi",
                     "md5": f"hash_{i}",
-                    "processed_date": "2024-01-01",
+                    "processed_at": "2024-01-01T00:00:00",
                     "resend_flag": False,
                 }
             )
@@ -371,7 +371,7 @@ class TestProcessedFilesDialogLargeDataset:
                     "folder_id": folder_id,
                     "filename": f"file_{i:04d}.edi",
                     "md5": f"hash_{i:05d}",
-                    "processed_date": "2024-01-01",
+                    "processed_at": "2024-01-01T00:00:00",
                     "resend_flag": False,
                 }
             )
@@ -405,7 +405,7 @@ class TestProcessedFilesDialogLargeDataset:
                     "folder_id": folder_id,
                     "filename": f"file_{i}.edi",
                     "md5": f"hash_{i}",
-                    "processed_date": "2024-01-01",
+                    "processed_at": "2024-01-01T00:00:00",
                     "resend_flag": False,
                 }
             )

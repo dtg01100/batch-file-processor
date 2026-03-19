@@ -24,7 +24,7 @@ import pytest
 import create_database
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 from tests.integration.option_matrix import (
     CSV_OPTION_CASES,

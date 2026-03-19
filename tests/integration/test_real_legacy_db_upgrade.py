@@ -25,7 +25,7 @@ import sqlite3
 import folders_database_migrator
 import schema
 from core.utils.bool_utils import normalize_bool
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 LEGACY_DB_PATH = os.path.join(FIXTURES_DIR, "legacy_v32_folders.db")

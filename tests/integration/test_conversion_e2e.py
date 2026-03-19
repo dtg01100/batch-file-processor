@@ -17,15 +17,13 @@ Converters tested:
 - convert_to_jolley_custom.py
 """
 
-import pytest
-
-pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
-
 import csv
 import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
 
 # =============================================================================
 # EDI FORMAT SPECIFICATIONS (from test_convert_backends.py)
@@ -74,7 +72,8 @@ def sample_header_record():
 @pytest.fixture
 def sample_detail_record():
     """Create accurate detail record (76 chars)."""
-    # B + UPC(11) + Desc(25) + Item(6) + Cost(6) + Combo(2) + Mult(6) + Qty(5) + Retail(5) + Pack(3) + Parent(6) = 76
+    # B + UPC(11) + Desc(25) + Item(6) + Cost(6) + Combo(2) +
+    # Mult(6) + Qty(5) + Retail(5) + Pack(3) + Parent(6) = 76
     return (
         "B"
         + "01234567890"
@@ -214,7 +213,9 @@ def default_parameters_dict():
         "force_txt_file_ext": "False",
         "invoice_date_offset": 0,
         # Simplified CSV specific
-        "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,description,vendor_item",
+        "simple_csv_sort_order": (
+            "upc_number,qty_of_units,unit_cost,description,vendor_item"
+        ),
         "include_item_numbers": "True",
         "include_item_description": "True",
         # Estore einvoice specific
@@ -433,7 +434,12 @@ class TestConvertToCSV:
 
 @pytest.mark.integration
 class TestConvertToFintech:
-    """End-to-end tests for convert_to_fintech.py converter."""
+    """End-to-end tests for convert_to_fintech.py converter.
+
+    Note: FintechConverter uses InvFetcher with query_runner=None, which means
+    it returns empty values for database lookups. This is the expected behavior
+    for the fintech converter - it doesn't require actual database connections.
+    """
 
     def test_convert_produces_valid_csv(
         self,
@@ -448,19 +454,15 @@ class TestConvertToFintech:
 
         output_path = str(tmp_path / "output_fintech")
 
-        # Mock the invFetcher to avoid database dependency
-        with patch("utils.invFetcher") as mock_inv_fetcher_class:
-            mock_fetcher = MagicMock()
-            mock_fetcher.fetch_cust_no.return_value = "STORE001"
-            mock_inv_fetcher_class.return_value = mock_fetcher
-
-            result = convert_to_fintech.edi_convert(
-                edi_file,
-                output_path,
-                default_settings_dict,
-                default_parameters_dict,
-                sample_upc_lut,
-            )
+        # FintechConverter uses InvFetcher(None, ...) which returns empty values
+        # This is the expected behavior - no database mocking needed
+        result = convert_to_fintech.edi_convert(
+            edi_file,
+            output_path,
+            default_settings_dict,
+            default_parameters_dict,
+            sample_upc_lut,
+        )
 
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
@@ -486,49 +488,44 @@ class TestConvertToFintech:
         output_path = str(tmp_path / "output_missing_upc")
         empty_upc_lut = {}  # Empty lookup table
 
-        with patch("utils.invFetcher") as mock_inv_fetcher_class:
-            mock_fetcher = MagicMock()
-            mock_fetcher.fetch_cust_no.return_value = "STORE001"
-            mock_inv_fetcher_class.return_value = mock_fetcher
+        # FintechConverter uses InvFetcher(None, ...) which returns empty values
+        # This is the expected behavior - no database mocking needed
+        result = convert_to_fintech.edi_convert(
+            edi_file,
+            output_path,
+            default_settings_dict,
+            default_parameters_dict,
+            empty_upc_lut,
+        )
 
-            # Should handle missing UPC gracefully (use empty strings)
-            result = convert_to_fintech.edi_convert(
-                edi_file,
-                output_path,
-                default_settings_dict,
-                default_parameters_dict,
-                empty_upc_lut,
-            )
+        # Verify the output file was created
+        assert result is not None
 
-            # Verify the output file was created
-            assert result is not None
-            import os
+        # result already includes .csv extension
+        assert os.path.exists(
+            result
+        ), "Output CSV should be created even with missing UPCs"
 
-            # result already includes .csv extension
-            assert os.path.exists(
-                result
-            ), "Output CSV should be created even with missing UPCs"
+        # Read the output and verify empty UPC fields
+        with open(result, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
 
-            # Read the output and verify empty UPC fields
-            with open(result, "r", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                rows = list(reader)
+        # Should have header + at least one data row
+        assert len(rows) >= 2, "Should have header and data rows"
 
-            # Should have header + at least one data row
-            assert len(rows) >= 2, "Should have header and data rows"
-
-            # upc_pack and upc_case columns (indices 7 and 8) should be empty
-            # Header row: Division_id, invoice_number, invoice_date, Vendor_store_id,
-            #             quantity_shipped, Quantity_uom, item_number, upc_pack, upc_case, ...
-            for row in rows[1:]:  # Skip header
-                if len(row) > 8:
-                    # upc_pack (index 7) and upc_case (index 8) should be empty
-                    assert (
-                        row[7] == ""
-                    ), f"upc_pack should be empty for missing UPC, got: {row[7]}"
-                    assert (
-                        row[8] == ""
-                    ), f"upc_case should be empty for missing UPC, got: {row[8]}"
+        # upc_pack and upc_case columns (indices 7 and 8) should be empty
+        # Header row: Division_id, invoice_number, invoice_date,
+        # Vendor_store_id, quantity_shipped, Quantity_uom, item_number, ...
+        for row in rows[1:]:  # Skip header
+            if len(row) > 8:
+                # upc_pack (index 7) and upc_case (index 8) should be empty
+                assert (
+                    row[7] == ""
+                ), f"upc_pack should be empty for missing UPC, got: {row[7]}"
+                assert (
+                    row[8] == ""
+                ), f"upc_case should be empty for missing UPC, got: {row[8]}"
 
 
 # =============================================================================
@@ -699,27 +696,49 @@ class TestConvertToYellowdogCSV:
         default_parameters_dict,
         default_settings_dict,
         sample_upc_lut,
+        invfetcher_test_db,
     ):
-        """Test that convert_to_yellowdog_csv produces a valid CSV file."""
+        """Test that convert_to_yellowdog_csv produces a valid CSV file.
+
+        Uses real invFetcher with a test SQLite database to verify actual
+        database query behavior without mocking.
+        """
         import convert_to_yellowdog_csv
 
         output_path = str(tmp_path / "output_yellowdog")
 
-        # Mock the invFetcher and query_runner to avoid database dependency
-        with patch("utils.invFetcher") as mock_inv_fetcher_class:
-            mock_fetcher = MagicMock()
-            mock_fetcher.fetch_cust_name.return_value = "Test Customer"
-            mock_fetcher.fetch_po.return_value = "PO12345"
-            mock_fetcher.fetch_uom_desc.return_value = "EA"
-            mock_inv_fetcher_class.return_value = mock_fetcher
+        # Get test database query runner
+        db_path, query_runner = invfetcher_test_db
 
-            result = convert_to_yellowdog_csv.edi_convert(
-                edi_file,
-                output_path,
-                default_settings_dict,
-                default_parameters_dict,
-                sample_upc_lut,
-            )
+        # Create a fake LegacyQueryRunnerAdapter that wraps our test query runner
+        class FakeLegacyQueryRunnerAdapter:
+            def __init__(self, runner):
+                self._runner = query_runner  # Use our test query runner
+
+            def run_query(self, query: str, params: tuple = None) -> list:
+                """Execute query using test database."""
+                return query_runner.run_query(query, params)
+
+            def run_arbitrary_query(self, query: str, params: tuple = None) -> list:
+                """Execute arbitrary query using test database."""
+                return query_runner.run_query(query, params)
+
+        # Patch the database imports to use our test database
+        with patch.object(
+            convert_to_yellowdog_csv, "create_query_runner", return_value=None
+        ):
+            with patch.object(
+                convert_to_yellowdog_csv,
+                "LegacyQueryRunnerAdapter",
+                FakeLegacyQueryRunnerAdapter,
+            ):
+                result = convert_to_yellowdog_csv.edi_convert(
+                    edi_file,
+                    output_path,
+                    default_settings_dict,
+                    default_parameters_dict,
+                    sample_upc_lut,
+                )
 
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
@@ -731,6 +750,18 @@ class TestConvertToYellowdogCSV:
         assert len(rows) >= 1, "CSV should have at least header row"
         # Verify expected columns in header
         assert "Invoice Number" in rows[0], "Header should contain Invoice Number"
+        # Verify actual data from test database was used
+        assert len(rows) >= 2, "CSV should have header and data rows"
+        # Customer name should come from test DB ("Test Customer Name")
+        cust_name_col = rows[0].index("Customer Name")
+        assert (
+            rows[1][cust_name_col] == "Test Customer Name"
+        ), f"Customer name should be from test DB, got: {rows[1][cust_name_col]}"
+        # PO number should come from test DB ("PO12345")
+        po_col = rows[0].index("Customer PO Number")
+        assert (
+            rows[1][po_col] == "PO12345"
+        ), f"PO number should be from test DB, got: {rows[1][po_col]}"
 
 
 # =============================================================================
@@ -803,7 +834,7 @@ class TestConvertToEstoreEinvoiceGeneric:
         output_path = str(tmp_path / "output_estore_generic")
 
         # Mock the query_runner to avoid database dependency
-        with patch("convert_to_estore_einvoice_generic.query_runner"):
+        with patch("convert_to_estore_einvoice_generic.create_query_runner"):
             result = convert_to_estore_einvoice_generic.edi_convert(
                 edi_file,
                 output_path,
@@ -838,11 +869,12 @@ class TestConvertToStewartsCustom:
 
         output_path = str(tmp_path / "output_stewarts")
 
-        # Mock LegacyQueryRunner (core.database.query_runner imported as LegacyQueryRunner)
-        with patch("convert_to_stewarts_custom.LegacyQueryRunner") as mock_qr_class:
+        # Mock LegacyQueryRunner (core.database.query_runner imported
+        # as LegacyQueryRunner)
+        with patch("convert_to_stewarts_custom.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
-            mock_qr_instance.run_arbitrary_query.side_effect = [
+            mock_qr_instance.run_query.side_effect = [
                 # Header fields query result
                 [
                     [
@@ -962,11 +994,12 @@ class TestConvertToJolleyCustom:
 
         output_path = str(tmp_path / "output_jolley")
 
-        # Mock LegacyQueryRunner (core.database.query_runner imported as LegacyQueryRunner)
-        with patch("convert_to_jolley_custom.LegacyQueryRunner") as mock_qr_class:
+        # Mock LegacyQueryRunner (core.database.query_runner imported
+        # as LegacyQueryRunner)
+        with patch("convert_to_jolley_custom.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
-            mock_qr_instance.run_arbitrary_query.side_effect = [
+            mock_qr_instance.run_query.side_effect = [
                 # Header fields query result
                 [
                     [

@@ -160,6 +160,7 @@ def _run(folder_params: dict, settings: dict) -> tuple["FolderResult", CaptureBa
         backends={"copy": backend},
         converter_step=EDIConverterStep(),
         settings=settings,
+        upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
     )
     orch = DispatchOrchestrator(cfg)
     result = orch.process_folder(folder_params, run_log=[], processed_files=None)
@@ -396,6 +397,7 @@ class TestPipelineTweakEDI:
             backends={"copy": backend},
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -415,6 +417,7 @@ class TestPipelineTweakEDI:
             backends={"copy": backend},
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -435,6 +438,7 @@ class TestPipelineTweakEDI:
             backends={"copy": backend},
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -452,6 +456,7 @@ class TestPipelineTweakEDI:
             backends={"copy": backend},
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -479,6 +484,7 @@ class TestPipelinePassThrough:
         cfg = DispatchConfig(
             backends={"copy": backend},
             settings=base_settings,
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)

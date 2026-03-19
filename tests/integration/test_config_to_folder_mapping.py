@@ -20,7 +20,7 @@ import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 # =============================================================================
 # Shared EDI content + helpers
@@ -89,6 +89,7 @@ def _run_folder_from_db(db, folder_id: int, extra_settings: dict = None) -> tupl
         converter_step=EDIConverterStep(),
         tweaker_step=EDITweakerStep(),
         settings=extra_settings or {},
+        upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
     )
     orch = DispatchOrchestrator(cfg)
     result = orch.process_folder(loaded, run_log=[], processed_files=None)

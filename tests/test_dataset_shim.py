@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import pytest
 
-from interface.database.sqlite_wrapper import connect
+from backend.database.sqlite_wrapper import connect
 
 
 def _create_table(db, table_name, columns):

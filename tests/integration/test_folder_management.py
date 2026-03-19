@@ -22,8 +22,8 @@ import os
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from core.utils.bool_utils import normalize_bool
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
+from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 
 

@@ -19,8 +19,8 @@ from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.pipeline.validator import EDIValidationStep
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
+from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseObj
 
 # Module-level constant replacing the former sample_edi_content fixture.
 SAMPLE_EDI_CONTENT = """\

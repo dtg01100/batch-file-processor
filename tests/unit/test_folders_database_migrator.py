@@ -14,7 +14,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 
 import folders_database_migrator
 import schema
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 
 class TestLogMigrationStep:

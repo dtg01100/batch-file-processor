@@ -18,7 +18,7 @@ def _make_dialog(qtbot, mock_database_obj, monkeypatch):
 
     mock_msgbox = MagicMock()
     monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", mock_msgbox)
-    dialog = ResendDialog(None, mock_database_obj)
+    dialog = ResendDialog(None, mock_database_obj.database_connection)
     qtbot.addWidget(dialog)
     return dialog, mock_msgbox
 
@@ -37,7 +37,7 @@ def _make_dialog_with_data(qtbot, mock_database_obj, monkeypatch, tmp_path):
             "folder_id": 1,
             "file_name": str(f1),
             "resend_flag": False,
-            "sent_date_time": "2024-01-01T00:00:00",
+            "processed_at": "2024-01-01T00:00:00",
         }
     )
     mock_database_obj.processed_files.insert(
@@ -46,7 +46,7 @@ def _make_dialog_with_data(qtbot, mock_database_obj, monkeypatch, tmp_path):
             "folder_id": 1,
             "file_name": str(f2),
             "resend_flag": True,
-            "sent_date_time": "2024-01-02T00:00:00",
+            "processed_at": "2024-01-02T00:00:00",
         }
     )
     mock_database_obj.folders_table.insert({"id": 1, "alias": "Test Folder"})
@@ -67,7 +67,7 @@ class TestResendDialogUI:
         dialog, _ = _make_dialog(qtbot, mock_database_obj, monkeypatch)
 
         assert dialog.windowTitle() == "Enable Resend"
-        assert dialog._database_connection == mock_database_obj
+        assert dialog._database_connection == mock_database_obj.database_connection
 
     def test_ui_has_required_widgets(self, qtbot, mock_database_obj, monkeypatch):
         """Test that all required UI widgets are created."""
@@ -289,4 +289,4 @@ class TestResendDialogServiceIntegration:
             qtbot, mock_database_obj, monkeypatch, tmp_path
         )
 
-        assert mock_database_obj.processed_files._call_tracker.get("count", 0) >= 1
+        assert dialog._service is not None

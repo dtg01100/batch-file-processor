@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database.database_obj import (
+from backend.database import (
     DatabaseConnectionProtocol,
     DatabaseObj,
     TableProtocol,
@@ -261,13 +261,13 @@ class TestDatabaseObjVersionChecking:
 
         # Create without injecting connection - will initialize from path
         with patch(
-            "interface.database.database_obj.sqlite_wrapper"
+            "backend.database.database_obj.sqlite_wrapper"
         ) as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
             mock_sqlite_wrapper.Database.connect.return_value = mock_conn
 
             with patch(
-                "interface.database.database_obj.os.path.isfile", return_value=True
+                "backend.database.database_obj.os.path.isfile", return_value=True
             ):
                 db = DatabaseObj(
                     database_path="/test/path.db",
@@ -294,13 +294,13 @@ class TestDatabaseObjVersionChecking:
             error_shown.append((title, message))
 
         with patch(
-            "interface.database.database_obj.sqlite_wrapper"
+            "backend.database.database_obj.sqlite_wrapper"
         ) as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
             mock_sqlite_wrapper.Database.connect.return_value = mock_conn
 
             with patch(
-                "interface.database.database_obj.os.path.isfile", return_value=True
+                "backend.database.database_obj.os.path.isfile", return_value=True
             ):
                 with pytest.raises(SystemExit):
                     DatabaseObj(
@@ -327,13 +327,13 @@ class TestDatabaseObjVersionChecking:
             error_shown.append((title, message))
 
         with patch(
-            "interface.database.database_obj.sqlite_wrapper"
+            "backend.database.database_obj.sqlite_wrapper"
         ) as mock_sqlite_wrapper:
             mock_conn = create_mock_connection(mock_tables)
             mock_sqlite_wrapper.Database.connect.return_value = mock_conn
 
             with patch(
-                "interface.database.database_obj.os.path.isfile", return_value=True
+                "backend.database.database_obj.os.path.isfile", return_value=True
             ):
                 with pytest.raises(SystemExit):
                     DatabaseObj(
@@ -412,7 +412,7 @@ class TestDatabaseObjReload:
         mock_conn2 = create_mock_connection(mock_tables2)
 
         with patch(
-            "interface.database.database_obj.sqlite_wrapper"
+            "backend.database.database_obj.sqlite_wrapper"
         ) as mock_sqlite_wrapper:
             mock_sqlite_wrapper.Database.connect.return_value = mock_conn2
             db.reload()

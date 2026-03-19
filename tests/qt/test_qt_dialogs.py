@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import QPushButton
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestBaseDialog:
-
     def test_construction(self, qtbot):
         from interface.qt.dialogs.base_dialog import BaseDialog
 
@@ -156,7 +155,6 @@ class TestBaseDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestQtFolderDataExtractor:
-
     def test_empty_fields_returns_defaults(self, qtbot):
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
@@ -254,7 +252,6 @@ class TestQtFolderDataExtractor:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestEditFoldersDialog:
-
     def test_enabled_folder_validation_fails_without_name(
         self, qtbot, sample_folder_config, monkeypatch
     ):
@@ -530,7 +527,6 @@ class TestEditFoldersDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestEditSettingsDialog:
-
     def _make_dialog(self, qtbot, sample_folder_config, **kwargs):
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
@@ -608,7 +604,6 @@ class TestEditSettingsDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestMaintenanceDialog:
-
     def test_construction(self, qtbot, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
@@ -663,7 +658,7 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
         mock_maintenance_functions._database_obj.emails_table.insert(
-            {"id": 1, "to": "a@b.com"}
+            {"folder_alias": "test", "log": "a@b.com"}
         )
         dialog._clear_queued_emails()
         assert mock_maintenance_functions._database_obj.emails_table.count() == 0
@@ -697,7 +692,6 @@ class TestMaintenanceDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestProcessedFilesDialog:
-
     def test_construction(self, qtbot, mock_database_obj):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
@@ -831,7 +825,6 @@ class TestProcessedFilesDialog:
 # ---------------------------------------------------------------------------
 @pytest.mark.qt
 class TestDatabaseImportDialog:
-
     def test_construction(self, qtbot, monkeypatch):
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
@@ -1122,7 +1115,6 @@ class TestDatabaseImportDialog:
 
 @pytest.mark.qt
 class TestResendDialog:
-
     def test_construction(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 

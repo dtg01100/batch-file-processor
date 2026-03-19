@@ -21,8 +21,8 @@ import create_database
 import folders_database_migrator
 import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
+from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseObj
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
 

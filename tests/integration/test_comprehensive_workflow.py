@@ -34,8 +34,8 @@ if str(project_root) not in sys.path:
 
 from dispatch.hash_utils import generate_file_hash
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
+from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 from schema import ensure_schema
 

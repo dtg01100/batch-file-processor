@@ -28,7 +28,7 @@ class TestFreshInstall:
             running_platform="test",
         )
 
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db = sqlite_wrapper.Database.connect(db_path)
 
@@ -51,7 +51,7 @@ class TestFreshInstall:
             running_platform="test",
         )
 
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db = sqlite_wrapper.Database.connect(db_path)
 
@@ -78,7 +78,7 @@ class TestFreshInstall:
             running_platform="test",
         )
 
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db = sqlite_wrapper.Database.connect(db_path)
 
@@ -105,7 +105,7 @@ class TestFreshInstall:
             running_platform="test",
         )
 
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db = sqlite_wrapper.Database.connect(db_path)
 
@@ -123,7 +123,7 @@ class TestAfterFirstRun:
     def test_administrative_record_exists_after_init(self, tmp_path):
         """Verify administrative record exists after database initialization."""
         import create_database
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -144,7 +144,7 @@ class TestAfterFirstRun:
     def test_administrative_record_can_be_updated(self, tmp_path):
         """Verify administrative record can be updated after first run."""
         import create_database
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -175,7 +175,7 @@ class TestAfterFirstRun:
     def test_oversight_and_defaults_find_one_returns_record(self, tmp_path):
         """Verify oversight_and_defaults.find_one returns record after first run."""
         import create_database
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -234,7 +234,7 @@ class TestSetDefaultsPopup:
     def test_set_defaults_popup_with_existing_record(self, tmp_path):
         """Verify set_defaults_popup preserves existing values from database."""
         import create_database
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -392,7 +392,7 @@ class TestDatabaseMigration:
         administrative table exists but has no records (simulating a
         legacy database that was opened with new code).
         """
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "old_test.db")
         db = sqlite_wrapper.Database.connect(db_path)
@@ -412,7 +412,7 @@ class TestDatabaseMigration:
 
     def test_legacy_database_handled_gracefully(self, tmp_path):
         """Verify legacy database without administrative table is handled."""
-        from interface.database import sqlite_wrapper
+        from backend.database import sqlite_wrapper
 
         db_path = str(tmp_path / "legacy_test.db")
         db = sqlite_wrapper.Database.connect(db_path)

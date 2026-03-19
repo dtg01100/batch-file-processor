@@ -10,16 +10,96 @@ Tests:
 - UPC generation
 
 Converter: convert_to_jolley_custom.py (12225 chars)
+
+This module uses a test-specific approach that injects test data directly
+into the converter rather than mocking database calls. This provides:
+- Real testing of converter logic without AS400 dependencies
+- No MagicMock or @patch decorators
+- Actual data flow through the conversion pipeline
 """
 
 import csv
 import os
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Import the module to test
 import convert_to_jolley_custom
+from core.database import LegacyQueryRunnerAdapter, QueryRunner, SQLiteConnection
+
+
+class QueryRunnerWithTestData:
+    """Query runner that returns preset data without executing SQL.
+
+    This class wraps a QueryRunner for actual query execution but allows
+    preset test data to be returned for specific queries, avoiding the
+    need for AS400-specific SQL syntax in tests.
+    """
+
+    def __init__(self, sqlite_conn):
+        """Initialize with a SQLite connection and empty preset data."""
+        self._sqlite_runner = QueryRunner(sqlite_conn)
+        self._customer_data = []
+        self._uom_data = []
+
+    def set_customer_data(self, data):
+        """Set the customer data to return for header queries."""
+        self._customer_data = data
+
+    def set_uom_data(self, data):
+        """Set the UOM data to return for UOM queries."""
+        self._uom_data = data
+
+    def run_query(self, query, params=None):
+        """Return preset data for known queries, or execute against SQLite."""
+        query_upper = query.upper()
+        # Check if this is a customer header query (has ohhst and dsabrep)
+        if "OHHS" in query_upper and "DSABRE" in query_upper:
+            if not self._customer_data:
+                return []
+            # Convert tuple data to dict format expected by LegacyQueryRunnerAdapter
+            columns = [
+                "Salesperson Name",
+                "Invoice Date",
+                "Terms Code",
+                "Terms Duration",
+                "Customer Status",
+                "Customer Number",
+                "Customer Name",
+                "Customer Address",
+                "Customer Town",
+                "Customer State",
+                "Customer Zip",
+                "Customer Phone",
+                "Customer Email",
+                "Customer Email 2",
+                "Corporate Customer Status",
+                "Corporate Customer Number",
+                "Corporate Customer Name",
+                "Corporate Customer Address",
+                "Corporate Customer Town",
+                "Corporate Customer State",
+                "Corporate Customer Zip",
+                "Corporate Customer Phone",
+                "Corporate Customer Email",
+                "Corporate Customer Email 2",
+            ]
+            return [dict(zip(columns, row)) for row in self._customer_data]
+        # Check if this is a UOM query (has odhst)
+        if "ODHS" in query_upper:
+            if not self._uom_data:
+                return []
+            columns = ["itemno", "uom_mult", "uom_code"]
+            return [dict(zip(columns, row)) for row in self._uom_data]
+        # Fall back to SQLite execution for other queries
+        return self._sqlite_runner.run_query(query, params)
+
+    def run_arbitrary_query(self, query, params=None):
+        """Alias for run_query for backward compatibility."""
+        return self.run_query(query, params)
+
+    def close(self):
+        """Close the underlying connection."""
+        self._sqlite_runner.close()
 
 
 class TestJolleyCustomFixtures:
@@ -99,8 +179,20 @@ class TestJolleyCustomFixtures:
         }
 
     @pytest.fixture
-    def mock_customer_data(self):
-        """Mock customer data returned from database."""
+    def test_customer_data(self):
+        """Test customer data returned from database.
+
+        Returns list of tuples matching the AS400 query result order:
+        Salesperson Name, Invoice Date, Terms Code, Terms Duration,
+        Customer Status, Customer Number, Customer Name, Customer Address,
+        Customer Town, Customer State, Customer Zip, Customer Phone,
+        Customer Email, Customer Email 2, Corporate Customer Status,
+        Corporate Customer Number, Corporate Customer Name,
+        Corporate Customer Address, Corporate Customer Town,
+        Corporate Customer State, Corporate Customer Zip,
+        Corporate Customer Phone, Corporate Customer Email,
+        Corporate Customer Email 2
+        """
         return [
             (
                 "John Salesperson",  # Salesperson Name
@@ -131,8 +223,8 @@ class TestJolleyCustomFixtures:
         ]
 
     @pytest.fixture
-    def mock_customer_data_no_corporate(self):
-        """Mock customer data with no corporate."""
+    def test_customer_data_no_corporate(self):
+        """Test customer data with no corporate customer."""
         return [
             (
                 "John Salesperson",  # Salesperson Name
@@ -163,19 +255,43 @@ class TestJolleyCustomFixtures:
         ]
 
     @pytest.fixture
-    def mock_uom_lookup(self):
-        """Mock UOM lookup data."""
+    def test_uom_data(self):
+        """Test UOM lookup data.
+
+        Returns list of tuples: (item_no, uom_mult, uom_code)
+        """
         return [
-            (123456, 1, "EA"),  # (item_no, uom_mult, uom_code)
+            (123456, 1, "EA"),
             (123456, 12, "CS"),
             (123457, 1, "EA"),
             (123457, 2, "PK"),
         ]
 
     @pytest.fixture
-    def empty_upc_lut(self):
-        """Empty UPC lookup table."""
-        return {}
+    def sqlite_connection(self):
+        """Create a basic SQLite connection for test infrastructure."""
+        conn = SQLiteConnection(":memory:")
+        yield conn
+        conn.close()
+
+    def _create_test_converter(self, sqlite_conn, customer_data, uom_data):
+        """Create a test converter with injected test data.
+
+        This helper method creates a JolleyCustomConverter with a
+        QueryRunnerWithTestData that returns the provided test data without
+        executing AS400-specific SQL.
+        """
+        # Create test query runner with preset data
+        test_runner = QueryRunnerWithTestData(sqlite_conn)
+        test_runner.set_customer_data(customer_data)
+        test_runner.set_uom_data(uom_data)
+
+        # Create legacy adapter wrapper
+        query_object = LegacyQueryRunnerAdapter(test_runner._sqlite_runner)
+        # Override the adapter's query methods to use our test runner
+        query_object._runner = test_runner
+
+        return query_object
 
 
 class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
@@ -189,613 +305,820 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
         assert hasattr(convert_to_jolley_custom, "edi_convert")
         assert hasattr(convert_to_jolley_custom, "CustomerLookupError")
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_edi_convert_returns_csv_filename(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that edi_convert returns the expected CSV filename."""
-        # Setup mocks - first call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create temp input file
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        assert result == output_file + ".csv"
+        # Patch the converter to use our test database
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            assert result == output_file + ".csv"
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_creates_csv_file(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that the CSV file is actually created."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_settings, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        assert os.path.exists(output_file + ".csv")
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_settings, {}
+            )
+
+            assert os.path.exists(output_file + ".csv")
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
     """Test customer lookup functionality."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_customer_lookup_error_when_not_found(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
+        sqlite_connection,
         tmp_path,
     ):
         """Test that CustomerLookupError is raised when customer not found."""
-        # Setup mock to return empty results
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = []
-        mock_query_runner.return_value = mock_query
+        # Create converter with empty customer data (simulates not found)
+        query_object = self._create_test_converter(sqlite_connection, [], [])
 
-        detail = (
-            "B"
-            + "01234567890"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
         )
-        edi_content = sample_header_record + "\n" + detail + "\n"
 
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
 
-        output_file = str(tmp_path / "output")
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
 
-        with pytest.raises(convert_to_jolley_custom.CustomerLookupError) as exc_info:
+        try:
+            detail = (
+                "B"
+                + "01234567890"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            with pytest.raises(
+                convert_to_jolley_custom.CustomerLookupError
+            ) as exc_info:
+                convert_to_jolley_custom.edi_convert(
+                    str(input_file),
+                    output_file,
+                    default_settings,
+                    default_parameters,
+                    {},
+                )
+
+            assert "Cannot Find Order" in str(exc_info.value)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
+    def test_customer_data_used_in_output(
+        self,
+        complete_edi_content,
+        default_parameters,
+        default_settings,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
+        tmp_path,
+    ):
+        """Test that customer data appears in output."""
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
+        )
+
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
             convert_to_jolley_custom.edi_convert(
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-        assert "Cannot Find Order" in str(exc_info.value)
-
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
-    def test_customer_data_used_in_output(
-        self,
-        mock_query_runner,
-        complete_edi_content,
-        default_parameters,
-        default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
-        tmp_path,
-    ):
-        """Test that customer data appears in output."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
-        )
-
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should contain customer name
-            assert "Test Customer" in content
-
-
-class TestJolleyCustomPrettifyDates(TestJolleyCustomFixtures):
-    """Test date prettification function."""
-
-    def test_prettify_dates_basic(self):
-        """Test basic date prettification."""
-        # The function expects date string like "1010125" (7 chars, first digit + year)
-        # and converts it to mm/dd/yy format
-        result = convert_to_jolley_custom.edi_convert.__code__.co_varnames
-
-    def test_prettify_dates_with_offset(self):
-        """Test date prettification with offset."""
-        # Date offset should adjust the date by the specified number of days
-
-    def test_prettify_dates_invalid_date(self):
-        """Test date prettification with invalid date."""
-        # Should return "Not Available" for invalid dates
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should contain customer name
+                assert "Test Customer" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
     """Test address formatting in output."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_bill_to_address_format(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that bill-to address is formatted correctly."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should contain formatted address
-            assert "Bill To:" in content or "12345" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should contain formatted address
+                assert "Bill To:" in content or "12345" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_ship_to_address_format(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that ship-to address is formatted correctly."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should contain ship to
-            assert "Ship To:" in content or "12345" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should contain ship to
+                assert "Ship To:" in content or "12345" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_corporate_customer_address(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test handling of corporate customer address."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should use corporate address when available
-            assert "Corporate Customer" in content or "456 Corporate Ave" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should use corporate address when available
+                assert "Corporate Customer" in content or "456 Corporate Ave" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_no_corporate_fallback_to_regular(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data_no_corporate,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data_no_corporate,
+        test_uom_data,
         tmp_path,
     ):
         """Test fallback to regular customer when no corporate."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data_no_corporate,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data_no_corporate, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should fall back to regular customer address
-            assert "Test Customer" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should fall back to regular customer address
+                assert "Test Customer" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
     """Test item total calculation."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_item_total_calculation(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test item total calculation."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create detail with specific cost and quantity
-        # unit_cost = 000100 = $1.00, qty = 00010 = 10
-        detail = (
-            "B"
-            + "01234567890"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should calculate correct total
-            assert "$" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Create detail with specific cost and quantity
+            # unit_cost = 000100 = $1.00, qty = 00010 = 10
+            detail = (
+                "B"
+                + "01234567890"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should calculate correct total
+                assert "$" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_negative_quantity(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test handling of negative quantities (returns)."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create detail with negative qty (starts with -)
-        detail = (
-            "B"
-            + "01234567890"
-            + "Return Item Description  "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "-0005"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        # Should handle negative qty gracefully
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Create detail with negative qty (starts with -)
+            detail = (
+                "B"
+                + "01234567890"
+                + "Return Item Description  "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "-0005"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            # Should handle negative qty gracefully
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomUOM(TestJolleyCustomFixtures):
     """Test UOM (Unit of Measure) handling."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_uom_lookup(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test UOM lookup from database."""
-        mock_query = MagicMock()
-        # First call returns customer, second returns UOM
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        detail = (
-            "B"
-            + "01234567890"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        # Should complete successfully
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            detail = (
+                "B"
+                + "01234567890"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            # Should complete successfully
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
     """Test UPC generation."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_upc_11_digit_with_check_digit(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test UPC generation for 11-digit UPC."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create detail with 11-digit UPC (without check digit)
-        detail = (
-            "B"
-            + "01234567890"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        # Should add check digit to make 12-digit UPC
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Create detail with 11-digit UPC (without check digit)
+            detail = (
+                "B"
+                + "01234567890"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            # Should add check digit to make 12-digit UPC
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_upc_8_digit_conversion(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test UPC-E to UPC-A conversion for 8-digit UPC."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create detail with 8-digit UPC-E
-        detail = (
-            "B"
-            + "01234567"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        # Should convert UPC-E to UPC-A
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Create detail with 8-digit UPC-E
+            detail = (
+                "B"
+                + "01234567"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            # Should convert UPC-E to UPC-A
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_empty_upc_handling(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test handling of empty UPC."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Create detail with empty UPC
-        detail = (
-            "B"
-            + "           "
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        edi_content = sample_header_record + "\n" + detail + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        # Should handle empty UPC gracefully
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Create detail with empty UPC
+            detail = (
+                "B"
+                + "           "
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            edi_content = sample_header_record + "\n" + detail + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            # Should handle empty UPC gracefully
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
     """Test edge cases and error conditions."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_empty_edi_file(
         self,
-        mock_query_runner,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test handling of empty EDI file.
@@ -803,277 +1126,389 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
         Note: The current implementation requires at least an A record.
         This test provides valid content to ensure the test passes.
         """
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        # Provide a valid header record
-        sample_header_record = "A" + "VENDOR" + "0000000001" + "010125" + "0000010000"
-        edi_content = sample_header_record + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            # Provide a valid header record
+            sample_header_record = (
+                "A" + "VENDOR" + "0000000001" + "010125" + "0000010000"
+            )
+            edi_content = sample_header_record + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_only_header_record(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
+        sqlite_connection,
+        test_customer_data,
         tmp_path,
     ):
         """Test with only header record (no details)."""
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.return_value = mock_customer_data
-        mock_query_runner.return_value = mock_query
-
-        edi_content = sample_header_record + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        result = convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, []
         )
 
-        assert os.path.exists(result)
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            edi_content = sample_header_record + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            result = convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            assert os.path.exists(result)
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_multiple_detail_records(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test with multiple detail records."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        detail1 = (
-            "B"
-            + "01234567890"
-            + "Item One Description     "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        detail2 = (
-            "B"
-            + "01234567891"
-            + "Item Two Description     "
-            + "234567"
-            + "000200"
-            + "01"
-            + "000002"
-            + "00020"
-            + "00299"
-            + "001"
-            + "000000"
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        edi_content = sample_header_record + "\n" + detail1 + "\n" + detail2 + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
-            # Should have multiple data rows
-            assert len(rows) > 3  # Header rows + data rows
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            detail1 = (
+                "B"
+                + "01234567890"
+                + "Item One Description     "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            detail2 = (
+                "B"
+                + "01234567891"
+                + "Item Two Description     "
+                + "234567"
+                + "000200"
+                + "01"
+                + "000002"
+                + "00020"
+                + "00299"
+                + "001"
+                + "000000"
+            )
+
+            edi_content = sample_header_record + "\n" + detail1 + "\n" + detail2 + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+                # Should have multiple data rows
+                assert len(rows) > 3  # Header rows + data rows
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_c_record_charges(
         self,
-        mock_query_runner,
         sample_header_record,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test handling of C records (charges/taxes)."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        detail = (
-            "B"
-            + "01234567890"
-            + "Test Item Description    "
-            + "123456"
-            + "000100"
-            + "01"
-            + "000001"
-            + "00010"
-            + "00199"
-            + "001"
-            + "000000"
-        )
-        tax = "C" + "FRE" + "Freight Charge           " + "0000050000"
-        edi_content = sample_header_record + "\n" + detail + "\n" + tax + "\n"
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should include charge amounts
-            assert "FRE" in content or "Freight" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            detail = (
+                "B"
+                + "01234567890"
+                + "Test Item Description    "
+                + "123456"
+                + "000100"
+                + "01"
+                + "000001"
+                + "00010"
+                + "00199"
+                + "001"
+                + "000000"
+            )
+            tax = "C" + "FRE" + "Freight Charge           " + "0000050000"
+            edi_content = sample_header_record + "\n" + detail + "\n" + tax + "\n"
+
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should include charge amounts
+                assert "FRE" in content or "Freight" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
 
 
 class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
     """Test output structure and formatting."""
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
     def test_invoice_details_header(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that invoice details header is present."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            assert "Invoice Details" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                assert "Invoice Details" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_invoice_total(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that invoice total is included."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Invoice total from header = 0000010000 = $100.00
-            assert "Total:" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
 
-    @patch("convert_to_jolley_custom.LegacyQueryRunner")
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Invoice total from header = 0000010000 = $100.00
+                assert "Total:" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )
+
     def test_column_headers(
         self,
-        mock_query_runner,
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_customer_data,
-        mock_uom_lookup,
+        sqlite_connection,
+        test_customer_data,
+        test_uom_data,
         tmp_path,
     ):
         """Test that column headers are present."""
-        # First call returns customer, second returns UOM
-        mock_query = MagicMock()
-        mock_query.run_arbitrary_query.side_effect = [
-            mock_customer_data,
-            mock_uom_lookup,
-        ]
-        mock_query_runner.return_value = mock_query
-
-        input_file = tmp_path / "input.edi"
-        input_file.write_text(complete_edi_content)
-
-        output_file = str(tmp_path / "output")
-
-        convert_to_jolley_custom.edi_convert(
-            str(input_file), output_file, default_settings, default_parameters, {}
+        query_object = self._create_test_converter(
+            sqlite_connection, test_customer_data, test_uom_data
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
-            content = f.read()
-            # Should have Description, UPC, Quantity, UOM, Price, Amount columns
-            assert "Description" in content
-            assert "UPC" in content
-            assert "Quantity" in content
-            assert "UOM" in content
-            assert "Price" in content
-            assert "Amount" in content
+        original_init = (
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output
+        )
+
+        def patched_init(self, context):
+            self.query_object = query_object
+            self.header_fields_dict = {}
+            self.uom_lookup_list = []
+            self.header_a_record = {}
+            context.output_file = open(
+                context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+            )
+            context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+        convert_to_jolley_custom.JolleyCustomConverter._initialize_output = patched_init
+
+        try:
+            input_file = tmp_path / "input.edi"
+            input_file.write_text(complete_edi_content)
+            output_file = str(tmp_path / "output")
+
+            convert_to_jolley_custom.edi_convert(
+                str(input_file), output_file, default_settings, default_parameters, {}
+            )
+
+            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+                content = f.read()
+                # Should have Description, UPC, Quantity, UOM, Price, Amount columns
+                assert "Description" in content
+                assert "UPC" in content
+                assert "Quantity" in content
+                assert "UOM" in content
+                assert "Price" in content
+                assert "Amount" in content
+        finally:
+            convert_to_jolley_custom.JolleyCustomConverter._initialize_output = (
+                original_init
+            )

@@ -30,7 +30,7 @@ sys.path.insert(
 
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 # ---------------------------------------------------------------------------
 # Helpers

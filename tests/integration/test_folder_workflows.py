@@ -19,8 +19,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.database, pytest.mark.workflo
 from pathlib import Path
 
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database import sqlite_wrapper
-from interface.database.database_obj import DatabaseObj
+from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 
 

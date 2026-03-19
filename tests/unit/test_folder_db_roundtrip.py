@@ -3,7 +3,7 @@ import json
 import unittest
 
 import schema
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
     ExtractedPluginConfig,
