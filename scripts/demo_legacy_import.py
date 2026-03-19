@@ -24,12 +24,12 @@ import sys
 sys.path.insert(0, str(project_root))
 
 import folders_database_migrator
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 
 def print_section(title):
     """Print a section header."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" {title}")
     print("=" * 60)
 
@@ -323,7 +323,7 @@ Migration Results:
   - Source database: v{version} (Windows) -> v{new_version} (Linux)
   - Folders imported: {len(import_folders)}
   - All migrations applied: {all_present}
-  - Database version preserved: {final_version == '42'}
+  - Database version preserved: {final_version == "42"}
   
 The legacy database import and migration system successfully:
   1. ✓ Examined legacy database at version 32
