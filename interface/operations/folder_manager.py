@@ -3,12 +3,14 @@
 This module provides the FolderManager class which handles CRUD operations
 for folder configurations, separating business logic from UI code.
 
-The class supports dependency injection through the DatabaseProtocol,
-enabling testing without actual database connections.
+The class supports dependency injection through the DatabaseProtocol or
+IFolderRepository, enabling testing without actual database connections.
 """
 
 import os
 from typing import Optional, Protocol, runtime_checkable
+
+from core.ports.repositories import IFolderRepository, ISettingsRepository
 
 
 @runtime_checkable
@@ -90,11 +92,15 @@ class FolderManager:
     - Deleting folders
     - Retrieving folder lists
 
+    Supports two injection modes:
+    - IFolderRepository + optional ISettingsRepository (preferred)
+    - DatabaseProtocol (legacy, for backward compatibility)
+
     Attributes:
         SKIP_LIST: List of fields to skip when copying template settings
 
     Example:
-        >>> manager = FolderManager(database)
+        >>> manager = FolderManager(folder_repo=folder_repository)
         >>> manager.add_folder("/path/to/folder")
         {'folder_name': '/path/to/folder', 'alias': 'folder', ...}
         >>> manager.check_folder_exists("/path/to/folder")
@@ -116,13 +122,29 @@ class FolderManager:
         "edi_converter_scratch_folder",
     ]
 
-    def __init__(self, database: DatabaseProtocol):
+    def __init__(
+        self,
+        database: Optional[DatabaseProtocol] = None,
+        folder_repo: Optional[IFolderRepository] = None,
+        settings_repo: Optional[ISettingsRepository] = None,
+    ):
         """Initialize the folder manager.
 
         Args:
-            database: Database object implementing DatabaseProtocol
+            database: Database object implementing DatabaseProtocol (legacy)
+            folder_repo: IFolderRepository implementation (preferred)
+            settings_repo: ISettingsRepository for getting defaults (optional)
         """
-        self._db = database
+        if folder_repo is None and (
+            database is None or not isinstance(database, DatabaseProtocol)
+        ):
+            raise ValueError(
+                "Either folder_repo (IFolderRepository) or database (DatabaseProtocol) "
+                "must be provided"
+            )
+        self._folder_repo = folder_repo
+        self._db = database  # Always store database if provided - needed for delete_folder_with_related
+        self._settings_repo = settings_repo
 
     def add_folder(
         self, folder_path: str, template_data: Optional[dict] = None
@@ -137,7 +159,10 @@ class FolderManager:
             The inserted folder record
         """
         if template_data is None:
-            template = self._db.get_oversight_or_default()
+            if self._settings_repo is not None:
+                template = self._settings_repo.get_defaults()
+            else:
+                template = self._db.get_oversight_or_default()
         else:
             template = template_data
 
@@ -149,7 +174,10 @@ class FolderManager:
         template_settings["folder_name"] = folder_path
         template_settings["alias"] = folder_name
 
-        self._db.folders_table.insert(template_settings)
+        if self._folder_repo is not None:
+            self._folder_repo.insert(template_settings)
+        else:
+            self._db.folders_table.insert(template_settings)
         return template_settings
 
     def _generate_unique_alias(self, folder_path: str) -> str:
@@ -168,9 +196,14 @@ class FolderManager:
         alias = base_name
         counter = 1
 
-        while self._db.folders_table.find_one(alias=alias):
-            alias = f"{base_name} {counter}"
-            counter += 1
+        if self._folder_repo is not None:
+            while self._folder_repo.find_by_alias(alias):
+                alias = f"{base_name} {counter}"
+                counter += 1
+        else:
+            while self._db.folders_table.find_one(alias=alias):
+                alias = f"{base_name} {counter}"
+                counter += 1
 
         return alias
 
@@ -187,9 +220,12 @@ class FolderManager:
                 - truefalse: bool indicating if folder exists
                 - matched_folder: The matching folder dict or None
         """
-        folder_list = self._db.folders_table.all()
+        if self._folder_repo is not None:
+            all_folders = self._folder_repo.find_all()
+        else:
+            all_folders = self._db.folders_table.all()
 
-        for folder in folder_list:
+        for folder in all_folders:
             if os.path.normpath(folder["folder_name"]) == os.path.normpath(folder_path):
                 return {"truefalse": True, "matched_folder": folder}
 
@@ -204,6 +240,8 @@ class FolderManager:
         Returns:
             Folder dict or None if not found
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.find_by_id(folder_id)
         return self._db.folders_table.find_one(id=folder_id)
 
     def get_folder_by_name(self, folder_name: str) -> Optional[dict]:
@@ -215,6 +253,8 @@ class FolderManager:
         Returns:
             Folder dict or None if not found
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.find_by_path(folder_name)
         return self._db.folders_table.find_one(folder_name=folder_name)
 
     def get_folder_by_alias(self, alias: str) -> Optional[dict]:
@@ -226,6 +266,8 @@ class FolderManager:
         Returns:
             Folder dict or None if not found
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.find_by_alias(alias)
         return self._db.folders_table.find_one(alias=alias)
 
     def disable_folder(self, folder_id: int) -> bool:
@@ -242,7 +284,10 @@ class FolderManager:
         folder = self.get_folder_by_id(folder_id)
         if folder:
             folder["folder_is_active"] = False
-            self._db.folders_table.update(folder, ["id"])
+            if self._folder_repo is not None:
+                self._folder_repo.update(folder)
+            else:
+                self._db.folders_table.update(folder, ["id"])
             return True
         return False
 
@@ -260,7 +305,10 @@ class FolderManager:
         folder = self.get_folder_by_id(folder_id)
         if folder:
             folder["folder_is_active"] = True
-            self._db.folders_table.update(folder, ["id"])
+            if self._folder_repo is not None:
+                self._folder_repo.update(folder)
+            else:
+                self._db.folders_table.update(folder, ["id"])
             return True
         return False
 
@@ -275,7 +323,10 @@ class FolderManager:
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
-            self._db.folders_table.delete(id=folder_id)
+            if self._folder_repo is not None:
+                self._folder_repo.delete(folder_id)
+            else:
+                self._db.folders_table.delete(id=folder_id)
             return True
         return False
 
@@ -292,9 +343,18 @@ class FolderManager:
 
         Returns:
             True if deleted, False if folder not found
+
+        Note:
+            This method requires DatabaseProtocol for processed_files and
+            emails_table access.
+            Will raise AttributeError if used with IFolderRepository.
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
+            if self._db is None:
+                raise AttributeError(
+                    "delete_folder_with_related requires database access"
+                )
             self._db.folders_table.delete(id=folder_id)
             self._db.processed_files.delete(folder_id=folder_id)
             self._db.emails_table.delete(folder_id=folder_id)
@@ -307,6 +367,8 @@ class FolderManager:
         Returns:
             List of active folder dicts
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.find_all(active_only=True)
         return list(self._db.folders_table.find(folder_is_active=True))
 
     def get_inactive_folders(self) -> list[dict]:
@@ -315,17 +377,27 @@ class FolderManager:
         Returns:
             List of inactive folder dicts
         """
+        if self._folder_repo is not None:
+            all_folders = self._folder_repo.find_all(active_only=False)
+            return [f for f in all_folders if not f.get("folder_is_active", True)]
         return list(self._db.folders_table.find(folder_is_active=False))
 
     def get_all_folders(self, order_by: Optional[str] = "alias") -> list[dict]:
         """Get all folders.
 
         Args:
-            order_by: Field to order by (passed to find)
+            order_by: Field to order by (passed to find) -
+                only used with DatabaseProtocol
 
         Returns:
             List of all folder dicts
+
+        Note:
+            The order_by parameter is only supported with DatabaseProtocol.
+            IFolderRepository returns unordered results.
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.find_all()
         if order_by:
             return list(self._db.folders_table.find(order_by=order_by))
         return list(self._db.folders_table.all())
@@ -339,6 +411,8 @@ class FolderManager:
         Returns:
             Folder count
         """
+        if self._folder_repo is not None:
+            return self._folder_repo.count(active_only=active_only)
         if active_only:
             return self._db.folders_table.count(folder_is_active=True)
         return self._db.folders_table.count()
@@ -357,7 +431,10 @@ class FolderManager:
 
         folder = self.get_folder_by_id(folder_data["id"])
         if folder:
-            self._db.folders_table.update(folder_data, ["id"])
+            if self._folder_repo is not None:
+                self._folder_repo.update(folder_data)
+            else:
+                self._db.folders_table.update(folder_data, ["id"])
             return True
         return False
 
@@ -375,9 +452,11 @@ class FolderManager:
 
         folder = self.get_folder_by_name(folder_data["folder_name"])
         if folder:
-            # Preserve the original ID
             folder_data["id"] = folder["id"]
-            self._db.folders_table.update(folder_data, ["id"])
+            if self._folder_repo is not None:
+                self._folder_repo.update(folder_data)
+            else:
+                self._db.folders_table.update(folder_data, ["id"])
             return True
         return False
 

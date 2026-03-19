@@ -9,7 +9,7 @@ from typing import Any
 import appdirs
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 
 

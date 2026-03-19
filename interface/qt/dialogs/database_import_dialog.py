@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 import backup_increment
 import folders_database_migrator
 from core.utils.bool_utils import normalize_bool
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 

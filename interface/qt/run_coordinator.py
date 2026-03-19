@@ -169,6 +169,7 @@ class QtRunCoordinator:
                     splitter_step=EDISplitterStep(),
                     converter_step=EDIConverterStep(),
                     tweaker_step=EDITweakerStep(),
+                    upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
                 )
 
                 orchestrator = DispatchOrchestrator(config)

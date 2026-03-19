@@ -24,7 +24,12 @@ import batch_log_sender
 import print_run_log
 import utils
 from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from interface.database.database_obj import DatabaseObj
+from backend.database.database_obj import DatabaseObj
+from adapters.sqlite.repositories import (
+    SqliteFolderRepository,
+    SqliteSettingsRepository,
+    SqliteProcessedFilesRepository,
+)
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService
@@ -66,6 +71,9 @@ class QtBatchFileSenderApp:
         self._database_path: Optional[str] = None
 
         self._folder_manager: Optional[FolderManager] = folder_manager
+        self._folder_repo: Optional[Any] = None
+        self._settings_repo: Optional[Any] = None
+        self._processed_files_repo: Optional[Any] = None
         self._reporting_service: Optional[ReportingService] = None
 
         self._app: Optional[QApplication] = None
@@ -153,8 +161,16 @@ class QtBatchFileSenderApp:
                 self._running_platform,
             )
 
+        self._folder_repo = SqliteFolderRepository(self._database)
+        self._settings_repo = SqliteSettingsRepository(self._database)
+        self._processed_files_repo = SqliteProcessedFilesRepository(self._database)
+
         if self._folder_manager is None:
-            self._folder_manager = FolderManager(self._database)
+            self._folder_manager = FolderManager(
+                database=self._database,
+                folder_repo=self._folder_repo,
+                settings_repo=self._settings_repo,
+            )
         self._reporting_service = ReportingService(
             database=self._database,
             batch_log_sender_module=batch_log_sender,
@@ -691,6 +707,9 @@ class QtBatchFileSenderApp:
                 else False
             ),
             database_import_callback=database_import_callback,
+            folder_repo=self._folder_repo,
+            settings_repo=self._settings_repo,
+            processed_files_repo=self._processed_files_repo,
         )
 
         MaintenanceDialog.open_dialog(
@@ -763,6 +782,9 @@ class QtBatchFileSenderApp:
             running_platform=self._running_platform,
             database_version=self._database_version,
             progress_callback=self._progress_service,
+            folder_repo=self._folder_repo,
+            settings_repo=self._settings_repo,
+            processed_files_repo=self._processed_files_repo,
         )
         maintenance.mark_active_as_processed(selected_folder=selected_folder)
 

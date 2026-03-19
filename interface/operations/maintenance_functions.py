@@ -9,6 +9,11 @@ import hashlib
 import os
 from typing import Any, Callable, Optional
 
+from core.ports.repositories import (
+    IFolderRepository,
+    IProcessedFilesRepository,
+    ISettingsRepository,
+)
 from interface.services.progress_service import NullProgressCallback, ProgressCallback
 
 
@@ -45,6 +50,9 @@ class MaintenanceFunctions:
         on_operation_end: Optional[Callable[[], None]] = None,
         confirm_callback: Optional[Callable[[str], bool]] = None,
         database_import_callback: Optional[Callable[[str], bool]] = None,
+        folder_repo: Optional[IFolderRepository] = None,
+        settings_repo: Optional[ISettingsRepository] = None,
+        processed_files_repo: Optional[IProcessedFilesRepository] = None,
     ):
         """Initialize MaintenanceFunctions with dependencies.
 
@@ -60,7 +68,10 @@ class MaintenanceFunctions:
             on_operation_start: Called at the start of each operation
             on_operation_end: Called at the end of each operation
             confirm_callback: Callback for user confirmation prompts
-            database_import_callback: Callback for database import (receives backup_path, returns success)
+            database_import_callback: Callback for database import
+            folder_repo: Optional folder repository for data access
+            settings_repo: Optional settings repository for data access
+            processed_files_repo: Optional processed files repository for data access
         """
         self._database_obj = database_obj
         self._refresh_callback = refresh_callback
@@ -74,6 +85,9 @@ class MaintenanceFunctions:
         self._on_operation_end = on_operation_end
         self._confirm = confirm_callback or (lambda msg: True)
         self._database_import_callback = database_import_callback
+        self._folder_repo = folder_repo
+        self._settings_repo = settings_repo
+        self._processed_files_repo = processed_files_repo
 
     def set_operation_callbacks(
         self,
@@ -102,9 +116,14 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         self._progress.show("Working...")
-        for row in self._database_obj.folders_table.find(folder_is_active=True):
-            row["folder_is_active"] = False
-            self._database_obj.folders_table.update(row, ["id"])
+        if self._folder_repo is not None:
+            for row in self._folder_repo.find_all(active_only=True):
+                row["folder_is_active"] = False
+                self._folder_repo.update(row)
+        else:
+            for row in self._database_obj.folders_table.find(folder_is_active=True):
+                row["folder_is_active"] = False
+                self._database_obj.folders_table.update(row, ["id"])
         if self._refresh_callback:
             self._refresh_callback()
         self._progress.hide()
@@ -116,9 +135,15 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         self._progress.show("Working...")
-        for row in self._database_obj.folders_table.find(folder_is_active=False):
-            row["folder_is_active"] = True
-            self._database_obj.folders_table.update(row, ["id"])
+        if self._folder_repo is not None:
+            for row in self._folder_repo.find_all(active_only=False):
+                if not row.get("folder_is_active", True):
+                    row["folder_is_active"] = True
+                    self._folder_repo.update(row)
+        else:
+            for row in self._database_obj.folders_table.find(folder_is_active=False):
+                row["folder_is_active"] = True
+                self._database_obj.folders_table.update(row, ["id"])
         if self._refresh_callback:
             self._refresh_callback()
         self._progress.hide()
@@ -142,7 +167,10 @@ class MaintenanceFunctions:
         if self._confirm("This will clear all records of sent files.\nAre you sure?"):
             if self._on_operation_start:
                 self._on_operation_start()
-            self._database_obj.processed_files.delete()
+            if self._processed_files_repo is not None:
+                self._processed_files_repo.clear_all()
+            else:
+                self._database_obj.processed_files.delete()
             if self._set_button_states_callback:
                 self._set_button_states_callback()
             if self._on_operation_end:
@@ -153,22 +181,40 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         users_refresh = False
-        if self._database_obj.folders_table.count(folder_is_active=False) > 0:
-            users_refresh = True
-        folders_total = self._database_obj.folders_table.count(folder_is_active=False)
-        folders_count = 0
-        self._progress.show(
-            "removing " + str(folders_count) + " of " + str(folders_total)
-        )
-        for folder_to_be_removed in self._database_obj.folders_table.find(
-            folder_is_active=False
-        ):
-            folders_count += 1
-            self._progress.update_message(
+        if self._folder_repo is not None:
+            if self._folder_repo.count(active_only=True) > 0:
+                users_refresh = True
+            folders_total = self._folder_repo.count(active_only=True)
+            folders_count = 0
+            self._progress.show(
                 "removing " + str(folders_count) + " of " + str(folders_total)
             )
-            if self._delete_folder_callback:
-                self._delete_folder_callback(folder_to_be_removed["id"])
+            for folder_to_be_removed in self._folder_repo.find_all(active_only=True):
+                folders_count += 1
+                self._progress.update_message(
+                    "removing " + str(folders_count) + " of " + str(folders_total)
+                )
+                if self._delete_folder_callback:
+                    self._delete_folder_callback(folder_to_be_removed["id"])
+        else:
+            if self._database_obj.folders_table.count(folder_is_active=False) > 0:
+                users_refresh = True
+            folders_total = self._database_obj.folders_table.count(
+                folder_is_active=False
+            )
+            folders_count = 0
+            self._progress.show(
+                "removing " + str(folders_count) + " of " + str(folders_total)
+            )
+            for folder_to_be_removed in self._database_obj.folders_table.find(
+                folder_is_active=False
+            ):
+                folders_count += 1
+                self._progress.update_message(
+                    "removing " + str(folders_count) + " of " + str(folders_total)
+                )
+                if self._delete_folder_callback:
+                    self._delete_folder_callback(folder_to_be_removed["id"])
         self._progress.hide()
         if users_refresh and self._refresh_callback:
             self._refresh_callback()
