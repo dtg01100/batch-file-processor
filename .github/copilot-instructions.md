@@ -4,6 +4,27 @@
 
 Batch File Processor is a PyQt6 desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
 
+## Documentation
+
+**Main Documentation**: [`DOCUMENTATION.md`](../DOCUMENTATION.md) - Central index for all documentation
+
+**Documentation Structure**:
+- `docs/user-guide/` - User-facing guides (EDI formats, quick reference, troubleshooting)
+- `docs/testing/` - Testing documentation (guides, best practices, corpus testing)
+- `docs/migrations/` - Database migration guides
+- `docs/architecture/` - Architecture and design documents
+- `docs/api/` - API specifications and contracts
+- `docs/design/` - Detailed design specifications
+- `docs/archive/` - Historical documents and session summaries
+
+**Key Files**:
+- [`README.md`](../README.md) - Project overview and quick start
+- [`DOCUMENTATION.md`](../DOCUMENTATION.md) - Complete documentation index
+- [`AGENTS.md`](../AGENTS.md) - Agent-specific instructions
+- [`docs/user-guide/EDI_FORMAT_GUIDE.md`](../docs/user-guide/EDI_FORMAT_GUIDE.md) - EDI format configuration
+- [`docs/testing/TESTING.md`](../docs/testing/TESTING.md) - Testing guide
+- [`docs/migrations/AUTOMATIC_MIGRATION_GUIDE.md`](../docs/migrations/AUTOMATIC_MIGRATION_GUIDE.md) - Migration guide
+
 ## Commands
 
 ```bash
@@ -30,6 +51,29 @@ black .
 ```
 
 **Never run tests without a timeout.** A hanging test is a bug. If a test hangs, use `pytest -x --timeout=30` to identify it.
+
+### Testing Philosophy
+
+**Minimize Mocks and Fakes:** Keep mocks and fakes to an absolute minimum.
+Prefer:
+- Real implementations with isolated test fixtures (temp directories, test DBs)
+- In-memory implementations over mock objects
+- Integration tests with real components over mocked unit tests
+- Test doubles only for: external services (FTP/SMTP), UI display servers, or
+  truly expensive operations
+
+**Qt/PyQt6 Testing Requirements:**
+- ALWAYS use real Qt widgets in tests with the offscreen backend (QT_QPA_PLATFORM=offscreen)
+- NEVER implement fake/mock Qt API classes (e.g., don't create FakeWidget, FakeEvent, etc.)
+- Use `qtbot` fixture for widget interactions and signal testing
+- For UI tests, inject real dependencies (DatabaseObj, MaintenanceFunctions) using temp_database fixture
+- When testing dialogs, use real service objects, not fake implementations
+- The offscreen backend handles rendering without a display - trust it
+
+When mocks are necessary:
+- Use them sparingly and only for clear boundaries (I/O, external services)
+- Prefer `pytest` fixtures with real implementations over `unittest.mock`
+- Document why a mock was necessary in comments
 
 ## Architecture
 
