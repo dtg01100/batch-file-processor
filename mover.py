@@ -12,7 +12,7 @@ from typing import Callable, Optional
 import backup_increment
 import folders_database_migrator
 from batch_file_processor.structured_logging import get_logger
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 logger = get_logger(__name__)
 

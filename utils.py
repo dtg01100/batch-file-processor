@@ -16,7 +16,7 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
-from core.database import query_runner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
@@ -414,12 +414,14 @@ class cRecGenerator:
 
     def _db_connect(self):
         """Establish database connection."""
-        self.query_object = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
+        runner = create_query_runner(
+            username=self.settings["as400_username"],
+            password=self.settings["as400_password"],
+            dsn=self.settings["as400_address"],
+            database="QGPL",
+            odbc_driver=f"{self.settings['odbc_driver']}",
         )
+        self.query_object = LegacyQueryRunnerAdapter(runner)
 
     def set_invoice_number(self, invoice_number):
         """Set the current invoice number and mark records as unappended.
