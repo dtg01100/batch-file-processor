@@ -1,7 +1,7 @@
 import os
 
 import schema
-from interface.database import sqlite_wrapper
+from backend.database import sqlite_wrapper
 
 
 def do(

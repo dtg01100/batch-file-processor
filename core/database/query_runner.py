@@ -5,10 +5,9 @@ dependency injection through the Protocol pattern, enabling easy testing
 and loose coupling from the underlying database implementation.
 """
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Optional, Protocol, runtime_checkable
-
 
 _READ_ONLY_SQL_START = {"SELECT", "WITH"}
 _MUTATING_SQL_START = {
@@ -260,6 +259,100 @@ class MockConnection:
             results: List of dictionaries to return on next execute call
         """
         self.results.append(results)
+
+
+class SQLiteConnection:
+    """SQLite connection for testing.
+
+    This class provides a SQLite-based implementation for testing
+    that implements the DatabaseConnectionProtocol. It allows tests
+    to use a real database with pre-populated test data instead of mocks.
+    """
+
+    def __init__(self, db_path: str = ":memory:"):
+        """Initialize the SQLite connection.
+
+        Args:
+            db_path: Path to SQLite database file, or ":memory:" for in-memory DB
+        """
+        self.db_path = db_path
+        self._connection = None
+
+    def _connect(self):
+        """Establish the database connection.
+
+        Returns:
+            sqlite3 connection object
+        """
+        import sqlite3
+
+        if self._connection is None:
+            self._connection = sqlite3.connect(self.db_path)
+            self._connection.row_factory = sqlite3.Row
+        return self._connection
+
+    def execute(self, query: str, params: tuple = None) -> list[dict]:
+        """Execute a query and return results as list of dicts.
+
+        Args:
+            query: SQL query string
+            params: Optional query parameters for parameterized queries
+
+        Returns:
+            List of dictionaries with column names as keys
+        """
+        import sqlite3
+
+        # Allow CREATE TABLE and INSERT for test setup, but not in production code paths
+        # This is test-only code
+        conn = self._connect()
+        cursor = conn.cursor()
+
+        try:
+            if params is not None:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+
+            # Get column names from cursor description
+            columns = (
+                [column[0] for column in cursor.description]
+                if cursor.description
+                else []
+            )
+
+            # Convert rows to dictionaries
+            results = []
+            for row in cursor.fetchall():
+                row_dict = dict(zip(columns, row))
+                results.append(row_dict)
+        except sqlite3.Error:
+            results = []
+        finally:
+            cursor.close()
+
+        return results
+
+    def close(self) -> None:
+        """Close the database connection if open."""
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+
+    def executescript(self, script: str) -> None:
+        """Execute a SQL script (for test setup).
+
+        Args:
+            script: SQL script to execute
+        """
+
+        conn = self._connect()
+        cursor = conn.cursor()
+        try:
+            cursor.executescript(script)
+            conn.commit()
+        finally:
+            cursor.close()
 
 
 class QueryRunner:

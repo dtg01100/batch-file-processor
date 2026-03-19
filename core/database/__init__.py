@@ -6,6 +6,7 @@ This module provides database abstraction components including:
 - QueryRunner: Main query runner with injectable connection
 - MockConnection: Mock connection for testing
 - query_runner: Legacy class for backward compatibility (DEPRECATED)
+- LegacyQueryRunnerAdapter: Adapter for migrating from legacy tuple-based API
 """
 
 import warnings
@@ -16,9 +17,80 @@ from core.database.query_runner import (
     MockConnection,
     PyODBCConnection,
     QueryRunner,
+    SQLiteConnection,
     assert_read_only_sql,
     create_query_runner,
 )
+
+
+class LegacyQueryRunnerAdapter:
+    """Adapter that provides legacy tuple-based API on top of QueryRunner.
+
+    This adapter allows incremental migration from the legacy query_runner
+    class (which returns tuples) to the new QueryRunner (which returns dicts).
+    It wraps a QueryRunner and converts dict results back to tuples.
+
+    .. deprecated:: 1.0
+        This adapter is a migration aid. Update code to use dict results
+        from QueryRunner directly, then remove this adapter.
+
+    Example migration:
+        OLD:
+            from core.database import query_runner
+            qr = query_runner(user, pass, host, driver)
+            results = qr.run_arbitrary_query("SELECT ...")
+
+        NEW (with adapter):
+            from core.database import create_query_runner, LegacyQueryRunnerAdapter
+            runner = create_query_runner(user, pass, dsn=host)
+            qr = LegacyQueryRunnerAdapter(runner)
+            results = qr.run_arbitrary_query("SELECT ...")
+
+        NEW (direct, preferred):
+            from core.database import create_query_runner
+            runner = create_query_runner(user, pass, dsn=host)
+            results = runner.run_query("SELECT ...")  # Returns list[dict]
+    """
+
+    def __init__(self, runner: QueryRunner):
+        """Initialize the adapter.
+
+        Args:
+            runner: QueryRunner instance to wrap
+        """
+        self._runner = runner
+        # Expose connection for legacy code that accesses it directly
+        self.connection = runner.connection
+
+    def run_arbitrary_query(self, query_string: str, params: tuple = None) -> list:
+        """Execute query and return results as tuples (legacy format).
+
+        Args:
+            query_string: SQL query to execute
+            params: Optional query parameters
+
+        Returns:
+            List of tuples (legacy format)
+        """
+        results = self._runner.run_query(query_string, params)
+        if not results:
+            return []
+        # Convert list[dict] to list[tuple] for backward compatibility
+        if isinstance(results[0], dict):
+            return [tuple(row.values()) for row in results]
+        return results
+
+    def run_query(self, query: str, params: tuple = None) -> list:
+        """Execute query and return results as tuples (legacy format).
+
+        Args:
+            query: SQL query string
+            params: Optional query parameters
+
+        Returns:
+            List of tuples (legacy format)
+        """
+        return self.run_arbitrary_query(query, params)
 
 
 # Legacy query_runner class for backward compatibility
@@ -135,6 +207,8 @@ __all__ = [
     "PyODBCConnection",
     "MockConnection",
     "QueryRunner",
+    "SQLiteConnection",
     "create_query_runner",
     "query_runner",
+    "LegacyQueryRunnerAdapter",
 ]
