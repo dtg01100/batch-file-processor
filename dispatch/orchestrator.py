@@ -19,7 +19,7 @@ from batch_file_processor.structured_logging import (
     log_file_operation,
     log_with_context,
 )
-from core.database import query_runner as LegacyQueryRunner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.utils.bool_utils import normalize_bool
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
@@ -529,12 +529,14 @@ class DispatchOrchestrator:
             )
             return {}
 
-        legacy_runner = LegacyQueryRunner(
-            settings["as400_username"],
-            settings["as400_password"],
-            settings["as400_address"],
-            settings["odbc_driver"],
+        runner = create_query_runner(
+            username=settings["as400_username"],
+            password=settings["as400_password"],
+            dsn=settings["as400_address"],
+            database="QGPL",
+            odbc_driver=settings["odbc_driver"],
         )
+        legacy_runner = LegacyQueryRunnerAdapter(runner)
 
         try:
             rows = legacy_runner.run_arbitrary_query(
@@ -1616,6 +1618,7 @@ class DispatchOrchestrator:
             splitter_step=EDISplitterStep(),
             converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
+            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
 
         orchestrator = DispatchOrchestrator(config)

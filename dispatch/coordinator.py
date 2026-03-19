@@ -6,21 +6,22 @@ import re
 import shutil
 import tempfile
 import threading
-import time
 from io import StringIO
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import doingstuffoverlay
+
 import record_error
 import utils
-from query_runner import query_runner
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from edi_format_parser import EDIFormatParser
-from .file_processor import FileDiscoverer, HashGenerator, FileFilter
-from .edi_validator import EDIValidator
-from .edi_processor import EDISplitter, EDIConverter, EDITweaker, FileNamer
-from .send_manager import SendManager
-from .error_handler import ErrorHandler, ErrorLogger
+
 from .db_manager import DBManager
+from .edi_processor import EDIConverter, EDISplitter, EDITweaker, FileNamer
+from .edi_validator import EDIValidator
+from .error_handler import ErrorHandler
+from .file_processor import FileDiscoverer, FileFilter, HashGenerator
+from .send_manager import SendManager
 
 
 class ProcessingContext:
@@ -264,7 +265,6 @@ class DispatchCoordinator:
 
     def _write_validation_report(self) -> str:
         """Write EDI validation report to file."""
-        import datetime
 
         validator_log_name = (
             f"Validator Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
@@ -281,12 +281,14 @@ class DispatchCoordinator:
 
     def _load_upc_data(self):
         """Load UPC data from the database."""
-        query_object = query_runner(
-            self.settings["as400_username"],
-            self.settings["as400_password"],
-            self.settings["as400_address"],
-            f"{self.settings['odbc_driver']}",
+        runner = create_query_runner(
+            username=self.settings["as400_username"],
+            password=self.settings["as400_password"],
+            dsn=self.settings["as400_address"],
+            database="QGPL",
+            odbc_driver=f"{self.settings['odbc_driver']}",
         )
+        query_object = LegacyQueryRunnerAdapter(runner)
 
         upc_qreturn = []
         for (
@@ -297,7 +299,7 @@ class DispatchCoordinator:
             upc3,
             upc4,
         ) in query_object.run_arbitrary_query("""
-            select 
+            select
                 dsanrep.anbacd,
                 dsanrep.anbbcd,
                 strip(dsanrep.anbgcd),
@@ -499,8 +501,6 @@ class DispatchCoordinator:
 
     def _write_folder_errors_report(self, parameters_dict: Dict[str, Any], errors: str):
         """Write folder errors report to file."""
-        import datetime
-        import re
 
         # Clean alias string
         cleaned_alias_string = re.sub("[^a-zA-Z0-9 ]", "", parameters_dict["alias"])
