@@ -14,18 +14,14 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from core import utils
-
-# Import structured logging utilities
+from core.database import query_runner
+from core.edi.c_rec_generator import CRecGenerator
+from core.edi.po_fetcher import POFetcher
 from core.structured_logging import (
     StructuredLogger,
     get_logger,
     get_or_create_correlation_id,
 )
-from core.database import query_runner
-from core.edi.c_rec_generator import CRecGenerator
-
-# Import refactored classes
-from core.edi.po_fetcher import POFetcher
 
 logger = get_logger(__name__)
 
@@ -57,7 +53,7 @@ def _create_query_runner_adapter(settings_dict: dict):
 
         def run_query(self, query: str, params: tuple = None) -> list:
             # Legacy runner returns list of tuples
-            return self._runner.run_arbitrary_query(query)
+            return self._runner.run_arbitrary_query(query, params)
 
     return QueryRunnerAdapter(legacy_runner)
 
@@ -340,13 +336,12 @@ def edi_tweak(
 
                 # Append PO number to A record
                 if append_arec:
-                    if "%po_str%" in append_arec_text:
+                    append_text = append_arec_text
+                    if "%po_str%" in append_text:
                         po_number = po_fetcher.fetch_po_number(
                             a_rec_edi_dict["invoice_number"]
                         )
-                        append_arec_text = append_arec_text.replace(
-                            "%po_str%", po_number
-                        )
+                        append_text = append_text.replace("%po_str%", po_number)
                         StructuredLogger.log_intermediate(
                             logger,
                             "edi_tweak",
@@ -355,7 +350,7 @@ def edi_tweak(
                             {"invoice": invoice_num, "po": po_number},
                             "fetched",
                         )
-                    a_rec_line_builder.append(append_arec_text)
+                    a_rec_line_builder.append(append_text)
                 a_rec_line_builder.append("\n")
                 writeable_line = "".join(a_rec_line_builder)
                 f.write(writeable_line)
@@ -368,7 +363,8 @@ def edi_tweak(
                 if override_upc:
                     vendor_item = b_rec_edi_dict["vendor_item"].strip()
                     try:
-                        if override_upc_category_filter == "ALL":
+                        category_filter = override_upc_category_filter.strip()
+                        if category_filter == "" or category_filter == "ALL":
                             b_rec_edi_dict["upc_number"] = upc_dict[int(vendor_item)][
                                 override_upc_level
                             ]
@@ -381,9 +377,9 @@ def edi_tweak(
                                 "applied",
                             )
                         else:
-                            if upc_dict[int(vendor_item)][
-                                0
-                            ] in override_upc_category_filter.split(","):
+                            if upc_dict[int(vendor_item)][0] in category_filter.split(
+                                ","
+                            ):
                                 b_rec_edi_dict["upc_number"] = upc_dict[
                                     int(vendor_item)
                                 ][override_upc_level]
@@ -411,7 +407,7 @@ def edi_tweak(
                 if retail_uom:
                     edi_line_pass = False
                     try:
-                        item_number = int(b_rec_edi_dict["vendor_item"].strip())
+                        int(b_rec_edi_dict["vendor_item"].strip())
                         float(b_rec_edi_dict["unit_cost"].strip())
                         test_unit_multiplier = int(
                             b_rec_edi_dict["unit_multiplier"].strip()
@@ -489,7 +485,28 @@ def edi_tweak(
 
                     if blank_upc is False:
                         proposed_upc = b_rec_edi_dict["upc_number"].strip()
-                        if len(str(proposed_upc)) == upc_target_length:
+                        proposed_len = len(str(proposed_upc))
+                        if proposed_len == upc_target_length:
+                            # Exact match, is valid
+                            pass
+                        elif proposed_len == 12 and upc_target_length == 13:
+                            # Pad a 12-char UPC with check digit to length 13.
+                            fill_char = (
+                                upc_padding_pattern[0] if upc_padding_pattern else " "
+                            )
+                            b_rec_edi_dict["upc_number"] = str(proposed_upc).rjust(
+                                upc_target_length, fill_char
+                            )
+                            StructuredLogger.log_intermediate(
+                                logger,
+                                "edi_tweak",
+                                __name__,
+                                "pad_upc",
+                                {"upc": proposed_upc, "target": upc_target_length},
+                                "padded",
+                            )
+                        elif proposed_len == 11:
+                            # Add check digit to 11-char base UPC
                             check_digit = utils.calc_check_digit(proposed_upc)
                             b_rec_edi_dict["upc_number"] = str(proposed_upc) + str(
                                 check_digit
@@ -502,19 +519,19 @@ def edi_tweak(
                                 {"upc": proposed_upc},
                                 "added",
                             )
-                        else:
-                            if len(str(proposed_upc)) == 8:
-                                b_rec_edi_dict["upc_number"] = str(
-                                    utils.convert_UPCE_to_UPCA(proposed_upc)
-                                )
-                                StructuredLogger.log_intermediate(
-                                    logger,
-                                    "edi_tweak",
-                                    __name__,
-                                    "convert_upce_to_upca",
-                                    {"upce": proposed_upc},
-                                    "converted",
-                                )
+                        elif proposed_len == 8:
+                            # Convert UPC-E to UPCA
+                            b_rec_edi_dict["upc_number"] = str(
+                                utils.convert_UPCE_to_UPCA(proposed_upc)
+                            )
+                            StructuredLogger.log_intermediate(
+                                logger,
+                                "edi_tweak",
+                                __name__,
+                                "convert_upce_to_upca",
+                                {"upce": proposed_upc},
+                                "converted",
+                            )
                     else:
                         b_rec_edi_dict["upc_number"] = upc_padding_pattern[
                             :upc_target_length
