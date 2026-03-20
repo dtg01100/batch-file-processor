@@ -165,11 +165,13 @@ class SplitResult:
         output_files: List of tuples (file_path, prefix, suffix)
         skipped_invoices: Number of invoices skipped due to filtering
         total_lines_written: Total lines written across all files
+        original_invoice_count: Number of invoices in source file before filtering
     """
 
     output_files: list[tuple[str, str, str]]
     skipped_invoices: int
     total_lines_written: int
+    original_invoice_count: int = 0
 
 
 def _col_to_excel(col: int) -> str:
@@ -413,15 +415,30 @@ def _write_invoice_binary(
 ) -> int:
     """Write one invoice to binary output and return line count written."""
     output_chunks: list[bytes] = []
-    output_chunks.append(a_record.replace("\n", "\r\n").encode())
+    output_chunks.append(_ensure_crlf(a_record).encode())
 
     for b_rec in b_records:
-        output_chunks.append(b_rec.replace("\n", "\r\n").encode())
+        output_chunks.append(_ensure_crlf(b_rec).encode())
     for c_rec in c_records:
-        output_chunks.append(c_rec.replace("\n", "\r\n").encode())
+        output_chunks.append(_ensure_crlf(c_rec).encode())
 
     filesystem.write_binary(output_path, b"".join(output_chunks))
     return 1 + len(b_records) + len(c_records)
+
+
+def _ensure_crlf(line: str) -> str:
+    """Ensure a line ends with CRLF, proper for EDI files.
+
+    Handles lines that may have no line ending, CR only, LF only,
+    or CRLF already present.
+    """
+    if line.endswith("\r\n"):
+        return line
+    if line.endswith("\r"):
+        return line + "\n"
+    if line.endswith("\n"):
+        return line.rstrip("\n") + "\r\n"
+    return line + "\r\n"
 
 
 def _finalize_current_invoice(
@@ -576,7 +593,10 @@ class EDISplitter:
         if not output_files:
             raise ValueError("No Split EDIs (all invoices may have been filtered out)")
 
-        return SplitResult(output_files, skipped_invoices, write_counter)
+        original_invoice_count = count
+        return SplitResult(
+            output_files, skipped_invoices, write_counter, original_invoice_count
+        )
 
     def do_split_edi(
         self,

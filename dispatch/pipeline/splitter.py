@@ -464,18 +464,44 @@ class EDISplitterStep:
                     errors=errors,
                 )
             else:
-                logger.info(
-                    "No split performed for %s (single invoice or no split)",
-                    input_path,
-                )
-
-                return SplitterResult(
-                    files=[(input_path, "", "")],
-                    was_split=False,
-                    was_filtered=was_filtered,
-                    skipped_invoices=split_result.skipped_invoices,
-                    errors=errors,
-                )
+                if len(split_result.output_files) == 1:
+                    original_count = getattr(split_result, "original_invoice_count", 1)
+                    if original_count > 1:
+                        logger.info(
+                            "Split produced single file (was filtered from multi-invoice source): %s",
+                            split_result.output_files[0][0],
+                        )
+                        return SplitterResult(
+                            files=split_result.output_files,
+                            was_split=True,
+                            was_filtered=was_filtered,
+                            skipped_invoices=split_result.skipped_invoices,
+                            errors=errors,
+                        )
+                    else:
+                        logger.info(
+                            "No split performed for %s (single invoice source)",
+                            input_path,
+                        )
+                        return SplitterResult(
+                            files=[(input_path, "", "")],
+                            was_split=False,
+                            was_filtered=was_filtered,
+                            skipped_invoices=split_result.skipped_invoices,
+                            errors=errors,
+                        )
+                else:
+                    logger.info(
+                        "No split performed for %s (single invoice source)",
+                        input_path,
+                    )
+                    return SplitterResult(
+                        files=[(input_path, "", "")],
+                        was_split=False,
+                        was_filtered=was_filtered,
+                        skipped_invoices=split_result.skipped_invoices,
+                        errors=errors,
+                    )
 
         except ValueError as e:
             logger.warning("No valid invoices after filtering %s: %s", input_path, e)
