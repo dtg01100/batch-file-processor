@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+import functools
 import hashlib
 import importlib
 import os
@@ -89,13 +90,16 @@ def generate_file_hash(source_file_struct):
 
 # this module iterates over all rows in the database, and attempts to process them with the correct backend
 
-hash_counter = 0
-file_count = 0
-filename = ""
-send_filename = ""
-parameters_dict_list = []
-hash_thread_return_list = []
-hash_thread_return_queue = queue.Queue()
+
+class _ProcessingContext:
+    """Encapsulates shared state for process() to avoid global variables."""
+
+    def __init__(self):
+        self.file_count = 0
+        self.hash_thread_return_queue = queue.Queue()
+        self.parameters_dict_list = []
+        self.edi_validator_errors = StringIO()
+        self.global_edi_validator_error_status = False
 
 
 def process(
@@ -111,19 +115,7 @@ def process(
     settings,
     progress_callback: Optional[ProgressCallback] = None,
 ):
-    global hash_counter
-    global file_count
-    global parameters_dict_list
-    global hash_thread_return_queue
-    global edi_validator_errors
-    global global_edi_validator_error_status
-    global file_count
-    global hash_counter
-    global filename
-    global send_filename
-    hash_counter = 0
-    file_count = 0
-    hash_thread_return_queue = queue.Queue()
+    ctx = _ProcessingContext()
 
     if progress_callback is None:
         progress_callback = NullProgressCallback()
@@ -194,12 +186,7 @@ def process(
         )
         progress_callback.update_message(message)
 
-    edi_validator_errors = StringIO()
-    global_edi_validator_error_status = False
-
     def validate_file(input_file, file_name):
-        global edi_validator_errors
-        global global_edi_validator_error_status
         edi_validator_output, edi_validator_error_status, minor_edi_errors = (
             mtc_edi_validator.report_edi_issues(input_file)
         )
@@ -208,19 +195,19 @@ def process(
             or edi_validator_error_status
             and reporting["report_edi_errors"]
         ):
-            edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
-            edi_validator_errors.write(edi_validator_output.getvalue())
+            ctx.edi_validator_errors.write("\r\nErrors for " + file_name + ":\r\n")
+            ctx.edi_validator_errors.write(edi_validator_output.getvalue())
             edi_validator_output.close()
-            global_edi_validator_error_status = True
+            ctx.global_edi_validator_error_status = True
         return edi_validator_error_status
 
-    parameters_dict_list = []
+    ctx.parameters_dict_list = []
     for parameters_dict in folders_database.find(folder_is_active=1, order_by="alias"):
         try:
             parameters_dict["id"] = parameters_dict.pop("old_id")
         except KeyError:
             pass
-        parameters_dict_list.append(parameters_dict)
+        ctx.parameters_dict_list.append(parameters_dict)
 
     def hash_thread_target():
         def search_dictionaries(key, value, list_of_dictionaries):
@@ -228,10 +215,8 @@ def process(
                 element for element in list_of_dictionaries if element[key] == value
             ]
 
-        global parameters_dict_list
-        global hash_thread_return_list
         with concurrent.futures.ProcessPoolExecutor() as hash_executor:
-            for counter, entry_dict in enumerate(parameters_dict_list):
+            for counter, entry_dict in enumerate(ctx.parameters_dict_list):
                 # create list of all files in directory
                 hash_files = [
                     os.path.abspath(
@@ -249,7 +234,7 @@ def process(
                     "Generating file hashes "
                     + str(counter + 1)
                     + " of "
-                    + str(len(parameters_dict_list))
+                    + str(len(ctx.parameters_dict_list))
                     + f" ({entry_dict['folder_name']})"
                 )
 
@@ -316,7 +301,7 @@ def process(
                             (index_number, os.path.basename(file_path), file_hash)
                         )
 
-                hash_thread_return_queue.put(
+                ctx.hash_thread_return_queue.put(
                     dict(
                         folder_name=entry_dict["folder_name"],
                         files=hash_files,
@@ -337,16 +322,15 @@ def process(
     for entry in processed_files.find():
         temp_processed_files_list.append(dict(entry))
     hash_thread_object.start()
-    for parameters_dict in parameters_dict_list:
+    for parameters_dict in ctx.parameters_dict_list:
         folder_count += 1
-        file_count = 0
+        ctx.file_count = 0
         file_count_total = 0
-        hash_counter = 0
         update_overlay(
             "processing folder...\n\n",
             folder_count,
             folder_total_count,
-            file_count,
+            ctx.file_count,
             file_count_total,
             "",
         )
@@ -382,7 +366,7 @@ def process(
             )
             folder_errors_log = StringIO()
 
-            hash_thread_return_dict = hash_thread_return_queue.get()
+            hash_thread_return_dict = ctx.hash_thread_return_queue.get()
 
             files = hash_thread_return_dict["files"]
 
@@ -409,7 +393,7 @@ def process(
             run_log.write("Checking for new files\r\n".encode())
             print("Checking for new files")
 
-            file_count = 0
+            ctx.file_count = 0
             folder_errors = False
             if len(files) == 0:  # if there are no files in directory, record in log
                 run_log.write("No files in directory\r\n\r\n".encode())
@@ -433,14 +417,13 @@ def process(
                         input_filename = process_row[1]
                         input_file_checksum = process_row[2]
                 assert input_file_checksum is not None
-                global file_count
                 with tempfile.TemporaryDirectory() as file_scratch_folder:
                     input_filename = os.path.join(
                         str(os.path.abspath(parameters_dict["folder_name"])),
                         str(input_filename),
                     )
                     process_original_filename = input_filename
-                    file_count += 1
+                    ctx.file_count += 1
 
                     valid_edi_file = True
                     if (
@@ -773,7 +756,9 @@ def process(
                     file_checksum,
                     return_log,
                     return_error_log,
-                ) in executor.map(process_files, index_number_list):
+                ) in executor.map(
+                    functools.partial(process_files, ctx), index_number_list
+                ):
                     # Write the return_log to the run_log
                     run_log.writelines([row.encode() for row in return_log])
                     # If there are errors, write the return_error_log to the folder_errors_log
@@ -783,12 +768,12 @@ def process(
                         )
                         folder_errors = True
                     # Update the overlay if not all files have been processed
-                    if not file_count == file_count_total:
+                    if not ctx.file_count == file_count_total:
                         update_overlay(
                             "processing folder...\n\n",
                             folder_count,
                             folder_total_count,
-                            file_count,
+                            ctx.file_count,
                             file_count_total,
                             "Sending File: " + os.path.basename(original_filename),
                         )
@@ -945,7 +930,7 @@ def process(
                 + parameters_dict["alias"]
             )
             error_counter += 1
-    if global_edi_validator_error_status is True:
+    if ctx.global_edi_validator_error_status is True:
         validator_log_name_constructor = (
             "Validator Log " + str(time.ctime()).replace(":", "-") + ".txt"
         )
@@ -953,14 +938,14 @@ def process(
             run_log_directory, validator_log_name_constructor
         )
         validator_log_file = open(validator_log_path, "wb")
-        validator_log_file.write(edi_validator_errors.getvalue().encode())
-        edi_validator_errors.close()
+        validator_log_file.write(ctx.edi_validator_errors.getvalue().encode())
+        ctx.edi_validator_errors.close()
         validator_log_file.close()
         if reporting["enable_reporting"] == "True":
             emails_table.insert(dict(log=validator_log_path))
     print(str(processed_counter) + " processed, " + str(error_counter) + " errors")
 
-    if global_edi_validator_error_status:
+    if ctx.global_edi_validator_error_status:
         edi_validator_error_report_string = ", has EDI validator errors"
     else:
         edi_validator_error_report_string = ""
