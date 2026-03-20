@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional
 
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.structured_logging import (
     CorrelationContext,
     get_logger,
@@ -19,7 +20,6 @@ from core.structured_logging import (
     log_file_operation,
     log_with_context,
 )
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
 from core.utils.bool_utils import normalize_bool
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
@@ -665,6 +665,7 @@ class DispatchOrchestrator:
             original_file_path=file_path,
             context=context,
             run_log=run_log,
+            validation_passed=result.validated,
         )
         if did_convert:
             result.converted = True
@@ -790,6 +791,7 @@ class DispatchOrchestrator:
                     original_file_path=file_path,
                     context=context,
                     run_log=run_log,
+                    validation_passed=result.validated,
                 )
                 if did_convert:
                     result.converted = True
@@ -936,8 +938,17 @@ class DispatchOrchestrator:
         original_file_path: str,
         context: ProcessingContext,
         run_log: Any,
+        validation_passed: bool = True,
     ) -> tuple[str, bool]:
         """Apply converter and tweaker steps for a single file path.
+
+        Args:
+            current_file: Current file path in the pipeline
+            file_basename: Base name of the file
+            original_file_path: Original file path before any processing
+            context: Processing context
+            run_log: Run log for recording activity
+            validation_passed: Whether validation passed for this file
 
         Returns:
             Tuple of (final_file_path, did_convert)
@@ -946,18 +957,27 @@ class DispatchOrchestrator:
 
         converter_step = self.config.converter_step
         convert_edi = context.effective_folder.get("convert_edi", False)
+        tweak_edi = context.effective_folder.get("tweak_edi", False)
+        run_conversion = converter_step is not None and (
+            convert_edi or (tweak_edi and validation_passed)
+        )
+
         logger.debug(
-            "Converter step: enabled=%s, convert_edi=%s",
+            "Converter step: enabled=%s, convert_edi=%s, tweak_edi=%s",
             bool(converter_step),
             convert_edi,
+            tweak_edi,
         )
-        if converter_step is not None and convert_edi:
+
+        if run_conversion:
             convert_format = context.effective_folder.get(
                 "convert_to_format", "unknown"
             )
             self._log_message(
                 run_log,
-                f"Converting {file_basename} to {convert_format}",
+                f"Converting {file_basename} to {convert_format}"
+                if convert_edi
+                else f"Applying tweaks to {file_basename}",
             )
             converted_file = converter_step.execute(
                 current_file,
@@ -967,38 +987,10 @@ class DispatchOrchestrator:
                 context=context,
             )
             if converted_file:
-                # Track temp files created by converter (mkstemp persistent files)
                 if converted_file != original_file_path:
                     context.temp_files.append(converted_file)
                 current_file = converted_file
                 did_convert = True
-
-        tweaker_step = self.config.tweaker_step
-        tweak_edi = context.effective_folder.get("tweak_edi", False)
-        run_tweaker = self._should_apply_tweaker(tweaker_step, current_file)
-        logger.debug(
-            "Tweaker step: enabled=%s, tweak_edi=%s, applicable=%s",
-            bool(tweaker_step),
-            tweak_edi,
-            run_tweaker,
-        )
-        if tweaker_step is not None and tweak_edi and run_tweaker:
-            self._log_message(
-                run_log,
-                f"Applying tweaks to {file_basename}",
-            )
-            tweaked_file = tweaker_step.execute(
-                current_file,
-                context.effective_folder,
-                context.upc_dict,
-                context.settings,
-                context=context,
-            )
-            if tweaked_file:
-                # Track temp files created by tweaker (mkstemp)
-                if tweaked_file != original_file_path:
-                    context.temp_files.append(tweaked_file)
-                current_file = tweaked_file
 
         return current_file, did_convert
 
@@ -1234,26 +1226,6 @@ class DispatchOrchestrator:
             )
 
         return success
-
-    def _should_apply_tweaker(self, tweaker_step: Any, file_path: str) -> bool:
-        """Determine whether tweaker should run for a given file.
-
-        The built-in ``EDITweakerStep`` is designed for EDI line-record input.
-        After conversion to non-EDI formats (e.g. CSV), running it can corrupt
-        output. Custom test/dummy tweaker steps are still allowed on any file.
-        """
-        if tweaker_step is None:
-            return False
-
-        file_ext = file_path.lower().rsplit(".", 1)[-1] if "." in file_path else ""
-        if file_ext == "edi":
-            return True
-
-        # Skip built-in EDI tweaker for non-EDI converted outputs.
-        if tweaker_step.__class__.__name__ == "EDITweakerStep":
-            return False
-
-        return True
 
     def process_file(self, file_path: str, folder: dict) -> FileResult:
         """Process a single file via the pipeline path.
@@ -1618,13 +1590,9 @@ class DispatchOrchestrator:
             splitter_step=EDISplitterStep(),
             converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
-            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
         )
 
         orchestrator = DispatchOrchestrator(config)
-
-        # Get UPC dictionary for category filtering
-        upc_dict = orchestrator._get_upc_dictionary(settings)
 
         # Get all active folders
         folders = list(folders_database.find(folder_is_active=True, order_by="alias"))
