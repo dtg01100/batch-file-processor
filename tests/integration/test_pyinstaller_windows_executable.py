@@ -5,7 +5,13 @@ Docker image (which uses Wine + Windows Python inside Ubuntu) and verify
 the real artifact works correctly via --self-test and --help under Wine.
 """
 
+import shutil
+import subprocess
+from pathlib import Path
+
 import pytest
+
+from build_wine_local import format_bundle_validation_errors, validate_windows_bundle
 
 pytestmark = [
     pytest.mark.integration,
@@ -13,12 +19,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.build,
 ]
-
-import shutil
-import subprocess
-from pathlib import Path
-
-import pytest
 
 # Project root is the top-level repo directory
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -121,6 +121,16 @@ class TestWindowsExecutable:
 
         size_mb = exe.stat().st_size / (1024 * 1024)
         assert size_mb > 1, f"Executable is suspiciously small: {size_mb:.2f} MB"
+
+    def test_windows_bundle_contains_required_qt_runtime(self, windows_executable):
+        """The built bundle contains the expected Windows Qt runtime files."""
+        bundle_dir = Path(windows_executable).parent
+        issues = validate_windows_bundle(bundle_dir)
+
+        assert not issues, (
+            "Built Windows bundle failed validation.\n"
+            f"{format_bundle_validation_errors(issues)}"
+        )
 
     def test_windows_self_test_via_wine(self, windows_executable, docker_cmd):
         """Running --self-test on the .exe via Wine succeeds."""

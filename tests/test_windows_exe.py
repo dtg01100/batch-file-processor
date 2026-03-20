@@ -1,128 +1,90 @@
 #!/usr/bin/env python3
-"""
-Test script to verify the Windows executable has all required dependencies.
-This is an integration test for the Windows packaging.
-"""
+"""Tests and manual checks for the Windows bundle layout."""
 
-if __name__ != "__main__":
-    import pytest
+import sys
+from pathlib import Path
 
-    pytest.skip(
-        "Manual root-level Windows packaging verification script; skip during pytest collection to avoid side effects.",
-        allow_module_level=True,
+import pytest
+
+from build_wine_local import (
+    REQUIRED_WINDOWS_BUNDLE_PATHS,
+    WINDOWS_BUNDLE_NAME,
+    WINDOWS_DIST_DIRNAME,
+    format_bundle_validation_errors,
+    get_windows_bundle_dir,
+    validate_windows_bundle,
+)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _create_minimal_windows_bundle(root: Path) -> Path:
+    bundle_dir = root / WINDOWS_BUNDLE_NAME
+    for relative_path in REQUIRED_WINDOWS_BUNDLE_PATHS:
+        target = bundle_dir / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"test")
+    return bundle_dir
+
+
+@pytest.mark.unit
+def test_validate_windows_bundle_accepts_expected_layout(tmp_path):
+    bundle_dir = _create_minimal_windows_bundle(tmp_path)
+    assert validate_windows_bundle(bundle_dir) == []
+
+
+@pytest.mark.unit
+def test_validate_windows_bundle_flags_missing_qtwidgets_runtime(tmp_path):
+    bundle_dir = _create_minimal_windows_bundle(tmp_path)
+    (bundle_dir / "_internal" / "PyQt6" / "QtWidgets.pyd").unlink()
+
+    issues = validate_windows_bundle(bundle_dir)
+
+    assert any("PyQt6/QtWidgets.pyd" in issue for issue in issues)
+
+
+@pytest.mark.unit
+def test_validate_windows_bundle_flags_linux_shared_objects(tmp_path):
+    bundle_dir = _create_minimal_windows_bundle(tmp_path)
+    linux_artifact = bundle_dir / "_internal" / "libQt6Widgets.so.6"
+    linux_artifact.parent.mkdir(parents=True, exist_ok=True)
+    linux_artifact.write_bytes(b"linux")
+
+    issues = validate_windows_bundle(bundle_dir)
+
+    assert any("libQt6Widgets.so.6" in issue for issue in issues)
+
+
+@pytest.mark.unit
+def test_default_windows_bundle_dir_uses_dist_windows():
+    assert get_windows_bundle_dir(PROJECT_ROOT / WINDOWS_DIST_DIRNAME) == (
+        PROJECT_ROOT / WINDOWS_DIST_DIRNAME / WINDOWS_BUNDLE_NAME
     )
 
-import os
-import sys
 
-
-def test_executable_structure():
-    """Verify the executable has all required files."""
-    exe_dir = ".wine-build/dist/Batch File Sender"
-    internal_dir = os.path.join(exe_dir, "_internal")
+def main(argv: list[str] | None = None) -> int:
+    """Run a manual validation of the built Windows bundle."""
+    argv = argv or sys.argv[1:]
+    bundle_dir = (
+        Path(argv[0])
+        if argv
+        else get_windows_bundle_dir(PROJECT_ROOT / WINDOWS_DIST_DIRNAME)
+    )
+    issues = validate_windows_bundle(bundle_dir)
 
     print("=" * 60)
-    print("Windows Executable Self-Test (Integration Test)")
+    print("Windows Executable Bundle Validation")
     print("=" * 60)
-    print()
+    print(f"Bundle: {bundle_dir}")
 
-    # Check executable exists
-    exe_path = os.path.join(exe_dir, "Batch File Sender.exe")
-    if os.path.exists(exe_path):
-        print(f"✓ Executable found: {exe_path}")
-        size = os.path.getsize(exe_path)
-        print(f"  Size: {size:,} bytes ({size/1024/1024:.2f} MB)")
-    else:
-        print(f"✗ Executable NOT found: {exe_path}")
+    if issues:
+        print("❌ Bundle validation failed")
+        print(format_bundle_validation_errors(issues))
         return 1
 
-    print()
-
-    # Check _internal directory
-    if os.path.exists(internal_dir):
-        print("✓ _internal directory found")
-    else:
-        print("✗ _internal directory NOT found")
-        return 1
-
-    print()
-
-    # Check for critical Qt6 DLLs
-    qt_bin_dir = os.path.join(internal_dir, "PyQt6", "Qt6", "bin")
-    critical_dlls = [
-        "Qt6Core.dll",
-        "Qt6Gui.dll",
-        "Qt6Widgets.dll",
-        "Qt6Network.dll",
-        "Qt6PrintSupport.dll",
-        "Qt6Svg.dll",
-        "Qt6Xml.dll",
-    ]
-
-    print("[Qt6 DLLs Check]")
-    missing_dlls = []
-    for dll in critical_dlls:
-        dll_path = os.path.join(qt_bin_dir, dll)
-        if os.path.exists(dll_path):
-            print(f"  ✓ {dll}")
-        else:
-            print(f"  ✗ {dll} - MISSING")
-            missing_dlls.append(dll)
-
-    print()
-
-    # Check for ICU DLLs (commonly missing)
-    print("[ICU DLLs Check]")
-    icu_dlls = ["icuuc.dll", "icuin.dll", "icudt.dll"]
-    missing_icu = []
-    for dll in icu_dlls:
-        dll_path = os.path.join(qt_bin_dir, dll)
-        if os.path.exists(dll_path):
-            print(f"  ✓ {dll}")
-        else:
-            print(f"  ✗ {dll} - MISSING (optional but recommended)")
-            missing_icu.append(dll)
-
-    print()
-
-    # Check for Python modules
-    print("[Python Modules Check]")
-    required_modules = [
-        "PyQt6/QtCore.pyd",
-        "PyQt6/QtGui.pyd",
-        "PyQt6/QtWidgets.pyd",
-        "lxml/etree.cp311-win_amd64.pyd",
-        "PIL/_imaging.cp311-win_amd64.pyd",
-    ]
-
-    missing_modules = []
-    for module in required_modules:
-        module_path = os.path.join(internal_dir, module)
-        if os.path.exists(module_path):
-            print(f"  ✓ {module}")
-        else:
-            print(f"  ✗ {module} - MISSING")
-            missing_modules.append(module)
-
-    print()
-
-    # Summary
-    print("=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
-
-    if missing_dlls:
-        print(f"✗ FAILED: {len(missing_dlls)} critical DLL(s) missing")
-        return 1
-    elif missing_icu:
-        print(f"⚠ WARNING: {len(missing_icu)} ICU DLL(s) missing (may cause issues)")
-        print("  These are often required by Qt6 but may be bundled elsewhere")
-        return 0  # Still pass, as these might be optional
-    else:
-        print("✓ ALL CHECKS PASSED")
-        print("  The Windows executable appears to be properly packaged.")
-        return 0
+    print("✅ Bundle validation passed")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(test_executable_structure())
+    sys.exit(main())

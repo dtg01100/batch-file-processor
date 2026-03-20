@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QLineEdit, QTableWidget
+from PyQt5.QtWidgets import QLineEdit, QTableWidget
 
 
 @pytest.mark.qt

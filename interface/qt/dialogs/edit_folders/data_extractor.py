@@ -7,7 +7,7 @@ mirroring the Tkinter-based FolderDataExtractor but operating on PyQt6 widgets.
 
 from typing import Any, Dict, Optional
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QLineEdit,

@@ -12,9 +12,9 @@ import os
 from operator import itemgetter
 from typing import Any, List, Optional, Tuple
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import (
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeyEvent
+from PyQt5.QtWidgets import (
     QButtonGroup,
     QDialogButtonBox,
     QFileDialog,

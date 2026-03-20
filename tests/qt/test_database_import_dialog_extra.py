@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 pytestmark = pytest.mark.qt
 
@@ -282,7 +282,7 @@ class TestDatabaseImportDialogConfirm:
         """Test confirmation handler with Yes response."""
         import threading
 
-        from PyQt6.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox
 
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
@@ -307,7 +307,7 @@ class TestDatabaseImportDialogConfirm:
         """Test confirmation handler with No response."""
         import threading
 
-        from PyQt6.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox
 
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 

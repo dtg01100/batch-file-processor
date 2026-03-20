@@ -18,8 +18,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
     QApplication,
     QMessageBox,
     QPushButton,
@@ -372,7 +372,7 @@ class TestFolderListWidgetComprehensive:
         qtbot.addWidget(widget)
 
         # Find scroll areas
-        from PyQt6.QtWidgets import QScrollArea
+        from PyQt5.QtWidgets import QScrollArea
 
         scroll_areas = widget.findChildren(QScrollArea)
         assert len(scroll_areas) > 0
@@ -511,7 +511,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_initialization(self, qtbot):
         """Test progress service initializes correctly."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -523,7 +523,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_show_hide(self, qtbot):
         """Test showing and hiding progress dialog."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -539,7 +539,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_set_total(self, qtbot):
         """Test setting total progress value."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -552,7 +552,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_set_current(self, qtbot):
         """Test setting current progress value."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -567,7 +567,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_set_message(self, qtbot):
         """Test setting progress message."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -580,7 +580,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_indeterminate_mode(self, qtbot):
         """Test indeterminate progress mode."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -594,7 +594,7 @@ class TestQtProgressServiceComprehensive:
 
     def test_progress_service_multiple_updates(self, qtbot):
         """Test multiple progress updates in sequence."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -685,7 +685,7 @@ class TestQtUIServiceComprehensive:
         """Test asking for open filename."""
         service = QtUIService()
 
-        from PyQt6.QtWidgets import QFileDialog
+        from PyQt5.QtWidgets import QFileDialog
 
         mock_open = MagicMock(return_value=("/path/to/file.txt", ""))
         monkeypatch.setattr(QFileDialog, "getOpenFileName", mock_open)
@@ -698,7 +698,7 @@ class TestQtUIServiceComprehensive:
         """Test asking for save filename."""
         service = QtUIService()
 
-        from PyQt6.QtWidgets import QFileDialog
+        from PyQt5.QtWidgets import QFileDialog
 
         mock_save = MagicMock(return_value=("/path/to/save.txt", ""))
         monkeypatch.setattr(QFileDialog, "getSaveFileName", mock_save)
@@ -711,7 +711,7 @@ class TestQtUIServiceComprehensive:
         """Test asking for directory."""
         service = QtUIService()
 
-        from PyQt6.QtWidgets import QFileDialog
+        from PyQt5.QtWidgets import QFileDialog
 
         mock_dir = MagicMock(return_value="/path/to/directory")
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", mock_dir)
@@ -1010,7 +1010,7 @@ class TestUIThreadSafetyAndState:
 
     def test_progress_updates_from_background_thread(self, qtbot):
         """Test progress updates are thread-safe."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)
@@ -1101,7 +1101,7 @@ class TestUIErrorHandlingEdgeCases:
 
     def test_progress_with_invalid_values(self, qtbot):
         """Test progress service handles invalid values."""
-        from PyQt6.QtWidgets import QWidget
+        from PyQt5.QtWidgets import QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)

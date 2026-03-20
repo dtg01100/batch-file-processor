@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,

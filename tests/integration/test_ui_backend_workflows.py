@@ -18,7 +18,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.qt, pytest.m
 import tempfile
 from pathlib import Path
 
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
@@ -300,7 +300,7 @@ class TestMultiDialogWorkflow:
             }
         )
 
-        from PyQt6.QtWidgets import QPushButton, QWidget
+        from PyQt5.QtWidgets import QPushButton, QWidget
 
         from interface.operations.maintenance_functions import MaintenanceFunctions
 

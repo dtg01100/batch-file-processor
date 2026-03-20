@@ -69,6 +69,35 @@ Or use the helper script:
 ./launch_interface.sh --offscreen
 ```
 
+### 5. Windows packaged executable: `DLL load failed while importing QtWidgets`
+
+**Error:**
+```text
+ImportError: DLL load failed while importing QtWidgets: The specified module could not be found.
+```
+
+**What this usually means:**
+- The workstation is missing the Microsoft Visual C++ runtime / UCRT that Qt6
+  depends on.
+- The executable was copied without the rest of the extracted bundle.
+- Antivirus or deployment tooling removed DLLs from `_internal/PyQt6/Qt6/bin`.
+
+**Checklist:**
+1. Extract the full bundle and keep the entire `Batch File Sender` folder
+   together. Do not copy only `Batch File Sender.exe`.
+2. Confirm the workstation is **64-bit Windows**.
+3. Install or repair the latest **Microsoft Visual C++ 2015-2022 Redistributable
+   (x64)**:
+   https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
+4. Confirm these paths exist after extraction:
+   - `_internal/PyQt6/Qt6/bin`
+   - `_internal/PyQt6/Qt6/plugins/platforms/qwindows.dll`
+5. If the error persists, check whether security software quarantined files
+   under `_internal/PyQt6/Qt6/bin`.
+
+**Build note:**
+- Current Windows bundles are built with **PyInstaller 6.19.0**.
+
 ## Quick Start
 
 ### With GUI (using virtual display):

@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication, QDialog, QPushButton
+from PyQt5.QtWidgets import QApplication, QDialog, QPushButton
 
 from core.edi.edi_parser import build_a_record, build_b_record, build_c_record
 from interface.qt.app import QtBatchFileSenderApp

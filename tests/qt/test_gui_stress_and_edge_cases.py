@@ -13,7 +13,7 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QMessageBox,
     QPushButton,
     QWidget,
@@ -1203,7 +1203,7 @@ class TestAppSmokeActions:
             lambda *args, **kwargs: str(tmp_path),
         )
         # Mock QMessageBox.question to avoid blocking
-        from PyQt6.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox
 
         monkeypatch.setattr(
             "PyQt6.QtWidgets.QMessageBox.question",

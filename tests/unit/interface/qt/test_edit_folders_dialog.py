@@ -233,7 +233,7 @@ class TestEditFoldersDialogRegression:
         event_handlers.update_active_state() explicitly handles QPushButton with
         text/style updates for enabled/disabled states.
         """
-        from PyQt6.QtWidgets import QPushButton
+        from PyQt5.QtWidgets import QPushButton
 
         dialog = _make_dialog(qtbot)
 
@@ -345,7 +345,7 @@ class TestEditFoldersDialogOKButtonFlow:
 
     def test_event_handlers_update_active_state_with_qcheckbox(self, qtbot):
         """Test that EventHandlers.update_active_state works with QCheckBox."""
-        from PyQt6.QtWidgets import QCheckBox
+        from PyQt5.QtWidgets import QCheckBox
 
         from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 

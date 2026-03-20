@@ -11,7 +11,7 @@ if __name__ != "__main__":
 
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 # Mock the plugin manager before importing dialog
 with patch("interface.qt.dialogs.edit_folders_dialog.PluginManager") as mock_pm_class:

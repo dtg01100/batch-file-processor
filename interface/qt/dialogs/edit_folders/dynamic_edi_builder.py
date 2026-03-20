@@ -16,8 +16,8 @@ from core.structured_logging import (
 
 logger = get_logger(__name__)
 
-from PyQt6 import QtCore
-from PyQt6.QtWidgets import (
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
@@ -171,7 +171,7 @@ class DynamicEDIBuilder:
         Called before any clear that would destroy these widgets, so that
         the extractor can still read the last user-chosen values.
         """
-        from PyQt6.QtWidgets import QCheckBox, QComboBox, QLineEdit
+        from PyQt5.QtWidgets import QCheckBox, QComboBox, QLineEdit
 
         for key in self._UPC_OVERRIDE_KEYS:
             widget = self.fields.get(key)
@@ -316,7 +316,7 @@ class DynamicEDIBuilder:
             if self.on_dynamic_form_changed:
                 self.on_dynamic_form_changed()
         finally:
-            from PyQt6.QtCore import QTimer
+            from PyQt5.QtCore import QTimer
 
             QTimer.singleShot(100, self._clear_edi_processing_flag)
 

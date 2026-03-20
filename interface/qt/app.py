@@ -17,8 +17,8 @@ import sys
 from typing import Any, Optional
 
 import appdirs
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
 import core.utils as utils
 import scripts.backup_increment as backup_increment

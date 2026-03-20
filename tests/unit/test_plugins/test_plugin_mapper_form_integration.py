@@ -15,7 +15,7 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
 
     def test_form_generator_integration(self):
         """Test that plugin mapper works with real Qt widgets."""
-        from PyQt6.QtWidgets import (
+        from PyQt5.QtWidgets import (
             QApplication,
             QCheckBox,
             QLineEdit,

@@ -7,7 +7,7 @@ Uses a decomposed architecture with dedicated builders and handlers.
 import os
 from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QWidget,

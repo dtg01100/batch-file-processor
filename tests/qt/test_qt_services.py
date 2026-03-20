@@ -1,8 +1,8 @@
 """Tests for Qt UI service implementations using pytest-qt."""
 
 import pytest
-from PyQt6.QtCore import QEvent
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
+from PyQt5.QtCore import QEvent
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
 from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.theme import Theme

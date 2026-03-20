@@ -5,8 +5,8 @@ Database operations use real DatabaseObj with temporary SQLite databases.
 """
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton
 
 pytestmark = pytest.mark.qt
 

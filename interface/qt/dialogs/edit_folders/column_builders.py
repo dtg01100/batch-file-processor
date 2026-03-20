@@ -7,7 +7,7 @@ configuring the widgets for a specific section of the dialog.
 
 from typing import Any, Callable, Dict, List, Optional
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,

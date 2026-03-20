@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 pytestmark = pytest.mark.qt
 

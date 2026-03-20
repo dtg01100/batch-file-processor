@@ -20,7 +20,7 @@ sys.path.insert(0, str(project_root))
 
 def test_ok_button_full_flow():
     """Test the complete OK button flow with database save."""
-    from PyQt6.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QApplication
 
     QApplication([])
 

@@ -2,9 +2,9 @@
 
 from typing import Callable, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QHBoxLayout, QLineEdit, QStyle, QWidget
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QShortcut, QStyle, QWidget
 
 from interface.qt.theme import Theme
 

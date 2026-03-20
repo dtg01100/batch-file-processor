@@ -9,7 +9,7 @@ import tempfile
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION

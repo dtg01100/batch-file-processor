@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import pytest
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,

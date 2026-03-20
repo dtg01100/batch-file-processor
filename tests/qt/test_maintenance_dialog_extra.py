@@ -1,7 +1,7 @@
 """Additional tests for MaintenanceDialog to improve coverage."""
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 from tests.fakes import FakeMaintenanceFunctions
 

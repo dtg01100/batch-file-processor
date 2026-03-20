@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Optional, Protocol, runtime_checkable
 
 try:
-    from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 except ImportError:
     QApplication = None  # type: ignore[assignment,misc]
     QFileDialog = None  # type: ignore[assignment,misc]

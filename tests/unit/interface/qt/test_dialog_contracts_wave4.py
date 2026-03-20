@@ -7,8 +7,8 @@ even as internal dialog implementations evolve.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialogButtonBox
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDialogButtonBox
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog

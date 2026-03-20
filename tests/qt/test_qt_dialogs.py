@@ -12,8 +12,8 @@ pytestmark = [pytest.mark.qt, pytest.mark.gui]
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ class TestBaseDialog:
         assert dialog._button_box is None
 
     def test_confirm_yes_no_uses_question_box(self, qtbot, monkeypatch):
-        from PyQt6.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox
 
         from interface.qt.dialogs.base_dialog import BaseDialog
 
@@ -165,7 +165,7 @@ class TestQtFolderDataExtractor:
         assert result.process_backend_ftp is False
 
     def test_reads_line_edit(self, qtbot):
-        from PyQt6.QtWidgets import QLineEdit
+        from PyQt5.QtWidgets import QLineEdit
 
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
@@ -176,7 +176,7 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().ftp_server == "my_server"
 
     def test_reads_checkbox(self, qtbot):
-        from PyQt6.QtWidgets import QCheckBox
+        from PyQt5.QtWidgets import QCheckBox
 
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
@@ -187,7 +187,7 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().process_backend_ftp is True
 
     def test_reads_combobox(self, qtbot):
-        from PyQt6.QtWidgets import QComboBox
+        from PyQt5.QtWidgets import QComboBox
 
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 
@@ -199,7 +199,7 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().convert_to_format == "fintech"
 
     def test_reads_spinbox(self, qtbot):
-        from PyQt6.QtWidgets import QSpinBox
+        from PyQt5.QtWidgets import QSpinBox
 
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
 

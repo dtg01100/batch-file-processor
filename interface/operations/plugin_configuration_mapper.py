@@ -437,7 +437,7 @@ class PluginConfigurationMapper:
         Returns:
             Any: Widget value
         """
-        from PyQt6.QtWidgets import (
+        from PyQt5.QtWidgets import (
             QCheckBox,
             QComboBox,
             QDoubleSpinBox,
@@ -570,7 +570,7 @@ class PluginConfigurationMapper:
             widget: Qt widget instance
             value: Value to set
         """
-        from PyQt6.QtWidgets import (
+        from PyQt5.QtWidgets import (
             QCheckBox,
             QComboBox,
             QDoubleSpinBox,

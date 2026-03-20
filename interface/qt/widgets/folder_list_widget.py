@@ -13,9 +13,9 @@ when a filter value is provided.
 from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 import thefuzz.process  # type: ignore
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFontMetrics
-from PyQt6.QtWidgets import (
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFontMetrics
+from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,

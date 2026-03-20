@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 import appdirs
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow
 
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
@@ -108,9 +108,9 @@ class QtDiagnosticsService:
                 print(f"  [?] {module} (optional, not bundled on this platform): {e}")
 
         try:
-            print("  [OK] PyQt6.sip")
+            print("  [OK] PyQt5.sip")
         except ImportError as e:
-            print(f"  [FAIL] PyQt6.sip: {e}")
+            print(f"  [FAIL] PyQt5.sip: {e}")
             failures += 1
 
         print("\n2. Checking configuration directories...")
@@ -184,7 +184,7 @@ class QtDiagnosticsService:
         return 1
 
     def run_gui_self_test(self) -> int:
-        from PyQt6.QtCore import QTimer
+        from PyQt5.QtCore import QTimer
 
         print(f"\n{'=' * 50}")
         print("GUI Self-Test")

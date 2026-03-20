@@ -12,7 +12,7 @@ This theme system implements contemporary design principles including:
 import re
 from pathlib import Path
 
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 
 class Theme:

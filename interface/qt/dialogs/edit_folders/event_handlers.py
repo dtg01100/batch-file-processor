@@ -8,7 +8,7 @@ checkbox toggles, and dropdown selections.
 import os
 from typing import Any, Callable, Dict, Optional
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QCheckBox,
     QDialog,
     QFileDialog,

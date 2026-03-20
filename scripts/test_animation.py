@@ -11,9 +11,9 @@ if __name__ != "__main__":
 
 import sys
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
-from PyQt6.QtGui import QTransform
-from PyQt6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, pyqtProperty
+from PyQt5.QtGui import QTransform
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 
 class RotatableLabel(QLabel):

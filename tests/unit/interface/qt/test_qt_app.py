@@ -14,7 +14,7 @@ from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QPushButton
+from PyQt5.QtWidgets import QApplication, QPushButton
 
 from interface.qt.app import QtBatchFileSenderApp
 

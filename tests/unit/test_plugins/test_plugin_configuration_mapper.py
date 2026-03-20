@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QTextEdit
+from PyQt5.QtWidgets import QApplication, QTextEdit
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (

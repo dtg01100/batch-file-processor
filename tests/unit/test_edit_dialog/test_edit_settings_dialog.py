@@ -557,7 +557,7 @@ class TestEditSettingsDialogSaveFunctionality:
 
     def test_ok_button_triggers_validate_and_apply(self, qtbot):
         """Test that clicking OK button triggers validation and apply."""
-        from PyQt6.QtCore import Qt
+        from PyQt5.QtCore import Qt
 
         dialog = _make_dialog(qtbot)
         assert dialog._button_box is not None
@@ -574,7 +574,7 @@ class TestEditSettingsDialogSaveFunctionality:
 
     def test_ok_button_aborts_when_validation_fails(self, qtbot):
         """Test that clicking OK button does not call apply when validation fails."""
-        from PyQt6.QtCore import Qt
+        from PyQt5.QtCore import Qt
 
         dialog = _make_dialog(qtbot)
         assert dialog._button_box is not None
@@ -610,7 +610,7 @@ class TestEditSettingsDialogBaseDialogPattern:
 
     def test_dialog_is_subclass_of_qdialog(self):
         """Test that dialog is ultimately a QDialog subclass."""
-        from PyQt6.QtWidgets import QDialog
+        from PyQt5.QtWidgets import QDialog
 
         assert issubclass(EditSettingsDialog, QDialog)
 

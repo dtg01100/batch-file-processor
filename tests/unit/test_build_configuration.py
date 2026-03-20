@@ -9,6 +9,10 @@ from pathlib import Path
 
 import pytest
 
+import build_windows_docker
+import build_windows_podman
+import build_wine_local
+
 try:
     from PyInstaller.utils.hooks import collect_submodules
 
@@ -86,7 +90,8 @@ class TestHiddenImports:
         """Verify hook files collect all submodules for their packages."""
         hook_packages = get_hook_packages()
 
-        # Qt hooks use collect_data_files/collect_dynamic_libs instead of collect_submodules
+        # Qt hooks use collect_data_files/collect_dynamic_libs instead of
+        # collect_submodules.
         # This is correct for Qt modules which need binary/data collection
         qt_hooks = {"PyQt6", "PyQt6.QtCore", "PyQt6.QtGui", "PyQt6.QtWidgets"}
 
@@ -102,7 +107,10 @@ class TestHiddenImports:
                 assert (
                     "collect_data_files" in hook_content
                     or "collect_dynamic_libs" in hook_content
-                ), f"Qt hook for {package} should use collect_data_files or collect_dynamic_libs"
+                ), (
+                    f"Qt hook for {package} should use collect_data_files "
+                    "or collect_dynamic_libs"
+                )
             else:
                 # Non-Qt hooks should use collect_submodules
                 collected = collect_submodules(package)
@@ -214,6 +222,37 @@ class TestHiddenImports:
         assert (
             "['hooks']" in content or '"hooks"' in content
         ), "Spec file should include 'hooks' in hookspath"
+
+    def test_windows_bundle_validation_targets_qt_runtime(self):
+        """Verify Windows bundle validation checks the Qt runtime pieces."""
+        required_paths = set(build_wine_local.REQUIRED_WINDOWS_BUNDLE_PATHS)
+
+        assert "_internal/PyQt6/QtWidgets.pyd" in required_paths
+        assert "_internal/PyQt6/Qt6/bin/Qt6Widgets.dll" in required_paths
+        assert "_internal/PyQt6/Qt6/plugins/platforms/qwindows.dll" in required_paths
+        assert "_internal/python311.dll" in required_paths
+
+    def test_windows_bundle_dir_uses_dist_windows(self):
+        """The Wine/local Windows build should write to dist_windows."""
+        assert build_wine_local.get_windows_bundle_dir(
+            PROJECT_ROOT / build_wine_local.WINDOWS_DIST_DIRNAME
+        ) == (
+            PROJECT_ROOT
+            / build_wine_local.WINDOWS_DIST_DIRNAME
+            / build_wine_local.WINDOWS_BUNDLE_NAME
+        )
+
+    def test_windows_dockerfile_uses_image_entrypoint(self):
+        """Docker build should delegate to the image entrypoint."""
+        dockerfile_content = build_windows_docker.build_dockerfile_content()
+
+        assert "ENV SPECFILE=/src/main_interface.spec" in dockerfile_content
+        assert "python3.11 -m PyInstaller" not in dockerfile_content
+
+    def test_podman_build_route_fails_fast(self):
+        """Podman script should reject the unsupported Linux PyInstaller route."""
+        with pytest.raises(RuntimeError, match="Linux.*PyInstaller"):
+            build_windows_podman.ensure_supported_build_route()
 
 
 class TestImportDiscovery:

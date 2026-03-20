@@ -93,7 +93,7 @@ class DbMigrationThing:
         while preimport_operations_thread_object.is_alive():
             # Process events if needed (for Qt compatibility)
             try:
-                from PyQt6.QtWidgets import QApplication
+                from PyQt5.QtWidgets import QApplication
 
                 QApplication.processEvents()
             except ImportError:

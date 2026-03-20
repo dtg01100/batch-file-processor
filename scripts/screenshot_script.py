@@ -5,7 +5,7 @@ import sys
 os.chdir("/workspaces/batch-file-processor")
 sys.path.insert(0, "/workspaces/batch-file-processor")
 
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget
 
 app = QApplication(sys.argv)
 

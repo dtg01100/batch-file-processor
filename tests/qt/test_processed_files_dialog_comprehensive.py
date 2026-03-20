@@ -12,8 +12,8 @@ Tests cover:
 from unittest.mock import patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 

@@ -16,7 +16,7 @@ print("Step 1: Basic import", flush=True)
 
 try:
     print("Step 2: Importing PyQt6", flush=True)
-    from PyQt6.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QApplication
 
     print("Step 3: PyQt6 imported successfully", flush=True)
 

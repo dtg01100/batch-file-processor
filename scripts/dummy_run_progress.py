@@ -16,8 +16,8 @@ Run independently to test the progress overlay.
 import sys
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import (
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
@@ -405,13 +405,13 @@ class ProgressDemoWindow(QMainWindow):
 
             for i in range(3):
                 if self.progress_service:
-                    self.progress_service.show(f"Toggle iteration {i+1}/3")
-                    self.log_message(f"  Shown (iteration {i+1})")
+                    self.progress_service.show(f"Toggle iteration {i + 1}/3")
+                    self.log_message(f"  Shown (iteration {i + 1})")
                     QTimer.singleShot(800, lambda: None)
                     QApplication.processEvents()
 
                     self.progress_service.hide()
-                    self.log_message(f"  Hidden (iteration {i+1})")
+                    self.log_message(f"  Hidden (iteration {i + 1})")
                     QTimer.singleShot(600, lambda: None)
                     QApplication.processEvents()
 
@@ -447,8 +447,8 @@ def main() -> int:
         return app.exec()
 
     except ImportError as e:
-        print(f"ERROR: Missing required PyQt6 modules: {e}")
-        print("Install with: pip install PyQt6")
+        print(f"ERROR: Missing required PyQt5 modules: {e}")
+        print("Install with: pip install PyQt5")
         return 1
 
     except Exception as e:

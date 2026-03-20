@@ -6,7 +6,7 @@ previously covered only by placeholder assertions.
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox
 
 from interface.qt.dialogs.database_import_dialog import DbMigrationJob, ImportThread
 

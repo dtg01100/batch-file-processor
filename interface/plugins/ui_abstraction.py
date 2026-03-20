@@ -378,7 +378,7 @@ class QtLineEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QLineEdit
+        from PyQt5.QtWidgets import QLineEdit
 
         self.widget = QLineEdit(parent)
         if field_definition.default:
@@ -405,7 +405,7 @@ class QtSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QSpinBox
+        from PyQt5.QtWidgets import QSpinBox
 
         self.widget = QSpinBox(parent)
         if field_definition.min_value is not None:
@@ -436,7 +436,7 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QDoubleSpinBox
+        from PyQt5.QtWidgets import QDoubleSpinBox
 
         self.widget = QDoubleSpinBox(parent)
         if field_definition.min_value is not None:
@@ -468,7 +468,7 @@ class QtComboBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QComboBox
+        from PyQt5.QtWidgets import QComboBox
 
         self.widget = QComboBox(parent)
         for choice in field_definition.choices:
@@ -501,7 +501,7 @@ class QtCheckBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QCheckBox
+        from PyQt5.QtWidgets import QCheckBox
 
         self.widget = QCheckBox(field_definition.label, parent)
         if field_definition.default:
@@ -531,8 +531,8 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
 
         self.widget = QListWidget(parent)
         # Use QAbstractItemView.MultiSelection for PyQt6 selection mode
@@ -549,7 +549,7 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def set_value(self, value: Any) -> None:
         if value is not None:
-            from PyQt6.QtCore import Qt
+            from PyQt5.QtCore import Qt
 
             for i in range(self.widget.count()):
                 item = self.widget.item(i)
@@ -557,7 +557,7 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def get_value(self) -> Any:
         selected = []
-        from PyQt6.QtCore import Qt
+        from PyQt5.QtCore import Qt
 
         for item in self.widget.selectedItems():
             selected.append(item.data(Qt.ItemDataRole.UserRole))
@@ -577,7 +577,7 @@ class QtTextEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: dict, parent: Any = None):
         super().__init__(field_definition, parent)
-        from PyQt6.QtWidgets import QTextEdit
+        from PyQt5.QtWidgets import QTextEdit
 
         self.widget = QTextEdit(parent)
         if field_definition.default:

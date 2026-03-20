@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QDialogButtonBox
 
 
 @pytest.mark.qt
