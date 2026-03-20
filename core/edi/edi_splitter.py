@@ -389,8 +389,6 @@ def _build_split_filename(
     file_name_suffix = ".cr" if int(line_dict["invoice_total"]) < 0 else ".inv"
 
     file_name_prefix = prepend_letters + "_"
-    if config.filename_stem:
-        file_name_prefix = config.filename_stem + "_" + file_name_prefix
 
     if config.prepend_date:
         from datetime import datetime
@@ -399,9 +397,10 @@ def _build_split_filename(
         inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
         file_name_prefix = inv_date + "_" + file_name_prefix
 
+    middle_part = config.filename_stem if config.filename_stem else "split"
     output_path = os.path.join(
         config.output_directory,
-        file_name_prefix + "split" + file_name_suffix,
+        file_name_prefix + middle_part + file_name_suffix,
     )
     return output_path, file_name_prefix, file_name_suffix
 
