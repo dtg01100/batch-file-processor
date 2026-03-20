@@ -10,13 +10,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from core.structured_logging import (
-    get_logger,
-    get_correlation_id,
-    set_correlation_id,
     generate_correlation_id,
+    get_correlation_id,
+    get_logger,
     log_with_context,
+    set_correlation_id,
 )
-
 from interface.plugins.config_schemas import ConfigurationSchema
 from interface.plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
 from interface.plugins.validation_framework import ValidationResult

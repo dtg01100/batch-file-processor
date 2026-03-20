@@ -7,11 +7,11 @@ that appear based on user selections in the EDI options dropdown.
 from typing import Any, Callable, Dict, List, Optional
 
 from core.structured_logging import (
-    get_logger,
-    get_correlation_id,
-    set_correlation_id,
     generate_correlation_id,
+    get_correlation_id,
+    get_logger,
     log_with_context,
+    set_correlation_id,
 )
 
 logger = get_logger(__name__)

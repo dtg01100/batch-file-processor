@@ -24,11 +24,11 @@ from PyQt6.QtWidgets import (
 )
 
 import scripts.backup_increment as backup_increment
-from migrations import folders_database_migrator
-from core.utils.bool_utils import normalize_bool
 from backend.database import sqlite_wrapper
+from core.utils.bool_utils import normalize_bool
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
+from migrations import folders_database_migrator
 
 
 class DatabaseImportDialog(BaseDialog):

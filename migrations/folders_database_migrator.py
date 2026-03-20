@@ -41,8 +41,6 @@ def upgrade_database(
     if target_version and int(db_version_dict["version"]) >= int(target_version):
         return
 
-    starting_version = db_version_dict["version"]
-
     db_version_dict = db_version.find_one(id=1)
     if target_version and int(db_version_dict["version"]) >= int(target_version):
         return

@@ -28,8 +28,8 @@ Example:
         ]
 """
 
-from typing import Any, Dict, List, Literal, Optional, Union
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Literal, Optional, Union
 
 
 @dataclass
@@ -153,12 +153,12 @@ class PluginConfigMixin:
         errors = []
         fields = cls.get_config_fields()
 
-        for field in fields:
-            value = config.get(field.key)
+        for cfg_field in fields:
+            value = config.get(cfg_field.key)
 
             # Check required fields
-            if field.required and (value is None or value == ""):
-                errors.append(f"{field.label} is required")
+            if cfg_field.required and (value is None or value == ""):
+                errors.append(f"{cfg_field.label} is required")
                 continue
 
             # Skip further validation if field is empty and not required
@@ -166,40 +166,48 @@ class PluginConfigMixin:
                 continue
 
             # Type validation
-            if field.type == "boolean" and not isinstance(value, bool):
-                errors.append(f"{field.label} must be a boolean")
-            elif field.type == "integer":
+            if cfg_field.type == "boolean" and not isinstance(value, bool):
+                errors.append(f"{cfg_field.label} must be a boolean")
+            elif cfg_field.type == "integer":
                 if not isinstance(value, int):
                     try:
                         value = int(value)
                     except (ValueError, TypeError):
-                        errors.append(f"{field.label} must be an integer")
+                        errors.append(f"{cfg_field.label} must be an integer")
                         continue
 
-                if field.min_value is not None and value < field.min_value:
-                    errors.append(f"{field.label} must be at least {field.min_value}")
-                if field.max_value is not None and value > field.max_value:
-                    errors.append(f"{field.label} must be at most {field.max_value}")
+                if cfg_field.min_value is not None and value < cfg_field.min_value:
+                    errors.append(
+                        f"{cfg_field.label} must be at least {cfg_field.min_value}"
+                    )
+                if cfg_field.max_value is not None and value > cfg_field.max_value:
+                    errors.append(
+                        f"{cfg_field.label} must be at most {cfg_field.max_value}"
+                    )
 
-            elif field.type == "float":
+            elif cfg_field.type == "float":
                 if not isinstance(value, (int, float)):
                     try:
                         value = float(value)
                     except (ValueError, TypeError):
-                        errors.append(f"{field.label} must be a number")
+                        errors.append(f"{cfg_field.label} must be a number")
                         continue
 
-                if field.min_value is not None and value < field.min_value:
-                    errors.append(f"{field.label} must be at least {field.min_value}")
-                if field.max_value is not None and value > field.max_value:
-                    errors.append(f"{field.label} must be at most {field.max_value}")
+                if cfg_field.min_value is not None and value < cfg_field.min_value:
+                    errors.append(
+                        f"{cfg_field.label} must be at least {cfg_field.min_value}"
+                    )
+                if cfg_field.max_value is not None and value > cfg_field.max_value:
+                    errors.append(
+                        f"{cfg_field.label} must be at most {cfg_field.max_value}"
+                    )
 
-            elif field.type == "select":
+            elif cfg_field.type == "select":
                 valid_options = [
-                    opt if isinstance(opt, str) else opt[0] for opt in field.options
+                    opt if isinstance(opt, str) else opt[0] for opt in cfg_field.options
                 ]
                 if value not in valid_options:
-                    errors.append(f"{field.label} has invalid value")
+                    errors.append(f"{cfg_field.label} has invalid value")
 
         return len(errors) == 0, errors
 
@@ -305,8 +313,8 @@ class PluginRegistry:
         This method scans for convert_to_* and *_backend modules
         and registers their plugin classes.
         """
-        import importlib
         import glob
+        import importlib
         import os
 
         # Discover convert plugins

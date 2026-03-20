@@ -770,7 +770,7 @@ class EditFoldersDialog(BaseDialog):
             return []
 
     def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
-        extracted_configs = self.plugin_config_mapper.extract_plugin_configurations(
+        self.plugin_config_mapper.extract_plugin_configurations(
             self._fields, framework="qt"
         )
         # Note: Don't add plugin_configurations to target dict for database storage.

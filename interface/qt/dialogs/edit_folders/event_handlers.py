@@ -18,13 +18,12 @@ from PyQt6.QtWidgets import (
 )
 
 from core.structured_logging import (
-    get_logger,
-    get_correlation_id,
-    set_correlation_id,
     generate_correlation_id,
+    get_correlation_id,
+    get_logger,
     log_with_context,
+    set_correlation_id,
 )
-
 from interface.qt.theme import Theme
 
 logger = get_logger(__name__)
