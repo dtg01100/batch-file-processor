@@ -33,7 +33,7 @@ import csv
 import decimal
 from typing import Any, Dict, List, Tuple
 
-import core.utils
+from core import utils
 from core.structured_logging import (
     get_logger,
     log_file_operation,

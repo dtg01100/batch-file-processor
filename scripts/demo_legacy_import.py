@@ -23,7 +23,7 @@ import sys
 
 sys.path.insert(0, str(project_root))
 
-import migrations.folders_database_migrator
+from migrations import folders_database_migrator
 from backend.database import sqlite_wrapper
 
 

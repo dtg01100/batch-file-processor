@@ -13,10 +13,10 @@ import time
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-import core.utils
+from core import utils
 
 # Import structured logging utilities
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     StructuredLogger,
     get_logger,
     get_or_create_correlation_id,

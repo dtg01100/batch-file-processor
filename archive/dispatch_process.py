@@ -24,7 +24,7 @@ import edi_tweaks
 import mtc_edi_validator
 
 import scripts.record_error as record_error
-import core.utils
+from core import utils
 from core.database import query_runner
 from interface.services.progress_service import NullProgressCallback, ProgressCallback
 

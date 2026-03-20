@@ -26,7 +26,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List
 
-import core.utils
+from core import utils
 from core.structured_logging import (
     get_logger,
     log_file_operation,

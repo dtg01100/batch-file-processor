@@ -42,7 +42,7 @@ from PIL import Image as pil_Image
 from PIL import ImageOps as pil_ImageOps
 
 import core.database
-import core.utils
+from core import utils
 from core.structured_logging import (
     StructuredLogger,
     get_logger,

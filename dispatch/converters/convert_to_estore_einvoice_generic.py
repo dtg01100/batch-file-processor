@@ -46,7 +46,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
 
-import core.utils
+from core import utils
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,

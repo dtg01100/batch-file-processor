@@ -111,7 +111,7 @@ class DefaultCreditDetector:
         Returns:
             True if the file is a credit memo
         """
-        import core.utils
+        from core import utils
 
         return utils.detect_invoice_is_credit(file_path)
 
@@ -519,7 +519,7 @@ class EDISplitterStep:
                 filter_mode,
             )
             try:
-                import core.utils
+                from core import utils
 
                 filtered_output = os.path.join(
                     output_dir, "filtered_" + os.path.basename(input_path)

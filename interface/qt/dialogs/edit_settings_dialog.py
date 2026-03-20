@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-import core.utils
+from core import utils
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format

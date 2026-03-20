@@ -1,6 +1,6 @@
 import os
 
-import core.database.schema
+from core.database import schema
 from backend.database import sqlite_wrapper
 
 

@@ -26,7 +26,7 @@ Backward Compatibility:
 import csv
 import logging
 
-import core.utils
+from core import utils
 from core.structured_logging import (
     get_logger,
     log_file_operation,

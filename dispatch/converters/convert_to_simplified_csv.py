@@ -21,7 +21,7 @@ Backward Compatibility:
 import csv
 from decimal import Decimal
 
-import core.utils
+from core import utils
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,

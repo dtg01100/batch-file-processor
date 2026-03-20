@@ -10,7 +10,7 @@ import time
 from typing import Callable, Optional
 
 import scripts.backup_increment as backup_increment
-import migrations.folders_database_migrator
+from migrations import folders_database_migrator
 from core.structured_logging import get_logger
 from backend.database import sqlite_wrapper
 
