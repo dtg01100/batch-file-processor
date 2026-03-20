@@ -1,6 +1,12 @@
 import os
 
 
+def _quote_identifier(name: str) -> str:
+    """Quote a SQL identifier, escaping any embedded quotes."""
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
+
+
 def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
     """Add a column to a table if it doesn't already exist.
 
@@ -12,12 +18,14 @@ def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
         sql_type: SQL column type (default "TEXT").
     """
     cursor = db.raw_connection.cursor()
-    cursor.execute(f"PRAGMA table_info({table_name})")
+    quoted_table = _quote_identifier(table_name)
+    cursor.execute(f"PRAGMA table_info({quoted_table})")
     existing = {row[1] for row in cursor.fetchall()}
     if column_name in existing:
         return
-    db.query(f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}' {sql_type}")
-    db.query(f"UPDATE '{table_name}' SET '{column_name}' = {default_sql}")
+    quoted_column = _quote_identifier(column_name)
+    db.query(f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}")
+    db.query(f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}")
 
 
 def _log_migration_step(from_version, to_version):
@@ -750,9 +758,8 @@ def upgrade_database(
 
         database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'created_at' TEXT")
         database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'updated_at' TEXT")
-        database_connection.query(
-            f"UPDATE 'folders' SET created_at='{now}', updated_at='{now}'"
-        )
+        cursor = database_connection.raw_connection.cursor()
+        cursor.execute("UPDATE 'folders' SET created_at=?, updated_at=?", (now, now))
 
         database_connection.query(
             "ALTER TABLE 'administrative' ADD COLUMN 'created_at' TEXT"
@@ -760,8 +767,8 @@ def upgrade_database(
         database_connection.query(
             "ALTER TABLE 'administrative' ADD COLUMN 'updated_at' TEXT"
         )
-        database_connection.query(
-            f"UPDATE 'administrative' SET created_at='{now}', updated_at='{now}'"
+        cursor.execute(
+            "UPDATE 'administrative' SET created_at=?, updated_at=?", (now, now)
         )
 
         database_connection.query(
@@ -770,13 +777,11 @@ def upgrade_database(
         database_connection.query(
             "ALTER TABLE 'processed_files' ADD COLUMN 'processed_at' TEXT"
         )
-        database_connection.query(f"UPDATE 'processed_files' SET created_at='{now}'")
+        cursor.execute("UPDATE 'processed_files' SET created_at=?", (now,))
 
         database_connection.query("ALTER TABLE 'settings' ADD COLUMN 'created_at' TEXT")
         database_connection.query("ALTER TABLE 'settings' ADD COLUMN 'updated_at' TEXT")
-        database_connection.query(
-            f"UPDATE 'settings' SET created_at='{now}', updated_at='{now}'"
-        )
+        cursor.execute("UPDATE 'settings' SET created_at=?, updated_at=?", (now, now))
 
         update_version = dict(id=1, version="34", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -926,31 +931,32 @@ def upgrade_database(
             whole operation is rolled back and no data is lost.
             """
             cursor = conn.cursor()
-            cursor.execute(f"PRAGMA table_info({table_name})")
+            quoted_table = _quote_identifier(table_name)
+            cursor.execute(f"PRAGMA table_info({quoted_table})")
             existing = [row[1] for row in cursor.fetchall()]
             if "id" in existing:
                 return  # already has primary key – nothing to do
 
-            cursor.execute(f"PRAGMA table_info({table_name})")
+            cursor.execute(f"PRAGMA table_info({quoted_table})")
             old_columns = [(row[1], row[2]) for row in cursor.fetchall()]
 
             col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
             for col_name, col_type in old_columns:
-                col_defs.append(f'"{col_name}" {col_type}')
+                col_defs.append(f"{_quote_identifier(col_name)} {col_type}")
             columns_sql = ", ".join(col_defs)
 
-            old_cols = ", ".join([f'"{c[0]}"' for c in old_columns])
-            new_table = f"{table_name}_new"
+            old_cols = ", ".join([_quote_identifier(c[0]) for c in old_columns])
+            new_table = _quote_identifier(f"{table_name}_new")
 
             cursor.execute("BEGIN")
             try:
                 cursor.execute(f"DROP TABLE IF EXISTS {new_table}")
                 cursor.execute(f"CREATE TABLE {new_table} ({columns_sql})")
                 cursor.execute(
-                    f"INSERT INTO {new_table} ({old_cols}) SELECT {old_cols} FROM {table_name}"
+                    f"INSERT INTO {new_table} ({old_cols}) SELECT {old_cols} FROM {quoted_table}"
                 )
-                cursor.execute(f"DROP TABLE {table_name}")
-                cursor.execute(f"ALTER TABLE {new_table} RENAME TO {table_name}")
+                cursor.execute(f"DROP TABLE {quoted_table}")
+                cursor.execute(f"ALTER TABLE {new_table} RENAME TO {quoted_table}")
                 cursor.execute("COMMIT")
             except Exception:
                 cursor.execute("ROLLBACK")
@@ -976,17 +982,20 @@ def upgrade_database(
         # without overwriting real values already present in legacy databases.
         def _existing_columns(table_name):
             cursor = database_connection.raw_connection.cursor()
-            cursor.execute(f"PRAGMA table_info({table_name})")
+            quoted_table = _quote_identifier(table_name)
+            cursor.execute(f"PRAGMA table_info({quoted_table})")
             return {row[1] for row in cursor.fetchall()}
 
         def _ensure_column(table_name, column_name, sql_type, default_sql):
             if column_name in _existing_columns(table_name):
                 return
+            quoted_table = _quote_identifier(table_name)
+            quoted_column = _quote_identifier(column_name)
             database_connection.query(
-                f"ALTER TABLE '{table_name}' ADD COLUMN '{column_name}' {sql_type}"
+                f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
             )
             database_connection.query(
-                f"UPDATE '{table_name}' SET '{column_name}' = {default_sql}"
+                f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}"
             )
 
         for table_name in ("folders", "administrative"):
@@ -1040,13 +1049,14 @@ def upgrade_database(
         # Normalize folders table
         for field in boolean_fields:
             try:
+                quoted_field = _quote_identifier(field)
                 # Replace True with 1
                 database_connection.query(
-                    f"UPDATE folders SET {field} = 1 WHERE {field} = 'True'"
+                    f"UPDATE folders SET {quoted_field} = 1 WHERE {quoted_field} = 'True'"
                 )
                 # Replace False with 0
                 database_connection.query(
-                    f"UPDATE folders SET {field} = 0 WHERE {field} = 'False'"
+                    f"UPDATE folders SET {quoted_field} = 0 WHERE {quoted_field} = 'False'"
                 )
             except Exception as e:
                 print(f"Error normalizing field {field} in folders: {e}")
@@ -1055,13 +1065,14 @@ def upgrade_database(
         # Normalize administrative table
         for field in boolean_fields:
             try:
+                quoted_field = _quote_identifier(field)
                 # Replace True with 1
                 database_connection.query(
-                    f"UPDATE administrative SET {field} = 1 WHERE {field} = 'True'"
+                    f"UPDATE administrative SET {quoted_field} = 1 WHERE {quoted_field} = 'True'"
                 )
                 # Replace False with 0
                 database_connection.query(
-                    f"UPDATE administrative SET {field} = 0 WHERE {field} = 'False'"
+                    f"UPDATE administrative SET {quoted_field} = 0 WHERE {quoted_field} = 'False'"
                 )
             except Exception as e:
                 print(f"Error normalizing field {field} in administrative: {e}")
