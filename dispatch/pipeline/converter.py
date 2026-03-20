@@ -408,7 +408,7 @@ class EDIConverterStep:
                 errors=errors,
             )
 
-        module_name = f"convert_to_{format_normalized}"
+        module_name = f"dispatch.converters.convert_to_{format_normalized}"
 
         output_filename = os.path.join(output_dir, os.path.basename(input_path))
 

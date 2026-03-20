@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 import scripts.backup_increment as backup_increment
 import scripts.batch_log_sender as batch_log_sender
 import scripts.print_run_log as print_run_log
-import core.utils
+import core.utils as utils
 from adapters.sqlite.repositories import (
     SqliteFolderRepository,
     SqliteProcessedFilesRepository,

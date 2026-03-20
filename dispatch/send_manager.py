@@ -32,19 +32,19 @@ class SendManager:
     # Default backend configuration mapping
     DEFAULT_BACKENDS = {
         "copy": {
-            "module": "copy_backend",
+            "module": "backend.copy_backend",
             "setting": "copy_to_directory",
             "display_name": "Copy Backend",
             "enabled_key": "process_backend_copy",
         },
         "ftp": {
-            "module": "ftp_backend",
+            "module": "backend.ftp_backend",
             "setting": "ftp_server",
             "display_name": "FTP Backend",
             "enabled_key": "process_backend_ftp",
         },
         "email": {
-            "module": "email_backend",
+            "module": "backend.email_backend",
             "setting": "email_to",
             "display_name": "Email Backend",
             "enabled_key": "process_backend_email",
