@@ -22,7 +22,7 @@ Welcome to the Batch File Processor documentation. This is the main entry point 
 - [Testing Best Practices](docs/testing/TESTING_BEST_PRACTICES.md) - Guidelines for writing tests
 - [Qt Testing Guide](docs/testing/QT_TESTING_GUIDE.md) - PyQt6/Qt widget testing
 - [Corpus Testing Guide](docs/testing/CORPUS_TESTING_GUIDE.md) - Production EDI corpus testing
-- [Convert Testing Quick Reference](docs/testing/CONVERT_TESTING_QUICK_REFERENCE.md) - Converter testing
+- [Conversion Testing Quick Reference](docs/testing/CONVERT_TESTING_QUICK_REFERENCE.md) - All 11 conversion targets including EDI tweaks
 - [Tests Documentation](docs/testing/TESTS_DOCUMENTATION.md) - Test suite overview
 - [Testing Quick Reference](docs/testing/TESTING_QUICK_REFERENCE.md) - Quick testing commands
 

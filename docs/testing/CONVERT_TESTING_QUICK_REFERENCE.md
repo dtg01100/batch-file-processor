@@ -1,6 +1,28 @@
-# Convert_To Backend Testing - Quick Reference
+# Conversion and Tweaks Testing - Quick Reference
 
-## All 10 Backends Requiring Tests
+## Overview
+
+EDI tweaking is part of the conversion pipeline - it's another conversion target, not a separate step. When `tweak_edi=True` and no `convert_to_format` is set, the converter applies tweaks directly.
+
+## Conversion Targets
+
+| Target | Handler | Notes |
+|--------|---------|-------|
+| CSV | `convert_to_csv.py` | Standard EDI to CSV |
+| Fintech | `convert_to_fintech.py` | CSV/TXT format |
+| Scannerware | `convert_to_scannerware.py` | TXT format |
+| Scansheet Type A | `convert_to_scansheet_type_a.py` | Custom format |
+| Simplified CSV | `convert_to_simplified_csv.py` | Simplified CSV |
+| Yellowdog CSV | `convert_to_yellowdog_csv.py` | Vendor-specific CSV |
+| Jolley Custom | `convert_to_jolley_custom.py` | Custom format |
+| Stewarts Custom | `convert_to_stewarts_custom.py` | Custom format |
+| eStore Invoice | `convert_to_estore_einvoice.py` | XML/Custom |
+| eStore Generic | `convert_to_estore_einvoice_generic.py` | XML/Custom |
+| **EDI Tweaks** | `edi_tweaks.py` | In-place modifications via `EDIConverterStep._apply_tweak()` |
+
+**Total: 11 conversion targets** (10 formats + EDI tweaks)
+
+## All 11 Conversion Targets Requiring Tests
 
 | Backend | File | Format | Complexity | Estimated Tests |
 |---------|------|--------|------------|-----------------|
@@ -14,8 +36,80 @@
 | Stewarts Custom | `convert_to_stewarts_custom.py` | Custom | High | 5-7 |
 | eStore Invoice | `convert_to_estore_einvoice.py` | XML/Custom | Very High | 8-10 |
 | eStore Generic | `convert_to_estore_einvoice_generic.py` | XML/Custom | Very High | 8-10 |
+| **EDI Tweaks** | `EDIConverterStep._apply_tweak()` | EDI in-place | Medium | 6-8 |
 
-**Total: 54-74 tests for full coverage**
+**Total: 60-80 tests for full coverage**
+
+---
+
+## EDI Tweaks Testing
+
+EDI tweaks are applied via `EDIConverterStep._apply_tweak()` when `tweak_edi=True` and no `convert_to_format` is set. Tweaks modify EDI content in-place without format conversion.
+
+### Tweak Settings
+
+| Setting | Purpose |
+|---------|---------|
+| `tweak_edi` | Enable EDI tweaks |
+| `pad_a_records` | Pad A record cust_vendor field |
+| `a_record_padding` | Padding string (e.g., "test") |
+| `a_record_padding_length` | Target width for padding |
+| `calculate_upc_check_digit` | Add check digit to 11-char UPCs |
+| `override_upc_bool` | Replace UPC from AS400 lookup |
+| `override_upc_level` | UPC lookup column index (0-based) |
+| `override_upc_category_filter` | Filter by category (empty or "ALL" = no filter) |
+| `upc_target_length` | Target UPC length (11, 12, or 13) |
+| `upc_padding_pattern` | Character for UPC padding (default: space) |
+
+### UPC Length Handling
+
+| Input | Target | Action |
+|-------|--------|--------|
+| 11 chars | 12 or 13 | Add check digit, then pad if needed |
+| 12 chars | 13 | Pad with `upc_padding_pattern[0]` |
+| 12 chars | 12 | Valid as-is |
+| 13 chars | 13 | Valid as-is |
+| 8 chars (UPC-E) | Any | Convert to UPCA first |
+
+### Real-World Test Run
+
+```bash
+# Clear processed files
+sqlite3 ~/.local/share/"Batch File Sender"/folders.db "DELETE FROM processed_files;"
+
+# Clear output
+rm -rf outdir/*
+
+# Run with debug
+DEBUG=1 python -c "
+from interface.qt.app import QtBatchFileSenderApp
+from core.constants import CURRENT_DATABASE_VERSION
+app = QtBatchFileSenderApp(appname='Batch File Sender', version='(Git Branch: Master)', database_version=CURRENT_DATABASE_VERSION)
+app.initialize()
+app._args = type('Args', (), {'automatic': True, 'graphical_automatic': False})()
+app._automatic_process_directories(app._database.folders_table)
+app.shutdown()
+"
+
+# Verify output
+md5sum test_edi/202001.001 outdir/202001.001
+head -2 outdir/202001.001
+```
+
+### Check Tweak Settings
+
+```python
+folders = list(app._database.folders_table.find(id=<folder_id>))
+if folders:
+    folder = folders[0]
+    print('tweak_edi:', folder.get('tweak_edi'))
+    print('pad_a_records:', folder.get('pad_a_records'))
+    print('calculate_upc_check_digit:', folder.get('calculate_upc_check_digit'))
+    print('override_upc_bool:', folder.get('override_upc_bool'))
+    print('override_upc_level:', folder.get('override_upc_level'))
+    print('upc_target_length:', folder.get('upc_target_length'))
+    print('upc_padding_pattern:', repr(folder.get('upc_padding_pattern')))
+```
 
 ---
 
