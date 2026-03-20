@@ -394,9 +394,10 @@ class TestPipelineTweakEDI:
         backend = CaptureBackend()
         cfg = DispatchConfig(
             backends={"copy": backend},
+            converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
-            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+            upc_dict={"_mock": []},
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -414,9 +415,10 @@ class TestPipelineTweakEDI:
         backend = CaptureBackend()
         cfg = DispatchConfig(
             backends={"copy": backend},
+            converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
-            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+            upc_dict={"_mock": []},
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -435,9 +437,10 @@ class TestPipelineTweakEDI:
         backend = CaptureBackend()
         cfg = DispatchConfig(
             backends={"copy": backend},
+            converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
-            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+            upc_dict={"_mock": []},
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
@@ -453,9 +456,10 @@ class TestPipelineTweakEDI:
         backend = CaptureBackend()
         cfg = DispatchConfig(
             backends={"copy": backend},
+            converter_step=EDIConverterStep(),
             tweaker_step=EDITweakerStep(),
             settings=base_settings,
-            upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+            upc_dict={"_mock": []},
         )
         orch = DispatchOrchestrator(cfg)
         result = orch.process_folder(folder, run_log=[], processed_files=None)
