@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import the module to test
-lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+from dispatch.converters import convert_to_fintech
 
 
 class TestConvertToFintechFixtures:
@@ -117,12 +117,12 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
 
     def test_module_import(self):
         """Test that convert_to_fintech module can be imported."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+        from dispatch.converters import convert_to_fintech
 
         assert convert_to_fintech is not None
         assert hasattr(convert_to_fintech, "edi_convert")
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_edi_convert_returns_csv_filename(
         self,
         mock_inv_fetcher,
@@ -154,7 +154,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
 
         assert result == output_file + ".csv"
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_creates_csv_file(
         self,
         mock_inv_fetcher,
@@ -188,7 +188,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
 class TestConvertToFintechHeaders(TestConvertToFintechFixtures):
     """Test CSV header output."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_csv_has_correct_headers(
         self,
         mock_inv_fetcher,
@@ -238,7 +238,7 @@ class TestConvertToFintechHeaders(TestConvertToFintechFixtures):
 class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
     """Test fintech division ID handling."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_division_id_in_output(
         self,
         mock_inv_fetcher,
@@ -270,7 +270,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
             content = f.read()
             assert "DIV001" in content
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_custom_division_id(
         self,
         mock_inv_fetcher,
@@ -307,7 +307,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
 class TestConvertToFintechUOM(TestConvertToFintechFixtures):
     """Test UOM description handling."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_uom_cs_for_unit_multiplier_1(
         self,
         mock_inv_fetcher,
@@ -360,7 +360,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
             # UOM should be CS for multiplier 1
             assert data_rows[0][5] == "CS"
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_uom_ea_for_unit_multiplier_greater_than_1(
         self,
         mock_inv_fetcher,
@@ -416,7 +416,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
 class TestConvertToFintechTaxRecords(TestConvertToFintechFixtures):
     """Test tax (C record) handling."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_c_record_included(
         self,
         mock_inv_fetcher,
@@ -457,7 +457,7 @@ class TestConvertToFintechTaxRecords(TestConvertToFintechFixtures):
 class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
     """Test UPC lookup and handling."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_upc_lookup_from_lut(
         self,
         mock_inv_fetcher,
@@ -510,7 +510,7 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
             # upc_case should be from LUT: 012345678900
             assert data_rows[0][8] == "012345678900"
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_missing_upc_in_lut_handling(
         self,
         mock_inv_fetcher,
@@ -566,8 +566,8 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
 class TestConvertToFintechDateHandling(TestConvertToFintechFixtures):
     """Test invoice date handling."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
-    @patch("convert_to_fintech.utils.datetime_from_invtime")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.datetime_from_invtime")
     def test_invoice_date_format(
         self,
         mock_datetime,
@@ -627,7 +627,7 @@ class TestConvertToFintechDateHandling(TestConvertToFintechFixtures):
 class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
     """Test edge cases and error conditions."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_empty_edi_file(
         self,
         mock_inv_fetcher,
@@ -655,7 +655,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
 
         assert os.path.exists(result)
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_only_header_record(
         self,
         mock_inv_fetcher,
@@ -692,7 +692,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
             # Should have header + no data (or just header if no B records)
             assert len(lines) >= 1
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_missing_header_before_detail(
         self,
         mock_inv_fetcher,
@@ -748,7 +748,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
 
         assert os.path.exists(result)
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_invalid_record_type(
         self,
         mock_inv_fetcher,
@@ -780,7 +780,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
 class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
     """Test data transformation accuracy."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_invoice_number_is_int(
         self,
         mock_inv_fetcher,
@@ -815,7 +815,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
             # Invoice number should be converted to int (no leading zeros)
             assert data_rows[0][1] == "1"
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_quantity_is_int(
         self,
         mock_inv_fetcher,
@@ -850,7 +850,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
             # Quantity should be int
             assert int(data_rows[0][4]) > 0
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_price_format(
         self,
         mock_inv_fetcher,
@@ -889,7 +889,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
 class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
     """Test with multiple records."""
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_multiple_detail_records(
         self,
         mock_inv_fetcher,
@@ -953,7 +953,7 @@ class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
             assert len(data_rows) == 2
 
-    @patch("convert_to_fintech.utils.invFetcher")
+    @patch("dispatch.converters.convert_to_fintech.utils.invFetcher")
     def test_multiple_invoices(
         self,
         mock_inv_fetcher,

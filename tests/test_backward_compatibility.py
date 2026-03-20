@@ -65,7 +65,7 @@ class TestCoreModulesImportable:
     @pytest.mark.unit
     def test_schema_module_importable(self):
         """schema module should be importable."""
-        import core.database.schema
+        from core.database import schema
 
         assert schema is not None
 
@@ -270,7 +270,7 @@ class TestConversionModulesCompatibility:
     def test_conversion_modules_importable(self, module_name):
         """Each conversion module should be importable."""
         try:
-            mod = __import__(module_name)
+            mod = __import__(f"dispatch.converters.{module_name}", fromlist=["dispatch.converters"])
             assert mod is not None
         except ImportError as e:
             pytest.fail(f"Failed to import {module_name}: {e}")
@@ -342,17 +342,17 @@ class TestMainEntryPointsCompatibility:
     def test_create_database_exists(self):
         """create_database module should be importable."""
         try:
-            import scripts.create_database
+            from scripts import create_database
 
             assert create_database is not None
         except ImportError as e:
-            pytest.fail(f"Failed to import scripts.create_database: {e}")
+            pytest.fail(f"Failed to Failed to import scripts.create_database: {e}")
 
     @pytest.mark.backward_compatibility
     @pytest.mark.unit
     def test_schema_module_accessible(self):
         """schema module should be accessible."""
-        import core.database.schema
+        from core.database import schema
 
         assert hasattr(schema, "ensure_schema")
 
@@ -408,7 +408,7 @@ class TestExceptionHandling:
     def test_core_utils_available(self):
         """core utilities should be importable."""
         try:
-            from core import core.utils
+            from core import utils
 
             assert utils is not None
         except ImportError as e:
@@ -460,7 +460,7 @@ class TestUtilityModulesAccessible:
         """utils module should be importable."""
         import core.utils
 
-        assert utils is not None
+        assert core.utils is not None
 
     @pytest.mark.backward_compatibility
     @pytest.mark.unit

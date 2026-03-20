@@ -23,8 +23,8 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-import backend.email_backend
-import backend.ftp_backend
+from backend import email_backend
+from backend import ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient, RealSMTPClient
 from dispatch.send_manager import SendManager

@@ -78,9 +78,9 @@ class TestEmailComposition:
         callback.update_message = MagicMock()
         return callback
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_single_log_email_subject(
         self,
@@ -124,9 +124,9 @@ class TestEmailComposition:
         assert sent_message["Subject"] == f"Log from run at: {run_time}"
         assert "Logs from run at:" not in sent_message["Subject"]
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_multiple_logs_email_subject(
         self,
@@ -229,9 +229,9 @@ class TestSMTPConnection:
         callback.update_message = MagicMock()
         return callback
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_smtp_connection_with_tls_and_auth(
         self,
@@ -277,9 +277,9 @@ class TestSMTPConnection:
         assert mock_smtp_instance.send_message.call_count == 1
         assert mock_smtp_instance.close.call_count == 1
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_smtp_connection_without_auth(
         self,
@@ -374,10 +374,10 @@ class TestAttachmentHandling:
         callback.update_message = MagicMock()
         return callback
 
-    @patch("batch_log_sender.mimetypes.guess_type")
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.mimetypes.guess_type")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_attachment_mime_type_detection(
         self,
@@ -427,10 +427,10 @@ class TestAttachmentHandling:
         attachments = list(sent_message.iter_attachments())
         assert len(attachments) == 1
 
-    @patch("batch_log_sender.mimetypes.guess_type")
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.mimetypes.guess_type")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_attachment_fallback_to_octet_stream(
         self,
@@ -471,10 +471,10 @@ class TestAttachmentHandling:
         # Verify guess_type was called
         mock_guess_type.assert_called()
 
-    @patch("batch_log_sender.mimetypes.guess_type")
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.mimetypes.guess_type")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_attachment_with_encoding_not_none(
         self,
@@ -551,9 +551,9 @@ class TestQueueManagement:
         callback.update_message = MagicMock()
         return callback
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_old_id_update(
         self,
@@ -608,9 +608,9 @@ class TestQueueManagement:
         # Verify id is no longer in the log (it was popped)
         assert "id" not in inserted_log
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_zip_extension_removal(
         self,
@@ -662,9 +662,9 @@ class TestQueueManagement:
         assert inserted_log["log"] == "/path/to/run_20230101.log"
         assert not inserted_log["log"].endswith(".zip")
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_no_zip_extension_removal(
         self,
@@ -753,9 +753,9 @@ class TestErrorHandling:
         return callback
 
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     def test_smtp_connection_failure(
         self,
         mock_smtp,
@@ -801,7 +801,7 @@ class TestErrorHandling:
                 progress_callback=mock_progress_callback,
             )
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     def test_smtp_send_failure(
         self,
         mock_smtp,
@@ -833,7 +833,7 @@ class TestErrorHandling:
 
         # Mock file open to raise FileNotFoundError
         with patch(
-            "batch_log_sender.open", side_effect=FileNotFoundError("Log file not found")
+            "scripts.batch_log_sender.open", side_effect=FileNotFoundError("Log file not found")
         ):
             with pytest.raises(FileNotFoundError):
                 batch_log_sender.do(
@@ -849,8 +849,8 @@ class TestErrorHandling:
                     progress_callback=mock_progress_callback,
                 )
 
-    @patch("batch_log_sender.smtplib.SMTP")
-    @patch("batch_log_sender.open", side_effect=FileNotFoundError("Log file not found"))
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.open", side_effect=FileNotFoundError("Log file not found"))
     def test_missing_log_file(
         self,
         mock_file,
@@ -916,9 +916,9 @@ class TestProgressCallback:
         queue.insert = MagicMock()
         return queue
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_progress_callback_invoked(
         self, mock_file, mock_smtp, mock_settings, mock_reporting, mock_queue
@@ -961,9 +961,9 @@ class TestProgressCallback:
         # Verify progress callback was invoked
         assert mock_progress_callback.update_message.call_count >= 1
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_null_progress_callback_used_when_none(
         self, mock_file, mock_smtp, mock_settings, mock_reporting, mock_queue
@@ -1032,9 +1032,9 @@ class TestEmailAddressHandling:
         callback.update_message = MagicMock()
         return callback
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_single_recipient_email(
         self, mock_file, mock_smtp, mock_settings, mock_queue, mock_progress_callback
@@ -1083,9 +1083,9 @@ class TestEmailAddressHandling:
         # Verify From address
         assert sent_message["From"] == "sender@example.com"
 
-    @patch("batch_log_sender.smtplib.SMTP")
+    @patch("scripts.batch_log_sender.smtplib.SMTP")
     @patch(
-        "batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
+        "scripts.batch_log_sender.open", new_callable=mock_open, read_data=b"test log content"
     )
     def test_multiple_recipients_email(
         self, mock_file, mock_smtp, mock_settings, mock_queue, mock_progress_callback

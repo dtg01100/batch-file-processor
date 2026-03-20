@@ -506,7 +506,7 @@ C00000003000030000
         input_file.write_text(content)
 
         # Import and test converter
-        with patch("convert_to_csv.edi_convert") as mock_convert:
+        with patch("dispatch.converters.convert_to_csv.edi_convert") as mock_convert:
             mock_convert.return_value = str(output_file)
 
             result = mock_convert(
@@ -531,7 +531,7 @@ C00000002000010000
         input_file.write_text(content)
 
         # Test that converter can be imported and has correct signature
-        from convert_to_fintech import edi_convert
+        from dispatch.converters.convert_to_fintech import edi_convert
 
         assert callable(edi_convert), "edi_convert should be callable"
 
@@ -547,7 +547,7 @@ C00000002000010000
         input_file.write_text(content)
 
         # Test that converter exists and is callable
-        from convert_to_scannerware import edi_convert
+        from dispatch.converters.convert_to_scannerware import edi_convert
 
         assert callable(edi_convert), "edi_convert should be callable"
 
@@ -563,7 +563,7 @@ C00000002000010000
         input_file.write_text(content)
 
         # Test that converter exists
-        from convert_to_estore_einvoice import edi_convert
+        from dispatch.converters.convert_to_estore_einvoice import edi_convert
 
         assert callable(edi_convert), "edi_convert should be callable"
 

@@ -1155,7 +1155,7 @@ class TestAppSmokeActions:
 
         import appdirs
 
-        import scripts.create_database
+        from scripts import create_database
         from backend.database.database_obj import DatabaseObj
         from interface.qt.app import QtBatchFileSenderApp
 

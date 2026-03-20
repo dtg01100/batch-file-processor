@@ -208,7 +208,7 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v1_to_current(self, legacy_database_v1, tmp_path):
         """Test migrating from v1 schema to current."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -241,7 +241,7 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v2_to_current(self, legacy_database_v2, tmp_path):
         """Test migrating from v2 schema to current."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -270,7 +270,7 @@ class TestLegacyDatabaseMigration:
 
     def test_migrate_v3_to_current(self, legacy_database_v3, tmp_path):
         """Test migrating from v3 schema to current."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -312,7 +312,7 @@ class TestMigrationWithDataValidation:
         self, legacy_database_v3, tmp_path
     ):
         """Test that all data is preserved after migration."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -352,7 +352,7 @@ class TestMigrationWithDataValidation:
 
     def test_validate_data_types_preserved(self, legacy_database_v3, tmp_path):
         """Test that data types are preserved during migration."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -387,7 +387,7 @@ class TestMigrationRollback:
 
     def test_backup_created_before_migration(self, legacy_database_v3, tmp_path):
         """Test that backup is created before migration."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -448,7 +448,7 @@ class TestMigrationRollback:
 
     def test_restore_from_backup(self, legacy_database_v3, tmp_path):
         """Test restoring from backup after failed migration."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -497,7 +497,7 @@ class TestInterruptedMigration:
 
     def test_resume_interrupted_migration(self, legacy_database_v3, tmp_path):
         """Test resuming migration after interruption."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -526,7 +526,7 @@ class TestInterruptedMigration:
 
     def test_corrupted_migration_recovery(self, legacy_database_v3, tmp_path):
         """Test recovery from corrupted migration."""
-        import core.database.schema
+        from core.database import schema
 
         # Create backup
         backup_path = tmp_path / "backup"
@@ -570,7 +570,7 @@ class TestMultiVersionMigration:
 
     def test_skip_version_migration_v1_to_v5(self, legacy_database_v1, tmp_path):
         """Test migrating from v1 directly to current (skipping intermediate versions)."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -597,7 +597,7 @@ class TestMultiVersionMigration:
 
     def test_migrate_with_schema_evolution(self, legacy_database_v2, tmp_path):
         """Test migration handling schema evolution."""
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -694,7 +694,7 @@ class TestMigrationEdgeCases:
         conn.commit()
         conn.close()
 
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 
@@ -810,7 +810,7 @@ class TestMigrationEdgeCases:
         conn.commit()
         conn.close()
 
-        import core.database.schema
+        from core.database import schema
         from migrations.folders_database_migrator import upgrade_database
         from backend.database import sqlite_wrapper
 

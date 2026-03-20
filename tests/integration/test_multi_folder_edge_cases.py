@@ -385,7 +385,7 @@ class TestConcurrentDatabaseAccess:
 
     def test_concurrent_reads_and_writes(self, tmp_path):
         """Multiple threads read and one writes; no crashes."""
-        import scripts.create_database
+        from scripts import create_database
         from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
@@ -434,7 +434,7 @@ class TestConcurrentDatabaseAccess:
 
     def test_multiple_folder_inserts_are_isolated(self, tmp_path):
         """Insert many folders quickly; verify all are present."""
-        import scripts.create_database
+        from scripts import create_database
         from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 

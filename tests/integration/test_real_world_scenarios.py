@@ -21,7 +21,7 @@ from unittest import mock
 
 import pytest
 
-import scripts.create_database
+from scripts import create_database
 from core.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database.database_obj import DatabaseObj
@@ -283,6 +283,7 @@ def test_tweaking_scenario(workspace):
                 "odbc_driver": "driver",
             },
             tweaker_step=EDITweakerStep(),
+            upc_dict={"_mock": []},
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -701,6 +702,7 @@ def test_conversion_with_tweaking(workspace):
                 "odbc_driver": "driver",
             },
             tweaker_step=EDITweakerStep(),
+            upc_dict={"_mock": []},
             converter_step=EDIConverterStep(),
         )
         orchestrator = DispatchOrchestrator(config)
@@ -979,6 +981,7 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
                 "odbc_driver": "driver",
             },
             tweaker_step=EDITweakerStep(),
+            upc_dict={"_mock": []},
         )
         orchestrator = DispatchOrchestrator(config_obj)
 
@@ -1082,6 +1085,7 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
                     "odbc_driver": "driver",
                 },
                 tweaker_step=EDITweakerStep(),
+            upc_dict={"_mock": []},
                 converter_step=EDIConverterStep(),
             )
             orchestrator = DispatchOrchestrator(config_obj)

@@ -52,7 +52,7 @@ class TestFTPBackend:
         self, sample_process_parameters, sample_settings_dict, sample_file
     ):
         """ftp_backend.do() connects and logs in to the FTP server."""
-        import backend.ftp_backend
+        from backend import ftp_backend
         from backend.ftp_client import MockFTPClient
 
         mock_client = MockFTPClient()
@@ -72,7 +72,7 @@ class TestFTPBackend:
         self, sample_process_parameters, sample_settings_dict, sample_file
     ):
         """ftp_backend.do() attempts a connection (TLS or plain)."""
-        import backend.ftp_backend
+        from backend import ftp_backend
         from backend.ftp_client import MockFTPClient
 
         mock_client = MockFTPClient()
@@ -90,7 +90,7 @@ class TestFTPBackend:
         self, sample_process_parameters, sample_settings_dict, sample_file
     ):
         """ftp_backend.do() uses only the file basename in the STOR command."""
-        import backend.ftp_backend
+        from backend import ftp_backend
         from backend.ftp_client import MockFTPClient
 
         mock_client = MockFTPClient()
@@ -113,7 +113,7 @@ class TestFTPBackend:
         self, sample_settings_dict, sample_file
     ):
         """ftp_backend.do() navigates into each path segment of ftp_folder."""
-        import backend.ftp_backend
+        from backend import ftp_backend
         from backend.ftp_client import MockFTPClient
 
         params = {
@@ -166,7 +166,7 @@ class TestEmailBackend:
         self, sample_process_parameters, sample_settings, sample_file
     ):
         """email_backend.do() connects to the SMTP server and sends a message."""
-        import backend.email_backend
+        from backend import email_backend
         from backend.smtp_client import MockSMTPClient
 
         mock_smtp = MockSMTPClient()
@@ -182,7 +182,7 @@ class TestEmailBackend:
 
     def test_email_substitutes_filename_in_subject(self, sample_settings, sample_file):
         """%filename% in email_subject_line is replaced with the actual filename."""
-        import backend.email_backend
+        from backend import email_backend
         from backend.smtp_client import MockSMTPClient
 
         params = {
@@ -199,7 +199,7 @@ class TestEmailBackend:
 
     def test_email_uses_default_subject_when_empty(self, sample_settings, sample_file):
         """When email_subject_line is empty, subject defaults to '<filename> Attached'."""
-        import backend.email_backend
+        from backend import email_backend
         from backend.smtp_client import MockSMTPClient
 
         params = {
@@ -216,7 +216,7 @@ class TestEmailBackend:
 
     def test_email_sends_to_multiple_recipients(self, sample_settings, sample_file):
         """Comma-separated email_to addresses are each included in the To field."""
-        import backend.email_backend
+        from backend import email_backend
         from backend.smtp_client import MockSMTPClient
 
         params = {
@@ -253,7 +253,7 @@ class TestCopyBackend:
         self, sample_source_file, sample_destination_dir
     ):
         """copy_backend.do() writes the source file into copy_to_directory."""
-        import backend.copy_backend
+        from backend import copy_backend
 
         params = {"copy_to_directory": sample_destination_dir}
         result = copy_backend.do(params, {}, sample_source_file)

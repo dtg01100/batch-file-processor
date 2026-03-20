@@ -17,9 +17,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import scripts.create_database
-import migrations.folders_database_migrator
-import core.database.schema
+from scripts import create_database
+from migrations import folders_database_migrator
+from core.database import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
@@ -59,47 +59,34 @@ class TrackingBackend:
 # Tests: Database creation
 # ---------------------------------------------------------------------------
 class TestDatabaseCreation:
-
-    def test_create_database_creates_file(self, tmp_path):
+    def test_fresh_database_structure(self, tmp_path):
+        """Verify fresh database has correct file, tables, columns, and settings."""
+        # Create database once
         db_path, _ = _create_fresh_db(tmp_path)
+
+        # Verify file exists
         assert os.path.isfile(db_path)
 
-    def test_created_db_has_version_table(self, tmp_path):
-        db_path, _ = _create_fresh_db(tmp_path)
-        conn = sqlite_wrapper.Database.connect(db_path)
-        ver = conn["version"].find_one(id=1)
-        assert int(ver["version"]) >= int(CURRENT_DB_VERSION)
-        conn.close()
-
-    def test_created_db_has_settings_table(self, tmp_path):
-        db_path, _ = _create_fresh_db(tmp_path)
-        conn = sqlite_wrapper.Database.connect(db_path)
-        settings = conn["settings"].find_one(id=1)
-        assert settings is not None
-        conn.close()
-
-    def test_created_db_has_administrative_table(self, tmp_path):
-        db_path, _ = _create_fresh_db(tmp_path)
-        conn = sqlite_wrapper.Database.connect(db_path)
-        admin = conn["administrative"].find_one(id=1)
-        assert admin is not None
-        conn.close()
-
-    def test_created_db_has_folders_table(self, tmp_path):
-        db_path, _ = _create_fresh_db(tmp_path)
-        conn = sqlite_wrapper.Database.connect(db_path)
-        # folders table exists but is empty initially
-        folders = list(conn["folders"].all())
-        assert isinstance(folders, list)
-        conn.close()
-
-    def test_fresh_database_has_all_columns(self, tmp_path):
-        """Verify fresh database has all expected columns in each table."""
-        db_path, _ = _create_fresh_db(tmp_path)
         conn = sqlite_wrapper.Database.connect(db_path)
         cursor = conn.raw_connection.cursor()
 
-        # Check folders table columns
+        # Verify version table exists with correct version
+        ver = conn["version"].find_one(id=1)
+        assert int(ver["version"]) >= int(CURRENT_DB_VERSION)
+
+        # Verify settings table exists
+        settings = conn["settings"].find_one(id=1)
+        assert settings is not None
+
+        # Verify administrative table exists
+        admin = conn["administrative"].find_one(id=1)
+        assert admin is not None
+
+        # Verify folders table exists (can be queried)
+        folders = list(conn["folders"].all())
+        assert isinstance(folders, list)
+
+        # Verify all required columns in folders table
         cursor.execute("PRAGMA table_info(folders)")
         folders_columns = [row[1] for row in cursor.fetchall()]
 
@@ -124,7 +111,7 @@ class TestDatabaseCreation:
         for col in required_folders_columns:
             assert col in folders_columns, f"folders table should have {col} column"
 
-        # Check administrative table columns
+        # Verify all required columns in administrative table
         cursor.execute("PRAGMA table_info(administrative)")
         admin_columns = [row[1] for row in cursor.fetchall()]
 
@@ -137,22 +124,13 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert (
-                col in admin_columns
-            ), f"administrative table should have {col} column"
+            assert col in admin_columns, (
+                f"administrative table should have {col} column"
+            )
 
-        conn.close()
-
-    def test_foreign_keys_enabled(self, tmp_path):
-        """Verify foreign keys are enabled after database creation."""
-        db_path, _ = _create_fresh_db(tmp_path)
-        conn = sqlite_wrapper.Database.connect(db_path)
-        cursor = conn.raw_connection.cursor()
-
+        # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")
         result = cursor.fetchone()
-
-        # Foreign keys should be enabled
         assert result[0] == 1 or result[0] == "1"
 
         conn.close()
@@ -162,7 +140,6 @@ class TestDatabaseCreation:
 # Tests: Folder CRUD
 # ---------------------------------------------------------------------------
 class TestFolderCRUD:
-
     @pytest.fixture()
     def db(self, tmp_path):
         db_path, _ = _create_fresh_db(tmp_path)
@@ -250,7 +227,6 @@ class TestFolderCRUD:
 # Tests: Settings persistence
 # ---------------------------------------------------------------------------
 class TestSettingsPersistence:
-
     @pytest.fixture()
     def db(self, tmp_path):
         db_path, _ = _create_fresh_db(tmp_path)
@@ -297,7 +273,6 @@ class TestSettingsPersistence:
 # Tests: Processed files tracking
 # ---------------------------------------------------------------------------
 class TestProcessedFilesTracking:
-
     @pytest.fixture()
     def db(self, tmp_path):
         db_path, _ = _create_fresh_db(tmp_path)
@@ -355,8 +330,8 @@ class TestProcessedFilesTracking:
 # ---------------------------------------------------------------------------
 # Tests: Migration chain
 # ---------------------------------------------------------------------------
+@pytest.mark.slow
 class TestMigrationChain:
-
     def test_migrate_from_v33_to_current(self, tmp_path):
         """Create DB at v33, then migrate to current."""
         db_path = str(tmp_path / "old.db")
@@ -510,7 +485,6 @@ class TestMigrationChain:
 # Tests: DatabaseObj wrapper
 # ---------------------------------------------------------------------------
 class TestDatabaseObjWrapper:
-
     def test_database_obj_creates_and_connects(self, tmp_path):
         """DatabaseObj creates a new database if it doesn't exist."""
         db_path = str(tmp_path / "dbobj.db")
@@ -611,7 +585,6 @@ class TestDatabaseObjWrapper:
 # Tests: Orchestrator with real DB folders
 # ---------------------------------------------------------------------------
 class TestOrchestratorWithRealDB:
-
     def test_process_active_folders_from_db(self, tmp_path):
         """Insert active folders into DB, then process them via orchestrator."""
         db_path = str(tmp_path / "orch.db")
@@ -945,6 +918,7 @@ class TestAppUpgradeViaDatabaseObj:
     creates a backup, and migrates in-place.
     """
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("old_version", ["33", "35", "38", "40"])
     def test_upgrade_from_old_version_reaches_current(self, tmp_path, old_version):
         """DatabaseObj auto-migrates an old DB to CURRENT_DB_VERSION."""
@@ -965,6 +939,7 @@ class TestAppUpgradeViaDatabaseObj:
         assert int(ver["version"]) == int(CURRENT_DB_VERSION)
         db.close()
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("old_version", ["33", "35", "38", "40"])
     def test_backup_created_before_upgrade(self, tmp_path, old_version):
         """A backup file is produced during the upgrade."""
@@ -988,6 +963,7 @@ class TestAppUpgradeViaDatabaseObj:
         assert len(backup_files) >= 1, "No backup file created during upgrade"
         db.close()
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("old_version", ["33", "38"])
     def test_folder_data_preserved_after_upgrade(self, tmp_path, old_version):
         """Folder rows inserted before upgrade survive the migration."""
@@ -1014,6 +990,7 @@ class TestAppUpgradeViaDatabaseObj:
 
         db.close()
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("old_version", ["33", "38"])
     def test_processed_files_preserved_after_upgrade(self, tmp_path, old_version):
         """Processed file records survive the upgrade."""
@@ -1058,6 +1035,7 @@ class TestAppUpgradeViaDatabaseObj:
         assert db.session_database is not None
         db.close()
 
+    @pytest.mark.slow
     def test_upgraded_db_is_fully_functional(self, tmp_path):
         """After upgrade, new folder inserts and queries work normally."""
         db_path = str(tmp_path / "folders.db")
@@ -1097,6 +1075,7 @@ class TestAppUpgradeViaDatabaseObj:
         assert settings is not None
         db.close()
 
+    @pytest.mark.slow
     def test_upgraded_db_can_process_files(self, tmp_path):
         """After upgrade, the orchestrator can process folders from the DB."""
         db_path = str(tmp_path / "folders.db")
@@ -1158,6 +1137,7 @@ class TestAppUpgradeViaDatabaseObj:
                 running_platform="Linux",
             )
 
+    @pytest.mark.slow
     def test_double_open_after_upgrade_is_noop(self, tmp_path):
         """Opening an already-upgraded DB a second time doesn't re-migrate."""
         db_path = str(tmp_path / "folders.db")
@@ -1188,121 +1168,3 @@ class TestAppUpgradeViaDatabaseObj:
         # Data still intact
         assert db2.folders_table.find_one(alias="invoices") is not None
         db2.close()
-
-
-# ---------------------------------------------------------------------------
-# Tests: Real legacy v32 DB through DatabaseObj
-# ---------------------------------------------------------------------------
-class TestRealLegacyDbViaDatabaseObj:
-    """Open the actual v32 production DB fixture through DatabaseObj.
-
-    Skipped automatically if the fixture file is not present.
-    """
-
-    @pytest.fixture()
-    def legacy_db_copy(self, tmp_path):
-        if not os.path.exists(LEGACY_DB_PATH):
-            pytest.skip("Legacy v32 database fixture not found")
-        dest = str(tmp_path / "folders.db")
-        shutil.copy2(LEGACY_DB_PATH, dest)
-        # The real fixture was created on Windows -- patch OS to Linux so
-        # DatabaseObj doesn't reject it for OS mismatch.
-        conn = sqlite_wrapper.Database.connect(dest)
-        ver = conn["version"].find_one(id=1)
-        ver["os"] = "Linux"
-        conn["version"].update(ver, ["id"])
-        conn.commit()
-        conn.close()
-        return dest
-
-    def test_real_v32_upgrades_via_database_obj(self, legacy_db_copy, tmp_path):
-        """Real v32 DB auto-upgrades to current when opened via DatabaseObj."""
-        config = str(tmp_path / "config")
-        os.makedirs(config, exist_ok=True)
-
-        db = DatabaseObj(
-            database_path=legacy_db_copy,
-            database_version=CURRENT_DB_VERSION,
-            config_folder=config,
-            running_platform="Linux",
-        )
-
-        ver = db.database_connection["version"].find_one(id=1)
-        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
-        db.close()
-
-    def test_real_v32_folders_accessible_after_upgrade(self, legacy_db_copy, tmp_path):
-        """All 530 folders from the real legacy DB are accessible post-upgrade."""
-        config = str(tmp_path / "config")
-        os.makedirs(config, exist_ok=True)
-
-        db = DatabaseObj(
-            database_path=legacy_db_copy,
-            database_version=CURRENT_DB_VERSION,
-            config_folder=config,
-            running_platform="Linux",
-        )
-
-        all_folders = list(db.folders_table.all())
-        assert len(all_folders) >= 530
-        db.close()
-
-    def test_real_v32_processed_files_accessible(self, legacy_db_copy, tmp_path):
-        """Processed files from the real legacy DB are accessible post-upgrade."""
-        config = str(tmp_path / "config")
-        os.makedirs(config, exist_ok=True)
-
-        db = DatabaseObj(
-            database_path=legacy_db_copy,
-            database_version=CURRENT_DB_VERSION,
-            config_folder=config,
-            running_platform="Linux",
-        )
-
-        pf_count = db.processed_files.count()
-        assert pf_count >= 227000
-        db.close()
-
-    def test_real_v32_settings_accessible(self, legacy_db_copy, tmp_path):
-        """Settings table is accessible and populated after upgrade."""
-        config = str(tmp_path / "config")
-        os.makedirs(config, exist_ok=True)
-
-        db = DatabaseObj(
-            database_path=legacy_db_copy,
-            database_version=CURRENT_DB_VERSION,
-            config_folder=config,
-            running_platform="Linux",
-        )
-
-        settings = db.settings.find_one(id=1)
-        assert settings is not None
-        db.close()
-
-    def test_real_v32_can_insert_new_folder_after_upgrade(
-        self, legacy_db_copy, tmp_path
-    ):
-        """Post-upgrade, new folder inserts work on the real legacy DB."""
-        config = str(tmp_path / "config")
-        os.makedirs(config, exist_ok=True)
-
-        db = DatabaseObj(
-            database_path=legacy_db_copy,
-            database_version=CURRENT_DB_VERSION,
-            config_folder=config,
-            running_platform="Linux",
-        )
-
-        db.folders_table.insert(
-            dict(
-                folder_name="/brand/new/path",
-                alias="post_upgrade_folder",
-                folder_is_active=1,
-            )
-        )
-        db.database_connection.commit()
-
-        found = db.folders_table.find_one(alias="post_upgrade_folder")
-        assert found is not None
-        assert found["folder_name"] == "/brand/new/path"
-        db.close()

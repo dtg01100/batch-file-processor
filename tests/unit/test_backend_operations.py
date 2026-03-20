@@ -21,9 +21,9 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-import backend.copy_backend
-import backend.email_backend
-import backend.ftp_backend
+from backend import copy_backend
+from backend import email_backend
+from backend import ftp_backend
 
 
 class MockFileOperations:

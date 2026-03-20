@@ -260,7 +260,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_csv with empty input produces an empty CSV (headers only)."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         result = convert_to_csv.edi_convert(
             empty_edi_file,
@@ -280,7 +280,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_simplified_csv with empty input produces an empty CSV."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         result = convert_to_simplified_csv.edi_convert(
             empty_edi_file,
@@ -300,7 +300,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_scannerware with empty input produces an empty output file."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         result = convert_to_scannerware.edi_convert(
             empty_edi_file,
@@ -320,10 +320,10 @@ class TestConverterEmptyFileHandling:
         mock_inv_fetcher,
     ):
         """convert_to_fintech with empty input produces a CSV with headers only."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+        from dispatch.converters import convert_to_fintech
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("convert_to_fintech.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.return_value = None
             mock_utils.datetime_from_invtime.return_value = MagicMock()
@@ -348,14 +348,14 @@ class TestConverterEmptyFileHandling:
         mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv with empty input handles it gracefully (doesn't crash badly)."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")yellowdog_csv
+        from dispatch.converters import convert_to_yellowdog_csv
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
 
         # For yellowdog_csv, an empty file leads to an empty arec_line dict
         # which causes flush_to_csv to fail when accessing arec_line['invoice_date']
         # This is a known limitation of the converter, so we expect this specific error
-        with patch("convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.return_value = None
             mock_utils.convert_to_price.return_value = "0.00"
@@ -383,7 +383,7 @@ class TestConverterEmptyFileHandling:
         self, empty_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice with empty input completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
+        from dispatch.converters import convert_to_estore_einvoice
 
         output_filename_initial = str(tmp_path / "output_estore")
         result = convert_to_estore_einvoice.edi_convert(
@@ -399,7 +399,7 @@ class TestConverterEmptyFileHandling:
         self, empty_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice_generic with empty input completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         output_filename_initial = str(tmp_path / "output_estore_generic")
         with patch.object(
@@ -428,7 +428,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_stewarts_custom handles empty file gracefully (no crash)."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")stewarts_custom
+        from dispatch.converters import convert_to_stewarts_custom
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
@@ -450,7 +450,7 @@ class TestConverterEmptyFileHandling:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_stewarts_custom with valid EDI content completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")stewarts_custom
+        from dispatch.converters import convert_to_stewarts_custom
 
         output_base = str(tmp_path / "output_stewarts")
 
@@ -497,7 +497,7 @@ class TestConverterEmptyFileHandling:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_stewarts_custom raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")stewarts_custom
+        from dispatch.converters import convert_to_stewarts_custom
 
         missing = str(tmp_path / "does_not_exist.edi")
 
@@ -519,7 +519,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_jolley_custom handles empty file gracefully (no crash)."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
+        from dispatch.converters import convert_to_jolley_custom
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
@@ -541,7 +541,7 @@ class TestConverterEmptyFileHandling:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_jolley_custom with valid EDI content completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
+        from dispatch.converters import convert_to_jolley_custom
 
         output_base = str(tmp_path / "output_jolley")
 
@@ -598,7 +598,7 @@ class TestConverterEmptyFileHandling:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_jolley_custom raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
+        from dispatch.converters import convert_to_jolley_custom
 
         missing = str(tmp_path / "does_not_exist.edi")
 
@@ -620,7 +620,7 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_scansheet_type_a with empty input completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scansheet_type_a
+        from dispatch.converters import convert_to_scansheet_type_a
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
@@ -628,7 +628,7 @@ class TestConverterEmptyFileHandling:
             mock_qr_class.return_value = mock_qr_instance
 
             # The converter saves an xlsx file; mock openpyxl to avoid real file I/O
-            with patch("convert_to_scansheet_type_a.openpyxl") as mock_openpyxl:
+            with patch("dispatch.converters.convert_to_scansheet_type_a.openpyxl") as mock_openpyxl:
                 mock_wb = MagicMock()
                 mock_ws = MagicMock()
                 mock_ws.columns = []
@@ -667,7 +667,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """A B record shorter than 76 chars should not crash convert_to_csv."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         # Truncated B record -- only 20 chars
         truncated_b = "B01234567890Test Ite"
@@ -691,7 +691,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """Lines containing only whitespace should be silently ignored."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         content = make_a_record() + "\n" + "   \n" + "\t\n" + make_b_record() + "\n"
         edi_file = self._write_edi(tmp_path, content)
@@ -709,7 +709,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """Lines starting with an unknown record type (e.g. 'X') should not crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         content = (
             make_a_record()
@@ -737,7 +737,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """Files with mixed CRLF/LF line endings should be handled gracefully."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         content = (
             make_a_record() + "\r\n" + make_b_record() + "\n" + make_c_record() + "\r\n"
@@ -757,7 +757,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_simplified_csv with a truncated B record should not crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         truncated_b = "B01234567890Test Ite"
         content = make_a_record() + "\n" + truncated_b + "\n"
@@ -779,7 +779,7 @@ class TestConverterMalformedInput:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_scannerware with whitespace-only lines should not crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         content = make_a_record() + "\n" + "   \n" + make_b_record() + "\n"
         edi_file = self._write_edi(tmp_path, content)
@@ -806,13 +806,13 @@ class TestConverterMalformedInput:
         mock_inv_fetcher,
     ):
         """convert_to_fintech with an unknown record type should not crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+        from dispatch.converters import convert_to_fintech
 
         content = make_a_record() + "\n" + "Xunknown\n" + make_b_record() + "\n"
         edi_file = self._write_edi(tmp_path, content)
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
-        with patch("convert_to_fintech.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
 
             def _capture(line):
@@ -873,7 +873,7 @@ class TestConverterFileIOErrors:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_csv raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         missing = str(tmp_path / "does_not_exist.edi")
         with pytest.raises(FileNotFoundError):
@@ -889,7 +889,7 @@ class TestConverterFileIOErrors:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_simplified_csv raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         missing = str(tmp_path / "does_not_exist.edi")
         with pytest.raises(FileNotFoundError):
@@ -905,7 +905,7 @@ class TestConverterFileIOErrors:
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
         """convert_to_scannerware raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         missing = str(tmp_path / "does_not_exist.edi")
         with pytest.raises(FileNotFoundError):
@@ -926,11 +926,11 @@ class TestConverterFileIOErrors:
         mock_inv_fetcher,
     ):
         """convert_to_fintech raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+        from dispatch.converters import convert_to_fintech
 
         missing = str(tmp_path / "does_not_exist.edi")
         fetcher_class, _ = mock_inv_fetcher
-        with patch("convert_to_fintech.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             with pytest.raises(FileNotFoundError):
                 convert_to_fintech.edi_convert(
@@ -950,11 +950,11 @@ class TestConverterFileIOErrors:
         mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")yellowdog_csv
+        from dispatch.converters import convert_to_yellowdog_csv
 
         missing = str(tmp_path / "does_not_exist.edi")
         fetcher_class, _ = mock_inv_fetcher
-        with patch("convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             with pytest.raises(FileNotFoundError):
                 convert_to_yellowdog_csv.edi_convert(
@@ -969,7 +969,7 @@ class TestConverterFileIOErrors:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
+        from dispatch.converters import convert_to_estore_einvoice
 
         missing = str(tmp_path / "does_not_exist.edi")
         output_filename_initial = str(tmp_path / "output_estore")
@@ -986,7 +986,7 @@ class TestConverterFileIOErrors:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice_generic raises FileNotFoundError for missing input."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         missing = str(tmp_path / "does_not_exist.edi")
         output_filename_initial = str(tmp_path / "output_estore_generic")
@@ -1022,7 +1022,7 @@ class TestConverterRetailUomMode:
         self, tmp_path, retail_uom_params, default_settings_dict
     ):
         """retail_uom=True with a matching UPC in upc_lut rewrites the B record UPC."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         # B record with vendor_item=123456, unit_multiplier=000006 (non-zero)
         b_rec = make_b_record(
@@ -1061,7 +1061,7 @@ class TestConverterRetailUomMode:
         The converter catches the ValueError and prints a message, then skips the
         line.  The output file should still be created successfully.
         """
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         # B record with unit_multiplier=000000 (zero) -- triggers ValueError at line 67
         b_rec = make_b_record(
@@ -1091,7 +1091,7 @@ class TestConverterRetailUomMode:
         self, tmp_path, retail_uom_params, default_settings_dict
     ):
         """retail_uom=True with no UPC match falls back to upc_padding_pattern."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         b_rec = make_b_record(
             vendor_item="999999",
@@ -1138,7 +1138,7 @@ class TestConverterEmptyUpcLut:
         self, valid_edi_file, output_base, default_settings_dict, override_upc_params
     ):
         """convert_to_csv with override_upc=True and empty upc_lut sets UPC to empty."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         result = convert_to_csv.edi_convert(
             valid_edi_file,
@@ -1161,7 +1161,7 @@ class TestConverterEmptyUpcLut:
         default_parameters_dict,
     ):
         """convert_to_simplified_csv with empty upc_lut completes without crash."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         result = convert_to_simplified_csv.edi_convert(
             valid_edi_file,
@@ -1176,7 +1176,7 @@ class TestConverterEmptyUpcLut:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice with empty upc_lut falls back to EDI UPC."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
+        from dispatch.converters import convert_to_estore_einvoice
 
         output_filename_initial = str(tmp_path / "output_estore")
         result = convert_to_estore_einvoice.edi_convert(
@@ -1202,10 +1202,10 @@ class TestConverterEmptyUpcLut:
         with a default value. An empty lut therefore returns empty strings
         instead of raising KeyError.
         """
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
+        from dispatch.converters import convert_to_fintech
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
-        with patch("convert_to_fintech.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -1266,10 +1266,10 @@ class TestConverterEmptyUpcLut:
         mock_inv_fetcher,
     ):
         """convert_to_yellowdog_csv with empty upc_lut uses raw UPC from EDI."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")yellowdog_csv
+        from dispatch.converters import convert_to_yellowdog_csv
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
-        with patch("convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -1345,7 +1345,7 @@ class TestScannerwareInvoiceDateOffset:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """A non-zero invoice_date_offset shifts the invoice date in the output."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         params = dict(default_parameters_dict)
         params["invoice_date_offset"] = 7  # integer (not string) -- also valid
@@ -1368,7 +1368,7 @@ class TestScannerwareInvoiceDateOffset:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """A zero invoice_date_offset leaves the invoice date unchanged."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         params = dict(default_parameters_dict)
         params["invoice_date_offset"] = 0
@@ -1395,7 +1395,7 @@ class TestScannerwareForceTxtExtension:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """force_txt_file_ext=True appends .txt to the output filename."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         params = dict(default_parameters_dict)
         params["force_txt_file_ext"] = "True"
@@ -1417,7 +1417,7 @@ class TestScannerwareForceTxtExtension:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """force_txt_file_ext=False uses the output_filename as-is."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
+        from dispatch.converters import convert_to_scannerware
 
         params = dict(default_parameters_dict)
         params["force_txt_file_ext"] = "False"
@@ -1444,7 +1444,7 @@ class TestEstoreEinvoiceOutputFilenameGeneration:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice generates a timestamped filename in the output dir."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
+        from dispatch.converters import convert_to_estore_einvoice
 
         output_filename_initial = str(tmp_path / "output_estore")
         result = convert_to_estore_einvoice.edi_convert(
@@ -1464,7 +1464,7 @@ class TestEstoreEinvoiceOutputFilenameGeneration:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """convert_to_estore_einvoice_generic generates a timestamped filename."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         output_filename_initial = str(tmp_path / "output_estore_generic")
         with patch.object(
@@ -1504,7 +1504,7 @@ class TestCsvConverterOutputContent:
         default_parameters_dict,
     ):
         """With include_headers=True the first row should be the column headers."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         params = dict(default_parameters_dict)
         params["include_headers"] = "True"
@@ -1530,7 +1530,7 @@ class TestCsvConverterOutputContent:
         default_parameters_dict,
     ):
         """With include_headers=False the first row should be a data row (or empty)."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         params = dict(default_parameters_dict)
         params["include_headers"] = "False"
@@ -1557,7 +1557,7 @@ class TestCsvConverterOutputContent:
         default_parameters_dict,
     ):
         """B record data should appear in the CSV output."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
+        from dispatch.converters import convert_to_csv
 
         params = dict(default_parameters_dict)
         params["include_headers"] = "False"
@@ -1587,7 +1587,7 @@ class TestSimplifiedCsvSortOrder:
         default_parameters_dict,
     ):
         """Default sort order produces a valid CSV."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         result = convert_to_simplified_csv.edi_convert(
             valid_edi_file,
@@ -1602,7 +1602,7 @@ class TestSimplifiedCsvSortOrder:
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Sort order with vendor_item column produces a valid CSV."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
+        from dispatch.converters import convert_to_simplified_csv
 
         params = dict(default_parameters_dict)
         params["simple_csv_sort_order"] = (
@@ -1627,7 +1627,7 @@ class TestEstoreEinvoiceGenericProcessing:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Test converter handles content without A record gracefully."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         # Just B record without A record
         content = make_b_record() + "\n"
@@ -1663,7 +1663,7 @@ class TestEstoreEinvoiceGenericProcessing:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Test converter handles content with C record (tax) only."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         # A record followed by C record (no B record)
         content = make_a_record() + "\n" + make_c_record() + "\n"
@@ -1694,7 +1694,7 @@ class TestEstoreEinvoiceGenericProcessing:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Test converter handles multiple B records in a single invoice."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         # A record with multiple B records
         b1 = make_b_record(upc="01234567890", vendor_item="111111", unit_cost="000100")
@@ -1738,7 +1738,7 @@ class TestEstoreEinvoiceGenericProcessing:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Test converter handles negative quantities in B records."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         # B record with negative quantity (starts with -)
         b1 = make_b_record(quantity="-00010", unit_cost="000100")
@@ -1775,7 +1775,7 @@ class TestEstoreEinvoiceGenericProcessing:
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
         """Test converter uses UPC lookup when provided."""
-        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
+        from dispatch.converters import convert_to_estore_einvoice_generic
 
         content = make_a_record() + "\n" + make_b_record() + "\n"
         edi_file = tmp_path / "upc_lookup.edi"

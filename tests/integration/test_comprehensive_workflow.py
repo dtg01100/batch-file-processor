@@ -388,9 +388,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert (
-            updated_folder["convert_to_format"] == "fintech"
-        ), "Format should be changed to fintech"
+        assert updated_folder["convert_to_format"] == "fintech", (
+            "Format should be changed to fintech"
+        )
 
     def test_toggle_edi_processing(self, workspace, test_folder):
         """Test toggling EDI processing on/off."""
@@ -441,9 +441,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert updated_folder["copy_to_directory"] == str(
-            new_output
-        ), "Copy destination should be updated"
+        assert updated_folder["copy_to_directory"] == str(new_output), (
+            "Copy destination should be updated"
+        )
 
 
 # =============================================================================
@@ -636,12 +636,12 @@ class TestEDITweakingAndSplitting:
         # Verify settings
         folder = get_folder_config(workspace["db"], folder_id)
         assert folder["split_edi"] == 1, "Split should be enabled"
-        assert (
-            folder["split_edi_filter_categories"] == "CAT1,CAT2"
-        ), "Categories should be set"
-        assert (
-            folder["split_edi_filter_mode"] == "include"
-        ), "Filter mode should be include"
+        assert folder["split_edi_filter_categories"] == "CAT1,CAT2", (
+            "Categories should be set"
+        )
+        assert folder["split_edi_filter_mode"] == "include", (
+            "Filter mode should be include"
+        )
 
     def test_pad_a_records_config(self, workspace, test_folder):
         """Test pad_a_records configuration."""
@@ -968,9 +968,9 @@ class TestEdgeCasesAndErrorHandling:
         assert "folder_name" in folder
         assert folder["folder_name"] == str(workspace["input_folder"])
         # Default convert_to_format should come from oversight defaults
-        assert (
-            "convert_to_format" in folder
-        ), "Folder should inherit convert_to_format default"
+        assert "convert_to_format" in folder, (
+            "Folder should inherit convert_to_format default"
+        )
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""
@@ -1010,3 +1010,213 @@ class TestEdgeCasesAndErrorHandling:
             original.get("folder_is_active", 1) == 1
             or original.get("folder_is_active") is None
         ), "Second folder should be unchanged"
+
+
+# =============================================================================
+# TEST CLASS 8: Bulk Operations
+# =============================================================================
+
+
+class TestBulkOperations:
+    """Bulk folder operations."""
+
+    def test_bulk_create_and_process(self, tmp_path):
+        """Create N folders in DB, process all, verify all succeed."""
+        from scripts import create_database
+        from core.constants import CURRENT_DATABASE_VERSION
+        from backend.database.database_obj import DatabaseObj
+
+        db_path = tmp_path / "folders.db"
+        create_database.do("33", str(db_path), str(tmp_path), "Linux")
+        db = DatabaseObj(
+            database_path=str(db_path),
+            database_version=CURRENT_DATABASE_VERSION,
+            config_folder=str(tmp_path),
+            running_platform="Linux",
+        )
+
+        # Sample EDI content for test files
+        sample_edi = """A00000120240101001TESTVENDOR         Test Vendor Inc                 00001
+B001001ITEM001     000010EA0010Test Item 1                     0000010000
+B001002ITEM002     000020EA0020Test Item 2                     0000020000
+C00000003000030000
+"""
+
+        # Create 5 folder configs in DB
+        for i in range(5):
+            inp = tmp_path / f"inp_{i}"
+            out = tmp_path / f"out_{i}"
+            inp.mkdir()
+            out.mkdir()
+            (inp / f"file_{i}.edi").write_text(sample_edi)
+
+            db.folders_table.insert(
+                {
+                    "folder_name": str(inp),
+                    "alias": f"Bulk {i}",
+                    "process_backend_copy": True,
+                    "copy_to_directory": str(out),
+                }
+            )
+
+        all_folders = list(db.folders_table.all())
+        assert len(all_folders) == 5
+
+        # Create mock orchestrator with copy backend
+        class TrackingCopyBackend:
+            def __init__(self):
+                self.sent: list[str] = []
+
+            def send(self, params: dict, settings: dict, filename: str) -> bool:
+                import shutil
+
+                dest_dir = params.get("copy_to_directory")
+                if dest_dir:
+                    dest = Path(dest_dir)
+                    dest.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(filename, dest / Path(filename).name)
+                self.sent.append(filename)
+                return True
+
+        copy_be = TrackingCopyBackend()
+        config = DispatchConfig(backends={"copy": copy_be}, settings={})
+        orchestrator = DispatchOrchestrator(config)
+
+        results = [orchestrator.process_folder(f, MagicMock()) for f in all_folders]
+
+        assert all(r.success for r in results)
+        assert sum(r.files_processed for r in results) == 5
+
+        db.close()
+
+    def test_bulk_deactivate_and_delete(self, tmp_path):
+        """Deactivate then delete multiple folder configs."""
+        from scripts import create_database
+        from core.constants import CURRENT_DATABASE_VERSION
+        from backend.database.database_obj import DatabaseObj
+
+        db_path = tmp_path / "folders.db"
+        create_database.do("33", str(db_path), str(tmp_path), "Linux")
+        db = DatabaseObj(
+            database_path=str(db_path),
+            database_version=CURRENT_DATABASE_VERSION,
+            config_folder=str(tmp_path),
+            running_platform="Linux",
+        )
+
+        for i in range(4):
+            db.folders_table.insert({"folder_name": f"/path/{i}", "alias": f"Del {i}"})
+
+        rows = list(db.folders_table.all())
+        assert len(rows) == 4
+
+        # Deactivate first two
+        for row in rows[:2]:
+            row["folder_is_active"] = False
+            db.folders_table.update(row, ["id"])
+
+        # Delete the deactivated ones
+        for row in rows[:2]:
+            db.folders_table.delete(id=row["id"])
+
+        assert len(list(db.folders_table.all())) == 2
+
+        db.close()
+
+
+# =============================================================================
+# TEST CLASS 9: Edge Cases
+# =============================================================================
+
+
+class TestEdgeCases:
+    """Edge-case scenarios the user may hit."""
+
+    def test_empty_folder(self, workspace):
+        """Processing an empty folder succeeds with 0 files."""
+        folder_config = {
+            "id": 1,
+            "folder_name": str(workspace["input_folder"]),
+            "alias": "Empty Test",
+            "process_backend_copy": True,
+            "copy_to_directory": str(workspace["output_folder"]),
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+        }
+
+        class NoopBackend:
+            def __init__(self):
+                self.sent: list[str] = []
+
+            def send(self, params: dict, settings: dict, filename: str) -> bool:
+                self.sent.append(filename)
+                return True
+
+        config = DispatchConfig(backends={"copy": NoopBackend()}, settings={})
+        orchestrator = DispatchOrchestrator(config)
+        result = orchestrator.process_folder(folder_config, MagicMock())
+
+        assert result.success is True
+        assert result.files_processed == 0
+
+    def test_missing_folder(self, workspace):
+        """Processing a nonexistent folder returns failure."""
+        fc = {
+            "id": 99,
+            "folder_name": str(workspace["workspace"] / "does_not_exist"),
+            "alias": "Ghost",
+            "process_backend_copy": True,
+            "copy_to_directory": str(workspace["output_folder"]),
+        }
+
+        class NoopBackend:
+            def send(self, params: dict, settings: dict, filename: str) -> bool:
+                return True
+
+        config = DispatchConfig(backends={"copy": NoopBackend()}, settings={})
+        orchestrator = DispatchOrchestrator(config)
+        result = orchestrator.process_folder(fc, MagicMock())
+
+        assert result.success is False
+        assert len(result.errors) > 0
+
+    def test_no_backends_enabled(self, workspace, sample_edi_content):
+        """Processing with no backends enabled fails for each file."""
+        # Create test file
+        test_file = workspace["input_folder"] / "invoice.edi"
+        test_file.write_text(sample_edi_content)
+
+        folder_config = {
+            "id": 1,
+            "folder_name": str(workspace["input_folder"]),
+            "alias": "No Backend Test",
+            "process_backend_copy": False,
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+        }
+
+        config = DispatchConfig(backends={}, settings={})
+        orchestrator = DispatchOrchestrator(config)
+        result = orchestrator.process_folder(folder_config, MagicMock())
+
+        # Each file fails because no backend is enabled
+        assert result.success is False
+        assert result.files_failed == 1
+
+    def test_file_hashing_consistency(self, workspace, sample_edi_content):
+        """Same file -> same hash, different file -> different hash."""
+        from dispatch.hash_utils import generate_file_hash
+
+        # Create two files with different content
+        file1 = workspace["input_folder"] / "file1.edi"
+        file2 = workspace["input_folder"] / "file2.edi"
+        file1.write_text(sample_edi_content)
+        file2.write_text(sample_edi_content.replace("VENDOR", "VENDOR2"))
+
+        h1 = generate_file_hash(str(file1))
+        h2 = generate_file_hash(str(file1))
+        h3 = generate_file_hash(str(file2))
+
+        assert h1 == h2
+        assert h1 != h3
+        assert len(h1) == 32

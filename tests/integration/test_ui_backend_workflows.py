@@ -20,7 +20,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
-import scripts.create_database
+from scripts import create_database
 from core.constants import CURRENT_DATABASE_VERSION
 from backend.database.database_obj import DatabaseObj
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog

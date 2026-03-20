@@ -22,8 +22,8 @@ import os
 import shutil
 import sqlite3
 
-import migrations.folders_database_migrator
-import core.database.schema
+from migrations import folders_database_migrator
+from core.database import schema
 from core.utils.bool_utils import normalize_bool
 from backend.database import sqlite_wrapper
 

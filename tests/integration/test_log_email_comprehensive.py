@@ -423,14 +423,14 @@ class TestLoggingLevels:
 
     def test_debug_logging_enabled(self, caplog):
         """With DEBUG level, debug messages should appear in caplog."""
-        with caplog.at_level(logging.DEBUG, logger="ftp_backend"):
+        with caplog.at_level(logging.DEBUG, logger="backend.ftp_backend"):
             logging.getLogger("ftp_backend").debug("Debug message from ftp_backend")
 
         assert any("Debug message" in r.message for r in caplog.records)
 
     def test_debug_logging_disabled(self, caplog):
         """With WARNING level, DEBUG messages must NOT appear for ftp_backend."""
-        with caplog.at_level(logging.WARNING, logger="ftp_backend"):
+        with caplog.at_level(logging.WARNING, logger="backend.ftp_backend"):
             logging.getLogger("ftp_backend").debug("Should be suppressed")
 
         debug_messages = [r for r in caplog.records if r.levelno == logging.DEBUG]
@@ -441,7 +441,7 @@ class TestLoggingLevels:
         """ftp_backend.do() should log a debug message about connecting."""
         from unittest.mock import patch
 
-        import backend.ftp_backend
+        from backend import ftp_backend
         from backend.ftp_client import MockFTPClient
 
         test_file = str(tmp_path / "f.txt")
@@ -457,8 +457,8 @@ class TestLoggingLevels:
             "ftp_folder": "",
         }
 
-        with caplog.at_level(logging.DEBUG, logger="ftp_backend"):
-            with patch("ftp_backend.time.sleep"):
+        with caplog.at_level(logging.DEBUG, logger="backend.ftp_backend"):
+            with patch("backend.ftp_backend.time.sleep"):
                 ftp_backend.do(params, {}, test_file, ftp_client=mock_client)
 
         connect_messages = [
@@ -472,7 +472,7 @@ class TestLoggingLevels:
         """email_backend.do() should not suppress all log output at INFO level."""
         from unittest.mock import patch
 
-        import backend.email_backend
+        from backend import email_backend
         from backend.smtp_client import MockSMTPClient
 
         test_file = str(tmp_path / "mail.txt")
@@ -493,7 +493,7 @@ class TestLoggingLevels:
         }
 
         with caplog.at_level(logging.DEBUG):
-            with patch("email_backend.time.sleep"):
+            with patch("backend.email_backend.time.sleep"):
                 email_backend.do(params, settings, test_file, smtp_client=mock_client)
 
         # Verify the email was actually dispatched through the mock client
@@ -504,7 +504,7 @@ class TestLoggingLevels:
     def test_warning_level_suppresses_info(self, caplog):
         """INFO messages must not appear when log level is set to WARNING."""
         logger = logging.getLogger("ftp_backend")
-        with caplog.at_level(logging.WARNING, logger="ftp_backend"):
+        with caplog.at_level(logging.WARNING, logger="backend.ftp_backend"):
             logger.info("This info should be suppressed")
 
         info_msgs = [
@@ -526,7 +526,7 @@ class TestLoggingLevels:
     def test_error_messages_always_appear(self, caplog):
         """ERROR level messages should appear at any logging level >= ERROR."""
         logger = logging.getLogger("ftp_backend")
-        with caplog.at_level(logging.ERROR, logger="ftp_backend"):
+        with caplog.at_level(logging.ERROR, logger="backend.ftp_backend"):
             logger.error("Critical FTP failure")
 
         error_msgs = [r for r in caplog.records if "Critical FTP failure" in r.message]

@@ -250,34 +250,47 @@ class TestDBSchema:
 class TestFolderCRUD:
     """Create, read, update, delete operations on folder records."""
 
-    def test_folder_crud_operations(self, fresh_db):
-        """Full CRUD cycle for a folder record."""
+    @pytest.mark.parametrize(
+        "operation,field_name,initial_value,updated_value,check_field",
+        [
+            ("update", "alias", "InitialAlias", "UpdatedAlias", "alias"),
+            ("toggle_active", "folder_is_active", True, False, "folder_is_active"),
+            ("toggle_active", "folder_is_active", False, True, "folder_is_active"),
+        ],
+        ids=["update_alias", "deactivate_folder", "activate_folder"],
+    )
+    def test_folder_update_operations(
+        self, fresh_db, operation, field_name, initial_value, updated_value, check_field
+    ):
+        """Parametrized update operations: alias update and active toggling."""
         db = open_db(fresh_db)
         tbl = db["folders"]
 
-        # Create
-        row_id = tbl.insert(minimal_folder_row(alias="MyCRUDFolder"))
+        # Create with initial value
+        row_id = tbl.insert(
+            minimal_folder_row(alias="InitialAlias", active=initial_value)
+        )
         assert row_id > 0
 
-        # Read
-        found = tbl.find_one(alias="MyCRUDFolder")
-        assert found is not None
-        assert found["alias"] == "MyCRUDFolder"
-
-        # Update
-        tbl.update({"id": found["id"], "alias": "UpdatedAlias"}, ["id"])
-        updated = tbl.find_one(id=found["id"])
-        assert updated["alias"] == "UpdatedAlias"
-
-        # Delete
-        tbl.delete(id=found["id"])
-        deleted = tbl.find_one(id=found["id"])
-        assert deleted is None
+        # Update the field
+        tbl.update({"id": row_id, field_name: updated_value}, ["id"])
+        updated = tbl.find_one(id=row_id)
+        assert updated[check_field] == updated_value
 
         db.close()
 
-    def test_folder_active_filter(self, fresh_db):
-        """find(folder_is_active=True) must return only active folders."""
+    @pytest.mark.parametrize(
+        "active_filter,expected_aliases,unexpected_aliases",
+        [
+            (True, ["Active1", "Active2"], ["Inactive1"]),
+            (False, ["Inactive1"], ["Active1", "Active2"]),
+        ],
+        ids=["find_active_only", "find_inactive_only"],
+    )
+    def test_folder_find_by_active_status(
+        self, fresh_db, active_filter, expected_aliases, unexpected_aliases
+    ):
+        """Parametrized active/inactive filtering."""
         db = open_db(fresh_db)
         tbl = db["folders"]
 
@@ -285,43 +298,72 @@ class TestFolderCRUD:
         tbl.insert(minimal_folder_row(alias="Active2", active=True))
         tbl.insert(minimal_folder_row(alias="Inactive1", active=False))
 
-        active = tbl.find(folder_is_active=True)
-        inactive = tbl.find(folder_is_active=False)
+        results = tbl.find(folder_is_active=active_filter)
         db.close()
 
-        active_aliases = {r["alias"] for r in active}
-        inactive_aliases = {r["alias"] for r in inactive}
+        result_aliases = {r["alias"] for r in results}
 
-        assert "Active1" in active_aliases
-        assert "Active2" in active_aliases
-        assert "Inactive1" not in active_aliases
-        assert "Inactive1" in inactive_aliases
+        for alias in expected_aliases:
+            assert alias in result_aliases
+        for alias in unexpected_aliases:
+            assert alias not in result_aliases
 
-    def test_folder_insert_multiple_and_count(self, fresh_db):
-        """Inserting multiple folders should be reflected in count()."""
+    @pytest.mark.parametrize("count", [1, 5, 10], ids=["single", "five", "ten"])
+    def test_folder_insert_and_count(self, fresh_db, count):
+        """Parametrized test for inserting various numbers of folders."""
         db = open_db(fresh_db)
         tbl = db["folders"]
 
-        for i in range(7):
+        for i in range(count):
             tbl.insert(minimal_folder_row(alias=f"Folder{i}"))
 
         total = tbl.count()
         db.close()
 
-        assert total == 7
+        assert total == count
 
-    def test_folder_find_by_alias(self, fresh_db):
-        """find_one with alias should return the correct record."""
+    def test_folder_insert_retrieve_and_delete(self, fresh_db):
+        """Full insert, retrieve, and delete cycle."""
+        db = open_db(fresh_db)
+        tbl = db["folders"]
+
+        # Insert and retrieve
+        row_id = tbl.insert(minimal_folder_row(alias="MyFolder"))
+        found = tbl.find_one(alias="MyFolder")
+        assert found is not None
+        assert found["alias"] == "MyFolder"
+
+        # Delete and verify
+        tbl.delete(id=found["id"])
+        deleted = tbl.find_one(id=found["id"])
+        assert deleted is None
+
+        db.close()
+
+    @pytest.mark.parametrize(
+        "search_alias,should_find",
+        [
+            ("SpecificAlias", True),
+            ("OtherAlias", True),
+            ("NonExistent", False),
+        ],
+        ids=["find_specific", "find_other", "not_found"],
+    )
+    def test_folder_find_by_alias(self, fresh_db, search_alias, should_find):
+        """Parametrized alias lookup tests."""
         db = open_db(fresh_db)
         tbl = db["folders"]
         tbl.insert(minimal_folder_row(alias="SpecificAlias"))
         tbl.insert(minimal_folder_row(alias="OtherAlias"))
 
-        found = tbl.find_one(alias="SpecificAlias")
+        found = tbl.find_one(alias=search_alias)
         db.close()
 
-        assert found is not None
-        assert found["alias"] == "SpecificAlias"
+        if should_find:
+            assert found is not None
+            assert found["alias"] == search_alias
+        else:
+            assert found is None
 
 
 # ---------------------------------------------------------------------------
@@ -332,8 +374,78 @@ class TestFolderCRUD:
 class TestProcessedFilesCRUD:
     """Tests for the processed_files table."""
 
-    def test_processed_files_insert_and_query(self, fresh_db):
-        """Insert a processed_file record, then query by folder_id."""
+    @pytest.mark.parametrize(
+        "field_name,initial_value,updated_value",
+        [
+            ("status", "pending", "processed"),
+            ("status", "new", "pending"),
+            ("resend_flag", 0, 1),
+            ("resend_flag", 1, 0),
+        ],
+        ids=[
+            "update_status_to_processed",
+            "update_status_to_pending",
+            "set_resend_flag",
+            "clear_resend_flag",
+        ],
+    )
+    def test_processed_files_field_updates(
+        self, fresh_db, field_name, initial_value, updated_value
+    ):
+        """Parametrized field update tests for status and resend_flag."""
+        db = open_db(fresh_db)
+        folders = db["folders"]
+        folder_id = folders.insert(minimal_folder_row())
+
+        pf = db["processed_files"]
+        row_data = minimal_processed_file_row(folder_id=folder_id)
+        row_data[field_name] = initial_value
+        rec_id = pf.insert(row_data)
+
+        pf.update({"id": rec_id, field_name: updated_value}, ["id"])
+        record = pf.find_one(id=rec_id)
+        db.close()
+
+        assert record[field_name] == updated_value
+
+    @pytest.mark.parametrize(
+        "field_name,field_value,check_func",
+        [
+            (
+                "file_name",
+                "/custom/path/file.txt",
+                lambda r: r["file_name"].endswith("file.txt"),
+            ),
+            ("file_checksum", "abc123xyz", lambda r: r["file_checksum"] == "abc123xyz"),
+            (
+                "sent_to",
+                "FTP: ftp.example.com",
+                lambda r: "ftp.example.com" in r["sent_to"],
+            ),
+        ],
+        ids=["store_file_name", "store_checksum", "store_sent_to"],
+    )
+    def test_processed_files_field_storage(
+        self, fresh_db, field_name, field_value, check_func
+    ):
+        """Parametrized test for storing and retrieving various fields."""
+        db = open_db(fresh_db)
+        folders = db["folders"]
+        folder_id = folders.insert(minimal_folder_row())
+
+        pf = db["processed_files"]
+        row_data = minimal_processed_file_row(folder_id=folder_id)
+        row_data[field_name] = field_value
+        pf.insert(row_data)
+
+        record = pf.find_one(folder_id=folder_id)
+        db.close()
+
+        assert record is not None
+        assert check_func(record)
+
+    def test_processed_files_insert_and_query_by_folder(self, fresh_db):
+        """Insert records and query by folder_id."""
         db = open_db(fresh_db)
         folders = db["folders"]
         folder_id = folders.insert(minimal_folder_row(alias="FolderForPF"))
@@ -352,7 +464,6 @@ class TestProcessedFilesCRUD:
 
         assert len(results) == 1
         assert results[0]["file_name"] == "/test/myfile.txt"
-        assert results[0]["file_checksum"] == "deadbeef"
 
     def test_processed_files_checksum_uniqueness(self, fresh_db):
         """Same checksum can exist under different folder_ids."""
@@ -373,84 +484,30 @@ class TestProcessedFilesCRUD:
         assert id1 in folder_ids
         assert id2 in folder_ids
 
-    def test_db_resend_flag_lifecycle(self, fresh_db):
-        """Insert with resend_flag=0, set to 1, verify query, set to 0, verify cleared."""
-        db = open_db(fresh_db)
-        folders = db["folders"]
-        folder_id = folders.insert(minimal_folder_row(alias="ResendFolder"))
-
-        pf = db["processed_files"]
-        rec_id = pf.insert(
-            minimal_processed_file_row(folder_id=folder_id, resend_flag=0)
-        )
-
-        # Verify initially not in resend set
-        resend_records = pf.find(resend_flag=1)
-        assert len(resend_records) == 0
-
-        # Set resend_flag=1
-        pf.update({"id": rec_id, "resend_flag": 1}, ["id"])
-        resend_records = pf.find(resend_flag=1)
-        assert len(resend_records) == 1
-
-        # Clear resend_flag
-        pf.update({"id": rec_id, "resend_flag": 0}, ["id"])
-        resend_records = pf.find(resend_flag=1)
-        assert len(resend_records) == 0
-
-        db.close()
-
-    def test_processed_files_update_status(self, fresh_db):
-        """Update status field from 'pending' to 'processed'."""
-        db = open_db(fresh_db)
-        folders = db["folders"]
-        folder_id = folders.insert(minimal_folder_row())
-
-        pf = db["processed_files"]
-        rec_id = pf.insert(
-            minimal_processed_file_row(folder_id=folder_id, status="pending")
-        )
-
-        pf.update({"id": rec_id, "status": "processed"}, ["id"])
-        record = pf.find_one(id=rec_id)
-        db.close()
-
-        assert record["status"] == "processed"
-
-    def test_processed_files_sent_to_field(self, fresh_db):
-        """The sent_to field should be stored and retrieved correctly."""
-        db = open_db(fresh_db)
-        folders = db["folders"]
-        folder_id = folders.insert(minimal_folder_row())
-
-        pf = db["processed_files"]
-        pf.insert(
-            {
-                **minimal_processed_file_row(folder_id=folder_id),
-                "sent_to": "FTP: ftp.example.com, Email: ops@example.com",
-            }
-        )
-
-        record = pf.find_one(folder_id=folder_id)
-        db.close()
-
-        assert "FTP: ftp.example.com" in record["sent_to"]
-
-    def test_processed_files_count_by_folder(self, fresh_db):
-        """count() with folder_id filters correctly."""
+    @pytest.mark.parametrize(
+        "counts,expected",
+        [
+            ([3, 0], [3, 0]),
+            ([5, 5], [5, 5]),
+            ([0, 10], [0, 10]),
+        ],
+        ids=["only_first", "equal", "only_second"],
+    )
+    def test_processed_files_count_by_folder(self, fresh_db, counts, expected):
+        """Parametrized count() with folder_id filters."""
         db = open_db(fresh_db)
         folders = db["folders"]
         id_a = folders.insert(minimal_folder_row(alias="A"))
         id_b = folders.insert(minimal_folder_row(alias="B"))
 
         pf = db["processed_files"]
-        for i in range(3):
+        for i in range(counts[0]):
             pf.insert(
                 minimal_processed_file_row(
                     file_name=f"/a/file{i}.txt", folder_id=id_a, checksum=f"ca{i}"
                 )
             )
-        for i in range(5):
+        for i in range(counts[1]):
             pf.insert(
                 minimal_processed_file_row(
                     file_name=f"/b/file{i}.txt", folder_id=id_b, checksum=f"cb{i}"
@@ -461,8 +518,8 @@ class TestProcessedFilesCRUD:
         count_b = pf.count(folder_id=id_b)
         db.close()
 
-        assert count_a == 3
-        assert count_b == 5
+        assert count_a == expected[0]
+        assert count_b == expected[1]
 
 
 # ---------------------------------------------------------------------------

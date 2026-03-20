@@ -12,8 +12,8 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 
-import migrations.folders_database_migrator
-import core.database.schema
+from migrations import folders_database_migrator
+from core.database import schema
 from backend.database import sqlite_wrapper
 
 

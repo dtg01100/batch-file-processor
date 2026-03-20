@@ -16,7 +16,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration]
 
-import core.database.schema
+from core.database import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep

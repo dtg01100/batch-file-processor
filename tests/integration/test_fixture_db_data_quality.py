@@ -13,6 +13,7 @@ from interface.models.folder_configuration import FolderConfiguration
 pytestmark = [pytest.mark.integration]
 
 
+@pytest.mark.slow
 class TestRealFolderConfigFromDict:
     """Tests that FolderConfiguration.from_dict() works with real production data."""
 
@@ -34,9 +35,9 @@ class TestRealFolderConfigFromDict:
         assert len(real_folder_rows) == 5, "Expected 5 diverse folder rows"
         for row in real_folder_rows:
             fc = FolderConfiguration.from_dict(row)
-            assert (
-                fc.folder_name
-            ), f"folder_name should not be empty for row id={row.get('id')}"
+            assert fc.folder_name, (
+                f"folder_name should not be empty for row id={row.get('id')}"
+            )
 
     def test_edi_config_populated_from_real_data(self, real_folder_row):
         """EDI sub-configuration is populated and convert_to_format is a string."""
@@ -50,6 +51,7 @@ class TestRealFolderConfigFromDict:
         assert fc.csv is not None, "csv should be populated from real data"
 
 
+@pytest.mark.slow
 class TestRealFolderConfigAtScale:
     """Tests FolderConfiguration against ALL 530 folders in the fixture database."""
 
@@ -66,9 +68,9 @@ class TestRealFolderConfigAtScale:
                     f"Row id={row.get('id')} alias={row.get('alias')!r}: {exc}"
                 )
         assert count == 530, f"Expected 530 folder rows, got {count}"
-        assert (
-            failures == []
-        ), f"{len(failures)} folder(s) failed to parse:\n" + "\n".join(failures)
+        assert failures == [], (
+            f"{len(failures)} folder(s) failed to parse:\n" + "\n".join(failures)
+        )
 
     def test_all_folders_roundtrip(self, migrated_v42_db):
         """First 50 folders survive a from_dict -> to_dict round-trip."""
@@ -76,11 +78,12 @@ class TestRealFolderConfigAtScale:
             fc = FolderConfiguration.from_dict(row)
             result = fc.to_dict()
             assert isinstance(result, dict)
-            assert (
-                "folder_name" in result
-            ), f"Round-tripped dict missing 'folder_name' for row id={row.get('id')}"
+            assert "folder_name" in result, (
+                f"Round-tripped dict missing 'folder_name' for row id={row.get('id')}"
+            )
 
 
+@pytest.mark.slow
 class TestRealSettingsIntegrity:
     """Validates that the migrated settings row contains expected keys and types."""
 
@@ -96,6 +99,7 @@ class TestRealSettingsIntegrity:
         assert port > 0, "smtp_port should be a positive integer"
 
 
+@pytest.mark.slow
 class TestRealAdminIntegrity:
     """Validates that the migrated administrative row has expected structure."""
 

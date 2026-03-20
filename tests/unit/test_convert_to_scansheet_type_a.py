@@ -2,7 +2,7 @@
 
 import pytest
 
-from convert_to_scansheet_type_a import ScanSheetTypeAConverter
+from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
 
 
 class TestScanSheetBarcodeParsing:

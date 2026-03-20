@@ -167,7 +167,7 @@ class TestRecordError:
 
     def test_timestamp_included(self, sample_run_log, sample_errors_log):
         """Test that timestamp is included in error message."""
-        with patch("record_error.time.ctime") as mock_ctime:
+        with patch("scripts.record_error.time.ctime") as mock_ctime:
             mock_ctime.return_value = "Mon Mar  3 12:00:00 2026"
 
             record_error.do(

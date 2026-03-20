@@ -437,7 +437,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_drops_invoice_with_no_b_records(self, tmp_path):
         """When all B records are filtered out, the invoice should be dropped."""
-        import core.utils
+        from core import utils
 
         # Create test EDI file with 2 invoices
         # Invoice 1: has B record with category 1
@@ -478,7 +478,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_keeps_invoice_with_some_b_records(self, tmp_path):
         """Invoice with at least one matching B record should be kept."""
-        import core.utils
+        from core import utils
 
         # Create test EDI file with invoice containing multiple B records
         input_content = (
@@ -517,7 +517,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_all_mode_keeps_all_invoices(self, tmp_path):
         """filter_categories='ALL' should keep all invoices unchanged."""
-        import core.utils
+        from core import utils
 
         input_content = (
             self.create_a_record("0000000001")

@@ -334,7 +334,7 @@ class TestDispatchSendBackendIntegration:
             )
 
         # Patch the ftp_backend module
-        with patch("ftp_backend.do", side_effect=mock_ftp_do):
+        with patch("backend.ftp_backend.do", side_effect=mock_ftp_do):
             config = DispatchConfig(
                 settings=settings_dict,
             )
@@ -377,7 +377,7 @@ class TestDispatchSendBackendIntegration:
             )
 
         # Patch the email_backend module
-        with patch("email_backend.do", side_effect=mock_email_do):
+        with patch("backend.email_backend.do", side_effect=mock_email_do):
             config = DispatchConfig(
                 settings=settings_dict,
             )
@@ -422,7 +422,7 @@ class TestDispatchSendBackendIntegration:
             )
 
         # Patch the copy_backend module
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
             )
@@ -461,7 +461,7 @@ class TestDispatchBackendToggles:
             ftp_calls.append({"filename": filename})
 
         # Test with FTP enabled
-        with patch("ftp_backend.do", side_effect=mock_ftp_do):
+        with patch("backend.ftp_backend.do", side_effect=mock_ftp_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(sample_edi_file, folder_config_with_ftp)
@@ -474,7 +474,7 @@ class TestDispatchBackendToggles:
         folder_config_disabled = folder_config_with_ftp.copy()
         folder_config_disabled["process_backend_ftp"] = False
 
-        with patch("ftp_backend.do", side_effect=mock_ftp_do):
+        with patch("backend.ftp_backend.do", side_effect=mock_ftp_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(sample_edi_file, folder_config_disabled)
@@ -497,7 +497,7 @@ class TestDispatchBackendToggles:
             email_calls.append({"filename": filename})
 
         # Test with email enabled
-        with patch("email_backend.do", side_effect=mock_email_do):
+        with patch("backend.email_backend.do", side_effect=mock_email_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(
@@ -512,7 +512,7 @@ class TestDispatchBackendToggles:
         folder_config_disabled = folder_config_with_email.copy()
         folder_config_disabled["process_backend_email"] = False
 
-        with patch("email_backend.do", side_effect=mock_email_do):
+        with patch("backend.email_backend.do", side_effect=mock_email_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(sample_edi_file, folder_config_disabled)
@@ -535,7 +535,7 @@ class TestDispatchBackendToggles:
             copy_calls.append({"filename": filename})
 
         # Test with copy enabled
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(sample_edi_file, folder_config_with_copy)
@@ -548,7 +548,7 @@ class TestDispatchBackendToggles:
         folder_config_disabled = folder_config_with_copy.copy()
         folder_config_disabled["process_backend_copy"] = False
 
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
             result = orchestrator.process_file(sample_edi_file, folder_config_disabled)
@@ -591,9 +591,9 @@ class TestDispatchFullPipeline:
 
         # Patch all backends
         with (
-            patch("ftp_backend.do", side_effect=mock_ftp_do),
-            patch("email_backend.do", side_effect=mock_email_do),
-            patch("copy_backend.do", side_effect=mock_copy_do),
+            patch("backend.ftp_backend.do", side_effect=mock_ftp_do),
+            patch("backend.email_backend.do", side_effect=mock_email_do),
+            patch("backend.copy_backend.do", side_effect=mock_copy_do),
         ):
 
             config = DispatchConfig(settings=settings_dict)
@@ -632,7 +632,7 @@ class TestDispatchFullPipeline:
         mock_validator = MagicMock()
         mock_validator.validate.return_value = (True, [])
 
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
                 validator=mock_validator,
@@ -673,7 +673,7 @@ class TestDispatchErrorHandling:
         def mock_copy_do_failure(process_parameters, settings, filename):
             raise Exception("Simulated copy failure")
 
-        with patch("copy_backend.do", side_effect=mock_copy_do_failure):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do_failure):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -696,7 +696,7 @@ class TestDispatchErrorHandling:
         def mock_ftp_do_failure(process_parameters, settings, filename):
             raise Exception("FTP connection failed")
 
-        with patch("ftp_backend.do", side_effect=mock_ftp_do_failure):
+        with patch("backend.ftp_backend.do", side_effect=mock_ftp_do_failure):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -719,7 +719,7 @@ class TestDispatchErrorHandling:
         def mock_email_do_failure(process_parameters, settings, filename):
             raise Exception("SMTP connection failed")
 
-        with patch("email_backend.do", side_effect=mock_email_do_failure):
+        with patch("backend.email_backend.do", side_effect=mock_email_do_failure):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -761,9 +761,9 @@ class TestDispatchErrorHandling:
         # Test with email failing - since backends are processed in order,
         # copy will be called first (alphabetically in set), then email fails
         with (
-            patch("copy_backend.do", side_effect=mock_copy_do),
-            patch("email_backend.do", side_effect=mock_email_do_failure),
-            patch("ftp_backend.do", side_effect=mock_ftp_do),
+            patch("backend.copy_backend.do", side_effect=mock_copy_do),
+            patch("backend.email_backend.do", side_effect=mock_email_do_failure),
+            patch("backend.ftp_backend.do", side_effect=mock_ftp_do),
         ):
 
             config = DispatchConfig(settings=settings_dict)
@@ -850,9 +850,9 @@ class TestSendManagerIntegration:
             copy_calls.append(filename)
 
         with (
-            patch("ftp_backend.do", side_effect=mock_ftp_do),
-            patch("email_backend.do", side_effect=mock_email_do),
-            patch("copy_backend.do", side_effect=mock_copy_do),
+            patch("backend.ftp_backend.do", side_effect=mock_ftp_do),
+            patch("backend.email_backend.do", side_effect=mock_email_do),
+            patch("backend.copy_backend.do", side_effect=mock_copy_do),
         ):
 
             manager = SendManager()
@@ -897,7 +897,7 @@ class TestFolderProcessingIntegration:
         def mock_copy_do(process_parameters, settings, filename):
             copy_calls.append({"filename": filename})
 
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -939,7 +939,7 @@ class TestFolderProcessingIntegration:
         def mock_copy_do(process_parameters, settings, filename):
             copy_calls.append({"filename": filename})
 
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
                 validator=mock_validator,
@@ -980,7 +980,7 @@ class TestFolderProcessingIntegration:
         def mock_copy_do(process_parameters, settings, filename):
             copy_calls.append({"filename": filename})
 
-        with patch("copy_backend.do", side_effect=mock_copy_do):
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
                 validator=mock_validator,

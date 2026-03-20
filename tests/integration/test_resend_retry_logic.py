@@ -22,8 +22,8 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import backend.email_backend
-import backend.ftp_backend
+from backend import email_backend
+from backend import ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
@@ -122,7 +122,7 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Connection refused"))
         mock_client.add_error(ftplib.error_temp("Connection refused"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -134,7 +134,7 @@ class TestFTPRetryLogic:
         mock_client = MockFTPClient()
         mock_client.add_error(ftplib.error_perm("530 Login incorrect"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -147,7 +147,7 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Temporary failure"))
         mock_client.add_error(ftplib.error_temp("Temporary failure"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -164,7 +164,7 @@ class TestFTPRetryLogic:
         for _ in range(22):
             mock_client.add_error(ftplib.error_temp("Server unavailable"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             with pytest.raises(Exception):
                 ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
@@ -172,7 +172,7 @@ class TestFTPRetryLogic:
         """Successful first attempt must not call time.sleep at all."""
         mock_client = MockFTPClient()
 
-        with patch("ftp_backend.time.sleep") as mock_sleep:
+        with patch("backend.ftp_backend.time.sleep") as mock_sleep:
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -186,7 +186,7 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Transient error"))
         mock_client.add_error(ftplib.error_temp("Transient error"))
 
-        with patch("ftp_backend.time.sleep") as mock_sleep:
+        with patch("backend.ftp_backend.time.sleep") as mock_sleep:
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -197,7 +197,7 @@ class TestFTPRetryLogic:
         mock_client = MockFTPClient()
         mock_client.add_error(ftplib.error_temp("Retry me"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -213,7 +213,7 @@ class TestFTPRetryLogic:
         mock_client_b = MockFTPClient()
         mock_client_b.add_error(ftplib.error_temp("Second call error"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result_a = ftp_backend.do(
                 FTP_PARAMS, {}, test_file, ftp_client=mock_client_a
             )
@@ -230,7 +230,7 @@ class TestFTPRetryLogic:
         for _ in range(10):
             mock_client.add_error(ftplib.error_temp("Always failing"))
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert result is True
@@ -239,7 +239,7 @@ class TestFTPRetryLogic:
         """storbinary command must contain the base filename."""
         mock_client = MockFTPClient()
 
-        with patch("ftp_backend.time.sleep"):
+        with patch("backend.ftp_backend.time.sleep"):
             ftp_backend.do(FTP_PARAMS, {}, test_file, ftp_client=mock_client)
 
         assert len(mock_client.files_sent) == 1
@@ -260,7 +260,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Service unavailable"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -274,7 +274,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Try again"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -288,7 +288,7 @@ class TestEmailRetryLogic:
         for _ in range(11):
             mock_client.add_error(smtplib.SMTPConnectError(421, "Unavailable"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             with pytest.raises(Exception):
                 email_backend.do(
                     EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
@@ -298,7 +298,7 @@ class TestEmailRetryLogic:
         """time.sleep must not be called when the first attempt succeeds."""
         mock_client = MockSMTPClient()
 
-        with patch("email_backend.time.sleep") as mock_sleep:
+        with patch("backend.email_backend.time.sleep") as mock_sleep:
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -311,7 +311,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Temp fail"))
 
-        with patch("email_backend.time.sleep") as mock_sleep:
+        with patch("backend.email_backend.time.sleep") as mock_sleep:
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -325,7 +325,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Try again"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -345,7 +345,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Retry"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
                 params, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -360,7 +360,7 @@ class TestEmailRetryLogic:
         for _ in range(10):
             mock_client.add_error(smtplib.SMTPConnectError(421, "Fail"))
 
-        with patch("email_backend.time.sleep"):
+        with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
             )
@@ -372,7 +372,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(OSError(errno.ENETUNREACH, "Network is unreachable"))
 
-        with patch("email_backend.time.sleep") as mock_sleep:
+        with patch("backend.email_backend.time.sleep") as mock_sleep:
             with pytest.raises(RuntimeError, match="Network is unreachable"):
                 email_backend.do(
                     EMAIL_PARAMS, EMAIL_SETTINGS, test_file, smtp_client=mock_client
