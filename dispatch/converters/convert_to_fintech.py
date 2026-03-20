@@ -27,6 +27,7 @@ import csv
 import logging
 
 from core import utils
+from core.edi.inv_fetcher import InvFetcher
 from core.structured_logging import (
     get_logger,
     log_file_operation,
@@ -38,7 +39,6 @@ from dispatch.converters.convert_base import (
     EDIRecord,
     create_csv_writer,
 )
-from core.edi.inv_fetcher import InvFetcher
 
 logger = get_logger(__name__)
 

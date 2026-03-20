@@ -47,13 +47,13 @@ from decimal import Decimal
 from typing import Any, Dict, List
 
 from core import utils
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.edi.inv_fetcher import InvFetcher
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
 )
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
-from core.edi.inv_fetcher import InvFetcher
 
 
 class invFetcher:

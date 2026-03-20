@@ -28,19 +28,19 @@ import decimal
 from typing import Any, Dict, List, Tuple
 
 from core import utils
+from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.exceptions import CustomerLookupError
 from core.structured_logging import (
     get_logger,
     log_file_operation,
     log_with_context,
 )
+from core.utils import prettify_dates
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
 )
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
-from core.exceptions import CustomerLookupError
-from core.utils import prettify_dates
 
 logger = get_logger(__name__)
 
