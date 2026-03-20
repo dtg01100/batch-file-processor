@@ -746,7 +746,6 @@ class TestDispatchErrorHandling:
         that behavior.
         """
         ftp_calls = []
-        email_calls = []
         copy_calls = []
 
         def mock_ftp_do(process_parameters, settings, filename):

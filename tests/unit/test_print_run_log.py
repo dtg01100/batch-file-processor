@@ -233,7 +233,7 @@ class TestPrintRunLogUnix:
 
         import subprocess
 
-        lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
+        subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
 
         mock_popen.assert_called_with("/usr/bin/lpr", stdin=subprocess.PIPE)
 

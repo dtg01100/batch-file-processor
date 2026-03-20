@@ -145,8 +145,8 @@ def mock_database_obj(tmp_path):
         DatabaseObj: A real database object with initialized tables including
         processed_files and folders_table.
     """
-    from core.constants import CURRENT_DATABASE_VERSION
     from backend.database.database_obj import DatabaseObj
+    from core.constants import CURRENT_DATABASE_VERSION
 
     db_path = tmp_path / "test_folders.db"
 
@@ -162,8 +162,8 @@ def mock_database_obj(tmp_path):
 
 @pytest.fixture
 def mock_maintenance_functions(tmp_path):
-    from core.constants import CURRENT_DATABASE_VERSION
     from backend.database.database_obj import DatabaseObj
+    from core.constants import CURRENT_DATABASE_VERSION
 
     db_path = tmp_path / "maint_test.db"
     db = DatabaseObj(

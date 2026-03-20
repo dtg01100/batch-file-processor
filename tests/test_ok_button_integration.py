@@ -22,7 +22,7 @@ def test_ok_button_full_flow():
     """Test the complete OK button flow with database save."""
     from PyQt6.QtWidgets import QApplication
 
-    app = QApplication([])
+    QApplication([])
 
     # Mock the plugin manager before importing
     with patch(

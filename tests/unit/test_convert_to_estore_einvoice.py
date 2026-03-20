@@ -203,7 +203,7 @@ class TestEstoreEinvoiceHeaderRecord(TestEstoreEinvoiceFixtures):
 
         output_file = str(tmp_path / "output")
 
-        result = convert_to_estore_einvoice.edi_convert(
+        convert_to_estore_einvoice.edi_convert(
             str(input_file),
             output_file,
             default_settings,

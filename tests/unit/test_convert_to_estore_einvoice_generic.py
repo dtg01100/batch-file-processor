@@ -20,8 +20,8 @@ import sqlite3
 
 import pytest
 
-from dispatch.converters import convert_to_estore_einvoice_generic
 from core.database import LegacyQueryRunnerAdapter, QueryRunner
+from dispatch.converters import convert_to_estore_einvoice_generic
 
 
 class SQLiteTestConnection:
@@ -526,7 +526,6 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
         )
 
         assert os.path.exists(result)
-
 
 class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
     """Test header record handling."""

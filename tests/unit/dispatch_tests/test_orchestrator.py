@@ -305,7 +305,7 @@ class TestDispatchOrchestrator:
             "process_backend_copy": True,
         }
 
-        result = orchestrator.process_file("/data/input/file.edi", folder)
+        orchestrator.process_file("/data/input/file.edi", folder)
 
         mock_validator.validate.assert_called_once()
 

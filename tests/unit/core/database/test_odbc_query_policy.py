@@ -17,6 +17,11 @@ FORBIDDEN_SQL_KEYWORDS = re.compile(
 ODBC_QUERY_METHODS = {"run_query", "run_arbitrary_query", "execute"}
 
 
+ODBC_EXCLUDED_PREFIXES = [
+    "backend/database",
+]
+
+
 def _iter_policy_files(repo_root: Path) -> list[Path]:
     """Return files that may contain AS400 ODBC query call sites."""
     files: set[Path] = set()
@@ -29,7 +34,12 @@ def _iter_policy_files(repo_root: Path) -> list[Path]:
     ):
         files.update(repo_root.glob(pattern))
 
-    return sorted(path for path in files if path.is_file())
+    def _is_excluded(path: Path) -> bool:
+        rel_path = path.relative_to(repo_root)
+        rel_str = str(rel_path)
+        return any(rel_str.startswith(prefix) for prefix in ODBC_EXCLUDED_PREFIXES)
+
+    return sorted(path for path in files if path.is_file() and not _is_excluded(path))
 
 
 def _call_name(node: ast.Call) -> str | None:

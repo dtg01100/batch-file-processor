@@ -142,7 +142,7 @@ class TestErrorHandler:
         run_log = []
         errors_log = []
 
-        result = handler.record_error_to_logs(
+        handler.record_error_to_logs(
             run_log=run_log,
             errors_log=errors_log,
             error_message="Test error",
@@ -279,7 +279,7 @@ class TestDoFunction:
         run_log = []
         errors_log = []
 
-        result = do(
+        do(
             run_log=run_log,
             errors_log=errors_log,
             error_message="Test error",

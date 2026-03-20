@@ -22,10 +22,10 @@ import os
 import shutil
 import sqlite3
 
-from migrations import folders_database_migrator
+from backend.database import sqlite_wrapper
 from core.database import schema
 from core.utils.bool_utils import normalize_bool
-from backend.database import sqlite_wrapper
+from migrations import folders_database_migrator
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 LEGACY_DB_PATH = os.path.join(FIXTURES_DIR, "legacy_v32_folders.db")
@@ -767,21 +767,21 @@ class TestRequiredFieldReadability:
 
     # Fields accessed via hard bracket [] in backend modules — missing = KeyError
     _BACKEND_REQUIRED_FOLDER_FIELDS = {
-        "copy_to_directory",   # copy_backend.py: process_parameters["copy_to_directory"]
+        "copy_to_directory",  # copy_backend.py: process_parameters["copy_to_directory"]
         "email_subject_line",  # email_backend.py: process_parameters["email_subject_line"]
-        "email_to",            # email_backend.py: process_parameters["email_to"]
-        "ftp_server",          # ftp_backend.py: process_parameters["ftp_server"]
-        "ftp_port",            # ftp_backend.py: process_parameters["ftp_port"]
-        "ftp_username",        # ftp_backend.py: process_parameters["ftp_username"]
-        "ftp_password",        # ftp_backend.py: process_parameters["ftp_password"]
-        "ftp_folder",          # ftp_backend.py: process_parameters["ftp_folder"]
+        "email_to",  # email_backend.py: process_parameters["email_to"]
+        "ftp_server",  # ftp_backend.py: process_parameters["ftp_server"]
+        "ftp_port",  # ftp_backend.py: process_parameters["ftp_port"]
+        "ftp_username",  # ftp_backend.py: process_parameters["ftp_username"]
+        "ftp_password",  # ftp_backend.py: process_parameters["ftp_password"]
+        "ftp_folder",  # ftp_backend.py: process_parameters["ftp_folder"]
     }
 
     # Fields accessed via hard bracket [] in email_backend.py from settings table
     _REQUIRED_SETTINGS_FIELDS = {
-        "email_address",       # settings["email_address"]
-        "email_smtp_server",   # settings["email_smtp_server"]
-        "smtp_port",           # settings["smtp_port"]
+        "email_address",  # settings["email_address"]
+        "email_smtp_server",  # settings["email_smtp_server"]
+        "smtp_port",  # settings["smtp_port"]
     }
 
     @pytest.fixture
@@ -805,9 +805,13 @@ class TestRequiredFieldReadability:
             except Exception as exc:
                 errors.append(f"folder id={folder['id']}: {exc}")
 
-        assert not errors, f"from_dict() failed for {len(errors)} folders:\n" + "\n".join(errors[:10])
+        assert (
+            not errors
+        ), f"from_dict() failed for {len(errors)} folders:\n" + "\n".join(errors[:10])
 
-    def test_all_backend_required_fields_present_in_every_folder(self, fully_migrated_db):
+    def test_all_backend_required_fields_present_in_every_folder(
+        self, fully_migrated_db
+    ):
         """Every folder row must have all backend-required fields (no KeyError on access)."""
         missing_report = []
         for folder in fully_migrated_db["folders"].all():
@@ -816,13 +820,21 @@ class TestRequiredFieldReadability:
                 if field not in row:
                     missing_report.append(f"folder id={row['id']} missing '{field}'")
 
-        assert not missing_report, (
-            f"{len(missing_report)} missing fields found:\n" + "\n".join(missing_report[:20])
+        assert (
+            not missing_report
+        ), f"{len(missing_report)} missing fields found:\n" + "\n".join(
+            missing_report[:20]
         )
 
     def test_ftp_fields_readable_for_ftp_folders(self, fully_migrated_db):
         """FTP folders must have non-None ftp_server so backend can connect."""
-        ftp_fields = {"ftp_server", "ftp_port", "ftp_username", "ftp_password", "ftp_folder"}
+        ftp_fields = {
+            "ftp_server",
+            "ftp_port",
+            "ftp_username",
+            "ftp_password",
+            "ftp_folder",
+        }
         ftp_folders = list(fully_migrated_db["folders"].find(process_backend_ftp=1))
         if not ftp_folders:
             pytest.skip("No FTP-enabled folders in fixture")
@@ -830,7 +842,9 @@ class TestRequiredFieldReadability:
         for folder in ftp_folders:
             row = dict(folder)
             for field in ftp_fields:
-                assert field in row, f"folder id={row['id']} missing FTP field '{field}'"
+                assert (
+                    field in row
+                ), f"folder id={row['id']} missing FTP field '{field}'"
 
     def test_email_fields_readable_for_email_folders(self, fully_migrated_db):
         """Email folders must have email_to and email_subject_line fields."""
@@ -842,7 +856,9 @@ class TestRequiredFieldReadability:
         for folder in email_folders:
             row = dict(folder)
             for field in email_fields:
-                assert field in row, f"folder id={row['id']} missing email field '{field}'"
+                assert (
+                    field in row
+                ), f"folder id={row['id']} missing email field '{field}'"
 
     def test_settings_table_has_all_required_email_fields(self, fully_migrated_db):
         """Settings table row must have all fields required by email_backend.py."""
@@ -853,7 +869,9 @@ class TestRequiredFieldReadability:
         for field in self._REQUIRED_SETTINGS_FIELDS:
             assert field in settings_dict, f"Settings missing required field '{field}'"
 
-    def test_plugin_configurations_column_present_after_ensure_schema(self, fully_migrated_db):
+    def test_plugin_configurations_column_present_after_ensure_schema(
+        self, fully_migrated_db
+    ):
         """plugin_configurations must be present after ensure_schema() runs (added via ALTER TABLE)."""
         folder = fully_migrated_db["folders"].find_one(id=21)
         assert folder is not None
@@ -867,15 +885,17 @@ class TestRequiredFieldReadability:
         """folder_is_active must be present for all folders (used to skip inactive folders)."""
         for folder in fully_migrated_db["folders"].all():
             row = dict(folder)
-            assert "folder_is_active" in row, f"folder id={row['id']} missing 'folder_is_active'"
+            assert (
+                "folder_is_active" in row
+            ), f"folder id={row['id']} missing 'folder_is_active'"
 
     def test_convert_to_format_field_readable(self, fully_migrated_db):
         """convert_to_format drives dispatch routing — must be present in all folders."""
         for folder in fully_migrated_db["folders"].all():
             row = dict(folder)
-            assert "convert_to_format" in row, (
-                f"folder id={row['id']} missing 'convert_to_format'"
-            )
+            assert (
+                "convert_to_format" in row
+            ), f"folder id={row['id']} missing 'convert_to_format'"
 
     def test_processed_files_required_fields_readable(self, fully_migrated_db):
         """processed_files rows must have fields needed by the UI (file_name, folder_id, status)."""
@@ -1066,9 +1086,9 @@ class TestNoBehavioralChangeAfterUpgrade:
         (before_folders, _, _), after_conn = snapshots_and_migrated
         after_folders = self._snapshot_folders(after_conn)
 
-        assert len(after_folders) == len(before_folders), (
-            f"Folder count changed: {len(before_folders)} → {len(after_folders)}"
-        )
+        assert len(after_folders) == len(
+            before_folders
+        ), f"Folder count changed: {len(before_folders)} → {len(after_folders)}"
 
         diffs = []
         for before_row, after_row in zip(before_folders, after_folders):
@@ -1091,9 +1111,10 @@ class TestNoBehavioralChangeAfterUpgrade:
                             f"{b_val!r} → {a_val!r}"
                         )
 
-        assert not diffs, (
-            f"{len(diffs)} behavioral field(s) changed after migration:\n"
-            + "\n".join(diffs[:20])
+        assert (
+            not diffs
+        ), f"{len(diffs)} behavioral field(s) changed after migration:\n" + "\n".join(
+            diffs[:20]
         )
 
     def test_processed_files_dedup_state_unchanged(self, snapshots_and_migrated):
@@ -1104,9 +1125,9 @@ class TestNoBehavioralChangeAfterUpgrade:
         (_, before_pf, _), after_conn = snapshots_and_migrated
         after_pf = self._snapshot_processed_files(after_conn)
 
-        assert len(after_pf) == len(before_pf), (
-            f"processed_files count changed: {len(before_pf)} → {len(after_pf)}"
-        )
+        assert len(after_pf) == len(
+            before_pf
+        ), f"processed_files count changed: {len(before_pf)} → {len(after_pf)}"
 
         diffs = []
         for before_row, after_row in zip(before_pf, after_pf):
@@ -1123,9 +1144,10 @@ class TestNoBehavioralChangeAfterUpgrade:
             if len(diffs) >= 5:
                 break
 
-        assert not diffs, (
-            f"Deduplication state changed — files will be re-processed:\n"
-            + "\n".join(diffs)
+        assert (
+            not diffs
+        ), "Deduplication state changed — files will be re-processed:\n" + "\n".join(
+            diffs
         )
 
     def test_settings_behavioral_values_unchanged(self, snapshots_and_migrated):
@@ -1143,9 +1165,9 @@ class TestNoBehavioralChangeAfterUpgrade:
                 if b_val != a_val:
                     diffs.append(f"settings col='{col_name}': {b_val!r} → {a_val!r}")
 
-        assert not diffs, (
-            f"Settings behavioral values changed after migration:\n" + "\n".join(diffs)
-        )
+        assert (
+            not diffs
+        ), "Settings behavioral values changed after migration:\n" + "\n".join(diffs)
 
     def test_no_folder_ids_renumbered(self, snapshots_and_migrated):
         """Folder IDs must be stable — processed_files.folder_id references them by ID."""
@@ -1155,11 +1177,13 @@ class TestNoBehavioralChangeAfterUpgrade:
         before_ids = [r[0] for r in before_folders]
         after_ids = [r[0] for r in after_folders]
 
-        assert before_ids == after_ids, (
-            "Folder IDs changed after migration — processed_files references would break"
-        )
+        assert (
+            before_ids == after_ids
+        ), "Folder IDs changed after migration — processed_files references would break"
 
-    def test_processed_files_folder_id_referential_integrity(self, snapshots_and_migrated):
+    def test_processed_files_folder_id_referential_integrity(
+        self, snapshots_and_migrated
+    ):
         """Every processed_files.folder_id must still refer to a valid folder after migration."""
         (_, before_pf, _), after_conn = snapshots_and_migrated
 
@@ -1167,9 +1191,10 @@ class TestNoBehavioralChangeAfterUpgrade:
             r[0] for r in after_conn.execute("SELECT id FROM folders").fetchall()
         }
         orphaned = [
-            row for row in before_pf
+            row
+            for row in before_pf
             if row[4] is not None and row[4] not in after_folder_ids
         ]
-        assert not orphaned, (
-            f"{len(orphaned)} processed_files rows have orphaned folder_id after migration"
-        )
+        assert (
+            not orphaned
+        ), f"{len(orphaned)} processed_files rows have orphaned folder_id after migration"

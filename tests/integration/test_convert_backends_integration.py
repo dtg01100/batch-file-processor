@@ -317,7 +317,7 @@ class TestUPCOverrideIntegration:
         if "ALL" in filter_str:
             apply_to_all = True
         else:
-            categories = filter_str.split(",")
+            filter_str.split(",")
             apply_to_all = False
 
         assert apply_to_all is True

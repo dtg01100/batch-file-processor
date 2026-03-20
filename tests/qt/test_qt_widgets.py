@@ -116,11 +116,26 @@ class TestFolderListWidget:
     def _create_test_folders(self, temp_database):
         """Helper to create test folders in the real database."""
         active_folders = [
-            {"id": 1, "alias": "ActiveFolder1", "folder_name": "/path/1", "folder_is_active": "True"},
-            {"id": 2, "alias": "ActiveFolder2", "folder_name": "/path/2", "folder_is_active": "True"},
+            {
+                "id": 1,
+                "alias": "ActiveFolder1",
+                "folder_name": "/path/1",
+                "folder_is_active": "True",
+            },
+            {
+                "id": 2,
+                "alias": "ActiveFolder2",
+                "folder_name": "/path/2",
+                "folder_is_active": "True",
+            },
         ]
         inactive_folders = [
-            {"id": 3, "alias": "InactiveFolder1", "folder_name": "/path/3", "folder_is_active": "False"},
+            {
+                "id": 3,
+                "alias": "InactiveFolder1",
+                "folder_name": "/path/3",
+                "folder_is_active": "False",
+            },
         ]
         for folder in active_folders + inactive_folders:
             temp_database.folders_table.insert(folder)
@@ -144,9 +159,14 @@ class TestFolderListWidget:
     def test_active_folder_buttons(self, qtbot, temp_database):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        temp_database.folders_table.insert({
-            "id": 1, "alias": "FolderA", "folder_name": "/path/a", "folder_is_active": "True"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 1,
+                "alias": "FolderA",
+                "folder_name": "/path/a",
+                "folder_is_active": "True",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -166,9 +186,14 @@ class TestFolderListWidget:
     def test_inactive_folder_buttons(self, qtbot, temp_database):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        temp_database.folders_table.insert({
-            "id": 2, "alias": "FolderB", "folder_name": "/path/b", "folder_is_active": "False"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 2,
+                "alias": "FolderB",
+                "folder_name": "/path/b",
+                "folder_is_active": "False",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -190,9 +215,14 @@ class TestFolderListWidget:
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         received = []
-        temp_database.folders_table.insert({
-            "id": 7, "alias": "Sender", "folder_name": "/path/s", "folder_is_active": "True"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 7,
+                "alias": "Sender",
+                "folder_name": "/path/s",
+                "folder_is_active": "True",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -213,9 +243,14 @@ class TestFolderListWidget:
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         received = []
-        temp_database.folders_table.insert({
-            "id": 55, "alias": "Editable", "folder_name": "/path/e", "folder_is_active": "True"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 55,
+                "alias": "Editable",
+                "folder_name": "/path/e",
+                "folder_is_active": "True",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -236,9 +271,14 @@ class TestFolderListWidget:
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         received = []
-        temp_database.folders_table.insert({
-            "id": 42, "alias": "Target", "folder_name": "/path/t", "folder_is_active": "True"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 42,
+                "alias": "Target",
+                "folder_name": "/path/t",
+                "folder_is_active": "True",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -259,9 +299,14 @@ class TestFolderListWidget:
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         received = []
-        temp_database.folders_table.insert({
-            "id": 99, "alias": "ToDelete", "folder_name": "/path/d", "folder_is_active": "False"
-        })
+        temp_database.folders_table.insert(
+            {
+                "id": 99,
+                "alias": "ToDelete",
+                "folder_name": "/path/d",
+                "folder_is_active": "False",
+            }
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -281,8 +326,12 @@ class TestFolderListWidget:
     def test_fuzzy_filter(self, qtbot, temp_database):
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
-        temp_database.folders_table.insert({"id": 1, "alias": "Alpha", "folder_name": "/a", "folder_is_active": "True"})
-        temp_database.folders_table.insert({"id": 2, "alias": "Beta", "folder_name": "/b", "folder_is_active": "True"})
+        temp_database.folders_table.insert(
+            {"id": 1, "alias": "Alpha", "folder_name": "/a", "folder_is_active": "True"}
+        )
+        temp_database.folders_table.insert(
+            {"id": 2, "alias": "Beta", "folder_name": "/b", "folder_is_active": "True"}
+        )
 
         widget = FolderListWidget(
             parent=None,
@@ -308,8 +357,12 @@ class TestFolderListWidget:
         from interface.qt.widgets.folder_list_widget import FolderListWidget
 
         received = []
-        temp_database.folders_table.insert({"id": 1, "alias": "A", "folder_name": "/a", "folder_is_active": "True"})
-        temp_database.folders_table.insert({"id": 2, "alias": "B", "folder_name": "/b", "folder_is_active": "False"})
+        temp_database.folders_table.insert(
+            {"id": 1, "alias": "A", "folder_name": "/a", "folder_is_active": "True"}
+        )
+        temp_database.folders_table.insert(
+            {"id": 2, "alias": "B", "folder_name": "/b", "folder_is_active": "False"}
+        )
 
         widget = FolderListWidget(
             parent=None,

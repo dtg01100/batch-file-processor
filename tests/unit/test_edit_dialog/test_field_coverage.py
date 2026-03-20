@@ -468,7 +468,6 @@ class TestFieldCoverageAnalysis:
         missing_fields = []
         for field in fields_to_check:
             # Map to_dict keys to extractor field names
-            extractor_field = field
             if field not in extractor_fields:
                 missing_fields.append(field)
 

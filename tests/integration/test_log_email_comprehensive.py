@@ -149,7 +149,7 @@ class TestLogSenderWithMock:
         sender = LogSender(email_service=email_service)
         entries = [LogEntry(log1), LogEntry(log2), LogEntry(log3)]
 
-        results = sender.send_batch_logs(entries, ["qa@test.com"], "Batch Logs")
+        sender.send_batch_logs(entries, ["qa@test.com"], "Batch Logs")
 
         assert len(email_service.sent_emails) == 1
         email = email_service.sent_emails[0]

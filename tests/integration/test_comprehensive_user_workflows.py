@@ -15,20 +15,11 @@ Coverage:
 
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
-
-from dispatch.error_handler import ErrorHandler
-from dispatch.hash_utils import generate_file_hash
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from dispatch.processed_files_tracker import (
-    InMemoryDatabase,
-    ProcessedFilesTracker,
-)
 
 # -----------------------------------------------------------------------------
 # Shared helpers / fixtures

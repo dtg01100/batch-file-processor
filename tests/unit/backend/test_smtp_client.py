@@ -194,7 +194,7 @@ class TestRealSMTPClient:
             "use_tls": True,
         }
 
-        client = RealSMTPClient.from_config(config)
+        RealSMTPClient.from_config(config)
 
         mock_smtplib.SMTP.assert_called_once_with("smtp.example.com", 587, timeout=30)
         assert mock_smtplib.SMTP.return_value.starttls.call_count == 1
@@ -206,7 +206,7 @@ class TestRealSMTPClient:
         """Test from_config without authentication."""
         config = {"host": "smtp.example.com", "port": 25, "use_tls": False}
 
-        client = RealSMTPClient.from_config(config)
+        RealSMTPClient.from_config(config)
 
         mock_smtplib.SMTP.return_value.login.assert_not_called()
 

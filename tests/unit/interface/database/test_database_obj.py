@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.constants import CURRENT_DATABASE_VERSION
 from backend.database import (
     DatabaseConnectionProtocol,
     DatabaseObj,
     TableProtocol,
 )
+from core.constants import CURRENT_DATABASE_VERSION
 
 
 def create_mock_connection(mock_tables):
@@ -269,7 +269,7 @@ class TestDatabaseObjVersionChecking:
             with patch(
                 "backend.database.database_obj.os.path.isfile", return_value=True
             ):
-                db = DatabaseObj(
+                DatabaseObj(
                     database_path="/test/path.db",
                     database_version=CURRENT_DATABASE_VERSION,
                     config_folder="/test/config",
@@ -394,8 +394,6 @@ class TestDatabaseObjReload:
             running_platform="Linux",
             connection=mock_conn1,
         )
-
-        original_folders = db.folders_table
 
         # Simulate reload with new connection
         mock_tables2 = {

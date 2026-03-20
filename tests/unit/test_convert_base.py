@@ -477,9 +477,7 @@ class TestEdgeCases(TestFixtures):
         input_file.write_text("")
 
         converter = MockConverter()
-        result = converter.edi_convert(
-            str(input_file), str(tmp_path / "out"), {}, {}, {}
-        )
+        converter.edi_convert(str(input_file), str(tmp_path / "out"), {}, {}, {})
 
         assert converter.initialize_called is True
         assert converter.finalize_called is True

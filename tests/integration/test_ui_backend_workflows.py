@@ -20,10 +20,10 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
-from scripts import create_database
-from core.constants import CURRENT_DATABASE_VERSION
 from backend.database.database_obj import DatabaseObj
+from core.constants import CURRENT_DATABASE_VERSION
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+from scripts import create_database
 
 
 @pytest.fixture

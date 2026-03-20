@@ -23,8 +23,8 @@ import os
 
 import pytest
 
-from dispatch.converters import convert_to_jolley_custom
 from core.database import LegacyQueryRunnerAdapter, QueryRunner, SQLiteConnection
+from dispatch.converters import convert_to_jolley_custom
 
 
 class QueryRunnerWithTestData:

@@ -484,7 +484,7 @@ class TestComponentIntegration:
         builders = ColumnBuilders(fields=fields, folder_config=folder_config)
 
         # Build folder column (contains alias field)
-        folder_column = builders.build_folder_column()
+        builders.build_folder_column()
 
         # Create alias field manually for this test
         alias_field = QLineEdit("Test Alias")

@@ -38,7 +38,7 @@ class TestDoBackup:
             shutil.rmtree(backups_dir)
 
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            result = backup_increment.do_backup(test_file)
+            backup_increment.do_backup(test_file)
 
         assert os.path.exists(backups_dir)
         assert os.path.isdir(backups_dir)
@@ -90,7 +90,7 @@ class TestDoBackup:
         """Test backup handles case where backups name exists as a file."""
         # First backup creates the directory
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            first_result = backup_increment.do_backup(test_file)
+            backup_increment.do_backup(test_file)
 
         # Remove the backup directory and create a file with that name
         backups_dir = os.path.join(temp_dir, "backups")
@@ -111,7 +111,7 @@ class TestDoBackup:
     def test_do_backup_increments_suffix(self, temp_dir, test_file):
         """Test backup increments numeric suffix when directories exist."""
         # Create multiple backup scenarios
-        backups_dir = os.path.join(temp_dir, "backups")
+        os.path.join(temp_dir, "backups")
 
         # First run creates "backups" directory
         with patch("scripts.backup_increment.utils.do_clear_old_files"):

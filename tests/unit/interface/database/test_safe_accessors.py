@@ -9,8 +9,8 @@ import tempfile
 
 import pytest
 
-from core.constants import CURRENT_DATABASE_VERSION
 from backend.database.database_obj import DatabaseObj
+from core.constants import CURRENT_DATABASE_VERSION
 
 
 class TestSafeDatabaseAccessors:

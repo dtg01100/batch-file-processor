@@ -17,7 +17,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e]
 
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FolderResult
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
 
@@ -118,7 +118,6 @@ def base_folder_params(edi_dir):
         "invoice_date_custom_format": False,
         "invoice_date_custom_format_string": "",
         "split_prepaid_sales_tax_crec": False,
-        "a_record_padding_length": 6,
     }
 
 

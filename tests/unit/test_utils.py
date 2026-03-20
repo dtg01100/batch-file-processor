@@ -23,7 +23,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.edi.edi_parser import EDIParseError
 from core import utils
 
 # =============================================================================
@@ -513,14 +512,18 @@ class TestApplyUpcOverride:
     def test_empty_upc_dict_returns_false(self):
         """Empty upc_dict should return False immediately."""
         record = self._make_record(vendor_item="000123")
-        result = utils.apply_upc_override(record, {}, override_level=1, category_filter="ALL")
+        result = utils.apply_upc_override(
+            record, {}, override_level=1, category_filter="ALL"
+        )
         assert result is False
 
     def test_override_level_selects_correct_upc(self):
         """override_level should select the correct index from the lookup list."""
         record = self._make_record(vendor_item="000123")
         upc_dict = {123: ["GROCERY", "11111111111", "22222222222", "33333333333"]}
-        utils.apply_upc_override(record, upc_dict, override_level=2, category_filter="ALL")
+        utils.apply_upc_override(
+            record, upc_dict, override_level=2, category_filter="ALL"
+        )
         assert record["upc_number"] == "22222222222"
 
     def test_default_override_level_is_1(self):
@@ -1069,7 +1072,9 @@ class TestFilterBRecordsByCategory:
         """ALL filter returns all records."""
         b_records = ["B00000000001ITEM00100010000010", "B00000000002ITEM00200010000020"]
         upc_dict = {1: ["A", "111", "222"], 2: ["B", "333", "444"]}
-        result = utils.filter_b_records_by_category(b_records, upc_dict, "ALL", "include")
+        result = utils.filter_b_records_by_category(
+            b_records, upc_dict, "ALL", "include"
+        )
         assert result == b_records
 
     def test_include_specific_category(self):
@@ -1080,7 +1085,9 @@ class TestFilterBRecordsByCategory:
             "B00000000002DESC2         000002             00020000020",
         ]
         upc_dict = {1: ["GROCERY", "111", "222"], 2: ["DAIRY", "333", "444"]}
-        result = utils.filter_b_records_by_category(b_records, upc_dict, "GROCERY", "include")
+        result = utils.filter_b_records_by_category(
+            b_records, upc_dict, "GROCERY", "include"
+        )
         # Just verify it runs
         assert isinstance(result, list)
 
@@ -1091,7 +1098,9 @@ class TestFilterBRecordsByCategory:
             "B00000000002DESC2         000002             00020000020",
         ]
         upc_dict = {1: ["GROCERY", "111", "222"], 2: ["DAIRY", "333", "444"]}
-        result = utils.filter_b_records_by_category(b_records, upc_dict, "GROCERY", "exclude")
+        result = utils.filter_b_records_by_category(
+            b_records, upc_dict, "GROCERY", "exclude"
+        )
         assert isinstance(result, list)
 
     def test_multiple_categories(self):
@@ -1102,7 +1111,9 @@ class TestFilterBRecordsByCategory:
             "B00000000003DESC3         000003             00030000030",
         ]
         upc_dict = {1: ["A", "111"], 2: ["B", "222"], 3: ["C", "333"]}
-        result = utils.filter_b_records_by_category(b_records, upc_dict, "A,B", "include")
+        result = utils.filter_b_records_by_category(
+            b_records, upc_dict, "A,B", "include"
+        )
         assert isinstance(result, list)
 
     def test_empty_b_records(self):
@@ -1113,7 +1124,9 @@ class TestFilterBRecordsByCategory:
     def test_empty_upc_dict(self):
         """Empty UPC dict with non-ALL filter includes all."""
         b_records = ["B00000000001ITEM001"]
-        result = utils.filter_b_records_by_category(b_records, {}, "SOME_CAT", "include")
+        result = utils.filter_b_records_by_category(
+            b_records, {}, "SOME_CAT", "include"
+        )
         # Fail-open: include records not in dict
         assert result == b_records
 
@@ -1128,7 +1141,9 @@ class TestFilterBRecordsByCategory:
         """Categories with whitespace should be handled."""
         b_records = ["B00000000001ITEM001", "B00000000002ITEM002"]
         upc_dict = {1: ["A", "111"], 2: ["B", "222"]}
-        result = utils.filter_b_records_by_category(b_records, upc_dict, " A , B ", "include")
+        result = utils.filter_b_records_by_category(
+            b_records, upc_dict, " A , B ", "include"
+        )
         assert len(result) == 2
 
 

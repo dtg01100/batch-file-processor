@@ -32,12 +32,12 @@ project_root = Path(__file__).parent.parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from dispatch.hash_utils import generate_file_hash
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
-from interface.operations.folder_manager import FolderManager
 from core.database.schema import ensure_schema
+from dispatch.hash_utils import generate_file_hash
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from interface.operations.folder_manager import FolderManager
 
 # =============================================================================
 # FIXTURES
@@ -147,7 +147,7 @@ def test_folder(workspace, folder_manager):
     folder_path = str(workspace["input_folder"])
 
     # Add folder using FolderManager - it returns the record but without id
-    folder_record = folder_manager.add_folder(folder_path)
+    folder_manager.add_folder(folder_path)
 
     # Find the folder we just added (by path) - use folders_table attribute
     folder = workspace["db"].folders_table.find_one(folder_name=folder_path)
@@ -388,9 +388,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert updated_folder["convert_to_format"] == "fintech", (
-            "Format should be changed to fintech"
-        )
+        assert (
+            updated_folder["convert_to_format"] == "fintech"
+        ), "Format should be changed to fintech"
 
     def test_toggle_edi_processing(self, workspace, test_folder):
         """Test toggling EDI processing on/off."""
@@ -441,9 +441,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert updated_folder["copy_to_directory"] == str(new_output), (
-            "Copy destination should be updated"
-        )
+        assert updated_folder["copy_to_directory"] == str(
+            new_output
+        ), "Copy destination should be updated"
 
 
 # =============================================================================
@@ -636,12 +636,12 @@ class TestEDITweakingAndSplitting:
         # Verify settings
         folder = get_folder_config(workspace["db"], folder_id)
         assert folder["split_edi"] == 1, "Split should be enabled"
-        assert folder["split_edi_filter_categories"] == "CAT1,CAT2", (
-            "Categories should be set"
-        )
-        assert folder["split_edi_filter_mode"] == "include", (
-            "Filter mode should be include"
-        )
+        assert (
+            folder["split_edi_filter_categories"] == "CAT1,CAT2"
+        ), "Categories should be set"
+        assert (
+            folder["split_edi_filter_mode"] == "include"
+        ), "Filter mode should be include"
 
     def test_pad_a_records_config(self, workspace, test_folder):
         """Test pad_a_records configuration."""
@@ -968,9 +968,9 @@ class TestEdgeCasesAndErrorHandling:
         assert "folder_name" in folder
         assert folder["folder_name"] == str(workspace["input_folder"])
         # Default convert_to_format should come from oversight defaults
-        assert "convert_to_format" in folder, (
-            "Folder should inherit convert_to_format default"
-        )
+        assert (
+            "convert_to_format" in folder
+        ), "Folder should inherit convert_to_format default"
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""
@@ -1022,9 +1022,9 @@ class TestBulkOperations:
 
     def test_bulk_create_and_process(self, tmp_path):
         """Create N folders in DB, process all, verify all succeed."""
-        from scripts import create_database
-        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
+        from core.constants import CURRENT_DATABASE_VERSION
+        from scripts import create_database
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")
@@ -1091,9 +1091,9 @@ C00000003000030000
 
     def test_bulk_deactivate_and_delete(self, tmp_path):
         """Deactivate then delete multiple folder configs."""
-        from scripts import create_database
-        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
+        from core.constants import CURRENT_DATABASE_VERSION
+        from scripts import create_database
 
         db_path = tmp_path / "folders.db"
         create_database.do("33", str(db_path), str(tmp_path), "Linux")

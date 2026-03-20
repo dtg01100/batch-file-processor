@@ -269,7 +269,7 @@ class TestErrorRecoveryWorkflow:
 
         # Since the orchestrator catches exceptions, we expect it to process successfully
         # but one file may fail - that's expected behavior without explicit retry logic
-        result = orchestrator.process_folder(sample_folder_config, run_log)
+        orchestrator.process_folder(sample_folder_config, run_log)
 
         # Either succeeds (retry worked) or has failures (as expected without explicit retry)
         # The test verifies the backend was called
@@ -322,7 +322,7 @@ class TestErrorRecoveryWorkflow:
         orchestrator = DispatchOrchestrator(config)
 
         run_log = MagicMock()
-        result = orchestrator.process_folder(sample_folder_config, run_log)
+        orchestrator.process_folder(sample_folder_config, run_log)
 
         # Verify errors were logged
         assert error_handler.get_error_count() > 0
@@ -442,7 +442,7 @@ class TestDatabaseIntegrationWorkflow:
         folder_config = sample_folder_config.copy()
         folder_config["id"] = 1
 
-        result = orchestrator.process_folder(
+        orchestrator.process_folder(
             folder_config, run_log, temp_database.processed_files
         )
 
@@ -482,8 +482,6 @@ class TestConfigurationPersistenceWorkflow:
 
     def test_folder_config_save_load(self, complete_workspace, temp_database):
         """Test saving and loading folder configuration."""
-
-        folders_table = temp_database.folders_table
 
         # Save configuration
         config = {

@@ -674,9 +674,9 @@ class TestDbMigrationJob:
         self, legacy_v32_db, tmp_path
     ):
         """Regression: import should preserve active folders from legacy source."""
-        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database import sqlite_wrapper
         from backend.database.database_obj import DatabaseObj
+        from core.constants import CURRENT_DATABASE_VERSION
         from interface.qt.dialogs.database_import_dialog import DbMigrationJob
 
         target_path = str(tmp_path / "target_folders.db")

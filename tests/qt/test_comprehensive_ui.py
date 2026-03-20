@@ -25,9 +25,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
 )
 
-from scripts import create_database
-from core.constants import CURRENT_DATABASE_VERSION
 from backend.database.database_obj import DatabaseObj
+from core.constants import CURRENT_DATABASE_VERSION
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
@@ -35,6 +34,7 @@ from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.widgets.folder_list_widget import FolderListWidget
 from interface.qt.widgets.search_widget import SearchWidget
+from scripts import create_database
 
 # =============================================================================
 # Test Fixtures

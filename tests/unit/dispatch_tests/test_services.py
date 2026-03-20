@@ -129,6 +129,7 @@ class TestUPCService:
 
     def test_fetch_upc_dictionary_error_handling(self):
         """Test error handling when query fails."""
+        from dispatch.feature_flags import get_strict_testing_mode
 
         def failing_execute(query, params=None):
             raise Exception("Database connection failed")
@@ -137,12 +138,17 @@ class TestUPCService:
         query_runner.execute = failing_execute
         service = UPCService(query_runner)
 
-        result = service.fetch_upc_dictionary({})
-
-        assert result.success is False
-        assert len(result.errors) == 1
-        assert "Database connection failed" in result.errors[0]
-        assert result.upc_dict == {}
+        if get_strict_testing_mode():
+            with pytest.raises(
+                RuntimeError, match="Failed to fetch UPC dictionary from database"
+            ):
+                service.fetch_upc_dictionary({})
+        else:
+            result = service.fetch_upc_dictionary({})
+            assert result.success is False
+            assert len(result.errors) == 1
+            assert "Database connection failed" in result.errors[0]
+            assert result.upc_dict == {}
 
     def test_get_upc_for_item_when_cached(self):
         """Test getting UPC for item when cache is populated."""

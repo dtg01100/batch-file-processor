@@ -4,8 +4,8 @@ import pytest
 from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
-from interface.qt.theme import Theme
 from interface.qt.services.qt_services import QtProgressService, QtUIService
+from interface.qt.theme import Theme
 
 pytestmark = pytest.mark.qt
 

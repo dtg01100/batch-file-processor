@@ -328,7 +328,7 @@ class TestDeduplication:
 
         folder = str(tmp_path / "dedup")
         os.makedirs(folder)
-        filepath = _make_file(folder, "report.txt", b"static content")
+        _make_file(folder, "report.txt", b"static content")
 
         db = InMemoryProcessedFiles()
         folder_cfg = {"folder_name": folder, "alias": "dedup", "id": 1}

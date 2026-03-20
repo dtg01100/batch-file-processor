@@ -490,7 +490,7 @@ class TestIncompleteImplementations:
                 pass
 
         # Should fail runtime check since it doesn't have all methods
-        incomplete = IncompleteDatabase()
+        IncompleteDatabase()
         # Note: runtime_checkable allows this to be evaluated at runtime
         # but the method signatures may not match
 

@@ -28,9 +28,9 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+from backend.database import sqlite_wrapper
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend
-from backend.database import sqlite_wrapper
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -328,7 +328,7 @@ class TestFolderCRUD:
         tbl = db["folders"]
 
         # Insert and retrieve
-        row_id = tbl.insert(minimal_folder_row(alias="MyFolder"))
+        tbl.insert(minimal_folder_row(alias="MyFolder"))
         found = tbl.find_one(alias="MyFolder")
         assert found is not None
         assert found["alias"] == "MyFolder"
@@ -641,7 +641,7 @@ class TestOrchestratorDBIntegration:
 
         orc.process_folder(folder, [], processed_files=db_processed_files)
 
-        file_path = str(folder_dir / "invoice.txt")
+        str(folder_dir / "invoice.txt")
         record = db_processed_files.find_one(folder_id=1)
         assert record is not None
 

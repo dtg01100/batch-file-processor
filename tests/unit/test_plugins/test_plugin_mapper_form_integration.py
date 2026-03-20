@@ -8,11 +8,6 @@ from interface.operations.plugin_configuration_mapper import (
     PluginConfigurationMapper,
     PluginSectionStateManager,
 )
-from interface.plugins.config_schemas import (
-    ConfigurationSchema,
-    FieldDefinition,
-    FieldType,
-)
 
 
 class TestPluginMapperWithFormGenerator(unittest.TestCase):
@@ -28,7 +23,7 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
         )
 
         # Ensure QApplication exists for offscreen testing
-        app = QApplication.instance() or QApplication(["test"])
+        QApplication.instance() or QApplication(["test"])
 
         mapper = PluginConfigurationMapper()
 
@@ -185,7 +180,7 @@ class TestBackwardCompatibility(unittest.TestCase):
 
     def test_legacy_folder_config_dict(self):
         """Test that legacy folder config dict is handled correctly."""
-        mapper = PluginConfigurationMapper()
+        PluginConfigurationMapper()
 
         legacy_config = {
             "folder_name": "Test",
@@ -201,7 +196,7 @@ class TestBackwardCompatibility(unittest.TestCase):
 
     def test_plugin_config_migration(self):
         """Test migrating legacy settings to plugin config."""
-        mapper = PluginConfigurationMapper()
+        PluginConfigurationMapper()
 
         legacy_settings = {
             "include_headers": "True",

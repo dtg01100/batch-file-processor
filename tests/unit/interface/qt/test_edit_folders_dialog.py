@@ -242,7 +242,9 @@ class TestEditFoldersDialogRegression:
         assert isinstance(
             active_btn, QPushButton
         ), "active_checkbutton must be a QPushButton (checkable full-width toggle)"
-        assert active_btn.isCheckable(), "active_checkbutton QPushButton must be checkable"
+        assert (
+            active_btn.isCheckable()
+        ), "active_checkbutton QPushButton must be checkable"
 
     def test_update_active_state_works_with_qcheckbox(self, qtbot):
         """Regression: Verify update_active_state() properly handles QCheckBox.

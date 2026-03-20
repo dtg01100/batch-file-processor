@@ -12,9 +12,9 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 
-from migrations import folders_database_migrator
-from core.database import schema
 from backend.database import sqlite_wrapper
+from core.database import schema
+from migrations import folders_database_migrator
 
 
 class TestLogMigrationStep:

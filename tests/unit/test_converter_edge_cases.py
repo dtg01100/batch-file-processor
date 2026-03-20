@@ -364,7 +364,7 @@ class TestConverterEmptyFileHandling:
             # The test is that it handles the empty file gracefully (doesn't crash with system errors)
             # We allow the specific KeyError that occurs due to empty arec_line
             try:
-                result = convert_to_yellowdog_csv.edi_convert(
+                convert_to_yellowdog_csv.edi_convert(
                     empty_edi_file,
                     output_base,
                     default_settings_dict,
@@ -628,7 +628,9 @@ class TestConverterEmptyFileHandling:
             mock_qr_class.return_value = mock_qr_instance
 
             # The converter saves an xlsx file; mock openpyxl to avoid real file I/O
-            with patch("dispatch.converters.convert_to_scansheet_type_a.openpyxl") as mock_openpyxl:
+            with patch(
+                "dispatch.converters.convert_to_scansheet_type_a.openpyxl"
+            ) as mock_openpyxl:
                 mock_wb = MagicMock()
                 mock_ws = MagicMock()
                 mock_ws.columns = []
@@ -1249,7 +1251,7 @@ class TestConverterEmptyUpcLut:
             mock_utils.convert_to_price.return_value = "1.00"
 
             # Empty UPC LUT should be handled gracefully - returns empty strings
-            result = convert_to_fintech.edi_convert(
+            convert_to_fintech.edi_convert(
                 valid_edi_file,
                 output_base,
                 default_settings_dict,
@@ -1309,7 +1311,7 @@ class TestConverterEmptyUpcLut:
             )
             from datetime import datetime
 
-            mock_dt = datetime(2025, 1, 1)  # Real datetime object instead of MagicMock
+            datetime(2025, 1, 1)  # Real datetime object instead of MagicMock
 
             def datetime_from_invtime_side_effect(date_str):
                 if date_str == "010125":  # From our A record

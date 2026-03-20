@@ -21,10 +21,10 @@ pytestmark = [pytest.mark.integration, pytest.mark.database]
 import os
 from pathlib import Path
 
-from core.constants import CURRENT_DATABASE_VERSION
-from core.utils.bool_utils import normalize_bool
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
+from core.constants import CURRENT_DATABASE_VERSION
+from core.utils.bool_utils import normalize_bool
 from interface.operations.folder_manager import FolderManager
 
 
@@ -110,7 +110,7 @@ class TestBasicFolderOperations:
         custom_template["process_edi"] = 0  # Override default
 
         folder_path = str(workspace["dirs"]["folder2"])
-        result = folder_manager.add_folder(folder_path, template_data=custom_template)
+        folder_manager.add_folder(folder_path, template_data=custom_template)
 
         # Verify the custom template value was used
         folder_from_db = db.folders_table.find_one(folder_name=folder_path)
@@ -122,7 +122,7 @@ class TestBasicFolderOperations:
         folder_manager = FolderManager(db)
 
         folder_path = str(workspace["dirs"]["folder1"])
-        added = folder_manager.add_folder(folder_path)
+        folder_manager.add_folder(folder_path)
 
         # Get from database to get the actual ID
         folder_from_db = db.folders_table.find_one(folder_name=folder_path)
@@ -1004,7 +1004,7 @@ class TestRealWorldWorkflows:
         Path(processing_path + "/folder_b").mkdir(exist_ok=True)
         Path(processing_path + "/folder_c").mkdir(exist_ok=True)
 
-        result2 = folder_manager.batch_add_folders(processing_path, skip_existing=False)
+        folder_manager.batch_add_folders(processing_path, skip_existing=False)
 
         # Should have additional folders
         all_folders_2 = folder_manager.get_all_folders()
@@ -1025,7 +1025,7 @@ class TestRealWorldWorkflows:
             vendor_path = str(vendor_paths[vendor_name])
 
             # Add with current defaults as template
-            result = folder_manager.add_folder(vendor_path, template_data=defaults)
+            folder_manager.add_folder(vendor_path, template_data=defaults)
 
             # Verify folder was added
             folder = db.folders_table.find_one(folder_name=vendor_path)
@@ -1173,7 +1173,7 @@ class TestDataConsistency:
         vendor_paths = workspace_with_datasets["vendor_paths"]
 
         vendor_path = str(vendor_paths["acme_corp"])
-        result1 = folder_manager.add_folder(vendor_path)
+        folder_manager.add_folder(vendor_path)
         folder1 = db.folders_table.find_one(folder_name=vendor_path)
         folder_id = folder1["id"]
 
@@ -1232,7 +1232,7 @@ class TestBatchScenarios:
         for i in range(3):
             Path(batch_parent + f"/folder_{i}").mkdir(exist_ok=True)
 
-        result = folder_manager.batch_add_folders(batch_parent)
+        folder_manager.batch_add_folders(batch_parent)
         all_folders = folder_manager.get_all_folders()
         batch_folders = [f for f in all_folders if batch_parent in f["folder_name"]]
 
@@ -1349,7 +1349,7 @@ class TestMultiVendorScenarios:
         for vendor_name, config in vendor_configs.items():
             vendor_path = str(vendor_paths[vendor_name])
             template = {"id": 1, **config}
-            result = folder_manager.add_folder(vendor_path, template_data=template)
+            folder_manager.add_folder(vendor_path, template_data=template)
             folder = db.folders_table.find_one(folder_name=vendor_path)
             folder_ids[vendor_name] = (folder["id"], vendor_path)
 

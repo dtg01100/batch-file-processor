@@ -1205,7 +1205,7 @@ class TestResendDialog:
         assert hasattr(dialog, "_table")
 
     def test_no_selection_initially(self, qtbot, monkeypatch):
-        mock_db = MagicMock()
+        MagicMock()
 
         # Mock ResendService to avoid database operations
         mock_service = MagicMock()

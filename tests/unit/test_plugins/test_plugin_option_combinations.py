@@ -446,7 +446,7 @@ class TestPluginManagerCombinations:
                 elif field.field_type.name == "STRING":
                     # Use appropriate length based on min_length constraint
                     min_len = getattr(field, "min_length", None) or 0
-                    max_len = getattr(field, "max_length", None) or 50
+                    getattr(field, "max_length", None) or 50
                     if min_len > 0:
                         all_true_config[field.name] = "X" * min_len
                     else:

@@ -78,8 +78,8 @@ def test_update_and_count_and_delete():
     db = connect("sqlite:///")
     _create_table(db, "items", {"sku": "TEXT", "qty": "INTEGER"})
     t = db["items"]
-    id1 = t.insert({"sku": "A1", "qty": 5})
-    id2 = t.insert({"sku": "B2", "qty": 3})
+    t.insert({"sku": "A1", "qty": 5})
+    t.insert({"sku": "B2", "qty": 3})
 
     assert t.count() >= 2
 

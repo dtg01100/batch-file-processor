@@ -1,6 +1,5 @@
 """Tests for dispatch.preflight_validator."""
 
-import pytest
 from unittest.mock import MagicMock
 
 from dispatch.preflight_validator import (

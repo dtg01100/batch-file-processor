@@ -16,11 +16,11 @@ import pytest
 
 pytestmark = [pytest.mark.integration]
 
+from backend.database import sqlite_wrapper
 from core.database import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
-from backend.database import sqlite_wrapper
 
 # =============================================================================
 # Shared EDI content + helpers

@@ -419,7 +419,9 @@ class TestEDIConverterStep:
     def test_convert_with_supported_format_and_mock_module_loader(self, caplog):
         """Test convert() with supported format and mock module loader."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -457,7 +459,9 @@ class TestEDIConverterStep:
     def test_convert_handles_module_without_edi_convert_function(self):
         """Test convert() handles module without edi_convert function."""
         mock_module = MagicMock(spec=[])
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
         mock_error_handler = MockErrorHandler()
 
         step = EDIConverterStep(
@@ -478,7 +482,9 @@ class TestEDIConverterStep:
         mock_module = create_mock_conversion_module(
             should_raise=RuntimeError("Conversion failed")
         )
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
         mock_error_handler = MockErrorHandler()
 
         step = EDIConverterStep(
@@ -536,7 +542,9 @@ class TestEDIConverterStep:
     def test_format_normalization_with_spaces(self):
         """Test format normalization handles spaces."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"convert_to_estore_einvoice": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_estore_einvoice": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -544,12 +552,17 @@ class TestEDIConverterStep:
         result = step.convert("/input/test.edi", "/output", params, {}, {})
 
         assert result.success is True
-        assert mock_loader.last_module_name == "convert_to_estore_einvoice"
+        assert (
+            mock_loader.last_module_name
+            == "dispatch.converters.convert_to_estore_einvoice"
+        )
 
     def test_format_normalization_with_hyphens(self):
         """Test format normalization handles hyphens."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"convert_to_estore_einvoice": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_estore_einvoice": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -557,12 +570,17 @@ class TestEDIConverterStep:
         result = step.convert("/input/test.edi", "/output", params, {}, {})
 
         assert result.success is True
-        assert mock_loader.last_module_name == "convert_to_estore_einvoice"
+        assert (
+            mock_loader.last_module_name
+            == "dispatch.converters.convert_to_estore_einvoice"
+        )
 
     def test_format_normalization_case_insensitive(self):
         """Test format normalization is case insensitive."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -615,7 +633,9 @@ class TestIntegration:
     def test_full_conversion_flow_with_mock_module_loader(self):
         """Test full conversion flow with mock module loader."""
         mock_module = create_mock_conversion_module("/output/result.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
         mock_error_handler = MockErrorHandler()
 
         step = EDIConverterStep(
@@ -640,7 +660,9 @@ class TestIntegration:
     def test_output_directory_created_if_needed(self):
         """Test that output directory is created if needed."""
         mock_module = create_mock_conversion_module("/output/subdir/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
         mock_fs = MockFileSystem()
 
         step = EDIConverterStep(module_loader=mock_loader, file_system=mock_fs)
@@ -654,7 +676,9 @@ class TestIntegration:
     def test_multiple_conversions_in_sequence(self):
         """Test multiple conversions in sequence."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -687,7 +711,9 @@ class TestIntegration:
             mock_module = create_mock_conversion_module(
                 f"/output/converted.{format_name}"
             )
-            mock_loader = MockModuleLoader({f"convert_to_{format_name}": mock_module})
+            mock_loader = MockModuleLoader(
+                {f"dispatch.converters.convert_to_{format_name}": mock_module}
+            )
 
             step = EDIConverterStep(module_loader=mock_loader)
 
@@ -700,7 +726,9 @@ class TestIntegration:
     def test_no_conversion_without_process_edi_flag(self):
         """Test no conversion happens without process_edi = True."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -746,7 +774,9 @@ class TestEdgeCases:
     def test_none_upc_dict(self):
         """Test with None upc_dict."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
 
         step = EDIConverterStep(module_loader=mock_loader)
 
@@ -759,7 +789,7 @@ class TestEdgeCases:
         """Test format normalization with mixed spaces and hyphens."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
         mock_loader = MockModuleLoader(
-            {"convert_to_estore_einvoice_generic": mock_module}
+            {"dispatch.converters.convert_to_estore_einvoice_generic": mock_module}
         )
 
         step = EDIConverterStep(module_loader=mock_loader)
@@ -768,12 +798,17 @@ class TestEdgeCases:
         result = step.convert("/input/test.edi", "/output", params, {}, {})
 
         assert result.success is True
-        assert mock_loader.last_module_name == "convert_to_estore_einvoice_generic"
+        assert (
+            mock_loader.last_module_name
+            == "dispatch.converters.convert_to_estore_einvoice_generic"
+        )
 
     def test_file_system_makedirs_failure(self):
         """Test handling of file system makedirs failure."""
         mock_module = create_mock_conversion_module("/output/converted.csv")
-        mock_loader = MockModuleLoader({"dispatch.converters.convert_to_csv": mock_module})
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
         mock_fs = MockFileSystem()
 
         def raise_error(path):

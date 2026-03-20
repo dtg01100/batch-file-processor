@@ -293,7 +293,7 @@ class TestSendManagerModuleBackends:
         # This should use the module-based backend
         manager._send_via_module("copy", "/test/file.edi", params, settings)
 
-        mock_import.assert_called_with("copy_backend")
+        mock_import.assert_called_with("backend.copy_backend")
         mock_module.do.assert_called_once()
 
     @patch("dispatch.send_manager.importlib.import_module")
@@ -309,7 +309,7 @@ class TestSendManagerModuleBackends:
 
         manager._send_via_module("ftp", "/test/file.edi", params, settings)
 
-        mock_import.assert_called_with("ftp_backend")
+        mock_import.assert_called_with("backend.ftp_backend")
         mock_module.do.assert_called_once()
 
     @patch("dispatch.send_manager.importlib.import_module")
@@ -325,7 +325,7 @@ class TestSendManagerModuleBackends:
 
         manager._send_via_module("email", "/test/file.edi", params, settings)
 
-        mock_import.assert_called_with("email_backend")
+        mock_import.assert_called_with("backend.email_backend")
         mock_module.do.assert_called_once()
 
     def test_send_via_module_disabled_backend(self):

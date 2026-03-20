@@ -14,8 +14,7 @@ from typing import Optional
 
 import pytest
 
-from backend import email_backend
-from backend import ftp_backend
+from backend import email_backend, ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient
 from dispatch.send_manager import MockBackend, SendManager

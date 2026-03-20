@@ -1155,9 +1155,9 @@ class TestAppSmokeActions:
 
         import appdirs
 
-        from scripts import create_database
         from backend.database.database_obj import DatabaseObj
         from interface.qt.app import QtBatchFileSenderApp
+        from scripts import create_database
 
         # Mock appdirs to return tmp_path
         monkeypatch.setattr(appdirs, "user_data_dir", lambda name: str(tmp_path / name))

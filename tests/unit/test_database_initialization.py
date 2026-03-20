@@ -122,8 +122,8 @@ class TestAfterFirstRun:
 
     def test_administrative_record_exists_after_init(self, tmp_path):
         """Verify administrative record exists after database initialization."""
-        from scripts import create_database
         from backend.database import sqlite_wrapper
+        from scripts import create_database
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -143,8 +143,8 @@ class TestAfterFirstRun:
 
     def test_administrative_record_can_be_updated(self, tmp_path):
         """Verify administrative record can be updated after first run."""
-        from scripts import create_database
         from backend.database import sqlite_wrapper
+        from scripts import create_database
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -174,8 +174,8 @@ class TestAfterFirstRun:
 
     def test_oversight_and_defaults_find_one_returns_record(self, tmp_path):
         """Verify oversight_and_defaults.find_one returns record after first run."""
-        from scripts import create_database
         from backend.database import sqlite_wrapper
+        from scripts import create_database
 
         db_path = str(tmp_path / "test.db")
         create_database.do(
@@ -233,8 +233,8 @@ class TestSetDefaultsPopup:
 
     def test_set_defaults_popup_with_existing_record(self, tmp_path):
         """Verify set_defaults_popup preserves existing values from database."""
-        from scripts import create_database
         from backend.database import sqlite_wrapper
+        from scripts import create_database
 
         db_path = str(tmp_path / "test.db")
         create_database.do(

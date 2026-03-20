@@ -7,14 +7,56 @@ from pathlib import Path
 
 import pytest
 
-from migrations import folders_database_migrator
 from backend.database import sqlite_wrapper
+from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
 
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+
+ODBC_REQUIRED_KEYS = [
+    "AS400_ADDRESS",
+    "AS400_USERNAME",
+    "AS400_PASSWORD",
+    "ODBC_DRIVER",
+]
+
+
+def _load_dotenv():
+    """Load .env file from project root if present."""
+    env_path = project_root / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ.setdefault(key, value)
+
+
+_load_dotenv()
+
+
+@pytest.fixture
+def odbc_creds():
+    """Require ODBC credentials from .env file.
+
+    Skips the test if AS400_ADDRESS, AS400_USERNAME, AS400_PASSWORD, or
+    ODBC_DRIVER are not set in the environment (loaded from .env file
+    in the project root).
+    """
+    missing = [key for key in ODBC_REQUIRED_KEYS if not os.environ.get(key)]
+    if missing:
+        pytest.skip(f"ODBC credentials missing from .env: {', '.join(missing)}")
+    return {
+        "address": os.environ["AS400_ADDRESS"],
+        "username": os.environ["AS400_USERNAME"],
+        "password": os.environ["AS400_PASSWORD"],
+        "driver": os.environ["ODBC_DRIVER"],
+    }
 
 
 def pytest_configure(config):
@@ -148,8 +190,8 @@ def temp_database(tmp_path):
     Returns:
         DatabaseObj: Temporary database object
     """
-    from core.constants import CURRENT_DATABASE_VERSION
     from backend.database.database_obj import DatabaseObj
+    from core.constants import CURRENT_DATABASE_VERSION
 
     db_path = tmp_path / "test_folders.db"
 

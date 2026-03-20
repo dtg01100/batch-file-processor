@@ -21,11 +21,11 @@ from unittest import mock
 
 import pytest
 
-from scripts import create_database
+from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
+from scripts import create_database
 from tests.integration.option_matrix import (
     CSV_OPTION_CASES,
     FORMAT_OPTION_CASES,
@@ -273,7 +273,7 @@ def test_tweaking_scenario(workspace):
 
     from dispatch.pipeline.tweaker import EDITweakerStep
 
-    with mock.patch("archive.edi_tweaks.query_runner") as mock_qr:
+    with mock.patch("archive.edi_tweaks.query_runner"):
         config = DispatchConfig(
             database=db,
             settings={
@@ -1085,7 +1085,7 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
                     "odbc_driver": "driver",
                 },
                 tweaker_step=EDITweakerStep(),
-            upc_dict={"_mock": []},
+                upc_dict={"_mock": []},
                 converter_step=EDIConverterStep(),
             )
             orchestrator = DispatchOrchestrator(config_obj)

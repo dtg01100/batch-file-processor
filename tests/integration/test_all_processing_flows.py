@@ -25,14 +25,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from backend.database import sqlite_wrapper
+from core.database.schema import ensure_schema
 from core.edi.edi_splitter import filter_edi_file_by_category
 from dispatch.error_handler import ErrorHandler
 from dispatch.hash_utils import generate_file_hash
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.processed_files_tracker import ProcessedFilesTracker
-from backend.database import sqlite_wrapper
-from core.database.schema import ensure_schema
 
 # =============================================================================
 # Test Fixtures
@@ -191,7 +191,7 @@ class TestResendFlow:
     ):
         """Test that resend flag bypasses duplicate detection."""
         db = temp_workspace["db"]
-        tracker = ProcessedFilesTracker(db)
+        ProcessedFilesTracker(db)
 
         # Initialize processed_files table
         processed_table = db["processed_files"]
@@ -230,7 +230,7 @@ class TestResendFlow:
     def test_resend_multiple_files(self, temp_workspace, folder_config, mock_backend):
         """Test resending multiple files simultaneously."""
         db = temp_workspace["db"]
-        tracker = ProcessedFilesTracker(db)
+        ProcessedFilesTracker(db)
 
         # Insert multiple processed records
         processed_table = db["processed_files"]
@@ -509,7 +509,7 @@ C00000003000030000
         with patch("dispatch.converters.convert_to_csv.edi_convert") as mock_convert:
             mock_convert.return_value = str(output_file)
 
-            result = mock_convert(
+            mock_convert(
                 input_file,
                 str(output_file),
                 {"test": "settings"},
@@ -522,7 +522,7 @@ C00000003000030000
     def test_fintech_conversion(self, temp_workspace):
         """Test Fintech conversion end-to-end."""
         input_file = temp_workspace["input_folder"] / "test.edi"
-        output_file = temp_workspace["output_folder"] / "test.fin"
+        temp_workspace["output_folder"] / "test.fin"
 
         content = """A00001120240101001VENDOR1           Vendor One                      00001
 B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
@@ -538,7 +538,7 @@ C00000002000010000
     def test_scannerware_conversion(self, temp_workspace):
         """Test Scannerware conversion end-to-end."""
         input_file = temp_workspace["input_folder"] / "test.edi"
-        output_file = temp_workspace["output_folder"] / "test.scn"
+        temp_workspace["output_folder"] / "test.scn"
 
         content = """A00001120240101001VENDOR1           Vendor One                      00001
 B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
@@ -554,7 +554,7 @@ C00000002000010000
     def test_estore_einvoice_conversion(self, temp_workspace):
         """Test eStore eInvoice conversion end-to-end."""
         input_file = temp_workspace["input_folder"] / "test.edi"
-        output_file = temp_workspace["output_folder"] / "test.xml"
+        temp_workspace["output_folder"] / "test.xml"
 
         content = """A00001120240101001VENDOR1           Vendor One                      00001
 B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
@@ -783,7 +783,7 @@ class TestCombinedFlows:
     def test_filter_tweak_convert_flow(self, temp_workspace):
         """Test complete flow: filter → tweak → convert."""
         test_file = temp_workspace["input_folder"] / "combined.edi"
-        output_file = temp_workspace["output_folder"] / "combined.csv"
+        temp_workspace["output_folder"] / "combined.csv"
         content = """A00001120240101001VENDOR1           Vendor One                      00001
 B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
 B001002ITEM002     000020EA0020CAT2Description 2                   0000020000
@@ -834,7 +834,7 @@ C00000003000030000
     def test_process_error_resend_flow(self, temp_workspace, folder_config):
         """Test flow: process → error → mark resend → reprocess."""
         db = temp_workspace["db"]
-        tracker = ProcessedFilesTracker(db)
+        ProcessedFilesTracker(db)
 
         # Create backend that fails initially
         class InitiallyFailingBackend:
@@ -877,7 +877,7 @@ C00000003000030000
         """
         db = temp_workspace["db"]
         folders_table = db["folders"]
-        tracker = ProcessedFilesTracker(db)
+        ProcessedFilesTracker(db)
 
         # Step 1: Create folder configuration
         folder_id = folders_table.insert(

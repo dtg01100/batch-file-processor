@@ -7,8 +7,8 @@ the current schema version (v42).
 
 import pytest
 
-from migrations import folders_database_migrator
 from backend.database import sqlite_wrapper
+from migrations import folders_database_migrator
 
 
 def _create_old_v33_database(db_path, platform="Linux"):

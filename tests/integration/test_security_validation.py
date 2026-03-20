@@ -16,13 +16,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from scripts import create_database
 from backend.copy_backend import do as copy_backend_do
+from backend.database.database_obj import DatabaseObj
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.pipeline.validator import EDIValidationStep
-from backend.database.database_obj import DatabaseObj
+from scripts import create_database
 
 
 @pytest.fixture
@@ -279,7 +279,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             def send(self, params: dict, settings: dict, filename: str) -> None:
                 # Verify we're not copying symlinks to sensitive files
                 if "outside.txt" in str(params.get("copy_to_directory", "")):
-                    raise SecurityError("Attempted to copy to sensitive location")
+                    raise ValueError("Attempted to copy to sensitive location")
                 copy_backend_do(params, settings, filename)
 
         config = DispatchConfig(
@@ -292,7 +292,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        result = orchestrator.process_folder(folders[0], MagicMock())
+        orchestrator.process_folder(folders[0], MagicMock())
 
         # Verify outside file wasn't modified
         assert outside_file.read_text() == "sensitive data"
@@ -383,7 +383,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        result = orchestrator.process_folder(folders[0], MagicMock())
+        orchestrator.process_folder(folders[0], MagicMock())
 
         # Verify database integrity
         folders_after = list(db.folders_table.all())

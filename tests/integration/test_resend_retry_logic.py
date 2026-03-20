@@ -6,8 +6,8 @@ Tests cover:
 - Resend flag processing via DispatchOrchestrator with an in-memory DB
 """
 
-import ftplib
 import errno
+import ftplib
 import os
 import smtplib
 import sys
@@ -22,8 +22,7 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from backend import email_backend
-from backend import ftp_backend
+from backend import email_backend, ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
@@ -450,7 +449,7 @@ class TestResendLogic:
         config = DispatchConfig(backends={"mock": mock_backend})
         orc = DispatchOrchestrator(config)
         run_log = []
-        result = orc.process_folder(folder, run_log, processed_files=processed)
+        orc.process_folder(folder, run_log, processed_files=processed)
 
         # File was already processed → MockBackend must NOT have been called
         assert len(mock_backend.send_calls) == 0
@@ -480,7 +479,7 @@ class TestResendLogic:
         config = DispatchConfig(backends={"mock": mock_backend})
         orc = DispatchOrchestrator(config)
         run_log = []
-        result = orc.process_folder(folder, run_log, processed_files=processed)
+        orc.process_folder(folder, run_log, processed_files=processed)
 
         assert len(mock_backend.send_calls) == 1
 
@@ -524,7 +523,7 @@ class TestResendLogic:
         config = DispatchConfig(backends={"mock": mock_backend})
         orc = DispatchOrchestrator(config)
         run_log = []
-        result = orc.process_folder(folder, run_log, processed_files=processed)
+        orc.process_folder(folder, run_log, processed_files=processed)
 
         assert len(mock_backend.send_calls) == 1
 

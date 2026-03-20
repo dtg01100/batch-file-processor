@@ -17,12 +17,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from scripts import create_database
-from migrations import folders_database_migrator
-from core.database import schema
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
+from core.database import schema
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from migrations import folders_database_migrator
+from scripts import create_database
 
 pytestmark = [pytest.mark.integration, pytest.mark.database]
 
@@ -124,9 +124,9 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert col in admin_columns, (
-                f"administrative table should have {col} column"
-            )
+            assert (
+                col in admin_columns
+            ), f"administrative table should have {col} column"
 
         # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")

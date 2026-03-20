@@ -834,7 +834,9 @@ class TestConvertToEstoreEinvoiceGeneric:
         output_path = str(tmp_path / "output_estore_generic")
 
         # Mock the query_runner to avoid database dependency
-        with patch("dispatch.converters.convert_to_estore_einvoice_generic.create_query_runner"):
+        with patch(
+            "dispatch.converters.convert_to_estore_einvoice_generic.create_query_runner"
+        ):
             result = convert_to_estore_einvoice_generic.edi_convert(
                 edi_file,
                 output_path,
@@ -871,7 +873,9 @@ class TestConvertToStewartsCustom:
 
         # Mock LegacyQueryRunner (core.database.query_runner imported
         # as LegacyQueryRunner)
-        with patch("dispatch.converters.convert_to_stewarts_custom.create_query_runner") as mock_qr_class:
+        with patch(
+            "dispatch.converters.convert_to_stewarts_custom.create_query_runner"
+        ) as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_query.side_effect = [
@@ -996,7 +1000,9 @@ class TestConvertToJolleyCustom:
 
         # Mock LegacyQueryRunner (core.database.query_runner imported
         # as LegacyQueryRunner)
-        with patch("dispatch.converters.convert_to_jolley_custom.create_query_runner") as mock_qr_class:
+        with patch(
+            "dispatch.converters.convert_to_jolley_custom.create_query_runner"
+        ) as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             mock_qr_instance.run_query.side_effect = [

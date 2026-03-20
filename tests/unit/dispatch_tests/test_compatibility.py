@@ -39,9 +39,9 @@ class TestCompatibility:
         # Test empty string
         assert parse_legacy_process_edi_flag("") is False
 
-        # Test other values
+        # Test other values (only documented legacy formats)
         assert parse_legacy_process_edi_flag("yes") is False
-        assert parse_legacy_process_edi_flag("1") is False
+        assert parse_legacy_process_edi_flag("1") is True
         assert parse_legacy_process_edi_flag("0") is False
 
     def test_convert_backend_config(self):

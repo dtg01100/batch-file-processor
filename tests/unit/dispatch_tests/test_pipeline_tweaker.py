@@ -94,9 +94,7 @@ class TestMockTweaker:
         settings = {"setting1": "value1"}
         upc_dict = {"upc1": "product1"}
 
-        result = mock.tweak(
-            "/input/file.edi", "/output/dir", params, settings, upc_dict
-        )
+        mock.tweak("/input/file.edi", "/output/dir", params, settings, upc_dict)
 
         assert mock.call_count == 1
         assert mock.last_input_path == "/input/file.edi"
@@ -358,7 +356,7 @@ class TestIntegrationTests:
         )
 
         params = {"tweak_edi": True}
-        result = step.tweak("/input/file.edi", "/output/dir", params, {}, {})
+        step.tweak("/input/file.edi", "/output/dir", params, {}, {})
 
         mock_file_system.dir_exists.assert_called_with("/output/dir")
         mock_tweak_func.assert_called_once()

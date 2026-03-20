@@ -270,7 +270,9 @@ class TestConversionModulesCompatibility:
     def test_conversion_modules_importable(self, module_name):
         """Each conversion module should be importable."""
         try:
-            mod = __import__(f"dispatch.converters.{module_name}", fromlist=["dispatch.converters"])
+            mod = __import__(
+                f"dispatch.converters.{module_name}", fromlist=["dispatch.converters"]
+            )
             assert mod is not None
         except ImportError as e:
             pytest.fail(f"Failed to import {module_name}: {e}")

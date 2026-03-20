@@ -11,12 +11,10 @@ This module tests:
 import json
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
 from core.structured_logging import (
-    REDACTION_PATTERNS,
     CorrelationContext,
     JSONFormatter,
     StructuredLogger,
@@ -83,6 +81,7 @@ class TestCorrelationIdManagement:
             set_correlation_id(f"id-{thread_id}")
             # Small delay to ensure other thread runs
             import time
+
             time.sleep(0.01)
             results[thread_id] = get_correlation_id()
 

@@ -105,7 +105,7 @@ class TestEditSettingsDialogInitialization:
         mock_settings = {"as400_address": "test.server.com"}
         mock_settings_provider = MagicMock(return_value=mock_settings)
 
-        dialog = _make_dialog(qtbot, settings_provider=mock_settings_provider)
+        _make_dialog(qtbot, settings_provider=mock_settings_provider)
 
         mock_settings_provider.assert_called_once()
 

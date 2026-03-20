@@ -631,7 +631,7 @@ class TestEDISplitterStep:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": "True"}
-        result = step.split("/input/test.edi", "/output", params, {})
+        step.split("/input/test.edi", "/output", params, {})
 
         assert mock_splitter.call_count == 1
 
@@ -705,7 +705,7 @@ class TestEDISplitterStep:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True, "prepend_date_files": "True"}
-        result = step.split("/input/test.edi", "/output", params, {})
+        step.split("/input/test.edi", "/output", params, {})
 
         assert mock_splitter.last_config.prepend_date is True
 
@@ -772,8 +772,9 @@ class TestIntegration:
         step = EDISplitterStep(splitter=mock_splitter, file_system=mock_fs)
 
         with patch(
-            "utils.filter_edi_file_by_category", return_value=True
-        ) as mock_filter:
+            "core.utils.filter_edi_file_by_category",
+            return_value=True,
+        ):
             params = {"split_edi": False, "split_edi_filter_categories": "CAT1"}
             result = step.split("/input/test.edi", "/output", params, {})
 
@@ -804,8 +805,8 @@ class TestIntegration:
 
         params = {"split_edi": True}
 
-        result1 = step.split("/input/file1.edi", "/output", params, {})
-        result2 = step.split("/input/file2.edi", "/output", params, {})
+        step.split("/input/file1.edi", "/output", params, {})
+        step.split("/input/file2.edi", "/output", params, {})
 
         assert mock_splitter.call_count == 2
         assert mock_splitter.last_input_path == "/input/file2.edi"
@@ -874,7 +875,8 @@ class TestEdgeCases:
         step = EDISplitterStep(file_system=mock_fs)
 
         with patch(
-            "utils.filter_edi_file_by_category", side_effect=Exception("Filter error")
+            "core.utils.filter_edi_file_by_category",
+            side_effect=Exception("Filter error"),
         ):
             params = {"split_edi": False, "split_edi_filter_categories": "CAT1"}
             result = step.split("/input/test.edi", "/output", params, {})
@@ -928,7 +930,7 @@ class TestEdgeCases:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True}
-        result = step.split("/input/test.edi", "/output", params, None)
+        step.split("/input/test.edi", "/output", params, None)
 
         assert mock_splitter.last_upc_dict is None
 

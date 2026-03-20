@@ -443,7 +443,7 @@ class TestValidationFailureLogging:
             "process_edi": True,
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         assert backend.sent == [], "File should not be sent when validation fails"
         joined = "\n".join(log_capture)
@@ -473,7 +473,7 @@ class TestValidationFailureLogging:
             "process_edi": True,
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         assert len(backend.sent) == 1
         joined = "\n".join(log_capture)
@@ -558,7 +558,7 @@ class TestConversionStepLogging:
             "process_edi": True,
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         assert converter.call_count == 1
         joined = "\n".join(log_capture)
@@ -646,7 +646,7 @@ class TestMultiBackendLogging:
             "ftp_server": "ftp.example.com",
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         assert len(copy_backend.sent) == 1
         assert len(ftp_backend.sent) == 1
@@ -680,7 +680,7 @@ class TestMultiBackendLogging:
             "ftp_server": "ftp.example.com",
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         joined = "\n".join(log_capture)
         # Good backend should have been attempted
@@ -782,7 +782,7 @@ class TestFullPipelineLogging:
             "tweak_edi": True,
         }
 
-        result = orch.process_folder(folder, run_log=None)
+        orch.process_folder(folder, run_log=None)
 
         # Converter blew up, so tweaker should not be called
         assert tweaker.call_count == 0
@@ -1082,7 +1082,7 @@ class TestReprocessAfterFailure:
         config2 = DispatchConfig(backends={"copy": good_backend}, settings={})
         orch2 = DispatchOrchestrator(config2)
 
-        r2 = orch2.process_folder(folder, run_log=None)
+        orch2.process_folder(folder, run_log=None)
         assert len(good_backend.sent) == 1
 
         joined = "\n".join(log_capture)

@@ -583,20 +583,6 @@ class TestConvertToFintech:
         """Test that fintech CSV has correct structure."""
         from dispatch.converters import convert_to_fintech
 
-        expected_headers = [
-            "Division_id",
-            "invoice_number",
-            "invoice_date",
-            "Vendor_store_id",
-            "quantity_shipped",
-            "Quantity_uom",
-            "item_number",
-            "upc_pack",
-            "upc_case",
-            "product_description",
-            "unit_price",
-        ]
-
         # Verify headers are defined in the module
         # The actual CSV is generated dynamically, so we check the function signature
         assert callable(convert_to_fintech.edi_convert)
@@ -844,7 +830,10 @@ class TestConvertFormatConfiguration:
         for format_name in supported_formats:
             module_name = f"convert_to_{format_name}"
             try:
-                __import__(f"dispatch.converters.{module_name}", fromlist=["dispatch.converters"])
+                __import__(
+                    f"dispatch.converters.{module_name}",
+                    fromlist=["dispatch.converters"],
+                )
             except ImportError:
                 pytest.fail(f"Missing module for format: {format_name}")
 
@@ -865,7 +854,10 @@ class TestConvertFormatConfiguration:
 
         for format_name, module_name in format_mapping.items():
             try:
-                __import__(f"dispatch.converters.{module_name}", fromlist=["dispatch.converters"])
+                __import__(
+                    f"dispatch.converters.{module_name}",
+                    fromlist=["dispatch.converters"],
+                )
             except ImportError:
                 pytest.fail(
                     f"Format '{format_name}' does not map to module '{module_name}'"

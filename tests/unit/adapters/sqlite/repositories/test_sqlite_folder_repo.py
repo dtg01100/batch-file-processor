@@ -5,14 +5,12 @@ Uses a mock database_obj (no real DB connection required) to verify
 the repository correctly delegates to the underlying Table API.
 """
 
-import os
 from unittest.mock import MagicMock
 
 import pytest
 
 from adapters.sqlite.repositories import SqliteFolderRepository
 from core.ports.repositories import IFolderRepository
-
 
 # ---------------------------------------------------------------------------
 # Helpers

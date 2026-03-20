@@ -60,7 +60,7 @@ class TestRecordError:
         sample_error_source,
     ):
         """Test basic error recording without threading."""
-        result = record_error.do(
+        record_error.do(
             sample_run_log,
             sample_errors_log,
             sample_error_message,
