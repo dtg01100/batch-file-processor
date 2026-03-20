@@ -13,8 +13,8 @@ import sys
 import traceback
 from typing import Any, Optional, Protocol, runtime_checkable
 
-from core.database import schema
 from backend.database import sqlite_wrapper
+from core.database import schema
 
 
 @runtime_checkable

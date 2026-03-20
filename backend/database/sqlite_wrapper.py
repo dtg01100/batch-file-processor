@@ -527,36 +527,6 @@ class Table:
         else:
             self.insert(record)
 
-    def insert_many(self, records: List[Dict[str, Any]]) -> None:
-        """Insert multiple records efficiently.
-
-        Args:
-            records: List of dictionaries to insert
-
-        Raises:
-            sqlite3.OperationalError: If table or column doesn't exist
-        """
-        if not records:
-            return
-
-        # Use first record to determine keys
-        keys = list(records[0].keys())
-        quoted_table = self._quote_identifier(self._name)
-        cols = ", ".join(self._quote_identifier(k) for k in keys)
-        placeholders = ", ".join("?" for _ in keys)
-        sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
-
-        params = [
-            tuple(
-                self._serialize_record_value(k, record[k], self._get_boolean_columns())
-                for k in keys
-            )
-            for record in records
-        ]
-
-        self._conn.executemany(sql, params)
-        self._conn.commit()
-
     def create_column(self, column_name: str, column_type: str) -> None:
         """Create a column in the table if it doesn't exist.
 

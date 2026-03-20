@@ -13,6 +13,36 @@ from backend.protocols import FileOperationsProtocol
 # note: process_parameters is a dict from a row in the database, passed into this module
 
 
+def _resolve_destination_path(
+    dest_dir: str, filename: str, file_ops: FileOperationsProtocol
+) -> str:
+    """Resolve a copy destination while preserving the source basename.
+
+    When the destination filename is already present, route the copy into a
+    unique subdirectory derived from the source file's parent directory. This
+    preserves vendor-required filenames while avoiding silent overwrites.
+    """
+    dest_filename = file_ops.basename(filename)
+    candidate = file_ops.join(dest_dir, dest_filename)
+    if not file_ops.exists(candidate):
+        return candidate
+
+    source_parent = file_ops.basename(file_ops.dirname(filename)) or "collision"
+    collision_dir = file_ops.join(dest_dir, source_parent)
+    collision_candidate = file_ops.join(collision_dir, dest_filename)
+    collision_index = 1
+
+    while file_ops.exists(collision_candidate):
+        collision_dir = file_ops.join(dest_dir, f"{source_parent}.{collision_index}")
+        collision_candidate = file_ops.join(collision_dir, dest_filename)
+        collision_index += 1
+
+    if not file_ops.exists(collision_dir):
+        file_ops.makedirs(collision_dir, exist_ok=True)
+
+    return collision_candidate
+
+
 def do(
     process_parameters: dict,
     settings_dict: dict,
@@ -52,7 +82,8 @@ def do(
 
     while not file_pass:
         try:
-            file_ops.copy(filename, dest_dir)
+            destination_path = _resolve_destination_path(dest_dir, filename, file_ops)
+            file_ops.copy(filename, destination_path)
             file_pass = True
         except IOError:
             if counter == 10:
