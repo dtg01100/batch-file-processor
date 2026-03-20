@@ -4,7 +4,7 @@ SQLite processed-files repository implementation.
 Wraps the DatabaseObj / Table API to implement IProcessedFilesRepository.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from core.ports.repositories import IProcessedFilesRepository
 
@@ -27,9 +27,7 @@ class SqliteProcessedFilesRepository(IProcessedFilesRepository):
         """Return True if *file_hash* exists in the processed_files table."""
         return self._db.processed_files.find_one(file_hash=file_hash) is not None
 
-    def mark_processed(
-        self, file_hash: str, folder_id: int, filename: str
-    ) -> None:
+    def mark_processed(self, file_hash: str, folder_id: int, filename: str) -> None:
         """Insert a processed-file record."""
         self._db.processed_files.insert(
             {
