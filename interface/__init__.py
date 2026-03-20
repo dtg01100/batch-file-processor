@@ -6,7 +6,7 @@ database operations, and business logic for the batch file processor.
 
 Key components:
 - QtBatchFileSenderApp: Main application class (interface.qt.app)
-- DatabaseObj: Database operations (interface.database.database_obj)
+- DatabaseObj: Database operations (backend.database.database_obj)
 - FolderManager: Folder management operations (interface.operations.folder_manager)
 - Dialogs: UI dialogs (interface.qt.dialogs)
 """

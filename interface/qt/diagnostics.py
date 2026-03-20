@@ -44,7 +44,7 @@ class QtDiagnosticsService:
             "PyQt6.QtSvg",
             "PyQt6.QtXml",
             "PyQt6.QtNetwork",
-            "interface.database.database_obj",
+            "backend.database.database_obj",
             "interface.operations.folder_manager",
             "interface.ports",
             "interface.services.reporting_service",

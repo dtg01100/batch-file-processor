@@ -102,7 +102,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     print("[1d/14] Application module imports")
     app_modules = [
         # Database and operations
-        "interface.database.database_obj",
+        "backend.database.database_obj",
         "interface.operations.folder_manager",
         "interface.ports",
         "interface.services.reporting_service",
