@@ -4,24 +4,26 @@
     These fakes are deprecated in favor of real implementations.
     Use real Qt widgets (with QT_QPA_PLATFORM=offscreen) and real DatabaseObj
     with temporary databases instead of these fakes.
-    
+
     See:
     - tests/conftest.py for temp_database fixture
     - pytest.ini for qt marker with offscreen mode
     - tests/qt/test_qt_widgets.py for examples using real widgets
 
+Remaining classes and migration path:
+- FakeTable: Used in test_pipeline_logging_validation.py, test_gui_stress_and_edge_cases.py.
+  Migrate to: Simple dict-like objects or real database tables via temp_database fixture.
+- FakeDatabaseObj: Used in test_dialog_contracts_wave4.py, test_gui_stress_and_edge_cases.py.
+  Migrate to: temp_database fixture from conftest.py.
+- FakeMaintenanceFunctions: Used in test_maintenance_dialog_extra.py, test_dialog_contracts_wave4.py.
+  Migrate to: Real MaintenanceFunctions with temp_database fixture.
+
 This module provides fake classes that implement the protocols defined in the
 application, allowing tests to use real-like objects instead of MagicMocks.
-
-Migration guide:
-- Instead of FakeTable/FakeDatabaseObj: Use temp_database fixture from conftest.py
-- Instead of FakeEvent/FakeWidget: Use real Qt widgets with qtbot fixture
-- Instead of FakeUIService: Use real Qt dialogs or monkeypatch specific methods
-- Instead of MagicMock: Use real objects where possible, minimal mocking otherwise
 """
 
 import warnings
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 # Emit deprecation warning when this module is imported
 warnings.warn(
@@ -270,177 +272,6 @@ class FakeDatabaseObj:
         self._connection.close()
 
 
-class FakeEvent:
-    """A fake Qt event for testing event handlers.
-
-    .. deprecated:: Use real Qt events with qtbot fixture instead.
-    """
-
-    def __init__(
-        self,
-        x: int = 10,
-        y: int = 20,
-        x_root: int = 100,
-        y_root: int = 200,
-        num: int = 4,
-        delta: int = 120,
-    ):
-        warnings.warn(
-            "FakeEvent is deprecated. Use real Qt widgets with qtbot instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.x = x
-        self.y = y
-        self.x_root = x_root
-        self.y_root = y_root
-        self.num = num
-        self.delta = delta
-        self.widget = FakeWidget()
-
-
-class FakeWidget:
-    """A fake Qt widget for testing.
-
-    .. deprecated:: Use real Qt widgets with qtbot fixture instead.
-    """
-
-    def __init__(self):
-        self._visible = True
-        self._enabled = True
-        self._text = ""
-
-    def isVisible(self) -> bool:
-        return self._visible
-
-    def setVisible(self, visible: bool) -> None:
-        self._visible = visible
-
-    def isEnabled(self) -> bool:
-        return self._enabled
-
-    def setEnabled(self, enabled: bool) -> None:
-        self._enabled = enabled
-
-    def text(self) -> str:
-        return self._text
-
-    def setText(self, text: str) -> None:
-        self._text = text
-
-
-class FakeUIService:
-    """A fake UI service.
-
-    .. deprecated:: Use real Qt dialogs or minimal monkeypatching instead.
-    """
-
-    def __init__(self):
-        warnings.warn(
-            "FakeUIService is deprecated. Use real Qt dialogs or monkeypatch instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self._calls: dict[str, list[tuple]] = {}
-        self._return_values: dict[str, Any] = {
-            "ask_yes_no": False,
-            "ask_ok_cancel": False,
-            "ask_directory": "",
-            "ask_open_filename": "",
-            "ask_save_filename": "",
-        }
-
-    def _record_call(self, method: str, *args, **kwargs) -> None:
-        if method not in self._calls:
-            self._calls[method] = []
-        self._calls[method].append((args, kwargs))
-
-    def set_return_value(self, method: str, value: Any) -> None:
-        self._return_values[method] = value
-
-    def show_info(self, title: str, message: str) -> None:
-        self._record_call("show_info", title=title, message=message)
-
-    def show_error(self, title: str, message: str) -> None:
-        self._record_call("show_error", title=title, message=message)
-
-    def show_warning(self, title: str, message: str) -> None:
-        self._record_call("show_warning", title=title, message=message)
-
-    def ask_yes_no(self, title: str, message: str) -> bool:
-        self._record_call("ask_yes_no", title=title, message=message)
-        return self._return_values.get("ask_yes_no", False)
-
-    def ask_ok_cancel(self, title: str, message: str) -> bool:
-        self._record_call("ask_ok_cancel", title=title, message=message)
-        return self._return_values.get("ask_ok_cancel", False)
-
-    def ask_directory(self, title: str = "") -> str:
-        self._record_call("ask_directory", title=title)
-        return self._return_values.get("ask_directory", "")
-
-    def ask_open_filename(self, title: str = "", filter: str = "") -> str:
-        self._record_call("ask_open_filename", title=title, filter=filter)
-        return self._return_values.get("ask_open_filename", "")
-
-    def ask_save_filename(self, title: str = "", filter: str = "") -> str:
-        self._record_call("ask_save_filename", title=title, filter=filter)
-        return self._return_values.get("ask_save_filename", "")
-
-    def pump_events(self) -> None:
-        self._record_call("pump_events")
-
-    def get_calls(self, method: str) -> list[tuple]:
-        return self._calls.get(method, [])
-
-    def was_called(self, method: str) -> bool:
-        return method in self._calls and len(self._calls[method]) > 0
-
-    def reset(self) -> None:
-        self._calls.clear()
-
-
-class FakeProgressService:
-    """A fake progress service.
-
-    .. deprecated:: Use real progress dialogs with qtbot or minimal mocking.
-    """
-
-    def __init__(self):
-        self._visible = False
-        self._message = ""
-        self._calls: dict[str, list[tuple]] = {}
-
-    def _record_call(self, method: str, *args, **kwargs) -> None:
-        if method not in self._calls:
-            self._calls[method] = []
-        self._calls[method].append((args, kwargs))
-
-    def show(self, message: str = "") -> None:
-        self._record_call("show", message=message)
-        self._visible = True
-        self._message = message
-
-    def hide(self) -> None:
-        self._record_call("hide")
-        self._visible = False
-
-    def update_message(self, message: str) -> None:
-        self._record_call("update_message", message=message)
-        self._message = message
-
-    def is_visible(self) -> bool:
-        return self._visible
-
-    def get_message(self) -> str:
-        return self._message
-
-    def reset(self) -> None:
-        self._visible = False
-        self._message = ""
-        self._calls.clear()
-
-
 class FakeMaintenanceFunctions:
     """A fake MaintenanceFunctions for testing maintenance dialogs.
 
@@ -491,45 +322,6 @@ class FakeMaintenanceFunctions:
 
     def get_database(self) -> "FakeDatabaseObj":
         return self._database_obj
-
-    def reset(self) -> None:
-        self._calls.clear()
-
-
-class FakeResendService:
-    """A fake ResendService for testing resend dialogs.
-
-    .. deprecated:: Use real ResendService with temp_database instead.
-    """
-
-    def __init__(self, database_obj: FakeDatabaseObj | None = None):
-        self._database_obj = database_obj or FakeDatabaseObj()
-        self._calls: dict[str, int] = {}
-        self._has_processed_files = True
-        self._folder_list: list[tuple[int, str]] = []
-        self._files: list[dict] = []
-
-    def _track_call(self, method: str) -> None:
-        self._calls[method] = self._calls.get(method, 0) + 1
-
-    def has_processed_files(self) -> bool:
-        self._track_call("has_processed_files")
-        return self._has_processed_files
-
-    def get_folder_list(self) -> list[tuple[int, str]]:
-        self._track_call("get_folder_list")
-        return self._folder_list
-
-    def get_files_for_folder(self, folder_id: int, limit: int = 100) -> list[dict]:
-        self._track_call("get_files_for_folder")
-        return self._files[:limit]
-
-    def count_files_for_folder(self, folder_id: int) -> int:
-        self._track_call("count_files_for_folder")
-        return len(self._files)
-
-    def set_resend_flag(self, file_id: int, flag: bool) -> None:
-        self._track_call("set_resend_flag")
 
     def reset(self) -> None:
         self._calls.clear()

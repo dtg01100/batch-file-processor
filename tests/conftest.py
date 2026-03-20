@@ -7,9 +7,8 @@ from pathlib import Path
 
 import pytest
 
-import migrations.folders_database_migrator
+from migrations import folders_database_migrator
 from backend.database import sqlite_wrapper
-from tests.fakes import FakeEvent
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
 
@@ -32,32 +31,6 @@ def pytest_configure(config):
         config.option.timeout_method = "thread"
     else:
         config.option.timeout_method = "signal"
-
-
-@pytest.fixture
-def mock_event():
-    """Create a fake event object for testing event handlers."""
-    return FakeEvent(
-        x=10,
-        y=20,
-        x_root=100,
-        y_root=200,
-        num=4,  # Button 4 for scroll up on Linux
-        delta=120,  # Scroll delta for Windows
-    )
-
-
-@pytest.fixture
-def mock_event_none_coords():
-    """Create a fake event with None coordinates for edge case testing."""
-    return FakeEvent(
-        x=None,
-        y=None,
-        x_root=None,
-        y_root=None,
-        num=4,
-        delta=120,
-    )
 
 
 # ---------------------------------------------------------------------------
