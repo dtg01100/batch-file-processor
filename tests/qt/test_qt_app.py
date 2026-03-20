@@ -9,7 +9,7 @@ import os
 import types
 from unittest.mock import MagicMock
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 
 
 @pytest.mark.qt
@@ -848,7 +848,7 @@ class TestQtBatchFileSenderApp:
         def mock_backup(path):
             backup_called.append(path)
 
-        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", mock_backup)
+        monkeypatch.setattr("scripts.backup_increment.do_backup", mock_backup)
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
@@ -897,7 +897,7 @@ class TestQtBatchFileSenderApp:
         def mock_backup(path):
             backup_called.append(path)
 
-        monkeypatch.setattr("interface.qt.app.backup_increment.do_backup", mock_backup)
+        monkeypatch.setattr("scripts.backup_increment.do_backup", mock_backup)
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
@@ -1516,7 +1516,7 @@ class TestQtBatchFileSenderApp:
 
         backup_called = []
         monkeypatch.setattr(
-            "interface.qt.app.backup_increment.do_backup",
+            "scripts.backup_increment.do_backup",
             lambda path: backup_called.append(path),
         )
 
@@ -1904,7 +1904,7 @@ class TestQtAppInteractionWorkflows:
         app._ui_service.ask_ok_cancel.return_value = True
 
         monkeypatch.setattr(
-            "interface.qt.app.backup_increment.do_backup", lambda *_: None
+            "scripts.backup_increment.do_backup", lambda *_: None
         )
 
         captured = {}
@@ -2061,7 +2061,7 @@ class TestQtAppInteractionWorkflows:
         app._ui_service = MagicMock()
 
         monkeypatch.setattr(
-            "interface.qt.app.backup_increment.do_backup", lambda *_: None
+            "scripts.backup_increment.do_backup", lambda *_: None
         )
 
         captured = {}

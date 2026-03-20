@@ -215,8 +215,8 @@ class TestEditFolderPersistence:
 
     def test_folder_crud_roundtrip(self, tmp_path):
         """Insert, read, update, delete a folder in DatabaseObj."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
@@ -261,8 +261,8 @@ class TestEditFolderPersistence:
 
     def test_toggle_folder_active_status(self, tmp_path):
         """Toggle folder active ↔ inactive and verify persistence."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
@@ -294,8 +294,8 @@ class TestEditFolderPersistence:
 
     def test_settings_roundtrip(self, tmp_path):
         """Read and update global settings."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
@@ -409,8 +409,8 @@ class TestBulkOperations:
 
     def test_bulk_create_and_process(self, tmp_path):
         """Create N folders in DB, process all, verify all succeed."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
@@ -455,8 +455,8 @@ class TestBulkOperations:
 
     def test_bulk_deactivate_and_delete(self, tmp_path):
         """Deactivate then delete multiple folder configs."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"
@@ -498,8 +498,8 @@ class TestCompleteLifecycle:
 
     def test_full_lifecycle(self, tmp_path):
         """Walk through the entire folder lifecycle."""
-        import create_database
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        import scripts.create_database
+        from core.constants import CURRENT_DATABASE_VERSION
         from backend.database.database_obj import DatabaseObj
 
         db_path = tmp_path / "folders.db"

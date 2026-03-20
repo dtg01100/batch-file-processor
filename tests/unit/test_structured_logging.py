@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     REDACTION_PATTERNS,
     CorrelationContext,
     JSONFormatter,

@@ -66,7 +66,7 @@ def multiple_folders_workspace():
 
 def create_copy_backend():
     """Create a copy backend wrapper for testing."""
-    from copy_backend import do as copy_backend_do
+    from backend.copy_backend import do as copy_backend_do
 
     class CopyBackend:
         def send(self, params: dict, settings: dict, filename: str) -> None:

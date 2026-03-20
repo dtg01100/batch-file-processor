@@ -1,7 +1,7 @@
 import time
 from io import StringIO
 
-import utils
+import core.utils
 
 
 # this function does a simple check to see if input file is an edi file, and returns false if it isn't

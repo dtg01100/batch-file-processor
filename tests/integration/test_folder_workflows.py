@@ -18,7 +18,7 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.database, pytest.mark.workflow]
 from pathlib import Path
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager

@@ -263,7 +263,7 @@ class TestConvertToCSV:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_csv produces a valid CSV file."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         output_path = str(tmp_path / "output")
 
@@ -292,7 +292,7 @@ class TestConvertToCSV:
         self, edi_file_empty_detail, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_csv handles EDI with no detail records."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         output_path = str(tmp_path / "output_empty")
 
@@ -315,7 +315,7 @@ class TestConvertToCSV:
 
     def test_convert_with_a_records(self, edi_file, tmp_path, sample_upc_lut):
         """Test that A records are included when configured."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         parameters = {
             "calculate_upc_check_digit": "False",
@@ -353,7 +353,7 @@ class TestConvertToCSV:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that C records are included when configured."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         parameters = default_parameters_dict.copy()
         parameters["include_c_records"] = "True"
@@ -376,7 +376,7 @@ class TestConvertToCSV:
 
     def test_convert_ampersand_filtering(self, tmp_path, sample_upc_lut):
         """Test that ampersands are replaced with AND when filter is enabled."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         # Create EDI with ampersand in description
         detail = (
@@ -450,7 +450,7 @@ class TestConvertToFintech:
         sample_upc_lut,
     ):
         """Test that convert_to_fintech produces a valid CSV file."""
-        import convert_to_fintech
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
 
         output_path = str(tmp_path / "output_fintech")
 
@@ -483,7 +483,7 @@ class TestConvertToFintech:
         When UPC is not found in the lookup table, the converter should use
         empty strings for upc_pack and upc_case rather than failing.
         """
-        import convert_to_fintech
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
 
         output_path = str(tmp_path / "output_missing_upc")
         empty_upc_lut = {}  # Empty lookup table
@@ -541,7 +541,7 @@ class TestConvertToScannerware:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_scannerware produces a valid output file."""
-        import convert_to_scannerware
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
 
         output_path = str(tmp_path / "output_scannerware")
 
@@ -561,7 +561,7 @@ class TestConvertToScannerware:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that output has .txt extension when force_txt_file_ext is True."""
-        import convert_to_scannerware
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
 
         parameters = default_parameters_dict.copy()
         parameters["force_txt_file_ext"] = "True"
@@ -578,7 +578,7 @@ class TestConvertToScannerware:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that invoice date is offset correctly."""
-        import convert_to_scannerware
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scannerware
 
         parameters = default_parameters_dict.copy()
         parameters["invoice_date_offset"] = 7  # Add 7 days
@@ -615,7 +615,7 @@ class TestConvertToSimplifiedCSV:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_simplified_csv produces a valid CSV file."""
-        import convert_to_simplified_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
 
         output_path = str(tmp_path / "output_simple")
 
@@ -636,7 +636,7 @@ class TestConvertToSimplifiedCSV:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that headers are omitted when configured."""
-        import convert_to_simplified_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
 
         parameters = default_parameters_dict.copy()
         parameters["include_headers"] = "False"
@@ -661,7 +661,7 @@ class TestConvertToSimplifiedCSV:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that columns are in configured order."""
-        import convert_to_simplified_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
 
         output_path = str(tmp_path / "output_column_order")
 
@@ -703,7 +703,7 @@ class TestConvertToYellowdogCSV:
         Uses real invFetcher with a test SQLite database to verify actual
         database query behavior without mocking.
         """
-        import convert_to_yellowdog_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")yellowdog_csv
 
         output_path = str(tmp_path / "output_yellowdog")
 
@@ -777,7 +777,7 @@ class TestConvertToEstoreEinvoice:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_estore_einvoice produces a valid CSV file."""
-        import convert_to_estore_einvoice
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
 
         output_path = str(tmp_path / "output_estore")
 
@@ -798,7 +798,7 @@ class TestConvertToEstoreEinvoice:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that output filename follows expected format."""
-        import convert_to_estore_einvoice
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice
 
         output_path = str(tmp_path / "output_filename_test")
 
@@ -829,7 +829,7 @@ class TestConvertToEstoreEinvoiceGeneric:
         sample_upc_lut,
     ):
         """Test that convert_to_estore_einvoice_generic produces a valid CSV file."""
-        import convert_to_estore_einvoice_generic
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
 
         output_path = str(tmp_path / "output_estore_generic")
 
@@ -865,7 +865,7 @@ class TestConvertToStewartsCustom:
         sample_upc_lut,
     ):
         """Test that convert_to_stewarts_custom produces a valid CSV file."""
-        import convert_to_stewarts_custom
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")stewarts_custom
 
         output_path = str(tmp_path / "output_stewarts")
 
@@ -939,7 +939,7 @@ class TestConvertToScansheetTypeA:
         sample_upc_lut,
     ):
         """Test that convert_to_scansheet_type_a produces a valid XLSX file."""
-        import convert_to_scansheet_type_a
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")scansheet_type_a
 
         output_path = str(tmp_path / "output_scansheet")
 
@@ -990,7 +990,7 @@ class TestConvertToJolleyCustom:
         sample_upc_lut,
     ):
         """Test that convert_to_jolley_custom produces a valid CSV file."""
-        import convert_to_jolley_custom
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
 
         output_path = str(tmp_path / "output_jolley")
 
@@ -1057,7 +1057,7 @@ class TestConversionEdgeCases:
 
     def test_empty_edi_file(self, tmp_path, default_parameters_dict, sample_upc_lut):
         """Test handling of empty EDI file."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         # Create empty EDI file
         empty_edi = tmp_path / "empty.edi"
@@ -1078,7 +1078,7 @@ class TestConversionEdgeCases:
         self, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test handling of unicode characters in description."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         # Create EDI with unicode in description
         detail = (
@@ -1114,7 +1114,7 @@ class TestConversionEdgeCases:
 
     def test_multiple_invoices(self, tmp_path, default_parameters_dict, sample_upc_lut):
         """Test handling of multiple invoices in single file."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         # Create EDI with two invoices
         header1 = "A" + "VENDOR" + "0000000001" + "010125" + "0000010000"
@@ -1166,7 +1166,7 @@ class TestConversionEdgeCases:
 
     def test_negative_quantity(self, tmp_path, default_parameters_dict, sample_upc_lut):
         """Test handling of negative quantity (returns/credits)."""
-        import convert_to_simplified_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")simplified_csv
 
         # Create EDI with negative quantity (using -0010 format)
         # The qty_of_units field is 5 chars at positions 57-62
@@ -1224,7 +1224,7 @@ class TestOutputFormatValidation:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that CSV output uses CRLF line endings (Excel format)."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         output_path = str(tmp_path / "output_crlf")
 
@@ -1244,7 +1244,7 @@ class TestOutputFormatValidation:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that CSV output quotes all fields."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         output_path = str(tmp_path / "output_quoted")
 
@@ -1266,7 +1266,7 @@ class TestOutputFormatValidation:
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that price values are correctly converted from cents to dollars."""
-        import convert_to_csv
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")csv
 
         output_path = str(tmp_path / "output_price")
 

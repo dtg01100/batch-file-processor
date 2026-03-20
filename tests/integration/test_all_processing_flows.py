@@ -32,7 +32,7 @@ from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.processed_files_tracker import ProcessedFilesTracker
 from backend.database import sqlite_wrapper
-from schema import ensure_schema
+from core.database.schema import ensure_schema
 
 # =============================================================================
 # Test Fixtures

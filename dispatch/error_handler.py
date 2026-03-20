@@ -10,8 +10,8 @@ import time
 from io import StringIO
 from typing import Any, Optional
 
-import record_error
-from batch_file_processor.structured_logging import (
+import scripts.record_error as record_error
+from core.structured_logging import (
     get_logger,
     log_with_context,
 )

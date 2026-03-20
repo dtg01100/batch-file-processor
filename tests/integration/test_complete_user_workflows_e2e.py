@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from copy_backend import CopyBackend
+from backend.copy_backend import CopyBackend
 from core.utils.bool_utils import normalize_bool
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend

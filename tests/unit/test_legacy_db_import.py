@@ -7,7 +7,7 @@ the current schema version (v42).
 
 import pytest
 
-import folders_database_migrator
+import migrations.folders_database_migrator
 from backend.database import sqlite_wrapper
 
 

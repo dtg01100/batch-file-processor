@@ -16,8 +16,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import create_database
-from copy_backend import do as copy_backend_do
+import scripts.create_database
+from backend.copy_backend import do as copy_backend_do
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep
@@ -40,7 +40,7 @@ def secure_test_environment():
         db_path = workspace / "database" / "folders.db"
         create_database.do("33", str(db_path), str(workspace), "Linux")
 
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from core.constants import CURRENT_DATABASE_VERSION
 
         db = DatabaseObj(
             database_path=str(db_path),

@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     log_file_operation,
 )
@@ -111,7 +111,7 @@ class DefaultCreditDetector:
         Returns:
             True if the file is a credit memo
         """
-        import utils
+        import core.utils
 
         return utils.detect_invoice_is_credit(file_path)
 
@@ -519,7 +519,7 @@ class EDISplitterStep:
                 filter_mode,
             )
             try:
-                import utils
+                import core.utils
 
                 filtered_output = os.path.join(
                     output_dir, "filtered_" + os.path.basename(input_path)

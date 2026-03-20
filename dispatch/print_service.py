@@ -10,7 +10,7 @@ import textwrap
 from abc import ABC, abstractmethod
 from typing import Optional, Protocol, runtime_checkable
 
-from batch_file_processor.structured_logging import get_logger
+from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
 

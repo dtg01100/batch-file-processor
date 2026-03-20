@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 
-from batch_file_processor.structured_logging import get_logger, log_with_context
+from core.structured_logging import get_logger, log_with_context
 
 logger = get_logger(__name__)
 

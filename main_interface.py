@@ -33,7 +33,7 @@ from interface.qt.app import QtBatchFileSenderApp
 
 def main() -> None:
     """Main entry point for the Batch File Sender application."""
-    from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+    from core.constants import CURRENT_DATABASE_VERSION
 
     app = QtBatchFileSenderApp(
         appname="Batch File Sender",

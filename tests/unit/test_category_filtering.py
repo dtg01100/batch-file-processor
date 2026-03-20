@@ -8,7 +8,7 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 from core.edi.edi_splitter import filter_b_records_by_category
-from utils import capture_records
+from core.utils import capture_records
 
 
 def create_b_record(vendor_item: int, upc: str = "01234567890") -> str:
@@ -437,7 +437,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_drops_invoice_with_no_b_records(self, tmp_path):
         """When all B records are filtered out, the invoice should be dropped."""
-        import utils
+        import core.utils
 
         # Create test EDI file with 2 invoices
         # Invoice 1: has B record with category 1
@@ -478,7 +478,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_keeps_invoice_with_some_b_records(self, tmp_path):
         """Invoice with at least one matching B record should be kept."""
-        import utils
+        import core.utils
 
         # Create test EDI file with invoice containing multiple B records
         input_content = (
@@ -517,7 +517,7 @@ class TestFilterEDICategoryDropInvoices:
 
     def test_filter_edi_all_mode_keeps_all_invoices(self, tmp_path):
         """filter_categories='ALL' should keep all invoices unchanged."""
-        import utils
+        import core.utils
 
         input_content = (
             self.create_a_record("0000000001")

@@ -13,7 +13,7 @@ import sys
 import traceback
 from typing import Any, Optional, Protocol, runtime_checkable
 
-import schema
+import core.database.schema
 from backend.database import sqlite_wrapper
 
 
@@ -210,7 +210,7 @@ class DatabaseObj:
                     self._running_platform,
                 )
             else:
-                import create_database
+                import scripts.create_database as create_database
 
                 create_database.do(
                     self._database_version,
@@ -277,7 +277,7 @@ class DatabaseObj:
         if self._backup_func:
             self._backup_func(self._database_path)
         else:
-            import backup_increment
+            import scripts.backup_increment
 
             backup_increment.do_backup(self._database_path)
 
@@ -286,7 +286,7 @@ class DatabaseObj:
                 self.database_connection, self._config_folder, self._running_platform
             )
         else:
-            import folders_database_migrator
+            import migrations.folders_database_migrator
 
             folders_database_migrator.upgrade_database(
                 self.database_connection, self._config_folder, self._running_platform

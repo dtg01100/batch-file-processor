@@ -9,7 +9,7 @@ through the existing UI abstraction layer.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     get_correlation_id,
     set_correlation_id,

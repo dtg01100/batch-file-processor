@@ -17,9 +17,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import create_database
-import folders_database_migrator
-import schema
+import scripts.create_database
+import migrations.folders_database_migrator
+import core.database.schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj

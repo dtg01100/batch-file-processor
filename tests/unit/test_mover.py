@@ -15,8 +15,8 @@ import os
 
 import pytest
 
-import mover
-import schema
+import scripts.mover as mover
+import core.database.schema as schema
 from backend.database import sqlite_wrapper
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]

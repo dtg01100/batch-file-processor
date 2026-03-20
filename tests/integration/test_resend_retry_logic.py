@@ -22,8 +22,8 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import email_backend
-import ftp_backend
+import backend.email_backend
+import backend.ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator

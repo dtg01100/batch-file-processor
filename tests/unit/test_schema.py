@@ -33,7 +33,7 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.database]
 from unittest.mock import MagicMock
 
-import schema
+import core.database.schema as schema
 from backend.database import sqlite_wrapper
 
 

@@ -647,7 +647,7 @@ class Database:
         # Ensure core schema exists for new or in-memory databases so tests and
         # migrations can assume base tables like 'version' are present.
         try:
-            import schema
+            import core.database.schema
 
             schema.ensure_schema(self)
         except Exception:

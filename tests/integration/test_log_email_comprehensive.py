@@ -441,7 +441,7 @@ class TestLoggingLevels:
         """ftp_backend.do() should log a debug message about connecting."""
         from unittest.mock import patch
 
-        import ftp_backend
+        import backend.ftp_backend
         from backend.ftp_client import MockFTPClient
 
         test_file = str(tmp_path / "f.txt")
@@ -472,7 +472,7 @@ class TestLoggingLevels:
         """email_backend.do() should not suppress all log output at INFO level."""
         from unittest.mock import patch
 
-        import email_backend
+        import backend.email_backend
         from backend.smtp_client import MockSMTPClient
 
         test_file = str(tmp_path / "mail.txt")

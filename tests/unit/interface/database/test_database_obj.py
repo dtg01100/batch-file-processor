@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 from backend.database import (
     DatabaseConnectionProtocol,
     DatabaseObj,

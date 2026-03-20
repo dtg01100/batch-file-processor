@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     StructuredLogger,
     get_logger,
     get_or_create_correlation_id,

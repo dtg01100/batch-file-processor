@@ -7,7 +7,7 @@ data from the database using dependency injection for testability.
 import logging
 from typing import Protocol, runtime_checkable
 
-from batch_file_processor.structured_logging import get_logger, log_with_context
+from core.structured_logging import get_logger, log_with_context
 
 logger = get_logger(__name__)
 

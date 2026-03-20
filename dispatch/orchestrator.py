@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     CorrelationContext,
     get_logger,
     get_or_create_correlation_id,

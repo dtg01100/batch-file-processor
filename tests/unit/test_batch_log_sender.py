@@ -93,7 +93,7 @@ class TestEmailComposition:
         mock_progress_callback,
     ):
         """Test that single log produces 'Log from run at: {time}' subject."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -139,7 +139,7 @@ class TestEmailComposition:
         mock_progress_callback,
     ):
         """Test that multiple logs produce 'Logs from run at: {time}' subject."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -244,7 +244,7 @@ class TestSMTPConnection:
         mock_progress_callback,
     ):
         """Test SMTP connection with TLS and authentication."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -292,7 +292,7 @@ class TestSMTPConnection:
         mock_progress_callback,
     ):
         """Test SMTP connection without authentication (no credentials)."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -391,7 +391,7 @@ class TestAttachmentHandling:
         mock_progress_callback,
     ):
         """Test that MIME type is correctly detected from filename."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -444,7 +444,7 @@ class TestAttachmentHandling:
         mock_progress_callback,
     ):
         """Test fallback to application/octet-stream for unknown types."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -488,7 +488,7 @@ class TestAttachmentHandling:
         mock_progress_callback,
     ):
         """Test fallback to application/octet-stream when encoding is not None."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -565,7 +565,7 @@ class TestQueueManagement:
         mock_progress_callback,
     ):
         """Test that old_id is updated from id field."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -622,7 +622,7 @@ class TestQueueManagement:
         mock_progress_callback,
     ):
         """Test that .zip extension is removed from log path."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -676,7 +676,7 @@ class TestQueueManagement:
         mock_progress_callback,
     ):
         """Test that non-.zip paths are not modified."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -766,7 +766,7 @@ class TestErrorHandling:
         mock_progress_callback,
     ):
         """Test handling of SMTP connection failures."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -811,7 +811,7 @@ class TestErrorHandling:
         mock_progress_callback,
     ):
         """Test handling of SMTP send failures."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock SMTP instance to raise exception on send_message
         mock_smtp_instance = MagicMock()
@@ -861,7 +861,7 @@ class TestErrorHandling:
         mock_progress_callback,
     ):
         """Test handling of missing log files."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Create mock table
         mock_table = MagicMock()
@@ -924,7 +924,7 @@ class TestProgressCallback:
         self, mock_file, mock_smtp, mock_settings, mock_reporting, mock_queue
     ):
         """Test that progress callback is invoked during execution."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -969,7 +969,7 @@ class TestProgressCallback:
         self, mock_file, mock_smtp, mock_settings, mock_reporting, mock_queue
     ):
         """Test that NullProgressCallback is used when no callback provided."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -1040,7 +1040,7 @@ class TestEmailAddressHandling:
         self, mock_file, mock_smtp, mock_settings, mock_queue, mock_progress_callback
     ):
         """Test email sent to single recipient."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(
@@ -1091,7 +1091,7 @@ class TestEmailAddressHandling:
         self, mock_file, mock_smtp, mock_settings, mock_queue, mock_progress_callback
     ):
         """Test email sent to multiple recipients."""
-        import batch_log_sender
+        import scripts.batch_log_sender as batch_log_sender
 
         # Mock file exists check
         mock_file.return_value.__enter__ = MagicMock(

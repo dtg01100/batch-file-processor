@@ -23,7 +23,7 @@ import os
 
 import pytest
 
-import convert_to_jolley_custom
+lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
 from core.database import LegacyQueryRunnerAdapter, QueryRunner, SQLiteConnection
 
 
@@ -299,7 +299,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
     def test_module_import(self):
         """Test that convert_to_jolley_custom module can be imported."""
-        import convert_to_jolley_custom
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")jolley_custom
 
         assert convert_to_jolley_custom is not None
         assert hasattr(convert_to_jolley_custom, "edi_convert")

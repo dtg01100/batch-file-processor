@@ -6,7 +6,7 @@ that appear based on user selections in the EDI options dropdown.
 
 from typing import Any, Callable, Dict, List, Optional
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     get_correlation_id,
     set_correlation_id,

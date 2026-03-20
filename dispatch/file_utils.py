@@ -10,7 +10,7 @@ import re
 import time
 from typing import Optional
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     log_file_operation,
 )

@@ -17,7 +17,7 @@ def _get_default_parser():
     global _default_parser
     if _default_parser is None:
         try:
-            from edi_format_parser import EDIFormatParser
+            from core.edi.edi_format_parser import EDIFormatParser
 
             _default_parser = EDIFormatParser.get_default_parser()
         except Exception:

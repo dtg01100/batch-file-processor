@@ -7,7 +7,7 @@ import time
 import traceback
 from typing import Any
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     get_correlation_id,
     set_correlation_id,

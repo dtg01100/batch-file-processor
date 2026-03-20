@@ -20,7 +20,7 @@ import sqlite3
 
 import pytest
 
-import convert_to_estore_einvoice_generic
+lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
 from core.database import LegacyQueryRunnerAdapter, QueryRunner
 
 
@@ -469,7 +469,7 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
 
     def test_module_import(self):
         """Test that convert_to_estore_einvoice_generic module can be imported."""
-        import convert_to_estore_einvoice_generic
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")estore_einvoice_generic
 
         assert convert_to_estore_einvoice_generic is not None
         assert hasattr(convert_to_estore_einvoice_generic, "edi_convert")

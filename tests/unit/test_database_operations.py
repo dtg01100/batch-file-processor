@@ -23,7 +23,7 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.database]
 import os
 
-import schema
+import core.database.schema
 from backend.database import sqlite_wrapper
 
 

@@ -10,7 +10,7 @@ import time
 from typing import List, Optional
 
 from backend.protocols import FileOperationsProtocol
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
     log_backend_call,

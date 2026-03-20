@@ -2,7 +2,7 @@ import ast
 import json
 import unittest
 
-import schema
+import core.database.schema
 from backend.database import sqlite_wrapper
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (

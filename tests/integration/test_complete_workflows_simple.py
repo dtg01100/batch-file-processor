@@ -13,8 +13,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from copy_backend import do as copy_backend_do
+from core.constants import CURRENT_DATABASE_VERSION
+from backend.copy_backend import do as copy_backend_do
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.tweaker import EDITweakerStep

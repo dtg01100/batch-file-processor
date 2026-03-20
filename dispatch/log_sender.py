@@ -12,7 +12,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Optional, Protocol, runtime_checkable
 
-from batch_file_processor.structured_logging import (
+from core.structured_logging import (
     get_logger,
     log_backend_call,
 )

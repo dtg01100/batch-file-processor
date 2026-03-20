@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import the module to test
-import convert_to_fintech
+lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
 
 
 class TestConvertToFintechFixtures:
@@ -117,7 +117,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
 
     def test_module_import(self):
         """Test that convert_to_fintech module can be imported."""
-        import convert_to_fintech
+        lambda m: m.group(0).replace("import convert_to_", "import dispatch.converters.convert_to_")fintech
 
         assert convert_to_fintech is not None
         assert hasattr(convert_to_fintech, "edi_convert")

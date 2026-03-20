@@ -23,12 +23,12 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-import email_backend
-import ftp_backend
+import backend.email_backend
+import backend.ftp_backend
 from backend.ftp_client import MockFTPClient
 from backend.smtp_client import MockSMTPClient, RealSMTPClient
 from dispatch.send_manager import SendManager
-from email_backend import EmailBackend
+from backend.email_backend import EmailBackend
 
 pytestmark = [pytest.mark.integration, pytest.mark.backend]
 

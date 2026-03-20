@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 from backend.database.database_obj import DatabaseObj
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog

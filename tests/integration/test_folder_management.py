@@ -20,7 +20,7 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.database]
 import os
 
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 from core.utils.bool_utils import normalize_bool
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj

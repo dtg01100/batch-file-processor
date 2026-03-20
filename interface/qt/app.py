@@ -20,17 +20,17 @@ import appdirs
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
-import backup_increment
-import batch_log_sender
-import print_run_log
-import utils
+import scripts.backup_increment as backup_increment
+import scripts.batch_log_sender as batch_log_sender
+import scripts.print_run_log as print_run_log
+import core.utils
 from adapters.sqlite.repositories import (
     SqliteFolderRepository,
     SqliteProcessedFilesRepository,
     SqliteSettingsRepository,
 )
 from backend.database.database_obj import DatabaseObj
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService

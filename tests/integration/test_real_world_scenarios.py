@@ -21,8 +21,8 @@ from unittest import mock
 
 import pytest
 
-import create_database
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+import scripts.create_database
+from core.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager

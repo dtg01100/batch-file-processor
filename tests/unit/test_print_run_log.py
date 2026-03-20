@@ -37,13 +37,13 @@ class TestPrintRunLog:
 
     def test_module_import(self):
         """Test that print_run_log module can be imported."""
-        import print_run_log
+        import scripts.print_run_log as print_run_log
 
         assert print_run_log is not None
 
     def test_do_function_exists(self):
         """Test that do function exists."""
-        import print_run_log
+        import scripts.print_run_log as print_run_log
 
         assert hasattr(print_run_log, "do")
         assert callable(print_run_log.do)

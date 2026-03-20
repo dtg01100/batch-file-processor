@@ -13,7 +13,7 @@ import sqlite3
 import pytest
 
 from backend.database import sqlite_wrapper
-from schema import ensure_schema
+from core.database.schema import ensure_schema
 
 
 @pytest.fixture(scope="session")

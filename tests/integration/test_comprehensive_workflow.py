@@ -37,7 +37,7 @@ from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
-from schema import ensure_schema
+from core.database.schema import ensure_schema
 
 # =============================================================================
 # FIXTURES

@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import the module under test
-from convert_base import (
+from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
@@ -271,7 +271,7 @@ class TestBaseEDIConverter(TestFixtures):
         converter = MockConverter()
         assert converter is not None
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_edi_convert_full_workflow(self, mock_utils, tmp_path, sample_edi_content):
         """Test the complete edi_convert workflow."""
         # Setup
@@ -323,7 +323,7 @@ class TestBaseEDIConverter(TestFixtures):
         assert len(converter.c_records) == 1
         assert result == str(output_file) + ".csv"
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_record_dispatching(self, mock_utils, tmp_path):
         """Test that records are dispatched to correct handlers."""
         mock_utils.capture_records.side_effect = [
@@ -343,7 +343,7 @@ class TestBaseEDIConverter(TestFixtures):
         assert len(converter.b_records) == 1
         assert len(converter.c_records) == 1
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_record_filtering(self, mock_utils, tmp_path):
         """Test that _should_process_record_type filters records."""
         mock_utils.capture_records.side_effect = [
@@ -364,7 +364,7 @@ class TestBaseEDIConverter(TestFixtures):
         assert len(converter.b_records) == 1
         assert len(converter.c_records) == 0  # Filtered out
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_arec_header_storage(self, mock_utils, tmp_path):
         """Test that A record header is stored in context."""
         mock_utils.capture_records.side_effect = [
@@ -391,7 +391,7 @@ class TestBaseEDIConverter(TestFixtures):
 
         assert context.arec_header == {"invoice_number": "INV001"}
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_error_cleanup(self, mock_utils, tmp_path):
         """Test that resources are cleaned up on error."""
         mock_utils.capture_records.side_effect = ValueError("Parse error")
@@ -468,7 +468,7 @@ class TestUtilityFunctions:
 class TestEdgeCases(TestFixtures):
     """Test suite for edge cases and error conditions."""
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_empty_edi_file(self, mock_utils, tmp_path):
         """Test handling of empty EDI file."""
         mock_utils.capture_records.return_value = None
@@ -485,7 +485,7 @@ class TestEdgeCases(TestFixtures):
         assert converter.finalize_called is True
         assert len(converter.a_records) == 0
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_unknown_record_type(self, mock_utils, tmp_path):
         """Test handling of unknown record types."""
         mock_utils.capture_records.side_effect = [
@@ -501,7 +501,7 @@ class TestEdgeCases(TestFixtures):
 
         assert len(converter.unknown_records) == 1
 
-    @patch("convert_base.utils")
+    @patch("dispatch.converters.convert_base.utils")
     def test_arec_header_default_storage(
         self, mock_utils, tmp_path, sample_edi_record_a
     ):
@@ -563,13 +563,13 @@ class TestModuleImports:
 
     def test_module_import(self):
         """Test that convert_base module can be imported."""
-        import convert_base as cb
+        import dispatch.converters.convert_base as cb
 
         assert cb is not None
 
     def test_all_classes_importable(self):
         """Test that all public classes can be imported."""
-        from convert_base import (
+        from dispatch.converters.convert_base import (
             BaseEDIConverter,
             ConversionContext,
             EDIRecord,
@@ -585,7 +585,7 @@ class TestModuleImports:
 
     def test_base_edi_converter_is_abc(self):
         """Test that BaseEDIConverter is an abstract base class."""
-        from convert_base import BaseEDIConverter
+        from dispatch.converters.convert_base import BaseEDIConverter
 
         # Check it's a subclass of ABC
         assert issubclass(BaseEDIConverter, ABC)

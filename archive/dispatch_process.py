@@ -23,8 +23,8 @@ if _script_dir not in sys.path:
 import edi_tweaks
 import mtc_edi_validator
 
-import record_error
-import utils
+import scripts.record_error as record_error
+import core.utils
 from core.database import query_runner
 from interface.services.progress_service import NullProgressCallback, ProgressCallback
 

@@ -102,7 +102,7 @@ class TestScalabilityByFileCount:
 
     def test_process_10_files(self, large_dataset_workspace):
         """Test processing 10 files - baseline."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 10 files
@@ -134,7 +134,7 @@ class TestScalabilityByFileCount:
 
     def test_process_100_files(self, large_dataset_workspace):
         """Test processing 100 files."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 100 files
@@ -166,7 +166,7 @@ class TestScalabilityByFileCount:
 
     def test_process_1000_files(self, large_dataset_workspace):
         """Test processing 1000 files."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 1000 files
@@ -282,7 +282,7 @@ class TestMemoryUsage:
 
     def test_memory_usage_small_batch(self, large_dataset_workspace):
         """Test memory usage with small batch (10 files)."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 10 files
@@ -317,7 +317,7 @@ class TestMemoryUsage:
 
     def test_memory_usage_large_batch(self, large_dataset_workspace):
         """Test memory usage with large batch (100 files)."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 100 files
@@ -415,7 +415,7 @@ class TestUIResponsiveness:
 
     def test_progress_update_frequency(self, large_dataset_workspace):
         """Test that progress updates are frequent enough."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 50 files
@@ -466,7 +466,7 @@ class TestConversionPerformance:
 
     def test_csv_conversion_speed(self, large_dataset_workspace):
         """Test CSV conversion speed."""
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 50 EDI files
@@ -509,7 +509,7 @@ class TestConcurrentProcessing:
         """Test processing multiple folders in parallel."""
         from concurrent.futures import ThreadPoolExecutor
 
-        from copy_backend import CopyBackend
+        from backend.copy_backend import CopyBackend
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 
         # Create 5 folders

@@ -65,7 +65,7 @@ class TestCoreModulesImportable:
     @pytest.mark.unit
     def test_schema_module_importable(self):
         """schema module should be importable."""
-        import schema
+        import core.database.schema
 
         assert schema is not None
 
@@ -239,7 +239,7 @@ class TestConversionModulesCompatibility:
     @pytest.mark.unit
     def test_convert_base_importable(self):
         """convert_base module should be importable."""
-        from convert_base import BaseEDIConverter
+        from dispatch.converters.convert_base import BaseEDIConverter
 
         assert BaseEDIConverter is not None
 
@@ -248,7 +248,7 @@ class TestConversionModulesCompatibility:
     @pytest.mark.unit
     def test_conversion_base_has_methods(self):
         """BaseEDIConverter should have expected methods."""
-        from convert_base import BaseEDIConverter
+        from dispatch.converters.convert_base import BaseEDIConverter
 
         # Should be an ABC with abstract methods
         assert BaseEDIConverter is not None
@@ -284,7 +284,7 @@ class TestDatabaseSchemaCompatibility:
     @pytest.mark.unit
     def test_ensure_schema_function_exists(self):
         """ensure_schema function should exist."""
-        from schema import ensure_schema
+        from core.database.schema import ensure_schema
 
         assert callable(ensure_schema)
 
@@ -293,7 +293,7 @@ class TestDatabaseSchemaCompatibility:
     @pytest.mark.unit
     def test_ensure_schema_accepts_connection(self):
         """ensure_schema should accept database_connection parameter."""
-        from schema import ensure_schema
+        from core.database.schema import ensure_schema
 
         sig = inspect.signature(ensure_schema)
         params = list(sig.parameters.keys())
@@ -314,7 +314,7 @@ class TestDatabaseSchemaCompatibility:
     @pytest.mark.integration
     def test_schema_can_be_created(self, temp_db):
         """Core schema should be generatable without errors."""
-        from schema import ensure_schema
+        from core.database.schema import ensure_schema
 
         try:
             # Just verify this doesn't raise an error
@@ -342,17 +342,17 @@ class TestMainEntryPointsCompatibility:
     def test_create_database_exists(self):
         """create_database module should be importable."""
         try:
-            import create_database
+            import scripts.create_database
 
             assert create_database is not None
         except ImportError as e:
-            pytest.fail(f"Failed to import create_database: {e}")
+            pytest.fail(f"Failed to import scripts.create_database: {e}")
 
     @pytest.mark.backward_compatibility
     @pytest.mark.unit
     def test_schema_module_accessible(self):
         """schema module should be accessible."""
-        import schema
+        import core.database.schema
 
         assert hasattr(schema, "ensure_schema")
 
@@ -378,7 +378,7 @@ class TestAPISignaturePreservation:
     @pytest.mark.unit
     def test_base_edi_converter_instantiable(self):
         """BaseEDIConverter should be available as base class."""
-        from convert_base import BaseEDIConverter
+        from dispatch.converters.convert_base import BaseEDIConverter
 
         try:
             assert BaseEDIConverter is not None
@@ -408,7 +408,7 @@ class TestExceptionHandling:
     def test_core_utils_available(self):
         """core utilities should be importable."""
         try:
-            from core import utils
+            from core import core.utils
 
             assert utils is not None
         except ImportError as e:
@@ -458,7 +458,7 @@ class TestUtilityModulesAccessible:
     @pytest.mark.unit
     def test_utils_module_importable(self):
         """utils module should be importable."""
-        import utils
+        import core.utils
 
         assert utils is not None
 
@@ -474,7 +474,7 @@ class TestUtilityModulesAccessible:
     @pytest.mark.unit
     def test_batch_file_processor_constants_importable(self):
         """batch_file_processor.constants should be importable."""
-        from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+        from core.constants import CURRENT_DATABASE_VERSION
 
         assert CURRENT_DATABASE_VERSION is not None
 

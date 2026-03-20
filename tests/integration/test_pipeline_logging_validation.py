@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from batch_file_processor.logging_config import (
+from core.logging_config import (
     RunLogAdapter,
     RunLogHandler,
     setup_logging,

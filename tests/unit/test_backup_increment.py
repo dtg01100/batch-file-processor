@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-import backup_increment
+import scripts.backup_increment as backup_increment
 
 
 class TestDoBackup:
@@ -37,7 +37,7 @@ class TestDoBackup:
         if os.path.exists(backups_dir):
             shutil.rmtree(backups_dir)
 
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(test_file)
 
         assert os.path.exists(backups_dir)
@@ -45,7 +45,7 @@ class TestDoBackup:
 
     def test_do_backup_creates_bak_file(self, temp_dir, test_file):
         """Test that backup creates a .bak file."""
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(test_file)
 
         assert os.path.exists(result)
@@ -54,7 +54,7 @@ class TestDoBackup:
 
     def test_do_backup_returns_correct_path(self, temp_dir, test_file):
         """Test that do_backup returns the correct backup path."""
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(test_file)
 
         expected_dir = os.path.join(temp_dir, "backups")
@@ -66,7 +66,7 @@ class TestDoBackup:
         with open(test_file, "r") as f:
             original_content = f.read()
 
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(test_file)
 
         with open(result, "r") as f:
@@ -76,7 +76,7 @@ class TestDoBackup:
 
     def test_do_backup_calls_clear_old_files(self, temp_dir, test_file):
         """Test that do_backup calls utils.do_clear_old_files."""
-        with patch("backup_increment.utils.do_clear_old_files") as mock_clear:
+        with patch("scripts.backup_increment.utils.do_clear_old_files") as mock_clear:
             backup_increment.do_backup(test_file)
 
             mock_clear.assert_called_once()
@@ -89,7 +89,7 @@ class TestDoBackup:
     ):
         """Test backup handles case where backups name exists as a file."""
         # First backup creates the directory
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             first_result = backup_increment.do_backup(test_file)
 
         # Remove the backup directory and create a file with that name
@@ -101,7 +101,7 @@ class TestDoBackup:
             f.write("fake backup folder")
 
         # Second backup should handle this by creating "backups1" directory
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             second_result = backup_increment.do_backup(test_file)
 
         # Should create backups1 directory
@@ -114,7 +114,7 @@ class TestDoBackup:
         backups_dir = os.path.join(temp_dir, "backups")
 
         # First run creates "backups" directory
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             first_result = backup_increment.do_backup(test_file)
 
         # Clean up the backup but leave the directory
@@ -122,14 +122,14 @@ class TestDoBackup:
             os.remove(first_result)
 
         # Second run should find "backups" is a directory and use it
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             second_result = backup_increment.do_backup(test_file)
 
         assert os.path.exists(second_result)
 
     def test_do_backup_timestamp_in_filename(self, temp_dir, test_file):
         """Test that backup filename contains a timestamp."""
-        with patch("backup_increment.utils.do_clear_old_files"):
+        with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(test_file)
 
         # Filename should contain .bak-

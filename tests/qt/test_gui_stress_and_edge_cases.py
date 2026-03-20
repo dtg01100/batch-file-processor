@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 pytestmark = pytest.mark.qt
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
+from core.constants import CURRENT_DATABASE_VERSION
 
 
 # ---------------------------------------------------------------------------
@@ -1155,7 +1155,7 @@ class TestAppSmokeActions:
 
         import appdirs
 
-        import create_database
+        import scripts.create_database
         from backend.database.database_obj import DatabaseObj
         from interface.qt.app import QtBatchFileSenderApp
 

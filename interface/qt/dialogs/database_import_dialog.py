@@ -23,8 +23,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-import backup_increment
-import folders_database_migrator
+import scripts.backup_increment as backup_increment
+import migrations.folders_database_migrator
 from core.utils.bool_utils import normalize_bool
 from backend.database import sqlite_wrapper
 from interface.qt.dialogs.base_dialog import BaseDialog

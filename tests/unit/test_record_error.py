@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-import record_error
+import scripts.record_error as record_error
 
 
 class TestRecordError:
