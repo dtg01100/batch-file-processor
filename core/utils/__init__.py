@@ -32,6 +32,8 @@ from .utils import (
     filter_b_records_by_category,
     filter_edi_file_by_category,
     invFetcher,
+    add_row,
+    qty_to_int,
 )
 from core.edi.edi_parser import EDIParseError
 
@@ -59,5 +61,7 @@ __all__ = [
     "filter_b_records_by_category",
     "filter_edi_file_by_category",
     "invFetcher",
+    "add_row",
+    "qty_to_int",
     "EDIParseError",
 ]
