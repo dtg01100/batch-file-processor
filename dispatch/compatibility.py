@@ -33,8 +33,24 @@ def _normalize_legacy_true_false(value: Any) -> bool:
     Handles all stored forms: string "True"/"False" (legacy), integer 1/0
     (modern), and string "1"/"0" (produced by the v41→v42 migration due to
     SQLite TEXT affinity converting integer writes back to strings).
+
+    Does NOT accept "yes"/"no" or other truthy strings - only the documented
+    legacy formats.
     """
-    return normalize_bool(value)
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        lower_val = stripped.lower()
+        if lower_val in ("true", "1"):
+            return True
+        if lower_val in ("false", "0", ""):
+            return False
+    return False
 
 
 def parse_legacy_process_edi_flag(value: Any) -> bool:

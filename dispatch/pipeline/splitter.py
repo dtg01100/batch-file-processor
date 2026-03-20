@@ -8,11 +8,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.structured_logging import (
     get_logger,
     log_file_operation,
 )
-from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.utils.bool_utils import normalize_bool
 from dispatch.interfaces import FileSystemInterface
 
@@ -25,8 +25,24 @@ def _normalize_true_false_only(value: Any) -> bool:
     Handles all stored forms: string "True"/"False" (legacy), integer 1/0
     (modern), and string "1"/"0" (produced by the v41→v42 migration due to
     SQLite TEXT affinity converting integer writes back to strings).
+
+    Does NOT accept "yes"/"no" or other truthy strings - only the documented
+    legacy formats.
     """
-    return normalize_bool(value)
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        lower_val = stripped.lower()
+        if lower_val in ("true", "1"):
+            return True
+        if lower_val in ("false", "0", ""):
+            return False
+    return False
 
 
 def _normalize_include_flag(value: Any, default: bool = True) -> bool:

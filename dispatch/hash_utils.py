@@ -56,7 +56,6 @@ def generate_file_hash(
     absolute_path = os.path.abspath(file_path)
     generated_checksum: Optional[str] = None
     checksum_attempt = 1
-    last_error: Optional[Exception] = None
 
     while generated_checksum is None:
         try:
@@ -65,8 +64,7 @@ def generate_file_hash(
                 for chunk in iter(lambda: f.read(8192), b""):
                     h.update(chunk)
                 generated_checksum = h.hexdigest()
-        except Exception as error:
-            last_error = error
+        except Exception:
             if checksum_attempt <= max_retries:
                 # Exponential backoff: 1s, 4s, 9s, 16s, 25s
                 time.sleep(retry_delay_base * checksum_attempt * checksum_attempt)

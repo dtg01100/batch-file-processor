@@ -348,9 +348,7 @@ class ErrorHandler:
         return validator_log_path
 
     def write_processing_report(self, errors: str, version: str) -> str:
-        folder_log_name = (
-            f"Folder Errors Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
-        )
+        folder_log_name = f"Folder Errors Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
         folder_log_path = os.path.join(self.run_log_directory, folder_log_name)
         content = self.report_generator.generate_processing_report(errors, version)
         self.fs.write_file_text(folder_log_path, content)
