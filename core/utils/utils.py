@@ -20,13 +20,15 @@ from core.database import LegacyQueryRunnerAdapter, create_query_runner
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
+from core.edi.edi_transformer import (
+    detect_invoice_is_credit,  # noqa: F401
+)
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
 from core.edi.upc_utils import (
     calc_check_digit,  # noqa: F401
-    convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
 )
-from core.edi.edi_transformer import (
-    detect_invoice_is_credit,  # noqa: F401
+from core.edi.upc_utils import (
+    convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
 )
 from core.utils.date_utils import (
     dactime_from_datetime,  # noqa: F401
@@ -164,22 +166,6 @@ def convert_to_price_decimal(value):
 
 # Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime,
 # dactime_from_invtime are now imported from core.utils.date_utils
-
-
-def detect_invoice_is_credit(edi_process):
-    """Detect if an invoice is a credit memo based on negative total."""
-    with open(edi_process, encoding="utf-8") as work_file:
-        fields = capture_records(work_file.readline())
-        if fields is None:
-            return False
-        if fields["record_type"] != "A":
-            raise ValueError(
-                "[Invoice Type Detection]: Somehow ended up in the middle of a file, this should not happen"
-            )
-        if dac_str_int_to_int(fields["invoice_total"]) >= 0:
-            return False
-        else:
-            return True
 
 
 # Note: _get_default_parser and capture_records are now imported from core.edi.edi_parser

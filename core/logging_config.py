@@ -30,7 +30,6 @@ from typing import IO, Union
 from core.structured_logging import (
     JSONFormatter,
     StructuredLogAdapter,
-    get_correlation_id,
 )
 
 # ---------------------------------------------------------------------------

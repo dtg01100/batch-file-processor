@@ -535,7 +535,6 @@ class EDISplitter:
 
                 # Start new invoice
                 count += 1
-                prepend_letters = _col_to_excel(count)
                 line_dict = capture_records(line)
 
                 if line_dict is None:

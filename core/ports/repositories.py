@@ -168,9 +168,7 @@ class IProcessedFilesRepository(ABC):
         ...
 
     @abstractmethod
-    def mark_processed(
-        self, file_hash: str, folder_id: int, filename: str
-    ) -> None:
+    def mark_processed(self, file_hash: str, folder_id: int, filename: str) -> None:
         """Record that a file has been processed.
 
         Args:
@@ -227,9 +225,7 @@ class IEmailQueueRepository(ABC):
         ...
 
     @abstractmethod
-    def dequeue_batch(
-        self, max_size: int, max_count: int
-    ) -> List[Dict[str, Any]]:
+    def dequeue_batch(self, max_size: int, max_count: int) -> List[Dict[str, Any]]:
         """Return a batch of emails ready to send.
 
         Args:

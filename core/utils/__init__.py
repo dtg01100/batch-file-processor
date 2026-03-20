@@ -7,6 +7,8 @@ This package contains small, focused utility modules organized by functionality:
 - utils: Legacy utilities (kept for backward compatibility)
 """
 
+from core.edi.edi_parser import EDIParseError
+
 from .bool_utils import from_db_bool, normalize_bool, to_db_bool
 from .date_utils import (
     dactime_from_datetime,
@@ -18,6 +20,7 @@ from .date_utils import (
 
 # Import legacy utils for backward compatibility
 from .utils import (
+    add_row,
     apply_retail_uom_transform,
     apply_upc_override,
     calc_check_digit,
@@ -32,10 +35,8 @@ from .utils import (
     filter_b_records_by_category,
     filter_edi_file_by_category,
     invFetcher,
-    add_row,
     qty_to_int,
 )
-from core.edi.edi_parser import EDIParseError
 
 __all__ = [
     "normalize_bool",
