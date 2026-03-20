@@ -14,6 +14,7 @@ from core.structured_logging import (
     generate_correlation_id,
     log_with_context,
 )
+from dispatch.preflight_validator import PreflightValidator
 
 logger = get_logger(__name__)
 
@@ -51,6 +52,24 @@ class QtRunCoordinator:
                 + (f" (e.g. '{missing_folder_name}')." if missing_folder_name else "."),
             )
         elif folders_table_process.count(folder_is_active=True) > 0:
+            # Preflight validation — catch config issues before the run.
+            active_folders = list(folders_table_process.find(folder_is_active=True))
+            settings = self._app._database.get_settings_or_default()
+            preflight = PreflightValidator(os_module=self._app._os_module)
+            preflight_result = preflight.validate_folders(active_folders, settings)
+            if not preflight_result.is_valid:
+                proceed = self._app._ui_service.ask_ok_cancel(
+                    "Preflight Warning",
+                    preflight_result.format_message() + "\n\nContinue anyway?",
+                )
+                if not proceed:
+                    return
+            elif preflight_result.warnings:
+                self._app._ui_service.show_warning(
+                    "Preflight Warning",
+                    preflight_result.format_message(),
+                )
+
             self._app._progress_service.show("Preparing run...")
             self._app._process_directories(folders_table_process)
             self._app._refresh_users_list()
@@ -169,7 +188,9 @@ class QtRunCoordinator:
                     splitter_step=EDISplitterStep(),
                     converter_step=EDIConverterStep(),
                     tweaker_step=EDITweakerStep(),
-                    upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+                    upc_dict={
+                        "_mock": []
+                    },  # Non-empty dict prevents UPC lookup from AS400
                 )
 
                 orchestrator = DispatchOrchestrator(config)
@@ -288,6 +309,33 @@ class QtRunCoordinator:
                 operation="automatic_process_directories",
                 context={"active_folders": active_count},
             )
+            # Preflight validation — log only, never block automatic runs.
+            try:
+                active_folders = list(
+                    automatic_process_folders_table.find(folder_is_active=True)
+                )
+                settings = self._app._database.get_settings_or_default()
+                preflight = PreflightValidator(os_module=self._app._os_module)
+                preflight_result = preflight.validate_folders(active_folders, settings)
+                if preflight_result.issues:
+                    log_with_context(
+                        logger,
+                        30,  # WARNING
+                        "Preflight validation issues (automatic mode, "
+                        "proceeding anyway): " + preflight_result.format_message(),
+                        correlation_id=correlation_id,
+                        component="qt_run_coordinator",
+                        operation="automatic_process_directories",
+                    )
+            except Exception as preflight_error:
+                log_with_context(
+                    logger,
+                    30,  # WARNING
+                    f"Preflight validation failed: {preflight_error}",
+                    correlation_id=correlation_id,
+                    component="qt_run_coordinator",
+                    operation="automatic_process_directories",
+                )
             try:
                 self._app._process_directories(automatic_process_folders_table)
             except Exception as automatic_process_error:

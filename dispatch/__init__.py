@@ -34,6 +34,11 @@ from dispatch.log_sender import (
     SMTPEmailService,
 )
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.preflight_validator import (
+    PreflightIssue,
+    PreflightResult,
+    PreflightValidator,
+)
 from dispatch.print_service import (
     MockPrintService,
     NullPrintService,
@@ -66,6 +71,10 @@ __all__ = [
     "ErrorHandler",
     "DispatchConfig",
     "DispatchOrchestrator",
+    # Preflight Validation
+    "PreflightValidator",
+    "PreflightResult",
+    "PreflightIssue",
     # Feature Flags
     "get_debug_mode",
     "get_feature_flags",
