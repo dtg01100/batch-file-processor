@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import logging
 import multiprocessing
 import os
 import platform
@@ -23,13 +24,13 @@ import backup_increment
 import batch_log_sender
 import print_run_log
 import utils
-from batch_file_processor.constants import CURRENT_DATABASE_VERSION
-from backend.database.database_obj import DatabaseObj
 from adapters.sqlite.repositories import (
     SqliteFolderRepository,
-    SqliteSettingsRepository,
     SqliteProcessedFilesRepository,
+    SqliteSettingsRepository,
 )
+from backend.database.database_obj import DatabaseObj
+from batch_file_processor.constants import CURRENT_DATABASE_VERSION
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService
@@ -37,6 +38,8 @@ from interface.qt.diagnostics import QtDiagnosticsService
 from interface.qt.run_coordinator import QtRunCoordinator
 from interface.qt.window_controller import QtMainWindowController
 from interface.services.reporting_service import ReportingService
+
+logger = logging.getLogger(__name__)
 
 
 class QtBatchFileSenderApp:
@@ -214,14 +217,20 @@ class QtBatchFileSenderApp:
                 try:
                     disposer()
                 except Exception:
-                    pass
+                    logger.debug(
+                        "Failed to dispose progress service during shutdown",
+                        exc_info=True,
+                    )
 
         if self._window is not None:
             try:
                 self._window.close()
                 self._window.deleteLater()
             except Exception:
-                pass
+                logger.debug(
+                    "Failed to close and delete main window during shutdown",
+                    exc_info=True,
+                )
             self._window = None
 
         try:
@@ -231,7 +240,9 @@ class QtBatchFileSenderApp:
                 for _ in range(10):
                     QApplication.processEvents()
         except Exception:
-            pass
+            logger.debug(
+                "Failed to process pending Qt events during shutdown", exc_info=True
+            )
 
         self._ui_service = None
         self._progress_service = None

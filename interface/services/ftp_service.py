@@ -1,8 +1,11 @@
 """FTP Service abstraction for testable FTP operations."""
 
 import ftplib
+import logging
 from dataclasses import dataclass
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -83,7 +86,9 @@ class FTPService(FTPServiceProtocol):
             try:
                 ftp.close()
             except Exception:
-                pass
+                logger.debug(
+                    "Failed to close FTP connection during cleanup", exc_info=True
+                )
 
     def connect(
         self, server: str, port: int, username: str, password: str

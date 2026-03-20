@@ -8,6 +8,7 @@ support testing and headless environments.
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from PyQt6.QtCore import QEvent, QObject, Qt
@@ -24,6 +25,8 @@ from PyQt6.QtWidgets import (
 )
 
 from interface.qt.theme import Theme
+
+logger = logging.getLogger(__name__)
 
 
 class QtUIService:
@@ -442,20 +445,26 @@ class QtProgressService(QObject):
             try:
                 animation.stop()
             except Exception:
-                pass
+                logger.debug(
+                    "Failed to stop throbber animation during dispose", exc_info=True
+                )
 
         if self._parent is not None:
             try:
                 self._parent.removeEventFilter(self)
             except Exception:
-                pass
+                logger.debug(
+                    "Failed to remove event filter during dispose", exc_info=True
+                )
 
         if self._overlay is not None:
             try:
                 self._overlay.hide()
                 self._overlay.deleteLater()
             except Exception:
-                pass
+                logger.debug(
+                    "Failed to hide and delete overlay during dispose", exc_info=True
+                )
 
     def set_message(self, message: str) -> None:
         """Set the progress message.
@@ -720,7 +729,9 @@ class QtProgressService(QObject):
             )
             self.update_progress(percentage)
         elif self._current_file_total > 0:
-            percentage = int((self._current_file_index / self._current_file_total) * 100)
+            percentage = int(
+                (self._current_file_index / self._current_file_total) * 100
+            )
             self.update_progress(percentage)
         else:
             self.set_indeterminate()
