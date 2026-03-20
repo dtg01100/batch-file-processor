@@ -307,6 +307,7 @@ class EDIConverterStep:
         errors: list[str] = []
 
         convert_to_format = params.get("convert_to_format", "")
+        tweak_edi = params.get("tweak_edi", False)
         input_basename = os.path.basename(input_path)
 
         StructuredLogger.log_debug(
@@ -317,18 +318,20 @@ class EDIConverterStep:
             input_path=input_basename,
             output_dir=output_dir,
             format=convert_to_format,
+            tweak_edi=tweak_edi,
             process_edi=params.get("process_edi"),
             correlation_id=correlation_id,
         )
 
-        if not convert_to_format:
+        if not convert_to_format and not tweak_edi:
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
                 logger,
                 "convert",
                 __name__,
-                f"No convert_to_format set, skipping conversion for {input_basename}",
-                decision="no_format",
+                f"No convert_to_format or tweak_edi set, "
+                f"skipping conversion for {input_basename}",
+                decision="no_format_no_tweak",
                 input_path=input_basename,
                 correlation_id=correlation_id,
                 duration_ms=duration_ms,
@@ -349,14 +352,15 @@ class EDIConverterStep:
             correlation_id=correlation_id,
         )
 
-        if not process_edi:
+        if not process_edi and not tweak_edi:
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
                 logger,
                 "convert",
                 __name__,
-                f"process_edi is False, skipping conversion for {input_basename}",
-                decision="process_edi_false",
+                f"process_edi is False and tweak_edi is False, "
+                f"skipping for {input_basename}",
+                decision="process_edi_and_tweak_edi_false",
                 input_path=input_basename,
                 format=convert_to_format,
                 correlation_id=correlation_id,
@@ -367,6 +371,18 @@ class EDIConverterStep:
                 format_used=convert_to_format,
                 success=True,
                 errors=errors,
+            )
+
+        if tweak_edi and not convert_to_format:
+            return self._apply_tweak(
+                input_path,
+                output_dir,
+                params,
+                settings,
+                upc_dict,
+                errors,
+                start_time,
+                correlation_id,
             )
 
         format_normalized = (
@@ -603,6 +619,120 @@ class EDIConverterStep:
             context={"source": "EDIConverterStep"},
             error_source="EDIConverter",
         )
+
+    def _apply_tweak(
+        self,
+        input_path: str,
+        output_dir: str,
+        params: dict,
+        settings: dict,
+        upc_dict: dict,
+        errors: list[str],
+        start_time: float,
+        correlation_id: str,
+    ) -> ConverterResult:
+        """Apply EDI tweaks to a file.
+
+        Args:
+            input_path: Path to the input EDI file
+            output_dir: Directory for output file
+            params: Folder parameters dictionary
+            errors: List to append errors to
+            start_time: Start time for duration calculation
+            correlation_id: Correlation ID for logging
+
+        Returns:
+            ConverterResult with tweak outcome
+        """
+        input_basename = os.path.basename(input_path)
+
+        StructuredLogger.log_debug(
+            logger,
+            "tweak",
+            __name__,
+            f"Applying tweaks to {input_basename}",
+            input_path=input_basename,
+            output_dir=output_dir,
+            correlation_id=correlation_id,
+        )
+
+        archive_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "archive"
+        )
+        import sys
+
+        if archive_path not in sys.path:
+            sys.path.insert(0, archive_path)
+        import edi_tweaks
+
+        output_filename = os.path.join(output_dir, input_basename)
+
+        if self._file_system and not self._file_system.dir_exists(output_dir):
+            try:
+                self._file_system.makedirs(output_dir)
+            except Exception as e:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                error_msg = f"Failed to create output directory: {e}"
+                StructuredLogger.log_error(
+                    logger,
+                    "tweak",
+                    __name__,
+                    e,
+                    {"input_path": input_basename, "output_dir": output_dir},
+                    duration_ms,
+                )
+                errors.append(error_msg)
+                self._record_error(input_path, error_msg)
+                return ConverterResult(
+                    output_path=input_path,
+                    format_used="tweak",
+                    success=False,
+                    errors=errors,
+                )
+
+        try:
+            tweaked_path = edi_tweaks.edi_tweak(
+                input_path, output_filename, settings, params, upc_dict
+            )
+
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            StructuredLogger.log_debug(
+                logger,
+                "tweak",
+                __name__,
+                f"Tweaked {input_basename} -> {tweaked_path}",
+                input_path=input_basename,
+                output_path=tweaked_path,
+                correlation_id=correlation_id,
+                duration_ms=duration_ms,
+            )
+
+            return ConverterResult(
+                output_path=tweaked_path,
+                format_used="tweak",
+                success=True,
+                errors=errors,
+            )
+
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            error_msg = f"Tweaking failed: {e}"
+            StructuredLogger.log_error(
+                logger,
+                "tweak",
+                __name__,
+                e,
+                {"input_path": input_basename, "output_dir": output_dir},
+                duration_ms,
+            )
+            errors.append(error_msg)
+            self._record_error(input_path, error_msg)
+            return ConverterResult(
+                output_path=input_path,
+                format_used="tweak",
+                success=False,
+                errors=errors,
+            )
 
     def execute(
         self,
