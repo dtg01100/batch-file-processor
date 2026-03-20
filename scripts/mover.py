@@ -10,9 +10,9 @@ import time
 from typing import Callable, Optional
 
 import scripts.backup_increment as backup_increment
-from migrations import folders_database_migrator
-from core.structured_logging import get_logger
 from backend.database import sqlite_wrapper
+from core.structured_logging import get_logger
+from migrations import folders_database_migrator
 
 logger = get_logger(__name__)
 

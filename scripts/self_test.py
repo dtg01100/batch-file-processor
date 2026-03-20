@@ -624,8 +624,6 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     try:
         from core.edi.edi_parser import (
             ARecord,
-            BRecord,
-            CRecord,
         )
         from core.edi.edi_parser import (
             build_a_record as _bar,
@@ -650,7 +648,7 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     except Exception as exc:
         fail("core.edi.edi_parser import", str(exc))
         _cr = _par = _pbr = _bar = _bbr = _bcr = None
-        ARecord = BRecord = CRecord = None
+        ARecord = None
 
     if _cr is not None:
         # capture_records: empty/whitespace -> None

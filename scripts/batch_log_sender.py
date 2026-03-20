@@ -30,8 +30,8 @@ def do(
     if progress_callback is None:
         progress_callback = NullProgressCallback()
 
-    from_address = settings["email_address"]
-    email_username = settings["email_username"]
+    settings["email_address"]
+    settings["email_username"]
     to_address = reporting["report_email_destination"]
     to_address_list = to_address.split(", ")
 

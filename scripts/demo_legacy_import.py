@@ -23,8 +23,8 @@ import sys
 
 sys.path.insert(0, str(project_root))
 
-from migrations import folders_database_migrator
 from backend.database import sqlite_wrapper
+from migrations import folders_database_migrator
 
 
 def print_section(title):
@@ -324,7 +324,7 @@ Migration Results:
   - Folders imported: {len(import_folders)}
   - All migrations applied: {all_present}
   - Database version preserved: {final_version == "42"}
-  
+
 The legacy database import and migration system successfully:
   1. ✓ Examined legacy database at version 32
   2. ✓ Migrated schema from v32 to v42 (42 migrations applied)
