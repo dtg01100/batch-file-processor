@@ -532,8 +532,11 @@ class QtBatchFileSenderApp:
             return []
 
         def _get_settings() -> dict:
-            if self._database and self._database.folders_table:
-                return {"folders": self._database.folders_table.find()}
+            if self._database:
+                settings = dict(self._database.get_settings_or_default())
+                if self._database.folders_table:
+                    settings["folders"] = self._database.folders_table.find()
+                return settings
             return {}
 
         dlg = EditFoldersDialog(

@@ -656,14 +656,7 @@ class EDIConverterStep:
             correlation_id=correlation_id,
         )
 
-        archive_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "archive"
-        )
-        import sys
-
-        if archive_path not in sys.path:
-            sys.path.insert(0, archive_path)
-        import edi_tweaks
+        from archive import edi_tweaks
 
         output_filename = os.path.join(output_dir, input_basename)
 

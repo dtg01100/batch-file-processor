@@ -36,11 +36,11 @@ def test_validate_windows_bundle_accepts_expected_layout(tmp_path):
 @pytest.mark.unit
 def test_validate_windows_bundle_flags_missing_qtwidgets_runtime(tmp_path):
     bundle_dir = _create_minimal_windows_bundle(tmp_path)
-    (bundle_dir / "_internal" / "PyQt6" / "QtWidgets.pyd").unlink()
+    (bundle_dir / "_internal" / "PyQt5" / "QtWidgets.pyd").unlink()
 
     issues = validate_windows_bundle(bundle_dir)
 
-    assert any("PyQt6/QtWidgets.pyd" in issue for issue in issues)
+    assert any("PyQt5/QtWidgets.pyd" in issue for issue in issues)
 
 
 @pytest.mark.unit

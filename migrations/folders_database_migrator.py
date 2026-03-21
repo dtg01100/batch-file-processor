@@ -73,9 +73,10 @@ def upgrade_database(
     if db_version_dict["version"] == "6":
         processed_table = database_connection["processed_files"]
         processed_table.create_column("resend_flag", "Boolean")
-        for line in processed_table.all():
-            line["resend_flag"] = 0
-            processed_table.update(line, ["id"])
+        database_connection.raw_connection.execute(
+            "UPDATE processed_files SET resend_flag = 0"
+        )
+        database_connection.commit()
 
         update_version = dict(id=1, version="7")
         db_version.update(update_version, ["id"])
@@ -754,32 +755,24 @@ def upgrade_database(
 
         now = datetime.datetime.now().isoformat()
 
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'created_at' TEXT")
-        database_connection.query("ALTER TABLE 'folders' ADD COLUMN 'updated_at' TEXT")
         cursor = database_connection.raw_connection.cursor()
-        cursor.execute("UPDATE 'folders' SET created_at=?, updated_at=?", (now, now))
-
-        database_connection.query(
-            "ALTER TABLE 'administrative' ADD COLUMN 'created_at' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'administrative' ADD COLUMN 'updated_at' TEXT"
-        )
-        cursor.execute(
-            "UPDATE 'administrative' SET created_at=?, updated_at=?", (now, now)
-        )
-
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'created_at' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'processed_at' TEXT"
-        )
-        cursor.execute("UPDATE 'processed_files' SET created_at=?", (now,))
-
-        database_connection.query("ALTER TABLE 'settings' ADD COLUMN 'created_at' TEXT")
-        database_connection.query("ALTER TABLE 'settings' ADD COLUMN 'updated_at' TEXT")
-        cursor.execute("UPDATE 'settings' SET created_at=?, updated_at=?", (now, now))
+        # Use DEFAULT clause so existing rows get the value without a full-table UPDATE.
+        # Wrap each ALTER in try/except — ensure_schema may have already added the column.
+        for stmt in [
+            f"ALTER TABLE 'folders' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+            f"ALTER TABLE 'folders' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+            f"ALTER TABLE 'administrative' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+            f"ALTER TABLE 'administrative' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+            f"ALTER TABLE 'processed_files' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+            "ALTER TABLE 'processed_files' ADD COLUMN 'processed_at' TEXT",
+            f"ALTER TABLE 'settings' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+            f"ALTER TABLE 'settings' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+        ]:
+            try:
+                cursor.execute(stmt)
+            except Exception:
+                pass  # column already exists
+        database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="34", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -794,31 +787,29 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "34":
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'filename' TEXT"
+        cursor = database_connection.raw_connection.cursor()
+        for col in [
+            "filename",
+            "original_path",
+            "processed_path",
+            "error_message",
+            "convert_format",
+            "sent_to",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
+            except Exception:
+                pass  # column already exists
+        try:
+            cursor.execute(
+                "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT DEFAULT 'processed'"
+            )
+        except Exception:
+            pass  # column already exists
+        cursor.execute(
+            "UPDATE 'processed_files' SET filename=file_name WHERE file_name IS NOT NULL AND filename IS NULL"
         )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'original_path' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'processed_path' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'error_message' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'convert_format' TEXT"
-        )
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'sent_to' TEXT"
-        )
-
-        database_connection.query(
-            "UPDATE 'processed_files' SET filename=file_name, status='processed' WHERE file_name IS NOT NULL"
-        )
+        database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="35", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -833,21 +824,19 @@ def upgrade_database(
         return
 
     if db_version_dict["version"] == "35":
-        database_connection.query(
-            "CREATE INDEX IF NOT EXISTS idx_folders_active ON folders(folder_is_active)"
-        )
-        database_connection.query(
-            "CREATE INDEX IF NOT EXISTS idx_folders_alias ON folders(alias)"
-        )
-        database_connection.query(
-            "CREATE INDEX IF NOT EXISTS idx_processed_files_folder ON processed_files(folder_id)"
-        )
-        database_connection.query(
-            "CREATE INDEX IF NOT EXISTS idx_processed_files_status ON processed_files(status)"
-        )
-        database_connection.query(
-            "CREATE INDEX IF NOT EXISTS idx_processed_files_created ON processed_files(created_at)"
-        )
+        cursor = database_connection.raw_connection.cursor()
+        for ddl in [
+            "CREATE INDEX IF NOT EXISTS idx_folders_active ON folders(folder_is_active)",
+            "CREATE INDEX IF NOT EXISTS idx_folders_alias ON folders(alias)",
+            "CREATE INDEX IF NOT EXISTS idx_processed_files_folder ON processed_files(folder_id)",
+            "CREATE INDEX IF NOT EXISTS idx_processed_files_status ON processed_files(status)",
+            "CREATE INDEX IF NOT EXISTS idx_processed_files_created ON processed_files(created_at)",
+        ]:
+            try:
+                cursor.execute(ddl)
+            except Exception:
+                pass  # column referenced by index may not exist in this DB variant
+        database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="36", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -1117,3 +1106,32 @@ def upgrade_database(
         update_version = dict(id=1, version="43", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("42", "43")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if db_version_dict["version"] == "43":
+        # Add upc_target_length (default 11) and upc_padding_pattern to folders
+        # and settings tables.  Both columns were present in the schema definition
+        # but were never added via a migration, so existing upgraded databases are
+        # missing them, causing sqlite3.OperationalError on folder save.
+        cursor = database_connection.raw_connection.cursor()
+        for table in ("folders", "settings"):
+            try:
+                cursor.execute(
+                    f"ALTER TABLE '{table}' ADD COLUMN 'upc_target_length' INTEGER DEFAULT 11"
+                )
+            except Exception:
+                pass  # column already exists
+            try:
+                cursor.execute(
+                    f"ALTER TABLE '{table}' ADD COLUMN 'upc_padding_pattern' TEXT"
+                )
+            except Exception:
+                pass  # column already exists
+        database_connection.raw_connection.commit()
+
+        update_version = dict(id=1, version="44", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("43", "44")

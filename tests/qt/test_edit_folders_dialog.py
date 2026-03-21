@@ -226,6 +226,36 @@ class TestEmailBackendToggle:
 
         assert not dialog._email_backend_check.isEnabled()
 
+    def test_email_backend_enabled_when_settings_provider_returns_combined_dict(
+        self, qtbot, sample_folder_config
+    ):
+        """Email checkbox must be enabled when settings_provider returns a dict that
+        contains both global settings (enable_email) and a folders list.
+
+        Regression test: app.py previously returned {"folders": [...]} from
+        _get_settings(), which has no "enable_email" key so the email checkbox
+        was permanently disabled even when email was globally enabled.
+        """
+        sample_folder_config["folder_is_active"] = "True"
+        other_folder = dict(sample_folder_config)
+        other_folder.update({"id": 99, "alias": "Other"})
+        # Simulate the combined dict now returned by app.py _get_settings():
+        # global settings fields + a "folders" list for the copy-config feature.
+        combined = {
+            "enable_email": True,
+            "folders": [other_folder],
+        }
+        dialog = create_dialog(
+            qtbot,
+            sample_folder_config,
+            settings_provider=lambda: combined,
+        )
+
+        assert dialog._email_backend_check.isEnabled(), (
+            "Email checkbox must be enabled when enable_email=True is present "
+            "in the settings dict, even if the dict also contains a 'folders' key"
+        )
+
 
 # ============================================================================
 # Test Convert Format ComboBox - Shows/Hides Format-Specific Sub-Fields
@@ -1037,9 +1067,9 @@ class TestWidgetCleanupAndLifecycle:
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
         # (Tweak EDI has different widgets)
-        assert (
-            "convert_formats_var" not in dialog._fields
-        ), "convert_formats_var should be removed when switching away from Convert EDI"
+        assert "convert_formats_var" not in dialog._fields, (
+            "convert_formats_var should be removed when switching away from Convert EDI"
+        )
 
     def test_clear_convert_sub_removes_field_references(
         self, qtbot, sample_folder_config
@@ -1082,9 +1112,9 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
-        assert (
-            "upc_var_check" not in dialog._fields
-        ), "upc_var_check should be removed when switching from CSV format"
+        assert "upc_var_check" not in dialog._fields, (
+            "upc_var_check should be removed when switching from CSV format"
+        )
 
     def test_data_extractor_handles_missing_widgets_gracefully(
         self, qtbot, sample_folder_config

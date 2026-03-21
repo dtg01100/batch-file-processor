@@ -37,13 +37,14 @@ class QtDiagnosticsService:
             "time",
             "traceback",
             "appdirs",
-            "PyQt6.QtCore",
-            "PyQt6.QtWidgets",
-            "PyQt6.QtGui",
-            "PyQt6.QtPrintSupport",
-            "PyQt6.QtSvg",
-            "PyQt6.QtXml",
-            "PyQt6.QtNetwork",
+            "PyQt5.QtCore",
+            "PyQt5.QtWidgets",
+            "PyQt5.QtGui",
+            "PyQt5.QtPrintSupport",
+            "PyQt5.QtSvg",
+            "PyQt5.QtXml",
+            "PyQt5.QtNetwork",
+            "PyQt5.sip",
             "backend.database.database_obj",
             "interface.operations.folder_manager",
             "interface.ports",
@@ -51,10 +52,6 @@ class QtDiagnosticsService:
             "interface.qt.app",
             "interface.qt.dialogs.edit_folders_dialog",
             "interface.qt.dialogs.edit_folders.data_extractor",
-            "batch_log_sender",
-            "print_run_log",
-            "utils",
-            "backup_increment",
             "core.edi.edi_parser",
             "core.edi.edi_splitter",
             "core.edi.inv_fetcher",
@@ -62,25 +59,23 @@ class QtDiagnosticsService:
             "dispatch",
             "dispatch.orchestrator",
             "dispatch.send_manager",
+            "dispatch.converters.convert_to_csv",
+            "dispatch.converters.convert_to_fintech",
+            "dispatch.converters.convert_to_simplified_csv",
+            "dispatch.converters.convert_to_stewarts_custom",
+            "dispatch.converters.convert_to_yellowdog_csv",
+            "dispatch.converters.convert_to_estore_einvoice",
+            "dispatch.converters.convert_to_estore_einvoice_generic",
+            "dispatch.converters.convert_to_scannerware",
+            "dispatch.converters.convert_to_scansheet_type_a",
+            "dispatch.converters.convert_to_jolley_custom",
             "backend.ftp_client",
             "backend.smtp_client",
-            "record_error",
-            "folders_database_migrator",
-            "mover",
-            "clear_old_files",
-            "convert_to_csv",
-            "convert_to_fintech",
-            "convert_to_simplified_csv",
-            "convert_to_stewarts_custom",
-            "convert_to_yellowdog_csv",
-            "convert_to_estore_einvoice",
-            "convert_to_estore_einvoice_generic",
-            "convert_to_scannerware",
-            "convert_to_scansheet_type_a",
-            "convert_to_jolley_custom",
-            "copy_backend",
-            "ftp_backend",
-            "email_backend",
+            "backend.copy_backend",
+            "backend.ftp_backend",
+            "backend.email_backend",
+            "archive",
+            "archive.edi_tweaks",
             "lxml",
             "lxml.etree",
         ]
@@ -106,12 +101,6 @@ class QtDiagnosticsService:
                 print(f"  [OK] {module} (optional)")
             except ImportError as e:
                 print(f"  [?] {module} (optional, not bundled on this platform): {e}")
-
-        try:
-            print("  [OK] PyQt5.sip")
-        except ImportError as e:
-            print(f"  [FAIL] PyQt5.sip: {e}")
-            failures += 1
 
         print("\n2. Checking configuration directories...")
         try:
@@ -149,37 +138,15 @@ class QtDiagnosticsService:
             print(f"  [FAIL] File system access error: {e}")
             failures += 1
 
-        print("\n5. Checking local module availability...")
-        local_modules = [
-            ("batch_log_sender", "batch_log_sender"),
-            ("print_run_log", "print_run_log"),
-            ("utils", "utils"),
-            ("backup_increment", "backup_increment"),
-        ]
-
-        for module_name, import_name in local_modules:
-            try:
-                module = __import__(import_name)
-                if hasattr(module, "__file__"):
-                    print(f"  [OK] {module_name}")
-                else:
-                    print(
-                        f"  [FAIL] {module_name}: Module imported but no __file__ attribute"
-                    )
-                    failures += 1
-            except Exception as e:
-                print(f"  [FAIL] {module_name}: {e}")
-                failures += 1
-
         print("\n" + "=" * 50)
         if failures == 0:
             print(
-                f"[PASS] Self-test passed - all {len(required_modules) + len(local_modules) + 3} checks successful"
+                f"[PASS] Self-test passed - all {len(required_modules)} checks successful"
             )
             return 0
 
         print(
-            f"[FAIL] Self-test failed - {failures} out of {len(required_modules) + len(local_modules) + 3} checks failed"
+            f"[FAIL] Self-test failed - {failures} out of {len(required_modules)} checks failed"
         )
         return 1
 

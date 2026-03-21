@@ -54,9 +54,9 @@ def built_executable(tmp_path_factory):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert (
-        EXECUTABLE_PATH.exists()
-    ), f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
+    assert EXECUTABLE_PATH.exists(), (
+        f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
+    )
 
     return EXECUTABLE_PATH
 
@@ -90,16 +90,16 @@ def test_self_test_passes(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert (
-        "Self-test passed" in result.stdout
-    ), f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
-    assert (
-        "Failed to extract" not in result.stderr
-    ), f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
+    assert "Self-test passed" in result.stdout, (
+        f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
+    )
+    assert "Failed to extract" not in result.stderr, (
+        f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
+    )
 
 
 def test_self_test_output_completeness(built_executable, tmp_path):
-    """--self-test output contains all expected section headers."""
+    """--self-test output contains all expected section headers and key module checks."""
     result = subprocess.run(
         [str(built_executable), "--self-test"],
         capture_output=True,
@@ -113,12 +113,29 @@ def test_self_test_output_completeness(built_executable, tmp_path):
         "Checking configuration directories",
         "Checking appdirs functionality",
         "Checking file system access",
-        "Checking local module availability",
     ]
 
     for section in expected_sections:
         assert section in result.stdout, (
             f"Missing expected section header '{section}' in stdout.\n"
+            f"--- stdout ---\n{result.stdout}"
+        )
+
+    # Verify the modules that are most likely to be missing from the bundle
+    # are explicitly confirmed present by the self-test output.
+    required_module_checks = [
+        "[OK] archive",
+        "[OK] archive.edi_tweaks",
+        "[OK] dispatch.converters.convert_to_csv",
+        "[OK] backend.copy_backend",
+        "[OK] backend.ftp_backend",
+        "[OK] backend.email_backend",
+        "[OK] PyQt5.sip",
+    ]
+
+    for check in required_module_checks:
+        assert check in result.stdout, (
+            f"Expected '{check}' in self-test output — module may be missing from bundle.\n"
             f"--- stdout ---\n{result.stdout}"
         )
 
@@ -138,9 +155,9 @@ def test_help_flag(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert (
-        "--self-test" in result.stdout
-    ), f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
-    assert (
-        "--automatic" in result.stdout
-    ), f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
+    assert "--self-test" in result.stdout, (
+        f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
+    )
+    assert "--automatic" in result.stdout, (
+        f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
+    )

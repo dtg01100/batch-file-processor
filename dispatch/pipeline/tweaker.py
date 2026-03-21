@@ -210,16 +210,12 @@ class EDITweakerStep:
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
         """
-        # Import from archive folder (legacy location)
-        import os
-        import sys
-
-        archive_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "archive"
-        )
-        if archive_path not in sys.path:
-            sys.path.insert(0, archive_path)
-        import edi_tweaks
+        # Import from the archive package.  Works in development (archive/ is a
+        # package at the project root) and in a PyInstaller frozen bundle
+        # (archive.edi_tweaks is listed in hiddenimports and collected by
+        # hooks/hook-archive.py).  Avoids __file__-relative sys.path
+        # manipulation that breaks inside a frozen _internal directory.
+        from archive import edi_tweaks
 
         self._tweak_function: TweakFunctionProtocol = (
             tweak_function or edi_tweaks.edi_tweak
