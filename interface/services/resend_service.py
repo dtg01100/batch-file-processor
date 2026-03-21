@@ -69,7 +69,7 @@ class ResendService:
         file_list = []
         file_name_list = []
         processed_lines = list(
-            self._processed_files.find(folder_id=folder_id, order_by="-sent_date_time")
+            self._processed_files.find(folder_id=folder_id, order_by="-processed_at")
         )
         for processed_line in processed_lines[:limit]:
             if processed_line["file_name"] not in file_name_list and os.path.exists(
@@ -97,7 +97,7 @@ class ResendService:
         """
         file_name_list = []
         for processed_line in self._processed_files.find(
-            folder_id=folder_id, order_by="-sent_date_time"
+            folder_id=folder_id, order_by="-processed_at"
         ):
             if processed_line["file_name"] not in file_name_list and os.path.exists(
                 processed_line["file_name"]
@@ -121,7 +121,7 @@ class ResendService:
             List of dicts with keys: id, folder_id, folder_alias, file_name, resend_flag, sent_date_time
         """
         file_list = []
-        processed_lines = list(self._processed_files.find(order_by="-sent_date_time"))
+        processed_lines = list(self._processed_files.find(order_by="-processed_at"))
 
         # Group by file_name and folder to avoid duplicates
         seen_files = set()
