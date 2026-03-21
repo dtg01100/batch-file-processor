@@ -86,7 +86,7 @@ Build details
 -------------
 - Windows bundle built with PyInstaller {PYINSTALLER_VERSION}
 - Python {PYTHON_VERSION}
-- PyQt5 {PyQt5.__version__ if "PyQt5" in dir() else "5.15.10"}
+- PyQt5 5.15.10
 """
 
 
