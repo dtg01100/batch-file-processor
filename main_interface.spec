@@ -42,6 +42,7 @@ a = Analysis(
         'email_backend',
         'ftp_backend',
         'edi_tweaks',
+        'archive.edi_tweaks',
     ],
     hookspath=[str(hooks_dir)],
     win_no_prefer_redirects=False,
