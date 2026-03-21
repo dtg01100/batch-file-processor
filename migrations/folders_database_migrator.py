@@ -1096,3 +1096,24 @@ def upgrade_database(
         update_version = dict(id=1, version="42", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("41", "42")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return
+
+    if db_version_dict["version"] == "42":
+        try:
+            folders_table = database_connection["folders"]
+            for folder in folders_table.all():
+                folder_name = folder.get("folder_name")
+                if folder_name and "\\" in folder_name:
+                    normalized = folder_name.replace("\\", "/")
+                    folders_table.update(
+                        {"id": folder["id"], "folder_name": normalized}, ["id"]
+                    )
+        except Exception as e:
+            print(f"Error normalizing folder paths: {e}")
+
+        update_version = dict(id=1, version="43", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("42", "43")
