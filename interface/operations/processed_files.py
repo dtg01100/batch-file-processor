@@ -33,10 +33,11 @@ def export_processed_report(
     export_file_path = avoid_duplicate_export_file(
         os.path.join(output_folder, folder_alias + " processed report"), ".csv"
     )
+
     with open(export_file_path, "w", encoding="utf-8") as processed_log:
         processed_log.write("File,Invoice Numbers,Date,Sent To\n")
-        rows = list(database_obj.processed_files.find(folder_id=folder_id))
-        for line in rows:
+        # Iterate directly over find() result without creating intermediate list
+        for line in database_obj.processed_files.find(folder_id=folder_id):
             processed_log.write(
                 f"{line.get('file_name', '')},"
                 f"{line.get('invoice_numbers', '')},"

@@ -5,10 +5,12 @@ Replaces the tkinter-based resend_interface.py with a Qt implementation.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
     QDialogButtonBox,
@@ -47,6 +49,9 @@ class ResendDialog(BaseDialog):
         self._filtered_files: List[Dict[str, Any]] = []
         self._selected_files: set = set()
         self._should_show = True  # Flag to control if dialog should be shown
+        self._search_timer = QTimer()
+        self._search_timer.setSingleShot(True)
+        self._search_timer.timeout.connect(self._do_search_filter)
 
         self._setup_ui()
         self._load_data()
@@ -151,11 +156,16 @@ class ResendDialog(BaseDialog):
             self._should_show = False
             return
 
-        # Load all files
-        self._all_files = self._service.get_all_files_for_resend()
+        # Load all files without file existence check for faster initial load
+        self._all_files = self._service.get_all_files_for_resend(
+            check_file_exists=False
+        )
         self._filtered_files = self._all_files.copy()
         self._populate_table()
         self._update_status()
+
+        # Schedule async file existence check after UI is loaded
+        QTimer.singleShot(100, self._check_files_exist_async)
 
     def _populate_table(self) -> None:
         """Populate the table with filtered files."""
@@ -204,13 +214,57 @@ class ResendDialog(BaseDialog):
         self._table.setColumnWidth(4, 80)  # Status column
         self._table.horizontalHeader().setStretchLastSection(True)
 
+    def _check_files_exist_async(self) -> None:
+        """Check which files exist on disk and update UI with warnings."""
+        missing_count = 0
+        for file_info in self._all_files:
+            file_info["file_exists"] = os.path.exists(file_info["file_name"])
+            if not file_info["file_exists"]:
+                missing_count += 1
+
+        # Update filtered files and refresh table highlighting
+        for file_info in self._filtered_files:
+            if file_info["id"] in {
+                f["id"] for f in self._all_files if not f["file_exists"]
+            }:
+                file_info["file_exists"] = False
+
+        if missing_count > 0:
+            self._highlight_missing_files()
+            self._update_status()
+
+    def _highlight_missing_files(self) -> None:
+        """Highlight rows for files that no longer exist on disk."""
+        missing_color = QColor("#FFCCCC")  # Light red background
+        warning_icon = "⚠"
+
+        for row in range(self._table.rowCount()):
+            file_info = self._filtered_files[row]
+            if not file_info.get("file_exists", True):
+                # Highlight the entire row
+                for col in range(self._table.columnCount()):
+                    item = self._table.item(row, col)
+                    if item is not None:
+                        item.setBackground(missing_color)
+                # Add warning to file name
+                file_item = self._table.item(row, 2)
+                if file_item is not None:
+                    file_item.setText(f"{warning_icon} {file_item.text()}")
+
     def _on_search_changed(self, text: str) -> None:
-        """Handle search input changes."""
+        """Handle search input changes with debouncing."""
+        self._search_timer.stop()
+        self._search_timer.start(150)  # 150ms debounce
+
+    def _do_search_filter(self) -> None:
+        """Perform the actual search filtering after debounce."""
+        text = self._search_input.text()
         if not text:
             self._filtered_files = self._all_files.copy()
         else:
+            lower_text = text.lower()
             self._filtered_files = [
-                f for f in self._all_files if text.lower() in f["file_name"].lower()
+                f for f in self._all_files if lower_text in f["file_name"].lower()
             ]
         self._populate_table()
         self._update_status()
@@ -265,13 +319,14 @@ class ResendDialog(BaseDialog):
     def _mark_selected_for_resend(self) -> None:
         """Mark selected files for resend."""
         try:
-            for file_id in self._selected_files:
-                self._service.set_resend_flag(file_id, True)
+            file_ids = list(self._selected_files)
+            self._service.set_resend_flags_batch(file_ids, True)
             # Update local data
+            selected_set = set(file_ids)
             for file_info in self._all_files:
-                if file_info["id"] in self._selected_files:
+                if file_info["id"] in selected_set:
                     file_info["resend_flag"] = True
-            count = len(self._selected_files)
+            count = len(file_ids)
             self._selected_files.clear()
             self._populate_table()
             self._update_bulk_actions()
@@ -283,13 +338,14 @@ class ResendDialog(BaseDialog):
     def _clear_selected_resend_flags(self) -> None:
         """Clear resend flags for selected files."""
         try:
-            for file_id in self._selected_files:
-                self._service.set_resend_flag(file_id, False)
+            file_ids = list(self._selected_files)
+            self._service.set_resend_flags_batch(file_ids, False)
             # Update local data
+            selected_set = set(file_ids)
             for file_info in self._all_files:
-                if file_info["id"] in self._selected_files:
+                if file_info["id"] in selected_set:
                     file_info["resend_flag"] = False
-            count = len(self._selected_files)
+            count = len(file_ids)
             self._selected_files.clear()
             self._populate_table()
             self._update_bulk_actions()

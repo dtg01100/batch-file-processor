@@ -181,7 +181,7 @@ class TestResendDialogFileManagement:
             with patch.object(dialog, "show_info"):
                 dialog._mark_selected_for_resend()
 
-            mock_service.set_resend_flag.assert_called_once_with(10, True)
+            mock_service.set_resend_flags_batch.assert_called_once_with([10], True)
 
 
 @pytest.mark.qt
@@ -199,7 +199,7 @@ class TestResendDialogEdgeCases:
                 "interface.qt.dialogs.resend_dialog.ResendService",
                 side_effect=Exception("Database error"),
             ),
-            patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_critical,
+            patch("PyQt5.QtWidgets.QMessageBox.critical") as mock_critical,
         ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)

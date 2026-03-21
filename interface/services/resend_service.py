@@ -23,6 +23,7 @@ class ResendService:
         self._db = database_connection
         self._processed_files = database_connection["processed_files"]
         self._folders = database_connection["folders"]
+        self._folder_alias_cache: Dict[int, str] = {}
 
     @staticmethod
     def _get_sent_timestamp(processed_line: Dict[str, Any]) -> Any:
@@ -35,23 +36,54 @@ class ResendService:
         """Check if there are any processed files."""
         return self._processed_files.count() > 0
 
+    def _get_folder_alias_batch(self, folder_ids: List[int]) -> Dict[int, str]:
+        """Get folder aliases for multiple folder IDs in a single query.
+
+        Args:
+            folder_ids: List of folder IDs to look up
+
+        Returns:
+            Dictionary mapping folder_id to alias
+        """
+        # Return cached entries first
+        result = {
+            fid: alias
+            for fid, alias in self._folder_alias_cache.items()
+            if fid in folder_ids
+        }
+        missing_ids = [fid for fid in folder_ids if fid not in result]
+
+        if not missing_ids:
+            return result
+
+        # Fetch missing folder aliases in a single query using IN clause
+        placeholders = ",".join("?" * len(missing_ids))
+        sql = f"SELECT id, alias FROM folders WHERE id IN ({placeholders})"
+        rows = self._db.query(sql)
+
+        for row in rows:
+            fid = row["id"]
+            alias = row["alias"]
+            result[fid] = alias
+            self._folder_alias_cache[fid] = alias
+
+        return result
+
     def get_folder_list(self) -> List[Tuple[int, str]]:
         """Get list of folders that have processed files.
 
         Returns:
             Sorted list of (folder_id, alias) tuples
         """
-        folder_list = []
-        seen_folder_ids = set()
-        for line in self._processed_files.distinct("folder_id"):
-            folder_id = line["folder_id"]
-            # Skip if we've already added this folder
-            if folder_id in seen_folder_ids:
-                continue
-            seen_folder_ids.add(folder_id)
-            folder_alias_dict = self._folders.find_one(id=folder_id)
-            if folder_alias_dict is not None:
-                folder_list.append((folder_id, folder_alias_dict["alias"]))
+        folder_ids = [
+            row["folder_id"] for row in self._processed_files.distinct("folder_id")
+        ]
+        folder_aliases = self._get_folder_alias_batch(folder_ids)
+        folder_list = [
+            (fid, folder_aliases.get(fid, "Unknown"))
+            for fid in folder_ids
+            if fid in folder_aliases
+        ]
         return sorted(folder_list, key=itemgetter(1))
 
     def get_files_for_folder(
@@ -114,36 +146,71 @@ class ResendService:
         """
         self._processed_files.update(dict(resend_flag=resend_flag, id=file_id), ["id"])
 
-    def get_all_files_for_resend(self) -> List[Dict[str, Any]]:
-        """Get all processable files across all folders for resend interface.
+    def set_resend_flags_batch(self, file_ids: List[int], resend_flag: bool) -> int:
+        """Set the resend flag for multiple processed files in a single query.
+
+        Args:
+            file_ids: List of processed file record IDs
+            resend_flag: Whether to enable resend
 
         Returns:
-            List of dicts with keys: id, folder_id, folder_alias, file_name, resend_flag, sent_date_time
+            Number of files updated
         """
-        file_list = []
+        if not file_ids:
+            return 0
+
+        placeholders = ",".join("?" * len(file_ids))
+        sql = f"UPDATE processed_files SET resend_flag=? WHERE id IN ({placeholders})"
+        self._db.raw_connection.execute(
+            sql, (1 if resend_flag else 0,) + tuple(file_ids)
+        )
+        self._db.raw_connection.commit()
+        return len(file_ids)
+
+    def get_all_files_for_resend(
+        self, check_file_exists: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Get all processable files across all folders for resend interface.
+
+        Args:
+            check_file_exists: If True, checks if file exists on disk and marks
+                it in the result. If False, skips the check for faster loading.
+
+        Returns:
+            List of dicts with keys: id, folder_id, folder_alias, file_name,
+            resend_flag, sent_date_time, file_exists
+        """
         processed_lines = list(self._processed_files.find(order_by="-processed_at"))
 
-        # Group by file_name and folder to avoid duplicates
+        # Collect all folder IDs for batch lookup
+        folder_ids = list(set(line["folder_id"] for line in processed_lines))
+        folder_aliases = self._get_folder_alias_batch(folder_ids)
+
+        file_list = []
         seen_files = set()
         for processed_line in processed_lines:
             file_key = (processed_line["file_name"], processed_line["folder_id"])
             if file_key in seen_files:
                 continue
-            if os.path.exists(processed_line["file_name"]):
-                # Get folder alias
-                folder_info = self._folders.find_one(id=processed_line["folder_id"])
-                folder_alias = folder_info["alias"] if folder_info else "Unknown"
 
-                file_list.append(
-                    {
-                        "id": processed_line["id"],
-                        "folder_id": processed_line["folder_id"],
-                        "folder_alias": folder_alias,
-                        "file_name": processed_line["file_name"],
-                        "resend_flag": processed_line["resend_flag"],
-                        "sent_date_time": self._get_sent_timestamp(processed_line),
-                    }
-                )
-                seen_files.add(file_key)
+            folder_id = processed_line["folder_id"]
+            folder_alias = folder_aliases.get(folder_id, "Unknown")
+
+            file_exists = True
+            if check_file_exists:
+                file_exists = os.path.exists(processed_line["file_name"])
+
+            file_list.append(
+                {
+                    "id": processed_line["id"],
+                    "folder_id": folder_id,
+                    "folder_alias": folder_alias,
+                    "file_name": processed_line["file_name"],
+                    "resend_flag": processed_line["resend_flag"],
+                    "sent_date_time": self._get_sent_timestamp(processed_line),
+                    "file_exists": file_exists,
+                }
+            )
+            seen_files.add(file_key)
 
         return file_list

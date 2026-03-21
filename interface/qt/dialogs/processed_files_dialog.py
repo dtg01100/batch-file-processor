@@ -9,7 +9,6 @@ helper.
 from __future__ import annotations
 
 import os
-from operator import itemgetter
 from typing import Any, List, Optional, Tuple
 
 from PyQt5.QtCore import Qt
@@ -138,27 +137,16 @@ class ProcessedFilesDialog(BaseDialog):
         return scroll_area
 
     def _get_folder_tuples(self) -> List[Tuple[int, str]]:
-        distinct_ids: List[int] = []
-        seen_ids = set()
-        for row in self._database_obj.processed_files.distinct("folder_id"):
-            fid = row["folder_id"]
-            if fid not in seen_ids:
-                distinct_ids.append(fid)
-                seen_ids.add(fid)
-
-        tuples: List[Tuple[int, str]] = []
-        for fid in distinct_ids:
-            # Try both integer and string lookup for compatibility
-            folder = self._database_obj.folders_table.find_one(id=fid)
-            if folder is None:
-                folder = self._database_obj.folders_table.find_one(id=str(fid))
-            if folder is None:
-                # Skip folders that no longer exist
-                continue
-            tuples.append((fid, folder["alias"]))
-
-        tuples.sort(key=itemgetter(1))
-        return tuples
+        # Use a single JOIN query to get distinct folder_id -> alias mapping
+        # instead of N individual queries
+        sql = """
+            SELECT DISTINCT pf.folder_id, f.alias
+            FROM processed_files pf
+            JOIN folders f ON pf.folder_id = f.id
+            ORDER BY f.alias
+        """
+        results = self._database_obj.query(sql)
+        return [(row["folder_id"], row["alias"]) for row in results]
 
     def _on_folder_selected(self, folder_id: int) -> None:
         self._selected_folder_id = folder_id
