@@ -4,7 +4,7 @@ pytest-qt is used for Qt widget testing. It automatically provides the
 ``qtbot`` fixture and manages the ``QApplication`` lifecycle.
 
 Configuration in pytest.ini:
-    qt_api = pyqt6
+    qt_api = pyqt5
     QT_QPA_PLATFORM=offscreen
 
 Note: Tests should use real Qt widgets, not mocks. Database operations
@@ -60,6 +60,18 @@ def _build_spy_class():
         def clear_resend_flags(self):
             self._record("clear_resend_flags")
             super().clear_resend_flags()
+
+        def clear_processed_files_log(self):
+            self._record("clear_processed_files_log")
+            super().clear_processed_files_log()
+
+        def remove_inactive_folders(self):
+            self._record("remove_inactive_folders")
+            super().remove_inactive_folders()
+
+        def mark_active_as_processed(self, selected_folder=None):
+            self._record("mark_active_as_processed")
+            super().mark_active_as_processed(selected_folder=selected_folder)
 
         def database_import_wrapper(self, path):
             self._record("database_import_wrapper")

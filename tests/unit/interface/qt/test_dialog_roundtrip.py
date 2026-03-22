@@ -6,6 +6,7 @@ properly without crashes or resource leaks.
 
 import os
 import tempfile
+from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
@@ -50,7 +51,7 @@ class TestDialogLifecycle:
         from unittest.mock import patch
 
         # Mock QMessageBox to prevent GUI interaction during test
-        with patch("PyQt6.QtWidgets.QMessageBox.information") as mock_msg_box:
+        with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_msg_box:
             # ResendDialog should handle empty database gracefully
             dialog = ResendDialog(None, temp_db.database_connection)
 
@@ -89,6 +90,7 @@ class TestDialogLifecycle:
                 "file_name": "test.txt",
                 "file_checksum": "abc123",
                 "resend_flag": False,
+                "processed_at": datetime.now().isoformat(),
             }
         )
 
@@ -279,6 +281,7 @@ class TestDialogRoundtrip:
                     "file_name": f"test{i}.txt",
                     "file_checksum": f"abc{i}",
                     "resend_flag": False,
+                    "processed_at": datetime.now().isoformat(),
                 }
             )
 
@@ -320,6 +323,7 @@ class TestDialogRoundtrip:
                 "file_name": "test.txt",
                 "file_checksum": "abc123",
                 "resend_flag": False,
+                "processed_at": datetime.now().isoformat(),
             }
         )
 

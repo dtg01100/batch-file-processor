@@ -3,15 +3,7 @@
 import pytest
 from PyQt5.QtCore import Qt
 
-from tests.fakes import FakeMaintenanceFunctions
-
 pytestmark = pytest.mark.qt
-
-
-@pytest.fixture
-def mock_maintenance_functions():
-    """Create a fake MaintenanceFunctions for testing."""
-    return FakeMaintenanceFunctions()
 
 
 @pytest.mark.qt

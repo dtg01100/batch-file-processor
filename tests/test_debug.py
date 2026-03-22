@@ -15,10 +15,10 @@ print("Starting debug script", flush=True)
 print("Step 1: Basic import", flush=True)
 
 try:
-    print("Step 2: Importing PyQt6", flush=True)
+    print("Step 2: Importing PyQt5", flush=True)
     from PyQt5.QtWidgets import QApplication
 
-    print("Step 3: PyQt6 imported successfully", flush=True)
+    print("Step 3: PyQt5 imported successfully", flush=True)
 
     print("Step 4: Creating application", flush=True)
     app = QApplication([])

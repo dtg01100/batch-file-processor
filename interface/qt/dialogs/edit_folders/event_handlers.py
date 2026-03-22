@@ -164,7 +164,7 @@ class EventHandlers:
         email_check = self.fields.get("process_backend_email_check")
         if email_check:
             settings = self.settings_provider() if self.settings_provider else {}
-            email_globally_enabled = settings.get("enable_email", False)
+            email_globally_enabled = bool(settings.get("enable_email", False))
             email_check.setEnabled(is_active and email_globally_enabled)
 
         self.update_backend_states()
@@ -175,7 +175,7 @@ class EventHandlers:
         is_active = active_btn.isChecked() if active_btn else False
 
         settings = self.settings_provider() if self.settings_provider else {}
-        email_globally_enabled = settings.get("enable_email", False)
+        email_globally_enabled = bool(settings.get("enable_email", False))
 
         # Copy backend
         copy_check = self.fields.get("process_backend_copy_check")
