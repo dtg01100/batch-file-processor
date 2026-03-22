@@ -4,6 +4,7 @@ This module sends files via FTP or FTPS (FTP over TLS) with
 injectable client support for testing.
 """
 
+import ftplib
 import os
 import time
 from typing import Optional
@@ -112,7 +113,7 @@ def do(
                                 try:
                                     # Check if directory exists by trying to change to it
                                     client.cwd(current_path)
-                                except Exception:
+                                except (ftplib.error_perm, ftplib.error_temp, OSError):
                                     # Directory doesn't exist, create it and change into it
                                     client.mkd(current_path)
                                     client.cwd(current_path)
@@ -157,13 +158,12 @@ def do(
                         if provider_index + 1 == len(use_tls_options):
                             raise
                         logger.debug("Falling back to non-TLS...")
-                        # Reset file pointer for retry
                         send_file.seek(0)
                     finally:
                         try:
                             client.close()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug("Failed to close FTP client: %s", e)
 
         except Exception as ftp_error:
             if counter == 10:

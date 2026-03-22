@@ -255,40 +255,32 @@ class DynamicEDIBuilder:
 
     def _find_and_track_widget_keys(self, widget, keys_to_remove):
         """Recursively find all descendant widgets and track their field keys."""
-        for key, value in list(self.fields.items()):
-            if value is widget:
-                if key not in keys_to_remove:
-                    keys_to_remove.append(key)
-                break
-
+        self._add_widget_key_if_found(widget, keys_to_remove)
         for child in widget.findChildren(QWidget):
-            for key, value in list(self.fields.items()):
-                if value is child:
-                    if key not in keys_to_remove:
-                        keys_to_remove.append(key)
-                    break
+            self._add_widget_key_if_found(child, keys_to_remove)
 
     def _find_and_track_layout_keys(self, layout, keys_to_remove):
         """Find all widgets in a layout and track their field keys."""
         for i in range(layout.count()):
             item = layout.itemAt(i)
-            if item:
-                widget = item.widget()
-                if widget:
-                    for key, value in list(self.fields.items()):
-                        if value is widget:
-                            if key not in keys_to_remove:
-                                keys_to_remove.append(key)
-                            break
-                    for child in widget.findChildren(QWidget):
-                        for key, value in list(self.fields.items()):
-                            if value is child:
-                                if key not in keys_to_remove:
-                                    keys_to_remove.append(key)
-                                break
-                sub_layout = item.layout()
-                if sub_layout:
-                    self._find_and_track_layout_keys(sub_layout, keys_to_remove)
+            if not item:
+                continue
+            widget = item.widget()
+            if widget:
+                self._add_widget_key_if_found(widget, keys_to_remove)
+                for child in widget.findChildren(QWidget):
+                    self._add_widget_key_if_found(child, keys_to_remove)
+            sub_layout = item.layout()
+            if sub_layout:
+                self._find_and_track_layout_keys(sub_layout, keys_to_remove)
+
+    def _add_widget_key_if_found(self, widget: QWidget, keys_to_remove: list) -> None:
+        """Add widget's field key to keys_to_remove if found in fields."""
+        for key, value in list(self.fields.items()):
+            if value is widget:
+                if key not in keys_to_remove:
+                    keys_to_remove.append(key)
+                break
 
     def _on_edi_option_changed(self, option: str):
         """Handle EDI option selection changes."""
@@ -382,7 +374,15 @@ class DynamicEDIBuilder:
         )
         self._clear_convert_sub()
         fmt_lower = (fmt or "").lower()
+        self._build_format_specific_options(fmt_lower, fmt)
 
+        if self.on_convert_format_changed:
+            self.on_convert_format_changed(fmt)
+        if self.on_dynamic_form_changed:
+            self.on_dynamic_form_changed()
+
+    def _build_format_specific_options(self, fmt_lower: str, fmt: str) -> None:
+        """Build format-specific sub-options based on the selected format."""
         if fmt_lower == "csv":
             self._build_csv_sub()
         elif fmt_lower == "scannerware":
@@ -402,11 +402,6 @@ class DynamicEDIBuilder:
             if plugin:
                 self._build_plugin_config_sub(plugin)
 
-        if self.on_convert_format_changed:
-            self.on_convert_format_changed(fmt)
-        if self.on_dynamic_form_changed:
-            self.on_dynamic_form_changed()
-
     def _clear_convert_sub(self):
         """Clear convert sub-widgets and clean up field references."""
         if not self.convert_sub_layout:
@@ -422,26 +417,7 @@ class DynamicEDIBuilder:
         )
         self._snapshot_upc_override()
         try:
-            keys_to_remove = []
-            items_to_remove = []
-            while self.convert_sub_layout.count():
-                items_to_remove.append(self.convert_sub_layout.takeAt(0))
-
-            for item in items_to_remove:
-                if item:
-                    widget = item.widget()
-                    if widget:
-                        self._find_and_track_widget_keys(widget, keys_to_remove)
-                        if widget and not widget.testAttribute(
-                            QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
-                        ):
-                            widget.setParent(None)
-                            widget.deleteLater()
-                    sub_layout = item.layout()
-                    if sub_layout:
-                        self._find_and_track_layout_keys(sub_layout, keys_to_remove)
-                        sub_layout.deleteLater()
-
+            keys_to_remove = self._extract_and_cleanup_items()
             for key in keys_to_remove:
                 if key in self.fields:
                     del self.fields[key]
@@ -458,6 +434,36 @@ class DynamicEDIBuilder:
                 exc_info=True,
             )
         self._restore_upc_override_as_plain_values()
+
+    def _extract_and_cleanup_items(self) -> list:
+        """Extract items from convert_sub_layout and cleanup widgets/layouts.
+
+        Returns:
+            List of field keys to remove
+        """
+        keys_to_remove = []
+        items_to_remove = []
+        while self.convert_sub_layout.count():
+            items_to_remove.append(self.convert_sub_layout.takeAt(0))
+
+        for item in items_to_remove:
+            if item:
+                self._cleanup_layout_item(item, keys_to_remove)
+
+        return keys_to_remove
+
+    def _cleanup_layout_item(self, item, keys_to_remove: list) -> None:
+        """Cleanup a single layout item and track its field keys."""
+        widget = item.widget()
+        if widget:
+            self._find_and_track_widget_keys(widget, keys_to_remove)
+            if not widget.testAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose):
+                widget.setParent(None)
+                widget.deleteLater()
+        sub_layout = item.layout()
+        if sub_layout:
+            self._find_and_track_layout_keys(sub_layout, keys_to_remove)
+            sub_layout.deleteLater()
 
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
         """Build plugin configuration sub-section."""

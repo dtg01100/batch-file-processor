@@ -384,9 +384,20 @@ def ensure_schema(database_connection) -> None:
         """,
     ]
 
+    # Log schema initialization start
+    logger.info("Initializing database schema")
+
     for s in stmts:
+        # Extract table/index name for logging
+        object_name = _extract_object_name(s)
+
         try:
             database_connection.query(s)
+            if object_name:
+                logger.debug(
+                    "Schema object created/verified: %s",
+                    object_name,
+                )
         except Exception:
             # be tolerant: older dataset impl or DB state may raise; ensure best-effort
             try:
@@ -395,10 +406,17 @@ def ensure_schema(database_connection) -> None:
                 if raw is not None:
                     raw.execute(s)
                     raw.commit()
+                    if object_name:
+                        logger.debug(
+                            "Schema object created/verified (via raw conn): %s",
+                            object_name,
+                        )
             except Exception:
                 # last resort: skip silently to avoid breaking upgrades
                 logger.debug(
-                    "Failed to execute schema statement (may already exist or DB locked)"
+                    "Failed to execute schema statement "
+                    "(may already exist or DB locked): %s",
+                    object_name or "unknown",
                 )
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
@@ -407,21 +425,62 @@ def ensure_schema(database_connection) -> None:
         database_connection.query(
             "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
         )
-        # initialize existing rows with an empty JSON/dict-like string if needed
+        # initialize existing rows with empty JSON/dict-like string if needed
         database_connection.query(
-            'UPDATE "folders" SET "plugin_configurations" = "{}" WHERE "plugin_configurations" IS NULL'
+            'UPDATE "folders" SET "plugin_configurations" = "{}" '
+            'WHERE "plugin_configurations" IS NULL'
         )
+        logger.info("Migration: added plugin_configurations column to folders table")
     except Exception:
-        # Ignore failures (column exists or DB locked) -- migrations handle this elsewhere
+        # Ignore failures (column exists or DB locked) -- migrations elsewhere
         logger.debug(
-            "Failed to add plugin_configurations column to folders table (may already exist)"
+            "Failed to add plugin_configurations column to folders table "
+            "(may already exist)"
         )
 
     try:
         database_connection.query(
             "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
         )
+        logger.info("Migration: added invoice_numbers column to processed_files table")
     except Exception:
         logger.debug(
-            "Failed to add invoice_numbers column to processed_files table (may already exist)"
+            "Failed to add invoice_numbers column to processed_files table "
+            "(may already exist)"
         )
+
+    logger.info("Database schema initialization complete")
+
+
+def _extract_object_name(stmt: str) -> str | None:
+    """Extract table or index name from a SQL statement for logging.
+
+    Args:
+        stmt: SQL statement
+
+    Returns:
+        Table/index name if extractable, None otherwise
+    """
+    import re
+
+    stmt_upper = stmt.strip().upper()
+
+    # Match CREATE TABLE <name>
+    table_match = re.match(
+        r"\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)", stmt_upper
+    )
+    if table_match:
+        return f"TABLE {table_match.group(1)}"
+
+    # Match CREATE INDEX <name>
+    index_match = re.match(
+        r"\s*CREATE\s+INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)", stmt_upper
+    )
+    if index_match:
+        return f"INDEX {index_match.group(1)}"
+
+    # Match PRAGMA
+    if stmt_upper.startswith("PRAGMA"):
+        return "PRAGMA"
+
+    return None

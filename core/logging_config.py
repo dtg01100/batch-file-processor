@@ -25,7 +25,8 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from typing import IO, Union
+from contextvars import ContextVar
+from typing import IO, Any, Union
 
 from core.structured_logging import (
     JSONFormatter,
@@ -340,3 +341,256 @@ class RunLogAdapter(logging.LoggerAdapter):
             msg = f"[{folder}] {msg}"
 
         return msg, kwargs
+
+
+# ---------------------------------------------------------------------------
+# AuditLogger
+# ---------------------------------------------------------------------------
+
+
+class AuditLogger:
+    """Structured audit logger for security-sensitive operations.
+
+    The AuditLogger provides a dedicated logger for security-sensitive
+    operations such as:
+    - User authentication and authorization
+    - Folder configuration changes
+    - Settings modifications
+    - File access and processing
+    - Backend configuration changes
+    - Export/delete operations
+
+    All audit events are logged at INFO level with structured fields
+    suitable for security information and event management (SIEM) systems.
+
+    Parameters
+    ----------
+    name:
+        Logger name for the audit logger (default: "audit")
+
+    Example::
+        audit = AuditLogger()
+        audit.log_user_action("login", username="admin", success=True)
+        audit.log_config_change("update_folder", folder="ACME_Corp", changed_by="admin")
+        audit.log_file_access("process", file_path="/path/to/file.edi")
+    """
+
+    def __init__(self, name: str = "audit") -> None:
+        """Initialize the audit logger.
+
+        Args:
+            name: Logger name for the audit logger
+        """
+        self._logger = logging.getLogger(name)
+        self._correlation_id_var: ContextVar[str | None] = ContextVar(
+            "audit_correlation_id", default=None
+        )
+
+    def _log(
+        self,
+        action: str,
+        level: int,
+        details: dict[str, Any] | None = None,
+        exc_info: bool = False,
+    ) -> None:
+        """Internal log method with structured fields.
+
+        Args:
+            action: The audit action being performed
+            level: Log level to use
+            details: Additional details about the action
+            exc_info: Whether to include exception info
+        """
+        extra: dict[str, Any] = {
+            "audit_action": action,
+            "audit_logger": True,
+        }
+
+        if details:
+            extra["audit_details"] = details
+
+        corr_id = self._correlation_id_var.get()
+        if corr_id:
+            extra["correlation_id"] = corr_id
+
+        self._logger.log(level, f"[AUDIT] {action}", extra=extra, exc_info=exc_info)
+
+    def set_correlation_id(self, correlation_id: str | None) -> None:
+        """Set the correlation ID for audit entries in the current context.
+
+        Args:
+            correlation_id: Correlation ID to set, or None to clear
+        """
+        self._correlation_id_var.set(correlation_id)
+
+    def log_user_action(
+        self,
+        action: str,
+        username: str | None = None,
+        success: bool = True,
+        reason: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Log a user action event.
+
+        Args:
+            action: The action performed (e.g., "login", "logout", "view_settings")
+            username: Username performing the action
+            success: Whether the action succeeded
+            reason: Reason for failure if success is False
+            **kwargs: Additional context fields
+        """
+        details: dict[str, Any] = {"username": username, "success": success}
+        if reason:
+            details["reason"] = reason
+        details.update(kwargs)
+
+        level = logging.INFO if success else logging.WARNING
+        self._log(action, level, details)
+
+    def log_config_change(
+        self,
+        action: str,
+        target_type: str,
+        target_name: str | None = None,
+        changed_by: str | None = None,
+        changes: dict[str, tuple[Any, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Log a configuration change event.
+
+        Args:
+            action: The change action (e.g., "create", "update", "delete")
+            target_type: Type of config target (e.g., "folder", "backend", "setting")
+            target_name: Name of the target being modified
+            changed_by: User who made the change
+            changes: Dict of field -> (old_value, new_value) tuples
+            **kwargs: Additional context fields
+        """
+        details: dict[str, Any] = {
+            "target_type": target_type,
+            "target_name": target_name,
+            "changed_by": changed_by,
+        }
+        if changes:
+            details["changes"] = {
+                field: {"old": _safe_value(old), "new": _safe_value(new)}
+                for field, (old, new) in changes.items()
+            }
+        details.update(kwargs)
+
+        self._log(f"config_{action}", logging.INFO, details)
+
+    def log_file_access(
+        self,
+        action: str,
+        file_path: str | None = None,
+        folder_alias: str | None = None,
+        performed_by: str | None = None,
+        success: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """Log a file access event.
+
+        Args:
+            action: The file action (e.g., "read", "write", "delete", "process")
+            file_path: Path to the file being accessed
+            folder_alias: Alias of the folder containing the file
+            performed_by: User or system component performing the action
+            success: Whether the action succeeded
+            **kwargs: Additional context fields
+        """
+        details: dict[str, Any] = {
+            "file_path": file_path,
+            "folder_alias": folder_alias,
+            "performed_by": performed_by,
+            "success": success,
+        }
+        details.update(kwargs)
+
+        level = logging.INFO if success else logging.WARNING
+        self._log(f"file_{action}", level, details)
+
+    def log_backend_config(
+        self,
+        action: str,
+        backend_type: str | None = None,
+        backend_name: str | None = None,
+        changed_by: str | None = None,
+        success: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """Log a backend configuration event.
+
+        Args:
+            action: The action (e.g., "configure", "test", "disable")
+            backend_type: Type of backend (e.g., "ftp", "smtp", "copy")
+            backend_name: Name/identifier of the backend
+            changed_by: User who made the change
+            success: Whether the action succeeded
+            **kwargs: Additional context fields
+        """
+        details: dict[str, Any] = {
+            "backend_type": backend_type,
+            "backend_name": backend_name,
+            "changed_by": changed_by,
+            "success": success,
+        }
+        details.update(kwargs)
+
+        level = logging.INFO if success else logging.WARNING
+        self._log(f"backend_{action}", level, details)
+
+    def log_security_event(
+        self,
+        event: str,
+        severity: str = "medium",
+        description: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Log a security-related event.
+
+        Args:
+            event: Type of security event
+            severity: Severity level ("low", "medium", "high", "critical")
+            description: Human-readable description
+            **kwargs: Additional context fields
+        """
+        details: dict[str, Any] = {
+            "severity": severity,
+            "description": description,
+        }
+        details.update(kwargs)
+
+        level_map = {
+            "low": logging.INFO,
+            "medium": logging.WARNING,
+            "high": logging.ERROR,
+            "critical": logging.CRITICAL,
+        }
+        level = level_map.get(severity.lower(), logging.WARNING)
+        self._log(f"security_{event}", level, details)
+
+
+def _safe_value(value: Any) -> Any:
+    """Convert a value to a safe, serializable form for logging.
+
+    Args:
+        value: The value to convert
+
+    Returns:
+        A safe representation of the value
+    """
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_safe_value(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _safe_value(v) for k, v in value.items()}
+    return str(value)
+
+
+# Default audit logger instance
+audit_logger = AuditLogger()

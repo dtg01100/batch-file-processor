@@ -42,6 +42,7 @@ from dispatch.converters.convert_base import (
     EDIRecord,
 )
 
+
 class EStoreEInvoiceConverter(BaseEDIConverter):
     """Converter for EStore E-Invoice CSV format with shipper mode support.
 

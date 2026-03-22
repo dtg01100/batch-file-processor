@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-The GUI layer is built with PyQt6 and follows a three-layer signal propagation pattern for communication between UI components and business logic.
+The GUI layer is built with PyQt5 and follows a three-layer signal propagation pattern for communication between UI components and business logic.
 
 ### 1.1 Architecture Layers
 
@@ -358,7 +358,7 @@ def qtbot(qapp):
 
 ### 8.2 Test Markers
 
-- `qt`: PyQt6-specific tests
+- `qt`: PyQt5-specific tests
 - `ui`: UI component tests
 
 ### 8.3 Running Tests Headless

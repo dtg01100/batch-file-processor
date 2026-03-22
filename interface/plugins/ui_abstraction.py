@@ -535,7 +535,7 @@ class QtListWidgetWidget(QtWidgetBase):
         from PyQt5.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
 
         self.widget = QListWidget(parent)
-        # Use QAbstractItemView.MultiSelection for PyQt6 selection mode
+        # Use QAbstractItemView.MultiSelection for PyQt5 selection mode
         self.widget.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         for choice in field_definition.choices:
             item = QListWidgetItem(choice["label"])

@@ -181,40 +181,34 @@ class MaintenanceFunctions:
         if self._on_operation_start:
             self._on_operation_start()
         users_refresh = False
+
+        def _remove_folders_iter(folders_iter, active_only: bool) -> None:
+            nonlocal users_refresh
+            count = len(folders_iter) if hasattr(folders_iter, "__len__") else 0
+            if count > 0:
+                users_refresh = True
+            folders_total = count
+            folders_count = 0
+            self._progress.show(
+                "removing " + str(folders_count) + " of " + str(folders_total)
+            )
+            for folder_to_be_removed in folders_iter:
+                folders_count += 1
+                self._progress.update_message(
+                    "removing " + str(folders_count) + " of " + str(folders_total)
+                )
+                if self._delete_folder_callback:
+                    self._delete_folder_callback(folder_to_be_removed["id"])
+
         if self._folder_repo is not None:
-            if self._folder_repo.count(active_only=True) > 0:
-                users_refresh = True
-            folders_total = self._folder_repo.count(active_only=True)
-            folders_count = 0
-            self._progress.show(
-                "removing " + str(folders_count) + " of " + str(folders_total)
-            )
-            for folder_to_be_removed in self._folder_repo.find_all(active_only=True):
-                folders_count += 1
-                self._progress.update_message(
-                    "removing " + str(folders_count) + " of " + str(folders_total)
-                )
-                if self._delete_folder_callback:
-                    self._delete_folder_callback(folder_to_be_removed["id"])
+            folders = list(self._folder_repo.find_all(active_only=True))
+            _remove_folders_iter(folders, active_only=True)
         else:
-            if self._database_obj.folders_table.count(folder_is_active=False) > 0:
-                users_refresh = True
-            folders_total = self._database_obj.folders_table.count(
-                folder_is_active=False
+            folders = list(
+                self._database_obj.folders_table.find(folder_is_active=False)
             )
-            folders_count = 0
-            self._progress.show(
-                "removing " + str(folders_count) + " of " + str(folders_total)
-            )
-            for folder_to_be_removed in self._database_obj.folders_table.find(
-                folder_is_active=False
-            ):
-                folders_count += 1
-                self._progress.update_message(
-                    "removing " + str(folders_count) + " of " + str(folders_total)
-                )
-                if self._delete_folder_callback:
-                    self._delete_folder_callback(folder_to_be_removed["id"])
+            _remove_folders_iter(folders, active_only=False)
+
         self._progress.hide()
         if users_refresh and self._refresh_callback:
             self._refresh_callback()

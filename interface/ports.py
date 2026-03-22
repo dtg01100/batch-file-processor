@@ -293,7 +293,7 @@ class NullUIService:
 
 
 class QtUIService:
-    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt6.
+    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt5.
 
     Uses QMessageBox for dialogs, QFileDialog for file/directory selection,
     and QApplication.processEvents() for event-loop pumping.

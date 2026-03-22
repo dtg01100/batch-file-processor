@@ -123,7 +123,7 @@ class InvFetcher:
                     "result_count": len(qry_ret),
                 },
             )
-        except Exception:
+        except (RuntimeError, OSError, ValueError):
             if self._strict_database_lookup:
                 raise
             log_with_context(
@@ -248,7 +248,7 @@ class InvFetcher:
                         "uom_count": len(self.uom_lut),
                     },
                 )
-            except Exception:
+            except (RuntimeError, OSError, ValueError):
                 if self._strict_database_lookup:
                     raise
                 log_with_context(
@@ -329,7 +329,7 @@ class InvFetcher:
                     f"No item-master UOM found in AS400 for item {itemno}"
                 )
             return "HI" if int(uommult) > 1 else "LO"
-        except Exception:
+        except (RuntimeError, OSError, ValueError):
             if self._strict_database_lookup:
                 raise
             try:

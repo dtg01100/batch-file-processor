@@ -1,7 +1,9 @@
-# PyQt6 UI Migration Summary
+# Qt UI Migration Summary
+
+> **Note:** This document describes the migration from tkinter to Qt. The project ultimately stayed on **PyQt5** for compatibility with the target platform. The `interface/qt/` directory contains the PyQt5 implementation.
 
 ## Overview
-Successfully migrated the tkinter-based interface to PyQt6 while maintaining full functional parity with the master branch.
+Successfully migrated the tkinter-based interface to Qt while maintaining full functional parity with the master branch.
 
 ## Completed Changes
 
@@ -115,7 +117,7 @@ All operations modules from the refactored interface are utilized:
 ## Technical Implementation Details
 
 ### Signal-Slot Architecture
-The new PyQt6 UI uses Qt's signal-slot mechanism for event handling:
+The new PyQt5 UI uses Qt's signal-slot mechanism for event handling:
 
 1. **UI Signals**: Buttons and widgets emit signals (e.g., `add_folder_clicked`)
 2. **Controller**: `ApplicationController` connects signals to operation handlers
@@ -140,7 +142,7 @@ All dialogs follow a consistent pattern:
 ### Layout Changes
 - Horizontal button panel changed to vertical left sidebar (better for many folders)
 - Active/inactive folders shown side-by-side instead of stacked
-- Modern PyQt6 styling instead of tkinter theming
+- Modern PyQt5 styling instead of tkinter theming
 
 ### Not Implemented (Non-Critical)
 - **"Enable Resend" button**: Functionality exists in maintenance dialog, but direct button not added
@@ -177,7 +179,7 @@ These were intentional decisions since:
 
 ## Migration Benefits
 
-1. **Modern UI Framework**: PyQt6 provides better cross-platform support
+1. **Modern UI Framework**: PyQt5 provides better cross-platform support
 2. **Maintainability**: Clean separation of concerns
 3. **Extensibility**: Easy to add new features or dialogs
 4. **Type Safety**: Full type hints throughout
@@ -187,7 +189,7 @@ These were intentional decisions since:
 
 ### New Files
 - `interface/application_controller.py` - Main controller wiring UI to operations
-- `interface/ui/app.py` - PyQt6 application class
+- `interface/ui/app.py` - PyQt5 application class
 - `interface/ui/main_window.py` - Main window
 - `interface/ui/widgets/button_panel.py` - Button panel widget
 - `interface/ui/widgets/folder_list.py` - Folder list widget
@@ -205,4 +207,4 @@ These were intentional decisions since:
 
 ## Conclusion
 
-The PyQt6 UI successfully achieves parity with the master branch tkinter UI while providing a more maintainable and extensible architecture. All core functionality is preserved, output formats are unchanged, and the application can be extended more easily in the future.
+The PyQt5 UI successfully achieves parity with the master branch tkinter UI while providing a more maintainable and extensible architecture. All core functionality is preserved, output formats are unchanged, and the application can be extended more easily in the future.

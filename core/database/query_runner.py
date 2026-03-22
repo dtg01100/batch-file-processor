@@ -6,8 +6,12 @@ and loose coupling from the underlying database implementation.
 """
 
 import re
+import time
+import uuid
 from dataclasses import dataclass
 from typing import Optional, Protocol, runtime_checkable
+
+from core.structured_logging import get_logger, log_database_call
 
 _READ_ONLY_SQL_START = {"SELECT", "WITH"}
 _MUTATING_SQL_START = {
@@ -139,6 +143,8 @@ class PyODBCConnection:
         """
         self.config = config
         self._connection = None
+        self._connection_id = uuid.uuid4().hex[:8]
+        self._logger = get_logger(__name__)
 
     def _connect(self):
         """Establish the database connection.
@@ -151,6 +157,7 @@ class PyODBCConnection:
         """
         import pyodbc
 
+        start_time = time.perf_counter()
         conn_str = (
             f"DRIVER={{{self.config.odbc_driver}}};"
             f"SYSTEM={self.config.dsn};"
@@ -160,7 +167,26 @@ class PyODBCConnection:
         )
         try:
             self._connection = pyodbc.connect(conn_str)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_database_call(
+                self._logger,
+                "connect",
+                table=self.config.database,
+                duration_ms=duration_ms,
+                success=True,
+                connection_id=self._connection_id,
+            )
         except pyodbc.Error as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_database_call(
+                self._logger,
+                "connect",
+                table=self.config.database,
+                duration_ms=duration_ms,
+                success=False,
+                error=exc,
+                connection_id=self._connection_id,
+            )
             raise ConnectionError(
                 f"Failed to connect to database SYSTEM={self.config.dsn!r} "
                 f"DRIVER={self.config.odbc_driver!r}: {exc}"
@@ -184,6 +210,11 @@ class PyODBCConnection:
             List of dictionaries with column names as keys
         """
         assert_read_only_sql(query)
+        start_time = time.perf_counter()
+
+        # Extract query type and table for logging
+        query_type = self._extract_query_type(query)
+        table = self._extract_table_name(query)
 
         conn = self._ensure_connection()
         cursor = conn.cursor()
@@ -198,6 +229,16 @@ class PyODBCConnection:
             # In that case cursor.description is None and fetchall() can raise
             # for drivers that enforce result-set semantics.
             if not cursor.description:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                log_database_call(
+                    self._logger,
+                    "execute",
+                    query_type=query_type,
+                    table=table,
+                    duration_ms=duration_ms,
+                    success=True,
+                    connection_id=self._connection_id,
+                )
                 return []
 
             # Get column names from cursor description
@@ -212,14 +253,71 @@ class PyODBCConnection:
             for row in cursor.fetchall():
                 row_dict = dict(zip(columns, row))
                 results.append(row_dict)
+
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_database_call(
+                self._logger,
+                "execute",
+                query_type=query_type,
+                table=table,
+                row_count=len(results),
+                duration_ms=duration_ms,
+                success=True,
+                connection_id=self._connection_id,
+            )
+        except Exception as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_database_call(
+                self._logger,
+                "execute",
+                query_type=query_type,
+                table=table,
+                duration_ms=duration_ms,
+                success=False,
+                error=exc,
+                connection_id=self._connection_id,
+            )
+            raise
         finally:
             cursor.close()
 
         return results
 
+    def _extract_query_type(self, query: str) -> str | None:
+        """Extract SQL query type from query string."""
+        import re
+
+        match = re.match(r"\s*(\w+)", query.strip())
+        return match.group(1).upper() if match else None
+
+    def _extract_table_name(self, query: str) -> str | None:
+        """Extract table name from SQL query string."""
+        import re
+
+        # Match FROM <table> or JOIN <table> or INTO <table> or UPDATE <table>
+        patterns = [
+            r'\bFROM\s+([\w`\[\]"]+)',  # SELECT FROM table
+            r'\bJOIN\s+([\w`\[\]"]+)',  # JOIN table
+            r'\bINTO\s+([\w`\[\]"]+)',  # INSERT INTO table
+            r'\bUPDATE\s+([\w`\[\]"]+)',  # UPDATE table
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, query, re.IGNORECASE)
+            if match:
+                table = match.group(1).strip('`[]"')
+                return table
+        return None
+
     def close(self) -> None:
         """Close the database connection if open."""
         if self._connection:
+            log_database_call(
+                self._logger,
+                "close",
+                table=self.config.database,
+                success=True,
+                connection_id=self._connection_id,
+            )
             self._connection.close()
             self._connection = None
 

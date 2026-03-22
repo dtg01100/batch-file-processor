@@ -527,6 +527,7 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
 
         assert os.path.exists(result)
 
+
 class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
     """Test header record handling."""
 

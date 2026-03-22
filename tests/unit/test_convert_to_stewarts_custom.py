@@ -12,7 +12,6 @@ Converter: convert_to_stewarts_custom.py (20871 chars)
 Note: This converter requires AS400 database access, so tests mock the query runner.
 """
 
-import csv
 import os
 from unittest.mock import MagicMock, patch
 
@@ -431,9 +430,6 @@ class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixt
         tmp_path,
     ):
         """Test that output contains 'Invoice Details' header via unit method test."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
 
         pytest.skip("Full conversion requires extensive database mocking")
 
@@ -447,8 +443,5 @@ class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixt
         tmp_path,
     ):
         """Test that output contains line item column headers via unit method test."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
 
         pytest.skip("Full conversion requires extensive database mocking")

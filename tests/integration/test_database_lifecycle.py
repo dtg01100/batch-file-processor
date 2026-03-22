@@ -123,9 +123,9 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert col in admin_columns, (
-                f"administrative table should have {col} column"
-            )
+            assert (
+                col in admin_columns
+            ), f"administrative table should have {col} column"
 
         # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")

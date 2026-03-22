@@ -130,7 +130,7 @@ def process(
     upc_qreturn = []
     for itemno, category, upc1, upc2, upc3, upc4 in query_object.run_arbitrary_query(
         """
-                    select 
+                    select
                         dsanrep.anbacd,
                         dsanrep.anbbcd,
                         strip(dsanrep.anbgcd),

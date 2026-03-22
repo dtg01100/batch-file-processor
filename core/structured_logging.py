@@ -786,6 +786,107 @@ def log_backend_call(
         )
 
 
+def log_database_call(
+    logger: logging.Logger,
+    operation: str,
+    *,
+    query_type: str | None = None,
+    table: str | None = None,
+    row_count: int | None = None,
+    duration_ms: float | None = None,
+    success: bool | None = None,
+    error: Exception | None = None,
+    connection_id: str | None = None,
+    correlation_id: str | None = None,
+    **kwargs: Any,
+) -> None:
+    """Log a database operation with standardized fields.
+
+    Args:
+        logger: Logger to use
+        operation: Operation being performed ("query", "execute", "connect", "close")
+        query_type: Type of SQL ("SELECT", "INSERT", "UPDATE", "DELETE", etc.)
+        table: Table being accessed (optional)
+        row_count: Number of rows affected/returned (optional)
+        duration_ms: Operation duration in milliseconds (optional)
+        success: Whether operation succeeded (optional)
+        error: Exception if operation failed (optional)
+        connection_id: Connection identifier (optional)
+        correlation_id: Correlation ID (optional)
+        **kwargs: Additional fields
+
+    Example:
+        >>> log_database_call(
+        ...     logger,
+        ...     "query",
+        ...     query_type="SELECT",
+        ...     table="folders",
+        ...     row_count=5,
+        ...     duration_ms=45.2,
+        ...     success=True
+        ... )
+    """
+    extra: dict[str, Any] = {
+        "correlation_id": correlation_id or get_correlation_id(),
+        "trace_id": get_trace_id(),
+        "db_operation": operation,
+    }
+
+    if query_type:
+        extra["query_type"] = query_type
+    if table:
+        extra["table"] = table
+    if row_count is not None:
+        extra["row_count"] = row_count
+    if duration_ms is not None:
+        extra["duration_ms"] = round(duration_ms, 2)
+    if success is not None:
+        extra["success"] = success
+    if connection_id:
+        extra["connection_id"] = connection_id
+
+    extra.update(kwargs)
+
+    # Determine log level based on outcome
+    if error:
+        extra["error"] = {"type": type(error).__name__, "message": str(error)}
+        logger.error(
+            "[DB ERROR] %s %s%s failed: %s",
+            operation,
+            f"{query_type} " if query_type else "",
+            f"on {table}" if table else "",
+            str(error),
+            extra=extra,
+            exc_info=True,
+        )
+    elif success is False:
+        logger.warning(
+            "[DB] %s %s%s failed",
+            operation,
+            f"{query_type} " if query_type else "",
+            f"on {table}" if table else "",
+            extra=extra,
+        )
+    elif success:
+        logger.info(
+            "[DB] %s %s%s completed in %.2fms (%s rows)",
+            operation,
+            f"{query_type} " if query_type else "",
+            f"on {table}" if table else "",
+            duration_ms or 0,
+            row_count if row_count is not None else "?",
+            extra=extra,
+        )
+    else:
+        logger.debug(
+            "[DB] %s %s%s started",
+            operation,
+            f"{query_type} " if query_type else "",
+            f"on {table}" if table else "",
+            extra=extra,
+        )
+
+
 # =============================================================================
 # Structured Logger
 # =============================================================================

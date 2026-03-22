@@ -337,8 +337,7 @@ class PluginConfigurationMapper:
             except Exception as e:
                 if get_strict_testing_mode():
                     raise RuntimeError(
-                        "Error extracting configuration for "
-                        f"{plugin.get_format_name()}"
+                        f"Error extracting configuration for {plugin.get_format_name()}"
                     ) from e
                 extracted_configs.append(
                     ExtractedPluginConfig(

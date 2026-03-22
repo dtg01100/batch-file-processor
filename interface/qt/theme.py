@@ -1,4 +1,4 @@
-"""Modern Material Design 3 inspired theme system for PyQt6 applications.
+"""Modern Material Design 3 inspired theme system for PyQt5 applications.
 
 This theme system implements contemporary design principles including:
 - Material Design 3 color palette with accessible colors

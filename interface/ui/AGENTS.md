@@ -1,6 +1,6 @@
-# UI COMPONENTS (PyQt6 Windows/Dialogs/Widgets)
+# UI COMPONENTS (PyQt5 Windows/Dialogs/Widgets)
 
-PyQt6 UI layer — Application, MainWindow, dialogs, custom widgets, plugin UI generator.
+PyQt5 UI layer — Application, MainWindow, dialogs, custom widgets, plugin UI generator.
 
 ## STRUCTURE
 

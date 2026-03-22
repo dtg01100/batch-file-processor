@@ -6,7 +6,7 @@
 
 ## 1. System Overview
 
-Batch File Processor is a PyQt6-based GUI application for processing EDI/batch files through a pluggable converter and send backend architecture. The system handles the complete pipeline from file discovery through EDI parsing, format conversion, and delivery.
+Batch File Processor is a Qt5-based GUI application for processing EDI/batch files through a pluggable converter and send backend architecture. The system handles the complete pipeline from file discovery through EDI parsing, format conversion, and delivery.
 
 ### 1.1 Primary Goals
 

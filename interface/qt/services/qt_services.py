@@ -1,4 +1,4 @@
-"""PyQt6 implementations of UIServiceProtocol and ProgressServiceProtocol.
+"""PyQt5 implementations of UIServiceProtocol and ProgressServiceProtocol.
 
 Provides :class:`QtUIService` and :class:`QtProgressService` as the Qt
 equivalents of ``TkinterUIService`` and ``TkinterProgressCallback``.  All
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class QtUIService:
-    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt6.
+    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt5.
 
     Uses :class:`QMessageBox` for informational and question dialogs,
     :class:`QFileDialog` for file/directory selection, and
@@ -444,7 +444,7 @@ class QtProgressService(QObject):
         if animation is not None:
             try:
                 animation.stop()
-            except Exception:
+            except RuntimeError:
                 logger.debug(
                     "Failed to stop throbber animation during dispose", exc_info=True
                 )
@@ -452,7 +452,7 @@ class QtProgressService(QObject):
         if self._parent is not None:
             try:
                 self._parent.removeEventFilter(self)
-            except Exception:
+            except (RuntimeError, AttributeError):
                 logger.debug(
                     "Failed to remove event filter during dispose", exc_info=True
                 )
@@ -461,7 +461,7 @@ class QtProgressService(QObject):
             try:
                 self._overlay.hide()
                 self._overlay.deleteLater()
-            except Exception:
+            except RuntimeError:
                 logger.debug(
                     "Failed to hide and delete overlay during dispose", exc_info=True
                 )

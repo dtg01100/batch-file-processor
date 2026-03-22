@@ -1491,12 +1491,14 @@ class DispatchOrchestrator:
                         if inv_num and inv_num not in seen_set:
                             seen.append(inv_num)
                             seen_set.add(inv_num)
-                except Exception:
+                except (ValueError, KeyError):
                     continue
 
             return ", ".join(seen)
-        except Exception:
-            logger.exception("Failed to extract invoice numbers from %s", file_path)
+        except (OSError, ValueError, KeyError) as e:
+            logger.exception(
+                "Failed to extract invoice numbers from %s: %s", file_path, e
+            )
             return ""
 
     def _should_validate(self, folder: dict) -> bool:

@@ -11,7 +11,7 @@ import datetime
 import os
 import sys
 import traceback
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 from backend.database import sqlite_wrapper
 from core.database import schema

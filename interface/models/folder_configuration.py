@@ -486,6 +486,24 @@ class FolderConfiguration:
             "process_backend_email": normalize_bool(self.process_backend_email),
         }
 
+        self._add_ftp_to_dict(data)
+        self._add_email_to_dict(data)
+        self._add_copy_to_dict(data)
+        self._add_edi_to_dict(data)
+        self._add_upc_override_to_dict(data)
+        self._add_a_record_padding_to_dict(data)
+        self._add_invoice_date_to_dict(data)
+        self._add_backend_specific_to_dict(data)
+        self._add_csv_to_dict(data)
+
+        # Plugin configurations
+        if self.plugin_configurations:
+            data["plugin_configurations"] = self.plugin_configurations
+
+        return data
+
+    def _add_ftp_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add FTP settings to dictionary."""
         if self.ftp:
             data.update(
                 {
@@ -497,6 +515,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_email_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add email settings to dictionary."""
         if self.email:
             data.update(
                 {
@@ -505,9 +525,13 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_copy_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add copy backend settings to dictionary."""
         if self.copy:
             data["copy_to_directory"] = self.copy.destination_directory
 
+    def _add_edi_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add EDI settings to dictionary."""
         if self.edi:
             data.update(
                 {
@@ -531,6 +555,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_upc_override_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add UPC override settings to dictionary."""
         if self.upc_override:
             data.update(
                 {
@@ -542,6 +568,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_a_record_padding_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add A-record padding settings to dictionary."""
         if self.a_record_padding:
             data.update(
                 {
@@ -558,6 +586,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_invoice_date_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add invoice date settings to dictionary."""
         if self.invoice_date:
             data.update(
                 {
@@ -570,6 +600,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_backend_specific_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add backend-specific settings to dictionary."""
         if self.backend_specific:
             data.update(
                 {
@@ -580,6 +612,8 @@ class FolderConfiguration:
                 }
             )
 
+    def _add_csv_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add CSV settings to dictionary."""
         if self.csv:
             data.update(
                 {
@@ -597,9 +631,3 @@ class FolderConfiguration:
                     ),
                 }
             )
-
-        # Plugin configurations
-        if self.plugin_configurations:
-            data["plugin_configurations"] = self.plugin_configurations
-
-        return data

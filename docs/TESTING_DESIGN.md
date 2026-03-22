@@ -15,7 +15,7 @@ This document describes the testing strategy, framework configuration, and patte
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Test Runner | pytest | Test discovery and execution |
-| Qt Testing | pytest-qt | PyQt6 widget testing |
+| Qt Testing | pytest-qt | Qt5 widget testing |
 | Coverage | pytest-cov | Code coverage reporting |
 | Fixtures | pytest fixtures | Test setup and teardown |
 | Mocking | unittest.mock | Dependency isolation |
@@ -124,7 +124,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "convert_smoke: mark test as quick convert backend smoke test")
     config.addinivalue_line("markers", "convert_parameters: mark test as convert parameter variation test")
     config.addinivalue_line("markers", "convert_integration: mark test as convert integration test")
-    config.addinivalue_line("markers", "qt: mark test as requiring PyQt6/Qt")
+    config.addinivalue_line("markers", "qt: mark test as requiring Qt5")
     config.addinivalue_line("markers", "parity: mark test as parity verification test")
     config.addinivalue_line("markers", "db: mark test as database-related test")
 ```

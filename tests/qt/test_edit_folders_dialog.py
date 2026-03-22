@@ -1067,9 +1067,9 @@ class TestWidgetCleanupAndLifecycle:
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
         # (Tweak EDI has different widgets)
-        assert "convert_formats_var" not in dialog._fields, (
-            "convert_formats_var should be removed when switching away from Convert EDI"
-        )
+        assert (
+            "convert_formats_var" not in dialog._fields
+        ), "convert_formats_var should be removed when switching away from Convert EDI"
 
     def test_clear_convert_sub_removes_field_references(
         self, qtbot, sample_folder_config
@@ -1112,9 +1112,9 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
-        assert "upc_var_check" not in dialog._fields, (
-            "upc_var_check should be removed when switching from CSV format"
-        )
+        assert (
+            "upc_var_check" not in dialog._fields
+        ), "upc_var_check should be removed when switching from CSV format"
 
     def test_data_extractor_handles_missing_widgets_gracefully(
         self, qtbot, sample_folder_config

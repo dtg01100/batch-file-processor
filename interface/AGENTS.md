@@ -1,6 +1,6 @@
-# INTERFACE MODULE (PyQt6 GUI)
+# INTERFACE MODULE (Qt5 GUI)
 
-PyQt6 GUI application layer — models, operations, database access, UI components, validation.
+Qt5 GUI application layer — models, operations, database access, UI components, validation.
 
 ## STRUCTURE
 

@@ -222,51 +222,65 @@ class EDIValidator:
 
             # Check each line starts with valid record type
             for line_num, line in enumerate(lines, start=1):
-                if not line:
-                    continue
-                first_char = line[0] if line else ""
-                if first_char not in ("A", "B", "C", ""):
+                is_valid, failed_line = self._validate_edi_line(
+                    line, line_num, file_path
+                )
+                if not is_valid:
+                    return False, failed_line
+
+            logger.debug("EDI format OK: %s (%d lines)", file_path, len(lines))
+            return True, len(lines)
+
+        except (OSError, UnicodeDecodeError):
+            return False, 0
+
+    def _validate_edi_line(
+        self, line: str, line_num: int, file_path: str
+    ) -> tuple[bool, int]:
+        """Validate a single EDI line.
+
+        Args:
+            line: Line content to validate
+            line_num: Line number for logging
+            file_path: File path for logging
+
+        Returns:
+            Tuple of (is_valid, line_number) where line_number is the
+            line where validation failed (0 if valid)
+        """
+        if not line:
+            return True, 0
+        first_char = line[0]
+        if first_char not in ("A", "B", "C", ""):
+            logger.debug("EDI format check failed at line %d: %s", line_num, file_path)
+            return False, line_num
+
+        # Validate B records
+        if first_char == "B":
+            if len(line) != 76 and len(line) != 70:
+                logger.debug(
+                    "EDI format check failed at line %d: %s", line_num, file_path
+                )
+                return False, line_num
+
+            # Check item number is numeric
+            try:
+                _ = int(line[1:12])
+            except ValueError:
+                if line[1:12] != "           ":
                     logger.debug(
                         "EDI format check failed at line %d: %s", line_num, file_path
                     )
                     return False, line_num
 
-                # Validate B records
-                if first_char == "B":
-                    if len(line) != 76 and len(line) != 70:
-                        logger.debug(
-                            "EDI format check failed at line %d: %s",
-                            line_num,
-                            file_path,
-                        )
-                        return False, line_num
+            # Check for missing pricing in 70-char lines
+            if len(line) == 70 and line[51:67] != "                ":
+                logger.debug(
+                    "EDI format check failed at line %d: %s", line_num, file_path
+                )
+                return False, line_num
 
-                    # Check item number is numeric
-                    try:
-                        _ = int(line[1:12])
-                    except ValueError:
-                        if line[1:12] != "           ":
-                            logger.debug(
-                                "EDI format check failed at line %d: %s",
-                                line_num,
-                                file_path,
-                            )
-                            return False, line_num
-
-                    # Check for missing pricing in 70-char lines
-                    if len(line) == 70 and line[51:67] != "                ":
-                        logger.debug(
-                            "EDI format check failed at line %d: %s",
-                            line_num,
-                            file_path,
-                        )
-                        return False, line_num
-
-            logger.debug("EDI format OK: %s (%d lines)", file_path, len(lines))
-            return True, len(lines)
-
-        except Exception:
-            return False, 0
+        return True, 0
 
     def _check_edi_issues(self, file_path: str, content: str) -> list[str]:
         """Check for specific EDI issues.

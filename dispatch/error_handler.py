@@ -285,7 +285,7 @@ class ErrorHandler:
             self.fs.write_file_text(log_path, content)
             return True
 
-        except Exception:
+        except (OSError, PermissionError):
             return False
 
     def get_errors(self) -> list[dict]:
