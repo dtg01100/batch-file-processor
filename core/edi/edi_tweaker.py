@@ -284,15 +284,20 @@ class EDITweaker:
 
     def _open_input_with_retry(self, filepath: str) -> TextIO:
         """Open input file with retry logic."""
-        read_attempt_counter = 1
-        while True:
+        max_retries = 5
+        for attempt in range(max_retries):
             try:
                 return open(filepath)
             except Exception as error:
-                if read_attempt_counter >= 5:
-                    time.sleep(read_attempt_counter * read_attempt_counter)
-                    read_attempt_counter += 1
-                    logger.info("Retrying open %s", filepath)
+                if attempt + 1 < max_retries:
+                    sleep_time = (attempt + 1) * (attempt + 1)
+                    time.sleep(sleep_time)
+                    logger.info(
+                        "Retrying open %s (attempt %d/%d)",
+                        filepath,
+                        attempt + 2,
+                        max_retries,
+                    )
                 else:
                     logger.error(
                         "Error opening file for read %s: %s",
@@ -304,15 +309,20 @@ class EDITweaker:
 
     def _open_output_with_retry(self, filepath: str) -> TextIO:
         """Open output file with retry logic."""
-        write_attempt_counter = 1
-        while True:
+        max_retries = 5
+        for attempt in range(max_retries):
             try:
                 return open(filepath, "w", newline="\r\n")
             except Exception as error:
-                if write_attempt_counter >= 5:
-                    time.sleep(write_attempt_counter * write_attempt_counter)
-                    write_attempt_counter += 1
-                    logger.info("Retrying open %s", filepath)
+                if attempt + 1 < max_retries:
+                    sleep_time = (attempt + 1) * (attempt + 1)
+                    time.sleep(sleep_time)
+                    logger.info(
+                        "Retrying open %s (attempt %d/%d)",
+                        filepath,
+                        attempt + 2,
+                        max_retries,
+                    )
                 else:
                     logger.error(
                         "Error opening file for write %s: %s",
