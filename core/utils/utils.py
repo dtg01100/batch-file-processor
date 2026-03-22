@@ -16,7 +16,7 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import QueryRunner, create_query_runner
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
@@ -397,14 +397,13 @@ class cRecGenerator:
 
     def _db_connect(self):
         """Establish database connection."""
-        runner = create_query_runner(
+        self.query_object = create_query_runner(
             username=self.settings["as400_username"],
             password=self.settings["as400_password"],
             dsn=self.settings["as400_address"],
             database="QGPL",
             odbc_driver=f"{self.settings['odbc_driver']}",
         )
-        self.query_object = LegacyQueryRunnerAdapter(runner)
 
     def set_invoice_number(self, invoice_number):
         """Set the current invoice number and mark records as unappended.
@@ -427,11 +426,11 @@ class cRecGenerator:
         if self.query_object is None:
             self._db_connect()
 
-        qry_ret = self.query_object.run_arbitrary_query(
+        qry_ret = self.query_object.run_query(
             """
             SELECT
-                sum(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END),
-                sum(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END)
+                SUM(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END) AS non_prepaid,
+                SUM(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END) AS prepaid
             FROM
                 dacdata.odhst odhst
             WHERE
@@ -440,7 +439,11 @@ class cRecGenerator:
             (self._invoice_number,),
         )
 
-        qry_ret_non_prepaid, qry_ret_prepaid = qry_ret[0]
+        if not qry_ret:
+            return
+
+        qry_ret_non_prepaid = qry_ret[0]["non_prepaid"]
+        qry_ret_prepaid = qry_ret[0]["prepaid"]
 
         def _write_line(typestr: str, amount: int, wprocfile):
             descstr = typestr.ljust(25, " ")

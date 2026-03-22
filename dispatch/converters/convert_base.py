@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, TextIO
 
 import core.utils as utils
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import QueryRunner, create_query_runner
 from core.edi.edi_format_parser import EDIFormatParser
 from interface.plugins.plugin_config import PluginConfigMixin
 
@@ -653,26 +653,25 @@ class DBEnabledConverter(CSVConverter):
         super().__init__(
             edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
         )
-        self.query_object: Optional[LegacyQueryRunnerAdapter] = None
+        self.query_object: Optional[QueryRunner] = None
         self._db_connected = False
 
     def connect_db(self) -> None:
         if not self._db_connected:
-            runner = create_query_runner(
+            self.query_object = create_query_runner(
                 username=self.settings_dict["as400_username"],
                 password=self.settings_dict["as400_password"],
                 dsn=self.settings_dict["as400_address"],
                 database="QGPL",
                 odbc_driver=f"{self.settings_dict['odbc_driver']}",
             )
-            self.query_object = LegacyQueryRunnerAdapter(runner)
             self._db_connected = True
 
     def run_query(self, query_string: str) -> list:
         self.connect_db()
         if self.query_object is None:
             raise RuntimeError("Failed to initialize database connection")
-        return self.query_object.run_arbitrary_query(query_string)
+        return self.query_object.run_query(query_string)
 
 
 def create_edi_convert_wrapper(converter_class):

@@ -232,7 +232,11 @@ class TestConvertToStewartsCustomDatabaseLookup(TestConvertToStewartsCustomFixtu
         )
 
         converter = StewartsCustomConverter()
-        converter.uom_lookup_list = [(123456, 6, "CS"), (123456, 1, "EA")]
+        # UOM data is now stored as list of dicts with keys: itemno, uom_mult, uom_code
+        converter.uom_lookup_list = [
+            {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
+            {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
+        ]
         result = converter._get_uom("123456", "6")
         assert result == "CS"
 
@@ -334,7 +338,11 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         )
 
         converter = StewartsCustomConverter()
-        converter.uom_lookup_list = [(123456, 6, "CS"), (123456, 1, "EA")]
+        # UOM data is now stored as list of dicts with keys: itemno, uom_mult, uom_code
+        converter.uom_lookup_list = [
+            {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
+            {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
+        ]
         result = converter._get_uom("123456", "6")
         assert result == "CS"
 
@@ -349,7 +357,10 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         )
 
         converter = StewartsCustomConverter()
-        converter.uom_lookup_list = [(123456, 6, "CS")]
+        # UOM data is now stored as list of dicts
+        converter.uom_lookup_list = [
+            {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"}
+        ]
         result = converter._get_uom("999999", "6")
         assert result == "?"
 

@@ -27,7 +27,7 @@ from datetime import datetime
 from typing import Dict, List
 
 from core import utils
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 from core.structured_logging import (
     get_logger,
@@ -87,14 +87,13 @@ class YellowDogConverter(BaseEDIConverter):
         query_runner = None
         if not missing_keys:
             try:
-                runner = create_query_runner(
+                query_runner = create_query_runner(
                     username=settings_dict["as400_username"],
                     password=settings_dict["as400_password"],
                     dsn=settings_dict["as400_address"],
                     database="QGPL",
                     odbc_driver=settings_dict["odbc_driver"],
                 )
-                query_runner = LegacyQueryRunnerAdapter(runner)
                 logger.debug("YellowDog database lookup runner initialized")
             except Exception:
                 if strict_db_mode:

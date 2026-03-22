@@ -47,7 +47,7 @@ from decimal import Decimal
 from typing import Any, Dict, List
 
 from core import utils
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -76,7 +76,7 @@ class invFetcher:
                 Must include: as400_username, as400_password, as400_address, odbc_driver
         """
         self.settings = settings_dict
-        # Create a new QueryRunner with legacy adapter for the core InvFetcher
+        # Create a new QueryRunner for the core InvFetcher
         runner = create_query_runner(
             username=self.settings["as400_username"],
             password=self.settings["as400_password"],
@@ -84,9 +84,8 @@ class invFetcher:
             database="QGPL",
             odbc_driver=f"{self.settings['odbc_driver']}",
         )
-        legacy_adapter = LegacyQueryRunnerAdapter(runner)
         # Create adapter for the core InvFetcher's protocol
-        self._fetcher = InvFetcher(legacy_adapter, settings_dict)
+        self._fetcher = InvFetcher(runner, settings_dict)
 
     @property
     def last_invoice_number(self):
@@ -196,7 +195,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         # Generate output filename with timestamp
         self.output_filename = os.path.join(
             os.path.dirname(context.output_filename),
-            f'eInv{self.vendor_name}.{datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")}.csv',
+            f"eInv{self.vendor_name}.{datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')}.csv",
         )
 
         # Open output file and create CSV writer

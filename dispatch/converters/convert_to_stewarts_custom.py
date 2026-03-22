@@ -79,10 +79,15 @@ class StewartsCustomConverter(
         return list(STEWARTS_CUSTOMER_FIELDS_LIST)
 
     def _build_customer_header_dict(
-        self, header_fields: List[Any], header_fields_list: List[str]
+        self, header_fields: Dict[str, Any], header_fields_list: List[str]
     ) -> Dict[str, Any]:
         """Build customer header dictionary from query results."""
-        return dict(zip(header_fields_list, header_fields))
+        # Convert spaces to underscores in keys for compatibility
+        result = {}
+        for key, value in header_fields.items():
+            new_key = key.replace(" ", "_")
+            result[new_key] = value
+        return result
 
     def _initialize_output(self, context: ConversionContext) -> None:
         """Initialize CSV output file, writer, and database connection.

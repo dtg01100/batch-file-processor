@@ -265,26 +265,6 @@ class TestReadOnlySqlPolicy:
 
         assert mock_conn.executed_queries == []
 
-    def test_legacy_query_runner_rejects_delete(self, monkeypatch):
-        """Legacy compatibility runner must enforce read-only policy too."""
-
-        class DummyConnection:
-            def _connect(self):
-                raise AssertionError("Should not connect for blocked SQL")
-
-        class DummyRunner:
-            def __init__(self):
-                self.connection = DummyConnection()
-
-        def _create_dummy_runner(**kwargs):
-            return DummyRunner()
-
-        monkeypatch.setattr(core.database, "create_query_runner", _create_dummy_runner)
-        legacy_runner = core.database.query_runner("u", "p", "h", "driver")
-
-        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
-            legacy_runner.run_arbitrary_query("DELETE FROM my_table")
-
 
 class TestProtocolCompliance:
     """Tests for Protocol compliance."""

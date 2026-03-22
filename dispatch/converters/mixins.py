@@ -26,7 +26,7 @@ import decimal
 from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import QueryRunner, create_query_runner
 from core.exceptions import CustomerLookupError
 from core.structured_logging import get_logger
 from core.utils import calc_check_digit, convert_to_price, convert_UPCE_to_UPCA
@@ -37,19 +37,18 @@ logger = get_logger(__name__)
 class DatabaseConnectionMixin(ABC):
     """Mixin for converters that require database connections.
 
-    Provides common database initialization logic using the new QueryRunner
-    with LegacyQueryRunnerAdapter for backward compatibility.
+    Provides common database initialization logic using QueryRunner.
 
     Subclasses must:
     - Call self._init_db_connection() in their _initialize_output method
     - Store the query_object as self.query_object
 
     Attributes:
-        query_object: The database query runner adapter
+        query_object: The database QueryRunner
         _db_initialized: Whether the database connection has been established
     """
 
-    query_object: Optional[LegacyQueryRunnerAdapter] = None
+    query_object: Optional[QueryRunner] = None
     _db_initialized: bool = False
 
     def _init_db_connection(
@@ -79,7 +78,7 @@ class DatabaseConnectionMixin(ABC):
                 f"Missing required database settings: {', '.join(missing_keys)}"
             )
 
-        runner = create_query_runner(
+        self.query_object = create_query_runner(
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
@@ -88,7 +87,6 @@ class DatabaseConnectionMixin(ABC):
                 "odbc_driver", "IBM i Access ODBC Driver 64-bit"
             ),
         )
-        self.query_object = LegacyQueryRunnerAdapter(runner)
         self._db_initialized = True
         logger.debug("Database connection initialized for %s", self.__class__.__name__)
 
@@ -141,29 +139,34 @@ class CustomerLookupMixin(ABC):
         )
 
     def _build_customer_header_dict(
-        self, header_fields: List[Any], header_fields_list: List[str]
+        self, header_fields: Dict[str, Any], header_fields_list: List[str]
     ) -> Dict[str, Any]:
         """Build customer header dictionary from query results.
 
         Override this to add custom field processing (e.g., None fallback).
 
         Args:
-            header_fields: Raw query result row
-            header_fields_list: List of field names
+            header_fields: Raw query result dict (keys may have spaces)
+            header_fields_list: List of field names (with underscores)
 
         Returns:
             Dictionary mapping field names to values
         """
-        return dict(zip(header_fields_list, header_fields))
+        # Convert spaces to underscores in keys for compatibility
+        result = {}
+        for key, value in header_fields.items():
+            new_key = key.replace(" ", "_")
+            result[new_key] = value
+        return result
 
     def _init_customer_lookup(
-        self, invoice_number: str, query_object: LegacyQueryRunnerAdapter
+        self, invoice_number: str, query_object: QueryRunner
     ) -> Dict[str, Any]:
         """Initialize customer lookup and fetch header fields.
 
         Args:
             invoice_number: Invoice number to look up
-            query_object: Database query runner
+            query_object: Database query runner (QueryRunner with dict results)
 
         Returns:
             Dictionary of customer header fields
@@ -177,7 +180,7 @@ class CustomerLookupMixin(ABC):
         # Normalize invoice number for query (strip leading zeros)
         invoice_param = invoice_number.lstrip("0")
 
-        header_fields = query_object.run_arbitrary_query(query_sql, (invoice_param,))
+        header_fields = query_object.run_query(query_sql, (invoice_param,))
 
         if len(header_fields) == 0:
             logger.error(
@@ -187,9 +190,9 @@ class CustomerLookupMixin(ABC):
             )
             raise CustomerLookupError(f"Cannot Find Order {invoice_number} In History.")
 
-        result = header_fields[0]
+        # Apply subclass's header dict builder (handles Jolley/Stewarts specifics)
         self.header_fields_dict = self._build_customer_header_dict(
-            result, header_fields_list
+            header_fields[0], header_fields_list
         )
         return self.header_fields_dict
 
@@ -203,7 +206,7 @@ class UOMLookupMixin(ABC):
         uom_lookup_list: Cached list of UOM data from database
     """
 
-    uom_lookup_list: List[Tuple] = []
+    uom_lookup_list: List[Dict[str, Any]] = []
 
     def _get_uom_query_sql(self) -> str:
         """Return the SQL query template for UOM lookup.
@@ -219,17 +222,19 @@ class UOMLookupMixin(ABC):
             WHERE odhst.buhhnb = ?
         """
 
-    def _init_uom_lookup(self, invoice_number: str, query_object) -> List[Tuple]:
+    def _init_uom_lookup(
+        self, invoice_number: str, query_object: QueryRunner
+    ) -> List[Dict[str, Any]]:
         """Initialize UOM lookup and fetch UOM data.
 
         Args:
             invoice_number: Invoice number to look up
-            query_object: Database query runner
+            query_object: Database query runner (QueryRunner with dict results)
 
         Returns:
-            List of tuples (itemno, uom_mult, uom_code)
+            List of dicts with keys: itemno, uom_mult, uom_code
         """
-        self.uom_lookup_list = query_object.run_arbitrary_query(
+        self.uom_lookup_list = query_object.run_query(
             self._get_uom_query_sql(), (invoice_number,)
         )
 
@@ -260,21 +265,21 @@ class UOMLookupMixin(ABC):
 
         for entry in self.uom_lookup_list:
             try:
-                if int(entry[0]) == int(item_number):
+                if int(entry["itemno"]) == int(item_number):
                     stage_1_list.append(entry)
             except (ValueError, TypeError):
                 continue
 
         for entry in stage_1_list:
             try:
-                if int(entry[1]) == int(packsize):
+                if int(entry["uom_mult"]) == int(packsize):
                     stage_2_list.append(entry)
             except (ValueError, TypeError):
                 stage_2_list.append(entry)
                 break
 
         try:
-            return stage_2_list[0][2]
+            return stage_2_list[0]["uom_code"]
         except IndexError:
             return "?"
 
@@ -511,20 +516,24 @@ STEWARTS_CUSTOMER_FIELDS_LIST = [
 
 
 def build_jolley_header_dict(
-    header_fields: List[Any], header_fields_list: List[str]
+    header_fields: Dict[str, Any], header_fields_list: List[str]
 ) -> Dict[str, Any]:
     """Build Jolley-specific customer header dictionary with corporate fallback.
 
     Jolley-specific: falls back corporate fields to customer fields if None.
 
     Args:
-        header_fields: Raw query result row
-        header_fields_list: List of field names
+        header_fields: Raw query result dict (keys may have spaces from SQL aliases)
+        header_fields_list: List of field names (with underscores for mapping)
 
     Returns:
         Dictionary with Jolley-specific corporate field fallback
     """
-    result = dict(zip(header_fields_list, header_fields))
+    # Convert spaces to underscores in keys for compatibility with field list
+    result = {}
+    for key, value in header_fields.items():
+        new_key = key.replace(" ", "_")
+        result[new_key] = value
 
     # Jolley-specific: fallback corporate fields to customer fields if None
     if result.get("Corporate_Customer_Number") is None:

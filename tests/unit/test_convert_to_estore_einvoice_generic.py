@@ -20,7 +20,7 @@ import sqlite3
 
 import pytest
 
-from core.database import LegacyQueryRunnerAdapter, QueryRunner
+from core.database import QueryRunner
 from dispatch.converters import convert_to_estore_einvoice_generic
 
 
@@ -165,6 +165,37 @@ def test_db_connection():
     conn.close()
 
 
+class SQLiteQueryRunnerWithTransform:
+    """Query runner wrapper that transforms AS/400 SQL to SQLite syntax.
+
+    Implements QueryRunnerProtocol so it can be used in place of QueryRunner.
+    """
+
+    def __init__(self, query_runner: QueryRunner):
+        """Initialize with underlying query runner.
+
+        Args:
+            query_runner: QueryRunner to wrap
+        """
+        self._runner = query_runner
+
+    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+        """Execute query with AS/400 -> SQLite transformation.
+
+        Args:
+            query: SQL query (AS/400 syntax)
+            params: Query parameters
+
+        Returns:
+            List of dicts representing query results
+        """
+        # Transform AS/400 table names to SQLite table names
+        modified_query = query.replace("dacdata.", "")
+        modified_query = modified_query.replace("trim(", "")
+        modified_query = modified_query.replace(")", "")
+        return self._runner.run_query(modified_query, params)
+
+
 @pytest.fixture
 def test_query_runner(test_db_connection):
     """Create a QueryRunner using the test database.
@@ -173,9 +204,10 @@ def test_query_runner(test_db_connection):
         test_db_connection: The test database connection fixture
 
     Returns:
-        QueryRunner: QueryRunner configured to use test database
+        SQLiteQueryRunnerWithTransform: QueryRunner wrapper that transforms queries
     """
-    return QueryRunner(test_db_connection)
+    raw_runner = QueryRunner(test_db_connection)
+    return SQLiteQueryRunnerWithTransform(raw_runner)
 
 
 @pytest.fixture
@@ -186,12 +218,11 @@ def inv_fetcher_with_test_db(test_query_runner):
         test_query_runner: The test query runner fixture
 
     Returns:
-        invFetcher: Configured with test database
+        invFetcher: Wrapper configured with test database
     """
-    # Create adapter for the test query runner
-    legacy_adapter = LegacyQueryRunnerAdapter(test_query_runner)
+    from core.edi.inv_fetcher import InvFetcher
 
-    # Create invFetcher manually with test settings
+    # Create the wrapper which internally uses our test query runner
     settings = {
         "as400_username": "test_user",
         "as400_password": "test_pass",
@@ -199,11 +230,11 @@ def inv_fetcher_with_test_db(test_query_runner):
         "odbc_driver": "ODBC Driver 17 for SQL Server",
     }
 
-    # Create the fetcher but replace the internal _fetcher with one using our adapter
+    # Create wrapper - it will use create_query_runner internally, so we need to patch
+    # Since we can't easily patch inside __init__, we create the wrapper and replace its _fetcher
     fetcher = convert_to_estore_einvoice_generic.invFetcher(settings)
-    from core.edi.inv_fetcher import InvFetcher
-
-    fetcher._fetcher = InvFetcher(legacy_adapter, settings)
+    # Replace the internal _fetcher with one using our test query runner
+    fetcher._fetcher = InvFetcher(test_query_runner, settings)
 
     return fetcher
 
@@ -329,29 +360,6 @@ class TestEstoreEinvoiceGenericFixtures:
             convert_to_estore_einvoice_generic,
             "create_query_runner",
             mock_create_query_runner,
-        )
-
-        # Make LegacyQueryRunnerAdapter pass through (identity)
-        class PassThroughAdapter:
-            def __init__(self, runner):
-                self._runner = runner
-                self.connection = runner.connection
-
-            def run_query(self, query, params=None):
-                # Convert AS/400 table names to our SQLite table names
-                # Replace qualified names like dacdata.ohhst with ohhst
-                modified_query = query.replace("dacdata.", "")
-                modified_query = modified_query.replace("trim(", "")
-                modified_query = modified_query.replace(")", "")
-                return self._runner.run_query(modified_query, params)
-
-            def run_arbitrary_query(self, query, params=None):
-                return self.run_query(query, params)
-
-        monkeypatch.setattr(
-            convert_to_estore_einvoice_generic,
-            "LegacyQueryRunnerAdapter",
-            PassThroughAdapter,
         )
 
         yield
@@ -581,9 +589,9 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             ]
 
             for col in expected_columns:
-                assert any(
-                    col in h for h in header_row
-                ), f"Column {col} not found in header"
+                assert any(col in h for h in header_row), (
+                    f"Column {col} not found in header"
+                )
 
     def test_store_number_in_output(
         self,

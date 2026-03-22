@@ -23,7 +23,7 @@ import os
 
 import pytest
 
-from core.database import LegacyQueryRunnerAdapter, QueryRunner, SQLiteConnection
+from core.database import QueryRunner, SQLiteConnection
 from dispatch.converters import convert_to_jolley_custom
 
 
@@ -286,12 +286,7 @@ class TestJolleyCustomFixtures:
         test_runner.set_customer_data(customer_data)
         test_runner.set_uom_data(uom_data)
 
-        # Create legacy adapter wrapper
-        query_object = LegacyQueryRunnerAdapter(test_runner._sqlite_runner)
-        # Override the adapter's query methods to use our test runner
-        query_object._runner = test_runner
-
-        return query_object
+        return test_runner
 
 
 class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):

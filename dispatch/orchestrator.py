@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Optional
 
-from core.database import LegacyQueryRunnerAdapter, create_query_runner
+from core.database import QueryRunner, create_query_runner
 from core.structured_logging import (
     CorrelationContext,
     get_logger,
@@ -479,15 +479,21 @@ class DispatchOrchestrator:
         return {}
 
     def _parse_upc_query_rows(
-        self, rows: list[Any], strict_testing_mode: bool
+        self, rows: list[dict[str, Any]], strict_testing_mode: bool
     ) -> dict[int, list[Any]]:
-        """Build UPC lookup data from raw query rows."""
+        """Build UPC lookup data from raw query rows (dict format)."""
         upc_dict = {}
         for row in rows:
             try:
-                item_number = int(row[0])
-                upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
-            except (TypeError, ValueError, IndexError) as exc:
+                item_number = int(row["anbacd"])
+                upc_dict[item_number] = [
+                    row["anbbcd"],
+                    row["anbgcd"],
+                    row["anbhcd"],
+                    row["anbicd"],
+                    row["anbjcd"],
+                ]
+            except (TypeError, ValueError, KeyError) as exc:
                 if strict_testing_mode:
                     raise RuntimeError(
                         f"Malformed UPC row returned from fallback query: {row!r}"
@@ -495,16 +501,13 @@ class DispatchOrchestrator:
                 continue
         return upc_dict
 
-    def _close_legacy_upc_runner(
-        self, legacy_runner: Any, strict_testing_mode: bool
-    ) -> None:
-        """Close legacy UPC query runner, surfacing failures in strict mode."""
+    def _close_upc_runner(self, runner: QueryRunner, strict_testing_mode: bool) -> None:
+        """Close UPC query runner, surfacing failures in strict mode."""
         try:
-            # legacy wrapper keeps the new-style runner in _runner
-            legacy_runner._runner.close()
+            runner.close()
         except Exception as exc:
             if strict_testing_mode:
-                raise RuntimeError("Failed to close legacy UPC query runner") from exc
+                raise RuntimeError("Failed to close UPC query runner") from exc
 
     def _fetch_upc_dictionary_from_settings(self, settings: dict) -> dict:
         """Fetch UPC dictionary directly from AS400 using app settings.
@@ -540,10 +543,9 @@ class DispatchOrchestrator:
             database="QGPL",
             odbc_driver=settings["odbc_driver"],
         )
-        legacy_runner = LegacyQueryRunnerAdapter(runner)
 
         try:
-            rows = legacy_runner.run_arbitrary_query(
+            rows = runner.run_query(
                 """
                 select
                     dsanrep.anbacd,
@@ -575,7 +577,7 @@ class DispatchOrchestrator:
             logger.exception("Failed to fetch UPC dictionary via fallback query")
             return {}
         finally:
-            self._close_legacy_upc_runner(legacy_runner, strict_testing_mode)
+            self._close_upc_runner(runner, strict_testing_mode)
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None

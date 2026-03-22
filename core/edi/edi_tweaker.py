@@ -54,37 +54,26 @@ class TweakerQueryRunnerProtocol(Protocol):
 
 
 def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProtocol:
-    """Create an adapter that wraps legacy query_runner.
+    """Create a QueryRunner from settings.
 
-    This function creates a query runner from settings and wraps it
-    with an adapter that implements the TweakerQueryRunnerProtocol.
+    This function creates a QueryRunner instance from settings
+    that implements the TweakerQueryRunnerProtocol.
 
     Args:
         settings_dict: Dictionary containing database connection settings
 
     Returns:
-        Object implementing TweakerQueryRunnerProtocol
+        QueryRunner implementing TweakerQueryRunnerProtocol
     """
-    from core.database import query_runner
+    from core.database import create_query_runner
 
-    legacy_runner = query_runner(
-        settings_dict["as400_username"],
-        settings_dict["as400_password"],
-        settings_dict["as400_address"],
-        f"{settings_dict['odbc_driver']}",
+    return create_query_runner(
+        username=settings_dict["as400_username"],
+        password=settings_dict["as400_password"],
+        dsn=settings_dict["as400_address"],
+        database="QGPL",
+        odbc_driver=settings_dict["odbc_driver"],
     )
-
-    class QueryRunnerAdapter:
-        """Adapter wrapping legacy query_runner for protocol compliance."""
-
-        def __init__(self, runner):
-            self._runner = runner
-
-        def run_query(self, query: str, params: tuple = None) -> list:
-            # Legacy runner returns list of tuples
-            return self._runner.run_arbitrary_query(query, params)
-
-    return QueryRunnerAdapter(legacy_runner)
 
 
 @dataclass

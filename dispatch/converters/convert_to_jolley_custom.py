@@ -90,7 +90,7 @@ class JolleyCustomConverter(
         return list(BASIC_CUSTOMER_FIELDS_LIST)
 
     def _build_customer_header_dict(
-        self, header_fields: List[Any], header_fields_list: List[str]
+        self, header_fields: Dict[str, Any], header_fields_list: List[str]
     ) -> Dict[str, Any]:
         """Build customer header dictionary with Jolley-specific corporate fallback."""
         return build_jolley_header_dict(header_fields, header_fields_list)
