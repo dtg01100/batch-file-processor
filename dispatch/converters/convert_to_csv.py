@@ -26,15 +26,22 @@ Backward Compatibility:
 """
 
 import csv
-from decimal import Decimal
 
 from core import utils
+from core.utils import convert_to_price
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
     create_csv_writer,
     normalize_parameter,
+)
+from dispatch.converters.csv_utils import (
+    apply_retail_uom,
+    apply_upc_override,
+    filter_description,
+    format_quantity,
+    process_upc_for_output,
 )
 
 
@@ -250,51 +257,12 @@ class CSVConverter(BaseEDIConverter):
             Modified fields dictionary
         """
         user_data = context.user_data
-
-        # Validate fields can be parsed
-        try:
-            item_number = int(fields["vendor_item"].strip())
-            float(fields["unit_cost"].strip())
-            unit_multiplier = int(fields["unit_multiplier"].strip())
-            if unit_multiplier == 0:
-                raise ValueError("Unit multiplier cannot be zero")
-            int(fields["qty_of_units"].strip())
-        except Exception:
-            print("cannot parse b record field, skipping retail UOM conversion")
-            return fields
-
-        # Get UPC for each (retail) from lookup
-        upc_target_length = user_data["upc_target_length"]
-        upc_padding = user_data["upc_padding_pattern"]
-
-        try:
-            each_upc = context.upc_lut[item_number][1][:upc_target_length].ljust(
-                upc_target_length
-            )
-        except KeyError:
-            each_upc = upc_padding[:upc_target_length]
-
-        # Apply conversion
-        try:
-            # Convert unit cost from case cost to each cost
-            case_cost = Decimal(fields["unit_cost"].strip()) / 100
-            each_cost = case_cost / Decimal(unit_multiplier)
-            each_cost_cents = str(each_cost.quantize(Decimal(".01"))).replace(".", "")
-            fields["unit_cost"] = each_cost_cents[-6:].rjust(6, "0")
-
-            # Convert quantity from cases to eaches
-            case_qty = int(fields["qty_of_units"].strip())
-            each_qty = unit_multiplier * case_qty
-            fields["qty_of_units"] = str(each_qty).rjust(5, "0")
-
-            # Set UPC to each UPC and multiplier to 1
-            fields["upc_number"] = each_upc
-            fields["unit_multiplier"] = "000001"
-
-        except Exception as error:
-            print(f"Retail UOM conversion error: {error}")
-
-        return fields
+        return apply_retail_uom(
+            fields,
+            context.upc_lut,
+            upc_target_length=user_data["upc_target_length"],
+            upc_padding=user_data["upc_padding_pattern"],
+        )
 
     def _apply_upc_override(self, fields: dict, context: ConversionContext) -> dict:
         """Apply UPC override from lookup table.
@@ -307,36 +275,12 @@ class CSVConverter(BaseEDIConverter):
             Modified fields dictionary
         """
         user_data = context.user_data
-
-        try:
-            vendor_item = int(fields["vendor_item"].strip())
-
-            if vendor_item not in context.upc_lut:
-                fields["upc_number"] = ""
-                return fields
-
-            # Check category filter
-            do_update = False
-            category_filter = user_data["override_upc_category_filter"]
-            upc_data = context.upc_lut[vendor_item]
-
-            if category_filter == "ALL":
-                do_update = True
-            else:
-                category = upc_data[0] if len(upc_data) > 0 else None
-                if category in category_filter.split(","):
-                    do_update = True
-
-            if do_update:
-                upc_level = user_data["override_upc_level"]
-                if isinstance(upc_level, str):
-                    upc_level = int(upc_level)
-                fields["upc_number"] = upc_data[upc_level]
-
-        except (KeyError, ValueError):
-            fields["upc_number"] = ""
-
-        return fields
+        return apply_upc_override(
+            fields,
+            context.upc_lut,
+            override_level=user_data["override_upc_level"],
+            category_filter=user_data["override_upc_category_filter"],
+        )
 
     def _process_upc_for_output(self, fields: dict, user_data: dict) -> str:
         """Process UPC field for CSV output.
@@ -350,31 +294,14 @@ class CSVConverter(BaseEDIConverter):
         Returns:
             Processed UPC string for output
         """
-        # Check if UPC is blank
-        blank_upc = False
-        try:
-            int(fields["upc_number"].rstrip())
-        except ValueError:
-            blank_upc = True
-
-        # Calculate full UPC with check digit
-        upc_string = ""
-        if not blank_upc:
-            proposed_upc = fields["upc_number"].strip()
-
-            if len(str(proposed_upc)) == 12:
-                upc_string = str(proposed_upc)
-            elif len(str(proposed_upc)) == 11:
-                upc_string = str(proposed_upc) + str(
-                    utils.calc_check_digit(proposed_upc)
-                )
-            elif len(str(proposed_upc)) == 8:
-                upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
-
-        # Apply tab prefix if calc_upc is enabled
         calc_upc = user_data["calc_upc"]
-        if calc_upc and not blank_upc:
-            return "\t" + upc_string
+        if calc_upc:
+            return process_upc_for_output(
+                fields,
+                calc_check_digit_flag=True,
+                upc_target_length=user_data["upc_target_length"],
+                upc_padding=user_data["upc_padding_pattern"],
+            )
         else:
             return fields["upc_number"]
 
@@ -388,8 +315,7 @@ class CSVConverter(BaseEDIConverter):
         Returns:
             Quantity with leading zeros stripped, or original if all zeros
         """
-        stripped = qty_str.lstrip("0")
-        return stripped if stripped else qty_str
+        return format_quantity(qty_str, allow_negative=True)
 
     @staticmethod
     def _process_description(desc: str, filter_ampersand: bool) -> str:
@@ -402,10 +328,7 @@ class CSVConverter(BaseEDIConverter):
         Returns:
             Processed description
         """
-        desc = desc.rstrip(" ")
-        if filter_ampersand:
-            desc = desc.replace("&", "AND")
-        return desc
+        return filter_description(desc, filter_ampersand=filter_ampersand)
 
 
 # =============================================================================

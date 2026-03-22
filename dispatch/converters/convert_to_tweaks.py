@@ -3,8 +3,8 @@
 This module exposes EDI tweaks as a conversion backend, allowing tweaks
 to be applied through the same module-loading mechanism as other converters.
 
-The tweak functionality is actually applied by archive.edi_tweaks.edi_tweak,
-which performs various EDI transformations including:
+The tweak functionality is applied by the modern EDITweaker class in
+core.edi.edi_tweaker, which performs various EDI transformations:
 - A-record padding
 - A-record appending
 - Invoice date offsetting
@@ -21,7 +21,7 @@ Backward Compatibility:
     settings_dict, parameters_dict, upc_lut)
 """
 
-from archive.edi_tweaks import edi_tweak
+from core.edi.edi_tweaker import EDITweaker, _create_query_runner_adapter
 
 
 def edi_convert(
@@ -33,12 +33,12 @@ def edi_convert(
 ) -> str:
     """Apply EDI tweaks to a file.
 
-    This is the entry point for the conversion backend system. It delegates
-    to archive.edi_tweaks.edi_tweak which performs the actual tweaking.
+    This is the entry point for the conversion backend system. It uses
+    the EDITweaker class from core.edi.edi_tweaker.
 
     Args:
         edi_process: Path to input EDI file
-        output_filename: Path to output file (without extension - edi_tweak adds it)
+        output_filename: Path to output file (without extension - tweak adds it)
         settings_dict: Dictionary containing database and app settings
         parameters_dict: Dictionary containing tweak parameters:
             - pad_a_records: Whether to pad A records
@@ -64,9 +64,14 @@ def edi_convert(
         Path to the output file (may include .txt extension if force_txt_file_ext)
 
     Raises:
-        Exception: Any exception raised by edi_tweak on failure
+        Exception: Any exception raised by EDITweaker on failure
     """
-    return edi_tweak(
+    # Create query runner adapter from settings
+    query_runner = _create_query_runner_adapter(settings_dict)
+
+    # Create tweaker and apply tweaks
+    tweaker = EDITweaker(query_runner)
+    return tweaker.tweak(
         edi_process,
         output_filename,
         settings_dict,

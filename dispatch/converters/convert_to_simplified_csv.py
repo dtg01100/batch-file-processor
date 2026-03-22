@@ -19,7 +19,6 @@ Backward Compatibility:
 """
 
 import csv
-from decimal import Decimal
 
 from core import utils
 from dispatch.converters.convert_base import (
@@ -29,6 +28,7 @@ from dispatch.converters.convert_base import (
     create_csv_writer,
     normalize_parameter,
 )
+from dispatch.converters.csv_utils import apply_retail_uom
 
 
 class SimplifiedCSVConverter(BaseEDIConverter):
@@ -198,50 +198,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         Returns:
             Modified fields dictionary
         """
-        # Validate fields can be parsed
-        try:
-            item_number = int(fields["vendor_item"].strip())
-            float(fields["unit_cost"].strip())
-            unit_multiplier = int(fields["unit_multiplier"].strip())
-            if unit_multiplier == 0:
-                raise ValueError("Unit multiplier cannot be zero")
-            int(fields["qty_of_units"].strip())
-            edi_line_pass = True
-        except Exception:
-            print("cannot parse b record field, skipping")
-            return fields
-
-        if edi_line_pass:
-            # Get UPC for each (retail) from lookup
-            try:
-                each_upc_string = context.upc_lut[item_number][1][:11].ljust(11)
-            except KeyError:
-                each_upc_string = "           "
-
-            # Apply conversion
-            try:
-                # Convert unit cost from case cost to each cost
-                case_cost = Decimal(fields["unit_cost"].strip()) / 100
-                each_cost = case_cost / Decimal(unit_multiplier)
-                each_cost_cents = (
-                    str(each_cost.quantize(Decimal(".01")))
-                    .replace(".", "")[-6:]
-                    .rjust(6, "0")
-                )
-                fields["unit_cost"] = each_cost_cents
-
-                # Convert quantity from cases to eaches
-                case_qty = int(fields["qty_of_units"].strip())
-                each_qty = unit_multiplier * case_qty
-                fields["qty_of_units"] = str(each_qty).rjust(5, "0")
-
-                # Set UPC to each UPC
-                fields["upc_number"] = each_upc_string
-
-            except Exception as error:
-                print(error)
-
-        return fields
+        return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
 
 # =============================================================================

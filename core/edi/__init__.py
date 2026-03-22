@@ -6,6 +6,7 @@ This module contains refactored EDI processing components:
 - edi_transformer: EDI data transformation functions
 - inv_fetcher: Invoice data fetcher with injectable dependencies
 - edi_splitter: EDI file splitting logic
+- edi_tweaker: EDI tweak transformations (replaces legacy edi_tweaks)
 """
 
 from core.edi.edi_parser import (
@@ -25,6 +26,10 @@ from core.edi.edi_transformer import (
     convert_to_price_decimal,
     dac_str_int_to_int,
     detect_invoice_is_credit,
+)
+from core.edi.edi_tweaker import (
+    EDITweaker,
+    TweakerConfig,
 )
 from core.edi.upc_utils import (
     apply_retail_uom_transform,
@@ -52,6 +57,9 @@ __all__ = [
     "convert_to_price",
     "convert_to_price_decimal",
     "detect_invoice_is_credit",
+    # EDI tweaking
+    "EDITweaker",
+    "TweakerConfig",
     # Dataclasses
     "ARecord",
     "BRecord",

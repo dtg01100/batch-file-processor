@@ -206,19 +206,44 @@ class EDITweakerStep:
         """Initialize the tweaker step.
 
         Args:
-            tweak_function: Function for applying EDI tweaks (defaults to edi_tweak)
+            tweak_function: Function for applying EDI tweaks (defaults to modern EDITweaker)
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
         """
-        # Import from the archive package.  Works in development (archive/ is a
-        # package at the project root) and in a PyInstaller frozen bundle
-        # (archive.edi_tweaks is listed in hiddenimports and collected by
-        # hooks/hook-archive.py).  Avoids __file__-relative sys.path
-        # manipulation that breaks inside a frozen _internal directory.
-        from archive import edi_tweaks
+        # Use the modern EDITweaker class from core.edi
+        from core.edi.edi_tweaker import EDITweaker, _create_query_runner_adapter
+
+        def _create_edi_tweaker_wrapper(
+            edi_process: str,
+            output_filename: str,
+            settings_dict: dict,
+            parameters_dict: dict,
+            upc_dict: dict,
+        ) -> str:
+            """Wrapper function that uses EDITweaker class.
+
+            Args:
+                edi_process: Path to input EDI file
+                output_filename: Path to output file
+                settings_dict: Settings dictionary
+                parameters_dict: Parameters dictionary
+                upc_dict: UPC dictionary
+
+            Returns:
+                Path to output file
+            """
+            query_runner = _create_query_runner_adapter(settings_dict)
+            tweaker = EDITweaker(query_runner)
+            return tweaker.tweak(
+                edi_process,
+                output_filename,
+                settings_dict,
+                parameters_dict,
+                upc_dict,
+            )
 
         self._tweak_function: TweakFunctionProtocol = (
-            tweak_function or edi_tweaks.edi_tweak
+            tweak_function or _create_edi_tweaker_wrapper
         )
         self._error_handler = error_handler
         self._file_system = file_system
