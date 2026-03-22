@@ -674,15 +674,95 @@ class DBEnabledConverter(CSVConverter):
         return self.query_object.run_query(query_string)
 
 
-def create_edi_convert_wrapper(converter_class):
-    """Create the legacy module-level ``edi_convert`` wrapper."""
+def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
+    """Create the legacy module-level ``edi_convert`` wrapper with logging.
+
+    Args:
+        converter_class: The converter class to instantiate
+        format_name: Name of the format for logging (e.g., "jolley_custom", "csv")
+    """
+    import logging
+    import os
+    import time
+
+    from core.structured_logging import (
+        get_logger,
+        get_or_create_correlation_id,
+        log_file_operation,
+        log_with_context,
+    )
 
     def edi_convert(
         edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
     ):
-        converter = converter_class(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+        logger = get_logger(__name__)
+        correlation_id = get_or_create_correlation_id()
+        start_time = time.perf_counter()
+
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Starting {format_name} conversion",
+            operation="edi_convert",
+            context={
+                "input_file": os.path.basename(edi_process),
+                "output_file": os.path.basename(output_filename),
+                "format": format_name,
+            },
         )
-        return converter.convert()
+        log_file_operation(
+            logger,
+            "read",
+            edi_process,
+            file_type="edi",
+            correlation_id=correlation_id,
+        )
+
+        try:
+            converter = converter_class(
+                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+            )
+            result = converter.edi_convert(
+                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+            )
+            duration_ms = time.perf_counter() - start_time
+
+            log_with_context(
+                logger,
+                logging.INFO,
+                f"{format_name} conversion completed",
+                operation="edi_convert",
+                context={
+                    "input_file": os.path.basename(edi_process),
+                    "output_file": os.path.basename(result),
+                    "format": format_name,
+                    "duration_ms": round(duration_ms * 1000, 2),
+                },
+            )
+            log_file_operation(
+                logger,
+                "write",
+                result,
+                file_type="csv",
+                success=True,
+                duration_ms=duration_ms * 1000,
+                correlation_id=correlation_id,
+            )
+            return result
+        except Exception as e:
+            duration_ms = time.perf_counter() - start_time
+            log_with_context(
+                logger,
+                logging.ERROR,
+                f"{format_name} conversion failed: {e}",
+                operation="edi_convert",
+                context={
+                    "input_file": os.path.basename(edi_process),
+                    "format": format_name,
+                    "duration_ms": round(duration_ms * 1000, 2),
+                    "error": str(e),
+                },
+            )
+            raise
 
     return edi_convert

@@ -21,6 +21,9 @@ from core.database import QueryRunner, create_query_runner
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
 from core.edi.edi_transformer import (
+    dac_str_int_to_int,  # noqa: F401
+    convert_to_price,  # noqa: F401
+    convert_to_price_decimal,  # noqa: F401
     detect_invoice_is_credit,  # noqa: F401
 )
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
@@ -129,41 +132,6 @@ def from_db_bool(value) -> bool:
 
 # ============================================================================
 # Data Transformation Functions (not yet migrated to core)
-# ============================================================================
-
-
-def dac_str_int_to_int(dacstr: str) -> int:
-    if dacstr.strip() == "":
-        return 0
-    try:
-        if dacstr.startswith("-"):
-            return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
-        else:
-            return int(dacstr)
-    except ValueError:
-        return 0
-
-
-def convert_to_price(value):
-    return (
-        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
-        + "."
-        + value[-2:]
-    )
-
-
-def convert_to_price_decimal(value):
-    retprice = (
-        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
-        + "."
-        + value[-2:]
-    )
-    try:
-        return Decimal(retprice)
-    except Exception:
-        return 0
-
-
 # Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime,
 # dactime_from_invtime are now imported from core.utils.date_utils
 
@@ -171,6 +139,10 @@ def convert_to_price_decimal(value):
 # Note: _get_default_parser and capture_records are now imported from core.edi.edi_parser
 
 # Note: calc_check_digit and convert_UPCE_to_UPCA are now imported from core.edi.upc_utils
+
+
+# Note: dac_str_int_to_int, convert_to_price, convert_to_price_decimal
+# are now imported from core.edi.edi_transformer
 
 
 def _col_to_excel(col: int) -> str:
