@@ -424,14 +424,16 @@ class TestLoggingLevels:
     def test_debug_logging_enabled(self, caplog):
         """With DEBUG level, debug messages should appear in caplog."""
         with caplog.at_level(logging.DEBUG, logger="backend.ftp_backend"):
-            logging.getLogger("ftp_backend").debug("Debug message from ftp_backend")
+            logging.getLogger("backend.ftp_backend").debug(
+                "Debug message from ftp_backend"
+            )
 
         assert any("Debug message" in r.message for r in caplog.records)
 
     def test_debug_logging_disabled(self, caplog):
         """With WARNING level, DEBUG messages must NOT appear for ftp_backend."""
         with caplog.at_level(logging.WARNING, logger="backend.ftp_backend"):
-            logging.getLogger("ftp_backend").debug("Should be suppressed")
+            logging.getLogger("backend.ftp_backend").debug("Should be suppressed")
 
         debug_messages = [r for r in caplog.records if r.levelno == logging.DEBUG]
         suppressed = [m for m in debug_messages if "Should be suppressed" in m.message]

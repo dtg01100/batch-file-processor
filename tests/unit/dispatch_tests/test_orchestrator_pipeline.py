@@ -626,15 +626,15 @@ class TestProcessFileWithPipeline:
         assert result.converted is True
 
     def test_pipeline_tweaker_integration(self, input_folder: Path):
-        """Test pipeline with tweaker step."""
+        """Test pipeline with tweak_edi=True routes to converter via convert_to_tweaks."""
         validator = FakeValidationStep(should_pass=True)
-        tweaker = FakeTweakerStep(output_path=str(input_folder / "tweaked.edi"))
+        converter = FakeConverterStep(output_path=str(input_folder / "tweaked.edi"))
         backend = CaptureBackend()
 
         config = DispatchConfig(
             backends={"copy": backend},
             validator_step=validator,
-            tweaker_step=tweaker,
+            converter_step=converter,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)
@@ -649,7 +649,8 @@ class TestProcessFileWithPipeline:
             str(input_folder / "test.edi"), folder, {"123": "product"}
         )
 
-        assert tweaker.call_count == 1
+        # Tweaks are now handled by converter step via convert_to_tweaks module
+        assert converter.call_count == 1
 
     def test_pipeline_sending_to_backends(self, input_folder: Path):
         """Test pipeline sending files to backends."""
@@ -1088,35 +1089,6 @@ class TestPipelineOnlyContract:
 
 class TestOrchestratorPipelineHelpers:
     """Tests for pipeline helper methods in DispatchOrchestrator."""
-
-    def test_should_apply_tweaker_false_when_tweaker_missing(self):
-        """Tweaker should not run when no step is configured."""
-        orchestrator = DispatchOrchestrator(DispatchConfig())
-
-        assert orchestrator._should_apply_tweaker(None, "/tmp/file.edi") is False
-
-    def test_should_apply_tweaker_false_for_builtin_tweaker_on_non_edi(self):
-        """Built-in EDITweakerStep should be skipped for non-EDI files."""
-        orchestrator = DispatchOrchestrator(DispatchConfig())
-
-        class EDITweakerStep:
-            pass
-
-        assert (
-            orchestrator._should_apply_tweaker(EDITweakerStep(), "/tmp/file.csv")
-            is False
-        )
-
-    def test_should_apply_tweaker_true_for_custom_tweaker_on_non_edi(self):
-        """Custom tweakers remain eligible for converted/non-EDI outputs."""
-        orchestrator = DispatchOrchestrator(DispatchConfig())
-
-        class CustomTweaker:
-            pass
-
-        assert (
-            orchestrator._should_apply_tweaker(CustomTweaker(), "/tmp/file.csv") is True
-        )
 
     def test_build_processing_context_applies_defaults_and_normalization(self):
         """Context builder should normalize flags/defaults without mutating source."""

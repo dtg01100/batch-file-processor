@@ -463,6 +463,21 @@ class DatabaseObj:
         """
         return self.database_connection
 
+    def query(self, sql: str) -> List[Dict[str, Any]]:
+        """Execute raw SQL and return results as dictionaries.
+
+        This is a convenience method that delegates to the underlying
+        database connection's query method.
+
+        Args:
+            sql: SQL statement to execute
+
+        Returns:
+            List of dictionaries representing result rows.
+            Returns empty list on error.
+        """
+        return self.database_connection.query(sql)
+
     def reload(self) -> None:
         """Reload the database connection.
 

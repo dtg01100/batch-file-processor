@@ -41,6 +41,7 @@ SUPPORTED_FORMATS = [
     "scansheet_type_a",
     "simplified_csv",
     "stewarts_custom",
+    "tweaks",
     "yellowdog_csv",
 ]
 
@@ -310,6 +311,10 @@ class EDIConverterStep:
         tweak_edi = params.get("tweak_edi", False)
         input_basename = os.path.basename(input_path)
 
+        # Normalize tweak_edi to convert_to_format="tweaks" for unified handling
+        if tweak_edi and not convert_to_format:
+            convert_to_format = "tweaks"
+
         StructuredLogger.log_debug(
             logger,
             "convert",
@@ -371,18 +376,6 @@ class EDIConverterStep:
                 format_used=convert_to_format,
                 success=True,
                 errors=errors,
-            )
-
-        if tweak_edi and not convert_to_format:
-            return self._apply_tweak(
-                input_path,
-                output_dir,
-                params,
-                settings,
-                upc_dict,
-                errors,
-                start_time,
-                correlation_id,
             )
 
         format_normalized = (
@@ -619,113 +612,6 @@ class EDIConverterStep:
             context={"source": "EDIConverterStep"},
             error_source="EDIConverter",
         )
-
-    def _apply_tweak(
-        self,
-        input_path: str,
-        output_dir: str,
-        params: dict,
-        settings: dict,
-        upc_dict: dict,
-        errors: list[str],
-        start_time: float,
-        correlation_id: str,
-    ) -> ConverterResult:
-        """Apply EDI tweaks to a file.
-
-        Args:
-            input_path: Path to the input EDI file
-            output_dir: Directory for output file
-            params: Folder parameters dictionary
-            errors: List to append errors to
-            start_time: Start time for duration calculation
-            correlation_id: Correlation ID for logging
-
-        Returns:
-            ConverterResult with tweak outcome
-        """
-        input_basename = os.path.basename(input_path)
-
-        StructuredLogger.log_debug(
-            logger,
-            "tweak",
-            __name__,
-            f"Applying tweaks to {input_basename}",
-            input_path=input_basename,
-            output_dir=output_dir,
-            correlation_id=correlation_id,
-        )
-
-        from archive import edi_tweaks
-
-        output_filename = os.path.join(output_dir, input_basename)
-
-        if self._file_system and not self._file_system.dir_exists(output_dir):
-            try:
-                self._file_system.makedirs(output_dir)
-            except Exception as e:
-                duration_ms = (time.perf_counter() - start_time) * 1000
-                error_msg = f"Failed to create output directory: {e}"
-                StructuredLogger.log_error(
-                    logger,
-                    "tweak",
-                    __name__,
-                    e,
-                    {"input_path": input_basename, "output_dir": output_dir},
-                    duration_ms,
-                )
-                errors.append(error_msg)
-                self._record_error(input_path, error_msg)
-                return ConverterResult(
-                    output_path=input_path,
-                    format_used="tweak",
-                    success=False,
-                    errors=errors,
-                )
-
-        try:
-            tweaked_path = edi_tweaks.edi_tweak(
-                input_path, output_filename, settings, params, upc_dict
-            )
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            StructuredLogger.log_debug(
-                logger,
-                "tweak",
-                __name__,
-                f"Tweaked {input_basename} -> {tweaked_path}",
-                input_path=input_basename,
-                output_path=tweaked_path,
-                correlation_id=correlation_id,
-                duration_ms=duration_ms,
-            )
-
-            return ConverterResult(
-                output_path=tweaked_path,
-                format_used="tweak",
-                success=True,
-                errors=errors,
-            )
-
-        except Exception as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            error_msg = f"Tweaking failed: {e}"
-            StructuredLogger.log_error(
-                logger,
-                "tweak",
-                __name__,
-                e,
-                {"input_path": input_basename, "output_dir": output_dir},
-                duration_ms,
-            )
-            errors.append(error_msg)
-            self._record_error(input_path, error_msg)
-            return ConverterResult(
-                output_path=input_path,
-                format_used="tweak",
-                success=False,
-                errors=errors,
-            )
 
     def execute(
         self,
