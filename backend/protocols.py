@@ -4,7 +4,12 @@ This module defines Protocol interfaces for external client dependencies,
 enabling dependency injection and testability for send backends.
 """
 
-from typing import Any, Optional, Protocol, runtime_checkable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    import requests
 
 from core.structured_logging import get_logger
 
@@ -231,5 +236,36 @@ class FileOperationsProtocol(Protocol):
 
         Returns:
             Joined path
+        """
+        ...
+
+
+@runtime_checkable
+class HTTPClientProtocol(Protocol):
+    """Protocol for HTTP client abstraction.
+
+    Implementations should wrap requests library
+    to enable testing without actual HTTP connections.
+    """
+
+    def post(
+        self,
+        url: str,
+        data: dict | None = None,
+        files: dict | None = None,
+        headers: dict | None = None,
+        timeout: float | None = None,
+    ) -> "requests.Response":
+        """Send a POST request.
+
+        Args:
+            url: The URL to POST to
+            data: Dictionary of form data
+            files: Dictionary of files to upload (multipart/form-data)
+            headers: Additional headers to include
+            timeout: Request-specific timeout in seconds
+
+        Returns:
+            Response object
         """
         ...

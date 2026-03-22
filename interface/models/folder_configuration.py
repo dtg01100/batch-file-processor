@@ -23,6 +23,7 @@ class BackendType(Enum):
     COPY = "copy"
     FTP = "ftp"
     EMAIL = "email"
+    HTTP = "http"
 
 
 class ConvertFormat(Enum):
@@ -110,6 +111,26 @@ class CopyConfiguration:
         errors = []
         if not self.destination_directory:
             errors.append("Copy Backend Destination Is Currently Unset")
+        return errors
+
+
+@dataclass
+class HTTPConfiguration:
+    """HTTP backend configuration."""
+
+    url: str = ""
+    headers: str = ""
+    field_name: str = "file"
+    auth_type: str = ""
+    api_key: str = ""
+
+    def validate(self) -> List[str]:
+        """Validate HTTP configuration."""
+        errors = []
+        if not self.url:
+            errors.append("HTTP URL Field Is Required")
+        if self.auth_type and self.auth_type not in ("bearer", "query"):
+            errors.append("HTTP Auth Type must be 'bearer' or 'query'")
         return errors
 
 
@@ -248,11 +269,13 @@ class FolderConfiguration:
     process_backend_copy: bool = False
     process_backend_ftp: bool = False
     process_backend_email: bool = False
+    process_backend_http: bool = False
 
     # Backend configurations
     ftp: Optional[FTPConfiguration] = None
     email: Optional[EmailConfiguration] = None
     copy: Optional[CopyConfiguration] = None
+    http: Optional[HTTPConfiguration] = None
 
     # EDI
     edi: Optional[EDIConfiguration] = None
@@ -387,6 +410,16 @@ class FolderConfiguration:
                 destination_directory=data.get("copy_to_directory", "")
             )
 
+        http = None
+        if "http_url" in data:
+            http = HTTPConfiguration(
+                url=data.get("http_url", ""),
+                headers=data.get("http_headers", ""),
+                field_name=data.get("http_field_name", "file"),
+                auth_type=data.get("http_auth_type", ""),
+                api_key=data.get("http_api_key", ""),
+            )
+
         # EDI configuration
         edi = EDIConfiguration(
             process_edi=_bool_from_data(data, "process_edi"),
@@ -463,9 +496,11 @@ class FolderConfiguration:
             process_backend_copy=_bool_from_data(data, "process_backend_copy"),
             process_backend_ftp=_bool_from_data(data, "process_backend_ftp"),
             process_backend_email=_bool_from_data(data, "process_backend_email"),
+            process_backend_http=_bool_from_data(data, "process_backend_http"),
             ftp=ftp,
             email=email,
             copy=copy,
+            http=http,
             edi=edi,
             upc_override=upc_override,
             a_record_padding=a_record_padding,
@@ -484,11 +519,13 @@ class FolderConfiguration:
             "process_backend_copy": normalize_bool(self.process_backend_copy),
             "process_backend_ftp": normalize_bool(self.process_backend_ftp),
             "process_backend_email": normalize_bool(self.process_backend_email),
+            "process_backend_http": normalize_bool(self.process_backend_http),
         }
 
         self._add_ftp_to_dict(data)
         self._add_email_to_dict(data)
         self._add_copy_to_dict(data)
+        self._add_http_to_dict(data)
         self._add_edi_to_dict(data)
         self._add_upc_override_to_dict(data)
         self._add_a_record_padding_to_dict(data)
@@ -529,6 +566,15 @@ class FolderConfiguration:
         """Add copy backend settings to dictionary."""
         if self.copy:
             data["copy_to_directory"] = self.copy.destination_directory
+
+    def _add_http_to_dict(self, data: Dict[str, Any]) -> None:
+        """Add HTTP backend settings to dictionary."""
+        if self.http:
+            data["http_url"] = self.http.url
+            data["http_headers"] = self.http.headers
+            data["http_field_name"] = self.http.field_name
+            data["http_auth_type"] = self.http.auth_type
+            data["http_api_key"] = self.http.api_key
 
     def _add_edi_to_dict(self, data: Dict[str, Any]) -> None:
         """Add EDI settings to dictionary."""

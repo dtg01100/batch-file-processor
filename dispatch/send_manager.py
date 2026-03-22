@@ -49,6 +49,12 @@ class SendManager:
             "display_name": "Email Backend",
             "enabled_key": "process_backend_email",
         },
+        "http": {
+            "module": "backend.http_backend",
+            "setting": "http_url",
+            "display_name": "HTTP Backend",
+            "enabled_key": "process_backend_http",
+        },
     }
 
     def __init__(
