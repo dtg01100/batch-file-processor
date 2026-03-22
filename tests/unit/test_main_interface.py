@@ -35,7 +35,7 @@ def test_main_reports_actionable_qt_import_failures(tmp_path, monkeypatch, capsy
     assert "DLL load failed while importing QtWidgets" in captured.err
     assert "Visual C++ 2015-2022 Redistributable (x64)" in captured.err
     assert "Keep the full extracted Batch File Sender bundle together" in captured.err
-    assert "_internal/PyQt6/Qt6/bin" in captured.err
+    assert "_internal/PyQt5/Qt5/bin" in captured.err
     assert "plugins/platforms/qwindows.dll" in captured.err
     assert f"Support log: {expected_log}" in captured.err
 

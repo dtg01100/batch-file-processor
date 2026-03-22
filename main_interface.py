@@ -80,7 +80,7 @@ def _build_startup_error_lines(exc: ImportError | OSError) -> list[str]:
             )
     else:
         lines.append(
-            "- If running from source, confirm PyQt6 is installed and "
+            "- If running from source, confirm PyQt5 is installed and "
             "matches this Python environment."
         )
 

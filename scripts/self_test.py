@@ -76,13 +76,13 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     # ------------------------------------ 1c. Required GUI (Qt) imports
     print("[1c/14] Required GUI modules (Qt -- failures will cause test to fail)")
     qt_modules = [
-        "PyQt6.QtCore",
-        "PyQt6.QtWidgets",
-        "PyQt6.QtGui",
-        "PyQt6.QtPrintSupport",
-        "PyQt6.QtSvg",
-        "PyQt6.QtXml",
-        "PyQt6.QtNetwork",
+        "PyQt5.QtCore",
+        "PyQt5.QtWidgets",
+        "PyQt5.QtGui",
+        "PyQt5.QtPrintSupport",
+        "PyQt5.QtSvg",
+        "PyQt5.QtXml",
+        "PyQt5.QtNetwork",
     ]
     for mod_name in qt_modules:
         try:
@@ -91,11 +91,11 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
         except Exception as exc:
             fail(mod_name, str(exc))
 
-    # Check for sip which is required by PyQt6 but imported differently
+    # Check for sip which is required by PyQt5 but imported differently
     try:
-        ok("PyQt6.sip")
+        ok("PyQt5.sip")
     except ImportError as exc:
-        fail("PyQt6.sip", str(exc))
+        fail("PyQt5.sip", str(exc))
     print()
 
     # ----------------------------------------- 1d. Application module imports

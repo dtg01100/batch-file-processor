@@ -46,13 +46,13 @@ def test_validate_windows_bundle_flags_missing_qtwidgets_runtime(tmp_path):
 @pytest.mark.unit
 def test_validate_windows_bundle_flags_linux_shared_objects(tmp_path):
     bundle_dir = _create_minimal_windows_bundle(tmp_path)
-    linux_artifact = bundle_dir / "_internal" / "libQt6Widgets.so.6"
+    linux_artifact = bundle_dir / "_internal" / "libQt5Widgets.so.6"
     linux_artifact.parent.mkdir(parents=True, exist_ok=True)
     linux_artifact.write_bytes(b"linux")
 
     issues = validate_windows_bundle(bundle_dir)
 
-    assert any("libQt6Widgets.so.6" in issue for issue in issues)
+    assert any("libQt5Widgets.so.6" in issue for issue in issues)
 
 
 @pytest.mark.unit

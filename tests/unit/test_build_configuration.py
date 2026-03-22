@@ -93,7 +93,7 @@ class TestHiddenImports:
         # Qt hooks use collect_data_files/collect_dynamic_libs instead of
         # collect_submodules.
         # This is correct for Qt modules which need binary/data collection
-        qt_hooks = {"PyQt6", "PyQt6.QtCore", "PyQt6.QtGui", "PyQt6.QtWidgets"}
+        qt_hooks = {"PyQt5", "PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets"}
 
         for package in hook_packages:
             hook_file = HOOKS_DIR / f"hook-{package}.py"
@@ -116,9 +116,9 @@ class TestHiddenImports:
                 collected = collect_submodules(package)
                 assert len(collected) > 0, f"No submodules collected for {package}"
 
-                assert (
-                    "collect_submodules" in hook_content
-                ), f"Hook for {package} should use collect_submodules"
+                assert "collect_submodules" in hook_content, (
+                    f"Hook for {package} should use collect_submodules"
+                )
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):
@@ -219,17 +219,17 @@ class TestHiddenImports:
             content = f.read()
 
         assert "hookspath" in content, "Spec file should configure hookspath"
-        assert (
-            "['hooks']" in content or '"hooks"' in content
-        ), "Spec file should include 'hooks' in hookspath"
+        assert "['hooks']" in content or '"hooks"' in content, (
+            "Spec file should include 'hooks' in hookspath"
+        )
 
     def test_windows_bundle_validation_targets_qt_runtime(self):
         """Verify Windows bundle validation checks the Qt runtime pieces."""
         required_paths = set(build_wine_local.REQUIRED_WINDOWS_BUNDLE_PATHS)
 
-        assert "_internal/PyQt6/QtWidgets.pyd" in required_paths
-        assert "_internal/PyQt6/Qt6/bin/Qt6Widgets.dll" in required_paths
-        assert "_internal/PyQt6/Qt6/plugins/platforms/qwindows.dll" in required_paths
+        assert "_internal/PyQt5/QtWidgets.pyd" in required_paths
+        assert "_internal/PyQt5/Qt5/bin/Qt5Widgets.dll" in required_paths
+        assert "_internal/PyQt5/plugins/platforms/qwindows.dll" in required_paths
         assert "_internal/python311.dll" in required_paths
 
     def test_windows_bundle_dir_uses_dist_windows(self):
