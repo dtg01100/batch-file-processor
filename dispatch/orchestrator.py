@@ -357,6 +357,10 @@ class DispatchOrchestrator:
                         pending,
                         processed_files,
                         folder,
+                        folder_index=folder_index,
+                        folder_total=folder_total,
+                        folder_name=alias,
+                        progress_reporter=progress_reporter,
                     )
 
             pending_lists.append(pending)
@@ -1302,7 +1306,14 @@ class DispatchOrchestrator:
         ]
 
     def _filter_processed_files(
-        self, files: list[str], processed_files: DatabaseInterface, folder: dict
+        self,
+        files: list[str],
+        processed_files: DatabaseInterface,
+        folder: dict,
+        folder_index: Optional[int] = None,
+        folder_total: Optional[int] = None,
+        folder_name: Optional[str] = None,
+        progress_reporter: Optional[Any] = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.
 
@@ -1310,6 +1321,10 @@ class DispatchOrchestrator:
             files: List of file paths
             processed_files: Database of processed files
             folder: Folder configuration
+            folder_index: Current folder index (1-based, optional)
+            folder_total: Total number of folders (optional)
+            folder_name: Display name of the folder (optional)
+            progress_reporter: Optional progress reporter for per-file updates
 
         Returns:
             List of unprocessed or resend-marked file paths
@@ -1329,8 +1344,22 @@ class DispatchOrchestrator:
             len(skipped_checksums),
         )
 
-        # Pre-calculate checksums once to avoid reading each file multiple times
-        file_checksums = {f: self._calculate_checksum(f) for f in files}
+        # Calculate checksums one at a time to enable per-file progress reporting
+        file_checksums: dict[str, str] = {}
+        for file_index, file_path in enumerate(files, start=1):
+            file_checksums[file_path] = self._calculate_checksum(file_path)
+
+            # Report per-file progress if reporter supports it
+            if progress_reporter and hasattr(
+                progress_reporter, "update_discovery_file"
+            ):
+                progress_reporter.update_discovery_file(
+                    folder_num=folder_index,
+                    folder_total=folder_total,
+                    file_num=file_index,
+                    file_total=len(files),
+                    filename=os.path.basename(file_path),
+                )
 
         return [f for f in files if file_checksums[f] not in skipped_checksums]
 

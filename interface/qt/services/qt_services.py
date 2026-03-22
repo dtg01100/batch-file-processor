@@ -627,6 +627,31 @@ class QtProgressService(QObject):
         self._footer_label.setText(f"Found {total_pending} file(s) ready to send")
         self._footer_label.show()
 
+    def update_discovery_file(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        filename: str,
+    ) -> None:
+        """Update per-file progress during discovery phase.
+
+        Called during checksum calculation to show which file is being scanned.
+
+        Args:
+            folder_num: Current folder index (1-based)
+            folder_total: Total folders being scanned
+            file_num: Current file index within folder (1-based)
+            file_total: Total files in current folder
+            filename: Name of the file being scanned
+        """
+        # Show scanning status in the file label
+        self._file_label.setText(f"Scanning: {filename} ({file_num}/{file_total})")
+        self._file_label.show()
+        # Process events to keep UI responsive
+        QApplication.processEvents()
+
     def start_sending(self, total_files: int, total_folders: int) -> None:
         """Begin phase-2 (sending) tracking."""
         self._overall_file_total = max(0, total_files)
