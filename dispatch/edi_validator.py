@@ -66,9 +66,12 @@ class EDIValidator:
         error_list: list[str] = []
 
         try:
+            # Read file once and pass content to all validation methods
+            content = self.fs.read_file_text(file_path)
+
             # First check if file is valid EDI format
             logger.debug("Checking EDI format for: %s", file_path)
-            is_valid_edi, check_line = self._check_edi_format(file_path)
+            is_valid_edi, check_line = self._check_edi_format(file_path, content)
 
             if not is_valid_edi:
                 logger.error(
@@ -82,7 +85,7 @@ class EDIValidator:
 
             # Check for specific EDI issues
             logger.debug("Checking EDI-specific issues for: %s", file_path)
-            issues = self._check_edi_issues(file_path)
+            issues = self._check_edi_issues(file_path, content)
             error_list.extend(issues)
 
             is_valid = not self.has_errors
@@ -153,7 +156,9 @@ class EDIValidator:
         warnings: list[str] = []
 
         try:
-            is_valid_edi, check_line = self._check_edi_format(file_path)
+            # Read file once and pass content to all validation methods
+            content = self.fs.read_file_text(file_path)
+            is_valid_edi, check_line = self._check_edi_format(file_path, content)
 
             if not is_valid_edi:
                 self.has_errors = True
@@ -166,7 +171,7 @@ class EDIValidator:
                 return False, errors, warnings
 
             # Check for issues and categorize them
-            self._check_edi_issues_with_warnings(file_path, errors, warnings)
+            self._check_edi_issues_with_warnings(file_path, content, errors, warnings)
 
             is_valid = not self.has_errors
             if is_valid and not warnings:
@@ -193,11 +198,12 @@ class EDIValidator:
             errors.append(error_msg)
             return False, errors, warnings
 
-    def _check_edi_format(self, file_path: str) -> tuple[bool, int]:
+    def _check_edi_format(self, file_path: str, content: str) -> tuple[bool, int]:
         """Check if file is a valid EDI format.
 
         Args:
             file_path: Path to the file to check
+            content: File content to validate (already read)
 
         Returns:
             Tuple of (is_valid, line_number) where line_number is the
@@ -205,7 +211,6 @@ class EDIValidator:
         """
         logger.debug("Checking EDI format: %s", file_path)
         try:
-            content = self.fs.read_file_text(file_path)
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
             lines = content.split("\n")
@@ -263,11 +268,12 @@ class EDIValidator:
         except Exception:
             return False, 0
 
-    def _check_edi_issues(self, file_path: str) -> list[str]:
+    def _check_edi_issues(self, file_path: str, content: str) -> list[str]:
         """Check for specific EDI issues.
 
         Args:
             file_path: Path to the file to check
+            content: File content to validate (already read)
 
         Returns:
             List of issue messages
@@ -276,7 +282,6 @@ class EDIValidator:
         issues: list[str] = []
 
         try:
-            content = self.fs.read_file_text(file_path)
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
             lines = content.split("\n")
@@ -319,17 +324,17 @@ class EDIValidator:
             return issues
 
     def _check_edi_issues_with_warnings(
-        self, file_path: str, errors: list[str], warnings: list[str]
+        self, file_path: str, content: str, errors: list[str], warnings: list[str]
     ) -> None:
         """Check for EDI issues and categorize as errors or warnings.
 
         Args:
             file_path: Path to the file to check
+            content: File content to validate (already read)
             errors: List to append error messages to
             warnings: List to append warning messages to
         """
         try:
-            content = self.fs.read_file_text(file_path)
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
             lines = content.split("\n")

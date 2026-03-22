@@ -103,14 +103,17 @@ def do(
                                 .split("/")
                                 if part
                             ]
-                            current_path = ""
 
+                            # Batch path creation: check existing dirs and create missing ones
+                            # Start from root and build up, only creating what's needed
+                            current_path = ""
                             for part in path_parts:
                                 current_path += "/" + part
                                 try:
+                                    # Check if directory exists by trying to change to it
                                     client.cwd(current_path)
                                 except Exception:
-                                    # Directory doesn't exist, create it
+                                    # Directory doesn't exist, create it and change into it
                                     client.mkd(current_path)
                                     client.cwd(current_path)
 

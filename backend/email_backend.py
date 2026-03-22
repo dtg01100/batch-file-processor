@@ -90,6 +90,18 @@ def do(
         correlation_id=correlation_id,
     )
 
+    # Read file once outside retry loop
+    with open(filename, "rb") as fp:
+        file_content = fp.read()
+
+    # Determine content type once outside retry loop
+    ctype, encoding = mimetypes.guess_type(filename)
+    if ctype is None or encoding is not None:
+        # No guess could be made, or the file is encoded (compressed), so
+        # use a generic bag-of-bits type.
+        ctype = "application/octet-stream"
+    maintype, subtype = ctype.split("/", 1)
+
     while not file_pass:
         start_time = time.perf_counter()
         try:
@@ -117,21 +129,13 @@ def do(
             message["To"] = to_address_list
             message.set_content(filename_no_path_str + " Attached")
 
-            # Determine content type and attach file
-            ctype, encoding = mimetypes.guess_type(filename)
-            if ctype is None or encoding is not None:
-                # No guess could be made, or the file is encoded (compressed), so
-                # use a generic bag-of-bits type.
-                ctype = "application/octet-stream"
-            maintype, subtype = ctype.split("/", 1)
-
-            with open(filename, "rb") as fp:
-                message.add_attachment(
-                    fp.read(),
-                    maintype=maintype,
-                    subtype=subtype,
-                    filename=filename_no_path_str,
-                )
+            # Attach file using pre-read content
+            message.add_attachment(
+                file_content,
+                maintype=maintype,
+                subtype=subtype,
+                filename=filename_no_path_str,
+            )
 
             # Create or use provided SMTP client
             if smtp_client is not None:
@@ -204,7 +208,7 @@ def do(
                 )
                 raise
             counter += 1
-            time.sleep(counter * counter)
+            time.sleep(min(2**counter, 60))
             print("Encountered an error. Retry number " + str(counter))
             print("Error is :" + str(email_error))
 

@@ -300,13 +300,9 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     if not os.path.exists(work_directory):
         os.mkdir(work_directory)
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
-        lines_in_edi = sum(1 for _ in work_file)
-        work_file.seek(0)
-        work_file_lined = [n for n in work_file.readlines()]  # make list of lines
-        list_of_first_characters = []
-        for line in work_file_lined:
-            list_of_first_characters.append(line[0])
-        a_record_count = list_of_first_characters.count("A")
+        work_file_lined = work_file.readlines()  # make list of lines
+        lines_in_edi = len(work_file_lined)
+        a_record_count = sum(1 for line in work_file_lined if line.startswith("A"))
         if a_record_count > 700:
             return []
 

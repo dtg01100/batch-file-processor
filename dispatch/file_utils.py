@@ -17,6 +17,10 @@ from core.structured_logging import (
 
 logger = get_logger(__name__)
 
+# Precompiled regex for stripping invalid filename characters
+_INVALID_FILENAME_CHARS_RE = re.compile(r"[^A-Za-z0-9. _]+")
+_INVALID_ALIAS_CHARS_RE = re.compile(r"[^a-zA-Z0-9 ]")
+
 
 def build_output_filename(
     original: str,
@@ -56,7 +60,7 @@ def build_output_filename(
         rename_file = original
 
     # Strip invalid characters
-    stripped_filename = re.sub("[^A-Za-z0-9. _]+", "", rename_file)
+    stripped_filename = _INVALID_FILENAME_CHARS_RE.sub("", rename_file)
 
     return stripped_filename
 
@@ -76,7 +80,7 @@ def build_error_log_filename(
         Full path to error log file
     """
     # Strip invalid characters from alias
-    cleaned_alias = re.sub("[^a-zA-Z0-9 ]", "", alias)
+    cleaned_alias = _INVALID_ALIAS_CHARS_RE.sub("", alias)
 
     # Generate timestamp if not provided
     if timestamp is None:

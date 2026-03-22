@@ -975,9 +975,11 @@ class DispatchOrchestrator:
             )
             self._log_message(
                 run_log,
-                f"Converting {file_basename} to {convert_format}"
-                if convert_edi
-                else f"Applying tweaks to {file_basename}",
+                (
+                    f"Converting {file_basename} to {convert_format}"
+                    if convert_edi
+                    else f"Applying tweaks to {file_basename}"
+                ),
             )
             converted_file = converter_step.execute(
                 current_file,
@@ -1327,9 +1329,10 @@ class DispatchOrchestrator:
             len(skipped_checksums),
         )
 
-        return [
-            f for f in files if self._calculate_checksum(f) not in skipped_checksums
-        ]
+        # Pre-calculate checksums once to avoid reading each file multiple times
+        file_checksums = {f: self._calculate_checksum(f) for f in files}
+
+        return [f for f in files if file_checksums[f] not in skipped_checksums]
 
     def _record_processed_file(
         self, processed_files: DatabaseInterface, folder: dict, file_result: FileResult
