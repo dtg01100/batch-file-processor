@@ -86,15 +86,21 @@ class ResendService:
         Returns:
             Sorted list of (folder_id, alias) tuples
         """
-        folder_ids = [
-            row["folder_id"] for row in self._processed_files.distinct("folder_id")
-        ]
+        folder_rows = list(self._processed_files.distinct("folder_id"))
+        folder_ids = [row["folder_id"] for row in folder_rows]
         folder_aliases = self._get_folder_alias_batch(folder_ids)
-        folder_list = [
-            (fid, folder_aliases.get(fid, "Unknown"))
-            for fid in folder_ids
-            if fid in folder_aliases
-        ]
+
+        folder_list = []
+        for fid in folder_ids:
+            if fid in folder_aliases:
+                folder_list.append((fid, folder_aliases[fid]))
+            else:
+                # Folder was deleted; fall back to the denormalized alias stored
+                # in the most recent processed_files row for this folder_id.
+                row = self._processed_files.find_one(folder_id=fid)
+                fallback = (row.get("folder_alias") if row else None) or "Unknown"
+                folder_list.append((fid, fallback))
+
         return sorted(folder_list, key=itemgetter(1))
 
     def get_files_for_folder(
@@ -214,7 +220,10 @@ class ResendService:
                 continue
 
             folder_id = processed_line["folder_id"]
-            folder_alias = folder_aliases.get(folder_id, "Unknown")
+            folder_alias = folder_aliases.get(
+                folder_id,
+                processed_line.get("folder_alias") or "Unknown",
+            )
 
             file_exists = True
             if check_file_exists:

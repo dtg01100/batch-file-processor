@@ -198,7 +198,7 @@ class TestBaseDialogHelperUsageGuards:
         service = MagicMock()
         service.has_processed_files.return_value = True
         service.get_all_files_for_resend.return_value = []
-        service.set_resend_flag.side_effect = RuntimeError("boom")
+        service.set_resend_flags_batch.side_effect = RuntimeError("boom")
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
         )
