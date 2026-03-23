@@ -305,8 +305,8 @@ class TestEmailRetryLogic:
         assert result is True
         mock_sleep.assert_not_called()
 
-    def test_email_sleep_quadratic_backoff(self, test_file):
-        """email_backend sleeps counter*counter seconds; verify for counter=1."""
+    def test_email_sleep_exponential_backoff(self, test_file):
+        """email_backend sleeps 2**counter seconds; verify for counter=1."""
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Temp fail"))
 
@@ -316,8 +316,8 @@ class TestEmailRetryLogic:
             )
 
         assert result is True
-        # counter is 1 after first failure → sleep(1*1) = sleep(1)
-        mock_sleep.assert_called_once_with(1)
+        # counter is 1 after first failure → sleep(2**1) = sleep(2)
+        mock_sleep.assert_called_once_with(2)
 
     def test_email_attachment_sent_on_retry(self, test_file):
         """The file attachment must be present even when sent on a retry."""
