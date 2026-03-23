@@ -499,3 +499,57 @@ class TestMigrationContents:
         assert "status" in processed[0]
 
         db_conn.close()
+
+    def test_v45_clear_stale_convert_to_format_for_tweak_edi(self, tmp_path):
+        """Test that v45 migration clears stale convert_to_format for folders with tweak_edi=True.
+
+        This fixes a bug where switching from Convert EDI (eStore eInvoice) to Tweak EDI
+        didn't properly clear the convert_to_format field, causing the einvoice filename
+        pattern to still be used.
+        """
+        db_path = str(tmp_path / "test_v45.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="44", os="Linux"))
+        # Insert folder with tweak_edi=True but stale convert_to_format="eStore eInvoice"
+        db_conn["folders"].insert(
+            dict(
+                folder_name="/test",
+                alias="Test",
+                tweak_edi=1,
+                convert_to_format="eStore eInvoice",
+            )
+        )
+        # Insert another folder with tweak_edi=True and different stale format
+        db_conn["folders"].insert(
+            dict(
+                folder_name="/test2",
+                alias="Test2",
+                tweak_edi=1,
+                convert_to_format="csv",
+            )
+        )
+        # Insert folder with tweak_edi=False (should not be affected)
+        db_conn["folders"].insert(
+            dict(
+                folder_name="/test3",
+                alias="Test3",
+                tweak_edi=0,
+                convert_to_format="eStore eInvoice",
+            )
+        )
+        db_conn.commit()
+
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        # Check that tweak_edi folders have convert_to_format cleared
+        folders = list(db_conn["folders"].all())
+        # Folder 1: tweak_edi=True with stale format -> should be cleared
+        assert folders[0]["convert_to_format"] == ""
+        # Folder 2: tweak_edi=True with stale format -> should be cleared
+        assert folders[1]["convert_to_format"] == ""
+        # Folder 3: tweak_edi=False -> should NOT be affected
+        assert folders[2]["convert_to_format"] == "eStore eInvoice"
+
+        db_conn.close()
