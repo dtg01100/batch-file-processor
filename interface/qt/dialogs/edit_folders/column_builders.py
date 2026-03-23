@@ -111,8 +111,6 @@ class ColumnBuilders:
         self.fields["others_search"] = others_search
         layout.addWidget(others_search)
 
-        layout.addWidget(others_list)
-
         copy_config_btn = QPushButton("Copy Config")
         copy_config_btn.setAccessibleName("Copy configuration")
         copy_config_btn.setAccessibleDescription(
@@ -122,6 +120,8 @@ class ColumnBuilders:
             copy_config_btn.clicked.connect(self.on_copy_config)
         self.fields["copy_config_btn"] = copy_config_btn
         layout.addWidget(copy_config_btn)
+
+        layout.addWidget(others_list)
 
         return container
 
