@@ -54,9 +54,9 @@ def built_executable(tmp_path_factory):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert EXECUTABLE_PATH.exists(), (
-        f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
-    )
+    assert (
+        EXECUTABLE_PATH.exists()
+    ), f"Build succeeded but executable not found at {EXECUTABLE_PATH}"
 
     return EXECUTABLE_PATH
 
@@ -90,12 +90,12 @@ def test_self_test_passes(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert "Self-test passed" in result.stdout, (
-        f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
-    )
-    assert "Failed to extract" not in result.stderr, (
-        f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
-    )
+    assert (
+        "Self-test passed" in result.stdout
+    ), f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
+    assert (
+        "Failed to extract" not in result.stderr
+    ), f"UPX corruption signature found in stderr.\n--- stderr ---\n{result.stderr}"
 
 
 def test_self_test_output_completeness(built_executable, tmp_path):
@@ -155,12 +155,12 @@ def test_help_flag(built_executable, tmp_path):
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert "--self-test" in result.stdout, (
-        f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
-    )
-    assert "--automatic" in result.stdout, (
-        f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
-    )
+    assert (
+        "--self-test" in result.stdout
+    ), f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
+    assert (
+        "--automatic" in result.stdout
+    ), f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
 
 
 def test_gui_self_test_with_offscreen(built_executable, tmp_path, monkeypatch):
@@ -201,6 +201,6 @@ def test_gui_self_test_with_offscreen(built_executable, tmp_path, monkeypatch):
     ]
 
     for check in gui_checks:
-        assert check in result.stdout, (
-            f"Expected '{check}' in --gui-test output.\n--- stdout ---\n{result.stdout}"
-        )
+        assert (
+            check in result.stdout
+        ), f"Expected '{check}' in --gui-test output.\n--- stdout ---\n{result.stdout}"

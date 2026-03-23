@@ -589,9 +589,9 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             ]
 
             for col in expected_columns:
-                assert any(col in h for h in header_row), (
-                    f"Column {col} not found in header"
-                )
+                assert any(
+                    col in h for h in header_row
+                ), f"Column {col} not found in header"
 
     def test_store_number_in_output(
         self,

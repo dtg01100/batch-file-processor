@@ -28,7 +28,6 @@ Backward Compatibility:
 import csv
 
 from core import utils
-from core.utils import convert_to_price
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,

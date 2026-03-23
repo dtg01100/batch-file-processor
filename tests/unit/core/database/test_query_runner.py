@@ -2,7 +2,6 @@
 
 import pytest
 
-import core.database
 from core.database.query_runner import (
     ConnectionConfig,
     DatabaseConnectionProtocol,

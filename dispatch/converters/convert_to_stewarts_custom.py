@@ -46,11 +46,11 @@ from dispatch.converters.convert_base import (
     EDIRecord,
 )
 from dispatch.converters.mixins import (
-    DatabaseConnectionMixin,
-    CustomerLookupMixin,
-    ItemProcessingMixin,
     STEWARTS_CUSTOMER_FIELDS_LIST,
     STEWARTS_CUSTOMER_QUERY_SQL,
+    CustomerLookupMixin,
+    DatabaseConnectionMixin,
+    ItemProcessingMixin,
     UOMLookupMixin,
 )
 

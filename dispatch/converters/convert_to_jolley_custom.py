@@ -39,6 +39,7 @@ import time
 from typing import Any, Dict, List
 
 from core import utils
+from core.exceptions import CustomerLookupError
 from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
@@ -54,13 +55,12 @@ from dispatch.converters.convert_base import (
 from dispatch.converters.mixins import (
     BASIC_CUSTOMER_FIELDS_LIST,
     BASIC_CUSTOMER_QUERY_SQL,
-    DatabaseConnectionMixin,
     CustomerLookupMixin,
+    DatabaseConnectionMixin,
     ItemProcessingMixin,
     UOMLookupMixin,
     build_jolley_header_dict,
 )
-from core.exceptions import CustomerLookupError
 
 # Backward compatibility: re-export CustomerLookupError
 __all__ = ["CustomerLookupError"]

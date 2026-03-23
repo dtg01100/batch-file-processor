@@ -28,12 +28,12 @@ Example:
 
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Optional, Protocol, TextIO, runtime_checkable
 
-from core.edi.c_rec_generator import CRecGenerator, QueryRunnerProtocol
+from core.edi.c_rec_generator import CRecGenerator
 from core.edi.po_fetcher import POFetcher
 from core.structured_logging import (
     StructuredLogger,
@@ -466,8 +466,6 @@ class EDITweaker:
         Returns:
             Formatted B record line
         """
-        vendor_item = fields["vendor_item"].strip()
-
         # UPC override transformation
         if self.config.override_upc:
             fields = self._apply_upc_override(fields, upc_dict)
@@ -657,9 +655,11 @@ class EDITweaker:
                 # Pad a 12-char UPC with check digit to length 13
                 fields["upc_number"] = str(proposed_upc).rjust(
                     self.config.upc_target_length,
-                    self.config.upc_padding_pattern[0]
-                    if self.config.upc_padding_pattern
-                    else " ",
+                    (
+                        self.config.upc_padding_pattern[0]
+                        if self.config.upc_padding_pattern
+                        else " "
+                    ),
                 )
             elif upc_len == 11:
                 # Add check digit to 11-char base UPC

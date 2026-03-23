@@ -31,20 +31,19 @@ def check(input_file):
             if line[0] != "A" and line[0] != "B" and line[0] != "C" and line[0] != "":
                 file_to_test.close()
                 return False, line_number
-            else:
-                try:
-                    if line[0] == "B":
-                        if len(line) != 77 and len(line) != 71:
-                            file_to_test.close()
-                            return False, line_number
-                        _ = int(line[1:12])
-                        if len(line) == 71 and line[51:67] != "                ":
-                            file_to_test.close()
-                            return False, line_number
-                except ValueError:
-                    if not line[1:12] == "           ":
+            try:
+                if line[0] == "B":
+                    if len(line) != 77 and len(line) != 71:
                         file_to_test.close()
                         return False, line_number
+                    _ = int(line[1:12])
+                    if len(line) == 71 and line[51:67] != "                ":
+                        file_to_test.close()
+                        return False, line_number
+            except ValueError:
+                if not line[1:12] == "           ":
+                    file_to_test.close()
+                    return False, line_number
 
         file_to_test.close()
         return True, line_number

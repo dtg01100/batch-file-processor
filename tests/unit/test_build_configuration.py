@@ -116,9 +116,9 @@ class TestHiddenImports:
                 collected = collect_submodules(package)
                 assert len(collected) > 0, f"No submodules collected for {package}"
 
-                assert "collect_submodules" in hook_content, (
-                    f"Hook for {package} should use collect_submodules"
-                )
+                assert (
+                    "collect_submodules" in hook_content
+                ), f"Hook for {package} should use collect_submodules"
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):
@@ -219,9 +219,9 @@ class TestHiddenImports:
             content = f.read()
 
         assert "hookspath" in content, "Spec file should configure hookspath"
-        assert "['hooks']" in content or '"hooks"' in content, (
-            "Spec file should include 'hooks' in hookspath"
-        )
+        assert (
+            "['hooks']" in content or '"hooks"' in content
+        ), "Spec file should include 'hooks' in hookspath"
 
     def test_windows_bundle_validation_targets_qt_runtime(self):
         """Verify Windows bundle validation checks the Qt runtime pieces."""

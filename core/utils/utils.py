@@ -16,14 +16,14 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
-from core.database import QueryRunner, create_query_runner
+from core.database import create_query_runner
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
 from core.edi.edi_transformer import (
-    dac_str_int_to_int,  # noqa: F401
     convert_to_price,  # noqa: F401
     convert_to_price_decimal,  # noqa: F401
+    dac_str_int_to_int,  # noqa: F401
     detect_invoice_is_credit,  # noqa: F401
 )
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
@@ -454,7 +454,6 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
     Returns:
         True if transformation was applied, False otherwise.
     """
-    from decimal import Decimal
 
     # Validate record fields can be parsed
     try:

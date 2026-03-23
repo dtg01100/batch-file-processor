@@ -25,7 +25,6 @@ from typing import Any, Dict, Optional
 
 from core.utils import (
     calc_check_digit,
-    convert_to_price,
     convert_UPCE_to_UPCA,
 )
 

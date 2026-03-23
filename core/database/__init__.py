@@ -15,10 +15,8 @@ from core.database.query_runner import (
     PyODBCConnection,
     QueryRunner,
     SQLiteConnection,
-    assert_read_only_sql,
     create_query_runner,
 )
-
 
 __all__ = [
     "ConnectionConfig",

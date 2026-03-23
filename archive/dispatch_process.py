@@ -956,5 +956,4 @@ def process(
     run_log.write(("\r\n\r\n" + run_summary_string + "\r\n\r\n").encode())
     if error_counter > 0:
         return True, run_summary_string
-    else:
-        return False, run_summary_string
+    return False, run_summary_string
