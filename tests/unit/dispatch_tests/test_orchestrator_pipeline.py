@@ -9,6 +9,7 @@ These tests use real implementations and lightweight test doubles instead of Mag
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -400,6 +401,19 @@ class TestDispatchConfigPipelineFields:
 class TestGetUPCDictionary:
     """Tests for _get_upc_dictionary method."""
 
+    class _StubQueryRunner:
+        """Simple stub query runner for fallback UPC query tests."""
+
+        def __init__(self, rows):
+            self._rows = rows
+            self.closed = False
+
+        def run_query(self, query, params=None):
+            return self._rows
+
+        def close(self):
+            self.closed = True
+
     def test_with_cached_dictionary(self):
         """Test returning cached UPC dictionary."""
         cached_dict = {"123": "product1", "456": "product2"}
@@ -447,6 +461,137 @@ class TestGetUPCDictionary:
             RuntimeError, match="Failed to fetch UPC dictionary from upc_service"
         ):
             orchestrator._get_upc_dictionary({})
+
+    def test_fallback_parses_uppercase_column_names(self, monkeypatch):
+        """Fallback parser should accept dict rows with uppercase column names."""
+        rows = [
+            {
+                "ANBACD": "123456",
+                "ANBBCD": "CAT1",
+                "ANBGCD": "11111111111",
+                "ANBHCD": "22222222222",
+                "ANBICD": "33333333333",
+                "ANBJCD": "44444444444",
+            }
+        ]
+        stub_runner = self._StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.orchestrator.create_query_runner",
+            lambda **kwargs: stub_runner,
+        )
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "odbc_driver": "IBM i Access ODBC Driver",
+            "database_lookup_mode": "optional",
+        }
+
+        result = orchestrator._get_upc_dictionary(settings)
+
+        assert 123456 in result
+        assert result[123456] == [
+            "CAT1",
+            "11111111111",
+            "22222222222",
+            "33333333333",
+            "44444444444",
+        ]
+        assert stub_runner.closed is True
+
+    def test_fallback_parses_tuple_rows(self, monkeypatch):
+        """Fallback parser should accept positional tuple/list rows."""
+        rows = [
+            (
+                987654,
+                "CAT2",
+                "55555555555",
+                "66666666666",
+                "77777777777",
+                "88888888888",
+            )
+        ]
+        stub_runner = self._StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.orchestrator.create_query_runner",
+            lambda **kwargs: stub_runner,
+        )
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "odbc_driver": "IBM i Access ODBC Driver",
+            "database_lookup_mode": "optional",
+        }
+
+        result = orchestrator._get_upc_dictionary(settings)
+
+        assert result[987654] == [
+            "CAT2",
+            "55555555555",
+            "66666666666",
+            "77777777777",
+            "88888888888",
+        ]
+        assert stub_runner.closed is True
+
+    def test_strict_mode_raises_when_rows_are_unparseable(self, monkeypatch):
+        """Strict database mode should fail if query returns no parseable UPC rows."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        rows = [{"bad_key": "bad_value"}]
+        stub_runner = self._StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.orchestrator.create_query_runner",
+            lambda **kwargs: stub_runner,
+        )
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "odbc_driver": "IBM i Access ODBC Driver",
+            "database_lookup_mode": "strict",
+        }
+
+        with pytest.raises(LookupError, match="no parseable rows"):
+            orchestrator._get_upc_dictionary(settings)
+
+    def test_optional_mode_logs_reason_for_unparseable_rows(
+        self, monkeypatch, caplog
+    ):
+        """Optional mode should return empty dict and log preserved failure reason."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        rows = [{"bad_key": "bad_value"}]
+        stub_runner = self._StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.orchestrator.create_query_runner",
+            lambda **kwargs: stub_runner,
+        )
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "odbc_driver": "IBM i Access ODBC Driver",
+            "database_lookup_mode": "optional",
+        }
+
+        caplog.set_level(logging.WARNING)
+        result = orchestrator._get_upc_dictionary(settings)
+
+        assert result == {}
+        assert (
+            orchestrator._last_upc_lookup_error
+            == "fallback UPC query returned rows, but none were parseable"
+        )
+        assert "none were parseable" in caplog.text
+        assert stub_runner.closed is True
 
 
 # =============================================================================

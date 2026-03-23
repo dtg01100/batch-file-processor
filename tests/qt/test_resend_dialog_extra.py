@@ -290,3 +290,189 @@ class TestResendDialogServiceIntegration:
         )
 
         assert dialog._service is not None
+
+
+@pytest.mark.qt
+class TestResendDialogSearch:
+    """Tests for search behavior in resend dialog."""
+
+    def test_search_placeholder_mentions_folder(
+        self, qtbot, mock_database_obj, monkeypatch
+    ):
+        """Search input text indicates folder search is supported."""
+        dialog, _ = _make_dialog(qtbot, mock_database_obj, monkeypatch)
+
+        assert "folder" in dialog._search_input.placeholderText().lower()
+
+    def test_search_filters_by_folder_alias(
+        self, qtbot, mock_database_obj, monkeypatch, tmp_path
+    ):
+        """Search returns files when query matches folder alias."""
+        folder = tmp_path / "folder"
+        folder.mkdir()
+        f1 = folder / "file1.txt"
+        f2 = folder / "file2.txt"
+        f1.write_text("test")
+        f2.write_text("test")
+
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 1,
+                "folder_name": str(folder),
+                "alias": "Sales West",
+                "folder_is_active": "True",
+            }
+        )
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 2,
+                "folder_name": str(folder),
+                "alias": "Warehouse East",
+                "folder_is_active": "True",
+            }
+        )
+
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 101,
+                "folder_id": 1,
+                "file_name": str(f1),
+                "resend_flag": False,
+                "processed_at": "2024-01-01T00:00:00",
+            }
+        )
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 102,
+                "folder_id": 2,
+                "file_name": str(f2),
+                "resend_flag": False,
+                "processed_at": "2024-01-02T00:00:00",
+            }
+        )
+
+        dialog, _ = _make_dialog(qtbot, mock_database_obj, monkeypatch)
+        dialog._search_input.setText("sales")
+        dialog._do_search_filter()
+
+        assert dialog._table.rowCount() == 1
+        folder_item = dialog._table.item(0, 1)
+        assert folder_item is not None
+        assert folder_item.text() == "Sales West"
+
+    def test_search_field_selector_can_limit_to_file_name(
+        self, qtbot, mock_database_obj, monkeypatch, tmp_path
+    ):
+        """File-name-only filtering should not match folder alias text."""
+        folder = tmp_path / "folder"
+        folder.mkdir()
+        f1 = folder / "invoice_a.txt"
+        f2 = folder / "invoice_b.txt"
+        f1.write_text("test")
+        f2.write_text("test")
+
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 1,
+                "folder_name": str(folder),
+                "alias": "Sales West",
+                "folder_is_active": "True",
+            }
+        )
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 2,
+                "folder_name": str(folder),
+                "alias": "Warehouse East",
+                "folder_is_active": "True",
+            }
+        )
+
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 201,
+                "folder_id": 1,
+                "file_name": str(f1),
+                "resend_flag": False,
+                "processed_at": "2024-01-03T00:00:00",
+            }
+        )
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 202,
+                "folder_id": 2,
+                "file_name": str(f2),
+                "resend_flag": False,
+                "processed_at": "2024-01-04T00:00:00",
+            }
+        )
+
+        dialog, _ = _make_dialog(qtbot, mock_database_obj, monkeypatch)
+        index = dialog._search_field_selector.findData("file_name")
+        assert index >= 0
+        dialog._search_field_selector.setCurrentIndex(index)
+
+        dialog._search_input.setText("sales")
+        dialog._do_search_filter()
+
+        assert dialog._table.rowCount() == 0
+
+    def test_search_field_selector_folder_filters_correctly(
+        self, qtbot, mock_database_obj, monkeypatch, tmp_path
+    ):
+        """Folder-only filtering should match folder aliases."""
+        folder = tmp_path / "folder2"
+        folder.mkdir()
+        f1 = folder / "alpha.txt"
+        f2 = folder / "beta.txt"
+        f1.write_text("test")
+        f2.write_text("test")
+
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 3,
+                "folder_name": str(folder),
+                "alias": "Logistics North",
+                "folder_is_active": "True",
+            }
+        )
+        mock_database_obj.folders_table.insert(
+            {
+                "id": 4,
+                "folder_name": str(folder),
+                "alias": "Retail South",
+                "folder_is_active": "True",
+            }
+        )
+
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 301,
+                "folder_id": 3,
+                "file_name": str(f1),
+                "resend_flag": False,
+                "processed_at": "2024-01-05T00:00:00",
+            }
+        )
+        mock_database_obj.processed_files.insert(
+            {
+                "id": 302,
+                "folder_id": 4,
+                "file_name": str(f2),
+                "resend_flag": False,
+                "processed_at": "2024-01-06T00:00:00",
+            }
+        )
+
+        dialog, _ = _make_dialog(qtbot, mock_database_obj, monkeypatch)
+        index = dialog._search_field_selector.findData("folder")
+        assert index >= 0
+        dialog._search_field_selector.setCurrentIndex(index)
+
+        dialog._search_input.setText("logistics")
+        dialog._do_search_filter()
+
+        assert dialog._table.rowCount() == 1
+        folder_item = dialog._table.item(0, 1)
+        assert folder_item is not None
+        assert folder_item.text() == "Logistics North"

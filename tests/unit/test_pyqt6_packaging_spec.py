@@ -151,6 +151,7 @@ def test_spec_hiddenimports_includes_all_dispatch_converters():
         "dispatch.converters.convert_to_fintech",
         "dispatch.converters.convert_to_simplified_csv",
         "dispatch.converters.convert_to_stewarts_custom",
+        "dispatch.converters.convert_to_tweaks",
         "dispatch.converters.convert_to_yellowdog_csv",
         "dispatch.converters.convert_to_estore_einvoice",
         "dispatch.converters.convert_to_estore_einvoice_generic",

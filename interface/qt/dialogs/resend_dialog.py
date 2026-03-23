@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialogButtonBox,
     QFrame,
     QHBoxLayout,
@@ -111,12 +112,29 @@ class ResendDialog(BaseDialog):
         search_label = QLabel("&Search:")
         self._search_input = QLineEdit()
         self._search_input.setPlaceholderText(
-            "Filter by file name or invoice number..."
+            "Filter by folder, file name, or invoice number..."
         )
         self._search_input.textChanged.connect(self._on_search_changed)
         self._search_input.setAccessibleName("Search files")
-        self._search_input.setAccessibleDescription("Filter the file list by file name")
+        self._search_input.setAccessibleDescription(
+            "Filter the file list by folder, file name, or invoice number"
+        )
+
+        self._search_field_selector = QComboBox()
+        self._search_field_selector.addItem("All fields", "all")
+        self._search_field_selector.addItem("Folder", "folder")
+        self._search_field_selector.addItem("File name", "file_name")
+        self._search_field_selector.addItem("Invoice number", "invoice_numbers")
+        self._search_field_selector.setAccessibleName("Search field selector")
+        self._search_field_selector.setAccessibleDescription(
+            "Choose which field to search: all fields, folder, file name, or invoice number"
+        )
+        self._search_field_selector.currentIndexChanged.connect(
+            self._on_search_field_changed
+        )
+
         search_layout.addWidget(search_label)
+        search_layout.addWidget(self._search_field_selector)
         search_layout.addWidget(self._search_input)
         main_layout.addLayout(search_layout)
 
@@ -322,9 +340,36 @@ class ResendDialog(BaseDialog):
         self._search_timer.stop()
         self._search_timer.start(150)
 
+    def _on_search_field_changed(self, index: int) -> None:
+        """Re-apply search when the selected search field changes."""
+        self._search_timer.stop()
+        self._do_search_filter()
+
+    def _get_selected_search_field(self) -> str:
+        """Return the selected search field key."""
+        selected_field = self._search_field_selector.currentData()
+        return selected_field if isinstance(selected_field, str) else "all"
+
+    @staticmethod
+    def _matches_search_field(file_info: Dict[str, Any], lower_text: str, field: str) -> bool:
+        """Check if a row matches text based on selected search field."""
+        if field == "file_name":
+            return lower_text in (file_info.get("file_name") or "").lower()
+        if field == "invoice_numbers":
+            return lower_text in (file_info.get("invoice_numbers") or "").lower()
+        if field == "folder":
+            return lower_text in (file_info.get("folder_alias") or "").lower()
+
+        return (
+            lower_text in (file_info.get("file_name") or "").lower()
+            or lower_text in (file_info.get("invoice_numbers") or "").lower()
+            or lower_text in (file_info.get("folder_alias") or "").lower()
+        )
+
     def _do_search_filter(self) -> None:
         """Perform the actual search filtering after debounce."""
         text = self._search_input.text()
+        search_field = self._get_selected_search_field()
         self._search_text = text
 
         if not text:
@@ -341,15 +386,17 @@ class ResendDialog(BaseDialog):
             self._current_offset = 0
             try:
                 self._filtered_files = self._service.search_files_for_resend(
-                    text, limit=self.PAGE_SIZE, offset=0
+                    text,
+                    limit=self.PAGE_SIZE,
+                    offset=0,
+                    search_field=search_field,
                 )
             except (TypeError, AttributeError):
                 lower_text = text.lower()
                 self._filtered_files = [
                     f
                     for f in self._all_files
-                    if lower_text in f["file_name"].lower()
-                    or lower_text in (f.get("invoice_numbers") or "").lower()
+                    if self._matches_search_field(f, lower_text, search_field)
                 ]
             self._all_files = self._filtered_files.copy()
             self._has_more_data = False

@@ -480,12 +480,15 @@ class EDISplitterStep:
                         )
                     else:
                         logger.info(
-                            "No split performed for %s (single invoice source)",
-                            input_path,
+                            "Split produced single file from single-invoice source: %s",
+                            split_result.output_files[0][0],
+                        )
+                        filtered_files = self._filter_by_credit_invoice(
+                            split_result.output_files, include_invoices, include_credits
                         )
                         return SplitterResult(
-                            files=[(input_path, "", "")],
-                            was_split=False,
+                            files=filtered_files,
+                            was_split=True,
                             was_filtered=was_filtered,
                             skipped_invoices=split_result.skipped_invoices,
                             errors=errors,

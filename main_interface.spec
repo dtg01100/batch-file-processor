@@ -37,6 +37,7 @@ a = Analysis(
         'dispatch.converters.convert_to_scansheet_type_a',
         'dispatch.converters.convert_to_simplified_csv',
         'dispatch.converters.convert_to_stewarts_custom',
+        'dispatch.converters.convert_to_tweaks',
         'dispatch.converters.convert_to_yellowdog_csv',
         'backend.copy_backend',
         'backend.email_backend',

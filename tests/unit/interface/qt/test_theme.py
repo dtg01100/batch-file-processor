@@ -56,3 +56,9 @@ class TestAssetUri:
         assert result.endswith(
             "checkbox_checked.svg"
         ), f"Path should end with filename: {result}"
+
+    def test_asset_uri_uses_forward_slashes_for_qss(self):
+        """Qt stylesheets expect URL paths with forward slashes for reliability."""
+        result = Theme._asset_uri("checkbox_checked.svg")
+
+        assert "\\" not in result, f"Path should not contain backslashes: {result}"

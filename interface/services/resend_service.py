@@ -190,18 +190,38 @@ class ResendService:
         limit: int = 1000,
         offset: int = 0,
         search_text: Optional[str] = None,
+        search_field: str = "all",
     ) -> List[Dict[str, Any]]:
         """Get files sorted by sent_date_time (most recent first), with processed_at fallback."""
         where_clause = ""
         params: List[Any] = []
         if search_text:
-            where_clause = "WHERE (file_name LIKE ? OR invoice_numbers LIKE ?)"
-            params = [f"%{search_text}%", f"%{search_text}%"]
+            search_value = f"%{search_text}%"
+            if search_field == "file_name":
+                where_clause = "WHERE pf.file_name LIKE ?"
+                params = [search_value]
+            elif search_field == "invoice_numbers":
+                where_clause = "WHERE pf.invoice_numbers LIKE ?"
+                params = [search_value]
+            elif search_field == "folder":
+                where_clause = "WHERE COALESCE(f.alias, pf.folder_alias, '') LIKE ?"
+                params = [search_value]
+            else:
+                where_clause = (
+                    "WHERE ("
+                    "pf.file_name LIKE ? "
+                    "OR pf.invoice_numbers LIKE ? "
+                    "OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?"
+                    ")"
+                )
+                params = [search_value, search_value, search_value]
 
         sql = f"""
-            SELECT * FROM processed_files
+            SELECT pf.*, COALESCE(f.alias, pf.folder_alias, '') AS resolved_folder_alias
+            FROM processed_files pf
+            LEFT JOIN folders f ON f.id = pf.folder_id
             {where_clause}
-            ORDER BY processed_at DESC
+            ORDER BY pf.processed_at DESC
             LIMIT ? OFFSET ?
         """
         params.extend([limit, offset])
@@ -222,7 +242,9 @@ class ResendService:
             folder_id = processed_line["folder_id"]
             folder_alias = folder_aliases.get(
                 folder_id,
-                processed_line.get("folder_alias") or "Unknown",
+                processed_line.get("resolved_folder_alias")
+                or processed_line.get("folder_alias")
+                or "Unknown",
             )
 
             file_exists = True
@@ -267,14 +289,21 @@ class ResendService:
         )
 
     def search_files_for_resend(
-        self, search_text: str, limit: int = 1000, offset: int = 0
+        self,
+        search_text: str,
+        limit: int = 1000,
+        offset: int = 0,
+        search_field: str = "all",
     ) -> List[Dict[str, Any]]:
-        """Search processable files by file name or invoice numbers.
+        """Search processable files by one specific field or all fields.
 
         Args:
-            search_text: Text to search for in file_name or invoice_numbers
+            search_text: Text to search for in file_name, invoice_numbers, or
+                folder alias
             limit: Maximum number of files to return
             offset: Number of files to skip (for pagination)
+            search_field: Field key to filter by. Supported values are
+                "all", "folder", "file_name", and "invoice_numbers".
 
         Returns:
             List of dicts with keys: id, folder_id, folder_alias, file_name,
@@ -285,4 +314,5 @@ class ResendService:
             limit=limit,
             offset=offset,
             search_text=search_text,
+            search_field=search_field,
         )

@@ -154,6 +154,7 @@ class DispatchOrchestrator:
         self.run_log: StringIO = StringIO()
         self.processed_count: int = 0
         self.error_count: int = 0
+        self._last_upc_lookup_error: Optional[str] = None
         logger.debug(
             "DispatchOrchestrator initialized (pipeline_steps: "
             "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
@@ -435,6 +436,7 @@ class DispatchOrchestrator:
         logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
         strict_db_mode = self._is_strict_database_lookup(settings)
         strict_testing_mode = get_strict_testing_mode()
+        self._last_upc_lookup_error = None
 
         if self.config.upc_dict:
             return self.config.upc_dict
@@ -468,10 +470,17 @@ class DispatchOrchestrator:
 
         # UPC dict could not be loaded - converters needing UPC data will fail
         # silently or produce degraded output
-        logger.warning(
-            "UPC dictionary is empty: no service configured and fallback query "
-            "failed (check AS400 credentials in settings)"
-        )
+        if self._last_upc_lookup_error:
+            logger.warning(
+                "UPC dictionary is empty: fallback query failed (%s). "
+                "Check AS400 host/user/password and ODBC driver settings.",
+                self._last_upc_lookup_error,
+            )
+        else:
+            logger.warning(
+                "UPC dictionary is empty: no service configured and fallback query "
+                "did not return usable rows"
+            )
         if strict_db_mode:
             raise RuntimeError(
                 "database_lookup_mode is strict but UPC dictionary could not be loaded"
@@ -479,21 +488,35 @@ class DispatchOrchestrator:
         return {}
 
     def _parse_upc_query_rows(
-        self, rows: list[dict[str, Any]], strict_testing_mode: bool
+        self, rows: list[Any], strict_testing_mode: bool
     ) -> dict[int, list[Any]]:
-        """Build UPC lookup data from raw query rows (dict format)."""
+        """Build UPC lookup data from raw query rows.
+
+        Supports dictionary rows (case-insensitive column names) and positional
+        tuple/list rows where expected columns are in this order:
+        anbacd, anbbcd, anbgcd, anbhcd, anbicd, anbjcd.
+        """
         upc_dict = {}
         for row in rows:
             try:
-                item_number = int(row["anbacd"])
-                upc_dict[item_number] = [
-                    row["anbbcd"],
-                    row["anbgcd"],
-                    row["anbhcd"],
-                    row["anbicd"],
-                    row["anbjcd"],
-                ]
-            except (TypeError, ValueError, KeyError) as exc:
+                if isinstance(row, dict):
+                    normalized_row = {
+                        str(key).strip().lower(): value for key, value in row.items()
+                    }
+                    item_number = int(normalized_row["anbacd"])
+                    upc_dict[item_number] = [
+                        normalized_row["anbbcd"],
+                        normalized_row["anbgcd"],
+                        normalized_row["anbhcd"],
+                        normalized_row["anbicd"],
+                        normalized_row["anbjcd"],
+                    ]
+                elif isinstance(row, (tuple, list)):
+                    item_number = int(row[0])
+                    upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
+                else:
+                    raise TypeError(f"Unsupported UPC row type: {type(row).__name__}")
+            except (TypeError, ValueError, KeyError, IndexError) as exc:
                 if strict_testing_mode:
                     raise RuntimeError(
                         f"Malformed UPC row returned from fallback query: {row!r}"
@@ -519,12 +542,14 @@ class DispatchOrchestrator:
             "as400_username",
             "as400_password",
             "as400_address",
-            "odbc_driver",
         )
         strict_db_mode = self._is_strict_database_lookup(settings)
         strict_testing_mode = get_strict_testing_mode()
         missing_keys = [key for key in required_keys if not settings.get(key)]
         if missing_keys:
+            self._last_upc_lookup_error = (
+                "missing AS400 settings: " + ", ".join(missing_keys)
+            )
             if strict_db_mode:
                 raise ValueError(
                     "database_lookup_mode is strict but AS400 settings are missing: "
@@ -536,24 +561,38 @@ class DispatchOrchestrator:
             )
             return {}
 
-        runner = create_query_runner(
-            username=settings["as400_username"],
-            password=settings["as400_password"],
-            dsn=settings["as400_address"],
-            database="QGPL",
-            odbc_driver=settings["odbc_driver"],
-        )
+        odbc_driver_raw = str(settings.get("odbc_driver", "") or "").strip()
+        # Legacy DB defaults may contain a placeholder value that is not a real
+        # driver name. In that case, allow QueryRunner's default driver to apply.
+        if odbc_driver_raw.lower().startswith("select odbc driver"):
+            odbc_driver_raw = ""
+
+        runner_kwargs = {
+            "username": settings["as400_username"],
+            "password": settings["as400_password"],
+            "dsn": settings["as400_address"],
+            "database": "QGPL",
+        }
+        if odbc_driver_raw:
+            runner_kwargs["odbc_driver"] = odbc_driver_raw
+        else:
+            logger.info(
+                "AS400 settings did not provide a usable ODBC driver; "
+                "using QueryRunner default"
+            )
+
+        runner = create_query_runner(**runner_kwargs)
 
         try:
             rows = runner.run_query(
                 """
                 select
-                    dsanrep.anbacd,
-                    dsanrep.anbbcd,
-                    strip(dsanrep.anbgcd),
-                    strip(dsanrep.anbhcd),
-                    strip(dsanrep.anbicd),
-                    strip(dsanrep.anbjcd)
+                    dsanrep.anbacd as anbacd,
+                    dsanrep.anbbcd as anbbcd,
+                    strip(dsanrep.anbgcd) as anbgcd,
+                    strip(dsanrep.anbhcd) as anbhcd,
+                    strip(dsanrep.anbicd) as anbicd,
+                    strip(dsanrep.anbjcd) as anbjcd
                 from dacdata.dsanrep dsanrep
                 """
             )
@@ -563,8 +602,22 @@ class DispatchOrchestrator:
                     "database_lookup_mode is strict but UPC query returned no rows"
                 )
 
-            return self._parse_upc_query_rows(rows, strict_testing_mode)
+            if not rows:
+                self._last_upc_lookup_error = "fallback UPC query returned no rows"
+                return {}
+
+            upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
+            if strict_db_mode and rows and not upc_dict:
+                raise LookupError(
+                    "database_lookup_mode is strict but UPC query returned no parseable rows"
+                )
+            if not upc_dict:
+                self._last_upc_lookup_error = (
+                    "fallback UPC query returned rows, but none were parseable"
+                )
+            return upc_dict
         except Exception as exc:
+            self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
             if strict_db_mode:
                 raise
             # Preserve RuntimeError messages that already have specific context

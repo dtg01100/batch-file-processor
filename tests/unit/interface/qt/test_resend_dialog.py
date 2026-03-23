@@ -101,6 +101,7 @@ class TestResendDialogInitialization:
             # Verify the flat table UI was built
             assert isinstance(dialog._table, QTableWidget)
             assert isinstance(dialog._search_input, QLineEdit)
+            assert hasattr(dialog, "_search_field_selector")
             assert dialog._should_show is True
 
 

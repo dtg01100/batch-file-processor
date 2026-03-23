@@ -546,7 +546,7 @@ class TestEDISplitterStep:
         assert mock_splitter.call_count == 0
 
     def test_split_with_split_edi_true_single_invoice(self):
-        """Test split() with split_edi=True and single invoice (no split needed)."""
+        """Test split() with split_edi=True and single invoice uses split naming."""
         mock_splitter = MockEDISplitter()
         mock_splitter.set_result(
             SplitResult(
@@ -560,8 +560,8 @@ class TestEDISplitterStep:
         params = {"split_edi": True}
         result = step.split("/input/test.edi", "/output", params, {})
 
-        assert result.was_split is False
-        assert len(result.files) == 1
+        assert result.was_split is True
+        assert result.files == [("/output/split.inv", "A_", ".inv")]
 
     def test_split_with_split_edi_true_multiple_invoices(self, caplog):
         """Test split() with split_edi=True and multiple invoices."""

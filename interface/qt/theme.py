@@ -164,7 +164,9 @@ class Theme:
     @staticmethod
     def _asset_uri(filename: str) -> str:
         """Return an absolute path for a theme asset located under interface/qt/assets."""
-        return str((Path(__file__).resolve().parent / "assets" / filename).resolve())
+        # Qt stylesheet url(...) parsing is most reliable with forward slashes,
+        # especially on Windows where backslashes can be interpreted as escapes.
+        return (Path(__file__).resolve().parent / "assets" / filename).resolve().as_posix()
 
     @staticmethod
     def get_button_stylesheet(variant="default"):
