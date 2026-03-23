@@ -69,7 +69,8 @@ class ResendService:
 
         placeholders = ",".join("?" * len(missing_ids))
         sql = f"SELECT id, alias FROM folders WHERE id IN ({placeholders})"
-        rows = self._db.query(sql)
+        cur = self._db.raw_connection.execute(sql, missing_ids)
+        rows = [dict(r) for r in cur.fetchall()]
 
         for row in rows:
             fid = row["id"]
