@@ -1135,3 +1135,31 @@ def upgrade_database(
         update_version = dict(id=1, version="44", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("43", "44")
+
+    db_version_dict = db_version.find_one(id=1)
+    if db_version_dict and str(db_version_dict["version"]) == "44":
+        # Clear convert_to_format for folders that have tweak_edi=True but a stale
+        # convert_to_format value (e.g., 'eStore eInvoice'). This fixes a bug where
+        # switching from Convert EDI (eStore eInvoice) to Tweak EDI didn't properly
+        # clear the convert_to_format field, causing the einvoice filename pattern
+        # (eInv{vendor}.{timestamp}.csv) to still be used.
+        cursor = database_connection.raw_connection.cursor()
+        cursor.execute("""
+            UPDATE folders 
+            SET convert_to_format = '' 
+            WHERE tweak_edi = 1 
+            AND convert_to_format IS NOT NULL 
+            AND convert_to_format != ''
+        """)
+        cursor.execute("""
+            UPDATE administrative 
+            SET convert_to_format = '' 
+            WHERE tweak_edi = 1 
+            AND convert_to_format IS NOT NULL 
+            AND convert_to_format != ''
+        """)
+        database_connection.raw_connection.commit()
+
+        update_version = dict(id=1, version="45", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("44", "45")

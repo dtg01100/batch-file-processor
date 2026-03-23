@@ -838,6 +838,50 @@ class TestEdgeCases:
 
         assert len(result.errors) == 1
 
+    def test_tweak_edi_overrides_stale_estore_einvoice_format(self):
+        """Regression test: tweak_edi=True must use tweaks converter even when convert_to_format is stale 'eStore eInvoice'.
+
+        Bug: When a profile was originally set up as 'estore einvoice' but is now set up as 'tweaks',
+        the custom estore naming (eInv{vendor}.{timestamp}.csv) was still being used because
+        convert_to_format wasn't cleared when switching to tweak mode.
+
+        The bug was that line 315: 'if tweak_edi and not convert_to_format:' only normalized
+        to 'tweaks' if convert_to_format was EMPTY. If convert_to_format='eStore eInvoice' (stale),
+        the estore einvoice converter was still used.
+        """
+        tweak_mock_module = create_mock_conversion_module("/output/tweaked.csv")
+        estore_mock_module = create_mock_conversion_module("/output/estore.csv")
+
+        mock_loader = MockModuleLoader(
+            {
+                "dispatch.converters.convert_to_tweaks": tweak_mock_module,
+                "dispatch.converters.convert_to_estore_einvoice": estore_mock_module,
+            }
+        )
+
+        step = EDIConverterStep(module_loader=mock_loader)
+
+        params = {
+            "tweak_edi": True,
+            "convert_to_format": "eStore eInvoice",
+            "process_edi": "True",
+        }
+        result = step.convert("/input/test.edi", "/output", params, {}, {})
+
+        assert result.success is True
+        assert (
+            mock_loader.last_module_name == "dispatch.converters.convert_to_tweaks"
+        ), (
+            f"Expected tweaks converter to be used when tweak_edi=True, "
+            f"but got {mock_loader.last_module_name}"
+        )
+        assert tweak_mock_module.edi_convert.called, (
+            "Tweaks converter should have been called"
+        )
+        assert not estore_mock_module.edi_convert.called, (
+            "Estore einvoice converter should NOT have been called when tweak_edi=True"
+        )
+
     def test_converter_result_with_all_fields_set(self):
         """Test ConverterResult with all fields explicitly set."""
         result = ConverterResult(

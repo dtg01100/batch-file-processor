@@ -312,7 +312,7 @@ class EDIConverterStep:
         input_basename = os.path.basename(input_path)
 
         # Normalize tweak_edi to convert_to_format="tweaks" for unified handling
-        if tweak_edi and not convert_to_format:
+        if tweak_edi:
             convert_to_format = "tweaks"
 
         StructuredLogger.log_debug(

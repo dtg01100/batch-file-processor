@@ -858,6 +858,11 @@ class DynamicEDIBuilder:
         self.fields["process_edi"] = False
         self.fields["tweak_edi"] = True
 
+        # Clear convert_formats_var to prevent stale einvoice format from persisting
+        # when switching from Convert EDI to Tweak EDI mode
+        if "convert_formats_var" in self.fields:
+            del self.fields["convert_formats_var"]
+
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
         wrapper_layout.setContentsMargins(0, 0, 0, 0)
