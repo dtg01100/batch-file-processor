@@ -311,13 +311,18 @@ class Table:
         return self._row_to_dict(cur.fetchone())
 
     def find(
-        self, order_by: Optional[str] = None, _limit: Optional[int] = None, **kwargs
+        self,
+        order_by: Optional[str] = None,
+        _limit: Optional[int] = None,
+        _offset: Optional[int] = None,
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """Find all records matching the given criteria.
 
         Args:
             order_by: Column name to sort by (optional)
             _limit: Maximum number of records to return (optional)
+            _offset: Number of records to skip (optional)
             **kwargs: Column=value pairs to match
 
         Returns:
@@ -340,6 +345,9 @@ class Table:
 
         if _limit:
             sql += f" LIMIT {_limit}"
+
+        if _offset:
+            sql += f" OFFSET {_offset}"
 
         cur = self._conn.execute(sql, tuple(params))
         return [
