@@ -36,6 +36,19 @@ class ResendService:
         """Check if there are any processed files."""
         return self._processed_files.count() > 0
 
+    def get_total_file_count(self) -> int:
+        """Get total count of unique processed files.
+
+        Returns:
+            Total number of unique processed files.
+        """
+        # Get distinct folder_id + file_name combinations
+        rows = list(self._processed_files.find(order_by=None))
+        seen = set()
+        for row in rows:
+            seen.add((row["file_name"], row["folder_id"]))
+        return len(seen)
+
     def _get_folder_alias_batch(self, folder_ids: List[int]) -> Dict[int, str]:
         """Get folder aliases for multiple folder IDs in a single query.
 
@@ -168,19 +181,30 @@ class ResendService:
         return len(file_ids)
 
     def get_all_files_for_resend(
-        self, check_file_exists: bool = True
+        self, check_file_exists: bool = True, limit: int = 1000, offset: int = 0
     ) -> List[Dict[str, Any]]:
         """Get all processable files across all folders for resend interface.
 
         Args:
             check_file_exists: If True, checks if file exists on disk and marks
                 it in the result. If False, skips the check for faster loading.
+            limit: Maximum number of files to return.
+            offset: Number of files to skip (for pagination).
 
         Returns:
             List of dicts with keys: id, folder_id, folder_alias, file_name,
             resend_flag, sent_date_time, file_exists
         """
-        processed_lines = list(self._processed_files.find(order_by="-processed_at"))
+        # Note: _offset=0 causes issues with some find implementations,
+        # so only pass it when non-zero
+        if offset > 0:
+            processed_lines = list(
+                self._processed_files.find(order_by="-processed_at", _limit=limit, _offset=offset)
+            )
+        else:
+            processed_lines = list(
+                self._processed_files.find(order_by="-processed_at", _limit=limit)
+            )
 
         # Collect all folder IDs for batch lookup
         folder_ids = list(set(line["folder_id"] for line in processed_lines))
