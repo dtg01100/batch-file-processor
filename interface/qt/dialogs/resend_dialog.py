@@ -112,7 +112,7 @@ class ResendDialog(BaseDialog):
         search_layout = QHBoxLayout()
         search_label = QLabel("&Search:")
         self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("Filter files by name...")
+        self._search_input.setPlaceholderText("Filter by file name or invoice number...")
         self._search_input.textChanged.connect(self._on_search_changed)
         self._search_input.setAccessibleName("Search files")
         self._search_input.setAccessibleDescription("Filter the file list by file name")
@@ -350,7 +350,9 @@ class ResendDialog(BaseDialog):
         else:
             lower_text = text.lower()
             self._filtered_files = [
-                f for f in self._all_files if lower_text in f["file_name"].lower()
+                f for f in self._all_files
+                if lower_text in f["file_name"].lower()
+                or lower_text in (f.get("invoice_numbers") or "").lower()
             ]
         self._populate_table()
         self._update_status()

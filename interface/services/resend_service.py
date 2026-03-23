@@ -232,6 +232,7 @@ class ResendService:
                     "file_name": processed_line["file_name"],
                     "resend_flag": processed_line["resend_flag"],
                     "sent_date_time": self._get_sent_timestamp(processed_line),
+                    "invoice_numbers": processed_line.get("invoice_numbers", ""),
                     "file_exists": file_exists,
                 }
             )
