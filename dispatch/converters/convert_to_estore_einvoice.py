@@ -94,8 +94,10 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
     def _leave_shipper_mode(self) -> None:
         """Exit shipper mode and update parent item quantity."""
         if self.shipper_mode:
-            # Update the parent item's quantity to the count of children
-            self.row_dict_list[self.shipper_line_number - 1]["QTY"] = len(
+            # Update the parent item's quantity to the count of children.
+            # shipper_line_number is set to invoice_index BEFORE the parent row
+            # is appended, so row_dict_list[shipper_line_number] IS the parent.
+            self.row_dict_list[self.shipper_line_number]["QTY"] = len(
                 self.shipper_accum
             )
             self.shipper_accum.clear()

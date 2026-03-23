@@ -1183,5 +1183,251 @@ class TestEstoreEinvoiceGenericPurchaseOrder(TestEstoreEinvoiceGenericFixtures):
             assert "PO12345" in content
 
 
+class TestEstoreEinvoiceGenericShipperModeRegression(TestEstoreEinvoiceGenericFixtures):
+    """Regression tests for the shipper_line_number off-by-one relationship.
+
+    Background: For the GENERIC converter, A records increment invoice_index but
+    do NOT append to row_dict_list (only B and C records do). So after invoice_index
+    for an A record:
+        len(row_dict_list) == invoice_index - 1
+    When the shipper parent B record is about to be processed:
+        shipper_line_number = invoice_index (set BEFORE append)
+        After append: parent_D is at row_dict_list[invoice_index - 1]
+    Correct access: row_dict_list[shipper_line_number - 1]  <- the '-1' IS required here
+    If '-1' is removed: row_dict_list[shipper_line_number] -> IndexError or wrong row.
+    """
+
+    @pytest.mark.unit
+    def test_shipper_parent_qty_updated_correctly(
+        self,
+        converter_with_test_db,
+        sample_header_record,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Regression: parent row QTY == count of children in generic converter.
+
+        For the generic converter the '-1' in row_dict_list[shipper_line_number - 1]
+        is correct and must NOT be removed.  A records count in invoice_index but
+        do not appear in row_dict_list, so the offset of 1 is required.
+        """
+        parent = (
+            "B"
+            + "01234567890"
+            + "Shipper Parent Item".ljust(25)
+            + "123456"  # vendor_item = "123456"
+            + "000100"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00199"
+            + "001"
+            + "123456"  # parent_item_number == vendor_item -> triggers shipper mode
+        )
+        child1 = (
+            "B"
+            + "01234567891"
+            + "Child Item One".ljust(25)
+            + "234567"
+            + "000050"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00099"
+            + "001"
+            + "123456"
+        )
+        child2 = (
+            "B"
+            + "01234567892"
+            + "Child Item Two".ljust(25)
+            + "345678"
+            + "000025"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00049"
+            + "001"
+            + "123456"
+        )
+        edi_content = (
+            sample_header_record + "\n" + parent + "\n" + child1 + "\n" + child2 + "\n"
+        )
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        result = convert_to_estore_einvoice_generic.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        with open(result, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        # Row 0 is the CSV column-name header (written by _initialize_output)
+        assert rows[0][0] == "Store #", "First row must be the CSV header row"
+
+        # Data rows start at index 1
+        # The generic converter merges A record header fields into every B row.
+        # Row 1 = parent D (merged): Detail Type at index 6, QTY at index 14
+        parent_row = rows[1]
+        assert parent_row[6] == "D", "Parent shipper Detail Type must be 'D'"
+        # QTY (Quantity) is at merged-row index 14
+        assert parent_row[14] == "2", (
+            f"Parent row QTY must be 2 (count of children); got {parent_row[14]}. "
+            "Fails if the '-1' is removed from row_dict_list[shipper_line_number - 1] "
+            "in the generic converter (A records are not in row_dict_list)."
+        )
+
+    @pytest.mark.unit
+    def test_shipper_children_detail_type_c(
+        self,
+        converter_with_test_db,
+        sample_header_record,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Test that shipper children have Detail Type 'C' and parent has 'D'."""
+        parent = (
+            "B"
+            + "01234567890"
+            + "Shipper Parent Item".ljust(25)
+            + "123456"
+            + "000100"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00199"
+            + "001"
+            + "123456"
+        )
+        child = (
+            "B"
+            + "01234567891"
+            + "Child Item One".ljust(25)
+            + "234567"
+            + "000050"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00099"
+            + "001"
+            + "123456"
+        )
+        edi_content = sample_header_record + "\n" + parent + "\n" + child + "\n"
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        result = convert_to_estore_einvoice_generic.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        with open(result, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        # rows[0] is CSV column headers; data rows start at index 1
+        data_rows = rows[1:]
+        detail_types = {r[6] for r in data_rows}  # Detail Type at merged index 6
+        assert "D" in detail_types, "Shipper parent must have Detail Type 'D'"
+        assert "C" in detail_types, "Shipper child must have Detail Type 'C'"
+
+
+class TestEstoreEinvoiceGenericFilenameRegression(TestEstoreEinvoiceGenericFixtures):
+    """Regression tests for the generic eStore eInvoice output filename format.
+
+    Background: commit f0ca26b1b "Restore timestamp filename format in eStore
+    converters" was created on a side branch specifically to restore the
+    timestamped filename format (eInv{vendor}.{YYYYMMDDHHMMSS}.csv) after it had
+    been inadvertently dropped. These tests pin the full filename pattern so any
+    future regression is caught immediately.
+
+    Expected format: eInv{VendorName}.{14-digit-timestamp}.csv
+    Example:         eInvTestVendor.20240101120000.csv
+    """
+
+    @pytest.mark.unit
+    def test_filename_matches_einv_timestamp_pattern(
+        self,
+        converter_with_test_db,
+        complete_edi_content,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Filename must match eInv{vendor}.{YYYYMMDDHHMMSS}.csv exactly.
+
+        Catches regressions where: the timestamp is dropped, the eInv prefix is
+        removed, a different separator is used, or the format reverts to just
+        appending '.csv' to the output path.
+        """
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
+
+        result = convert_to_estore_einvoice_generic.edi_convert(
+            str(input_file),
+            str(tmp_path / "output"),
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        basename = os.path.basename(result)
+        pattern = r"^eInv\w+\.\d{14}\.csv$"
+        assert re.match(pattern, basename), (
+            f"Filename '{basename}' does not match expected format "
+            f"'eInv{{vendor}}.{{YYYYMMDDHHMMSS}}.csv' (pattern: {pattern})"
+        )
+
+    @pytest.mark.unit
+    def test_filename_placed_in_output_directory(
+        self,
+        converter_with_test_db,
+        complete_edi_content,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Output file must be written to the same directory as output_filename.
+
+        Catches regressions where os.path.dirname() is replaced with a
+        hardcoded or incorrect directory.
+        """
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
+        out_dir = tmp_path / "subdir"
+        out_dir.mkdir()
+
+        result = convert_to_estore_einvoice_generic.edi_convert(
+            str(input_file),
+            str(out_dir / "output"),
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        assert os.path.dirname(result) == str(out_dir), (
+            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

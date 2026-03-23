@@ -710,35 +710,17 @@ class TestConvertToYellowdogCSV:
         # Get test database query runner
         db_path, query_runner = invfetcher_test_db
 
-        # Create a fake LegacyQueryRunnerAdapter that wraps our test query runner
-        class FakeLegacyQueryRunnerAdapter:
-            def __init__(self, runner):
-                self._runner = query_runner  # Use our test query runner
-
-            def run_query(self, query: str, params: tuple = None) -> list:
-                """Execute query using test database."""
-                return query_runner.run_query(query, params)
-
-            def run_arbitrary_query(self, query: str, params: tuple = None) -> list:
-                """Execute arbitrary query using test database."""
-                return query_runner.run_query(query, params)
-
-        # Patch the database imports to use our test database
+        # Patch create_query_runner to return our test query runner
         with patch.object(
-            convert_to_yellowdog_csv, "create_query_runner", return_value=None
+            convert_to_yellowdog_csv, "create_query_runner", return_value=query_runner
         ):
-            with patch.object(
-                convert_to_yellowdog_csv,
-                "LegacyQueryRunnerAdapter",
-                FakeLegacyQueryRunnerAdapter,
-            ):
-                result = convert_to_yellowdog_csv.edi_convert(
-                    edi_file,
-                    output_path,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    sample_upc_lut,
-                )
+            result = convert_to_yellowdog_csv.edi_convert(
+                edi_file,
+                output_path,
+                default_settings_dict,
+                default_parameters_dict,
+                sample_upc_lut,
+            )
 
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
@@ -871,45 +853,46 @@ class TestConvertToStewartsCustom:
 
         output_path = str(tmp_path / "output_stewarts")
 
-        # Mock LegacyQueryRunner (core.database.query_runner imported
-        # as LegacyQueryRunner)
+        # Mock create_query_runner in mixins where it's used via DatabaseConnectionMixin
         with patch(
-            "dispatch.converters.convert_to_stewarts_custom.create_query_runner"
+            "dispatch.converters.mixins.create_query_runner"
         ) as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
+            # QueryRunner.run_query returns list[dict]
             mock_qr_instance.run_query.side_effect = [
-                # Header fields query result
+                # Header fields query result (list of dicts)
                 [
-                    [
-                        "Salesperson",
-                        "2025-01-01",
-                        "NET30",
-                        "30",
-                        "A",
-                        "12345",
-                        "Test Customer",
-                        "123 Main St",
-                        "Anytown",
-                        "ST",
-                        "12345",
-                        "5551234567",
-                        "test@email.com",
-                        "",
-                        "A",
-                        "12345",
-                        "Corporate Customer",
-                        "456 Corp St",
-                        "Corptown",
-                        "ST",
-                        "54321",
-                        "5559876543",
-                        "corp@email.com",
-                        "",
-                    ]
+                    {
+                        "Salesperson_Name": "Salesperson",
+                        "Invoice_Date": "2025-01-01",
+                        "Terms_Code": "NET30",
+                        "Terms_Duration": "30",
+                        "Customer_Status": "A",
+                        "Customer_Number": "12345",
+                        "Customer_Name": "Test Customer",
+                        "Customer_Store_Number": "123 Main St",
+                        "Customer_Address": "123 Main St",
+                        "Customer_Town": "Anytown",
+                        "Customer_State": "ST",
+                        "Customer_Zip": "12345",
+                        "Customer_Phone": "5551234567",
+                        "Customer_Email": "test@email.com",
+                        "Customer_Email_2": "",
+                        "Corporate_Customer_Status": "A",
+                        "Corporate_Customer_Number": "12345",
+                        "Corporate_Customer_Name": "Corporate Customer",
+                        "Corporate_Customer_Address": "456 Corp St",
+                        "Corporate_Customer_Town": "Corptown",
+                        "Corporate_Customer_State": "ST",
+                        "Corporate_Customer_Zip": "54321",
+                        "Corporate_Customer_Phone": "5559876543",
+                        "Corporate_Customer_Email": "corp@email.com",
+                        "Corporate_Customer_Email_2": "",
+                    }
                 ],
-                # UOM lookup list query result (itemno, uom_mult, uom_code)
-                [["123456", "1", "EA"]],
+                # UOM lookup list query result (list of dicts with itemno, uom_mult, uom_code)
+                [[{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}]],
             ]
             mock_qr_class.return_value = mock_qr_instance
 
@@ -998,45 +981,45 @@ class TestConvertToJolleyCustom:
 
         output_path = str(tmp_path / "output_jolley")
 
-        # Mock LegacyQueryRunner (core.database.query_runner imported
-        # as LegacyQueryRunner)
+        # Mock create_query_runner in mixins where it's used via DatabaseConnectionMixin
         with patch(
-            "dispatch.converters.convert_to_jolley_custom.create_query_runner"
+            "dispatch.converters.mixins.create_query_runner"
         ) as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
+            # QueryRunner.run_query returns list[dict]
             mock_qr_instance.run_query.side_effect = [
-                # Header fields query result
+                # Header fields query result (list of dicts) - Jolley uses BASIC_CUSTOMER_FIELDS_LIST
                 [
-                    [
-                        "Salesperson",
-                        "2025-01-01",
-                        "NET30",
-                        "30",
-                        "A",
-                        "12345",
-                        "Test Customer",
-                        "123 Main St",
-                        "Anytown",
-                        "ST",
-                        "12345",
-                        "5551234567",
-                        "test@email.com",
-                        "",
-                        "A",
-                        "12345",
-                        "Corporate Customer",
-                        "456 Corp St",
-                        "Corptown",
-                        "ST",
-                        "54321",
-                        "5559876543",
-                        "corp@email.com",
-                        "",
-                    ]
+                    {
+                        "Salesperson_Name": "Salesperson",
+                        "Invoice_Date": "2025-01-01",
+                        "Terms_Code": "NET30",
+                        "Terms_Duration": "30",
+                        "Customer_Status": "A",
+                        "Customer_Number": "12345",
+                        "Customer_Name": "Test Customer",
+                        "Customer_Address": "123 Main St",
+                        "Customer_Town": "Anytown",
+                        "Customer_State": "ST",
+                        "Customer_Zip": "12345",
+                        "Customer_Phone": "5551234567",
+                        "Customer_Email": "test@email.com",
+                        "Customer_Email_2": "",
+                        "Corporate_Customer_Status": "A",
+                        "Corporate_Customer_Number": "12345",
+                        "Corporate_Customer_Name": "Corporate Customer",
+                        "Corporate_Customer_Address": "456 Corp St",
+                        "Corporate_Customer_Town": "Corptown",
+                        "Corporate_Customer_State": "ST",
+                        "Corporate_Customer_Zip": "54321",
+                        "Corporate_Customer_Phone": "5559876543",
+                        "Corporate_Customer_Email": "corp@email.com",
+                        "Corporate_Customer_Email_2": "",
+                    }
                 ],
-                # UOM lookup list query result (itemno, uom_mult, uom_code)
-                [["123456", "1", "EA"]],
+                # UOM lookup list query result (list of dicts with itemno, uom_mult, uom_code)
+                [[{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}]],
             ]
             mock_qr_class.return_value = mock_qr_instance
 

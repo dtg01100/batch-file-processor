@@ -12,6 +12,7 @@ Converter: convert_to_estore_einvoice.py (9668 chars)
 
 import csv
 import os
+import re
 
 import pytest
 
@@ -1040,3 +1041,252 @@ class TestEstoreEinvoiceFormatCompliance(TestEstoreEinvoiceFixtures):
 
         # Filename should include vendor name
         assert "TestVendor" in result
+
+
+class TestEstoreEinvoiceShipperModeRegression(TestEstoreEinvoiceFixtures):
+    """Regression tests for the shipper_line_number off-by-one bug.
+
+    Background: commit 7d7db63 "fix off-by-one in shippers" changed
+    row_dict_list[shipper_line_number] to row_dict_list[shipper_line_number - 1].
+    For the non-generic converter, the A record appends an H row to row_dict_list
+    AND increments invoice_index.  So after the first A record:
+        len(row_dict_list) == 1, invoice_index == 1
+    When the shipper parent B record is about to be processed:
+        shipper_line_number = invoice_index = 1  (set BEFORE append)
+        After append: parent_D is at row_dict_list[1]
+    Correct access: row_dict_list[shipper_line_number]     = row_dict_list[1] = parent D
+    Buggy access:   row_dict_list[shipper_line_number - 1] = row_dict_list[0] = H record
+    """
+
+    @pytest.mark.unit
+    def test_shipper_parent_qty_updated_correctly(
+        self,
+        sample_header_record,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Regression: parent D row gets QTY = count of children, not header H row.
+
+        With the off-by-one bug, _leave_shipper_mode writes QTY to row_dict_list[0]
+        (the H record) instead of row_dict_list[1] (the parent D record).
+        This test fails if the - 1 regression is re-introduced.
+        """
+        parent = (
+            "B"
+            + "01234567890"
+            + "Shipper Parent Item".ljust(25)
+            + "123456"  # vendor_item = "123456"
+            + "000100"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00199"
+            + "001"
+            + "123456"  # parent_item_number == vendor_item -> triggers shipper mode
+        )
+        child1 = (
+            "B"
+            + "01234567891"
+            + "Child Item One".ljust(25)
+            + "234567"  # vendor_item != parent, so this is a shipper child
+            + "000050"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00099"
+            + "001"
+            + "123456"  # parent_item_number == parent's vendor_item
+        )
+        child2 = (
+            "B"
+            + "01234567892"
+            + "Child Item Two".ljust(25)
+            + "345678"
+            + "000025"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00049"
+            + "001"
+            + "123456"  # parent_item_number == parent's vendor_item
+        )
+        edi_content = (
+            sample_header_record + "\n" + parent + "\n" + child1 + "\n" + child2 + "\n"
+        )
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        result = convert_to_estore_einvoice.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        with open(result, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        # Row 0 is the H record — must have exactly 6 fields
+        # The off-by-one bug corrupts it with a 7th QTY field
+        header_row = rows[0]
+        assert header_row[0] == "H", "First CSV row must be H record"
+        assert len(header_row) == 6, (
+            f"H record must have exactly 6 fields (got {len(header_row)}). "
+            "7 fields means the H row was corrupted by _leave_shipper_mode "
+            "with shipper_line_number - 1 pointing to the H row instead of the parent D."
+        )
+
+        # Row 1 is the parent D record — QTY must equal number of children (2)
+        parent_row = rows[1]
+        assert parent_row[0] == "D", "Row 1 must be D record"
+        assert parent_row[1] == "D", "Parent shipper Detail Type must be 'D'"
+        # QTY is at index 9 in the D row dict
+        assert parent_row[9] == "2", (
+            f"Parent D row QTY must be 2 (count of children); got {parent_row[9]}. "
+            "This fails when shipper_line_number - 1 points to H instead of parent D."
+        )
+
+    @pytest.mark.unit
+    def test_shipper_children_detail_type_c(
+        self,
+        sample_header_record,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Test that shipper children have Detail Type 'C' and parent has 'D'."""
+        parent = (
+            "B"
+            + "01234567890"
+            + "Shipper Parent Item".ljust(25)
+            + "123456"
+            + "000100"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00199"
+            + "001"
+            + "123456"  # triggers shipper mode
+        )
+        child = (
+            "B"
+            + "01234567891"
+            + "Child Item One".ljust(25)
+            + "234567"
+            + "000050"
+            + "01"
+            + "000001"
+            + "00001"
+            + "00099"
+            + "001"
+            + "123456"
+        )
+        edi_content = sample_header_record + "\n" + parent + "\n" + child + "\n"
+
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        result = convert_to_estore_einvoice.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        with open(result, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        d_rows = [r for r in rows if r[0] == "D"]
+        assert len(d_rows) == 2, f"Expected 2 D rows (parent + child), got {len(d_rows)}"
+
+        detail_types = {r[1] for r in d_rows}
+        assert "D" in detail_types, "Shipper parent must have Detail Type 'D'"
+        assert "C" in detail_types, "Shipper child must have Detail Type 'C'"
+
+
+class TestEstoreEinvoiceFilenameRegression(TestEstoreEinvoiceFixtures):
+    """Regression tests for the eStore eInvoice output filename format.
+
+    Background: commit f0ca26b1b "Restore timestamp filename format in eStore
+    converters" was created on a side branch specifically to restore the
+    timestamped filename format (eInv{vendor}.{YYYYMMDDHHMMSS}.csv) after it had
+    been inadvertently dropped. These tests pin the full filename pattern so any
+    future regression is caught immediately.
+
+    Expected format: eInv{VendorName}.{14-digit-timestamp}.csv
+    Example:         eInvTestVendor.20240101120000.csv
+    """
+
+    @pytest.mark.unit
+    def test_filename_matches_einv_timestamp_pattern(
+        self,
+        complete_edi_content,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Filename must match eInv{vendor}.{YYYYMMDDHHMMSS}.csv exactly.
+
+        Catches regressions where: the timestamp is dropped, the eInv prefix is
+        removed, a different separator is used, or the format reverts to just
+        appending '.csv' to the output path.
+        """
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
+
+        result = convert_to_estore_einvoice.edi_convert(
+            str(input_file),
+            str(tmp_path / "output"),
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        basename = os.path.basename(result)
+        pattern = r"^eInv\w+\.\d{14}\.csv$"
+        assert re.match(pattern, basename), (
+            f"Filename '{basename}' does not match expected format "
+            f"'eInv{{vendor}}.{{YYYYMMDDHHMMSS}}.csv' (pattern: {pattern})"
+        )
+
+    @pytest.mark.unit
+    def test_filename_placed_in_output_directory(
+        self,
+        complete_edi_content,
+        default_parameters,
+        default_settings,
+        sample_upc_lut,
+        tmp_path,
+    ):
+        """Output file must be written to the same directory as output_filename.
+
+        Catches regressions where os.path.dirname() is replaced with a
+        hardcoded or incorrect directory.
+        """
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
+        out_dir = tmp_path / "subdir"
+        out_dir.mkdir()
+
+        result = convert_to_estore_einvoice.edi_convert(
+            str(input_file),
+            str(out_dir / "output"),
+            default_settings,
+            default_parameters,
+            sample_upc_lut,
+        )
+
+        assert os.path.dirname(result) == str(out_dir), (
+            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
+        )
