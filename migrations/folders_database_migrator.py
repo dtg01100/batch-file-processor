@@ -1144,20 +1144,29 @@ def upgrade_database(
         # clear the convert_to_format field, causing the einvoice filename pattern
         # (eInv{vendor}.{timestamp}.csv) to still be used.
         cursor = database_connection.raw_connection.cursor()
-        cursor.execute("""
-            UPDATE folders 
-            SET convert_to_format = '' 
-            WHERE tweak_edi = 1 
-            AND convert_to_format IS NOT NULL 
-            AND convert_to_format != ''
-        """)
-        cursor.execute("""
-            UPDATE administrative 
-            SET convert_to_format = '' 
-            WHERE tweak_edi = 1 
-            AND convert_to_format IS NOT NULL 
-            AND convert_to_format != ''
-        """)
+
+        try:
+            cursor.execute("""
+                UPDATE folders
+                SET convert_to_format = ''
+                WHERE tweak_edi = 1
+                AND convert_to_format IS NOT NULL
+                AND convert_to_format != ''
+            """)
+        except Exception:
+            pass  # Column may not exist in older schemas
+
+        try:
+            cursor.execute("""
+                UPDATE administrative
+                SET convert_to_format = ''
+                WHERE tweak_edi = 1
+                AND convert_to_format IS NOT NULL
+                AND convert_to_format != ''
+            """)
+        except Exception:
+            pass  # Column may not exist in older schemas
+
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="45", os=running_platform)

@@ -5,7 +5,7 @@ This module provides toolkit-agnostic business logic for the resend interface.
 
 import os
 from operator import itemgetter
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class ResendService:
@@ -42,7 +42,6 @@ class ResendService:
         Returns:
             Total number of unique processed files.
         """
-        # Get distinct folder_id + file_name combinations
         rows = list(self._processed_files.find(order_by=None))
         seen = set()
         for row in rows:
@@ -58,7 +57,6 @@ class ResendService:
         Returns:
             Dictionary mapping folder_id to alias
         """
-        # Return cached entries first
         result = {
             fid: alias
             for fid, alias in self._folder_alias_cache.items()
@@ -69,7 +67,6 @@ class ResendService:
         if not missing_ids:
             return result
 
-        # Fetch missing folder aliases in a single query using IN clause
         placeholders = ",".join("?" * len(missing_ids))
         sql = f"SELECT id, alias FROM folders WHERE id IN ({placeholders})"
         rows = self._db.query(sql)
@@ -180,33 +177,31 @@ class ResendService:
         self._db.raw_connection.commit()
         return len(file_ids)
 
-    def get_all_files_for_resend(
-        self, check_file_exists: bool = True, limit: int = 1000, offset: int = 0
+    def _get_files_with_ordering(
+        self,
+        check_file_exists: bool = True,
+        limit: int = 1000,
+        offset: int = 0,
+        search_text: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Get all processable files across all folders for resend interface.
+        """Get files sorted by sent_date_time (most recent first), with processed_at fallback."""
+        where_clause = ""
+        params: List[Any] = []
+        if search_text:
+            where_clause = "WHERE (file_name LIKE ? OR invoice_numbers LIKE ?)"
+            params = [f"%{search_text}%", f"%{search_text}%"]
 
-        Args:
-            check_file_exists: If True, checks if file exists on disk and marks
-                it in the result. If False, skips the check for faster loading.
-            limit: Maximum number of files to return.
-            offset: Number of files to skip (for pagination).
-
-        Returns:
-            List of dicts with keys: id, folder_id, folder_alias, file_name,
-            resend_flag, sent_date_time, file_exists
+        sql = f"""
+            SELECT * FROM processed_files
+            {where_clause}
+            ORDER BY processed_at DESC
+            LIMIT ? OFFSET ?
         """
-        # Note: _offset=0 causes issues with some find implementations,
-        # so only pass it when non-zero
-        if offset > 0:
-            processed_lines = list(
-                self._processed_files.find(order_by="-processed_at", _limit=limit, _offset=offset)
-            )
-        else:
-            processed_lines = list(
-                self._processed_files.find(order_by="-processed_at", _limit=limit)
-            )
+        params.extend([limit, offset])
 
-        # Collect all folder IDs for batch lookup
+        cur = self._db.raw_connection.execute(sql, params)
+        processed_lines = [dict(row) for row in cur.fetchall()]
+
         folder_ids = list(set(line["folder_id"] for line in processed_lines))
         folder_aliases = self._get_folder_alias_batch(folder_ids)
 
@@ -239,3 +234,45 @@ class ResendService:
             seen_files.add(file_key)
 
         return file_list
+
+    def get_all_files_for_resend(
+        self, check_file_exists: bool = True, limit: int = 1000, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get all processable files across all folders for resend interface.
+
+        Args:
+            check_file_exists: If True, checks if file exists on disk and marks
+                it in the result. If False, skips the check for faster loading.
+            limit: Maximum number of files to return.
+            offset: Number of files to skip (for pagination).
+
+        Returns:
+            List of dicts with keys: id, folder_id, folder_alias, file_name,
+            resend_flag, sent_date_time, file_exists
+        """
+        return self._get_files_with_ordering(
+            check_file_exists=check_file_exists,
+            limit=limit,
+            offset=offset,
+        )
+
+    def search_files_for_resend(
+        self, search_text: str, limit: int = 1000, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Search processable files by file name or invoice numbers.
+
+        Args:
+            search_text: Text to search for in file_name or invoice_numbers
+            limit: Maximum number of files to return
+            offset: Number of files to skip (for pagination)
+
+        Returns:
+            List of dicts with keys: id, folder_id, folder_alias, file_name,
+            resend_flag, sent_date_time, file_exists, invoice_numbers
+        """
+        return self._get_files_with_ordering(
+            check_file_exists=True,
+            limit=limit,
+            offset=offset,
+            search_text=search_text,
+        )

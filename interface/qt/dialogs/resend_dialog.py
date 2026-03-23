@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -32,8 +32,8 @@ from interface.services.resend_service import ResendService
 class FileExistenceWorker(QThread):
     """Background worker for checking file existence on disk."""
 
-    file_checked = pyqtSignal(dict)  # Emitted when a file existence is checked
-    finished = pyqtSignal(int, int)  # Emitted when done: (missing_count, total_count)
+    file_checked = pyqtSignal(dict)
+    finished = pyqtSignal(int, int)
 
     def __init__(self, files: List[Dict[str, Any]], parent: QWidget = None) -> None:
         super().__init__(parent)
@@ -64,7 +64,6 @@ class ResendDialog(BaseDialog):
     Allows users to select which processed files should be marked for resend.
     """
 
-    # Pagination constants
     PAGE_SIZE = 500
 
     def __init__(
@@ -80,22 +79,23 @@ class ResendDialog(BaseDialog):
         self._all_files: List[Dict[str, Any]] = []
         self._filtered_files: List[Dict[str, Any]] = []
         self._selected_files: set = set()
-        self._should_show = True  # Flag to control if dialog should be shown
+        self._should_show = True
         self._search_timer = QTimer()
         self._search_timer.setSingleShot(True)
         self._search_timer.timeout.connect(self._do_search_filter)
 
-        # Pagination state
         self._current_offset = 0
         self._total_files = 0
         self._file_check_worker: Optional[FileExistenceWorker] = None
+        self._is_loading = False
+        self._has_more_data = True
+        self._search_text = ""
 
         self._setup_ui()
         self._load_data()
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        # Use the main layout from BaseDialog instead of creating a new one
         main_layout = self._main_layout
         main_layout.setContentsMargins(
             Theme.SPACING_MD_INT,
@@ -105,14 +105,14 @@ class ResendDialog(BaseDialog):
         )
         main_layout.setSpacing(Theme.SPACING_MD_INT)
 
-        # Set minimum size for comfortable viewing
         self.setMinimumSize(900, 600)
 
-        # Search bar
         search_layout = QHBoxLayout()
         search_label = QLabel("&Search:")
         self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("Filter by file name or invoice number...")
+        self._search_input.setPlaceholderText(
+            "Filter by file name or invoice number..."
+        )
         self._search_input.textChanged.connect(self._on_search_changed)
         self._search_input.setAccessibleName("Search files")
         self._search_input.setAccessibleDescription("Filter the file list by file name")
@@ -120,7 +120,6 @@ class ResendDialog(BaseDialog):
         search_layout.addWidget(self._search_input)
         main_layout.addLayout(search_layout)
 
-        # Table
         self._table = QTableWidget()
         self._table.setColumnCount(5)
         self._table.setHorizontalHeaderLabels(
@@ -136,21 +135,17 @@ class ResendDialog(BaseDialog):
         )
         main_layout.addWidget(self._table)
 
-        # Pagination bar
         pagination_layout = QHBoxLayout()
-        self._prev_button = QPushButton("&Previous")
-        self._prev_button.clicked.connect(self._load_previous_page)
-        pagination_layout.addWidget(self._prev_button)
 
-        self._page_label = QLabel("Page 1")
+        self._page_label = QLabel("Showing 0 files")
         self._page_label.setAccessibleName("Page information")
         pagination_layout.addWidget(self._page_label)
 
-        self._next_button = QPushButton("&Next")
-        self._next_button.clicked.connect(self._load_next_page)
-        pagination_layout.addWidget(self._next_button)
-
         pagination_layout.addStretch()
+
+        self._load_more_button = QPushButton("Load More")
+        self._load_more_button.clicked.connect(self._load_more)
+        pagination_layout.addWidget(self._load_more_button)
 
         self._loading_label = QLabel("")
         self._loading_label.setAccessibleName("Loading status")
@@ -158,12 +153,10 @@ class ResendDialog(BaseDialog):
 
         main_layout.addLayout(pagination_layout)
 
-        # Status bar
         self._status_label = QLabel()
         self._status_label.setAccessibleName("Status information")
         main_layout.addWidget(self._status_label)
 
-        # Bulk action bar (initially hidden)
         self._bulk_action_frame = QFrame()
         self._bulk_action_frame.setFrameStyle(QFrame.Shape.Box)
         self._bulk_action_frame.setVisible(False)
@@ -192,7 +185,6 @@ class ResendDialog(BaseDialog):
 
         main_layout.addWidget(self._bulk_action_frame)
 
-        # Close button
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         button_box.rejected.connect(self.reject)
         close_btn = button_box.button(QDialogButtonBox.StandardButton.Close)
@@ -215,28 +207,24 @@ class ResendDialog(BaseDialog):
             self._should_show = False
             return
 
-        # Get total count for pagination
         try:
             self._total_files = self._service.get_total_file_count()
         except (TypeError, AttributeError):
-            # Fallback for mocked services in tests
             self._total_files = len(self._all_files) if self._all_files else 0
         self._current_offset = 0
 
-        # Load first page without file existence check for faster initial load
         try:
             self._all_files = self._service.get_all_files_for_resend(
                 check_file_exists=False, limit=self.PAGE_SIZE, offset=0
             )
         except (TypeError, AttributeError):
-            # Fallback for mocked services in tests
             self._all_files = []
         self._filtered_files = self._all_files.copy()
+        self._has_more_data = len(self._all_files) == self.PAGE_SIZE
         self._populate_table()
         self._update_pagination()
         self._update_status()
 
-        # Schedule async file existence check after UI is loaded
         QTimer.singleShot(100, self._check_files_exist_async)
 
     def _populate_table(self) -> None:
@@ -244,7 +232,6 @@ class ResendDialog(BaseDialog):
         self._table.setRowCount(len(self._filtered_files))
 
         for row, file_info in enumerate(self._filtered_files):
-            # Checkbox column
             checkbox = QCheckBox()
             checkbox.setChecked(file_info["id"] in self._selected_files)
             checkbox.stateChanged.connect(
@@ -254,21 +241,20 @@ class ResendDialog(BaseDialog):
             )
             self._table.setCellWidget(row, 0, checkbox)
 
-            # Folder column
             folder_item = QTableWidgetItem(file_info["folder_alias"])
             folder_item.setFlags(folder_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 1, folder_item)
 
-            # File name column
             file_item = QTableWidgetItem(file_info["file_name"])
             file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 2, file_item)
 
-            # Sent date column
             sent_date_str = file_info.get("sent_date_time") or ""
             try:
                 if sent_date_str:
-                    sent_date = datetime.fromisoformat(sent_date_str).strftime("%Y-%m-%d %H:%M")
+                    sent_date = datetime.fromisoformat(sent_date_str).strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
                 else:
                     sent_date = ""
             except (ValueError, TypeError):
@@ -277,18 +263,16 @@ class ResendDialog(BaseDialog):
             date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 3, date_item)
 
-            # Resend status column
             status = "Yes" if file_info["resend_flag"] else "No"
             status_item = QTableWidgetItem(status)
             status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 4, status_item)
 
         self._table.resizeColumnsToContents()
-        # Set minimum widths for better readability
-        self._table.setColumnWidth(0, 50)  # Checkbox column
-        self._table.setColumnWidth(1, 150)  # Folder column
-        self._table.setColumnWidth(3, 120)  # Date column
-        self._table.setColumnWidth(4, 80)  # Status column
+        self._table.setColumnWidth(0, 50)
+        self._table.setColumnWidth(1, 150)
+        self._table.setColumnWidth(3, 120)
+        self._table.setColumnWidth(4, 80)
         self._table.horizontalHeader().setStretchLastSection(True)
 
     def _check_files_exist_async(self) -> None:
@@ -298,7 +282,6 @@ class ResendDialog(BaseDialog):
 
         self._loading_label.setText("Checking file existence...")
 
-        # Create and start worker thread
         self._file_check_worker = FileExistenceWorker(self._all_files)
         self._file_check_worker.file_checked.connect(self._on_file_checked)
         self._file_check_worker.finished.connect(self._on_file_check_finished)
@@ -306,7 +289,6 @@ class ResendDialog(BaseDialog):
 
     def _on_file_checked(self, file_info: Dict[str, Any]) -> None:
         """Handle individual file check result."""
-        # Update filtered files with the result
         for f in self._filtered_files:
             if f["id"] == file_info["id"]:
                 f["file_exists"] = file_info["file_exists"]
@@ -321,18 +303,16 @@ class ResendDialog(BaseDialog):
 
     def _highlight_missing_files(self) -> None:
         """Highlight rows for files that no longer exist on disk."""
-        missing_color = QColor("#FFCCCC")  # Light red background
+        missing_color = QColor("#FFCCCC")
         warning_icon = "⚠"
 
         for row in range(self._table.rowCount()):
             file_info = self._filtered_files[row]
             if not file_info.get("file_exists", True):
-                # Highlight the entire row
                 for col in range(self._table.columnCount()):
                     item = self._table.item(row, col)
                     if item is not None:
                         item.setBackground(missing_color)
-                # Add warning to file name
                 file_item = self._table.item(row, 2)
                 if file_item is not None:
                     file_item.setText(f"{warning_icon} {file_item.text()}")
@@ -340,21 +320,43 @@ class ResendDialog(BaseDialog):
     def _on_search_changed(self, text: str) -> None:
         """Handle search input changes with debouncing."""
         self._search_timer.stop()
-        self._search_timer.start(150)  # 150ms debounce
+        self._search_timer.start(150)
 
     def _do_search_filter(self) -> None:
         """Perform the actual search filtering after debounce."""
         text = self._search_input.text()
+        self._search_text = text
+
         if not text:
+            self._current_offset = 0
+            try:
+                self._all_files = self._service.get_all_files_for_resend(
+                    check_file_exists=False, limit=self.PAGE_SIZE, offset=0
+                )
+            except (TypeError, AttributeError):
+                self._all_files = []
             self._filtered_files = self._all_files.copy()
+            self._has_more_data = len(self._all_files) == self.PAGE_SIZE
         else:
-            lower_text = text.lower()
-            self._filtered_files = [
-                f for f in self._all_files
-                if lower_text in f["file_name"].lower()
-                or lower_text in (f.get("invoice_numbers") or "").lower()
-            ]
+            self._current_offset = 0
+            try:
+                self._filtered_files = self._service.search_files_for_resend(
+                    text, limit=self.PAGE_SIZE, offset=0
+                )
+            except (TypeError, AttributeError):
+                lower_text = text.lower()
+                self._filtered_files = [
+                    f
+                    for f in self._all_files
+                    if lower_text in f["file_name"].lower()
+                    or lower_text in (f.get("invoice_numbers") or "").lower()
+                ]
+            self._all_files = self._filtered_files.copy()
+            self._has_more_data = False
+
+        self._selected_files.clear()
         self._populate_table()
+        self._update_pagination()
         self._update_status()
 
     def _on_file_selected(self, file_id: int, selected: bool) -> None:
@@ -392,71 +394,63 @@ class ResendDialog(BaseDialog):
 
     def _update_pagination(self) -> None:
         """Update pagination controls."""
-        # Ensure _total_files is a valid int
-        try:
-            total_files = int(self._total_files)
-        except (TypeError, ValueError):
-            total_files = 0
+        self._page_label.setText(f"Showing {len(self._filtered_files)} files")
 
-        current_page = (self._current_offset // self.PAGE_SIZE) + 1
-        total_pages = max(1, (total_files + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
-        self._page_label.setText(f"Page {current_page} of {total_pages} ({total_files} total)")
+        self._load_more_button.setEnabled(
+            self._has_more_data and not self._is_loading and not self._search_text
+        )
 
-        self._prev_button.setEnabled(self._current_offset > 0)
-        self._next_button.setEnabled(self._current_offset + len(self._all_files) < total_files)
+    def _cancel_file_check_worker(self) -> None:
+        """Cancel existing file check worker safely."""
+        if self._file_check_worker and self._file_check_worker.isRunning():
+            self._file_check_worker.cancel()
+            self._file_check_worker.deleteLater()
+            QTimer.singleShot(500, self._file_check_worker.deleteLater)
+            self._file_check_worker = None
 
-    def _load_next_page(self) -> None:
-        """Load the next page of results."""
+    def _load_more(self) -> None:
+        """Load more results (append to existing list)."""
+        if self._is_loading:
+            return
+        if not self._has_more_data:
+            return
+        if self._search_text:
+            return
+
+        self._is_loading = True
+        self._load_more_button.setEnabled(False)
+        self._loading_label.setText("Loading...")
+
+        self._cancel_file_check_worker()
+
         new_offset = self._current_offset + self.PAGE_SIZE
-        if new_offset >= self._total_files:
-            return
-
         self._current_offset = new_offset
-        self._selected_files.clear()
 
-        # Cancel any existing worker
-        if self._file_check_worker and self._file_check_worker.isRunning():
-            self._file_check_worker.cancel()
-            self._file_check_worker.wait()
+        try:
+            new_files = self._service.get_all_files_for_resend(
+                check_file_exists=False,
+                limit=self.PAGE_SIZE,
+                offset=self._current_offset,
+            )
+        except (TypeError, AttributeError):
+            new_files = []
 
-        self._loading_label.setText("Loading...")
-        self._all_files = self._service.get_all_files_for_resend(
-            check_file_exists=False, limit=self.PAGE_SIZE, offset=self._current_offset
-        )
+        if len(new_files) < self.PAGE_SIZE:
+            self._has_more_data = False
+
+        existing_ids = {f["id"] for f in self._all_files}
+        for new_file in new_files:
+            if new_file["id"] not in existing_ids:
+                self._all_files.append(new_file)
+
         self._filtered_files = self._all_files.copy()
         self._populate_table()
         self._update_pagination()
         self._update_status()
+
+        self._is_loading = False
         self._loading_label.setText("")
 
-        # Restart file existence check for new page
-        QTimer.singleShot(100, self._check_files_exist_async)
-
-    def _load_previous_page(self) -> None:
-        """Load the previous page of results."""
-        new_offset = self._current_offset - self.PAGE_SIZE
-        if new_offset < 0:
-            return
-
-        self._current_offset = new_offset
-        self._selected_files.clear()
-
-        # Cancel any existing worker
-        if self._file_check_worker and self._file_check_worker.isRunning():
-            self._file_check_worker.cancel()
-            self._file_check_worker.wait()
-
-        self._loading_label.setText("Loading...")
-        self._all_files = self._service.get_all_files_for_resend(
-            check_file_exists=False, limit=self.PAGE_SIZE, offset=self._current_offset
-        )
-        self._filtered_files = self._all_files.copy()
-        self._populate_table()
-        self._update_pagination()
-        self._update_status()
-        self._loading_label.setText("")
-
-        # Restart file existence check for new page
         QTimer.singleShot(100, self._check_files_exist_async)
 
     def _select_all_files(self) -> None:
@@ -478,7 +472,6 @@ class ResendDialog(BaseDialog):
         try:
             file_ids = list(self._selected_files)
             self._service.set_resend_flags_batch(file_ids, True)
-            # Update local data
             selected_set = set(file_ids)
             for file_info in self._all_files:
                 if file_info["id"] in selected_set:
@@ -497,7 +490,6 @@ class ResendDialog(BaseDialog):
         try:
             file_ids = list(self._selected_files)
             self._service.set_resend_flags_batch(file_ids, False)
-            # Update local data
             selected_set = set(file_ids)
             for file_info in self._all_files:
                 if file_info["id"] in selected_set:
@@ -520,6 +512,5 @@ def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
         database_connection: Database connection object
     """
     dialog = ResendDialog(parent, database_connection)
-    # Only show dialog if data loaded successfully
     if dialog._should_show:
         dialog.exec()
