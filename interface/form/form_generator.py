@@ -16,7 +16,7 @@ from core.structured_logging import (
     log_with_context,
     set_correlation_id,
 )
-from interface.plugins.config_schemas import ConfigurationSchema
+from interface.plugins.config_schemas import ConfigurationSchema, FieldType
 from interface.plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
 from interface.plugins.validation_framework import ValidationResult
 
@@ -354,7 +354,7 @@ class QtFormGenerator(FormGenerator):
                     native_widget = widget.get_widget()
 
                     # For checkboxes, we don't need a separate label
-                    if field.field_type == "boolean":
+                    if field.field_type == FieldType.BOOLEAN:
                         form_layout.addRow(native_widget)
                     else:
                         # Create label with optional tooltip

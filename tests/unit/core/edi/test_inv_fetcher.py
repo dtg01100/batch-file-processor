@@ -206,8 +206,8 @@ class TestInvFetcher:
 
         # Set up the mock to raise an exception on odhst query
         # The exception should be caught and fallback returned
-        def side_effect(query):
-            raise Exception("DB Error")
+        def side_effect(query, params):
+            raise RuntimeError("DB Error")
 
         fetcher._query_runner.run_query.side_effect = side_effect
 

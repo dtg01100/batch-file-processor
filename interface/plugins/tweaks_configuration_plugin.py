@@ -119,12 +119,14 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
             ),
             FieldDefinition(
                 name="arec_padding_len",
-                field_type=FieldType.INTEGER,
+                field_type=FieldType.SELECT,
                 label="A-Record Padding Length",
                 description="Length for A record padding",
-                default=0,
-                min_value=0,
-                max_value=100,
+                default=6,
+                choices=[
+                    {"label": "6", "value": 6},
+                    {"label": "30", "value": 30},
+                ],
             ),
             # A-Record Appending
             FieldDefinition(
@@ -265,8 +267,12 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
             retail_uom=data.get("retail_uom", False),
             override_upc=data.get("override_upc", False),
             override_upc_level=data.get("override_upc_level", 1),
-            override_upc_category_filter=data.get("override_upc_category_filter", "ALL"),
-            split_prepaid_sales_tax_crec=data.get("split_prepaid_sales_tax_crec", False),
+            override_upc_category_filter=data.get(
+                "override_upc_category_filter", "ALL"
+            ),
+            split_prepaid_sales_tax_crec=data.get(
+                "split_prepaid_sales_tax_crec", False
+            ),
             upc_target_length=data.get("upc_target_length", 11),
             upc_padding_pattern=data.get("upc_padding_pattern", "           "),
         )
