@@ -32,6 +32,9 @@ from interface.plugins.validation_framework import ValidationResult
 from interface.plugins.yellowdog_csv_configuration_plugin import (
     YellowDogCSVConfigurationPlugin,
 )
+from interface.plugins.tweaks_configuration_plugin import (
+    TweaksConfigurationPlugin,
+)
 
 PLUGIN_CASES = [
     (
@@ -152,6 +155,48 @@ PLUGIN_CASES = [
             "estore_c_record_oid",
         ],
     ),
+    (
+        TweaksConfigurationPlugin,
+        ConvertFormat.TWEAKS,
+        {
+            "pad_arec": True,
+            "arec_padding": "PAD",
+            "arec_padding_len": 6,
+            "append_arec": True,
+            "append_arec_text": "APPEND",
+            "invoice_date_custom_format": False,
+            "invoice_date_custom_format_string": "%Y-%m-%d",
+            "invoice_date_offset": 0,
+            "force_txt_file_ext": False,
+            "calc_upc": True,
+            "retail_uom": True,
+            "split_prepaid_sales_tax_crec": True,
+            "override_upc": False,
+            "override_upc_level": 1,
+            "override_upc_category_filter": "ALL",
+            "upc_target_length": 11,
+            "upc_padding_pattern": "           ",
+        },
+        [
+            "pad_arec",
+            "arec_padding",
+            "arec_padding_len",
+            "append_arec",
+            "append_arec_text",
+            "invoice_date_custom_format",
+            "invoice_date_custom_format_string",
+            "invoice_date_offset",
+            "force_txt_file_ext",
+            "calc_upc",
+            "retail_uom",
+            "split_prepaid_sales_tax_crec",
+            "override_upc",
+            "override_upc_level",
+            "override_upc_category_filter",
+            "upc_target_length",
+            "upc_padding_pattern",
+        ],
+    ),
 ]
 
 
@@ -236,3 +281,23 @@ def test_plugin_config_round_trip_contract(
 
     plugin.activate()
     plugin.deactivate()
+
+
+def test_tweaks_plugin_arec_padding_len_is_select_with_6_and_30():
+    """Regression test: arec_padding_len must be SELECT with choices [6, 30], not INTEGER."""
+    from interface.plugins.config_schemas import FieldType
+
+    fields = TweaksConfigurationPlugin.get_config_fields()
+
+    arec_len_field = next((f for f in fields if f.name == "arec_padding_len"), None)
+    assert arec_len_field is not None, "arec_padding_len field not found"
+    assert arec_len_field.field_type == FieldType.SELECT, (
+        f"arec_padding_len must be FieldType.SELECT, got {arec_len_field.field_type}"
+    )
+    assert arec_len_field.choices == [
+        {"label": "6", "value": 6},
+        {"label": "30", "value": 30},
+    ], f"arec_padding_len choices must be [6, 30], got {arec_len_field.choices}"
+    assert arec_len_field.default == 6, (
+        f"arec_padding_len default must be 6, got {arec_len_field.default}"
+    )

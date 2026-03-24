@@ -189,12 +189,9 @@ class FieldDefinition:
 
     def _validate_select(self, value: Any) -> List[str]:
         errors = []
-        if not isinstance(value, str):
-            errors.append(f"Field '{self.name}' must be a string")
-            return errors
 
         if self.choices and value not in [c["value"] for c in self.choices]:
-            valid_choices = ", ".join([c["value"] for c in self.choices])
+            valid_choices = ", ".join([str(c["value"]) for c in self.choices])
             errors.append(f"Field '{self.name}' must be one of: {valid_choices}")
         return errors
 
