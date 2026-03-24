@@ -58,7 +58,6 @@ class QtFolderDataExtractor:
             email_subject_line=self._get_text("email_sender_subject_field"),
             process_edi=self._get_bool("process_edi"),
             convert_to_format=self._get_combo("convert_formats_var"),
-            tweak_edi=self._get_bool("tweak_edi"),
             split_edi=self._get_bool("split_edi"),
             split_edi_include_invoices=self._get_bool("split_edi_send_invoices"),
             split_edi_include_credits=self._get_bool("split_edi_send_credits"),

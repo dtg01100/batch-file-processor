@@ -145,10 +145,27 @@ class TestCopyBackendOperations:
 
         class FlakyCopyOps:
             def exists(self, path):
-                return True
+                # Return False so _resolve_destination_path picks the candidate
+                # directly without entering collision-handling branches.
+                return False
 
-            def makedirs(self, path):
+            def makedirs(self, path, exist_ok=False):
                 pass
+
+            def basename(self, path):
+                import os
+
+                return os.path.basename(path)
+
+            def dirname(self, path):
+                import os
+
+                return os.path.dirname(path)
+
+            def join(self, *paths):
+                import os
+
+                return os.path.join(*paths)
 
             def copy(self, src, dst):
                 call_count["n"] += 1

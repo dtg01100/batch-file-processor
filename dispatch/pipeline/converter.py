@@ -5,6 +5,7 @@ using dynamic module loading for different output formats.
 """
 
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
@@ -29,6 +30,19 @@ def _normalize_process_edi_flag(value: Any) -> bool:
     SQLite TEXT affinity converting integer writes back to strings).
     """
     return normalize_bool(value)
+
+
+def _normalize_convert_to_format(value: Any) -> str:
+    """Normalize convert format into canonical module token.
+
+    Handles legacy casing/spacing/hyphens and noisy punctuation.
+    """
+    if value is None:
+        return ""
+    normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+    normalized = re.sub(r"[^a-z0-9_]", "_", normalized)
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    return normalized
 
 
 SUPPORTED_FORMATS = [
@@ -307,13 +321,11 @@ class EDIConverterStep:
 
         errors: list[str] = []
 
-        convert_to_format = params.get("convert_to_format", "")
-        tweak_edi = params.get("tweak_edi", False)
+        raw_convert_to_format = params.get("convert_to_format", "")
+        convert_to_format = _normalize_convert_to_format(raw_convert_to_format)
         input_basename = os.path.basename(input_path)
 
-        # Normalize tweak_edi to convert_to_format="tweaks" for unified handling
-        if tweak_edi:
-            convert_to_format = "tweaks"
+        # convert_to_format is the single source of truth; tweak_edi is deprecated.
 
         StructuredLogger.log_debug(
             logger,
@@ -323,20 +335,19 @@ class EDIConverterStep:
             input_path=input_basename,
             output_dir=output_dir,
             format=convert_to_format,
-            tweak_edi=tweak_edi,
+            raw_format=raw_convert_to_format,
             process_edi=params.get("process_edi"),
             correlation_id=correlation_id,
         )
 
-        if not convert_to_format and not tweak_edi:
+        if not convert_to_format:
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
                 logger,
                 "convert",
                 __name__,
-                f"No convert_to_format or tweak_edi set, "
-                f"skipping conversion for {input_basename}",
-                decision="no_format_no_tweak",
+                f"No convert_to_format set, skipping conversion for {input_basename}",
+                decision="no_format",
                 input_path=input_basename,
                 correlation_id=correlation_id,
                 duration_ms=duration_ms,
@@ -357,15 +368,14 @@ class EDIConverterStep:
             correlation_id=correlation_id,
         )
 
-        if not process_edi and not tweak_edi:
+        if not process_edi:
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
                 logger,
                 "convert",
                 __name__,
-                f"process_edi is False and tweak_edi is False, "
-                f"skipping for {input_basename}",
-                decision="process_edi_and_tweak_edi_false",
+            f"process_edi is False, skipping for {input_basename}",
+            decision="process_edi_false",
                 input_path=input_basename,
                 format=convert_to_format,
                 correlation_id=correlation_id,
@@ -378,11 +388,7 @@ class EDIConverterStep:
                 errors=errors,
             )
 
-        format_normalized = (
-            convert_to_format.lower().replace(" ", "_").replace("-", "_")
-        )
-
-        if format_normalized not in SUPPORTED_FORMATS:
+        if convert_to_format not in SUPPORTED_FORMATS:
             duration_ms = (time.perf_counter() - start_time) * 1000
             error_msg = f"Unsupported conversion format: {convert_to_format}"
             StructuredLogger.log_debug(
@@ -417,7 +423,7 @@ class EDIConverterStep:
                 errors=errors,
             )
 
-        module_name = f"dispatch.converters.convert_to_{format_normalized}"
+        module_name = f"dispatch.converters.convert_to_{convert_to_format}"
 
         output_filename = os.path.join(output_dir, os.path.basename(input_path))
 

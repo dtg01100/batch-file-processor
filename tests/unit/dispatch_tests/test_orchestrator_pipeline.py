@@ -786,7 +786,8 @@ class TestProcessFileWithPipeline:
 
         folder = {
             "folder_name": str(input_folder),
-            "tweak_edi": True,
+            "convert_to_format": "tweaks",
+            "process_edi": True,
             "process_backend_copy": True,
         }
 
@@ -794,7 +795,8 @@ class TestProcessFileWithPipeline:
             str(input_folder / "test.edi"), folder, {"123": "product"}
         )
 
-        # Tweaks are now handled by converter step via convert_to_tweaks module
+        # Tweaks are handled by converter step via convert_to_tweaks module;
+        # convert_to_format is the source of truth (tweak_edi is deprecated).
         assert converter.call_count == 1
 
     def test_pipeline_sending_to_backends(self, input_folder: Path):
@@ -1265,6 +1267,36 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["process_edi"] is True
+
+    def test_build_processing_context_infers_convert_from_target_only(self):
+        """Explicit convert_to_format should enable process/convert gates even if process_edi is falsey."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": "False",
+                "convert_to_format": "Tweaks",
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "tweaks"
+        assert context.effective_folder["process_edi"] is True
+        assert context.effective_folder["convert_edi"] is True
+
+    def test_build_processing_context_normalizes_noisy_convert_format(self):
+        """Noisy legacy convert format strings should be canonicalized for runtime use."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": True,
+                "convert_to_format": " eStore / eInvoice Generic ",
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "estore_einvoice_generic"
 
 
 # =============================================================================

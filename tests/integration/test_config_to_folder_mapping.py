@@ -218,7 +218,12 @@ class TestProcessEDIMappingFromDB:
 
 
 class TestTweakEDIMappingFromDB:
-    """Verify that tweak_edi stored in DB maps to actual EDI tweaking."""
+    """Verify that convert_to_format='tweaks' in DB maps to actual EDI tweaking.
+
+    NOTE: tweak_edi is deprecated; migration v44→v45 converts `tweak_edi=1`
+    rows to `convert_to_format='tweaks'`.  Tests here always use the
+    post-migration representation.
+    """
 
     def test_tweak_edi_true_applies_date_offset(self, temp_db, tmp_path):
         indir = _make_edi_dir(tmp_path)
@@ -227,8 +232,8 @@ class TestTweakEDIMappingFromDB:
                 "folder_name": str(indir),
                 "alias": "tweak-folder",
                 "folder_is_active": True,
-                "process_edi": False,
-                "tweak_edi": True,
+                "process_edi": True,
+                "convert_to_format": "tweaks",
                 "invoice_date_offset": 1,  # shift Jan 01 → Jan 02
                 "invoice_date_custom_format": False,
                 "invoice_date_custom_format_string": "",
@@ -258,8 +263,8 @@ class TestTweakEDIMappingFromDB:
                 "folder_name": str(indir),
                 "alias": "tweak-noconvert",
                 "folder_is_active": True,
-                "process_edi": False,
-                "tweak_edi": True,
+                "process_edi": True,
+                "convert_to_format": "tweaks",
                 "invoice_date_custom_format": False,
                 "invoice_date_custom_format_string": "",
                 "split_prepaid_sales_tax_crec": False,
@@ -383,7 +388,6 @@ class TestMultiFolderIsolation:
                 "folder_is_active": True,
                 "process_edi": True,
                 "convert_to_format": "csv",
-                "tweak_edi": False,
                 "process_backend_copy": True,
                 "copy_to_directory": "/tmp",
             }
@@ -393,8 +397,8 @@ class TestMultiFolderIsolation:
                 "folder_name": str(dir_tweak),
                 "alias": "tweak-folder",
                 "folder_is_active": True,
-                "process_edi": False,
-                "tweak_edi": True,
+                "process_edi": True,
+                "convert_to_format": "tweaks",
                 "invoice_date_offset": 2,
                 "invoice_date_custom_format": False,
                 "invoice_date_custom_format_string": "",

@@ -596,7 +596,6 @@ class QtBatchFileSenderApp:
         defaults.setdefault("include_c_records", False)
         defaults.setdefault("include_headers", False)
         defaults.setdefault("filter_ampersand", False)
-        defaults.setdefault("tweak_edi", False)
         defaults.setdefault("split_edi", False)
         defaults.setdefault("split_edi_include_invoices", False)
         defaults.setdefault("split_edi_include_credits", False)

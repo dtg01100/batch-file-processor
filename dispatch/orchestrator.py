@@ -6,6 +6,7 @@ coordinating validation, conversion, and sending of files.
 
 import datetime
 import os
+import re
 import shutil
 from dataclasses import dataclass, field
 from io import StringIO
@@ -34,6 +35,22 @@ from dispatch.interfaces import (
 from dispatch.send_manager import SendManager
 
 logger = get_logger(__name__)
+
+
+def _normalize_convert_to_format(value: Any) -> str:
+    """Normalize convert_to_format into a predictable module-friendly token.
+
+    Examples:
+        "Estore eInvoice" -> "estore_einvoice"
+        "  Tweaks  " -> "tweaks"
+        None -> ""
+    """
+    if value is None:
+        return ""
+    normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+    normalized = re.sub(r"[^a-z0-9_]", "_", normalized)
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    return normalized
 
 
 @dataclass
@@ -1016,29 +1033,20 @@ class DispatchOrchestrator:
 
         converter_step = self.config.converter_step
         convert_edi = context.effective_folder.get("convert_edi", False)
-        tweak_edi = context.effective_folder.get("tweak_edi", False)
-        run_conversion = converter_step is not None and (
-            convert_edi or (tweak_edi and validation_passed)
-        )
+        convert_format = context.effective_folder.get("convert_to_format", "")
+        run_conversion = converter_step is not None and convert_edi
 
         logger.debug(
-            "Converter step: enabled=%s, convert_edi=%s, tweak_edi=%s",
+            "Converter step: enabled=%s, convert_edi=%s, convert_to_format=%s",
             bool(converter_step),
             convert_edi,
-            tweak_edi,
+            convert_format,
         )
 
         if run_conversion:
-            convert_format = context.effective_folder.get(
-                "convert_to_format", "unknown"
-            )
             self._log_message(
                 run_log,
-                (
-                    f"Converting {file_basename} to {convert_format}"
-                    if convert_edi
-                    else f"Applying tweaks to {file_basename}"
-                ),
+                f"Converting {file_basename} to {convert_format}",
             )
             converted_file = converter_step.execute(
                 current_file,
@@ -1167,18 +1175,34 @@ class DispatchOrchestrator:
                 "upc_target_length"
             ]
 
+        # Normalize convert format early so legacy/stale variants are treated
+        # consistently in downstream gates.
+        effective_folder["convert_to_format"] = _normalize_convert_to_format(
+            effective_folder.get("convert_to_format", "")
+        )
+
+        # convert_to_format is the single source of truth for conversion mode.
+        # tweak_edi is a deprecated column that is zeroed out by migration v44→v45;
+        # it is not read at runtime.
+
+        has_convert_target = bool(effective_folder.get("convert_to_format"))
+
         # Map DB field process_edi → convert_edi (orchestrator's internal gate).
         # The database stores process_edi=True to mean "convert EDI to another format".
         # The orchestrator uses convert_edi to gate the converter step.
         if "convert_edi" not in effective_folder:
             effective_folder["convert_edi"] = normalize_bool(
                 effective_folder.get("process_edi", False)
-            )
+            ) or has_convert_target
+
+        # Defensive normalization: if an explicit conversion target exists, ensure
+        # process_edi is also enabled so validation/processing gates stay aligned.
+        if has_convert_target and not normalize_bool(effective_folder.get("process_edi")):
+            effective_folder["process_edi"] = True
 
         if "process_edi" not in effective_folder and (
             effective_folder.get("split_edi", False)
             or effective_folder.get("convert_edi", False)
-            or effective_folder.get("tweak_edi", False)
         ):
             effective_folder["process_edi"] = True
 
@@ -1567,9 +1591,8 @@ class DispatchOrchestrator:
         """
         return (
             normalize_bool(folder.get("process_edi"))
-            or folder.get("tweak_edi", False)
-            or folder.get("split_edi", False)
-            or folder.get("force_edi_validation", False)
+            or normalize_bool(folder.get("split_edi", False))
+            or normalize_bool(folder.get("force_edi_validation", False))
         )
 
     def _log_message(self, run_log: Any, message: str) -> None:

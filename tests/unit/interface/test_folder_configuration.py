@@ -242,7 +242,6 @@ class TestEDIConfiguration:
         """Test creating default EDI configuration."""
         config = EDIConfiguration()
         assert config.process_edi is False
-        assert config.tweak_edi is False
         assert config.split_edi is False
         assert config.prepend_date_files is False
         assert config.convert_to_format == ""
@@ -250,10 +249,9 @@ class TestEDIConfiguration:
     def test_create_edi_config_with_values(self):
         """Test creating EDI configuration with values."""
         config = EDIConfiguration(
-            process_edi=True, tweak_edi=True, split_edi=True, convert_to_format="csv"
+            process_edi=True, split_edi=True, convert_to_format="csv"
         )
         assert config.process_edi is True
-        assert config.tweak_edi is True
         assert config.split_edi is True
         assert config.convert_to_format == "csv"
 
@@ -595,14 +593,14 @@ class TestFolderConfiguration:
         data = {
             "folder_name": "/test",
             "process_edi": "True",
-            "tweak_edi": True,
             "split_edi": True,
             "convert_to_format": "csv",
         }
         config = FolderConfiguration.from_dict(data)
         assert config.edi is not None
         assert config.edi.process_edi is True
-        assert config.edi.tweak_edi is True
+        assert config.edi.split_edi is True
+        assert config.edi.convert_to_format == "csv"
 
     def test_from_dict_with_upc_override(self):
         """Test from_dict() with UPC override configuration."""
@@ -720,13 +718,13 @@ class TestFolderConfiguration:
     def test_to_dict_with_edi(self):
         """Test to_dict() with EDI configuration."""
         edi_config = EDIConfiguration(
-            process_edi=True, tweak_edi=True, split_edi=True, convert_to_format="csv"
+            process_edi=True, split_edi=True, convert_to_format="csv"
         )
         config = FolderConfiguration(folder_name="/test", edi=edi_config)
         data = config.to_dict()
         assert data["process_edi"] is True
-        assert data["tweak_edi"] is True
         assert data["split_edi"] is True
+        assert data["convert_to_format"] == "csv"
 
     def test_to_dict_with_upc_override(self):
         """Test to_dict() with UPC override configuration."""

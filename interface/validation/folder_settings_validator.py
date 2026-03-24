@@ -379,7 +379,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_edi_split_requirements(
-        self, convert_format: str, split_edi: bool, prepend_dates: bool, tweak_edi: bool
+        self, convert_format: str, split_edi: bool, prepend_dates: bool
     ) -> ValidationResult:
         """
         Validate EDI split requirements.
@@ -388,7 +388,6 @@ class FolderSettingsValidator:
             convert_format: Current convert format
             split_edi: Whether EDI is split
             prepend_dates: Whether to prepend dates to files
-            tweak_edi: Whether EDI tweaking is enabled
 
         Returns:
             ValidationResult with any validation errors
@@ -400,7 +399,7 @@ class FolderSettingsValidator:
             result.add_error("split_edi", "EDI needs to be split for prepending dates")
 
         # Jolley custom requires split EDI
-        if convert_format == "jolley_custom" and not split_edi and not tweak_edi:
+        if convert_format == "jolley_custom" and not split_edi:
             result.add_error(
                 "split_edi", "EDI needs to be split for jolley_custom backend"
             )
@@ -473,7 +472,6 @@ class FolderSettingsValidator:
             ),
             edi=EDIConfiguration(
                 process_edi=extracted_fields.process_edi,
-                tweak_edi=extracted_fields.tweak_edi,
                 split_edi=extracted_fields.split_edi,
                 split_edi_include_invoices=extracted_fields.split_edi_include_invoices,
                 split_edi_include_credits=extracted_fields.split_edi_include_credits,
