@@ -67,10 +67,9 @@ def sample_folder_config():
         ),
         # Copy configuration
         copy=CopyConfiguration(destination_directory="/output/processed/"),
-        # EDI configuration (11 fields)
+        # EDI configuration (10 fields)
         edi=EDIConfiguration(
             process_edi=True,
-            tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
             split_edi_include_credits=True,
@@ -174,9 +173,8 @@ class TestFolderConfigDatabaseMapping:
         # Copy fields
         assert config_dict["copy_to_directory"] == "/output/processed/"
 
-        # EDI fields (all 11)
+        # EDI fields (all 10)
         assert config_dict["process_edi"] is True
-        assert config_dict["tweak_edi"] is True
         assert config_dict["split_edi"] is True
         assert config_dict["split_edi_include_invoices"] is True
         assert config_dict["split_edi_include_credits"] is True
@@ -391,10 +389,9 @@ class TestFolderConfigRoundtrip:
             == sample_folder_config.copy.destination_directory
         )
 
-        # Verify EDI (all 11 fields)
+        # Verify EDI (all 10 fields)
         assert loaded_config.edi is not None
         assert loaded_config.edi.process_edi == sample_folder_config.edi.process_edi
-        assert loaded_config.edi.tweak_edi == sample_folder_config.edi.tweak_edi
         assert loaded_config.edi.split_edi == sample_folder_config.edi.split_edi
         assert (
             loaded_config.edi.split_edi_include_invoices
@@ -621,13 +618,12 @@ class TestNestedConfigSerialization:
 
 
 class TestEDIFieldsMapping:
-    """Test suite for all EDI fields mapping (11 fields)."""
+    """Test suite for all EDI fields mapping (10 fields)."""
 
     def test_all_edi_fields_mapping(self, temp_database):
-        """Test all 11 EDI fields map correctly."""
+        """Test all 10 EDI fields map correctly."""
         edi_config = EDIConfiguration(
             process_edi=True,
-            tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
             split_edi_include_credits=False,
@@ -643,10 +639,9 @@ class TestEDIFieldsMapping:
 
         config_dict = config.to_dict()
 
-        # Verify all 11 EDI fields are present
+        # Verify all 10 EDI fields are present
         expected_edi_fields = {
             "process_edi": True,
-            "tweak_edi": True,
             "split_edi": True,
             "split_edi_include_invoices": True,
             "split_edi_include_credits": False,
@@ -670,9 +665,9 @@ class TestEDIFieldsMapping:
         for field, expected_value in expected_edi_fields.items():
             # Navigate to EDI field
             actual_value = getattr(loaded_config.edi, field)
-            assert (
-                actual_value == expected_value
-            ), f"EDI field {field} mismatch after roundtrip"
+            assert actual_value == expected_value, (
+                f"EDI field {field} mismatch after roundtrip"
+            )
 
 
 class TestCSVFieldsMapping:

@@ -1138,37 +1138,93 @@ def upgrade_database(
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict and str(db_version_dict["version"]) == "44":
-        # Clear convert_to_format for folders that have tweak_edi=True but a stale
-        # convert_to_format value (e.g., 'eStore eInvoice'). This fixes a bug where
-        # switching from Convert EDI (eStore eInvoice) to Tweak EDI didn't properly
-        # clear the convert_to_format field, causing the einvoice filename pattern
-        # (eInv{vendor}.{timestamp}.csv) to still be used.
+        # Make convert_to_format the single source of truth for conversion mode.
+        #
+        # Previous logic wrongly cleared convert_to_format for every folder with
+        # tweak_edi=1, destroying the intended conversion target (e.g. 'csv',
+        # 'YellowDog CSV').  The correct rule is:
+        #
+        #   • tweak_edi=1 + convert_to_format already set (non-empty, not 'tweaks'):
+        #     The stored format IS the intent.  Honour it: enable process_edi so the
+        #     conversion actually runs, and clear the now-redundant tweak_edi flag.
+        #
+        #   • tweak_edi=1 + convert_to_format is empty/null:
+        #     The folder truly wanted EDI tweaks.  Set convert_to_format='tweaks',
+        #     enable process_edi, and clear tweak_edi.
+        #
+        #   • tweak_edi=1 + convert_to_format='tweaks':
+        #     Already correct; just enable process_edi and clear tweak_edi.
         cursor = database_connection.raw_connection.cursor()
 
-        try:
-            cursor.execute("""
-                UPDATE folders
-                SET convert_to_format = ''
-                WHERE tweak_edi = 1
-                AND convert_to_format IS NOT NULL
-                AND convert_to_format != ''
-            """)
-        except Exception:
-            pass  # Column may not exist in older schemas
+        for table in ("folders", "administrative"):
+            try:
+                # Case A: real format already stored – honour it.
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET process_edi = 1,
+                        tweak_edi   = 0
+                    WHERE tweak_edi = 1
+                      AND convert_to_format IS NOT NULL
+                      AND convert_to_format != ''
+                """)
+            except Exception:
+                pass  # Column may not exist in older schemas
 
-        try:
-            cursor.execute("""
-                UPDATE administrative
-                SET convert_to_format = ''
-                WHERE tweak_edi = 1
-                AND convert_to_format IS NOT NULL
-                AND convert_to_format != ''
-            """)
-        except Exception:
-            pass  # Column may not exist in older schemas
+            try:
+                # Case B: no format stored – the intent was EDI tweaks.
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET convert_to_format = 'tweaks',
+                        process_edi       = 1,
+                        tweak_edi         = 0
+                    WHERE tweak_edi = 1
+                      AND (convert_to_format IS NULL OR convert_to_format = '')
+                """)
+            except Exception:
+                pass  # Column may not exist in older schemas
 
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="45", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("44", "45")
+
+    db_version_dict = db_version.find_one(id=1)
+    if db_version_dict and str(db_version_dict["version"]) == "45":
+        cursor = database_connection.raw_connection.cursor()
+
+        try:
+            cursor.execute("""
+                UPDATE folders
+                SET convert_to_format = 'tweaks'
+                WHERE tweak_edi = 1
+                AND (convert_to_format IS NULL OR convert_to_format = '')
+            """)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("""
+                UPDATE administrative
+                SET convert_to_format = 'tweaks'
+                WHERE tweak_edi = 1
+                AND (convert_to_format IS NULL OR convert_to_format = '')
+            """)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("UPDATE folders SET tweak_edi = 0")
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("UPDATE administrative SET tweak_edi = 0")
+        except Exception:
+            pass
+
+        database_connection.raw_connection.commit()
+
+        update_version = dict(id=1, version="46", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("45", "46")

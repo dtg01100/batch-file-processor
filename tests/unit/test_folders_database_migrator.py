@@ -89,15 +89,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        # Start at version 42 (current)
-        db_conn["version"].insert(dict(version="42", os="Linux"))
+        # Start at version 46 (current)
+        db_conn["version"].insert(dict(version="46", os="Linux"))
         db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -116,7 +116,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -134,7 +134,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -152,7 +152,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -170,7 +170,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -188,7 +188,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -229,7 +229,7 @@ class TestMigrationEdgeCases:
 
         version_record = db_conn["version"].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record["version"]) <= 42
+        assert int(version_record["version"]) <= 46
 
         db_conn.close()
 
@@ -361,7 +361,7 @@ class TestMigrationVersion41:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "42"
+        assert version_record["version"] == "46"
 
         db_conn.close()
 
@@ -501,18 +501,18 @@ class TestMigrationContents:
         db_conn.close()
 
     def test_v45_clear_stale_convert_to_format_for_tweak_edi(self, tmp_path):
-        """Test that v45 migration clears stale convert_to_format for folders with tweak_edi=True.
+        """Test that v45 migration handles convert_to_format for folders with tweak_edi=True.
 
-        This fixes a bug where switching from Convert EDI (eStore eInvoice) to Tweak EDI
-        didn't properly clear the convert_to_format field, causing the einvoice filename
-        pattern to still be used.
+        The migration honors non-empty convert_to_format (does not clear it) when
+        tweak_edi=1, since the stored format is the intended conversion target.
+        Folders with tweak_edi=1 and empty convert_to_format get convert_to_format='tweaks'.
         """
         db_path = str(tmp_path / "test_v45.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
         db_conn["version"].insert(dict(version="44", os="Linux"))
-        # Insert folder with tweak_edi=True but stale convert_to_format="eStore eInvoice"
+        # Insert folder with tweak_edi=True and non-empty convert_to_format
         db_conn["folders"].insert(
             dict(
                 folder_name="/test",
@@ -521,7 +521,7 @@ class TestMigrationContents:
                 convert_to_format="eStore eInvoice",
             )
         )
-        # Insert another folder with tweak_edi=True and different stale format
+        # Insert another folder with tweak_edi=True and different non-empty format
         db_conn["folders"].insert(
             dict(
                 folder_name="/test2",
@@ -530,26 +530,29 @@ class TestMigrationContents:
                 convert_to_format="csv",
             )
         )
-        # Insert folder with tweak_edi=False (should not be affected)
+        # Insert folder with tweak_edi=True and empty convert_to_format
         db_conn["folders"].insert(
             dict(
                 folder_name="/test3",
                 alias="Test3",
-                tweak_edi=0,
-                convert_to_format="eStore eInvoice",
+                tweak_edi=1,
+                convert_to_format="",
             )
         )
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        # Check that tweak_edi folders have convert_to_format cleared
+        # Check migration results
         folders = list(db_conn["folders"].all())
-        # Folder 1: tweak_edi=True with stale format -> should be cleared
-        assert folders[0]["convert_to_format"] == ""
-        # Folder 2: tweak_edi=True with stale format -> should be cleared
-        assert folders[1]["convert_to_format"] == ""
-        # Folder 3: tweak_edi=False -> should NOT be affected
-        assert folders[2]["convert_to_format"] == "eStore eInvoice"
+        # Folder 1: tweak_edi=True with non-empty format -> format is honored
+        assert folders[0]["convert_to_format"] == "eStore eInvoice"
+        assert folders[0]["tweak_edi"] == 0
+        # Folder 2: tweak_edi=True with non-empty format -> format is honored
+        assert folders[1]["convert_to_format"] == "csv"
+        assert folders[1]["tweak_edi"] == 0
+        # Folder 3: tweak_edi=True with empty format -> gets 'tweaks'
+        assert folders[2]["convert_to_format"] == "tweaks"
+        assert folders[2]["tweak_edi"] == 0
 
         db_conn.close()
