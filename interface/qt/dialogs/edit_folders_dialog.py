@@ -21,6 +21,9 @@ from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
+from interface.operations.tweaks_flat_column_sync import (
+    sync_tweaks_plugin_to_flat_columns,
+)
 from interface.services.ftp_service import FTPServiceProtocol
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 
@@ -765,8 +768,22 @@ class EditFoldersDialog(BaseDialog):
                 target["plugin_configurations"][format_name.lower()] = config
         self._apply_plugin_configurations(target)
 
+        # Keep flat DB columns in sync with plugin_configurations["tweaks"] so
+        # the orchestrator (which reads flat columns directly) always has
+        # up-to-date values after the dialog is saved.
+        self._sync_tweaks_plugin_to_flat_columns(target)
+
         if self._on_apply_success:
             self._on_apply_success(target)
+
+    def _sync_tweaks_plugin_to_flat_columns(self, target: Dict[str, Any]) -> None:
+        """Write tweaks plugin_configurations values back to legacy flat DB columns.
+
+        The orchestrator pipeline reads flat columns directly from the DB row and
+        never looks at plugin_configurations.  Delegates to the standalone pure-Python
+        helper so the logic can be unit-tested without a Qt dependency.
+        """
+        sync_tweaks_plugin_to_flat_columns(target)
 
     def _get_plugin_convert_formats(self) -> list:
         """Get convert format options from the plugin system."""

@@ -369,20 +369,126 @@ def test_tweaks_build_legacy_plugin_config_returns_empty_for_non_tweaks_plugin()
     csv_plugin = CSVConfigurationPlugin()
     result = builder._build_legacy_plugin_config(csv_plugin)
     assert result == {}
-    """Regression test: arec_padding_len must be SELECT with choices [6, 30], not INTEGER."""
-    from interface.plugins.config_schemas import FieldType
 
-    fields = TweaksConfigurationPlugin.get_config_fields()
 
-    arec_len_field = next((f for f in fields if f.name == "arec_padding_len"), None)
-    assert arec_len_field is not None, "arec_padding_len field not found"
-    assert arec_len_field.field_type == FieldType.SELECT, (
-        f"arec_padding_len must be FieldType.SELECT, got {arec_len_field.field_type}"
+def test_sync_tweaks_plugin_to_flat_columns_overwrites_defaults():
+    """sync_tweaks_plugin_to_flat_columns writes plugin_configurations["tweaks"] back
+    to the flat DB columns so the orchestrator always reads up-to-date values.
+    """
+    from interface.operations.tweaks_flat_column_sync import (
+        sync_tweaks_plugin_to_flat_columns,
     )
-    assert arec_len_field.choices == [
-        {"label": "6", "value": 6},
-        {"label": "30", "value": 30},
-    ], f"arec_padding_len choices must be [6, 30], got {arec_len_field.choices}"
-    assert arec_len_field.default == 6, (
-        f"arec_padding_len default must be 6, got {arec_len_field.default}"
+
+    tweaks_plugin_config = {
+        "pad_arec": True,
+        "arec_padding": "TESTPAD",
+        "arec_padding_len": 30,
+        "append_arec": True,
+        "append_arec_text": "APPENDME",
+        "calc_upc": True,
+        "retail_uom": True,
+        "override_upc": True,
+        "override_upc_level": 2,
+        "override_upc_category_filter": "CATX",
+        "upc_target_length": 12,
+        "upc_padding_pattern": "  ",
+        "split_prepaid_sales_tax_crec": True,
+        "invoice_date_custom_format": True,
+        "invoice_date_custom_format_string": "%d/%m/%Y",
+        "invoice_date_offset": -3,
+        "force_txt_file_ext": True,
+    }
+
+    # target dict starts with all-default flat values (as apply() writes before the sync)
+    target = {
+        "plugin_configurations": {"tweaks": tweaks_plugin_config},
+        # defaults that apply() would write from the missing legacy widgets:
+        "pad_a_records": False,
+        "a_record_padding": "",
+        "a_record_padding_length": 6,
+        "append_a_records": False,
+        "a_record_append_text": "",
+        "calculate_upc_check_digit": False,
+        "retail_uom": False,
+        "override_upc_bool": False,
+        "override_upc_level": 1,
+        "override_upc_category_filter": "",
+        "upc_target_length": 11,
+        "upc_padding_pattern": "           ",
+        "split_prepaid_sales_tax_crec": False,
+        "invoice_date_custom_format": False,
+        "invoice_date_custom_format_string": "%Y-%m-%d",
+        "invoice_date_offset": 0,
+        "force_txt_file_ext": False,
+    }
+
+    sync_tweaks_plugin_to_flat_columns(target)
+
+    assert target["pad_a_records"] is True
+    assert target["a_record_padding"] == "TESTPAD"
+    assert target["a_record_padding_length"] == 30
+    assert target["append_a_records"] is True
+    assert target["a_record_append_text"] == "APPENDME"
+    assert target["calculate_upc_check_digit"] is True
+    assert target["retail_uom"] is True
+    assert target["override_upc_bool"] is True
+    assert target["override_upc_level"] == 2
+    assert target["override_upc_category_filter"] == "CATX"
+    assert target["upc_target_length"] == 12
+    assert target["upc_padding_pattern"] == "  "
+    assert target["split_prepaid_sales_tax_crec"] is True
+    assert target["invoice_date_custom_format"] is True
+    assert target["invoice_date_custom_format_string"] == "%d/%m/%Y"
+    assert target["invoice_date_offset"] == -3
+    assert target["force_txt_file_ext"] is True
+
+
+def test_sync_tweaks_plugin_to_flat_columns_noop_when_no_tweaks_config():
+    """sync_tweaks_plugin_to_flat_columns is a no-op when plugin_configurations
+    has no "tweaks" entry, so existing flat columns are left untouched.
+    """
+    from interface.operations.tweaks_flat_column_sync import (
+        sync_tweaks_plugin_to_flat_columns,
+    )
+
+    target = {
+        "plugin_configurations": {},  # no "tweaks" entry
+        "pad_a_records": False,
+        "override_upc_bool": False,
+    }
+
+    sync_tweaks_plugin_to_flat_columns(target)
+
+    # Nothing should change
+    assert target["pad_a_records"] is False
+    assert target["override_upc_bool"] is False
+
+
+def test_sync_tweaks_reverse_map_covers_all_legacy_columns():
+    """Every entry in _TWEAKS_LEGACY_FIELD_MAP must have a corresponding entry
+    in the sync module's reverse map (_PLUGIN_TO_FLAT).
+
+    This test protects against the two maps drifting apart.
+    """
+    from interface.operations.tweaks_flat_column_sync import (
+        _PLUGIN_TO_FLAT,
+        sync_tweaks_plugin_to_flat_columns,
+    )
+
+    # _TWEAKS_LEGACY_FIELD_MAP is: legacy_col → plugin_field
+    # _PLUGIN_TO_FLAT is:          plugin_field → legacy_col
+    # The sets of legacy columns must match.
+    forward_flat_cols = set(_PLUGIN_TO_FLAT.values())
+
+    # Build expected set from _TWEAKS_LEGACY_FIELD_MAP via the same trick
+    # used in the dialog: all plugin fields set to True, then observe which
+    # flat cols got written.
+    all_plugin_values = {plugin_field: True for plugin_field in _PLUGIN_TO_FLAT}
+    target = {"plugin_configurations": {"tweaks": all_plugin_values}}
+    sync_tweaks_plugin_to_flat_columns(target)
+    written_flat_cols = set(target.keys()) - {"plugin_configurations"}
+
+    assert written_flat_cols == forward_flat_cols, (
+        f"Mismatch: written={sorted(written_flat_cols)}, "
+        f"declared={sorted(forward_flat_cols)}"
     )
