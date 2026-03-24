@@ -141,8 +141,8 @@ class TestDynamicEDIBuilder:
 
         assert combo is not None
         assert isinstance(combo, QComboBox)
-        # Should have Do Nothing, Convert EDI, Tweak EDI options
-        assert combo.count() == 3
+        # Should have Do Nothing, Convert EDI options
+        assert combo.count() == 2
 
     def test_edi_option_changed(self, qtbot):
         """Test EDI option change handling."""

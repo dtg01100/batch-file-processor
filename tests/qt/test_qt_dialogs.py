@@ -448,7 +448,6 @@ class TestEditFoldersDialog:
         assert options == [
             "Do Nothing",
             "Convert EDI",
-            "Tweak EDI",
         ]
 
     def test_disabled_folder_validates(self, qtbot, sample_folder_config):
@@ -711,24 +710,16 @@ class TestProcessedFilesDialog:
 
         mock_database_obj = MagicMock()
         mock_database_obj.get_oversight_or_default.return_value = {}
-
-        mock_database_obj.processed_files.distinct.return_value = [
-            {"folder_id": 2},
-            {"folder_id": 1},
-        ]
-        mock_database_obj.folders_table.find_one.side_effect = [
-            {"alias": "Zebra"},
-            {"alias": "Alpha"},
+        # _get_folder_tuples now uses a single JOIN query via database_obj.query()
+        mock_database_obj.query.return_value = [
+            {"folder_id": 1, "alias": "Alpha"},
+            {"folder_id": 2, "alias": "Zebra"},
         ]
         dialog = ProcessedFilesDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
-        mock_database_obj.processed_files.distinct.return_value = [
-            {"folder_id": 2},
-            {"folder_id": 1},
-        ]
-        mock_database_obj.folders_table.find_one.side_effect = [
-            {"alias": "Zebra"},
-            {"alias": "Alpha"},
+        mock_database_obj.query.return_value = [
+            {"folder_id": 1, "alias": "Alpha"},
+            {"folder_id": 2, "alias": "Zebra"},
         ]
         result = dialog._get_folder_tuples()
         assert result == [(1, "Alpha"), (2, "Zebra")]
@@ -738,26 +729,14 @@ class TestProcessedFilesDialog:
 
         mock_database_obj = MagicMock()
         mock_database_obj.get_oversight_or_default.return_value = {}
-
-        mock_database_obj.processed_files.distinct.return_value = [
-            {"folder_id": 1},
-            {"folder_id": 999},
-        ]
-        mock_database_obj.folders_table.find_one.side_effect = [
-            {"alias": "Existing"},
-            None,
-            None,
+        # The JOIN query inherently excludes folder_id 999 (no matching folder row)
+        mock_database_obj.query.return_value = [
+            {"folder_id": 1, "alias": "Existing"},
         ]
         dialog = ProcessedFilesDialog(None, mock_database_obj)
         qtbot.addWidget(dialog)
-        mock_database_obj.processed_files.distinct.return_value = [
-            {"folder_id": 1},
-            {"folder_id": 999},
-        ]
-        mock_database_obj.folders_table.find_one.side_effect = [
-            {"alias": "Existing"},
-            None,
-            None,
+        mock_database_obj.query.return_value = [
+            {"folder_id": 1, "alias": "Existing"},
         ]
         result = dialog._get_folder_tuples()
         assert result == [(1, "Existing")]

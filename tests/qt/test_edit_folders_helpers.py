@@ -128,11 +128,9 @@ class TestDynamicEDIBuilder:
         builder._on_edi_option_changed("Do Nothing")
 
         assert "process_edi" in fields
-        assert "tweak_edi" in fields
         assert fields["process_edi"] is False
-        assert fields["tweak_edi"] is False
 
-    def test_edi_option_tweak_populates_expected_fields(self, qtbot):
+    def test_edi_option_convert_supports_tweaks_target(self, qtbot):
         container = QWidget()
         qtbot.addWidget(container)
         layout = QVBoxLayout(container)
@@ -141,19 +139,18 @@ class TestDynamicEDIBuilder:
         builder = DynamicEDIBuilder(
             fields=fields,
             folder_config={
-                "calculate_upc_check_digit": "True",
-                "invoice_date_offset": 2,
+                "process_edi": True,
+                "convert_to_format": "Tweaks",
             },
             dynamic_container=container,
             dynamic_layout=layout,
         )
 
-        builder._on_edi_option_changed("Tweak EDI")
+        builder._on_edi_option_changed("Convert EDI")
 
-        assert "upc_var_check" in fields
-        assert "invoice_date_offset" in fields
-        assert fields["upc_var_check"].isChecked() is True
-        assert fields["invoice_date_offset"].value() == 2
+        assert "convert_formats_var" in fields
+        assert builder.convert_format_combo is not None
+        assert builder.convert_format_combo.count() > 0
 
     def test_handle_convert_format_changed_dispatches_fallback_builders(self, qtbot):
         container = QWidget()
@@ -234,7 +231,7 @@ class TestDynamicEDIBuilder:
         qtbot.addWidget(combo)
         combo.setCurrentText("Convert EDI")
 
-        assert combo.count() == 3
+        assert combo.count() == 2
         assert builder.convert_format_combo is not None
 
     def test_clear_convert_sub_removes_nested_widgets(self, qtbot):
