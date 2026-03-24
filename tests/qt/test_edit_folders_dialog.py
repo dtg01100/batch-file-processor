@@ -276,7 +276,7 @@ class TestConvertFormatChange:
     def test_csv_format_shows_csv_sub_fields(self, qtbot, sample_folder_config):
         """Selecting CSV format should show CSV-specific fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("csv")
+        dialog._convert_format_combo.setCurrentText("CSV")
 
         assert hasattr(dialog, "_csv_upc_check")
         assert hasattr(dialog, "_csv_a_rec_check")
@@ -298,7 +298,7 @@ class TestConvertFormatChange:
     ):
         """Selecting simplified_csv format should show simplified CSV fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("simplified_csv")
+        dialog._convert_format_combo.setCurrentText("Simplified CSV")
 
         assert hasattr(dialog, "_simp_headers_check")
         assert hasattr(dialog, "_simp_include_item_numbers_check")
@@ -307,7 +307,7 @@ class TestConvertFormatChange:
     def test_fintech_format_shows_fintech_fields(self, qtbot, sample_folder_config):
         """Selecting fintech format should show fintech-specific fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("fintech")
+        dialog._convert_format_combo.setCurrentText("Fintech")
 
         assert hasattr(dialog, "_fintech_division_field")
 
@@ -316,7 +316,7 @@ class TestConvertFormatChange:
     ):
         """Selecting Estore eInvoice format should show estore fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("Estore eInvoice")
+        dialog._convert_format_combo.setCurrentText("eStore eInvoice")
 
         assert hasattr(dialog, "_estore_store_number_field")
         assert hasattr(dialog, "_estore_vendor_oid_field")
@@ -327,7 +327,7 @@ class TestConvertFormatChange:
     ):
         """Estore eInvoice Generic should show C Record OId field."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("Estore eInvoice Generic")
+        dialog._convert_format_combo.setCurrentText("eStore eInvoice Generic")
 
         assert hasattr(dialog, "_estore_store_number_field")
         assert hasattr(dialog, "_estore_c_record_oid_field")
@@ -337,7 +337,7 @@ class TestConvertFormatChange:
     ):
         """Selecting jolley_custom should show basic options."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("jolley_custom")
+        dialog._convert_format_combo.setCurrentText("Jolley Custom")
 
         assert hasattr(dialog, "_convert_sub_container")
 
@@ -346,7 +346,7 @@ class TestConvertFormatChange:
     ):
         """Selecting stewarts_custom should show basic options."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("stewarts_custom")
+        dialog._convert_format_combo.setCurrentText("Stewarts Custom")
 
         assert hasattr(dialog, "_convert_sub_container")
 
@@ -362,7 +362,7 @@ class TestConvertFormatChange:
     def test_scansheet_type_a_format_no_extra_fields(self, qtbot, sample_folder_config):
         """Selecting scansheet-type-a should show no extra fields."""
         dialog = self._setup_edi_convert_mode(qtbot, sample_folder_config)
-        dialog._convert_format_combo.setCurrentText("scansheet-type-a")
+        dialog._convert_format_combo.setCurrentText("ScanSheet Type A")
 
         assert dialog._convert_sub_layout.count() == 0
 
@@ -730,7 +730,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["pad_a_records"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("csv")
+        dialog._convert_format_combo.setCurrentText("CSV")
 
         assert dialog._csv_upc_check.isChecked()
         assert dialog._csv_headers_check.isChecked()
@@ -746,7 +746,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["retail_uom"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("simplified_csv")
+        dialog._convert_format_combo.setCurrentText("Simplified CSV")
 
         assert dialog._simp_headers_check.isChecked()
         assert dialog._simp_include_item_numbers_check.isChecked()
@@ -762,7 +762,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["estore_vendor_NameVendorOID"] = "VendorName"
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("Estore eInvoice")
+        dialog._convert_format_combo.setCurrentText("eStore eInvoice")
 
         assert dialog._estore_store_number_field.text() == "12345"
         assert dialog._estore_vendor_oid_field.text() == "VENDOR001"
@@ -775,7 +775,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["fintech_division_id"] = "DIV001"
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("fintech")
+        dialog._convert_format_combo.setCurrentText("Fintech")
 
         assert dialog._fintech_division_field.text() == "DIV001"
 
@@ -813,7 +813,9 @@ class TestConvertFormatFieldPopulation:
             # Basic formats show a label widget only -- no input widgets
             assert dialog._convert_sub_layout is not None
 
-    @pytest.mark.skip(reason="Tweaks plugin causes extraction error - pre-existing issue with plugin config mapper")
+    @pytest.mark.skip(
+        reason="Tweaks plugin causes extraction error - pre-existing issue with plugin config mapper"
+    )
     def test_do_nothing_sets_process_edi_false(self, qtbot, sample_folder_config):
         """Selecting 'Do Nothing' should set process_edi=False on apply."""
         sample_folder_config["folder_is_active"] = "True"
@@ -838,7 +840,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["pad_a_records"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("csv")
+        dialog._convert_format_combo.setCurrentText("CSV")
         dialog.apply()
 
         assert sample_folder_config["process_edi"] is True
@@ -847,7 +849,9 @@ class TestConvertFormatFieldPopulation:
         assert sample_folder_config["include_headers"] is True
         assert sample_folder_config["pad_a_records"] is True
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_tweak_edi_roundtrip(self, qtbot, sample_folder_config):
         """Tweak EDI settings should round-trip through dialog apply()."""
         sample_folder_config["folder_is_active"] = "True"
@@ -878,14 +882,16 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["estore_c_record_OID"] = "COID123"
         dialog = create_dialog(qtbot, sample_folder_config)
         dialog._edi_options_combo.setCurrentText("Convert EDI")
-        dialog._convert_format_combo.setCurrentText("Estore eInvoice Generic")
+        dialog._convert_format_combo.setCurrentText("eStore eInvoice Generic")
 
         assert dialog._estore_store_number_field.text() == "99"
         assert dialog._estore_c_record_oid_field.text() == "COID123"
 
     """Tests for proper field population when switching EDI options."""
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_tweak_edi_populates_tweak_fields(self, qtbot, sample_folder_config):
         """Tweak EDI should populate its fields from config."""
         sample_folder_config["folder_is_active"] = "True"
@@ -902,7 +908,9 @@ class TestConvertFormatFieldPopulation:
         assert dialog._tweak_force_txt_check.isChecked()
         assert dialog._tweak_invoice_offset.value() == 5
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_tweak_edi_populates_override_upc_fields(self, qtbot, sample_folder_config):
         """Tweak EDI should populate UPC override fields from config."""
         sample_folder_config["folder_is_active"] = "True"
@@ -1027,7 +1035,9 @@ class TestWidgetCleanupAndLifecycle:
     properly removed from self._fields to prevent crashes.
     """
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_clear_dynamic_edi_removes_field_references(
         self, qtbot, sample_folder_config
     ):
@@ -1070,9 +1080,9 @@ class TestWidgetCleanupAndLifecycle:
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
         # (Tweak EDI has different widgets)
-        assert (
-            "convert_formats_var" not in dialog._fields
-        ), "convert_formats_var should be removed when switching away from Convert EDI"
+        assert "convert_formats_var" not in dialog._fields, (
+            "convert_formats_var should be removed when switching away from Convert EDI"
+        )
 
     def test_clear_convert_sub_removes_field_references(
         self, qtbot, sample_folder_config
@@ -1094,7 +1104,7 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         convert_format_combo = dialog._fields["convert_formats_var"]
-        convert_format_combo.setCurrentText("csv")
+        convert_format_combo.setCurrentText("CSV")
         qtbot.waitUntil(lambda: "upc_var_check" in dialog._fields, timeout=1000)
 
         # Verify CSV widgets were created
@@ -1115,9 +1125,9 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
-        assert (
-            "upc_var_check" not in dialog._fields
-        ), "upc_var_check should be removed when switching from CSV format"
+        assert "upc_var_check" not in dialog._fields, (
+            "upc_var_check should be removed when switching from CSV format"
+        )
 
     def test_data_extractor_handles_missing_widgets_gracefully(
         self, qtbot, sample_folder_config

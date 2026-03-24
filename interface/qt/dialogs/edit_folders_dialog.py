@@ -185,20 +185,38 @@ class EditFoldersDialog(BaseDialog):
                 mode_combo.setCurrentIndex(idx)
 
         # EDI Options combo
+        # Block signals while setting the combo value to avoid the timer-based
+        # _edi_option_processing flag racing with _populate_fields.  We call the
+        # builder method directly below so the sub-form is always built correctly.
         edi_combo = self.dynamic_edi_builder.edi_options_combo
         if edi_combo:
-            if normalize_bool(config.get("process_edi")) or bool(
+            want_convert = normalize_bool(config.get("process_edi")) or bool(
                 config.get("convert_to_format")
-            ):
-                edi_combo.setCurrentText("Convert EDI")
+            )
+            edi_combo.blockSignals(True)
+            try:
+                edi_combo.setCurrentText(
+                    "Convert EDI" if want_convert else "Do Nothing"
+                )
+            finally:
+                edi_combo.blockSignals(False)
+
+            # Directly rebuild the sub-form, bypassing the timer-flag guard so
+            # _populate_fields always produces the correct layout regardless of
+            # any pending _edi_option_processing state from widget construction.
+            self.dynamic_edi_builder._clear_dynamic_edi()
+            if want_convert:
+                self.dynamic_edi_builder._build_convert_edi_area()
             else:
-                edi_combo.setCurrentText("Do Nothing")
+                self.dynamic_edi_builder._build_do_nothing_area()
 
         # Convert format combo + sub-form -- updated *after* folder_config is already
         # reflecting the new values so the sub-form builders read the right data.
         convert_combo = self.dynamic_edi_builder.convert_format_combo
         if convert_combo:
-            new_fmt = str(config.get("convert_to_format") or "csv")
+            new_fmt = self.dynamic_edi_builder._resolve_format_display_name(
+                str(config.get("convert_to_format") or "")
+            )
             idx = self.dynamic_edi_builder._find_combo_index_case_insensitive(
                 convert_combo, new_fmt
             )

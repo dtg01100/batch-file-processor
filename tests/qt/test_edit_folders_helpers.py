@@ -17,7 +17,6 @@ from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 
 @pytest.mark.qt
 class TestColumnBuilders:
-
     def test_build_others_column_populates_sorted_aliases_and_copy_callback(
         self, qtbot
     ):
@@ -86,7 +85,6 @@ class TestColumnBuilders:
 
 @pytest.mark.qt
 class TestUILayoutBuilder:
-
     def test_build_ui_creates_dynamic_edi_components(self, qtbot):
         dialog = QDialog()
         qtbot.addWidget(dialog)
@@ -111,7 +109,6 @@ class TestUILayoutBuilder:
 
 @pytest.mark.qt
 class TestDynamicEDIBuilder:
-
     def test_edi_option_do_nothing_sets_hidden_flags(self, qtbot):
         container = QWidget()
         qtbot.addWidget(container)
@@ -194,18 +191,21 @@ class TestDynamicEDIBuilder:
         layout = QVBoxLayout(container)
 
         fields = {}
+        mock_plugin_manager = MagicMock()
+        mock_plugin_manager.get_configuration_plugins.return_value = []
         builder = DynamicEDIBuilder(
             fields=fields,
             folder_config={},
             dynamic_container=container,
             dynamic_layout=layout,
+            plugin_manager=mock_plugin_manager,
         )
 
         builder.convert_sub_container = container
         builder.convert_sub_layout = layout
 
         plugin = MagicMock()
-        builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
+        mock_plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
             return_value=plugin
         )
         plugin_builder = MagicMock()
@@ -256,7 +256,7 @@ class TestDynamicEDIBuilder:
 
         assert layout.count() == 0
 
-    def test_get_convert_formats_merges_plugins_with_hardcoded(self, qtbot):
+    def test_get_convert_formats_returns_plugin_formats(self, qtbot):
         container = QWidget()
         qtbot.addWidget(container)
         layout = QVBoxLayout(container)
@@ -278,7 +278,8 @@ class TestDynamicEDIBuilder:
 
         assert "csv" in formats
         assert "fintech" in formats
-        assert "ScannerWare" in formats
+        # Only the injected plugins are reflected; no hardcoded extras
+        assert len(formats) == 2
 
     def test_build_convert_edi_area_sets_format_and_callback(self, qtbot):
         container = QWidget()
@@ -288,7 +289,7 @@ class TestDynamicEDIBuilder:
         on_change = MagicMock()
         builder = DynamicEDIBuilder(
             fields={},
-            folder_config={"convert_to_format": "fintech"},
+            folder_config={"convert_to_format": "Fintech"},
             dynamic_container=container,
             dynamic_layout=layout,
             on_convert_format_changed=on_change,
@@ -297,7 +298,7 @@ class TestDynamicEDIBuilder:
         builder._build_convert_edi_area()
 
         assert builder.convert_format_combo is not None
-        assert builder.convert_format_combo.currentText() == "fintech"
+        assert builder.convert_format_combo.currentText() == "Fintech"
         on_change.assert_called()
 
     def test_convert_sub_builders_create_expected_fields(self, qtbot):
@@ -333,7 +334,6 @@ class TestDynamicEDIBuilder:
 
 @pytest.mark.qt
 class TestEventHandlers:
-
     def test_select_copy_directory_updates_path(self, qtbot, monkeypatch):
         dialog = QDialog()
         qtbot.addWidget(dialog)

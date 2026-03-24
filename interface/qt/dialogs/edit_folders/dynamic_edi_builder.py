@@ -129,6 +129,45 @@ class DynamicEDIBuilder:
             formats.append(plugin.get_format_name())
         return sorted(formats)
 
+    def _resolve_format_display_name(self, stored_value: str) -> str:
+        """Resolve a stored format value to its display name for the combo.
+
+        Handles both display names (e.g. "Simplified CSV") already stored
+        directly and legacy internal enum values (e.g. "simplified_csv") that
+        were stored by older versions of the dialog.
+
+        Args:
+            stored_value: The format string as stored in the database.
+
+        Returns:
+            The display name that matches a combo item, or the original value
+            if no match is found.
+        """
+        if not stored_value:
+            return stored_value
+
+        # 1. Try a direct display-name match (case-insensitive)
+        plugin = self.plugin_manager.get_configuration_plugin_by_format_name(
+            stored_value
+        )
+        if plugin:
+            return plugin.get_format_name()
+
+        # 2. Try matching against ConvertFormat enum values (legacy DB records)
+        from interface.models.folder_configuration import ConvertFormat
+
+        for fmt_enum in ConvertFormat:
+            if fmt_enum.value.lower() == stored_value.lower():
+                # Found the enum; now look up the plugin for it
+                enum_plugin = self.plugin_manager.get_configuration_plugin_by_format(
+                    fmt_enum
+                )
+                if enum_plugin:
+                    return enum_plugin.get_format_name()
+
+        # No match found — return as-is and let the caller handle it
+        return stored_value
+
     @staticmethod
     def _find_combo_index_case_insensitive(combo: QComboBox, text: str) -> int:
         """Find combo index by text case-insensitively."""
@@ -344,7 +383,9 @@ class DynamicEDIBuilder:
             self.handle_convert_format_changed
         )
 
-        current_fmt = self.folder_config.get("convert_to_format", "csv")
+        current_fmt = self._resolve_format_display_name(
+            self.folder_config.get("convert_to_format") or ""
+        )
         idx = self._find_combo_index_case_insensitive(
             self.convert_format_combo, current_fmt
         )
@@ -380,15 +421,21 @@ class DynamicEDIBuilder:
             self._build_csv_sub()
         elif fmt_lower == "scannerware":
             self._build_scannerware_sub()
-        elif fmt_lower == "simplified_csv":
+        elif fmt_lower in ("simplified csv", "simplified_csv"):
             self._build_simplified_csv_sub()
         elif fmt_lower in ("estore einvoice", "estore einvoice generic"):
             self._build_estore_sub(fmt)
         elif fmt_lower == "fintech":
             self._build_fintech_sub()
-        elif fmt_lower == "scansheet-type-a":
+        elif fmt_lower in ("scansheet type a", "scansheet-type-a"):
             pass
-        elif fmt_lower in ("jolley_custom", "stewarts_custom", "yellowdog csv"):
+        elif fmt_lower in (
+            "jolley custom",
+            "jolley_custom",
+            "stewarts custom",
+            "stewarts_custom",
+            "yellowdog csv",
+        ):
             self._build_basic_options_sub()
         else:
             plugin = self.plugin_manager.get_configuration_plugin_by_format_name(fmt)
@@ -851,7 +898,7 @@ class DynamicEDIBuilder:
         layout.addRow("Estore Vendor Name OId:", estore_vendor_name_field)
 
         estore_c_record_oid_field = None
-        if fmt == "Estore eInvoice Generic":
+        if fmt == "eStore eInvoice Generic":
             estore_c_record_oid_field = QLineEdit()
             self.fields["estore_c_record_oid_field"] = estore_c_record_oid_field
             layout.addRow("Estore C Record OId:", estore_c_record_oid_field)
@@ -862,7 +909,7 @@ class DynamicEDIBuilder:
         estore_vendor_name_field.setText(
             str(cfg.get("estore_vendor_NameVendorOID", ""))
         )
-        if fmt == "Estore eInvoice Generic" and estore_c_record_oid_field is not None:
+        if fmt == "eStore eInvoice Generic" and estore_c_record_oid_field is not None:
             estore_c_record_oid_field.setText(str(cfg.get("estore_c_record_OID", "")))
 
         if self.convert_sub_layout is not None:
