@@ -39,6 +39,7 @@ class ConvertFormat(Enum):
     STEWARTS_CUSTOM = "stewarts_custom"
     YELLOWDOG_CSV = "yellowdog_csv"
     SIMPLIFIED_CSV = "simplified_csv"
+    TWEAKS = "tweaks"
     DO_NOTHING = "do_nothing"
 
 
@@ -139,7 +140,6 @@ class EDIConfiguration:
     """EDI processing configuration."""
 
     process_edi: bool = False
-    tweak_edi: bool = False
     split_edi: bool = False
     split_edi_include_invoices: bool = False
     split_edi_include_credits: bool = False
@@ -423,7 +423,6 @@ class FolderConfiguration:
         # EDI configuration
         edi = EDIConfiguration(
             process_edi=_bool_from_data(data, "process_edi"),
-            tweak_edi=_bool_from_data(data, "tweak_edi"),
             split_edi=_bool_from_data(data, "split_edi"),
             split_edi_include_invoices=_bool_from_data(
                 data, "split_edi_include_invoices"
@@ -582,7 +581,6 @@ class FolderConfiguration:
             data.update(
                 {
                     "process_edi": normalize_bool(self.edi.process_edi),
-                    "tweak_edi": normalize_bool(self.edi.tweak_edi),
                     "split_edi": normalize_bool(self.edi.split_edi),
                     "split_edi_include_invoices": normalize_bool(
                         self.edi.split_edi_include_invoices
