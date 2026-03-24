@@ -283,7 +283,92 @@ def test_plugin_config_round_trip_contract(
     plugin.deactivate()
 
 
-def test_tweaks_plugin_arec_padding_len_is_select_with_6_and_30():
+def test_tweaks_legacy_field_map_covers_all_known_columns():
+    """_TWEAKS_LEGACY_FIELD_MAP must map every known legacy flat column to a plugin field."""
+    from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
+
+    mapping = DynamicEDIBuilder._TWEAKS_LEGACY_FIELD_MAP
+    # Every legacy key should be a non-empty string, every plugin key should exist in
+    # the TweaksConfigurationPlugin field names.
+    plugin_field_names = {f.name for f in TweaksConfigurationPlugin.get_config_fields()}
+    for legacy_col, plugin_field in mapping.items():
+        assert isinstance(legacy_col, str) and legacy_col, (
+            f"Legacy column key must be a non-empty string: {legacy_col!r}"
+        )
+        assert plugin_field in plugin_field_names, (
+            f"Legacy column '{legacy_col}' maps to '{plugin_field}' "
+            f"which is not a TweaksConfigurationPlugin field. "
+            f"Known fields: {sorted(plugin_field_names)}"
+        )
+
+
+def test_tweaks_build_legacy_plugin_config_maps_flat_columns():
+    """_build_legacy_plugin_config translates legacy flat columns to plugin field names."""
+    from unittest.mock import MagicMock, patch
+
+    from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
+
+    legacy_folder_config = {
+        "pad_a_records": True,
+        "a_record_padding": "TEST",
+        "a_record_padding_length": 30,
+        "override_upc_bool": True,
+        "override_upc_level": 2,
+        "invoice_date_offset": -7,
+        "force_txt_file_ext": True,
+    }
+
+    # Build a minimal DynamicEDIBuilder with a fake plugin manager
+    with patch(
+        "interface.qt.dialogs.edit_folders.dynamic_edi_builder.get_shared_plugin_manager"
+    ) as mock_pm_factory:
+        mock_pm = MagicMock()
+        mock_pm.get_configuration_plugins.return_value = []
+        mock_pm_factory.return_value = mock_pm
+
+        builder = DynamicEDIBuilder(
+            fields={},
+            folder_config=legacy_folder_config,
+            dynamic_container=MagicMock(),
+            dynamic_layout=MagicMock(),
+        )
+
+    plugin = TweaksConfigurationPlugin()
+    result = builder._build_legacy_plugin_config(plugin)
+
+    assert result["pad_arec"] is True
+    assert result["arec_padding"] == "TEST"
+    assert result["arec_padding_len"] == 30
+    assert result["override_upc"] is True
+    assert result["override_upc_level"] == 2
+    assert result["invoice_date_offset"] == -7
+    assert result["force_txt_file_ext"] is True
+
+
+def test_tweaks_build_legacy_plugin_config_returns_empty_for_non_tweaks_plugin():
+    """_build_legacy_plugin_config returns {} for plugins other than TweaksConfigurationPlugin."""
+    from unittest.mock import MagicMock, patch
+
+    from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
+    from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
+
+    with patch(
+        "interface.qt.dialogs.edit_folders.dynamic_edi_builder.get_shared_plugin_manager"
+    ) as mock_pm_factory:
+        mock_pm = MagicMock()
+        mock_pm.get_configuration_plugins.return_value = []
+        mock_pm_factory.return_value = mock_pm
+
+        builder = DynamicEDIBuilder(
+            fields={},
+            folder_config={"include_headers": True},
+            dynamic_container=MagicMock(),
+            dynamic_layout=MagicMock(),
+        )
+
+    csv_plugin = CSVConfigurationPlugin()
+    result = builder._build_legacy_plugin_config(csv_plugin)
+    assert result == {}
     """Regression test: arec_padding_len must be SELECT with choices [6, 30], not INTEGER."""
     from interface.plugins.config_schemas import FieldType
 

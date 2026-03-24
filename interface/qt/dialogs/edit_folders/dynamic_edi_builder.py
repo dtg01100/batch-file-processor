@@ -458,6 +458,51 @@ class DynamicEDIBuilder:
             self._find_and_track_layout_keys(sub_layout, keys_to_remove)
             sub_layout.deleteLater()
 
+    # Mapping from legacy flat DB column names to TweaksConfigurationPlugin field names.
+    _TWEAKS_LEGACY_FIELD_MAP = {
+        "pad_a_records": "pad_arec",
+        "a_record_padding": "arec_padding",
+        "a_record_padding_length": "arec_padding_len",
+        "append_a_records": "append_arec",
+        "a_record_append_text": "append_arec_text",
+        "calculate_upc_check_digit": "calc_upc",
+        "retail_uom": "retail_uom",
+        "override_upc_bool": "override_upc",
+        "override_upc_level": "override_upc_level",
+        "override_upc_category_filter": "override_upc_category_filter",
+        "upc_target_length": "upc_target_length",
+        "upc_padding_pattern": "upc_padding_pattern",
+        "split_prepaid_sales_tax_crec": "split_prepaid_sales_tax_crec",
+        "invoice_date_custom_format": "invoice_date_custom_format",
+        "invoice_date_custom_format_string": "invoice_date_custom_format_string",
+        "invoice_date_offset": "invoice_date_offset",
+        "force_txt_file_ext": "force_txt_file_ext",
+    }
+
+    def _build_legacy_plugin_config(self, plugin: ConfigurationPlugin) -> dict:
+        """Build a plugin config dict from legacy flat DB columns.
+
+        Used as a fallback when a folder was saved before the plugin
+        configuration system existed (i.e. plugin_configurations is absent
+        or does not contain an entry for this plugin).
+
+        Only the Tweaks plugin has a known legacy column mapping; for any
+        other plugin an empty dict is returned.
+        """
+        from interface.plugins.tweaks_configuration_plugin import (
+            TweaksConfigurationPlugin,
+        )
+
+        if not isinstance(plugin, TweaksConfigurationPlugin):
+            return {}
+
+        cfg = self.folder_config
+        result = {}
+        for legacy_key, plugin_key in self._TWEAKS_LEGACY_FIELD_MAP.items():
+            if legacy_key in cfg and cfg[legacy_key] is not None:
+                result[plugin_key] = cfg[legacy_key]
+        return result
+
     def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
         """Build plugin configuration sub-section."""
         schema = plugin.get_configuration_schema()
@@ -466,6 +511,10 @@ class DynamicEDIBuilder:
             plugin_config = self.folder_config.get("plugin_configurations", {}).get(
                 plugin.get_format_name().lower(), {}
             )
+            # Fall back to legacy flat DB columns when no plugin config is stored yet.
+            # This handles folders created before the plugin configuration system.
+            if not plugin_config:
+                plugin_config = self._build_legacy_plugin_config(plugin)
             form_widget = form_generator.build_form(
                 plugin_config, self.convert_sub_container
             )
