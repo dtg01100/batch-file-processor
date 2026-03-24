@@ -273,6 +273,7 @@ class DynamicEDIBuilder:
             for key in keys_to_remove:
                 if key in self.fields:
                     del self.fields[key]
+            self._prune_stale_plugin_generator_keys(keys_to_remove)
 
         except Exception as e:
             log_with_context(
@@ -286,6 +287,25 @@ class DynamicEDIBuilder:
                 exc_info=True,
             )
         self._restore_upc_override_as_plain_values()
+
+    def _prune_stale_plugin_generator_keys(self, removed_keys: list[str]) -> None:
+        """Remove plugin form-generator entries tied to removed plugin form widgets.
+
+        Plugin config forms store two field entries:
+        - ``plugin_config_<identifier>`` -> form widget
+        - ``plugin_config_<identifier>_generator`` -> FormGenerator instance
+
+        When the form widget is cleared, we must also remove the paired generator
+        entry; otherwise later extraction can call ``get_values()`` on generator
+        widgets that have already been deleted by Qt.
+        """
+        for key in removed_keys:
+            if not key.startswith("plugin_config_") or key.endswith("_generator"):
+                continue
+
+            generator_key = f"{key}_generator"
+            if generator_key in self.fields:
+                del self.fields[generator_key]
 
     def _find_and_track_widget_keys(self, widget, keys_to_remove):
         """Recursively find all descendant widgets and track their field keys."""
@@ -461,6 +481,7 @@ class DynamicEDIBuilder:
             for key in keys_to_remove:
                 if key in self.fields:
                     del self.fields[key]
+            self._prune_stale_plugin_generator_keys(keys_to_remove)
 
         except Exception as e:
             log_with_context(
@@ -483,8 +504,12 @@ class DynamicEDIBuilder:
         """
         keys_to_remove = []
         items_to_remove = []
-        while self.convert_sub_layout.count():
-            items_to_remove.append(self.convert_sub_layout.takeAt(0))
+        layout = self.convert_sub_layout
+        if layout is None:
+            return keys_to_remove
+
+        while layout.count():
+            items_to_remove.append(layout.takeAt(0))
 
         for item in items_to_remove:
             if item:

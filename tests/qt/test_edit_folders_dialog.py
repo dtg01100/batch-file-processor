@@ -1129,6 +1129,52 @@ class TestWidgetCleanupAndLifecycle:
             "upc_var_check should be removed when switching from CSV format"
         )
 
+    def test_switching_from_tweaks_to_do_nothing_removes_plugin_generator_refs(
+        self, qtbot, sample_folder_config, capsys
+    ):
+        """Switching away from Tweaks should remove stale generator references.
+
+        Regression test for: "wrapped C/C++ object of type QCheckBox has been deleted"
+        during plugin config extraction.
+        """
+        sample_folder_config["folder_is_active"] = "True"
+        sample_folder_config["process_backend_copy"] = True
+        sample_folder_config["process_edi"] = "True"
+        sample_folder_config["convert_to_format"] = "tweaks"
+
+        dialog = create_dialog(qtbot, sample_folder_config)
+
+        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        qtbot.waitUntil(
+            lambda: (
+                dialog._convert_format_combo is not None
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
+
+        dialog._convert_format_combo.setCurrentText("Tweaks")
+        qtbot.waitUntil(
+            lambda: "plugin_config_tweaks_configuration_generator" in dialog._fields,
+            timeout=1000,
+        )
+
+        dialog._edi_options_combo.setCurrentText("Do Nothing")
+        qtbot.waitUntil(
+            lambda: (
+                "plugin_config_tweaks_configuration_generator" not in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
+            ),
+            timeout=1000,
+        )
+
+        dialog.apply()
+
+        captured = capsys.readouterr()
+        assert "Error extracting plugin configuration for Tweaks" not in captured.out
+        assert "plugin_config_tweaks_configuration" not in dialog._fields
+        assert "plugin_config_tweaks_configuration_generator" not in dialog._fields
+
     def test_data_extractor_handles_missing_widgets_gracefully(
         self, qtbot, sample_folder_config
     ):

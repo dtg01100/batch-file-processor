@@ -372,9 +372,11 @@ class PluginConfigurationMapper:
                 field_name = field.name
                 widget = dialog_fields.get(field_name)
 
-                if widget:
+                if widget is not None:
                     try:
-                        if isinstance(widget, WidgetBase):
+                        if isinstance(widget, (bool, int, float, str, list, dict)):
+                            config[field_name] = widget
+                        elif isinstance(widget, WidgetBase):
                             config[field_name] = widget.get_value()
                         else:
                             config[field_name] = self._get_widget_value(

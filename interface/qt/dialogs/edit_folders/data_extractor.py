@@ -124,6 +124,11 @@ class QtFolderDataExtractor:
                     get_values = getattr(form_generator, "get_values", None)
                     if callable(get_values):
                         plugin_configs[plugin.get_format_name().lower()] = get_values()
+                except RuntimeError:
+                    # Plugin form widgets may already be deleted if the user
+                    # switched formats/options before extraction. Skip stale
+                    # generator references and continue.
+                    continue
                 except Exception as e:
                     print(
                         f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}"
