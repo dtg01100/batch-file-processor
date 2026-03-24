@@ -190,6 +190,14 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 description="Convert to retail UOM (case to each)",
                 default=False,
             ),
+            # Tax Handling
+            FieldDefinition(
+                name="split_prepaid_sales_tax_crec",
+                field_type=FieldType.BOOLEAN,
+                label="Split Prepaid Sales Tax CREC",
+                description="Split prepaid sales tax into C records",
+                default=False,
+            ),
             # UPC Override
             FieldDefinition(
                 name="override_upc",
@@ -230,14 +238,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 label="UPC Padding Pattern",
                 description="Pattern for UPC padding (spaces for left padding)",
                 default="           ",
-            ),
-            # Tax Handling
-            FieldDefinition(
-                name="split_prepaid_sales_tax_crec",
-                field_type=FieldType.BOOLEAN,
-                label="Split Prepaid Sales Tax CREC",
-                description="Split prepaid sales tax into C records",
-                default=False,
             ),
         ]
         return fields
