@@ -264,22 +264,29 @@ class UOMLookupMixin(ABC):
         stage_2_list = []
 
         for entry in self.uom_lookup_list:
+            item_no = entry.get("itemno")
+            if item_no is None:
+                continue
             try:
-                if int(entry["itemno"]) == int(item_number):
+                if int(item_no) == int(item_number):
                     stage_1_list.append(entry)
             except (ValueError, TypeError):
                 continue
 
         for entry in stage_1_list:
+            uom_mult = entry.get("uom_mult")
+            if uom_mult is None:
+                stage_2_list.append(entry)
+                break
             try:
-                if int(entry["uom_mult"]) == int(packsize):
+                if int(uom_mult) == int(packsize):
                     stage_2_list.append(entry)
             except (ValueError, TypeError):
                 stage_2_list.append(entry)
                 break
 
         try:
-            return stage_2_list[0]["uom_code"]
+            return stage_2_list[0].get("uom_code", "?")
         except IndexError:
             return "?"
 
