@@ -184,10 +184,10 @@ class EditFoldersDialog(BaseDialog):
         # EDI Options combo
         edi_combo = self.dynamic_edi_builder.edi_options_combo
         if edi_combo:
-            if normalize_bool(config.get("process_edi")):
+            if normalize_bool(config.get("process_edi")) or bool(
+                config.get("convert_to_format")
+            ):
                 edi_combo.setCurrentText("Convert EDI")
-            elif to_bool(config.get("tweak_edi")):
-                edi_combo.setCurrentText("Tweak EDI")
             else:
                 edi_combo.setCurrentText("Do Nothing")
 
@@ -196,7 +196,9 @@ class EditFoldersDialog(BaseDialog):
         convert_combo = self.dynamic_edi_builder.convert_format_combo
         if convert_combo:
             new_fmt = str(config.get("convert_to_format") or "csv")
-            idx = convert_combo.findText(new_fmt)
+            idx = self.dynamic_edi_builder._find_combo_index_case_insensitive(
+                convert_combo, new_fmt
+            )
             if idx >= 0:
                 # Changing the index fires handle_convert_format_changed which rebuilds
                 # the sub-form widgets from self.dynamic_edi_builder.folder_config.
@@ -709,7 +711,7 @@ class EditFoldersDialog(BaseDialog):
         target["include_headers"] = normalize_bool(extracted.include_headers)
         target["filter_ampersand"] = normalize_bool(extracted.filter_ampersand)
         target["force_edi_validation"] = extracted.force_edi_validation
-        target["tweak_edi"] = extracted.tweak_edi
+        target["tweak_edi"] = False  # always zero; column kept for DB compat only
         target["split_edi"] = extracted.split_edi
         target["split_edi_include_invoices"] = extracted.split_edi_include_invoices
         target["split_edi_include_credits"] = extracted.split_edi_include_credits

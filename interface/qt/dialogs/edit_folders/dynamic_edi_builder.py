@@ -25,7 +25,6 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -44,7 +43,7 @@ class DynamicEDIBuilder:
     sections based on user selections.
     """
 
-    EDI_OPTIONS = ["Do Nothing", "Convert EDI", "Tweak EDI"]
+    EDI_OPTIONS = ["Do Nothing", "Convert EDI"]
 
     def __init__(
         self,
@@ -128,22 +127,18 @@ class DynamicEDIBuilder:
         formats = []
         for plugin in self.configuration_plugins:
             formats.append(plugin.get_format_name())
-        # Add remaining hardcoded formats that don't have plugins yet
-        hardcoded_formats = [
-            "ScannerWare",
-            "scansheet-type-a",
-            "jolley_custom",
-            "stewarts_custom",
-            "simplified_csv",
-            "Estore eInvoice",
-            "Estore eInvoice Generic",
-            "YellowDog CSV",
-            "fintech",
-        ]
-        for fmt in hardcoded_formats:
-            if fmt not in formats:
-                formats.append(fmt)
         return sorted(formats)
+
+    @staticmethod
+    def _find_combo_index_case_insensitive(combo: QComboBox, text: str) -> int:
+        """Find combo index by text case-insensitively."""
+        if not text:
+            return -1
+        text_lower = text.lower()
+        for i in range(combo.count()):
+            if combo.itemText(i).lower() == text_lower:
+                return i
+        return -1
 
     def build_edi_options_combo(self) -> QComboBox:
         """Build and configure the EDI options dropdown."""
@@ -151,7 +146,7 @@ class DynamicEDIBuilder:
         self.edi_options_combo.addItems(self.EDI_OPTIONS)
         self.edi_options_combo.setAccessibleName("EDI options")
         self.edi_options_combo.setAccessibleDescription(
-            "Choose whether to convert EDI, tweak EDI, or send as is"
+            "Choose whether to convert EDI or send as is"
         )
         self.edi_options_combo.currentTextChanged.connect(self._on_edi_option_changed)
         self.fields["edi_options_combo"] = self.edi_options_combo
@@ -303,8 +298,6 @@ class DynamicEDIBuilder:
                 self._build_do_nothing_area()
             elif option == "Convert EDI":
                 self._build_convert_edi_area()
-            elif option == "Tweak EDI":
-                self._build_tweak_edi_area()
             if self.on_dynamic_form_changed:
                 self.on_dynamic_form_changed()
         finally:
@@ -319,14 +312,12 @@ class DynamicEDIBuilder:
     def _build_do_nothing_area(self):
         """Build the 'Do Nothing' EDI configuration section."""
         self.fields["process_edi"] = False
-        self.fields["tweak_edi"] = False
         label = QLabel("Send As Is")
         self.dynamic_layout.addWidget(label)
 
     def _build_convert_edi_area(self):
         """Build the 'Convert EDI' configuration section."""
         self.fields["process_edi"] = True
-        self.fields["tweak_edi"] = False
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
@@ -354,7 +345,9 @@ class DynamicEDIBuilder:
         )
 
         current_fmt = self.folder_config.get("convert_to_format", "csv")
-        idx = self.convert_format_combo.findText(current_fmt)
+        idx = self._find_combo_index_case_insensitive(
+            self.convert_format_combo, current_fmt
+        )
         if idx >= 0:
             self.convert_format_combo.setCurrentIndex(idx)
         self.handle_convert_format_changed(self.convert_format_combo.currentText())
@@ -854,226 +847,16 @@ class DynamicEDIBuilder:
             self.convert_sub_layout.addWidget(wrapper)
 
     def _build_tweak_edi_area(self):
-        """Build the 'Tweak EDI' configuration section."""
-        self.fields["process_edi"] = False
-        self.fields["tweak_edi"] = True
+        """Compatibility shim for legacy callers.
 
-        # Clear convert_formats_var to prevent stale einvoice format from persisting
-        # when switching from Convert EDI to Tweak EDI mode
-        if "convert_formats_var" in self.fields:
-            del self.fields["convert_formats_var"]
+        The dedicated tweak mode has been retired. Route legacy invocations to
+        Convert EDI mode with the "Tweaks" conversion target selected when
+        available.
+        """
+        self._build_convert_edi_area()
+        if self.convert_format_combo is None:
+            return
 
-        wrapper = QWidget()
-        wrapper_layout = QVBoxLayout(wrapper)
-        wrapper_layout.setContentsMargins(0, 0, 0, 0)
-
-        tweak_upc_check = QCheckBox("Calculate UPC Check Digit")
-        self.fields["upc_var_check"] = tweak_upc_check
-        wrapper_layout.addWidget(tweak_upc_check)
-
-        arec_group = QGroupBox("A-Record Padding")
-        arec_layout = QVBoxLayout(arec_group)
-        tweak_pad_arec_check = QCheckBox('Pad "A" Records')
-        self.fields["pad_arec_check"] = tweak_pad_arec_check
-        arec_layout.addWidget(tweak_pad_arec_check)
-
-        pad_row = QHBoxLayout()
-        pad_row.addWidget(QLabel("Padding Text:"))
-        tweak_arec_padding_field = QLineEdit()
-        tweak_arec_padding_field.setMaximumWidth(100)
-        self.fields["a_record_padding_field"] = tweak_arec_padding_field
-        pad_row.addWidget(tweak_arec_padding_field)
-
-        pad_row.addWidget(QLabel("Length:"))
-        tweak_arec_padding_length = QComboBox()
-        tweak_arec_padding_length.addItems(["6", "30"])
-        self.fields["a_record_padding_length"] = tweak_arec_padding_length
-        pad_row.addWidget(tweak_arec_padding_length)
-        arec_layout.addLayout(pad_row)
-
-        tweak_append_arec_check = QCheckBox(
-            'Append to "A" Records (6 Characters) (Series2K)'
-        )
-        self.fields["append_arec_check"] = tweak_append_arec_check
-        arec_layout.addWidget(tweak_append_arec_check)
-
-        append_row = QHBoxLayout()
-        append_row.addWidget(QLabel("Append Text:"))
-        tweak_arec_append_field = QLineEdit()
-        tweak_arec_append_field.setMaximumWidth(100)
-        self.fields["a_record_append_field"] = tweak_arec_append_field
-        append_row.addWidget(tweak_arec_append_field)
-        arec_layout.addLayout(append_row)
-        wrapper_layout.addWidget(arec_group)
-
-        tweak_force_txt_check = QCheckBox("Force .txt file extension")
-        tweak_force_txt_check.setAccessibleName("Force txt file extension")
-        self.fields["force_txt_file_ext_check"] = tweak_force_txt_check
-        wrapper_layout.addWidget(tweak_force_txt_check)
-
-        offset_row = QHBoxLayout()
-        offset_row.addWidget(QLabel("Invoice Offset (Days):"))
-        tweak_invoice_offset = QSpinBox()
-        tweak_invoice_offset.setRange(-14, 14)
-        tweak_invoice_offset.setAccessibleName("Invoice offset days")
-        self.fields["invoice_date_offset"] = tweak_invoice_offset
-        offset_row.addWidget(tweak_invoice_offset)
-        wrapper_layout.addLayout(offset_row)
-
-        custom_date_row = QHBoxLayout()
-        tweak_custom_date_check = QCheckBox("Custom Invoice Date Format")
-        self.fields["invoice_date_custom_format"] = tweak_custom_date_check
-        custom_date_row.addWidget(tweak_custom_date_check)
-        tweak_custom_date_field = QLineEdit()
-        tweak_custom_date_field.setMaximumWidth(100)
-        tweak_custom_date_field.setAccessibleName("Custom invoice date format string")
-        self.fields["invoice_date_custom_format_field"] = tweak_custom_date_field
-        custom_date_row.addWidget(tweak_custom_date_field)
-        wrapper_layout.addLayout(custom_date_row)
-
-        tweak_retail_uom_check = QCheckBox("Each UOM")
-        self.fields["edi_each_uom_tweak"] = tweak_retail_uom_check
-        wrapper_layout.addWidget(tweak_retail_uom_check)
-
-        upc_override_group = QGroupBox("Override UPC")
-        upc_layout = QVBoxLayout(upc_override_group)
-        tweak_override_upc_check = QCheckBox("Override UPC")
-        self.fields["override_upc_bool"] = tweak_override_upc_check
-        upc_layout.addWidget(tweak_override_upc_check)
-
-        upc_row1 = QHBoxLayout()
-        upc_row1.addWidget(QLabel("Level:"))
-        tweak_override_upc_level = QComboBox()
-        tweak_override_upc_level.addItems(["1", "2", "3", "4"])
-        self.fields["override_upc_level"] = tweak_override_upc_level
-        upc_row1.addWidget(tweak_override_upc_level)
-        upc_row1.addWidget(QLabel("Category Filter:"))
-        tweak_override_upc_cat_filter = QLineEdit()
-        tweak_override_upc_cat_filter.setMaximumWidth(100)
-        self.fields["override_upc_category_filter_entry"] = (
-            tweak_override_upc_cat_filter
-        )
-        upc_row1.addWidget(tweak_override_upc_cat_filter)
-        upc_layout.addLayout(upc_row1)
-
-        upc_row2 = QHBoxLayout()
-        upc_row2.addWidget(QLabel("UPC Target Length:"))
-        tweak_upc_target_length = QLineEdit()
-        tweak_upc_target_length.setMaximumWidth(50)
-        self.fields["upc_target_length_entry"] = tweak_upc_target_length
-        upc_row2.addWidget(tweak_upc_target_length)
-        upc_layout.addLayout(upc_row2)
-
-        upc_row3 = QHBoxLayout()
-        upc_row3.addWidget(QLabel("UPC Padding Pattern:"))
-        tweak_upc_padding_pattern = QLineEdit()
-        tweak_upc_padding_pattern.setMaximumWidth(120)
-        self.fields["upc_padding_pattern_entry"] = tweak_upc_padding_pattern
-        upc_row3.addWidget(tweak_upc_padding_pattern)
-        upc_layout.addLayout(upc_row3)
-        wrapper_layout.addWidget(upc_override_group)
-
-        tweak_split_sales_tax_check = QCheckBox("Split Sales Tax 'C' Records")
-        self.fields["split_sales_tax_prepaid_var"] = tweak_split_sales_tax_check
-        wrapper_layout.addWidget(tweak_split_sales_tax_check)
-
-        self._populate_tweak_fields_local(
-            tweak_upc_check,
-            tweak_pad_arec_check,
-            tweak_arec_padding_field,
-            tweak_arec_padding_length,
-            tweak_append_arec_check,
-            tweak_arec_append_field,
-            tweak_force_txt_check,
-            tweak_invoice_offset,
-            tweak_custom_date_check,
-            tweak_custom_date_field,
-            tweak_retail_uom_check,
-            tweak_override_upc_check,
-            tweak_override_upc_level,
-            tweak_override_upc_cat_filter,
-            tweak_upc_target_length,
-            tweak_upc_padding_pattern,
-            tweak_split_sales_tax_check,
-        )
-        self.dynamic_layout.addWidget(wrapper)
-
-    def _populate_tweak_fields_local(
-        self,
-        upc_check,
-        pad_arec_check,
-        arec_padding_field,
-        arec_padding_length,
-        append_arec_check,
-        arec_append_field,
-        force_txt_check,
-        invoice_offset,
-        custom_date_check,
-        custom_date_field,
-        retail_uom_check,
-        override_upc_check,
-        override_upc_level,
-        override_upc_cat_filter,
-        upc_target_length,
-        upc_padding_pattern,
-        split_sales_tax_check,
-    ):
-        cfg = self.folder_config
-        upc_check.setChecked(
-            normalize_bool(cfg.get("calculate_upc_check_digit", False))
-        )
-        pad_arec_check.setChecked(normalize_bool(cfg.get("pad_a_records", False)))
-        arec_padding_field.setText(str(cfg.get("a_record_padding") or ""))
-
-        pad_len = str(
-            cfg.get("a_record_padding_length")
-            if cfg.get("a_record_padding_length") is not None
-            else 6
-        )
-        idx = arec_padding_length.findText(pad_len)
+        idx = self.convert_format_combo.findText("Tweaks")
         if idx >= 0:
-            arec_padding_length.setCurrentIndex(idx)
-
-        append_arec_check.setChecked(normalize_bool(cfg.get("append_a_records", False)))
-        arec_append_field.setText(str(cfg.get("a_record_append_text") or ""))
-        force_txt_check.setChecked(normalize_bool(cfg.get("force_txt_file_ext", False)))
-
-        offset = cfg.get("invoice_date_offset")
-        invoice_offset.setValue(int(offset) if offset is not None else 0)
-
-        custom_date_check.setChecked(
-            normalize_bool(cfg.get("invoice_date_custom_format", False))
-        )
-        custom_date_field.setText(
-            str(cfg.get("invoice_date_custom_format_string") or "")
-        )
-        retail_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
-        override_upc_check.setChecked(
-            normalize_bool(cfg.get("override_upc_bool", False))
-        )
-
-        lvl = str(
-            cfg.get("override_upc_level")
-            if cfg.get("override_upc_level") is not None
-            else 1
-        )
-        idx = override_upc_level.findText(lvl)
-        if idx >= 0:
-            override_upc_level.setCurrentIndex(idx)
-
-        override_upc_cat_filter.setText(
-            str(cfg.get("override_upc_category_filter") or "")
-        )
-        upc_target_length.setText(
-            str(
-                cfg.get("upc_target_length")
-                if cfg.get("upc_target_length") is not None
-                else 11
-            )
-        )
-        upc_padding_pattern.setText(
-            str(cfg.get("upc_padding_pattern") or "           ")
-        )
-        split_sales_tax_check.setChecked(
-            normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
-        )
+            self.convert_format_combo.setCurrentIndex(idx)
