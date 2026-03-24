@@ -757,7 +757,12 @@ class EditFoldersDialog(BaseDialog):
         target["estore_c_record_OID"] = extracted.estore_c_record_oid
         target["fintech_division_id"] = extracted.fintech_division_id
 
-        # Plugins
+        # Plugins - update plugin_configurations from extracted values
+        if extracted.plugin_configurations:
+            if "plugin_configurations" not in target:
+                target["plugin_configurations"] = {}
+            for format_name, config in extracted.plugin_configurations.items():
+                target["plugin_configurations"][format_name.lower()] = config
         self._apply_plugin_configurations(target)
 
         if self._on_apply_success:
