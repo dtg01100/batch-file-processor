@@ -263,16 +263,6 @@ class EDIValidator:
                 )
                 return False, line_num
 
-            # Check item number is numeric
-            try:
-                _ = int(line[1:12])
-            except ValueError:
-                if line[1:12] != "           ":
-                    logger.debug(
-                        "EDI format check failed at line %d: %s", line_num, file_path
-                    )
-                    return False, line_num
-
             # Check for missing pricing in 70-char lines
             if len(line) == 70 and line[51:67] != "                ":
                 logger.debug(
@@ -306,26 +296,36 @@ class EDIValidator:
 
                 proposed_upc = line[1:12]
                 stripped_upc = str(proposed_upc).strip()
+                description = line[12:37].strip()
+                item_ctx = f"line {line_num} (UPC: {proposed_upc.strip()!r}, desc: {description!r})"
+
+                # Check for non-numeric UPC (not blank)
+                if proposed_upc != "           ":
+                    try:
+                        int(proposed_upc)
+                    except ValueError:
+                        self.has_minor_errors = True
+                        issues.append(f"Non-numeric UPC in {item_ctx}")
 
                 # Check for suppressed UPC (8 chars)
                 if len(stripped_upc) == 8:
                     self.has_minor_errors = True
-                    issues.append(f"Suppressed UPC in line {line_num}")
+                    issues.append(f"Suppressed UPC in {item_ctx}")
 
                 # Check for truncated UPC (1-10 chars)
                 elif 0 < len(stripped_upc) < 11:
                     self.has_minor_errors = True
-                    issues.append(f"Truncated UPC in line {line_num}")
+                    issues.append(f"Truncated UPC in {item_ctx}")
 
                 # Check for blank UPC
                 if line[1:12] == "           ":
                     self.has_minor_errors = True
-                    issues.append(f"Blank UPC in line {line_num}")
+                    issues.append(f"Blank UPC in {item_ctx}")
 
                 # Check for missing pricing
                 if len(line) == 70:
                     self.has_minor_errors = True
-                    issues.append(f"Missing pricing information in line {line_num}")
+                    issues.append(f"Missing pricing information in {item_ctx}")
 
             if issues:
                 logger.debug("Found %d issue(s) in: %s", len(issues), file_path)
@@ -359,22 +359,31 @@ class EDIValidator:
 
                 proposed_upc = line[1:12]
                 stripped_upc = str(proposed_upc).strip()
+                description = line[12:37].strip()
+                item_ctx = f"line {line_num} (UPC: {proposed_upc.strip()!r}, desc: {description!r})"
 
                 # Warnings (minor errors)
+                if proposed_upc != "           ":
+                    try:
+                        int(proposed_upc)
+                    except ValueError:
+                        self.has_minor_errors = True
+                        warnings.append(f"Non-numeric UPC in {item_ctx}")
+
                 if len(stripped_upc) == 8:
                     self.has_minor_errors = True
-                    warnings.append(f"Suppressed UPC in line {line_num}")
+                    warnings.append(f"Suppressed UPC in {item_ctx}")
                 elif 0 < len(stripped_upc) < 11:
                     self.has_minor_errors = True
-                    warnings.append(f"Truncated UPC in line {line_num}")
+                    warnings.append(f"Truncated UPC in {item_ctx}")
 
                 if line[1:12] == "           ":
                     self.has_minor_errors = True
-                    warnings.append(f"Blank UPC in line {line_num}")
+                    warnings.append(f"Blank UPC in {item_ctx}")
 
                 if len(line) == 70:
                     self.has_minor_errors = True
-                    warnings.append(f"Missing pricing information in line {line_num}")
+                    warnings.append(f"Missing pricing information in {item_ctx}")
 
         except Exception as e:
             self.has_errors = True

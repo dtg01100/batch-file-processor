@@ -332,6 +332,139 @@ class TestRealFileSystem:
         assert os.path.isabs(result)
 
 
+class TestUPCRegressions:
+    """Regression tests for UPC validation bug fixes.
+
+    Covers:
+    - Non-numeric UPC must be a non-fatal warning, not a hard failure.
+    - Warning messages must include line number, UPC value, and item description.
+    """
+
+    # B record layout: B(1) + UPC(11) + description(25) + rest(39) = 76 chars
+    # or 70-char variant: B(1) + UPC(11) + description(25) + rest(33) = 70 chars
+
+    @staticmethod
+    def _b_record(upc: str, description: str, length: int = 76) -> str:
+        """Build a B record of the requested length."""
+        upc_field = upc.ljust(11)[:11]
+        desc_field = description.ljust(25)[:25]
+        filler = " " * (length - 1 - 11 - 25)
+        return "B" + upc_field + desc_field + filler
+
+    def test_non_numeric_upc_is_not_fatal(self):
+        """Regression: non-numeric UPC must not cause hard validation failure.
+
+        Previously a non-numeric UPC (e.g. 'N4143303084') would return
+        is_valid=False. It should instead return is_valid=True with a warning.
+        """
+        b_line = self._b_record("N4143303084", "SOME ITEM DESC")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        is_valid, errors = validator.validate("/test/file.edi")
+
+        assert is_valid is True, "Non-numeric UPC should not be a fatal error"
+        assert validator.has_minor_errors is True
+        assert any("Non-numeric UPC" in e for e in errors)
+
+    def test_non_numeric_upc_warning_includes_upc_value(self):
+        """Regression: warning for non-numeric UPC must include the offending UPC."""
+        b_line = self._b_record("N4143303084", "SOME ITEM DESC")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        _, errors = validator.validate("/test/file.edi")
+
+        assert any("N4143303084" in e for e in errors), (
+            "Warning should include the offending UPC value"
+        )
+
+    def test_non_numeric_upc_warning_includes_description(self):
+        """Regression: warning for non-numeric UPC must include item description."""
+        b_line = self._b_record("N4143303084", "TURK/PROV SUB ITEM")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        _, errors = validator.validate("/test/file.edi")
+
+        assert any("TURK/PROV SUB ITEM" in e for e in errors), (
+            "Warning should include the item description"
+        )
+
+    def test_non_numeric_upc_warning_via_validate_with_warnings(self):
+        """Regression: non-numeric UPC appears in warnings via validate_with_warnings."""
+        b_line = self._b_record("N4143303084", "SOME ITEM DESC")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+
+        assert is_valid is True
+        assert errors == []
+        assert any("Non-numeric UPC" in w for w in warnings)
+        assert any("N4143303084" in w for w in warnings)
+
+    def test_suppressed_upc_warning_includes_context(self):
+        """Warning for suppressed UPC must include UPC value and description."""
+        upc_8 = "12345678"  # 8-char suppressed UPC, padded to 11 in field
+        b_line = self._b_record(upc_8, "SUPPRESSED ITEM")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+
+        assert is_valid is True
+        assert any("Suppressed UPC" in w for w in warnings)
+        assert any("12345678" in w for w in warnings)
+        assert any("SUPPRESSED ITEM" in w for w in warnings)
+
+    def test_blank_upc_warning_includes_context(self):
+        """Warning for blank UPC must include line number and description."""
+        b_line = self._b_record("           ", "BLANK UPC ITEM")
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+
+        assert is_valid is True
+        assert any("Blank UPC" in w for w in warnings)
+        assert any("BLANK UPC ITEM" in w for w in warnings)
+
+    def test_missing_pricing_warning_includes_context(self):
+        """Warning for missing pricing must include UPC value and description."""
+        b_line = self._b_record("12345678901", "MISSING PRICE ITEM", length=70)
+        edi_content = f"AHEADER\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+
+        assert is_valid is True
+        assert any("Missing pricing" in w for w in warnings)
+        assert any("12345678901" in w for w in warnings)
+        assert any("MISSING PRICE" in w for w in warnings)
+
+    def test_warning_includes_line_number(self):
+        """Warning message must include the line number of the offending record."""
+        b_line = self._b_record("N4143303084", "SOME ITEM")
+        # Put two A/C lines before B so the B is on line 3
+        edi_content = f"AHEADER\nASECOND\n{b_line}\nCFOOTER\n"
+        mock_fs = MockFileSystem({"/test/file.edi": edi_content})
+
+        validator = EDIValidator(file_system=mock_fs)
+        _, errors = validator.validate("/test/file.edi")
+
+        assert any("line 3" in e for e in errors), (
+            "Warning should contain the correct line number"
+        )
+
+
 class TestEDIValidatorEdgeCases:
     """Edge case tests for EDIValidator."""
 
