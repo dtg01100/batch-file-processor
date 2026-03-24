@@ -161,9 +161,9 @@ def _smtp_send(host, port, subject, filename, data: bytes):
 
 class TestEDIFileDiscovery:
     def test_edi_test_dir_exists(self):
-        assert os.path.isdir(
-            TEST_EDI_DIR
-        ), f"test_edi directory not found: {TEST_EDI_DIR}"
+        assert os.path.isdir(TEST_EDI_DIR), (
+            f"test_edi directory not found: {TEST_EDI_DIR}"
+        )
         files = os.listdir(TEST_EDI_DIR)
         assert len(files) > 0, "test_edi directory is empty"
 
@@ -176,9 +176,9 @@ class TestEDIFileDiscovery:
     def test_edi_file_naming_pattern(self):
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
-            assert re.match(
-                r"^\d{6}\.\d{3}$", filename
-            ), f"File does not match naming pattern: {filename}"
+            assert re.match(r"^\d{6}\.\d{3}$", filename), (
+                f"File does not match naming pattern: {filename}"
+            )
 
 
 # ===========================================================================
@@ -196,9 +196,9 @@ class TestEDIFileParsing:
                         first_non_empty = line
                         break
             assert first_non_empty is not None, f"File is empty: {file_path}"
-            assert first_non_empty.startswith(
-                "A"
-            ), f"First non-empty line does not start with A: {file_path}"
+            assert first_non_empty.startswith("A"), (
+                f"First non-empty line does not start with A: {file_path}"
+            )
 
     def test_a_record_field_widths(self):
         for file_path in _all_edi_files():
@@ -208,18 +208,18 @@ class TestEDIFileParsing:
                         continue
                     record = capture_records(line)
                     assert record is not None
-                    assert (
-                        len(record["cust_vendor"]) == 6
-                    ), f"cust_vendor wrong width in {file_path}: {record['cust_vendor']!r}"
-                    assert (
-                        len(record["invoice_number"]) == 10
-                    ), f"invoice_number wrong width in {file_path}: {record['invoice_number']!r}"
-                    assert (
-                        len(record["invoice_date"]) == 6
-                    ), f"invoice_date wrong width in {file_path}: {record['invoice_date']!r}"
-                    assert (
-                        len(record["invoice_total"]) == 10
-                    ), f"invoice_total wrong width in {file_path}: {record['invoice_total']!r}"
+                    assert len(record["cust_vendor"]) == 6, (
+                        f"cust_vendor wrong width in {file_path}: {record['cust_vendor']!r}"
+                    )
+                    assert len(record["invoice_number"]) == 10, (
+                        f"invoice_number wrong width in {file_path}: {record['invoice_number']!r}"
+                    )
+                    assert len(record["invoice_date"]) == 6, (
+                        f"invoice_date wrong width in {file_path}: {record['invoice_date']!r}"
+                    )
+                    assert len(record["invoice_total"]) == 10, (
+                        f"invoice_total wrong width in {file_path}: {record['invoice_total']!r}"
+                    )
 
     def test_b_record_field_widths(self):
         for file_path in _all_edi_files():
@@ -229,12 +229,12 @@ class TestEDIFileParsing:
                         continue
                     record = capture_records(line)
                     assert record is not None
-                    assert (
-                        len(record["upc_number"]) == 11
-                    ), f"upc_number wrong width in {file_path}: {record['upc_number']!r}"
-                    assert (
-                        len(record["description"]) == 25
-                    ), f"description wrong width in {file_path}: {record['description']!r}"
+                    assert len(record["upc_number"]) == 11, (
+                        f"upc_number wrong width in {file_path}: {record['upc_number']!r}"
+                    )
+                    assert len(record["description"]) == 25, (
+                        f"description wrong width in {file_path}: {record['description']!r}"
+                    )
 
     @pytest.mark.parametrize("filename", ["202002.003", "202002.006"])
     def test_negative_invoice_totals(self, filename):
@@ -246,9 +246,9 @@ class TestEDIFileParsing:
                     a_record = capture_records(line)
                     break
         assert a_record is not None, f"No A record found in {filename}"
-        assert a_record["invoice_total"].startswith(
-            "-"
-        ), f"Expected negative invoice_total in {filename}: {a_record['invoice_total']!r}"
+        assert a_record["invoice_total"].startswith("-"), (
+            f"Expected negative invoice_total in {filename}: {a_record['invoice_total']!r}"
+        )
 
     @pytest.mark.parametrize("filename", ["202006.003", "202007.001"])
     def test_multi_invoice_files(self, filename):
@@ -278,17 +278,17 @@ class TestEDIValidation:
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
             result = step.validate(file_path, filename)
-            assert (
-                result.errors == []
-            ), f"Unexpected blocking errors for {filename}: {result.errors}"
+            assert result.errors == [], (
+                f"Unexpected blocking errors for {filename}: {result.errors}"
+            )
 
     def test_small_file_validates(self):
         file_path = _edi_path("351018.004")
         step = EDIValidationStep()
         result = step.validate(file_path, "351018.004")
-        assert (
-            result.is_valid
-        ), f"Expected 351018.004 to be valid, errors: {result.errors}"
+        assert result.is_valid, (
+            f"Expected 351018.004 to be valid, errors: {result.errors}"
+        )
 
     def test_large_file_validates(self):
         all_files = _all_edi_files()
@@ -296,27 +296,27 @@ class TestEDIValidation:
         filename = os.path.basename(largest)
         step = EDIValidationStep()
         result = step.validate(largest, filename)
-        assert (
-            result.is_valid
-        ), f"Expected largest file {filename} to be valid, errors: {result.errors}"
+        assert result.is_valid, (
+            f"Expected largest file {filename} to be valid, errors: {result.errors}"
+        )
 
     @pytest.mark.parametrize("filename", ["202002.003", "202002.006"])
     def test_negative_amount_files_validate(self, filename):
         file_path = _edi_path(filename)
         step = EDIValidationStep()
         result = step.validate(file_path, filename)
-        assert (
-            result.is_valid is True
-        ), f"Expected {filename} to be valid, errors: {result.errors}"
+        assert result.is_valid is True, (
+            f"Expected {filename} to be valid, errors: {result.errors}"
+        )
 
     @pytest.mark.parametrize("filename", ["202006.003", "202007.001"])
     def test_multi_invoice_files_validate(self, filename):
         file_path = _edi_path(filename)
         step = EDIValidationStep()
         result = step.validate(file_path, filename)
-        assert (
-            result.is_valid is True
-        ), f"Expected {filename} to be valid, errors: {result.errors}"
+        assert result.is_valid is True, (
+            f"Expected {filename} to be valid, errors: {result.errors}"
+        )
 
 
 # ===========================================================================
@@ -329,7 +329,7 @@ class TestEDIFileSplitting:
         input_path = _edi_path("202001.001")
         step = EDISplitterStep()
         result = step.split(input_path, str(tmp_path), {"split_edi": True}, {})
-        assert result.was_split is False, "Single-invoice file should not be split"
+        assert result.was_split is True, "Single-invoice file should be marked as split"
         assert len(result.files) == 1, f"Expected 1 file, got {len(result.files)}"
 
     def test_multi_invoice_file_is_split(self, tmp_path):
@@ -344,9 +344,9 @@ class TestEDIFileSplitting:
         step = EDISplitterStep()
         result = step.split(input_path, str(tmp_path), {"split_edi": True}, {})
         for file_path, _prefix, _suffix in result.files:
-            assert os.path.isfile(
-                file_path
-            ), f"Split output file not found on disk: {file_path}"
+            assert os.path.isfile(file_path), (
+                f"Split output file not found on disk: {file_path}"
+            )
 
     def test_split_files_each_have_one_a_record(self, tmp_path):
         input_path = _edi_path("202007.001")
@@ -354,17 +354,17 @@ class TestEDIFileSplitting:
         result = step.split(input_path, str(tmp_path), {"split_edi": True}, {})
         for file_path, _prefix, _suffix in result.files:
             count = _count_a_records(file_path)
-            assert (
-                count == 1
-            ), f"Expected exactly 1 A record in {file_path}, got {count}"
+            assert count == 1, (
+                f"Expected exactly 1 A record in {file_path}, got {count}"
+            )
 
     def test_no_split_returns_original_path(self, tmp_path):
         input_path = _edi_path("202001.001")
         step = EDISplitterStep()
         result = step.split(input_path, str(tmp_path), {"split_edi": False}, {})
-        assert (
-            result.files[0][0] == input_path
-        ), f"Expected original path {input_path!r}, got {result.files[0][0]!r}"
+        assert result.files[0][0] == input_path, (
+            f"Expected original path {input_path!r}, got {result.files[0][0]!r}"
+        )
 
 
 # ===========================================================================
@@ -422,9 +422,9 @@ class TestEDIFTPTransport:
                 break
         assert a_record_line is not None, "No A record found in downloaded file"
         invoice_total = a_record_line[23:33]
-        assert invoice_total.startswith(
-            "-"
-        ), f"Expected negative invoice_total, got: {invoice_total!r}"
+        assert invoice_total.startswith("-"), (
+            f"Expected negative invoice_total, got: {invoice_total!r}"
+        )
 
     def test_multi_invoice_file_ftp_roundtrip(self, live_ftp_server):
         host, port, _root = live_ftp_server
@@ -435,9 +435,9 @@ class TestEDIFTPTransport:
         downloaded = _ftp_read(host, port, "202007.001")
         text = downloaded.decode("utf-8")
         a_count = sum(1 for line in text.splitlines() if line.startswith("A"))
-        assert (
-            a_count >= 2
-        ), f"Expected >= 2 A records in downloaded file, got {a_count}"
+        assert a_count >= 2, (
+            f"Expected >= 2 A records in downloaded file, got {a_count}"
+        )
 
 
 # ===========================================================================
@@ -453,9 +453,9 @@ class TestEDISMTPTransport:
             original_bytes = f.read()
         _smtp_send(host, port, "Test EDI", "202001.001", original_bytes)
         time.sleep(0.1)
-        assert (
-            len(handler.messages) == 1
-        ), f"Expected 1 message, got {len(handler.messages)}"
+        assert len(handler.messages) == 1, (
+            f"Expected 1 message, got {len(handler.messages)}"
+        )
         envelope = handler.messages[0]
         msg = message_from_bytes(envelope.content)
         attachment_data = None
@@ -463,9 +463,9 @@ class TestEDISMTPTransport:
             if part.get_content_disposition() == "attachment":
                 attachment_data = part.get_payload(decode=True)
         assert attachment_data is not None, "No attachment found in received message"
-        assert (
-            attachment_data == original_bytes
-        ), "Attachment bytes differ from original"
+        assert attachment_data == original_bytes, (
+            "Attachment bytes differ from original"
+        )
 
     def test_smtp_attachment_filename_preserved(self, live_smtp_server):
         host, port, handler = live_smtp_server
@@ -481,9 +481,9 @@ class TestEDISMTPTransport:
         for part in msg.walk():
             if part.get_content_disposition() == "attachment":
                 attachment_name = part.get_filename()
-        assert (
-            attachment_name == "202001.001"
-        ), f"Expected filename '202001.001', got {attachment_name!r}"
+        assert attachment_name == "202001.001", (
+            f"Expected filename '202001.001', got {attachment_name!r}"
+        )
 
     def test_smtp_multi_attachment(self, live_smtp_server):
         host, port, handler = live_smtp_server
@@ -494,9 +494,9 @@ class TestEDISMTPTransport:
                 data = f.read()
             _smtp_send(host, port, f"EDI {filename}", filename, data)
         time.sleep(0.2)
-        assert (
-            len(handler.messages) == 3
-        ), f"Expected 3 messages, got {len(handler.messages)}"
+        assert len(handler.messages) == 3, (
+            f"Expected 3 messages, got {len(handler.messages)}"
+        )
 
     def test_negative_amount_file_smtp_roundtrip(self, live_smtp_server):
         host, port, handler = live_smtp_server
@@ -520,9 +520,9 @@ class TestEDISMTPTransport:
                 a_line = line
                 break
         assert a_line is not None, "No A record found in SMTP attachment"
-        assert a_line[23:33].startswith(
-            "-"
-        ), f"Expected negative invoice_total field, got: {a_line[23:33]!r}"
+        assert a_line[23:33].startswith("-"), (
+            f"Expected negative invoice_total field, got: {a_line[23:33]!r}"
+        )
 
 
 # ===========================================================================

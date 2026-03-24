@@ -420,7 +420,7 @@ class TestConverterEmptyFileHandling:
             )
         assert os.path.exists(result)
 
-    def test_convert_to_stewarts_custom_empty_file_raises(
+    def test_convert_to_stewarts_custom_empty_file_handles_gracefully(
         self,
         empty_edi_file,
         output_base,
@@ -430,20 +430,25 @@ class TestConverterEmptyFileHandling:
         """convert_to_stewarts_custom handles empty file gracefully (no crash)."""
         from dispatch.converters import convert_to_stewarts_custom
 
+        settings_with_db = {
+            "as400_username": "test_user",
+            "as400_password": "test_pass",
+            "as400_address": "test_host",
+            "odbc_driver": "test_driver",
+        }
+
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
-            # Empty file should be handled gracefully - creates empty output
             result = convert_to_stewarts_custom.edi_convert(
                 empty_edi_file,
                 output_base,
-                default_settings_dict,
+                settings_with_db,
                 default_parameters_dict,
                 {},
             )
-            # Should return a result without raising
             assert result is not None
 
     def test_convert_to_stewarts_custom_with_valid_content(
@@ -501,17 +506,24 @@ class TestConverterEmptyFileHandling:
 
         missing = str(tmp_path / "does_not_exist.edi")
 
+        settings_with_db = {
+            "as400_username": "test_user",
+            "as400_password": "test_pass",
+            "as400_address": "test_host",
+            "odbc_driver": "test_driver",
+        }
+
         with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_stewarts_custom.edi_convert(
                     missing,
                     output_base,
-                    default_settings_dict,
+                    settings_with_db,
                     default_parameters_dict,
                     {},
                 )
 
-    def test_convert_to_jolley_custom_empty_file_raises(
+    def test_convert_to_jolley_custom_empty_file_handles_gracefully(
         self,
         empty_edi_file,
         output_base,
@@ -521,20 +533,25 @@ class TestConverterEmptyFileHandling:
         """convert_to_jolley_custom handles empty file gracefully (no crash)."""
         from dispatch.converters import convert_to_jolley_custom
 
+        settings_with_db = {
+            "as400_username": "test_user",
+            "as400_password": "test_pass",
+            "as400_address": "test_host",
+            "odbc_driver": "test_driver",
+        }
+
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
-            # Empty file should be handled gracefully - creates empty output
             result = convert_to_jolley_custom.edi_convert(
                 empty_edi_file,
                 output_base,
-                default_settings_dict,
+                settings_with_db,
                 default_parameters_dict,
                 {},
             )
-            # Should return a result without raising
             assert result is not None
 
     def test_convert_to_jolley_custom_with_valid_content(
@@ -602,12 +619,19 @@ class TestConverterEmptyFileHandling:
 
         missing = str(tmp_path / "does_not_exist.edi")
 
+        settings_with_db = {
+            "as400_username": "test_user",
+            "as400_password": "test_pass",
+            "as400_address": "test_host",
+            "odbc_driver": "test_driver",
+        }
+
         with patch("core.database.create_query_runner"):
             with pytest.raises(FileNotFoundError):
                 convert_to_jolley_custom.edi_convert(
                     missing,
                     output_base,
-                    default_settings_dict,
+                    settings_with_db,
                     default_parameters_dict,
                     {},
                 )
