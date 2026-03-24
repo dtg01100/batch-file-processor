@@ -330,5 +330,73 @@ class TestPluginSectionCommunication:
         assert "fallback error" in result.errors
 
 
+class TestQtFormGeneratorBuildForm:
+    """Tests for QtFormGenerator.build_form correctness.
+
+    Regression guard: build_form must not create two separate widget sets —
+    the widgets displayed to the user and the widgets queried by get_values()
+    must be the same objects.
+    """
+
+    def _make_schema(self):
+        return ConfigurationSchema(
+            [
+                FieldDefinition(
+                    "active", FieldType.BOOLEAN, label="Active", default=False
+                ),
+                FieldDefinition(
+                    "label_text", FieldType.STRING, label="Label", default=""
+                ),
+            ]
+        )
+
+    def test_build_form_returns_widget(self, qapp):
+        """build_form should return a non-None Qt widget."""
+        from interface.form.form_generator import QtFormGenerator
+
+        schema = self._make_schema()
+        gen = QtFormGenerator(schema, "qt")
+        widget = gen.build_form({})
+        assert widget is not None
+
+    def test_build_form_populates_values(self, qapp):
+        """Values passed to build_form are readable via get_values()."""
+        from interface.form.form_generator import QtFormGenerator
+
+        schema = self._make_schema()
+        gen = QtFormGenerator(schema, "qt")
+        gen.build_form({"active": True, "label_text": "hello"})
+        values = gen.get_values()
+        assert values["active"] is True
+        assert values["label_text"] == "hello"
+
+    def test_set_values_reflected_in_get_values(self, qapp):
+        """Values set via set_values() must be returned by get_values().
+
+        Regression: previously build_form created a hidden second widget set,
+        so set_values wrote to invisible widgets while get_values read from them
+        (not the displayed ones) and the displayed form stayed at defaults.
+        """
+        from interface.form.form_generator import QtFormGenerator
+
+        schema = self._make_schema()
+        gen = QtFormGenerator(schema, "qt")
+        gen.build_form({})
+        gen.set_values({"active": True, "label_text": "updated"})
+        values = gen.get_values()
+        assert values["active"] is True
+        assert values["label_text"] == "updated"
+
+    def test_widgets_dict_not_empty_after_build(self, qapp):
+        """self.widgets must be populated after build_form."""
+        from interface.form.form_generator import QtFormGenerator
+
+        schema = self._make_schema()
+        gen = QtFormGenerator(schema, "qt")
+        gen.build_form({})
+        assert "active" in gen.widgets
+        assert "label_text" in gen.widgets
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

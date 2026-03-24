@@ -339,43 +339,29 @@ class QtFormGenerator(FormGenerator):
 
         # Create main container widget
         self.form_container = QWidget(parent)
-        layout = QVBoxLayout(self.form_container)
+        outer_layout = QVBoxLayout(self.form_container)
 
-        # Create widget builder
-        from interface.plugins.ui_abstraction import ConfigurationWidgetBuilder
+        # Create the form layout container
+        form_container = QWidget(parent)
+        form_layout = QFormLayout(form_container)
+        outer_layout.addWidget(form_container)
 
-        class QtWidgetBuilder(ConfigurationWidgetBuilder):
-            def _layout_widgets(self, widgets, schema, parent):
-                container = QWidget(parent)
-                form_layout = QFormLayout(container)
-
-                for field in schema.fields:
-                    widget = widgets[field.name]
-                    native_widget = widget.get_widget()
-
-                    # For checkboxes, we don't need a separate label
-                    if field.field_type == FieldType.BOOLEAN:
-                        form_layout.addRow(native_widget)
-                    else:
-                        # Create label with optional tooltip
-                        label = QLabel(field.label)
-                        if field.description:
-                            label.setToolTip(field.description)
-                        form_layout.addRow(label, native_widget)
-
-                return container
-
-        builder = QtWidgetBuilder("qt")
-        widget_container = builder.build_configuration_panel(
-            self.schema, config, parent
-        )
-        layout.addWidget(widget_container)
-
-        # Store widget references
+        # Build widgets once and store references in self.widgets so that
+        # get_values() / set_values() operate on the same widgets that are
+        # displayed to the user.
         for field in self.schema.fields:
-            # We need to manually create widgets to store references
             widget = self.factory.create_widget(field.field_type, field, parent)
             self.widgets[field.name] = widget
+            native_widget = widget.get_widget()
+
+            # Checkboxes carry their own label text — no separate label row needed.
+            if field.field_type == FieldType.BOOLEAN:
+                form_layout.addRow(native_widget)
+            else:
+                label = QLabel(field.label)
+                if field.description:
+                    label.setToolTip(field.description)
+                form_layout.addRow(label, native_widget)
 
         # Set initial values if provided
         if config:
