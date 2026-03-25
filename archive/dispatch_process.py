@@ -97,6 +97,7 @@ class _ProcessingContext:
     def __init__(self):
         self.file_count = 0
         self.hash_thread_return_queue = queue.Queue()
+        self.hash_thread_exception = None
         self.parameters_dict_list = []
         self.edi_validator_errors = StringIO()
         self.global_edi_validator_error_status = False
@@ -215,101 +216,113 @@ def process(
                 element for element in list_of_dictionaries if element[key] == value
             ]
 
-        with concurrent.futures.ProcessPoolExecutor() as hash_executor:
-            for counter, entry_dict in enumerate(ctx.parameters_dict_list):
-                # create list of all files in directory
-                hash_files = [
-                    os.path.abspath(
-                        os.path.join(os.path.abspath(entry_dict["folder_name"]), file)
-                    )
-                    for file in os.listdir(
-                        path=os.path.abspath(entry_dict["folder_name"])
-                    )
-                    if os.path.isfile(
-                        os.path.join(os.path.abspath(entry_dict["folder_name"]), file)
-                    )
-                ]
-                hash_file_count_total = len(hash_files)
-                print(
-                    "Generating file hashes "
-                    + str(counter + 1)
-                    + " of "
-                    + str(len(ctx.parameters_dict_list))
-                    + f" ({entry_dict['folder_name']})"
-                )
-
-                try:
-                    search_folder_id = entry_dict["old_id"]
-                except KeyError:
-                    search_folder_id = entry_dict["id"]
-
-                folder_temp_processed_files_list = search_dictionaries(
-                    "folder_id", search_folder_id, temp_processed_files_list
-                )
-
-                folder_hash_dict_list = []
-                folder_name_dict_list = []
-                resend_flag_set_list = []
-
-                split_processed_files_list = [
-                    folder_temp_processed_files_list[i : i + 25]
-                    for i in range(0, len(folder_temp_processed_files_list), 25)
-                ]
-
-                for (
-                    folder_hash_dict,
-                    folder_name_dict,
-                    resend_flag_set,
-                ) in hash_executor.map(
-                    generate_match_lists, split_processed_files_list
-                ):
-                    folder_hash_dict_list.append(folder_hash_dict)
-                    folder_name_dict_list.append(folder_name_dict)
-                    resend_flag_set_list.append(resend_flag_set)
-
-                folder_hash_dict = []
-                folder_name_dict = []
-                resend_flag_set = []
-
-                list(map(folder_hash_dict.extend, folder_hash_dict_list))
-                list(map(folder_name_dict.extend, folder_name_dict_list))
-                list(map(resend_flag_set.extend, resend_flag_set_list))
-
-                folder_hash_dict = dict(folder_hash_dict)
-                folder_name_dict = dict(folder_name_dict)
-                resend_flag_set = set(resend_flag_set)
-
-                hash_files_struct = zip(
-                    hash_files,
-                    [number for number in range(len(hash_files) + 1)],
-                    [folder_temp_processed_files_list] * (len(hash_files) + 1),
-                    [folder_hash_dict] * (len(hash_files) + 1),
-                    [folder_name_dict] * (len(hash_files) + 1),
-                    [resend_flag_set] * (len(hash_files) + 1),
-                )
-
-                thread_file_hashes = []
-                ahead_filtered_files = []
-
-                for file_path, file_hash, index_number, send_file in hash_executor.map(
-                    generate_file_hash, hash_files_struct
-                ):
-                    file_hash_appender = [file_path, file_hash]
-                    thread_file_hashes.append(file_hash_appender)
-                    if send_file:
-                        ahead_filtered_files.append(
-                            (index_number, os.path.basename(file_path), file_hash)
+        try:
+            with concurrent.futures.ProcessPoolExecutor() as hash_executor:
+                for counter, entry_dict in enumerate(ctx.parameters_dict_list):
+                    # create list of all files in directory
+                    hash_files = [
+                        os.path.abspath(
+                            os.path.join(
+                                os.path.abspath(entry_dict["folder_name"]), file
+                            )
                         )
-
-                ctx.hash_thread_return_queue.put(
-                    dict(
-                        folder_name=entry_dict["folder_name"],
-                        files=hash_files,
-                        file_count_total=hash_file_count_total,
-                        file_hashes=thread_file_hashes,
-                        filtered_files=ahead_filtered_files,
+                        for file in os.listdir(
+                            path=os.path.abspath(entry_dict["folder_name"])
+                        )
+                        if os.path.isfile(
+                            os.path.join(
+                                os.path.abspath(entry_dict["folder_name"]), file
+                            )
+                        )
+                    ]
+                    hash_file_count_total = len(hash_files)
+                    print(
+                        "Generating file hashes "
+                        + str(counter + 1)
+                        + " of "
+                        + str(len(ctx.parameters_dict_list))
+                        + f" ({entry_dict['folder_name']})"
                     )
-                )
+
+                    try:
+                        search_folder_id = entry_dict["old_id"]
+                    except KeyError:
+                        search_folder_id = entry_dict["id"]
+
+                    folder_temp_processed_files_list = search_dictionaries(
+                        "folder_id", search_folder_id, temp_processed_files_list
+                    )
+
+                    folder_hash_dict_list = []
+                    folder_name_dict_list = []
+                    resend_flag_set_list = []
+
+                    split_processed_files_list = [
+                        folder_temp_processed_files_list[i : i + 25]
+                        for i in range(0, len(folder_temp_processed_files_list), 25)
+                    ]
+
+                    for (
+                        folder_hash_dict,
+                        folder_name_dict,
+                        resend_flag_set,
+                    ) in hash_executor.map(
+                        generate_match_lists, split_processed_files_list
+                    ):
+                        folder_hash_dict_list.append(folder_hash_dict)
+                        folder_name_dict_list.append(folder_name_dict)
+                        resend_flag_set_list.append(resend_flag_set)
+
+                    folder_hash_dict = []
+                    folder_name_dict = []
+                    resend_flag_set = []
+
+                    list(map(folder_hash_dict.extend, folder_hash_dict_list))
+                    list(map(folder_name_dict.extend, folder_name_dict_list))
+                    list(map(resend_flag_set.extend, resend_flag_set_list))
+
+                    folder_hash_dict = dict(folder_hash_dict)
+                    folder_name_dict = dict(folder_name_dict)
+                    resend_flag_set = set(resend_flag_set)
+
+                    hash_files_struct = zip(
+                        hash_files,
+                        [number for number in range(len(hash_files) + 1)],
+                        [folder_temp_processed_files_list] * (len(hash_files) + 1),
+                        [folder_hash_dict] * (len(hash_files) + 1),
+                        [folder_name_dict] * (len(hash_files) + 1),
+                        [resend_flag_set] * (len(hash_files) + 1),
+                    )
+
+                    thread_file_hashes = []
+                    ahead_filtered_files = []
+
+                    for (
+                        file_path,
+                        file_hash,
+                        index_number,
+                        send_file,
+                    ) in hash_executor.map(generate_file_hash, hash_files_struct):
+                        file_hash_appender = [file_path, file_hash]
+                        thread_file_hashes.append(file_hash_appender)
+                        if send_file:
+                            ahead_filtered_files.append(
+                                (index_number, os.path.basename(file_path), file_hash)
+                            )
+
+                    ctx.hash_thread_return_queue.put(
+                        dict(
+                            folder_name=entry_dict["folder_name"],
+                            files=hash_files,
+                            file_count_total=hash_file_count_total,
+                            file_hashes=thread_file_hashes,
+                            filtered_files=ahead_filtered_files,
+                        )
+                    )
+            ctx.hash_thread_return_queue.put(None)
+        except Exception as e:
+            ctx.hash_thread_exception = e
+            ctx.hash_thread_return_queue.put(None)
 
     hash_thread_object = threading.Thread(target=hash_thread_target)
 
@@ -366,7 +379,22 @@ def process(
             )
             folder_errors_log = StringIO()
 
-            hash_thread_return_dict = ctx.hash_thread_return_queue.get()
+            if ctx.hash_thread_exception is not None:
+                raise ctx.hash_thread_exception
+            try:
+                hash_thread_return_dict = ctx.hash_thread_return_queue.get(timeout=60)
+            except queue.Empty:
+                if ctx.hash_thread_exception is not None:
+                    raise ctx.hash_thread_exception
+                if not hash_thread_object.is_alive():
+                    break
+                continue
+            else:
+                if hash_thread_return_dict is None:
+                    break
+
+            if ctx.hash_thread_exception is not None:
+                raise ctx.hash_thread_exception
 
             files = hash_thread_return_dict["files"]
 
