@@ -75,6 +75,12 @@ When mocks are necessary:
 - Prefer `pytest` fixtures with real implementations over `unittest.mock`
 - Document why a mock was necessary in comments
 
+## Regression Testing Requirement
+
+- When fixing a bug, add a regression test that covers the bug path.
+- New code changes should include a test that would fail before the fix and pass after.
+- Prefer small focused tests that assert behavior as narrowly as possible.
+
 ## Architecture
 
 ```
