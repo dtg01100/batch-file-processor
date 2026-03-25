@@ -9,11 +9,12 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDateEdit,
     QDialogButtonBox,
     QFrame,
     QHBoxLayout,
@@ -80,6 +81,7 @@ class ResendDialog(BaseDialog):
         self._all_files: List[Dict[str, Any]] = []
         self._filtered_files: List[Dict[str, Any]] = []
         self._selected_files: set = set()
+        self._is_updating_selection = False
         self._should_show = True
         self._search_timer = QTimer()
         self._search_timer.setSingleShot(True)
@@ -134,9 +136,36 @@ class ResendDialog(BaseDialog):
             self._on_search_field_changed
         )
 
+        self._date_from_input = QDateEdit()
+        self._date_from_input.setCalendarPopup(True)
+        self._date_from_input.setDisplayFormat("yyyy-MM-dd")
+        self._date_from_input.setDate(QDate(1900, 1, 1))
+        self._date_from_input.setMinimumDate(QDate(1900, 1, 1))
+        self._date_from_input.setMaximumDate(QDate(9999, 12, 31))
+        self._date_from_input.dateChanged.connect(self._on_date_range_changed)
+        self._date_from_input.setAccessibleName("Start date")
+
+        self._date_to_input = QDateEdit()
+        self._date_to_input.setCalendarPopup(True)
+        self._date_to_input.setDisplayFormat("yyyy-MM-dd")
+        self._date_to_input.setDate(QDate(9999, 12, 31))
+        self._date_to_input.setMinimumDate(QDate(1900, 1, 1))
+        self._date_to_input.setMaximumDate(QDate(9999, 12, 31))
+        self._date_to_input.dateChanged.connect(self._on_date_range_changed)
+        self._date_to_input.setAccessibleName("End date")
+
+        self._clear_date_range_button = QPushButton("Clear &Date Range")
+        self._clear_date_range_button.clicked.connect(self._clear_date_range)
+        self._clear_date_range_button.setAccessibleName("Clear date range filter")
+
         search_layout.addWidget(search_label)
         search_layout.addWidget(self._search_field_selector)
         search_layout.addWidget(self._search_input)
+        search_layout.addWidget(QLabel("From:"))
+        search_layout.addWidget(self._date_from_input)
+        search_layout.addWidget(QLabel("To:"))
+        search_layout.addWidget(self._date_to_input)
+        search_layout.addWidget(self._clear_date_range_button)
         main_layout.addLayout(search_layout)
 
         self._table = QTableWidget()
@@ -146,6 +175,8 @@ class ResendDialog(BaseDialog):
         )
         self._table.setAlternatingRowColors(True)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+        self._table.itemSelectionChanged.connect(self._on_table_selection_changed)
         self._table.setSortingEnabled(True)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.setAccessibleName("Files table")
@@ -178,7 +209,7 @@ class ResendDialog(BaseDialog):
 
         self._bulk_action_frame = QFrame()
         self._bulk_action_frame.setFrameStyle(QFrame.Shape.Box)
-        self._bulk_action_frame.setVisible(False)
+        self._bulk_action_frame.setVisible(True)
         bulk_layout = QHBoxLayout(self._bulk_action_frame)
 
         self._bulk_select_all = QPushButton("&Select All")
@@ -187,12 +218,14 @@ class ResendDialog(BaseDialog):
 
         self._bulk_clear_selection = QPushButton("&Clear Selection")
         self._bulk_clear_selection.clicked.connect(self._clear_selection)
+        self._bulk_clear_selection.setEnabled(False)
         bulk_layout.addWidget(self._bulk_clear_selection)
 
         bulk_layout.addStretch()
 
         self._bulk_mark_resend = QPushButton("&Mark Selected for Resend")
         self._bulk_mark_resend.clicked.connect(self._mark_selected_for_resend)
+        self._bulk_mark_resend.setEnabled(False)
         self._bulk_mark_resend.setStyleSheet(
             "QPushButton { background-color: #4CAF50; color: white; }"
         )
@@ -200,6 +233,7 @@ class ResendDialog(BaseDialog):
 
         self._bulk_clear_resend = QPushButton("&Clear Resend Flags")
         self._bulk_clear_resend.clicked.connect(self._clear_selected_resend_flags)
+        self._bulk_clear_resend.setEnabled(False)
         bulk_layout.addWidget(self._bulk_clear_resend)
 
         main_layout.addWidget(self._bulk_action_frame)
@@ -232,9 +266,14 @@ class ResendDialog(BaseDialog):
             self._total_files = len(self._all_files) if self._all_files else 0
         self._current_offset = 0
 
+        date_from, date_to = self._get_date_filters()
         try:
             self._all_files = self._service.get_all_files_for_resend(
-                check_file_exists=False, limit=self.PAGE_SIZE, offset=0
+                check_file_exists=False,
+                limit=self.PAGE_SIZE,
+                offset=0,
+                date_from=date_from,
+                date_to=date_to,
             )
         except (TypeError, AttributeError):
             self._all_files = []
@@ -250,6 +289,9 @@ class ResendDialog(BaseDialog):
         """Populate the table with filtered files."""
         self._table.setRowCount(len(self._filtered_files))
 
+        self._is_updating_selection = True
+        self._table.clearSelection()
+
         for row, file_info in enumerate(self._filtered_files):
             checkbox = QCheckBox()
             checkbox.setChecked(file_info["id"] in self._selected_files)
@@ -259,6 +301,9 @@ class ResendDialog(BaseDialog):
                 )
             )
             self._table.setCellWidget(row, 0, checkbox)
+
+            if file_info["id"] in self._selected_files:
+                self._table.selectRow(row)
 
             folder_item = QTableWidgetItem(file_info["folder_alias"])
             folder_item.setFlags(folder_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -293,6 +338,7 @@ class ResendDialog(BaseDialog):
         self._table.setColumnWidth(3, 120)
         self._table.setColumnWidth(4, 80)
         self._table.horizontalHeader().setStretchLastSection(True)
+        self._is_updating_selection = False
 
     def _check_files_exist_async(self) -> None:
         """Check which files exist on disk in background thread."""
@@ -346,6 +392,34 @@ class ResendDialog(BaseDialog):
         self._search_timer.stop()
         self._do_search_filter()
 
+    def _on_date_range_changed(self) -> None:
+        """Re-run query when the date range inputs change."""
+        self._search_timer.stop()
+        self._search_timer.start(150)
+
+    def _clear_date_range(self) -> None:
+        """Clear date filters and reload data."""
+        self._date_from_input.setDate(QDate(1900, 1, 1))
+        self._date_to_input.setDate(QDate(9999, 12, 31))
+        self._do_search_filter()
+
+    def _get_date_filters(self) -> tuple[Optional[str], Optional[str]]:
+        """Return date_from/date_to values for queries, or None if not set."""
+        date_from = self._date_from_input.date()
+        date_to = self._date_to_input.date()
+
+        if date_from == self._date_from_input.minimumDate():
+            date_from_str = None
+        else:
+            date_from_str = date_from.toString("yyyy-MM-dd")
+
+        if date_to == self._date_to_input.maximumDate():
+            date_to_str = None
+        else:
+            date_to_str = date_to.toString("yyyy-MM-dd")
+
+        return date_from_str, date_to_str
+
     def _get_selected_search_field(self) -> str:
         """Return the selected search field key."""
         selected_field = self._search_field_selector.currentData()
@@ -376,11 +450,17 @@ class ResendDialog(BaseDialog):
         self._search_text = text
         self._search_offset = 0
 
+        date_from, date_to = self._get_date_filters()
+
         if not text:
             self._current_offset = 0
             try:
                 self._all_files = self._service.get_all_files_for_resend(
-                    check_file_exists=False, limit=self.PAGE_SIZE, offset=0
+                    check_file_exists=False,
+                    limit=self.PAGE_SIZE,
+                    offset=0,
+                    date_from=date_from,
+                    date_to=date_to,
                 )
             except (TypeError, AttributeError):
                 self._all_files = []
@@ -394,6 +474,8 @@ class ResendDialog(BaseDialog):
                     limit=self.PAGE_SIZE,
                     offset=0,
                     search_field=search_field,
+                    date_from=date_from,
+                    date_to=date_to,
                 )
             except (TypeError, AttributeError):
                 lower_text = text.lower()
@@ -416,12 +498,62 @@ class ResendDialog(BaseDialog):
             self._selected_files.add(file_id)
         else:
             self._selected_files.discard(file_id)
+
+        if not self._is_updating_selection:
+            self._is_updating_selection = True
+            # Synchronize row selection with checkbox selection.
+            for row, file_info in enumerate(self._filtered_files):
+                if file_info["id"] == file_id:
+                    if selected:
+                        self._table.selectRow(row)
+                    else:
+                        self._table.selectionModel().select(
+                            self._table.model().index(row, 0),
+                            QItemSelectionModel.Deselect | QItemSelectionModel.Rows,
+                        )
+                    break
+            self._is_updating_selection = False
+
         self._update_bulk_actions()
 
+    def _on_table_selection_changed(self) -> None:
+        """Sync checkbox state when user selects rows."""
+        if self._is_updating_selection:
+            return
+
+        self._is_updating_selection = True
+        selected_rows = {item.row() for item in self._table.selectedItems()}
+        self._selected_files = {
+            self._filtered_files[row]["id"]
+            for row in selected_rows
+            if row < len(self._filtered_files)
+        }
+
+        for row in range(self._table.rowCount()):
+            checkbox = self._table.cellWidget(row, 0)
+            if checkbox is None:
+                continue
+            should_check = self._filtered_files[row]["id"] in self._selected_files
+            if checkbox.isChecked() != should_check:
+                checkbox.blockSignals(True)
+                checkbox.setChecked(should_check)
+                checkbox.blockSignals(False)
+
+        self._is_updating_selection = False
+
+        self._update_bulk_actions()
+        self._update_status()
+
     def _update_bulk_actions(self) -> None:
-        """Update bulk action bar visibility and state."""
+        """Update bulk action bar buttons state."""
         has_selection = bool(self._selected_files)
-        self._bulk_action_frame.setVisible(has_selection)
+
+        # Always show bulk actions so "Select All" is available on first view.
+        self._bulk_action_frame.setVisible(True)
+
+        self._bulk_mark_resend.setEnabled(has_selection)
+        self._bulk_clear_resend.setEnabled(has_selection)
+        self._bulk_clear_selection.setEnabled(has_selection)
 
     def _update_status(self) -> None:
         """Update the status label."""
@@ -470,6 +602,8 @@ class ResendDialog(BaseDialog):
 
         self._cancel_file_check_worker()
 
+        date_from, date_to = self._get_date_filters()
+
         if self._search_text:
             # Load more search results
             self._search_offset += self.PAGE_SIZE
@@ -480,6 +614,8 @@ class ResendDialog(BaseDialog):
                     limit=self.PAGE_SIZE,
                     offset=self._search_offset,
                     search_field=search_field,
+                    date_from=date_from,
+                    date_to=date_to,
                 )
             except (TypeError, AttributeError):
                 new_files = []
@@ -491,6 +627,8 @@ class ResendDialog(BaseDialog):
                     check_file_exists=False,
                     limit=self.PAGE_SIZE,
                     offset=self._current_offset,
+                    date_from=date_from,
+                    date_to=date_to,
                 )
             except (TypeError, AttributeError):
                 new_files = []

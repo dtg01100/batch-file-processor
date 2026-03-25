@@ -200,30 +200,41 @@ class ResendService:
         offset: int = 0,
         search_text: Optional[str] = None,
         search_field: str = "all",
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Get files sorted by sent_date_time (most recent first), with processed_at fallback."""
-        where_clause = ""
+        where_clauses = []
         params: List[Any] = []
+
         if search_text:
             search_value = f"%{search_text}%"
             if search_field == "file_name":
-                where_clause = "WHERE pf.file_name LIKE ?"
+                where_clauses.append("pf.file_name LIKE ?")
                 params = [search_value]
             elif search_field == "invoice_numbers":
-                where_clause = "WHERE pf.invoice_numbers LIKE ?"
+                where_clauses.append("pf.invoice_numbers LIKE ?")
                 params = [search_value]
             elif search_field == "folder":
-                where_clause = "WHERE COALESCE(f.alias, pf.folder_alias, '') LIKE ?"
+                where_clauses.append("COALESCE(f.alias, pf.folder_alias, '') LIKE ?")
                 params = [search_value]
             else:
-                where_clause = (
-                    "WHERE ("
-                    "pf.file_name LIKE ? "
-                    "OR pf.invoice_numbers LIKE ? "
-                    "OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?"
-                    ")"
+                where_clauses.append(
+                    "(pf.file_name LIKE ? OR pf.invoice_numbers LIKE ? OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?)"
                 )
                 params = [search_value, search_value, search_value]
+
+        if date_from:
+            where_clauses.append("COALESCE(pf.sent_date_time, pf.processed_at) >= ?")
+            params.append(date_from)
+
+        if date_to:
+            where_clauses.append("COALESCE(pf.sent_date_time, pf.processed_at) <= ?")
+            params.append(date_to)
+
+        where_clause = ""
+        if where_clauses:
+            where_clause = "WHERE " + " AND ".join(where_clauses)
 
         sql = f"""
             SELECT pf.*, COALESCE(f.alias, pf.folder_alias, '') AS resolved_folder_alias
@@ -277,7 +288,12 @@ class ResendService:
         return file_list
 
     def get_all_files_for_resend(
-        self, check_file_exists: bool = True, limit: int = 1000, offset: int = 0
+        self,
+        check_file_exists: bool = True,
+        limit: int = 1000,
+        offset: int = 0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Get all processable files across all folders for resend interface.
 
@@ -295,6 +311,8 @@ class ResendService:
             check_file_exists=check_file_exists,
             limit=limit,
             offset=offset,
+            date_from=date_from,
+            date_to=date_to,
         )
 
     def search_files_for_resend(
@@ -303,6 +321,8 @@ class ResendService:
         limit: int = 1000,
         offset: int = 0,
         search_field: str = "all",
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Search processable files by one specific field or all fields.
 
@@ -324,4 +344,6 @@ class ResendService:
             offset=offset,
             search_text=search_text,
             search_field=search_field,
+            date_from=date_from,
+            date_to=date_to,
         )

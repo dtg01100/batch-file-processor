@@ -12,8 +12,8 @@ pytestmark = [pytest.mark.qt, pytest.mark.gui]
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtCore import QDate, QItemSelectionModel, Qt
+from PyQt5.QtWidgets import QPushButton, QTableWidget
 
 
 # ---------------------------------------------------------------------------
@@ -1133,8 +1133,61 @@ class TestResendDialog:
 
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
-        # With current table UI, bulk action frame is hidden when no selection
-        assert dialog._bulk_action_frame.isHidden()
+        # Bulk action frame should be shown as a UI section even with no selection.
+        assert dialog._bulk_action_frame.isHidden() is False
+
+    def test_bulk_action_bar_initially_present(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        mock_db = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        assert dialog._bulk_action_frame.isHidden() is False
+        assert dialog._bulk_select_all.isEnabled() is True
+        assert dialog._bulk_clear_selection.isEnabled() is False
+        assert dialog._bulk_mark_resend.isEnabled() is False
+        assert dialog._bulk_clear_resend.isEnabled() is False
+
+    def test_date_range_filter_applies_to_service_calls(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        mock_db = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        dialog._date_from_input.setDate(QDate(2024, 1, 1))
+        dialog._date_to_input.setDate(QDate(2024, 1, 31))
+
+        dialog._do_search_filter()
+
+        mock_service.get_all_files_for_resend.assert_called_with(
+            check_file_exists=False,
+            limit=dialog.PAGE_SIZE,
+            offset=0,
+            date_from="2024-01-01",
+            date_to="2024-01-31",
+        )
 
     def test_folder_selection_enables_spinbox(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
@@ -1163,6 +1216,105 @@ class TestResendDialog:
         qtbot.addWidget(dialog)
         # Table should be populated and search should be accessible
         assert dialog._table.rowCount() >= 1
+
+    def test_multi_row_selection(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        mock_db = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 1,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test1.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            },
+            {
+                "id": 2,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test2.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            },
+        ]
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        assert (
+            dialog._table.selectionMode()
+            == QTableWidget.SelectionMode.ExtendedSelection
+        )
+
+        selection_model = dialog._table.selectionModel()
+        index1 = dialog._table.model().index(0, 0)
+        index2 = dialog._table.model().index(1, 0)
+        selection_model.select(
+            index1, QItemSelectionModel.Select | QItemSelectionModel.Rows
+        )
+        selection_model.select(
+            index2, QItemSelectionModel.Select | QItemSelectionModel.Rows
+        )
+        dialog._on_table_selection_changed()
+
+        assert dialog._selected_files == {1, 2}
+        assert dialog._bulk_action_frame.isHidden() is False
+
+    def test_date_range_filters_search(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        mock_db = MagicMock()
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_total_file_count.return_value = 2
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 1,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test1.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-06-01T00:00:00",
+            },
+            {
+                "id": 2,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test2.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-07-01T00:00:00",
+            },
+        ]
+        mock_service.search_files_for_resend.return_value = []
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        dialog._search_input.setText("test")
+        dialog._search_field_selector.setCurrentIndex(0)  # All fields
+        dialog._date_from_input.setDate(QDate(2024, 1, 1))
+        dialog._date_to_input.setDate(QDate(2024, 12, 31))
+        dialog._do_search_filter()
+
+        mock_service.search_files_for_resend.assert_called_once()
+        _, kwargs = mock_service.search_files_for_resend.call_args
+        assert kwargs["date_from"] == "2024-01-01"
+        assert kwargs["date_to"] == "2024-12-31"
 
     def test_folder_selection_updates_max(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
