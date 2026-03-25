@@ -3,6 +3,7 @@
 This module tests the refactored log sender with mock services.
 """
 
+from unittest.mock import patch
 from dispatch.log_sender import (
     EmailConfig,
     LogEntry,
@@ -263,6 +264,37 @@ class TestLogSender:
         # Check UI was updated
         assert len(ui.email_progress_updates) == 2
 
+    def test_send_logs_from_table_removes_zip_suffix(self, tmp_path):
+        """Regression: zipped log names should be truncated in removal queue."""
+        zipped_log = tmp_path / "test.zip"
+        zipped_log.write_text("content")
+
+        class DummyTable:
+            def all(self):
+                return [{"id": 1, "log": str(zipped_log)}]
+
+        class DummyQueue:
+            def __init__(self):
+                self.inserted = []
+
+            def insert(self, record):
+                self.inserted.append(record)
+
+        email_service = MockEmailService()
+        sender = LogSender(email_service=email_service)
+
+        queue = DummyQueue()
+        results = sender.send_logs_from_table(
+            logs_table=DummyTable(),
+            recipients=["admin@example.com"],
+            subject="Test",
+            body="body",
+            removal_queue=queue,
+        )
+
+        assert results[str(zipped_log)] is True
+        assert queue.inserted[0]["log"] == str(zipped_log.with_suffix(""))
+
     def test_send_batch_logs_with_missing_file(self, tmp_path):
         """Test sending batch logs with a missing file."""
         log1 = tmp_path / "log1.txt"
@@ -317,6 +349,41 @@ class TestLogSender:
         email = email_service.get_last_email()
         assert len(email["attachments"]) == 1
         assert email["attachments"][0]["name"] == "test.log"
+
+    def test_smtp_service_unknown_attachment_mime_falls_back_to_octet_stream(self, tmp_path):
+        """Regression: unknown attachment ctype should default to application/octet-stream."""
+        unknown_file = tmp_path / "unknown_file.unknown"
+        unknown_file.write_text("content")
+
+        config = EmailConfig(
+            smtp_server="localhost",
+            smtp_port=1025,
+            smtp_username="",
+            smtp_password="",
+            from_address="sender@example.com",
+        )
+
+        service = SMTPEmailService(config)
+
+        with patch("dispatch.log_sender.smtplib.SMTP") as mock_smtp:
+            server = mock_smtp.return_value
+            server.send_message.return_value = None
+
+            success = service.send_email(
+                to=["recipient@example.com"],
+                subject="Test",
+                body="Body",
+                attachments=[{"path": str(unknown_file), "name": "unknown_file.unknown"}],
+            )
+
+            assert success is True
+            server.send_message.assert_called_once()
+
+            message_sent = server.send_message.call_args[0][0]
+            # There should be one attachment and it should use octet-stream
+            payloads = [part for part in message_sent.iter_parts() if part.get_content_disposition() == "attachment"]
+            assert len(payloads) == 1
+            assert payloads[0].get_content_type() == "application/octet-stream"
 
 
 class TestLogSenderFromSettings:

@@ -65,7 +65,7 @@ def generate_file_hash(
                     h.update(chunk)
                 generated_checksum = h.hexdigest()
         except Exception:
-            if checksum_attempt <= max_retries:
+            if checksum_attempt < max_retries:
                 # Exponential backoff: 1s, 4s, 9s, 16s, 25s
                 time.sleep(retry_delay_base * checksum_attempt * checksum_attempt)
                 checksum_attempt += 1

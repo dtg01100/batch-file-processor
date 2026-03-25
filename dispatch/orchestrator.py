@@ -1586,7 +1586,7 @@ class DispatchOrchestrator:
                 try:
                     rec = capture_records(line)
                     if rec and rec.get("record_type") == "A":
-                        inv_num = rec["invoice_number"].strip()
+                        inv_num = rec.get("invoice_number", "").strip()
                         if inv_num and inv_num not in seen_set:
                             seen.append(inv_num)
                             seen_set.add(inv_num)

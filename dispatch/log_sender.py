@@ -147,7 +147,7 @@ class SMTPEmailService:
                     )
 
                     ctype, encoding = mimetypes.guess_type(attachment_path)
-                    if ctype is None or encoding is not None:
+                    if ctype is None:
                         ctype = "application/octet-stream"
                     maintype, subtype = ctype.split("/", 1)
 
@@ -512,7 +512,7 @@ class LogSender:
                     if "id" in record:
                         record["old_id"] = record.pop("id")
                     if record.get("log", "").endswith(".zip"):
-                        record["log"] = record["log"][:-4]
+                        record["log"] = record["log"].removesuffix(".zip")
                     removal_queue.insert(record)
 
         return results

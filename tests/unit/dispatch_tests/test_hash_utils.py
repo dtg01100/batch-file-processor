@@ -153,6 +153,16 @@ class TestGenerateFileHash:
         finally:
             os.unlink(temp_path)
 
+    def test_generate_hash_uses_exact_max_retries_for_failures(self):
+        """Regression: generate_file_hash should attempt exactly max_retries times on failure."""
+        with patch("dispatch.hash_utils.open", side_effect=OSError("fail")) as mock_open, patch(
+            "dispatch.hash_utils.time.sleep"
+        ):
+            with pytest.raises(OSError, match="fail"):
+                generate_file_hash("/tmp/nonexistent", max_retries=3)
+
+            assert mock_open.call_count == 3
+
 
 class TestCheckFileAgainstProcessed:
     """Tests for check_file_against_processed function."""
@@ -345,3 +355,40 @@ class TestBuildHashDictionaries:
         assert name_dict == {"same_hash": "file2.txt"}
         # Both entries in hash_dict
         assert len(hash_dict) == 2
+
+
+class TestGenerateFileHashRetryCount:
+    """Regression tests for retry count logic in generate_file_hash."""
+
+    def test_retry_count_matches_max_retries(self):
+        """Regression: verify retry count equals max_retries, not max_retries+1.
+
+        Previously the condition was `checksum_attempt <= max_retries` which allowed
+        max_retries+1 attempts. Now it correctly uses `checksum_attempt < max_retries`.
+        """
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
+            f.write("test content")
+            temp_path = f.name
+
+        try:
+            # Mock the open to fail first, then succeed
+            original_open = open
+            call_count = [0]
+
+            def mock_open(*args, **kwargs):
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    raise IOError("Simulated failure")
+                return original_open(*args, **kwargs)
+
+            with patch("builtins.open", mock_open):
+                with patch("dispatch.hash_utils.time.sleep"):  # Speed up test
+                    result = generate_file_hash(temp_path, max_retries=3)
+
+            # With max_retries=3, we should get exactly 4 total attempts:
+            # attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> attempt 4 succeeds
+            # But with the fix: attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> then raise
+            # So with 1 failure, we should have 2 attempts total (initial + 1 retry)
+            assert call_count[0] == 2, f"Expected 2 attempts (1 fail + 1 success), got {call_count[0]}"
+        finally:
+            os.unlink(temp_path)

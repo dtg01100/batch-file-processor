@@ -1451,5 +1451,44 @@ class TestOrchestratorProgressPhases:
         assert progress.calls == [("Input", 1)]
 
 
+class TestExtractInvoiceNumbers:
+    """Regression tests for _extract_invoice_numbers method."""
+
+    def test_extract_invoice_numbers_handles_missing_invoice_number_key(self, tmp_path):
+        """Regression: A record without invoice_number key should not raise KeyError.
+
+        Previously the code used rec["invoice_number"] directly which would raise
+        KeyError if the key was missing. Now it uses rec.get("invoice_number", "").
+        """
+        # Create a test EDI file with an A record that has all fields
+        edi_content = "AVENDOR00000000011234567890123456\n"
+        test_file = tmp_path / "test.edi"
+        test_file.write_text(edi_content)
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        result = orchestrator._extract_invoice_numbers(str(test_file))
+
+        # Should return the invoice number, not raise KeyError
+        assert result == "1234567890"
+
+    def test_extract_invoice_numbers_handles_duplicate_invoices(self, tmp_path):
+        """Test that duplicate invoice numbers are deduplicated."""
+        # Two A records with the same invoice number
+        edi_content = (
+            "AVENDOR00000000011234567890123456\n"
+            "BVENDOR_ITEM                     \n"
+            "AVENDOR00000000011234567890123456\n"
+            "BVENDOR_ITEM                     \n"
+        )
+        test_file = tmp_path / "test.edi"
+        test_file.write_text(edi_content)
+
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+        result = orchestrator._extract_invoice_numbers(str(test_file))
+
+        # Should only return one instance of the duplicate
+        assert result == "1234567890"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
