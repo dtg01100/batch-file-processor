@@ -15,15 +15,15 @@ from PyQt5.QtWidgets import (
 
 from core.utils.bool_utils import normalize_bool
 from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
+from interface.operations.tweaks_flat_column_sync import (
+    sync_tweaks_plugin_to_flat_columns,
+)
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
-from interface.operations.tweaks_flat_column_sync import (
-    sync_tweaks_plugin_to_flat_columns,
-)
 from interface.services.ftp_service import FTPServiceProtocol
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 
@@ -145,6 +145,9 @@ class EditFoldersDialog(BaseDialog):
         self._set_check(
             "process_backend_email_check", to_bool(config.get("process_backend_email"))
         )
+        self._set_check(
+            "process_backend_http_check", to_bool(config.get("process_backend_http"))
+        )
 
         # Text fields
         self._set_text("folder_alias_field", str(config.get("alias") or ""))
@@ -157,6 +160,15 @@ class EditFoldersDialog(BaseDialog):
         self._set_text(
             "email_sender_subject_field", str(config.get("email_subject_line") or "")
         )
+        self._set_text("http_url_field", str(config.get("http_url") or ""))
+        self._set_text("http_headers_field", str(config.get("http_headers") or ""))
+        self._set_text(
+            "http_field_name_field", str(config.get("http_field_name") or "file")
+        )
+        self._set_combo(
+            "http_auth_type_var", str(config.get("http_auth_type") or "")
+        )
+        self._set_text("http_api_key_field", str(config.get("http_api_key") or ""))
 
         # EDI base settings
         self._set_check(
@@ -255,6 +267,7 @@ class EditFoldersDialog(BaseDialog):
             "process_backend_copy_check",
             "process_backend_ftp_check",
             "process_backend_email_check",
+            "process_backend_http_check",
             "copy_dest_btn",
             "ftp_server_field",
             "ftp_port_field",
@@ -263,6 +276,11 @@ class EditFoldersDialog(BaseDialog):
             "ftp_password_field",
             "email_recipient_field",
             "email_sender_subject_field",
+            "http_url_field",
+            "http_headers_field",
+            "http_field_name_field",
+            "http_auth_type_var",
+            "http_api_key_field",
             "force_edi_check_var",
             "split_edi",
             "split_edi_send_invoices",
@@ -339,6 +357,11 @@ class EditFoldersDialog(BaseDialog):
         if widget and hasattr(widget, "setText"):
             widget.setText(value)
 
+    def _set_combo(self, key: str, value: str):
+        widget = self._fields.get(key)
+        if widget and hasattr(widget, "setCurrentText"):
+            widget.setCurrentText(value)
+
     # ------------------------------------------------------------------
     # Convenience properties -- expose commonly accessed widgets directly
     # so tests and external code can reference them without knowing the
@@ -360,6 +383,10 @@ class EditFoldersDialog(BaseDialog):
     @property
     def _email_backend_check(self):
         return self._fields.get("process_backend_email_check")
+
+    @property
+    def _http_backend_check(self):
+        return self._fields.get("process_backend_http_check")
 
     @property
     def _split_edi_check(self):
@@ -708,6 +735,7 @@ class EditFoldersDialog(BaseDialog):
         target["process_backend_copy"] = extracted.process_backend_copy
         target["process_backend_ftp"] = extracted.process_backend_ftp
         target["process_backend_email"] = extracted.process_backend_email
+        target["process_backend_http"] = extracted.process_backend_http
 
         target["ftp_server"] = extracted.ftp_server
         try:
@@ -720,6 +748,12 @@ class EditFoldersDialog(BaseDialog):
 
         target["email_to"] = extracted.email_to
         target["email_subject_line"] = extracted.email_subject_line
+
+        target["http_url"] = extracted.http_url
+        target["http_headers"] = extracted.http_headers
+        target["http_field_name"] = extracted.http_field_name
+        target["http_auth_type"] = extracted.http_auth_type
+        target["http_api_key"] = extracted.http_api_key
 
         # EDI settings
         target["process_edi"] = normalize_bool(extracted.process_edi)

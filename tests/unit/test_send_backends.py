@@ -1,14 +1,16 @@
-"""Unit tests for send backends (FTP, Email, Copy).
+"""Unit tests for send backends (FTP, Email, Copy, HTTP).
 
 Tests:
 - FTP backend: connection, directory navigation, correct filename in STOR command
 - Email backend: SMTP connection, placeholder substitution in subject, multi-recipient
 - Copy backend: file placed in correct destination
+- HTTP backend: POST request with file, custom field name, auth types, headers
 
 Modules tested:
 - ftp_backend.py
 - email_backend.py
 - copy_backend.py
+- http_backend.py
 """
 
 import os
@@ -263,3 +265,213 @@ class TestCopyBackend:
             sample_destination_dir, os.path.basename(sample_source_file)
         )
         assert os.path.isfile(expected)
+
+
+class TestHTTPBackend:
+    """Test suite for HTTP backend functionality."""
+
+    @pytest.fixture
+    def sample_process_parameters(self):
+        """Create sample process parameters for HTTP."""
+        return {
+            "http_url": "https://example.com/upload",
+            "http_headers": "Content-Type: application/json",
+            "http_field_name": "file",
+            "http_auth_type": "",
+            "http_api_key": "",
+        }
+
+    @pytest.fixture
+    def sample_settings_dict(self):
+        """Create sample settings dictionary."""
+        return {}
+
+    @pytest.fixture
+    def sample_file(self, tmp_path):
+        """Create a sample file to send."""
+        test_file = tmp_path / "test_file.txt"
+        test_file.write_text("Test file content for HTTP upload")
+        return str(test_file)
+
+    def test_http_post_sends_file_mock(
+        self, sample_process_parameters, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() sends a POST request with the file."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        mock_client = MockHTTPClient()
+        result = http_backend.do(
+            sample_process_parameters,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        assert result is True
+        assert len(mock_client.posts) > 0
+        url, data, files, headers = mock_client.posts[0]
+        assert url == "https://example.com/upload"
+
+    def test_http_post_includes_file_in_files_dict(
+        self, sample_process_parameters, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() includes the file in the files parameter."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        mock_client = MockHTTPClient()
+        http_backend.do(
+            sample_process_parameters,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        assert len(mock_client.posts) > 0
+        url, data, files, headers = mock_client.posts[0]
+        basename = os.path.basename(sample_file)
+        # files dict has field_name as key and (filename, file_obj) tuple as value
+        assert "file" in files
+        assert files["file"][0] == basename
+
+    def test_http_post_uses_custom_field_name(
+        self, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() uses the configured field_name for the file."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        params = {
+            "http_url": "https://example.com/upload",
+            "http_field_name": "my_custom_field",
+        }
+        mock_client = MockHTTPClient()
+        http_backend.do(
+            params,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        url, data, files, headers = mock_client.posts[0]
+        assert "my_custom_field" in files
+
+    def test_http_post_with_bearer_auth(
+        self, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() adds Bearer token when auth_type is 'bearer'."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        params = {
+            "http_url": "https://example.com/upload",
+            "http_auth_type": "bearer",
+            "http_api_key": "my-secret-token",
+        }
+        mock_client = MockHTTPClient()
+        http_backend.do(
+            params,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        url, data, files, headers = mock_client.posts[0]
+        assert headers is not None
+        assert "Authorization" in headers
+        assert headers["Authorization"] == "Bearer my-secret-token"
+
+    def test_http_post_with_query_auth(
+        self, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() appends api_key as query param when auth_type is 'query'."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        params = {
+            "http_url": "https://example.com/upload",
+            "http_auth_type": "query",
+            "http_api_key": "my-api-key",
+        }
+        mock_client = MockHTTPClient()
+        http_backend.do(
+            params,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        url, data, files, headers = mock_client.posts[0]
+        assert "api_key=my-api-key" in url
+
+    def test_http_post_parses_custom_headers(
+        self, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() parses newline-separated headers correctly."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        params = {
+            "http_url": "https://example.com/upload",
+            "http_headers": "X-Custom-Header: value1\nX-Another: value2",
+        }
+        mock_client = MockHTTPClient()
+        http_backend.do(
+            params,
+            sample_settings_dict,
+            sample_file,
+            http_client=mock_client,
+        )
+
+        url, data, files, headers = mock_client.posts[0]
+        assert headers.get("X-Custom-Header") == "value1"
+        assert headers.get("X-Another") == "value2"
+
+    def test_http_post_raises_on_failure_response(
+        self, sample_process_parameters, sample_settings_dict, sample_file
+    ):
+        """http_backend.do() raises an exception when the response is not OK."""
+        from backend import http_backend
+        from backend.http_client import MockHTTPClient
+
+        mock_client = MockHTTPClient()
+        mock_client.set_response(status_code=500, text="Internal Server Error")
+
+        with pytest.raises(Exception) as exc_info:
+            http_backend.do(
+                sample_process_parameters,
+                sample_settings_dict,
+                sample_file,
+                http_client=mock_client,
+            )
+
+        assert "500" in str(exc_info.value)
+
+    def test_http_backend_class_send(
+        self, sample_process_parameters, sample_settings_dict, sample_file
+    ):
+        """HTTPBackend.send() calls do() correctly."""
+        from backend.http_backend import HTTPBackend
+        from backend.http_client import MockHTTPClient
+
+        mock_client = MockHTTPClient()
+        backend = HTTPBackend(http_client=mock_client)
+
+        result = backend.send(
+            sample_process_parameters,
+            sample_settings_dict,
+            sample_file,
+        )
+
+        assert result is True
+        assert len(mock_client.posts) > 0
+
+    def test_http_backend_class_create_client(self):
+        """HTTPBackend.create_client() returns an HTTP client."""
+        from backend.http_backend import HTTPBackend
+        from backend.http_client import RealHTTPClient
+
+        client = HTTPBackend.create_client(timeout=60.0)
+        assert isinstance(client, RealHTTPClient)
+        assert client.timeout == 60.0

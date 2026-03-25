@@ -170,6 +170,16 @@ class ColumnBuilders:
         self.fields["process_backend_email_check"] = email_backend_check
         layout.addWidget(email_backend_check)
 
+        http_backend_check = QCheckBox("HTTP Backend")
+        http_backend_check.setAccessibleName("Enable HTTP backend")
+        http_backend_check.setAccessibleDescription(
+            "Enable HTTP backend for this folder"
+        )
+        if self.on_update_backend_states:
+            http_backend_check.toggled.connect(self.on_update_backend_states)
+        self.fields["process_backend_http_check"] = http_backend_check
+        layout.addWidget(http_backend_check)
+
         if self.folder_config.get("folder_name") != "template":
             alias_group = QGroupBox("Folder Alias")
             alias_layout = QFormLayout(alias_group)
@@ -270,6 +280,49 @@ class ColumnBuilders:
         self.fields["email_sender_subject_field"] = email_subject_field
         email_layout.addRow("Email Subject:", email_subject_field)
         layout.addWidget(email_group)
+
+        http_group = QGroupBox("HTTP Backend Settings")
+        http_layout = QFormLayout(http_group)
+
+        http_url_field = QLineEdit()
+        http_url_field.setAccessibleName("HTTP URL")
+        http_url_field.setAccessibleDescription("HTTP endpoint URL for file upload")
+        self.fields["http_url_field"] = http_url_field
+        http_layout.addRow("HTTP URL:", http_url_field)
+
+        http_headers_field = QLineEdit()
+        http_headers_field.setAccessibleName("HTTP headers")
+        http_headers_field.setAccessibleDescription(
+            "Newline-separated custom headers (Key: Value format)"
+        )
+        self.fields["http_headers_field"] = http_headers_field
+        http_layout.addRow("HTTP Headers:", http_headers_field)
+
+        http_field_name_field = QLineEdit()
+        http_field_name_field.setAccessibleName("HTTP field name")
+        http_field_name_field.setText("file")
+        http_field_name_field.setAccessibleDescription(
+            "Form field name for file upload"
+        )
+        self.fields["http_field_name_field"] = http_field_name_field
+        http_layout.addRow("Field Name:", http_field_name_field)
+
+        http_auth_type_var = QComboBox()
+        http_auth_type_var.addItems(["", "bearer", "query"])
+        http_auth_type_var.setAccessibleName("HTTP auth type")
+        http_auth_type_var.setAccessibleDescription(
+            "Authentication type: bearer token or query parameter"
+        )
+        self.fields["http_auth_type_var"] = http_auth_type_var
+        http_layout.addRow("Auth Type:", http_auth_type_var)
+
+        http_api_key_field = QLineEdit()
+        http_api_key_field.setAccessibleName("HTTP API key")
+        http_api_key_field.setEchoMode(QLineEdit.EchoMode.Password)
+        http_api_key_field.setAccessibleDescription("API key for authentication")
+        self.fields["http_api_key_field"] = http_api_key_field
+        http_layout.addRow("API Key:", http_api_key_field)
+        layout.addWidget(http_group)
 
         layout.addStretch()
         return container

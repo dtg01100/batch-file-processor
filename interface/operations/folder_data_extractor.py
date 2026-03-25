@@ -24,6 +24,7 @@ class ExtractedDialogFields:
     process_backend_copy: bool = False
     process_backend_ftp: bool = False
     process_backend_email: bool = False
+    process_backend_http: bool = False
 
     # FTP fields
     ftp_server: str = ""
@@ -35,6 +36,13 @@ class ExtractedDialogFields:
     # Email fields
     email_to: str = ""
     email_subject_line: str = ""
+
+    # HTTP fields
+    http_url: str = ""
+    http_headers: str = ""
+    http_field_name: str = "file"
+    http_auth_type: str = ""
+    http_api_key: str = ""
 
     # EDI fields
     process_edi: bool = False
@@ -128,6 +136,7 @@ class FolderDataExtractor:
             process_backend_copy=self._get_bool("process_backend_copy_check"),
             process_backend_ftp=self._get_bool("process_backend_ftp_check"),
             process_backend_email=self._get_bool("process_backend_email_check"),
+            process_backend_http=self._get_bool("process_backend_http_check"),
             # FTP
             ftp_server=self._get_text("ftp_server_field"),
             ftp_port=self._get_int("ftp_port_field"),
@@ -137,6 +146,12 @@ class FolderDataExtractor:
             # Email
             email_to=self._get_text("email_recepient_field"),
             email_subject_line=self._get_text("email_sender_subject_field"),
+            # HTTP
+            http_url=self._get_text("http_url_field"),
+            http_headers=self._get_text("http_headers_field"),
+            http_field_name=self._get_text("http_field_name_field"),
+            http_auth_type=self._get_value("http_auth_type_var"),
+            http_api_key=self._get_text("http_api_key_field"),
             # EDI
             process_edi=self._get_bool("process_edi"),
             convert_to_format=self._get_value("convert_formats_var"),
