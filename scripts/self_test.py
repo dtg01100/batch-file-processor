@@ -251,12 +251,12 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     try:
         from core.constants import CURRENT_DATABASE_VERSION
 
-        if CURRENT_DATABASE_VERSION == "46":
-            ok("CURRENT_DATABASE_VERSION == '46'")
+        if CURRENT_DATABASE_VERSION == "47":
+            ok("CURRENT_DATABASE_VERSION == '47'")
         else:
             fail(
                 "CURRENT_DATABASE_VERSION",
-                f"expected '46', got {CURRENT_DATABASE_VERSION!r}",
+                f"expected '47', got {CURRENT_DATABASE_VERSION!r}",
             )
     except Exception as exc:
         fail("CURRENT_DATABASE_VERSION import", str(exc))

@@ -1140,25 +1140,30 @@ def upgrade_database(
     if db_version_dict and str(db_version_dict["version"]) == "44":
         # Make convert_to_format the single source of truth for conversion mode.
         #
-        # Previous logic wrongly cleared convert_to_format for every folder with
-        # tweak_edi=1, destroying the intended conversion target (e.g. 'csv',
-        # 'YellowDog CSV').  The correct rule is:
+        # tweak_edi is a now-deprecated flag that formerly ran a separate "tweaks"
+        # post-processing step.  Rules for retiring it:
         #
-        #   • tweak_edi=1 + convert_to_format already set (non-empty, not 'tweaks'):
-        #     The stored format IS the intent.  Honour it: enable process_edi so the
-        #     conversion actually runs, and clear the now-redundant tweak_edi flag.
+        #   • tweak_edi=1 + process_edi=1/NULL + convert_to_format non-empty:
+        #     Stored format IS the intended target.  Honour it: ensure process_edi=1
+        #     so conversion runs, then clear tweak_edi.
         #
-        #   • tweak_edi=1 + convert_to_format is empty/null:
-        #     The folder truly wanted EDI tweaks.  Set convert_to_format='tweaks',
-        #     enable process_edi, and clear tweak_edi.
+        #   • tweak_edi=1 + process_edi=1/NULL + convert_to_format empty/null:
+        #     The folder wanted EDI tweaks.  Set convert_to_format='tweaks',
+        #     ensure process_edi=1, and clear tweak_edi.
         #
-        #   • tweak_edi=1 + convert_to_format='tweaks':
-        #     Already correct; just enable process_edi and clear tweak_edi.
+        #   • tweak_edi=1 + process_edi=0 (explicitly disabled):
+        #     The user disabled EDI processing.  Respect that choice: only clear
+        #     the deprecated tweak_edi flag; do NOT change process_edi or
+        #     convert_to_format.  The folder continues to pass through files.
         cursor = database_connection.raw_connection.cursor()
 
         for table in ("folders", "administrative"):
             try:
-                # Case A: real format already stored – honour it.
+                # Case A (enabled): real format already stored and processing was
+                # enabled or unset – honour the stored format.
+                # Do NOT touch folders where process_edi was explicitly set to 0;
+                # those folders intentionally disabled conversion and must keep
+                # passing through.
                 cursor.execute(f"""
                     UPDATE {table}
                     SET process_edi = 1,
@@ -1166,12 +1171,29 @@ def upgrade_database(
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
+                      AND (process_edi IS NULL OR process_edi != 0)
                 """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
-                # Case B: no format stored – the intent was EDI tweaks.
+                # Case A (disabled): real format stored but processing was
+                # explicitly off.  Only retire the deprecated tweak_edi flag;
+                # leave process_edi=0 and convert_to_format untouched.
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET tweak_edi = 0
+                    WHERE tweak_edi = 1
+                      AND convert_to_format IS NOT NULL
+                      AND convert_to_format != ''
+                      AND process_edi = 0
+                """)
+            except Exception:
+                pass  # Column may not exist in older schemas
+
+            try:
+                # Case B (enabled): no format stored – the intent was EDI tweaks.
+                # Only promote when processing was enabled or unset.
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
@@ -1179,6 +1201,20 @@ def upgrade_database(
                         tweak_edi         = 0
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
+                      AND (process_edi IS NULL OR process_edi != 0)
+                """)
+            except Exception:
+                pass  # Column may not exist in older schemas
+
+            try:
+                # Case B (disabled): no format stored and processing was
+                # explicitly off.  Only retire the deprecated tweak_edi flag.
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET tweak_edi = 0
+                    WHERE tweak_edi = 1
+                      AND (convert_to_format IS NULL OR convert_to_format = '')
+                      AND process_edi = 0
                 """)
             except Exception:
                 pass  # Column may not exist in older schemas
@@ -1228,3 +1264,72 @@ def upgrade_database(
         update_version = dict(id=1, version="46", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("45", "46")
+
+    db_version_dict = db_version.find_one(id=1)
+    if db_version_dict and str(db_version_dict["version"]) == "46":
+        # Repair convert_to_format values corrupted by the original v44→v45
+        # migration (commit 8d86e0884).  That migration cleared convert_to_format
+        # for every folder with tweak_edi=1 regardless of whether process_edi was
+        # explicitly 0 (disabled).  A subsequent v45→v46 step then stamped them
+        # all with 'tweaks', leaving disabled folders (process_edi='0') with the
+        # nonsensical format 'tweaks'.
+        #
+        # The pre-migration backup the app creates before running migrations
+        # contains the original values.  We locate the most recent backup and
+        # restore convert_to_format for every affected row.
+        import glob
+        import sqlite3 as _sqlite3
+
+        cursor = database_connection.raw_connection.cursor()
+
+        backup_files = []
+        if config_folder:
+            backup_pattern = os.path.join(config_folder, "folders.db.bak-*")
+            backup_files = sorted(glob.glob(backup_pattern))
+
+        if backup_files:
+            backup_path = backup_files[-1]
+            try:
+                back_conn = _sqlite3.connect(backup_path)
+                back_conn.row_factory = _sqlite3.Row
+
+                # Identify the corrupted rows in production.
+                # Signature: process_edi='0' AND convert_to_format='tweaks'
+                # (disabled folders should never legitimately be 'tweaks')
+                affected = {
+                    r[0]
+                    for r in cursor.execute(
+                        "SELECT id FROM folders "
+                        "WHERE process_edi = '0' AND convert_to_format = 'tweaks'"
+                    ).fetchall()
+                }
+
+                fixed = 0
+                for row in back_conn.execute(
+                    "SELECT id, convert_to_format FROM folders"
+                ):
+                    if row["id"] in affected:
+                        cursor.execute(
+                            "UPDATE folders SET convert_to_format = ? WHERE id = ?",
+                            (row["convert_to_format"] or "", row["id"]),
+                        )
+                        fixed += 1
+
+                back_conn.close()
+                database_connection.raw_connection.commit()
+                print(
+                    f"  Repaired {fixed} folders using backup "
+                    f"{os.path.basename(backup_path)}"
+                )
+            except Exception as e:
+                print(f"  Warning: could not repair from backup: {e}")
+        else:
+            print(
+                "  Warning: no backup file found; folders with "
+                "process_edi='0' and convert_to_format='tweaks' may have "
+                "incorrect conversion targets (manual review recommended)."
+            )
+
+        update_version = dict(id=1, version="47", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("46", "47")

@@ -937,7 +937,10 @@ class TestNoBehavioralChangeAfterUpgrade:
         "alias",
         "folder_is_active",
         "process_edi",
-        "tweak_edi",
+        # tweak_edi intentionally excluded: migration v44→v46 zeroes it out as
+        # part of retiring the deprecated flag.  The current orchestrator does not
+        # read tweak_edi at runtime, so changing it from 1→0 carries no behavioral
+        # consequence for file dispatch.
         "split_edi",
         "split_edi_include_invoices",
         "split_edi_include_credits",
@@ -989,10 +992,11 @@ class TestNoBehavioralChangeAfterUpgrade:
     # The stored representation changes but the meaning is identical:
     # normalize_bool('True') == normalize_bool('1') == True.
     # Compare these fields by their boolean meaning, not their raw storage value.
+    # NOTE: tweak_edi is excluded — it is intentionally retired by migration and
+    # is not tracked as a behavioral field (see _FOLDER_BEHAVIORAL_COLS above).
     _BOOL_FOLDER_COLS = {
         "folder_is_active",
         "process_edi",
-        "tweak_edi",
         "split_edi",
         "split_edi_include_invoices",
         "split_edi_include_credits",
