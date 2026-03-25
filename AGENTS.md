@@ -172,6 +172,24 @@ Prefer:
 - Capture exceptions in threads and re-raise in the calling thread
 - Prefer `queue.Queue` or closure-captured dicts over module-level `global` for inter-thread communication
 
+## Convert Backend Selection
+
+**Philosophy**: Fail-fast is preferred over silent fallback. An incorrect format should cause the run to fail rather than send in the wrong format or pass through unchanged.
+
+### Current Protections
+- **Whitelist validation**: `dispatch/pipeline/converter.py:391` checks format against `SUPPORTED_FORMATS` list
+- **Module interface check**: Verifies `edi_convert` function exists after loading module
+- **No-output detection**: `orchestrator.py:1063-1068` raises error if conversion requested but no output produced
+
+### Agent Guidelines
+- When adding new converters, register a corresponding `ConfigurationPlugin` (not just the module)
+- Never add runtime "smart" fallback logic to route to a different format
+- Unknown/empty `convert_to_format` values should result in no conversion, not a fallback to "csv"
+- Database migrations should validate `convert_to_format` values against the whitelist
+
+### Where to Learn More
+See `docs/architecture/backend-selection-hardening.md` for detailed guidance including edge cases and testing recommendations.
+
 ## Markdown Organization
 
 - Prefer updating existing documentation over creating a new Markdown file.

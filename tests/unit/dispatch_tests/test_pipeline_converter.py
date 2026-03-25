@@ -590,6 +590,106 @@ class TestEDIConverterStep:
         assert result.success is True
         assert mock_loader.last_module_name == "dispatch.converters.convert_to_csv"
 
+    def test_format_normalization_whitespace_only(self):
+        """Test that whitespace-only format is treated as empty (no conversion)."""
+        step = EDIConverterStep()
+
+        # Whitespace-only should be treated as empty/no conversion
+        params = {"convert_to_format": "   ", "process_edi": "True"}
+        result = step.convert("/input/test.edi", "/output", params, {}, {})
+
+        assert result.output_path == "/input/test.edi"
+        assert result.format_used == ""  # Normalized to empty
+        assert result.success is True  # No conversion requested = success
+
+    def test_format_normalization_leading_trailing_whitespace(self):
+        """Test format with leading/trailing whitespace is normalized."""
+        mock_module = create_mock_conversion_module("/output/converted.csv")
+        mock_loader = MockModuleLoader(
+            {"dispatch.converters.convert_to_csv": mock_module}
+        )
+
+        step = EDIConverterStep(module_loader=mock_loader)
+
+        # Format with leading/trailing whitespace
+        params = {"convert_to_format": "  csv  ", "process_edi": "True"}
+        result = step.convert("/input/test.edi", "/output", params, {}, {})
+
+        assert result.success is True
+        assert mock_loader.last_module_name == "dispatch.converters.convert_to_csv"
+
+
+class TestPluginFormatAlignment:
+    """Tests verifying that ConfigurationPlugins and SUPPORTED_FORMATS are aligned."""
+
+    def test_supported_formats_and_plugins_alignment(self):
+        """Test that all SUPPORTED_FORMATS correspond to registered ConfigurationPlugins.
+
+        This ensures that any format accepted by the converter can also be configured
+        via the plugin system. This is critical for fail-fast behavior - if a format
+        is in SUPPORTED_FORMATS but has no plugin, users won't see it in the UI
+        dropdown but could still trigger it via database values.
+        """
+        from interface.models.folder_configuration import ConvertFormat
+        from interface.plugins.plugin_manager import PluginManager
+
+        manager = PluginManager()
+        manager.discover_plugins()
+        manager.initialize_plugins()
+
+        registered_plugins = manager.get_configuration_plugins()
+
+        # Build set of normalized format values that have plugins
+        registered_format_tokens = set()
+        for plugin in registered_plugins:
+            format_enum = plugin.get_format_enum()
+            if format_enum and format_enum.value:
+                # Normalize the enum value to match SUPPORTED_FORMATS tokens
+                normalized = (
+                    format_enum.value.lower().replace(" ", "_").replace("-", "_")
+                )
+                registered_format_tokens.add(normalized)
+            # Also try normalizing the display name
+            format_name = (
+                plugin.get_format_name().lower().replace(" ", "_").replace("-", "_")
+            )
+            registered_format_tokens.add(format_name)
+
+        missing_from_supported = []
+        for supported in SUPPORTED_FORMATS:
+            if supported not in registered_format_tokens:
+                missing_from_supported.append(supported)
+
+        assert missing_from_supported == [], (
+            f"Formats in SUPPORTED_FORMATS but not registered as plugins: {missing_from_supported}. "
+            "Each format in SUPPORTED_FORMATS must have a corresponding ConfigurationPlugin."
+        )
+
+    def test_plugins_produce_valid_convert_tokens(self):
+        """Test that plugins generate format tokens that match SUPPORTED_FORMATS.
+
+        Ensures that the format names shown in UI will normalize to tokens that
+        the converter can understand.
+        """
+        from interface.plugins.plugin_manager import PluginManager
+
+        manager = PluginManager()
+        manager.discover_plugins()
+        manager.initialize_plugins()
+
+        plugins = manager.get_configuration_plugins()
+
+        for plugin in plugins:
+            format_name = plugin.get_format_name()
+            normalized = format_name.strip().lower().replace(" ", "_").replace("-", "_")
+
+            # Should either be in SUPPORTED_FORMATS or normalize to something that works
+            # This test ensures UI dropdown values don't lead to "unknown format" errors
+            assert normalized in SUPPORTED_FORMATS or normalized == "", (
+                f"Plugin format '{format_name}' normalizes to '{normalized}' which is not "
+                f"in SUPPORTED_FORMATS: {SUPPORTED_FORMATS}"
+            )
+
 
 class TestProtocolTests:
     """Protocol tests for converter module."""
