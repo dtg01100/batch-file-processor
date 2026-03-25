@@ -14,6 +14,7 @@ from core.structured_logging import (
     log_with_context,
     set_correlation_id,
 )
+from dispatch.error_handler import ErrorHandler
 from dispatch.preflight_validator import PreflightValidator
 
 logger = get_logger(__name__)
@@ -179,12 +180,13 @@ class QtRunCoordinator:
                 from dispatch.pipeline.validator import EDIValidationStep
 
                 run_error_bool = False
+                validator_step = EDIValidationStep()
                 config = DispatchConfig(
                     database=folders_table_process,
                     settings=settings_dict,
                     version=self._app._version,
                     progress_reporter=self._app._progress_service,
-                    validator_step=EDIValidationStep(),
+                    validator_step=validator_step,
                     splitter_step=EDISplitterStep(),
                     converter_step=EDIConverterStep(),
                     tweaker_step=EDITweakerStep(),
@@ -244,6 +246,37 @@ class QtRunCoordinator:
                         )
 
                 run_summary_string = orchestrator.get_summary()
+
+                validator_log_output = ""
+                if hasattr(validator_step, "get_error_log"):
+                    validator_log_output = validator_step.get_error_log()
+
+                report_edi_errors_enabled = self._app._utils_module.normalize_bool(
+                    reporting.get("report_edi_errors", False)
+                )
+
+                if report_edi_errors_enabled and validator_log_output.strip():
+                    try:
+                        validator_report_path = ErrorHandler(
+                            run_log_directory=run_log_path
+                        ).write_validation_report(validator_log_output)
+
+                        if self._app._utils_module.normalize_bool(
+                            reporting["enable_reporting"]
+                        ):
+                            self._app._database.emails_table.insert(
+                                {"log": validator_report_path}
+                            )
+
+                        run_summary_string += ", has EDI validator errors"
+                    except Exception as validation_report_error:
+                        run_log.write(
+                            (
+                                "Failed to write validation report: "
+                                f"{validation_report_error}\r\n"
+                            ).encode()
+                        )
+
                 if run_error_bool and not self._app._args.automatic:
                     self._app._ui_service.show_info(
                         "Run Status", "Run completed with errors."

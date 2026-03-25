@@ -510,6 +510,23 @@ class TestEDIValidationStep:
         assert len(log) > 0
         assert "minor.edi" in log
 
+    def test_get_error_log_includes_hard_validation_failures(self):
+        """Hard validation failures must be accumulated for validator reporting."""
+        mock_validator = MockValidatorForStep(
+            should_pass=False,
+            errors=["Critical validation error"],
+            log_output="Validator hard-failure details\r\n",
+        )
+
+        step = EDIValidationStep(validator=mock_validator)
+
+        result = step.validate("/test/bad.edi", "bad.edi")
+
+        assert result.is_valid is False
+        log_output = step.get_error_log()
+        assert "Errors for bad.edi:" in log_output
+        assert "Validator hard-failure details" in log_output
+
     def test_clear_error_log(self, edi_content_with_minor_errors):
         """Test clear_error_log() clears the log buffer."""
         mock_fs = MockFileSystem({"/test/minor.edi": edi_content_with_minor_errors})

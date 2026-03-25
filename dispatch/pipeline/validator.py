@@ -250,7 +250,7 @@ class EDIValidationStep:
         if errors and self._error_handler is not None:
             self._record_errors(filename_for_log, errors)
 
-        if warnings:
+        if log_output:
             self._error_log.write(log_output)
 
         return ValidationResult(
