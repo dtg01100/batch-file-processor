@@ -45,11 +45,10 @@ class ResendService:
         Returns:
             Total number of unique processed files.
         """
-        rows = list(self._processed_files.find(order_by=None))
-        seen = set()
-        for row in rows:
-            seen.add((row["file_name"], row["folder_id"]))
-        return len(seen)
+        sql = "SELECT COUNT(DISTINCT file_name || '-' || folder_id) AS cnt FROM processed_files"
+        cur = self._db.raw_connection.execute(sql, [])
+        row = cur.fetchone()
+        return row["cnt"] if row else 0
 
     def _get_folder_alias_batch(self, folder_ids: List[int]) -> Dict[int, str]:
         """Get folder aliases for multiple folder IDs in a single query.
