@@ -6,9 +6,84 @@ Database operations use real DatabaseObj with temporary SQLite databases.
 
 import pytest
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtWidgets import QLabel, QPushButton, QWidget
+
+from interface.qt.theme import Theme
 
 pytestmark = pytest.mark.qt
+
+
+def luminance(color: QColor) -> float:
+    """Calculate relative luminance of a color. Based on WCAG 2.0."""
+    r = color.red() / 255.0
+    g = color.green() / 255.0
+    b = color.blue() / 255.0
+    r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
+    g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
+    b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(fg: QColor, bg: QColor) -> float:
+    """Calculate WCAG contrast ratio between two colors (1-21)."""
+    l1 = luminance(fg)
+    l2 = luminance(bg)
+    lighter = max(l1, l2)
+    darker = min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def get_actual_background_color(widget: QWidget) -> QColor:
+    """Get the actual rendered background color of a widget."""
+    return QColor(widget.palette().color(QPalette.Window))
+
+
+def get_actual_foreground_color(widget: QWidget) -> QColor:
+    """Get the actual rendered foreground (text) color of a widget."""
+    return QColor(widget.palette().color(QPalette.Text))
+
+
+@pytest.mark.qt
+class TestSearchWidgetContrast:
+    """Contrast tests for SearchWidget."""
+
+    def test_search_entry_text_has_sufficient_contrast(self, qtbot):
+        """Test that search entry text meets WCAG AA contrast requirements."""
+        from interface.qt.widgets.search_widget import SearchWidget
+
+        widget = SearchWidget()
+        qtbot.addWidget(widget)
+        widget.show()
+
+        fg_color = QColor(Theme.TEXT_PRIMARY)
+        bg_color = QColor(Theme.INPUT_BACKGROUND)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Search entry text contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(text={Theme.TEXT_PRIMARY}, bg={Theme.INPUT_BACKGROUND})"
+        )
+
+    def test_search_entry_focus_state_has_sufficient_contrast(self, qtbot):
+        """Test that search entry in focus state meets contrast requirements."""
+        from interface.qt.widgets.search_widget import SearchWidget
+
+        widget = SearchWidget()
+        qtbot.addWidget(widget)
+        widget.show()
+
+        entry = widget.entry
+        entry.setFocus()
+        qtbot.wait(10)
+
+        fg_color = QColor(Theme.TEXT_PRIMARY)
+        bg_color = QColor(Theme.BACKGROUND)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Search entry focus state contrast {ratio:.2f}:1 is below WCAG AA 4.5:1"
+        )
 
 
 @pytest.mark.qt
@@ -396,3 +471,230 @@ class TestFolderListWidget:
         )
         assert short_width > 0
         assert long_width > short_width
+
+
+@pytest.mark.qt
+class TestFolderListWidgetContrast:
+    """Contrast tests for FolderListWidget."""
+
+    def test_folder_card_text_has_sufficient_contrast(self, qtbot, temp_database):
+        """Test that folder card text meets WCAG AA contrast requirements."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 1,
+                "alias": "TestFolder",
+                "folder_name": "/test",
+                "folder_is_active": "True",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        fg_color = QColor(Theme.TEXT_PRIMARY)
+        bg_color = QColor(Theme.CARD_SURFACE)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Folder card text contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(text={Theme.TEXT_PRIMARY}, bg={Theme.CARD_SURFACE})"
+        )
+
+    def test_active_toggle_button_symbol_contrast(self, qtbot, temp_database):
+        """Test that active toggle button symbol has sufficient contrast."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 1,
+                "alias": "ActiveFolder",
+                "folder_name": "/test",
+                "folder_is_active": "True",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        toggle_buttons = [
+            btn for btn in widget.findChildren(QPushButton) if btn.text() == "\u25cf"
+        ]
+        assert toggle_buttons, "Active toggle button not found"
+
+        fg_color = QColor(Theme.PRIMARY)
+        bg_color = QColor(Theme.CARD_SURFACE)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Active toggle button contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(symbol={Theme.PRIMARY}, bg={Theme.CARD_SURFACE})"
+        )
+
+    def test_inactive_toggle_button_symbol_contrast(self, qtbot, temp_database):
+        """Test that inactive toggle button symbol has sufficient contrast."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 2,
+                "alias": "InactiveFolder",
+                "folder_name": "/test",
+                "folder_is_active": "False",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        toggle_buttons = [
+            btn for btn in widget.findChildren(QPushButton) if btn.text() == "\u25cb"
+        ]
+        assert toggle_buttons, "Inactive toggle button not found"
+
+        fg_color = QColor(Theme.TEXT_TERTIARY)
+        bg_color = QColor(Theme.CARD_SURFACE)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Inactive toggle button contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(symbol={Theme.TEXT_TERTIARY}, bg={Theme.CARD_SURFACE})"
+        )
+
+    def test_send_button_text_contrast(self, qtbot, temp_database):
+        """Test that Send button text has sufficient contrast."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 1,
+                "alias": "SenderFolder",
+                "folder_name": "/test",
+                "folder_is_active": "True",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        send_buttons = [
+            btn for btn in widget.findChildren(QPushButton) if btn.text() == "Send"
+        ]
+        assert send_buttons, "Send button not found"
+
+        fg_color = QColor(Theme.ON_PRIMARY)
+        bg_color = QColor(Theme.PRIMARY)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Send button text contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(text={Theme.ON_PRIMARY}, bg={Theme.PRIMARY})"
+        )
+
+    def test_delete_button_text_contrast(self, qtbot, temp_database):
+        """Test that Delete button text has sufficient contrast."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 2,
+                "alias": "DeleteFolder",
+                "folder_name": "/test",
+                "folder_is_active": "False",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        delete_buttons = [
+            btn for btn in widget.findChildren(QPushButton) if btn.text() == "Delete"
+        ]
+        assert delete_buttons, "Delete button not found"
+
+        fg_color = QColor(Theme.ON_ERROR)
+        bg_color = QColor(Theme.ERROR)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Delete button text contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(text={Theme.ON_ERROR}, bg={Theme.ERROR})"
+        )
+
+    def test_empty_state_label_contrast(self, qtbot, temp_database):
+        """Test that empty state label has sufficient contrast."""
+        from interface.qt.widgets.folder_list_widget import FolderListWidget
+
+        temp_database.folders_table.insert(
+            {
+                "id": 1,
+                "alias": "Folder",
+                "folder_name": "/test",
+                "folder_is_active": "True",
+            }
+        )
+
+        widget = FolderListWidget(
+            parent=None,
+            folders_table=temp_database.folders_table,
+            on_send=lambda fid: None,
+            on_edit=lambda fid: None,
+            on_toggle=lambda fid: None,
+            on_delete=lambda fid, name: None,
+            filter_value="nonexistent",
+        )
+        qtbot.addWidget(widget)
+        widget.show()
+
+        empty_labels = [
+            lbl for lbl in widget.findChildren(QLabel) if "No matching" in lbl.text()
+        ]
+        if empty_labels:
+            fg_color = QColor(Theme.TEXT_TERTIARY)
+            bg_color = QColor(Theme.CARD_SURFACE)
+            ratio = contrast_ratio(fg_color, bg_color)
+            assert ratio >= 4.5, (
+                f"Empty state label contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+                f"(text={Theme.TEXT_TERTIARY}, bg={Theme.CARD_SURFACE})"
+            )
