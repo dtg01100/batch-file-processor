@@ -399,7 +399,7 @@ class FolderListWidget(QWidget):
             toggle_btn.setStyleSheet(
                 f"""
                 QPushButton {{
-                    color: {Theme.TEXT_DISABLED};
+                    color: {Theme.TEXT_TERTIARY};
                     background-color: transparent;
                     border: 2px solid {Theme.OUTLINE_VARIANT};
                     border-radius: 18px;
