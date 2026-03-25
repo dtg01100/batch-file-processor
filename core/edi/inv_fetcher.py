@@ -329,9 +329,10 @@ class InvFetcher:
                     f"No item-master UOM found in AS400 for item {itemno}"
                 )
             return "HI" if int(uommult) > 1 else "LO"
-        except (RuntimeError, OSError, ValueError):
+        except (RuntimeError, OSError, ValueError) as e:
             if self._strict_database_lookup:
                 raise
+            logger.debug("UOM lookup failed for item %s, using default: %s", itemno, e)
             try:
                 if int(uommult) > 1:
                     return "HI"

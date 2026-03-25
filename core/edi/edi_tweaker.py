@@ -596,7 +596,8 @@ class EDITweaker:
             if unit_multiplier == 0:
                 raise ValueError
             int(fields["qty_of_units"].strip())
-        except Exception:
+        except Exception as e:
+            logger.debug("Skipping retail UOM transform for fields due to validation error: %s", e)
             return fields
 
         try:
@@ -622,8 +623,8 @@ class EDITweaker:
             ).rjust(5, "0")
             fields["upc_number"] = each_upc_string
             fields["unit_multiplier"] = "000001"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Error during retail UOM transformation, fields unchanged: %s", e)
 
         return fields
 

@@ -18,6 +18,8 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from dispatch.pipeline.tweaker import EDITweakerStep
+from core.edi.edi_tweaker import EDITweaker
+import logging
 
 
 class TestEDITweakBooleanCombinations:
@@ -98,6 +100,23 @@ class TestEDITweakBooleanCombinations:
 
             # Should not crash with any boolean combination
             assert result is not None
+
+    def test_apply_retail_uom_logs_invalid_record(self, caplog):
+        """Regression: _apply_retail_uom logs when input is invalid and returns unchanged."""
+        tweaker = EDITweaker(query_runner=MagicMock())
+        fields = {
+            "vendor_item": "abc",  # invalid integer
+            "unit_cost": "001200",
+            "unit_multiplier": "000012",
+            "qty_of_units": "00010",
+            "upc_number": "00000000000",
+        }
+
+        caplog.set_level(logging.DEBUG)
+        result = tweaker._apply_retail_uom(fields.copy(), {})
+
+        assert result == fields
+        assert any("Skipping retail UOM transform" in r.message for r in caplog.records)
 
     def test_all_options_enabled_simultaneously(self, base_parameters, base_settings):
         """Test all EDI tweak options enabled at once."""
