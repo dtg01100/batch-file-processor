@@ -1176,6 +1176,7 @@ class TestResendDialog:
         dialog = ResendDialog(None, mock_db)
         qtbot.addWidget(dialog)
 
+        dialog._date_filter_checkbox.setChecked(True)
         dialog._date_from_input.setDate(QDate(2024, 1, 1))
         dialog._date_to_input.setDate(QDate(2024, 1, 31))
 
@@ -1307,6 +1308,7 @@ class TestResendDialog:
 
         dialog._search_input.setText("test")
         dialog._search_field_selector.setCurrentIndex(0)  # All fields
+        dialog._date_filter_checkbox.setChecked(True)
         dialog._date_from_input.setDate(QDate(2024, 1, 1))
         dialog._date_to_input.setDate(QDate(2024, 12, 31))
         dialog._do_search_filter()
@@ -1334,6 +1336,33 @@ class TestResendDialog:
         qtbot.addWidget(dialog)
         # Table should be accessible (no spinbox in current UI)
         assert hasattr(dialog, "_table")
+
+    def test_calendar_popup_has_visible_text(self, qtbot, monkeypatch):
+        """Test that calendar popup text is visible (not black on black)."""
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+        from tests.qt.contrast_utils import assert_contrast_ratio
+
+        mock_db = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = []
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        # Enable date filter and get calendar
+        dialog._date_filter_checkbox.setChecked(True)
+        calendar = dialog._date_to_input.calendarWidget()
+        assert calendar is not None, "Calendar widget should exist"
+
+        # Assert calendar has sufficient contrast (WCAG AA = 4.5:1)
+        assert_contrast_ratio(calendar, min_ratio=4.5)
 
     def test_no_selection_initially(self, qtbot, monkeypatch):
         MagicMock()
