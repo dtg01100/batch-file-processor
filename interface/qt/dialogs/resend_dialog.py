@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QWidget,
 )
 
@@ -98,6 +99,63 @@ class ResendDialog(BaseDialog):
         self._setup_ui()
         self._load_data()
 
+    def _create_date_edit_with_today_button(self) -> QDateEdit:
+        """Create a date edit with a 'Today' button in the calendar popup."""
+        date_edit = QDateEdit()
+        date_edit.setCalendarPopup(True)
+
+        date_edit.setStyleSheet("""
+            QDateEdit {
+                background-color: white;
+                color: black;
+            }
+        """)
+
+        calendar = date_edit.calendarWidget()
+        if calendar is not None:
+            calendar.setNavigationBarVisible(True)
+
+            calendar.setStyleSheet("""
+                QCalendarWidget {
+                    background-color: white;
+                    color: black;
+                }
+                QCalendarWidget QAbstractItemView {
+                    background-color: white;
+                    color: black;
+                    selection-background-color: #4CAF50;
+                    selection-color: white;
+                }
+                QCalendarWidget QToolButton {
+                    background-color: #f0f0f0;
+                    color: black;
+                }
+                QCalendarWidget QMenu {
+                    background-color: white;
+                    color: black;
+                }
+            """)
+
+            nav_bar = calendar.findChild(QToolButton, "qt_calendar_navigation_bar")
+            if nav_bar is not None:
+                today_button = QToolButton()
+                today_button.setText("Today")
+                today_button.setToolTip("Jump to today")
+                today_button.clicked.connect(
+                    lambda: calendar.setSelectedDate(QDate.currentDate())
+                )
+                today_button.setStyleSheet(
+                    "background-color: #4CAF50; color: white; padding: 4px;"
+                )
+                nav_bar.insertWidget(
+                    nav_bar.children()[0] if nav_bar.children() else None, today_button
+                )
+
+        date_edit.setAccessibleName("Date selector")
+        date_edit.setAccessibleDescription("Select a date")
+
+        return date_edit
+
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
         main_layout = self._main_layout
@@ -136,19 +194,24 @@ class ResendDialog(BaseDialog):
             self._on_search_field_changed
         )
 
-        self._date_from_input = QDateEdit()
-        self._date_from_input.setCalendarPopup(True)
+        self._date_filter_checkbox = QCheckBox("Filter by date")
+        self._date_filter_checkbox.setChecked(False)
+        self._date_filter_checkbox.toggled.connect(self._on_date_filter_toggled)
+        self._date_filter_checkbox.setAccessibleName("Enable date range filter")
+
+        self._date_from_input = self._create_date_edit_with_today_button()
         self._date_from_input.setDisplayFormat("yyyy-MM-dd")
-        self._date_from_input.setDate(QDate(1900, 1, 1))
+        today = QDate.currentDate()
+        week_ago = today.addDays(-7)
+        self._date_from_input.setDate(week_ago)
         self._date_from_input.setMinimumDate(QDate(1900, 1, 1))
         self._date_from_input.setMaximumDate(QDate(9999, 12, 31))
         self._date_from_input.dateChanged.connect(self._on_date_range_changed)
         self._date_from_input.setAccessibleName("Start date")
 
-        self._date_to_input = QDateEdit()
-        self._date_to_input.setCalendarPopup(True)
+        self._date_to_input = self._create_date_edit_with_today_button()
         self._date_to_input.setDisplayFormat("yyyy-MM-dd")
-        self._date_to_input.setDate(QDate(9999, 12, 31))
+        self._date_to_input.setDate(today)
         self._date_to_input.setMinimumDate(QDate(1900, 1, 1))
         self._date_to_input.setMaximumDate(QDate(9999, 12, 31))
         self._date_to_input.dateChanged.connect(self._on_date_range_changed)
@@ -157,10 +220,14 @@ class ResendDialog(BaseDialog):
         self._clear_date_range_button = QPushButton("Clear &Date Range")
         self._clear_date_range_button.clicked.connect(self._clear_date_range)
         self._clear_date_range_button.setAccessibleName("Clear date range filter")
+        self._date_from_input.setEnabled(False)
+        self._date_to_input.setEnabled(False)
+        self._clear_date_range_button.setEnabled(False)
 
         search_layout.addWidget(search_label)
         search_layout.addWidget(self._search_field_selector)
         search_layout.addWidget(self._search_input)
+        search_layout.addWidget(self._date_filter_checkbox)
         search_layout.addWidget(QLabel("From:"))
         search_layout.addWidget(self._date_from_input)
         search_layout.addWidget(QLabel("To:"))
@@ -332,7 +399,6 @@ class ResendDialog(BaseDialog):
             status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, 4, status_item)
 
-        self._table.resizeColumnsToContents()
         self._table.setColumnWidth(0, 50)
         self._table.setColumnWidth(1, 150)
         self._table.setColumnWidth(3, 120)
@@ -392,31 +458,33 @@ class ResendDialog(BaseDialog):
         self._search_timer.stop()
         self._do_search_filter()
 
+    def _on_date_filter_toggled(self, checked: bool) -> None:
+        """Handle date filter checkbox toggle."""
+        self._date_from_input.setEnabled(checked)
+        self._date_to_input.setEnabled(checked)
+        self._clear_date_range_button.setEnabled(checked)
+        if not checked:
+            self._do_search_filter()
+
     def _on_date_range_changed(self) -> None:
         """Re-run query when the date range inputs change."""
-        self._search_timer.stop()
-        self._search_timer.start(150)
+        if self._date_filter_checkbox.isChecked():
+            self._search_timer.stop()
+            self._search_timer.start(150)
 
     def _clear_date_range(self) -> None:
         """Clear date filters and reload data."""
-        self._date_from_input.setDate(QDate(1900, 1, 1))
-        self._date_to_input.setDate(QDate(9999, 12, 31))
-        self._do_search_filter()
+        self._date_filter_checkbox.setChecked(False)
 
     def _get_date_filters(self) -> tuple[Optional[str], Optional[str]]:
         """Return date_from/date_to values for queries, or None if not set."""
+        if not self._date_filter_checkbox.isChecked():
+            return None, None
+
         date_from = self._date_from_input.date()
         date_to = self._date_to_input.date()
-
-        if date_from == self._date_from_input.minimumDate():
-            date_from_str = None
-        else:
-            date_from_str = date_from.toString("yyyy-MM-dd")
-
-        if date_to == self._date_to_input.maximumDate():
-            date_to_str = None
-        else:
-            date_to_str = date_to.toString("yyyy-MM-dd")
+        date_from_str = date_from.toString("yyyy-MM-dd")
+        date_to_str = date_to.toString("yyyy-MM-dd")
 
         return date_from_str, date_to_str
 

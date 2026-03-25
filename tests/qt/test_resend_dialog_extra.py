@@ -232,13 +232,16 @@ class TestResendDialogApply:
     def test_resend_button_toggled_without_folder(
         self, qtbot, mock_database_obj, monkeypatch, tmp_path
     ):
-        """Bulk frame is hidden initially when no selection."""
+        """Bulk frame is visible but buttons are disabled when no selection."""
         dialog, _ = _make_dialog_with_data(
             qtbot, mock_database_obj, monkeypatch, tmp_path
         )
 
-        # No selection → bulk frame hidden
-        assert dialog._bulk_action_frame.isHidden() is True
+        # Bulk frame visible but buttons disabled when nothing selected
+        assert dialog._bulk_action_frame.isHidden() is False
+        assert dialog._bulk_mark_resend.isEnabled() is False
+        assert dialog._bulk_clear_resend.isEnabled() is False
+        assert dialog._bulk_clear_selection.isEnabled() is False
 
     def test_resend_button_enabled_with_folder(
         self, qtbot, mock_database_obj, monkeypatch, tmp_path
