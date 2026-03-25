@@ -2,8 +2,32 @@
 
 import pytest
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QLabel
+
+from interface.qt.theme import Theme
 
 pytestmark = pytest.mark.qt
+
+
+def luminance(color: QColor) -> float:
+    """Calculate relative luminance of a color. Based on WCAG 2.0."""
+    r = color.red() / 255.0
+    g = color.green() / 255.0
+    b = color.blue() / 255.0
+    r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
+    g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
+    b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(fg: QColor, bg: QColor) -> float:
+    """Calculate WCAG contrast ratio between two colors (1-21)."""
+    l1 = luminance(fg)
+    l2 = luminance(bg)
+    lighter = max(l1, l2)
+    darker = min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 @pytest.mark.qt
@@ -166,3 +190,48 @@ class TestMaintenanceDialogClose:
 
         # Dialog should be closed
         assert not dialog.isVisible()
+
+
+@pytest.mark.qt
+class TestMaintenanceDialogContrast:
+    """Contrast tests for MaintenanceDialog."""
+
+    def test_warning_label_contrast(self, qtbot, mock_maintenance_functions):
+        """Test that the warning label has sufficient contrast."""
+        from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+
+        dialog = MaintenanceDialog(None, mock_maintenance_functions)
+        qtbot.addWidget(dialog)
+        dialog.show()
+
+        warning_labels = [
+            lbl for lbl in dialog.findChildren(QLabel) if "WARNING" in lbl.text()
+        ]
+        assert warning_labels, "Warning label not found"
+
+        fg_color = QColor(Theme.ERROR)
+        bg_color = QColor(Theme.BACKGROUND)
+        ratio = contrast_ratio(fg_color, bg_color)
+
+        assert ratio >= 4.5, (
+            f"Warning label contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+            f"(text={Theme.ERROR}, bg={Theme.BACKGROUND})"
+        )
+
+    def test_button_text_contrast(self, qtbot, mock_maintenance_functions):
+        """Test that dialog buttons have sufficient contrast."""
+        from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+
+        dialog = MaintenanceDialog(None, mock_maintenance_functions)
+        qtbot.addWidget(dialog)
+        dialog.show()
+
+        for btn in dialog._buttons:
+            fg_color = QColor(Theme.TEXT_PRIMARY)
+            bg_color = QColor(Theme.INPUT_BACKGROUND)
+            ratio = contrast_ratio(fg_color, bg_color)
+
+            assert ratio >= 4.5, (
+                f"Button '{btn.text()}' contrast {ratio:.2f}:1 is below WCAG AA 4.5:1 "
+                f"(text={Theme.TEXT_PRIMARY}, bg={Theme.INPUT_BACKGROUND})"
+            )
