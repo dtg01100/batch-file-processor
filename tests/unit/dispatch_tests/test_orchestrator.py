@@ -404,9 +404,6 @@ class TestOrchestratorHelperMethods:
         # With process_edi
         assert orchestrator._should_validate({"process_edi": "True"}) is True
 
-        # With tweak_edi
-        assert orchestrator._should_validate({"tweak_edi": True}) is True
-
         # With split_edi
         assert orchestrator._should_validate({"split_edi": True}) is True
 

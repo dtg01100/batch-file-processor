@@ -166,23 +166,22 @@ class TestDynamicEDIBuilder:
         builder.convert_sub_layout = layout
         builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
             return_value=None
-                # Use an isolated mock plugin manager to avoid polluting the shared singleton.
-                isolated_pm = MagicMock()
-                isolated_pm.get_configuration_plugins.return_value = []
-                isolated_pm.get_configuration_plugin_by_format_name = MagicMock(
-                    return_value=None
-                )
-                builder = DynamicEDIBuilder(
-                    fields=fields,
-                    folder_config={},
-                    dynamic_container=container,
-                    dynamic_layout=layout,
-                    plugin_manager=isolated_pm,
-                )
-
-                builder.convert_sub_container = container
-                builder.convert_sub_layout = layout
         )
+        isolated_pm = MagicMock()
+        isolated_pm.get_configuration_plugins.return_value = []
+        isolated_pm.get_configuration_plugin_by_format_name = MagicMock(
+            return_value=None
+        )
+        builder = DynamicEDIBuilder(
+            fields=fields,
+            folder_config={},
+            dynamic_container=container,
+            dynamic_layout=layout,
+            plugin_manager=isolated_pm,
+        )
+
+        builder.convert_sub_container = container
+        builder.convert_sub_layout = layout
 
         csv_cb = MagicMock()
         fintech_cb = MagicMock()

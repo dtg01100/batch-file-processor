@@ -449,7 +449,7 @@ class TestEmailBackendOperations:
 
         # Use mock client that fails - need enough errors for all 10 retries
         mock_client = MockSMTPClient()
-        for _ in range(15):  # 10 retries needed
+        for _ in range(60):  # Need 50+ errors (10 retries × 5 ops per retry)
             mock_client.add_error(RuntimeError("Connection failed"))
 
         # Mock sleep to be instant so test runs fast
