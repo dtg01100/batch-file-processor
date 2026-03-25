@@ -227,7 +227,7 @@ class EventHandlers:
             "rename_file_field",
             "split_edi_filter_categories_entry",
             "split_edi_filter_mode",
-            "edi_options_combo",
+            "edi_options_check",
         ]:
             widget = self.fields.get(key)
             if widget:

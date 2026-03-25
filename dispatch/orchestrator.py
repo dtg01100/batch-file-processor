@@ -1060,6 +1060,12 @@ class DispatchOrchestrator:
                     context.temp_files.append(converted_file)
                 current_file = converted_file
                 did_convert = True
+            elif str(convert_format).strip():
+                raise RuntimeError(
+                    "Conversion was requested for "
+                    f"format '{convert_format}' but no converted output "
+                    "was produced"
+                )
 
         return current_file, did_convert
 
@@ -1191,13 +1197,20 @@ class DispatchOrchestrator:
         # The database stores process_edi=True to mean "convert EDI to another format".
         # The orchestrator uses convert_edi to gate the converter step.
         if "convert_edi" not in effective_folder:
-            effective_folder["convert_edi"] = normalize_bool(
-                effective_folder.get("process_edi", False)
-            ) or has_convert_target
+            process_edi_raw = effective_folder.get("process_edi")
+            # Respect explicit process_edi on the folder; only infer from
+            # convert_to_format when process_edi is missing/NULL (legacy rows).
+            if process_edi_raw is None:
+                effective_folder["convert_edi"] = has_convert_target
+            else:
+                effective_folder["convert_edi"] = normalize_bool(process_edi_raw)
 
-        # Defensive normalization: if an explicit conversion target exists, ensure
-        # process_edi is also enabled so validation/processing gates stay aligned.
-        if has_convert_target and not normalize_bool(effective_folder.get("process_edi")):
+        # Defensive normalization: if an explicit conversion target exists and
+        # process_edi is not set (NULL in DB), infer that conversion was intended.
+        # This handles legacy folders created before the process_edi column existed.
+        # Do NOT override an explicit process_edi=False (user chose "Do Nothing").
+        _process_edi_raw = effective_folder.get("process_edi")
+        if has_convert_target and _process_edi_raw is None:
             effective_folder["process_edi"] = True
 
         if "process_edi" not in effective_folder and (

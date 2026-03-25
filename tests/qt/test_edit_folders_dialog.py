@@ -96,7 +96,7 @@ class TestActiveCheckboxToggle:
         assert not dialog._split_edi_check.isEnabled()
         assert not dialog._send_invoices_check.isEnabled()
         assert not dialog._send_credits_check.isEnabled()
-        assert not dialog._edi_options_combo.isEnabled()
+        assert not dialog._edi_options_check.isEnabled()
 
     def test_active_checkbox_enables_edi_when_backends_active(
         self, qtbot, sample_folder_config
@@ -107,7 +107,7 @@ class TestActiveCheckboxToggle:
         dialog = create_dialog(qtbot, sample_folder_config)
 
         assert dialog._split_edi_check.isEnabled()
-        assert dialog._edi_options_combo.isEnabled()
+        assert dialog._edi_options_check.isEnabled()
 
 
 # ============================================================================
@@ -270,7 +270,7 @@ class TestConvertFormatChange:
         sample_folder_config["process_edi"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         return dialog
 
     def test_csv_format_shows_csv_sub_fields(self, qtbot, sample_folder_config):
@@ -375,49 +375,49 @@ class TestEDIOptionsChange:
     """Tests for EDI options combo box changes."""
 
     def test_do_nothing_shows_send_as_is(self, qtbot, sample_folder_config):
-        """Do Nothing option should show the send-as-is state."""
+        """Unchecked state should show the send-as-is label."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         sample_folder_config["process_edi"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Do Nothing")
+        dialog._edi_options_check.setChecked(False)
 
-        assert dialog._edi_options_combo.currentText() == "Do Nothing"
+        assert not dialog._edi_options_check.isChecked()
         assert dialog._dynamic_edi_layout.count() > 0
 
     def test_convert_edi_shows_convert_fields(self, qtbot, sample_folder_config):
-        """Convert EDI option should show convert format fields."""
+        """Checked state should show convert format fields."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
 
         assert hasattr(dialog, "_convert_format_combo")
         assert hasattr(dialog, "_convert_sub_container")
 
     def test_tweak_edi_shows_tweak_fields(self, qtbot, sample_folder_config):
-        """Tweak EDI option should show tweak EDI fields."""
+        """Convert EDI checked with Tweaks format should show tweak fields."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         sample_folder_config["tweak_edi"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Tweak EDI")
+        dialog._edi_options_check.setChecked(True)
 
         assert hasattr(dialog, "_tweak_upc_check")
         assert hasattr(dialog, "_tweak_pad_arec_check")
         assert hasattr(dialog, "_tweak_force_txt_check")
 
     def test_tweak_edi_has_override_upc_group(self, qtbot, sample_folder_config):
-        """Tweak EDI should have UPC override group."""
+        """Convert EDI checked with Tweaks format should have UPC override group."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         sample_folder_config["tweak_edi"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Tweak EDI")
+        dialog._edi_options_check.setChecked(True)
 
         assert hasattr(dialog, "_tweak_override_upc_check")
         assert hasattr(dialog, "_tweak_override_upc_level")
@@ -425,27 +425,27 @@ class TestEDIOptionsChange:
     def test_edi_option_change_clears_previous_fields(
         self, qtbot, sample_folder_config
     ):
-        """Changing EDI options should clear previous dynamic fields."""
+        """Toggling Convert EDI should rebuild the dynamic EDI area."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
-        first_convert_widgets = []
+        dialog._edi_options_check.setChecked(True)
+        checked_widgets = []
         for i in range(dialog._dynamic_edi_layout.count()):
             item = dialog._dynamic_edi_layout.itemAt(i)
             if item and item.widget():
-                first_convert_widgets.append(type(item.widget()))
+                checked_widgets.append(type(item.widget()))
 
-        dialog._edi_options_combo.setCurrentText("Tweak EDI")
-        second_tweak_widgets = []
+        dialog._edi_options_check.setChecked(False)
+        unchecked_widgets = []
         for i in range(dialog._dynamic_edi_layout.count()):
             item = dialog._dynamic_edi_layout.itemAt(i)
             if item and item.widget():
-                second_tweak_widgets.append(type(item.widget()))
+                unchecked_widgets.append(type(item.widget()))
 
-        assert len(first_convert_widgets) > 0
-        assert len(second_tweak_widgets) > 0
+        assert len(checked_widgets) > 0
+        assert len(unchecked_widgets) > 0
 
 
 # ============================================================================
@@ -729,7 +729,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["include_headers"] = "True"
         sample_folder_config["pad_a_records"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("CSV")
 
         assert dialog._csv_upc_check.isChecked()
@@ -745,7 +745,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["include_item_numbers"] = True
         sample_folder_config["retail_uom"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("Simplified CSV")
 
         assert dialog._simp_headers_check.isChecked()
@@ -761,7 +761,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["estore_Vendor_OId"] = "VENDOR001"
         sample_folder_config["estore_vendor_NameVendorOID"] = "VendorName"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("eStore eInvoice")
 
         assert dialog._estore_store_number_field.text() == "12345"
@@ -774,7 +774,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["process_backend_copy"] = True
         sample_folder_config["fintech_division_id"] = "DIV001"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("Fintech")
 
         assert dialog._fintech_division_field.text() == "DIV001"
@@ -790,7 +790,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["append_a_records"] = "True"
         sample_folder_config["a_record_append_text"] = "APPEND"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("ScannerWare")
 
         assert dialog._sw_pad_arec_check.isChecked()
@@ -805,7 +805,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["process_edi"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
 
         for fmt in ("jolley_custom", "stewarts_custom", "YellowDog CSV"):
             dialog._convert_format_combo.setCurrentText(fmt)
@@ -823,7 +823,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["process_edi"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
         qtbot.wait(150)  # let the 100ms edi-processing guard timer fire
-        dialog._edi_options_combo.setCurrentText("Do Nothing")
+        dialog._edi_options_check.setChecked(False)
         dialog.apply()
 
         assert sample_folder_config["process_edi"] is False
@@ -839,7 +839,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["include_headers"] = "True"
         sample_folder_config["pad_a_records"] = "True"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("CSV")
         dialog.apply()
 
@@ -881,7 +881,7 @@ class TestConvertFormatFieldPopulation:
         sample_folder_config["estore_vendor_NameVendorOID"] = "VN"
         sample_folder_config["estore_c_record_OID"] = "COID123"
         dialog = create_dialog(qtbot, sample_folder_config)
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        dialog._edi_options_check.setChecked(True)
         dialog._convert_format_combo.setCurrentText("eStore eInvoice Generic")
 
         assert dialog._estore_store_number_field.text() == "99"
@@ -943,7 +943,7 @@ class TestBackendStatesCombined:
         sample_folder_config["process_backend_email"] = False
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        assert not dialog._edi_options_combo.isEnabled()
+        assert not dialog._edi_options_check.isEnabled()
 
     def test_any_backend_enabled_edi_enabled(self, qtbot, sample_folder_config):
         """When any backend is selected, EDI options should be enabled."""
@@ -953,7 +953,7 @@ class TestBackendStatesCombined:
         sample_folder_config["process_backend_email"] = False
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        assert dialog._edi_options_combo.isEnabled()
+        assert dialog._edi_options_check.isEnabled()
 
 
 # ============================================================================
@@ -1047,10 +1047,10 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
+        edi_options_check = dialog.dynamic_edi_builder.edi_options_check
 
         # Switch to "Convert EDI" which creates widgets
-        edi_options_combo.setCurrentText("Convert EDI")
+        edi_options_check.setChecked(True)
         qtbot.waitUntil(
             lambda: (
                 "convert_formats_var" in dialog._fields
@@ -1068,20 +1068,19 @@ class TestWidgetCleanupAndLifecycle:
         assert old_widget is not None
         assert isinstance(old_widget, QComboBox)
 
-        # Switch to "Tweak EDI" which clears convert widgets
-        edi_options_combo.setCurrentText("Tweak EDI")
+        # Uncheck (Do Nothing) which clears convert widgets
+        edi_options_check.setChecked(False)
         qtbot.waitUntil(
             lambda: (
                 "convert_formats_var" not in dialog._fields
-                and "force_txt_file_ext_check" in dialog._fields
+                and not dialog.dynamic_edi_builder._edi_option_processing
             ),
             timeout=1000,
         )
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
-        # (Tweak EDI has different widgets)
         assert "convert_formats_var" not in dialog._fields, (
-            "convert_formats_var should be removed when switching away from Convert EDI"
+            "convert_formats_var should be removed when unchecking Convert EDI"
         )
 
     def test_clear_convert_sub_removes_field_references(
@@ -1091,10 +1090,10 @@ class TestWidgetCleanupAndLifecycle:
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
+        edi_options_check = dialog.dynamic_edi_builder.edi_options_check
 
         # Switch to "Convert EDI" with CSV format
-        edi_options_combo.setCurrentText("Convert EDI")
+        edi_options_check.setChecked(True)
         qtbot.waitUntil(
             lambda: (
                 "convert_formats_var" in dialog._fields
@@ -1144,7 +1143,8 @@ class TestWidgetCleanupAndLifecycle:
 
         dialog = create_dialog(qtbot, sample_folder_config)
 
-        dialog._edi_options_combo.setCurrentText("Convert EDI")
+        # Ensure the Convert EDI checkbox is checked and Tweaks format is selected
+        dialog._edi_options_check.setChecked(True)
         qtbot.waitUntil(
             lambda: (
                 dialog._convert_format_combo is not None
@@ -1154,12 +1154,13 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         dialog._convert_format_combo.setCurrentText("Tweaks")
-        qtbot.waitUntil(
-            lambda: "plugin_config_tweaks_configuration_generator" in dialog._fields,
-            timeout=1000,
+        # handle_convert_format_changed is synchronous; key is present immediately.
+        dialog.dynamic_edi_builder.handle_convert_format_changed("Tweaks")
+        assert "plugin_config_tweaks_configuration_generator" in dialog._fields, (
+            "Tweaks plugin form was not built by handle_convert_format_changed"
         )
 
-        dialog._edi_options_combo.setCurrentText("Do Nothing")
+        dialog._edi_options_check.setChecked(False)
         qtbot.waitUntil(
             lambda: (
                 "plugin_config_tweaks_configuration_generator" not in dialog._fields
@@ -1203,29 +1204,22 @@ class TestWidgetCleanupAndLifecycle:
             pytest.fail(f"Data extractor crashed with missing widgets: {e}")
 
     def test_rapid_edi_option_changes_no_crash(self, qtbot, sample_folder_config):
-        """Rapidly changing EDI options should not cause crashes."""
+        """Rapidly toggling Convert EDI checkbox should not cause crashes."""
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
         dialog = create_dialog(qtbot, sample_folder_config)
-        edi_options_combo = dialog.dynamic_edi_builder.edi_options_combo
+        edi_options_check = dialog.dynamic_edi_builder.edi_options_check
 
-        # Rapidly switch EDI options (with proper debounce wait times)
-        options = [
-            "Do Nothing",
-            "Convert EDI",
-            "Tweak EDI",
-            "Convert EDI",
-            "Do Nothing",
-        ]
-        for option in options:
-            edi_options_combo.setCurrentText(option)
+        # Rapidly toggle Convert EDI on/off
+        for checked in [False, True, False, True, False]:
+            edi_options_check.setChecked(checked)
             qtbot.waitUntil(
                 lambda: not dialog.dynamic_edi_builder._edi_option_processing,
                 timeout=1000,
             )
 
         # Should not crash - if we get here, test passes
-        assert edi_options_combo.currentText() == options[-1]
+        assert not edi_options_check.isChecked()
 
     def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
         """Data extractor should handle widgets that have been deleted with deleteLater()."""

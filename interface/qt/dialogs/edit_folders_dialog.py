@@ -115,9 +115,9 @@ class EditFoldersDialog(BaseDialog):
 
         # Link dynamic EDI builder back to dialog for population if needed
         self.dynamic_edi_builder = self.ui_builder.get_dynamic_edi_builder()
-        if self.dynamic_edi_builder and self.dynamic_edi_builder.edi_options_combo:
-            self.dynamic_edi_builder.edi_options_combo.currentTextChanged.connect(
-                lambda _text: self._refresh_tab_order()
+        if self.dynamic_edi_builder and self.dynamic_edi_builder.edi_options_check:
+            self.dynamic_edi_builder.edi_options_check.toggled.connect(
+                lambda _checked: self._refresh_tab_order()
             )
 
     def _populate_fields(self, config: Dict[str, Any]):
@@ -196,22 +196,20 @@ class EditFoldersDialog(BaseDialog):
             if idx >= 0:
                 mode_combo.setCurrentIndex(idx)
 
-        # EDI Options combo
-        # Block signals while setting the combo value to avoid the timer-based
+        # Convert EDI checkbox
+        # Block signals while setting the checked state to avoid the timer-based
         # _edi_option_processing flag racing with _populate_fields.  We call the
         # builder method directly below so the sub-form is always built correctly.
-        edi_combo = self.dynamic_edi_builder.edi_options_combo
-        if edi_combo:
+        edi_check = self.dynamic_edi_builder.edi_options_check
+        if edi_check:
             want_convert = normalize_bool(config.get("process_edi")) or bool(
                 config.get("convert_to_format")
             )
-            edi_combo.blockSignals(True)
+            edi_check.blockSignals(True)
             try:
-                edi_combo.setCurrentText(
-                    "Convert EDI" if want_convert else "Do Nothing"
-                )
+                edi_check.setChecked(want_convert)
             finally:
-                edi_combo.blockSignals(False)
+                edi_check.blockSignals(False)
 
             # Directly rebuild the sub-form, bypassing the timer-flag guard so
             # _populate_fields always produces the correct layout regardless of
@@ -453,9 +451,9 @@ class EditFoldersDialog(BaseDialog):
         return None
 
     @property
-    def _edi_options_combo(self):
+    def _edi_options_check(self):
         if self.dynamic_edi_builder:
-            return self.dynamic_edi_builder.edi_options_combo
+            return self.dynamic_edi_builder.edi_options_check
         return None
 
     @property

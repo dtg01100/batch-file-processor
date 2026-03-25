@@ -43,8 +43,6 @@ class DynamicEDIBuilder:
     sections based on user selections.
     """
 
-    EDI_OPTIONS = ["Do Nothing", "Convert EDI"]
-
     def __init__(
         self,
         fields: Dict[str, Any],
@@ -76,7 +74,7 @@ class DynamicEDIBuilder:
         self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
 
         # Widget references
-        self.edi_options_combo = None
+        self.edi_options_check = None
         self.convert_format_combo = None
         self.convert_sub_container = None
         self.convert_sub_layout = None
@@ -179,17 +177,16 @@ class DynamicEDIBuilder:
                 return i
         return -1
 
-    def build_edi_options_combo(self) -> QComboBox:
-        """Build and configure the EDI options dropdown."""
-        self.edi_options_combo = QComboBox()
-        self.edi_options_combo.addItems(self.EDI_OPTIONS)
-        self.edi_options_combo.setAccessibleName("EDI options")
-        self.edi_options_combo.setAccessibleDescription(
-            "Choose whether to convert EDI or send as is"
+    def build_edi_options_check(self) -> QCheckBox:
+        """Build and configure the Convert EDI checkbox."""
+        self.edi_options_check = QCheckBox("Convert EDI")
+        self.edi_options_check.setAccessibleName("Convert EDI")
+        self.edi_options_check.setAccessibleDescription(
+            "Check to convert EDI files to another format; uncheck to send as-is"
         )
-        self.edi_options_combo.currentTextChanged.connect(self._on_edi_option_changed)
-        self.fields["edi_options_combo"] = self.edi_options_combo
-        return self.edi_options_combo
+        self.edi_options_check.toggled.connect(self._on_edi_check_toggled)
+        self.fields["edi_options_check"] = self.edi_options_check
+        return self.edi_options_check
 
     _UPC_OVERRIDE_KEYS = [
         "override_upc_bool",
@@ -336,8 +333,8 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_option_changed(self, option: str):
-        """Handle EDI option selection changes."""
+    def _on_edi_check_toggled(self, checked: bool):
+        """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return
 
@@ -345,18 +342,18 @@ class DynamicEDIBuilder:
         log_with_context(
             logger,
             10,  # DEBUG
-            f"EDI option changed to: {option}",
+            f"EDI option toggled to: {'Convert EDI' if checked else 'Do Nothing'}",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
-            operation="_on_edi_option_changed",
-            context={"edi_option": option},
+            operation="_on_edi_check_toggled",
+            context={"convert_edi": checked},
         )
         try:
             self._clear_dynamic_edi()
-            if option == "Do Nothing":
-                self._build_do_nothing_area()
-            elif option == "Convert EDI":
+            if checked:
                 self._build_convert_edi_area()
+            else:
+                self._build_do_nothing_area()
             if self.on_dynamic_form_changed:
                 self.on_dynamic_form_changed()
         finally:
@@ -371,6 +368,9 @@ class DynamicEDIBuilder:
     def _build_do_nothing_area(self):
         """Build the 'Do Nothing' EDI configuration section."""
         self.fields["process_edi"] = False
+        # Explicitly clear convert_formats_var so the extractor saves
+        # convert_to_format as "" rather than retaining a stale format value.
+        self.fields["convert_formats_var"] = ""
         label = QLabel("Send As Is")
         self.dynamic_layout.addWidget(label)
 

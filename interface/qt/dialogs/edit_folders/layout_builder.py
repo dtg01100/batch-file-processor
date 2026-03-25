@@ -166,8 +166,8 @@ class UILayoutBuilder:
             on_dynamic_form_changed=self.on_dynamic_form_changed,
         )
 
-        # Insert EDI options combo at the TOP of edi_column (index 0)
-        self._add_edi_options_combo(edi_column)
+        # Insert EDI options check at the TOP of edi_column (index 0)
+        self._add_edi_options_check(edi_column)
 
         # Add dynamic container + stretch at the BOTTOM
         self._add_dynamic_edi_container(edi_column)
@@ -211,17 +211,14 @@ class UILayoutBuilder:
         container_layout.addWidget(self.dynamic_edi_container)
         container_layout.addStretch()
 
-    def _add_edi_options_combo(self, container: QWidget):
-        """Add EDI options combo to the EDI column."""
+    def _add_edi_options_check(self, container: QWidget):
+        """Add Convert EDI checkbox to the EDI column."""
         container_layout = container.layout()
         if not container_layout:
             container_layout = QVBoxLayout(container)
 
-        edi_opt_row = QHBoxLayout()
-        edi_opt_row.addWidget(QLabel("EDI Options:"))
-        edi_combo = self.dynamic_edi_builder.build_edi_options_combo()
-        edi_opt_row.addWidget(edi_combo)
-        container_layout.insertLayout(0, edi_opt_row)
+        edi_check = self.dynamic_edi_builder.build_edi_options_check()
+        container_layout.insertWidget(0, edi_check)
 
     def get_column_builders(self) -> ColumnBuilders:
         """Get the column builders instance."""

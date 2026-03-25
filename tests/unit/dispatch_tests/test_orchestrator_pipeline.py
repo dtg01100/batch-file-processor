@@ -770,6 +770,39 @@ class TestProcessFileWithPipeline:
         assert converter.call_count == 1
         assert result.converted is True
 
+    def test_pipeline_converter_missing_output_fails_file(self, input_folder: Path):
+        """Conversion target set but converter returns no output -> file fails."""
+        validator = FakeValidationStep(should_pass=True)
+        converter = FakeConverterStep(output_path=None)
+        backend = CaptureBackend()
+
+        config = DispatchConfig(
+            backends={"copy": backend},
+            validator_step=validator,
+            converter_step=converter,
+            settings={},
+        )
+        orchestrator = DispatchOrchestrator(config)
+
+        folder = {
+            "folder_name": str(input_folder),
+            "convert_edi": True,
+            "convert_to_format": "csv",
+            "process_backend_copy": True,
+        }
+
+        result = orchestrator._process_file_with_pipeline(
+            str(input_folder / "test.edi"), folder, {}
+        )
+
+        assert converter.call_count == 1
+        assert result.sent is False
+        assert result.converted is False
+        assert any(
+            "no converted output was produced" in err.lower() for err in result.errors
+        )
+        assert len(backend.received) == 0
+
     def test_pipeline_tweaker_integration(self, input_folder: Path):
         """Test pipeline with tweak_edi=True routes to converter via convert_to_tweaks."""
         validator = FakeValidationStep(should_pass=True)
@@ -1268,8 +1301,8 @@ class TestOrchestratorPipelineHelpers:
 
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_infers_convert_from_target_only(self):
-        """Explicit convert_to_format should enable process/convert gates even if process_edi is falsey."""
+    def test_build_processing_context_respects_explicit_process_edi_false(self):
+        """Explicit process_edi=False takes priority over convert_to_format."""
         orchestrator = DispatchOrchestrator(DispatchConfig())
 
         context = orchestrator._build_processing_context(
@@ -1281,8 +1314,8 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["convert_to_format"] == "tweaks"
-        assert context.effective_folder["process_edi"] is True
-        assert context.effective_folder["convert_edi"] is True
+        assert context.effective_folder["process_edi"] == "False"
+        assert context.effective_folder["convert_edi"] is False
 
     def test_build_processing_context_normalizes_noisy_convert_format(self):
         """Noisy legacy convert format strings should be canonicalized for runtime use."""

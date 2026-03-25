@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QCheckBox, QDialog, QPushButton, QVBoxLayout, QWidget
 
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
 from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
@@ -122,7 +122,7 @@ class TestDynamicEDIBuilder:
             dynamic_layout=layout,
         )
 
-        builder._on_edi_option_changed("Do Nothing")
+        builder._on_edi_check_toggled(False)
 
         assert "process_edi" in fields
         assert fields["process_edi"] is False
@@ -143,7 +143,7 @@ class TestDynamicEDIBuilder:
             dynamic_layout=layout,
         )
 
-        builder._on_edi_option_changed("Convert EDI")
+        builder._on_edi_check_toggled(True)
 
         assert "convert_formats_var" in fields
         assert builder.convert_format_combo is not None
@@ -166,6 +166,22 @@ class TestDynamicEDIBuilder:
         builder.convert_sub_layout = layout
         builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
             return_value=None
+                # Use an isolated mock plugin manager to avoid polluting the shared singleton.
+                isolated_pm = MagicMock()
+                isolated_pm.get_configuration_plugins.return_value = []
+                isolated_pm.get_configuration_plugin_by_format_name = MagicMock(
+                    return_value=None
+                )
+                builder = DynamicEDIBuilder(
+                    fields=fields,
+                    folder_config={},
+                    dynamic_container=container,
+                    dynamic_layout=layout,
+                    plugin_manager=isolated_pm,
+                )
+
+                builder.convert_sub_container = container
+                builder.convert_sub_layout = layout
         )
 
         csv_cb = MagicMock()
@@ -215,7 +231,7 @@ class TestDynamicEDIBuilder:
 
         plugin_builder.assert_called_once_with(plugin)
 
-    def test_build_edi_options_combo_wires_signal(self, qtbot):
+    def test_build_edi_options_check_wires_signal(self, qtbot):
         container = QWidget()
         qtbot.addWidget(container)
         layout = QVBoxLayout(container)
@@ -227,11 +243,11 @@ class TestDynamicEDIBuilder:
             dynamic_layout=layout,
         )
 
-        combo = builder.build_edi_options_combo()
-        qtbot.addWidget(combo)
-        combo.setCurrentText("Convert EDI")
+        check = builder.build_edi_options_check()
+        qtbot.addWidget(check)
+        check.setChecked(True)
 
-        assert combo.count() == 2
+        assert isinstance(check, QCheckBox)
         assert builder.convert_format_combo is not None
 
     def test_clear_convert_sub_removes_nested_widgets(self, qtbot):
