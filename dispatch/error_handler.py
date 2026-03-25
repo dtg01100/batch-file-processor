@@ -6,6 +6,7 @@ using dependency injection for testability.
 
 import datetime
 import os
+import sys
 import time
 from io import StringIO
 from typing import Any, Optional
@@ -254,8 +255,14 @@ class ErrorHandler:
         try:
             self.db.insert(error_record)
         except Exception as e:
+            error_msg = f"Failed to persist error to database: {e}\n"
             if self.error_log:
-                self.error_log.write(f"Failed to persist error to database: {e}\n")
+                try:
+                    self.error_log.write(error_msg)
+                except Exception:
+                    sys.stderr.write(error_msg)
+            else:
+                sys.stderr.write(error_msg)
 
     def write_error_log_file(
         self, log_path: str, version: Optional[str] = None
