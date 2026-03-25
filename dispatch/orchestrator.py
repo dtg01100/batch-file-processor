@@ -564,8 +564,8 @@ class DispatchOrchestrator:
         strict_testing_mode = get_strict_testing_mode()
         missing_keys = [key for key in required_keys if not settings.get(key)]
         if missing_keys:
-            self._last_upc_lookup_error = (
-                "missing AS400 settings: " + ", ".join(missing_keys)
+            self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
+                missing_keys
             )
             if strict_db_mode:
                 raise ValueError(
@@ -1262,7 +1262,14 @@ class DispatchOrchestrator:
         if hasattr(context, "temp_dirs"):
             context.temp_dirs.append(temp_dir)
 
-        dest_path = os.path.join(temp_dir, new_name)
+        if os.path.isabs(new_name) or ".." in new_name:
+            raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
+
+        full_dest = os.path.join(temp_dir, new_name)
+        if not full_dest.startswith(temp_dir + os.sep) and full_dest != temp_dir:
+            raise ValueError(f"Path traversal attempt detected: {new_name}")
+
+        dest_path = full_dest
         shutil.copy2(file_path, dest_path)
         logger.debug("Renamed %s → %s for send", original_basename, new_name)
         return dest_path
