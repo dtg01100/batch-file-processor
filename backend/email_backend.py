@@ -7,6 +7,7 @@ injectable client support for testing.
 import errno
 import mimetypes
 import os
+import re
 import time
 from email.message import EmailMessage
 from typing import Optional
@@ -102,8 +103,16 @@ def do(
         ctype = "application/octet-stream"
     maintype, subtype = ctype.split("/", 1)
 
+    server = None
     while not file_pass:
         start_time = time.perf_counter()
+
+        # Create or use provided SMTP client
+        if smtp_client is not None:
+            server = smtp_client
+        else:
+            server = create_smtp_client()
+
         try:
             filename_no_path = os.path.basename(filename)
             filename_no_path_str = str(filename_no_path)
@@ -117,6 +126,9 @@ def do(
                 ).replace("%filename%", filename_no_path)
             else:
                 subject_line = str(filename_no_path) + " Attached"
+
+            subject_line = re.sub(r"[\r\n]", "", subject_line)
+            filename_no_path_str = re.sub(r"[\r\n]", "", filename_no_path_str)
 
             # Parse recipient addresses
             to_address = process_parameters["email_to"]
@@ -137,12 +149,6 @@ def do(
                 filename=filename_no_path_str,
             )
 
-            # Create or use provided SMTP client
-            if smtp_client is not None:
-                server = smtp_client
-            else:
-                server = create_smtp_client()
-
             # Connect and send
             server.connect(
                 str(settings["email_smtp_server"]), int(settings["smtp_port"])
@@ -157,7 +163,6 @@ def do(
                 server.login(settings["email_username"], settings["email_password"])
 
             server.send_message(message)
-            server.close()
             duration_ms = (time.perf_counter() - start_time) * 1000
 
             log_backend_call(
@@ -211,6 +216,13 @@ def do(
             time.sleep(min(2**counter, 60))
             print("Encountered an error. Retry number " + str(counter))
             print("Error is :" + str(email_error))
+        finally:
+            # Always close the connection, even on exception or retry
+            if server is not None:
+                try:
+                    server.close()
+                except Exception:
+                    pass  # Ignore close errors
 
     return file_pass
 

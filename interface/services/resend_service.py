@@ -4,8 +4,11 @@ This module provides toolkit-agnostic business logic for the resend interface.
 """
 
 import os
+from collections import OrderedDict
 from operator import itemgetter
 from typing import Any, Dict, List, Optional, Tuple
+
+MAX_FOLDER_ALIAS_CACHE_SIZE = 1000
 
 
 class ResendService:
@@ -23,7 +26,7 @@ class ResendService:
         self._db = database_connection
         self._processed_files = database_connection["processed_files"]
         self._folders = database_connection["folders"]
-        self._folder_alias_cache: Dict[int, str] = {}
+        self._folder_alias_cache: OrderedDict[int, str] = OrderedDict()
 
     @staticmethod
     def _get_sent_timestamp(processed_line: Dict[str, Any]) -> Any:
@@ -57,11 +60,10 @@ class ResendService:
         Returns:
             Dictionary mapping folder_id to alias
         """
-        result = {
-            fid: alias
-            for fid, alias in self._folder_alias_cache.items()
-            if fid in folder_ids
-        }
+        result = {}
+        for fid in folder_ids:
+            if fid in self._folder_alias_cache:
+                result[fid] = self._folder_alias_cache[fid]
         missing_ids = [fid for fid in folder_ids if fid not in result]
 
         if not missing_ids:
@@ -77,6 +79,13 @@ class ResendService:
             alias = row["alias"]
             result[fid] = alias
             self._folder_alias_cache[fid] = alias
+
+        if len(self._folder_alias_cache) > MAX_FOLDER_ALIAS_CACHE_SIZE:
+            keys_to_remove = list(self._folder_alias_cache.keys())[
+                : MAX_FOLDER_ALIAS_CACHE_SIZE // 4
+            ]
+            for key in keys_to_remove:
+                del self._folder_alias_cache[key]
 
         return result
 
