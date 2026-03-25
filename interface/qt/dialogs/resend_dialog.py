@@ -91,6 +91,7 @@ class ResendDialog(BaseDialog):
         self._is_loading = False
         self._has_more_data = True
         self._search_text = ""
+        self._search_offset = 0
 
         self._setup_ui()
         self._load_data()
@@ -351,7 +352,9 @@ class ResendDialog(BaseDialog):
         return selected_field if isinstance(selected_field, str) else "all"
 
     @staticmethod
-    def _matches_search_field(file_info: Dict[str, Any], lower_text: str, field: str) -> bool:
+    def _matches_search_field(
+        file_info: Dict[str, Any], lower_text: str, field: str
+    ) -> bool:
         """Check if a row matches text based on selected search field."""
         if field == "file_name":
             return lower_text in (file_info.get("file_name") or "").lower()
@@ -371,6 +374,7 @@ class ResendDialog(BaseDialog):
         text = self._search_input.text()
         search_field = self._get_selected_search_field()
         self._search_text = text
+        self._search_offset = 0
 
         if not text:
             self._current_offset = 0
@@ -399,7 +403,7 @@ class ResendDialog(BaseDialog):
                     if self._matches_search_field(f, lower_text, search_field)
                 ]
             self._all_files = self._filtered_files.copy()
-            self._has_more_data = False
+            self._has_more_data = len(self._filtered_files) == self.PAGE_SIZE
 
         self._selected_files.clear()
         self._populate_table()
@@ -443,9 +447,7 @@ class ResendDialog(BaseDialog):
         """Update pagination controls."""
         self._page_label.setText(f"Showing {len(self._filtered_files)} files")
 
-        self._load_more_button.setEnabled(
-            self._has_more_data and not self._is_loading and not self._search_text
-        )
+        self._load_more_button.setEnabled(self._has_more_data and not self._is_loading)
 
     def _cancel_file_check_worker(self) -> None:
         """Cancel existing file check worker safely."""
@@ -461,8 +463,6 @@ class ResendDialog(BaseDialog):
             return
         if not self._has_more_data:
             return
-        if self._search_text:
-            return
 
         self._is_loading = True
         self._load_more_button.setEnabled(False)
@@ -470,17 +470,30 @@ class ResendDialog(BaseDialog):
 
         self._cancel_file_check_worker()
 
-        new_offset = self._current_offset + self.PAGE_SIZE
-        self._current_offset = new_offset
-
-        try:
-            new_files = self._service.get_all_files_for_resend(
-                check_file_exists=False,
-                limit=self.PAGE_SIZE,
-                offset=self._current_offset,
-            )
-        except (TypeError, AttributeError):
-            new_files = []
+        if self._search_text:
+            # Load more search results
+            self._search_offset += self.PAGE_SIZE
+            search_field = self._get_selected_search_field()
+            try:
+                new_files = self._service.search_files_for_resend(
+                    self._search_text,
+                    limit=self.PAGE_SIZE,
+                    offset=self._search_offset,
+                    search_field=search_field,
+                )
+            except (TypeError, AttributeError):
+                new_files = []
+        else:
+            # Load more regular results
+            self._current_offset += self.PAGE_SIZE
+            try:
+                new_files = self._service.get_all_files_for_resend(
+                    check_file_exists=False,
+                    limit=self.PAGE_SIZE,
+                    offset=self._current_offset,
+                )
+            except (TypeError, AttributeError):
+                new_files = []
 
         if len(new_files) < self.PAGE_SIZE:
             self._has_more_data = False
