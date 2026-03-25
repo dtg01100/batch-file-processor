@@ -393,10 +393,48 @@ class TestRecordIntegration:
 
     def test_capture_records_handles_various_lengths(self):
         """Test capture_records handles lines of various lengths."""
-        # Short A record (may have truncated fields)
-        short_line = "AVENDOR0000000001010124000000\n"
-        result = capture_records(short_line)
+        # A record with minimum valid length (33 chars before newline)
+        # record_type(1) + cust_vendor(6) + invoice_number(10) + invoice_date(6) + invoice_total(10)
+        min_valid_line = "AVENDOR00000000011234567890123456\n"
+        result = capture_records(min_valid_line)
 
-        # Should still parse what it can
+        # Should parse successfully
         assert result is not None
         assert result["record_type"] == "A"
+
+    def test_capture_records_truncated_a_record_returns_none(self):
+        """Regression: truncated A record should return None with debug log, not corrupted data."""
+        # A record needs >=33 chars, this is only 25
+        short_line = "AVENDOR00000000010101\n"
+        result = capture_records(short_line)
+
+        # Should return None for truncated record, not corrupted data
+        assert result is None
+
+    def test_capture_records_truncated_b_record_returns_none(self):
+        """Regression: truncated B record should return None with debug log, not corrupted data."""
+        # B record needs >=70 chars, this is only 32
+        short_line = "B00123456789Test Item Descrip\n"
+        result = capture_records(short_line)
+
+        # Should return None for truncated record, not corrupted data
+        assert result is None
+
+    def test_capture_records_truncated_b_record_with_partial_parent(self):
+        """Regression: B record with parent but less than 76 chars should return partial parent."""
+        # 70-75 chars: has all required fields but parent is truncated
+        line_75 = "B00123456789Test Item Description    123456001234010000010000500123     \n"
+        result = capture_records(line_75)
+
+        assert result is not None
+        assert result["record_type"] == "B"
+        assert result["parent_item_number"] == ""  # Truncated, not corrupted
+
+    def test_capture_records_truncated_c_record_returns_none(self):
+        """Regression: truncated C record should return None with debug log, not corrupted data."""
+        # C record needs >=38 chars, this is only 20
+        short_line = "CFRTFreight Charg\n"
+        result = capture_records(short_line)
+
+        # Should return None for truncated record, not corrupted data
+        assert result is None

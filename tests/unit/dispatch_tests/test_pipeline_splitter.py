@@ -172,7 +172,8 @@ class MockEDISplitter:
 def edi_content_single_invoice():
     """EDI content with single A record (invoice)."""
     b_record = "B12345678901" + " " * 64
-    return f"AHEADER001  12345  010123\n{b_record}\nCFOOTER\n"
+    # A record needs >=33 chars: type(1)+vendor(6)+invoice(10)+date(6)+total(10)
+    return f"AHEADER001  12345  010123        \n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture
@@ -180,14 +181,16 @@ def edi_content_multiple_invoices():
     """EDI content with multiple A records (invoices)."""
     b_record1 = "B12345678901" + " " * 64
     b_record2 = "B12345678902" + " " * 64
-    return f"AHEADER001  12345  010123\n{b_record1}\nCFOOTER\nAHEADER002  12346  010123\n{b_record2}\nCFOOTER\n"
+    # A record needs >=33 chars: type(1)+vendor(6)+invoice(10)+date(6)+total(10)
+    return f"AHEADER001  12345  010123        \n{b_record1}\nCFOOTER\nAHEADER002  12346  010123        \n{b_record2}\nCFOOTER\n"
 
 
 @pytest.fixture
 def edi_content_with_credit():
     """EDI content with credit memo (negative invoice total)."""
     b_record = "B12345678901" + " " * 64
-    return f"AHEADER001  -1234  010123\n{b_record}\nCFOOTER\n"
+    # A record needs >=33 chars: type(1)+vendor(6)+invoice(10)+date(6)+total(10)
+    return f"AHEADER001  -1234  010123        \n{b_record}\nCFOOTER\n"
 
 
 @pytest.fixture

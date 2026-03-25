@@ -121,6 +121,12 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
         return None
 
     if line.startswith("A"):
+        if len(line) < 33:
+            import logging
+            logging.getLogger(__name__).debug(
+                "A record line too short: expected >=33 chars, got %d", len(line)
+            )
+            return None
         return {
             "record_type": line[0],
             "cust_vendor": line[1:7],
@@ -129,6 +135,12 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
             "invoice_total": line[23:33],
         }
     elif line.startswith("B"):
+        if len(line) < 70:
+            import logging
+            logging.getLogger(__name__).debug(
+                "B record line too short: expected >=70 chars, got %d", len(line)
+            )
+            return None
         return {
             "record_type": line[0],
             "upc_number": line[1:12],
@@ -140,9 +152,15 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
             "qty_of_units": line[57:62],
             "suggested_retail_price": line[62:67],
             "price_multi_pack": line[67:70],
-            "parent_item_number": line[70:76],
+            "parent_item_number": line[70:76] if len(line) >= 76 else "",
         }
     elif line.startswith("C"):
+        if len(line) < 38:
+            import logging
+            logging.getLogger(__name__).debug(
+                "C record line too short: expected >=38 chars, got %d", len(line)
+            )
+            return None
         return {
             "record_type": line[0],
             "charge_type": line[1:4],
