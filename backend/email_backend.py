@@ -200,7 +200,7 @@ def do(
                 ) from email_error
 
             if counter == 10:
-                print("Retried 10 times, passing exception to dispatch")
+                logger.debug("Retried 10 times, passing exception to dispatch")
                 log_backend_call(
                     logger,
                     "smtp",
@@ -214,15 +214,15 @@ def do(
                 raise
             counter += 1
             time.sleep(min(2**counter, 60))
-            print("Encountered an error. Retry number " + str(counter))
-            print("Error is :" + str(email_error))
+            logger.debug("Encountered an error. Retry number %d", counter)
+            logger.debug("SMTP error: %s", email_error)
         finally:
             # Always close the connection, even on exception or retry
             if server is not None:
                 try:
                     server.close()
-                except Exception:
-                    pass  # Ignore close errors
+                except Exception as close_err:
+                    logger.debug("Failed to close SMTP connection: %s", close_err)
 
     return file_pass
 
