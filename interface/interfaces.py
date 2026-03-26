@@ -8,7 +8,7 @@ class that implements the required methods is considered a valid
 implementation, without explicit inheritance.
 """
 
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -25,6 +25,7 @@ class MessageBoxProtocol(Protocol):
         Args:
             title: Dialog title
             message: Message to display
+
         """
         ...
 
@@ -34,6 +35,7 @@ class MessageBoxProtocol(Protocol):
         Args:
             title: Dialog title
             message: Message to display
+
         """
         ...
 
@@ -43,6 +45,7 @@ class MessageBoxProtocol(Protocol):
         Args:
             title: Dialog title
             message: Message to display
+
         """
         ...
 
@@ -55,6 +58,7 @@ class MessageBoxProtocol(Protocol):
 
         Returns:
             True if user clicked Yes, False otherwise
+
         """
         ...
 
@@ -67,10 +71,11 @@ class MessageBoxProtocol(Protocol):
 
         Returns:
             True if user clicked OK, False otherwise
+
         """
         ...
 
-    def askyesnocancel(self, title: str, message: str) -> Optional[bool]:
+    def askyesnocancel(self, title: str, message: str) -> bool | None:
         """Show a yes/no/cancel dialog.
 
         Args:
@@ -79,6 +84,7 @@ class MessageBoxProtocol(Protocol):
 
         Returns:
             True for Yes, False for No, None for Cancel
+
         """
         ...
 
@@ -92,7 +98,7 @@ class FileDialogProtocol(Protocol):
     """
 
     def askdirectory(
-        self, title: str = "Select Directory", initialdir: Optional[str] = None
+        self, title: str = "Select Directory", initialdir: str | None = None
     ) -> str:
         """Show a directory selection dialog.
 
@@ -102,14 +108,15 @@ class FileDialogProtocol(Protocol):
 
         Returns:
             Selected directory path or empty string if cancelled
+
         """
         ...
 
     def askopenfilename(
         self,
         title: str = "Open File",
-        initialdir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initialdir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show an open file dialog.
 
@@ -120,15 +127,16 @@ class FileDialogProtocol(Protocol):
 
         Returns:
             Selected file path or empty string if cancelled
+
         """
         ...
 
     def asksaveasfilename(
         self,
         title: str = "Save File",
-        initialdir: Optional[str] = None,
+        initialdir: str | None = None,
         defaultextension: str = "",
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show a save file dialog.
 
@@ -140,14 +148,15 @@ class FileDialogProtocol(Protocol):
 
         Returns:
             Selected file path or empty string if cancelled
+
         """
         ...
 
     def askopenfilenames(
         self,
         title: str = "Open Files",
-        initialdir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initialdir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> tuple[str, ...]:
         """Show an open files dialog (multiple selection).
 
@@ -158,6 +167,7 @@ class FileDialogProtocol(Protocol):
 
         Returns:
             Tuple of selected file paths or empty tuple if cancelled
+
         """
         ...
 
@@ -174,6 +184,7 @@ class WidgetProtocol(Protocol):
 
         Args:
             **kwargs: Pack options (side, fill, expand, etc.)
+
         """
         ...
 
@@ -182,6 +193,7 @@ class WidgetProtocol(Protocol):
 
         Args:
             **kwargs: Grid options (row, column, sticky, etc.)
+
         """
         ...
 
@@ -211,6 +223,7 @@ class TkinterProtocol(Protocol):
 
         Args:
             title: Window title text
+
         """
         ...
 
@@ -227,6 +240,7 @@ class TkinterProtocol(Protocol):
 
         Returns:
             Timer ID for cancellation
+
         """
         ...
 
@@ -235,6 +249,7 @@ class TkinterProtocol(Protocol):
 
         Args:
             timer_id: Timer ID returned by after()
+
         """
         ...
 
@@ -268,6 +283,7 @@ class OverlayProtocol(Protocol):
         Args:
             parent: Parent widget
             text: Text to display on overlay
+
         """
         ...
 
@@ -277,6 +293,7 @@ class OverlayProtocol(Protocol):
         Args:
             parent: Parent widget
             text: New text to display
+
         """
         ...
 
@@ -297,6 +314,7 @@ class VariableProtocol(Protocol):
 
         Returns:
             The current value
+
         """
         ...
 
@@ -305,6 +323,7 @@ class VariableProtocol(Protocol):
 
         Args:
             value: New value to set
+
         """
         ...
 
@@ -321,6 +340,7 @@ class EntryWidgetProtocol(Protocol):
 
         Returns:
             Current text content
+
         """
         ...
 
@@ -330,15 +350,17 @@ class EntryWidgetProtocol(Protocol):
         Args:
             index: Position to insert at
             text: Text to insert
+
         """
         ...
 
-    def delete(self, start: int, end: Optional[int] = None) -> None:
+    def delete(self, start: int, end: int | None = None) -> None:
         """Delete text from the entry.
 
         Args:
             start: Start position
             end: End position (or None for end of text)
+
         """
         ...
 
@@ -347,6 +369,7 @@ class EntryWidgetProtocol(Protocol):
 
         Args:
             **kwargs: Configuration options
+
         """
         ...
 
@@ -358,7 +381,7 @@ class ListboxProtocol(Protocol):
     Defines the interface for list selection widgets.
     """
 
-    def get(self, start: int, end: Optional[int] = None) -> tuple[str, ...]:
+    def get(self, start: int, end: int | None = None) -> tuple[str, ...]:
         """Get items from the listbox.
 
         Args:
@@ -367,6 +390,7 @@ class ListboxProtocol(Protocol):
 
         Returns:
             Tuple of item strings
+
         """
         ...
 
@@ -375,6 +399,7 @@ class ListboxProtocol(Protocol):
 
         Returns:
             Tuple of selected indices
+
         """
         ...
 
@@ -384,15 +409,17 @@ class ListboxProtocol(Protocol):
         Args:
             index: Position to insert at
             *items: Items to insert
+
         """
         ...
 
-    def delete(self, start: int, end: Optional[int] = None) -> None:
+    def delete(self, start: int, end: int | None = None) -> None:
         """Delete items from the listbox.
 
         Args:
             start: Start index
             end: End index
+
         """
         ...
 
@@ -401,5 +428,6 @@ class ListboxProtocol(Protocol):
 
         Returns:
             Number of items in listbox
+
         """
         ...

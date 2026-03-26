@@ -3,7 +3,6 @@
 import ftplib
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +12,8 @@ class FTPConnectionResult:
     """Result of an FTP connection test."""
 
     success: bool
-    error_message: Optional[str] = None
-    error_type: Optional[str] = None  # "server", "login", "cwd", "unknown"
+    error_message: str | None = None
+    error_type: str | None = None  # "server", "login", "cwd", "unknown"
 
 
 class FTPServiceProtocol:
@@ -45,6 +44,7 @@ class FTPService(FTPServiceProtocol):
 
         Returns:
             FTPConnectionResult indicating success or failure with error details
+
         """
         ftp = ftplib.FTP()
 
@@ -108,10 +108,11 @@ class MockFTPService(FTPServiceProtocol):
 
     def __init__(
         self,
+        *,
         should_succeed: bool = True,
-        fail_at: Optional[str] = None,
+        fail_at: str | None = None,
         error_message: str = "Mock FTP Error",
-    ):
+    ) -> None:
         """
         Initialize mock FTP service.
 
@@ -119,6 +120,7 @@ class MockFTPService(FTPServiceProtocol):
             should_succeed: Whether connections should succeed
             fail_at: Stage to fail at ("connect", "login", "cwd")
             error_message: Error message to return on failure
+
         """
         self.should_succeed = should_succeed
         self.fail_at = fail_at
@@ -151,14 +153,14 @@ class MockFTPService(FTPServiceProtocol):
 class MockFTPConnection:
     """Mock FTP connection for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.cwd_calls = []
         self.closed = False
 
-    def cwd(self, path: str):
+    def cwd(self, path: str) -> None:
         """Record CWD call."""
         self.cwd_calls.append(path)
 
-    def close(self):
+    def close(self) -> None:
         """Mark connection as closed."""
         self.closed = True

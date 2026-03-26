@@ -7,7 +7,8 @@ through the existing UI abstraction layer.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from core.structured_logging import (
     generate_correlation_id,
@@ -31,13 +32,14 @@ class FormGenerator(ABC):
     from ConfigurationSchema definitions.
     """
 
-    def __init__(self, schema: ConfigurationSchema, framework: str = "qt"):
+    def __init__(self, schema: ConfigurationSchema, framework: str = "qt") -> None:
         """
         Initialize the form generator.
 
         Args:
             schema: Configuration schema to generate form from
             framework: UI framework to use ('qt')
+
         """
         self.schema = schema
         self.framework = framework
@@ -45,13 +47,13 @@ class FormGenerator(ABC):
         if self.factory is None:
             raise ValueError(f"No widget factory registered for framework: {framework}")
 
-        self.widgets: Dict[str, WidgetBase] = {}
+        self.widgets: dict[str, WidgetBase] = {}
         self.form_container: Any = None
-        self._field_dependencies: Dict[str, List[str]] = {}
-        self._visibility_callbacks: Dict[str, List] = {}
-        self._plugin_sections: List[WidgetBase] = []
-        self._plugin_schemas: Dict[str, ConfigurationSchema] = {}
-        self._plugin_configs: Dict[str, Dict[str, Any]] = {}
+        self._field_dependencies: dict[str, list[str]] = {}
+        self._visibility_callbacks: dict[str, list] = {}
+        self._plugin_sections: list[WidgetBase] = []
+        self._plugin_schemas: dict[str, ConfigurationSchema] = {}
+        self._plugin_configs: dict[str, dict[str, Any]] = {}
         self._correlation_id = generate_correlation_id()
         set_correlation_id(self._correlation_id)
         log_with_context(
@@ -79,24 +81,27 @@ class FormGenerator(ABC):
 
         Returns:
             Any: Form container widget
+
         """
 
     @abstractmethod
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all form fields.
 
         Returns:
             Dict[str, Any]: Current field values
+
         """
 
     @abstractmethod
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all form fields.
 
         Args:
             config: Configuration values to set
+
         """
 
     @abstractmethod
@@ -106,38 +111,42 @@ class FormGenerator(ABC):
 
         Returns:
             ValidationResult: Validation result
+
         """
 
     @abstractmethod
-    def get_validation_errors(self) -> List[str]:
+    def get_validation_errors(self) -> list[str]:
         """
         Get all validation errors from the form.
 
         Returns:
             List[str]: List of validation error messages
+
         """
 
-    def set_field_visibility(self, field_name: str, visible: bool) -> None:
+    def set_field_visibility(self, field_name: str, *, visible: bool) -> None:
         """
         Set visibility of a specific field.
 
         Args:
             field_name: Field name to set visibility for
             visible: True if field should be visible, False otherwise
+
         """
         if field_name in self.widgets:
-            self.widgets[field_name].set_visible(visible)
+            self.widgets[field_name].set_visible(visible=visible)
 
-    def set_field_enabled(self, field_name: str, enabled: bool) -> None:
+    def set_field_enabled(self, field_name: str, *, enabled: bool) -> None:
         """
         Set enabled state of a specific field.
 
         Args:
             field_name: Field name to set enabled state for
             enabled: True if field should be enabled, False otherwise
+
         """
         if field_name in self.widgets:
-            self.widgets[field_name].set_enabled(enabled)
+            self.widgets[field_name].set_enabled(enabled=enabled)
 
     def get_field_value(self, field_name: str) -> Any:
         """
@@ -148,6 +157,7 @@ class FormGenerator(ABC):
 
         Returns:
             Any: Current field value
+
         """
         if field_name in self.widgets:
             return self.widgets[field_name].get_value()
@@ -160,6 +170,7 @@ class FormGenerator(ABC):
         Args:
             field_name: Field name to set value for
             value: Value to set
+
         """
         if field_name in self.widgets:
             self.widgets[field_name].set_value(value)
@@ -171,6 +182,7 @@ class FormGenerator(ABC):
         Args:
             field_name: Field name to set label for
             label: Label text
+
         """
         if field_name in self.widgets:
             self.widgets[field_name].set_label(label)
@@ -182,6 +194,7 @@ class FormGenerator(ABC):
         Args:
             field_name: Field name to set description for
             description: Description text
+
         """
         if field_name in self.widgets:
             self.widgets[field_name].set_description(description)
@@ -190,8 +203,8 @@ class FormGenerator(ABC):
         self,
         dependent_field: str,
         trigger_field: str,
-        condition: Optional[callable] = None,
-    ):
+        condition: Callable[..., Any] | None = None,
+    ) -> None:
         """
         Register a field dependency where the visibility of a field depends on
         the value of another field.
@@ -201,6 +214,7 @@ class FormGenerator(ABC):
             trigger_field: Field that triggers the dependency
             condition: Optional condition function that takes trigger field value
                 and returns True if dependent field should be visible
+
         """
         if trigger_field not in self._field_dependencies:
             self._field_dependencies[trigger_field] = []
@@ -219,12 +233,13 @@ class FormGenerator(ABC):
         Setup field dependencies and dynamic visibility callbacks.
         """
 
-    def _update_dependent_fields(self, trigger_field: str):
+    def _update_dependent_fields(self, trigger_field: str) -> None:
         """
         Update the visibility of fields dependent on a trigger field.
 
         Args:
             trigger_field: Field that triggered the change
+
         """
         if trigger_field not in self._field_dependencies:
             return
@@ -240,13 +255,13 @@ class FormGenerator(ABC):
                         visible = condition(trigger_value)
                         break
 
-            self.set_field_visibility(dependent_field, visible)
+            self.set_field_visibility(dependent_field, visible=visible)
 
     def add_plugin_section(
         self,
         section_id: str,
         schema: ConfigurationSchema,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a plugin configuration section to the form.
@@ -255,17 +270,19 @@ class FormGenerator(ABC):
             section_id: Unique identifier for the section
             schema: Configuration schema for the section
             config: Optional initial configuration values
+
         """
         self._plugin_schemas[section_id] = schema
         self._plugin_configs[section_id] = config or {}
         # This will be rendered in build_form when _render_plugin_sections is called
 
-    def add_plugin_sections(self, sections: List[Dict[str, Any]]) -> None:
+    def add_plugin_sections(self, sections: list[dict[str, Any]]) -> None:
         """
         Add multiple plugin configuration sections to the form.
 
         Args:
             sections: List of section definitions with 'id', 'schema', and optional 'config'
+
         """
         for section in sections:
             self.add_plugin_section(
@@ -274,12 +291,13 @@ class FormGenerator(ABC):
                 section.get("config"),
             )
 
-    def get_plugin_section_values(self) -> Dict[str, Dict[str, Any]]:
+    def get_plugin_section_values(self) -> dict[str, dict[str, Any]]:
         """
         Get configuration values from all plugin sections.
 
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary mapping section IDs to their values
+
         """
         values = {}
         for section in self._plugin_sections:
@@ -288,12 +306,13 @@ class FormGenerator(ABC):
                 values[section_id] = section.get_values()
         return values
 
-    def set_plugin_section_values(self, configs: Dict[str, Dict[str, Any]]) -> None:
+    def set_plugin_section_values(self, configs: dict[str, dict[str, Any]]) -> None:
         """
         Set configuration values for plugin sections.
 
         Args:
             configs: Dictionary mapping section IDs to their configuration values
+
         """
         for section in self._plugin_sections:
             section_id = getattr(section, "section_id", None)
@@ -306,6 +325,7 @@ class FormGenerator(ABC):
 
         Returns:
             ValidationResult: Combined validation result for all sections
+
         """
         all_errors = []
         for section in self._plugin_sections:
@@ -334,6 +354,7 @@ class QtFormGenerator(FormGenerator):
 
         Returns:
             Any: Qt form container widget
+
         """
         from PyQt5.QtWidgets import QFormLayout, QLabel, QVBoxLayout, QWidget
 
@@ -381,6 +402,7 @@ class QtFormGenerator(FormGenerator):
 
         Args:
             parent: Optional parent widget
+
         """
         if not self._plugin_schemas:
             return
@@ -420,24 +442,26 @@ class QtFormGenerator(FormGenerator):
                 exc_info=True,
             )
 
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all Qt form fields.
 
         Returns:
             Dict[str, Any]: Current field values
+
         """
         values = {}
         for field_name, widget in self.widgets.items():
             values[field_name] = widget.get_value()
         return values
 
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all Qt form fields.
 
         Args:
             config: Configuration values to set
+
         """
         for field_name, value in config.items():
             if field_name in self.widgets:
@@ -449,6 +473,7 @@ class QtFormGenerator(FormGenerator):
 
         Returns:
             ValidationResult: Validation result
+
         """
         all_errors = []
         for field_name, widget in self.widgets.items():
@@ -470,19 +495,20 @@ class QtFormGenerator(FormGenerator):
         )
         return ValidationResult(success=is_valid, errors=all_errors)
 
-    def get_validation_errors(self) -> List[str]:
+    def get_validation_errors(self) -> list[str]:
         """
         Get all validation errors from the Qt form.
 
         Returns:
             List[str]: List of validation error messages
+
         """
         errors = []
         for widget in self.widgets.values():
             errors.extend(widget.get_validation_errors())
         return errors
 
-    def _setup_field_dependencies(self):
+    def _setup_field_dependencies(self) -> None:
         """
         Setup field dependencies and dynamic visibility callbacks for Qt.
         """
@@ -529,6 +555,7 @@ class FormGeneratorFactory:
 
         Raises:
             ValueError: If framework is not supported
+
         """
         correlation_id = get_correlation_id() or generate_correlation_id()
         log_with_context(

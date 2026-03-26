@@ -12,7 +12,7 @@ import os
 import time
 import zipfile
 from io import StringIO
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from interface.services.progress_service import ProgressCallback
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class TableProtocol(Protocol):
     """Protocol for database table operations."""
 
-    def find_one(self, **kwargs) -> Optional[dict]:
+    def find_one(self, **kwargs) -> dict | None:
         """Find a single record matching criteria."""
         ...
 
@@ -94,6 +94,7 @@ class ReportingService:
         ...     start_time="2024-01-01 12:00:00",
         ...     run_summary="Processed 10 files"
         ... )
+
     """
 
     MAX_EMAIL_SIZE = 9000000  # 9MB
@@ -105,7 +106,7 @@ class ReportingService:
         batch_log_sender_module: Any = None,
         print_run_log_module: Any = None,
         utils_module: Any = None,
-    ):
+    ) -> None:
         """Initialize the reporting service.
 
         Args:
@@ -113,6 +114,7 @@ class ReportingService:
             batch_log_sender_module: Module for sending batch logs (injected for testing)
             print_run_log_module: Module for printing run logs (injected for testing)
             utils_module: Utils module with normalize_bool function (injected for testing)
+
         """
         self._db = database
         self._batch_log_sender = batch_log_sender_module
@@ -127,6 +129,7 @@ class ReportingService:
 
         Returns:
             Boolean representation of the value
+
         """
         if self._utils is not None:
             return self._utils.normalize_bool(value)
@@ -137,7 +140,7 @@ class ReportingService:
         return bool(value)
 
     def add_run_log_to_queue(
-        self, run_log_path: str, run_log_name: str, enable_reporting: bool
+        self, run_log_path: str, run_log_name: str, *, enable_reporting: bool
     ) -> None:
         """Add a run log to the email queue if reporting is enabled.
 
@@ -145,6 +148,7 @@ class ReportingService:
             run_log_path: Full path to the run log file
             run_log_name: Name of the run log for display
             enable_reporting: Whether reporting is enabled
+
         """
         if enable_reporting:
             self._db.emails_table.insert(
@@ -158,7 +162,7 @@ class ReportingService:
         run_log_path: str,
         start_time: str,
         run_summary: str,
-        progress_callback: Optional[ProgressCallback] = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Send all queued report emails.
 
@@ -175,6 +179,7 @@ class ReportingService:
             start_time: Start time string for the run
             run_summary: Summary string of the run
             progress_callback: Progress callback for status updates (optional)
+
         """
         try:
             self._db.sent_emails_removal_queue.delete()
@@ -284,7 +289,7 @@ class ReportingService:
         emails_count: int,
         total_emails: int,
         run_summary: str,
-        progress_callback: Optional[ProgressCallback] = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Send a batch of emails.
 
@@ -297,6 +302,7 @@ class ReportingService:
             total_emails: Total emails to send
             run_summary: Summary string of the run
             progress_callback: Progress callback for status updates (optional)
+
         """
         if self._batch_log_sender is not None:
             self._batch_log_sender.do(
@@ -323,7 +329,7 @@ class ReportingService:
         batch_number: int,
         emails_count: int,
         total_emails: int,
-        progress_callback: Optional[ProgressCallback] = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Handle skipped files by creating and sending an error log.
 
@@ -338,6 +344,7 @@ class ReportingService:
             emails_count: Current email count
             total_emails: Total emails
             progress_callback: Progress callback for status updates (optional)
+
         """
         batch_number += 1
         emails_count += 1
@@ -388,6 +395,7 @@ class ReportingService:
             error: The exception that occurred
             run_log_path: Path to log directory
             reporting_config: Reporting configuration dictionary
+
         """
         run_log_file = None
         for f in os.listdir(run_log_path):

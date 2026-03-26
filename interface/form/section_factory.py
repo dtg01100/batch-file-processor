@@ -7,7 +7,7 @@ sections for plugins and the core system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..plugins.config_schemas import ConfigurationSchema
 from ..plugins.section_registry import SectionRegistry
@@ -31,7 +31,7 @@ class SectionFactory(ABC):
         self,
         section_type: str,
         schema: ConfigurationSchema,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
     ) -> ConfigSectionWidget:
         """
@@ -45,15 +45,17 @@ class SectionFactory(ABC):
 
         Returns:
             ConfigSectionWidget: Created section widget
+
         """
 
     @abstractmethod
-    def get_supported_types(self) -> List[str]:
+    def get_supported_types(self) -> list[str]:
         """
         Get list of supported section types.
 
         Returns:
             List[str]: List of supported section type identifiers
+
         """
 
 
@@ -74,7 +76,7 @@ class QtSectionFactory(SectionFactory):
         self,
         section_type: str,
         schema: ConfigurationSchema,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
     ) -> ConfigSectionWidget:
         """
@@ -88,6 +90,7 @@ class QtSectionFactory(SectionFactory):
 
         Returns:
             ConfigSectionWidget: Created section widget
+
         """
         if section_type == "tabbed":
             if not isinstance(schema, list):
@@ -104,12 +107,13 @@ class QtSectionFactory(SectionFactory):
         widget.render(config)
         return widget
 
-    def get_supported_types(self) -> List[str]:
+    def get_supported_types(self) -> list[str]:
         """
         Get list of supported section types.
 
         Returns:
             List[str]: List of supported section type identifiers
+
         """
         return list(self._section_type_map.keys())
 
@@ -122,7 +126,7 @@ class SectionFactoryRegistry:
     and provides a centralized way to create sections.
     """
 
-    _factories: Dict[str, SectionFactory] = {}
+    _factories: dict[str, SectionFactory] = {}
 
     @classmethod
     def register_factory(cls, framework: str, factory: SectionFactory) -> None:
@@ -132,11 +136,12 @@ class SectionFactoryRegistry:
         Args:
             framework: Framework identifier ('qt')
             factory: Section factory to register
+
         """
         cls._factories[framework] = factory
 
     @classmethod
-    def get_factory(cls, framework: str) -> Optional[SectionFactory]:
+    def get_factory(cls, framework: str) -> SectionFactory | None:
         """
         Get the section factory for a framework.
 
@@ -145,6 +150,7 @@ class SectionFactoryRegistry:
 
         Returns:
             Optional[SectionFactory]: Section factory or None if not found
+
         """
         return cls._factories.get(framework)
 
@@ -154,7 +160,7 @@ class SectionFactoryRegistry:
         section_type: str,
         schema: ConfigurationSchema,
         framework: str = "qt",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
     ) -> ConfigSectionWidget:
         """
@@ -172,6 +178,7 @@ class SectionFactoryRegistry:
 
         Raises:
             ValueError: If framework is not supported
+
         """
         factory = cls.get_factory(framework)
         if factory is None:
@@ -186,9 +193,9 @@ class SectionFactoryRegistry:
         cls,
         section_id: str,
         framework: str = "qt",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
-    ) -> Optional[ConfigSectionWidget]:
+    ) -> ConfigSectionWidget | None:
         """
         Create a section from the section registry.
 
@@ -200,6 +207,7 @@ class SectionFactoryRegistry:
 
         Returns:
             Optional[ConfigSectionWidget]: Created section widget or None if not found
+
         """
         section_class = SectionRegistry.get_section(section_id)
         if section_class is None:
@@ -217,9 +225,9 @@ class SectionFactoryRegistry:
     def create_all_registered_sections(
         cls,
         framework: str = "qt",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
-    ) -> List[ConfigSectionWidget]:
+    ) -> list[ConfigSectionWidget]:
         """
         Create all sections registered in the section registry.
 
@@ -230,6 +238,7 @@ class SectionFactoryRegistry:
 
         Returns:
             List[ConfigSectionWidget]: List of created section widgets
+
         """
         sections = []
         for section_class in SectionRegistry.get_all_sections():
@@ -259,9 +268,9 @@ class PluginSectionFactory:
         plugin_id: str,
         section_id: str,
         framework: str = "qt",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
-    ) -> Optional[ConfigSectionWidget]:
+    ) -> ConfigSectionWidget | None:
         """
         Create a section from a specific plugin.
 
@@ -274,6 +283,7 @@ class PluginSectionFactory:
 
         Returns:
             Optional[ConfigSectionWidget]: Created section widget or None if not found
+
         """
         full_section_id = f"{plugin_id}.{section_id}"
         return SectionFactoryRegistry.create_section_from_registry(
@@ -285,9 +295,9 @@ class PluginSectionFactory:
         cls,
         plugin_id: str,
         framework: str = "qt",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         parent: Any = None,
-    ) -> List[ConfigSectionWidget]:
+    ) -> list[ConfigSectionWidget]:
         """
         Create all sections for a specific plugin.
 
@@ -299,6 +309,7 @@ class PluginSectionFactory:
 
         Returns:
             List[ConfigSectionWidget]: List of created section widgets
+
         """
         sections = []
 
@@ -317,7 +328,7 @@ class PluginSectionFactory:
         return sections
 
     @classmethod
-    def get_plugin_section_ids(cls, plugin_id: str) -> List[str]:
+    def get_plugin_section_ids(cls, plugin_id: str) -> list[str]:
         """
         Get all section IDs for a specific plugin.
 
@@ -326,6 +337,7 @@ class PluginSectionFactory:
 
         Returns:
             List[str]: List of section IDs
+
         """
         return [
             section_class.get_section_id()

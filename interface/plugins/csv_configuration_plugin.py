@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for CSV format configuration.
 Provides support for CSV-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat, CSVConfiguration
 from .config_schemas import FieldDefinition, FieldType
@@ -28,6 +28,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             str: Plugin name for display purposes
+
         """
         return "CSV Configuration"
 
@@ -38,6 +39,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             str: Unique plugin identifier
+
         """
         return "csv_configuration"
 
@@ -48,6 +50,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             str: Plugin description
+
         """
         return "Provides CSV format configuration options for EDI conversion"
 
@@ -58,6 +61,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             str: Plugin version string
+
         """
         return "1.0.0"
 
@@ -68,6 +72,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             str: Format name for display purposes
+
         """
         return "CSV"
 
@@ -78,17 +83,19 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             ConvertFormat: The format enum from folder_configuration
+
         """
         return ConvertFormat.CSV
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """
         Get the list of field definitions for this configuration format.
 
         Returns:
             List[FieldDefinition]: List of field definitions that define the
             configuration schema for this format.
+
         """
         fields = [
             FieldDefinition(
@@ -136,7 +143,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """
         Validate configuration data against the format's schema.
 
@@ -145,13 +152,14 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             ValidationResult: Result of the validation operation
+
         """
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> CSVConfiguration:
+    def create_config(self, data: dict[str, Any]) -> CSVConfiguration:
         """
         Create a configuration instance from raw data.
 
@@ -160,6 +168,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             CSVConfiguration: CSV configuration instance
+
         """
         return CSVConfiguration(
             include_headers=data.get("include_headers", False),
@@ -172,7 +181,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
             ),
         )
 
-    def serialize_config(self, config: CSVConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: CSVConfiguration) -> dict[str, Any]:
         """
         Serialize a configuration instance to dictionary format.
 
@@ -181,6 +190,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             Dict[str, Any]: Serialized configuration data
+
         """
         if isinstance(config, dict):
             return {
@@ -204,7 +214,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
             "split_prepaid_sales_tax_crec": config.split_prepaid_sales_tax_crec,
         }
 
-    def deserialize_config(self, data: Dict[str, Any]) -> CSVConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> CSVConfiguration:
         """
         Deserialize stored data into a configuration instance.
 
@@ -213,12 +223,13 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             CSVConfiguration: CSV configuration instance
+
         """
         if isinstance(data, CSVConfiguration):
             return data
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialize the plugin with configuration.
 
@@ -226,6 +237,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Args:
             config: Optional configuration dictionary
+
         """
         if config:
             self._config = self.create_config(config)
@@ -258,6 +270,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
 
         Returns:
             Any: UI widget for plugin configuration
+
         """
         schema = self.get_configuration_schema()
         if schema:

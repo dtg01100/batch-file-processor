@@ -5,7 +5,7 @@ Qt edit folders dialog. Each column builder is responsible for creating and
 configuring the widgets for a specific section of the dialog.
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -34,14 +34,14 @@ class ColumnBuilders:
 
     def __init__(
         self,
-        fields: Dict[str, Any],
-        folder_config: Dict[str, Any],
-        alias_provider: Optional[Callable] = None,
-        on_copy_config: Optional[Callable] = None,
-        on_select_copy_dir: Optional[Callable] = None,
-        on_show_path: Optional[Callable] = None,
-        on_update_backend_states: Optional[Callable] = None,
-    ):
+        fields: dict[str, Any],
+        folder_config: dict[str, Any],
+        alias_provider: Callable | None = None,
+        on_copy_config: Callable | None = None,
+        on_select_copy_dir: Callable | None = None,
+        on_show_path: Callable | None = None,
+        on_update_backend_states: Callable | None = None,
+    ) -> None:
         """Initialize column builders.
 
         Args:
@@ -52,6 +52,7 @@ class ColumnBuilders:
             on_select_copy_dir: Callback for select copy directory button
             on_show_path: Callback for show folder path button
             on_update_backend_states: Callback for backend state updates
+
         """
         self.fields = fields
         self.folder_config = folder_config
@@ -86,7 +87,7 @@ class ColumnBuilders:
         )
         self.fields["others_list"] = others_list
 
-        aliases: List[str] = []
+        aliases: list[str] = []
         if self.alias_provider:
             aliases = sorted(self.alias_provider() or [])
         for alias in aliases:

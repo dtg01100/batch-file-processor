@@ -7,7 +7,7 @@ can be reused across different configuration interfaces.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from ..plugins.config_schemas import ConfigurationSchema, FieldType
 from ..plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
@@ -24,7 +24,7 @@ class ConfigSectionWidget(ABC):
 
     def __init__(
         self, schema: ConfigurationSchema, framework: str = "qt", parent: Any = None
-    ):
+    ) -> None:
         """
         Initialize the config section widget.
 
@@ -32,16 +32,17 @@ class ConfigSectionWidget(ABC):
             schema: Configuration schema for this section
             framework: UI framework ('qt')
             parent: Optional parent widget
+
         """
         self.schema = schema
         self.framework = framework
         self.parent = parent
-        self.widgets: Dict[str, WidgetBase] = {}
+        self.widgets: dict[str, WidgetBase] = {}
         self.container: Any = None
-        self._value_changed_callbacks: List[Callable] = []
+        self._value_changed_callbacks: list[Callable] = []
 
     @abstractmethod
-    def render(self, config: Optional[Dict[str, Any]] = None) -> Any:
+    def render(self, config: dict[str, Any] | None = None) -> Any:
         """
         Render the section widget.
 
@@ -50,24 +51,27 @@ class ConfigSectionWidget(ABC):
 
         Returns:
             Any: Rendered widget container
+
         """
 
     @abstractmethod
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all form fields.
 
         Returns:
             Dict[str, Any]: Current field values
+
         """
 
     @abstractmethod
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all form fields.
 
         Args:
             config: Configuration values to set
+
         """
 
     @abstractmethod
@@ -77,14 +81,16 @@ class ConfigSectionWidget(ABC):
 
         Returns:
             ValidationResult: Validation result
+
         """
 
-    def get_validation_errors(self) -> List[str]:
+    def get_validation_errors(self) -> list[str]:
         """
         Get all validation errors from the section.
 
         Returns:
             List[str]: List of validation error messages
+
         """
         errors = []
         for widget in self.widgets.values():
@@ -100,6 +106,7 @@ class ConfigSectionWidget(ABC):
 
         Returns:
             Any: Current field value
+
         """
         if field_name in self.widgets:
             return self.widgets[field_name].get_value()
@@ -112,31 +119,34 @@ class ConfigSectionWidget(ABC):
         Args:
             field_name: Field name to set value for
             value: Value to set
+
         """
         if field_name in self.widgets:
             self.widgets[field_name].set_value(value)
 
-    def set_field_visibility(self, field_name: str, visible: bool) -> None:
+    def set_field_visibility(self, field_name: str, *, visible: bool) -> None:
         """
         Set visibility of a specific field.
 
         Args:
             field_name: Field name to set visibility for
             visible: True if field should be visible
+
         """
         if field_name in self.widgets:
-            self.widgets[field_name].set_visible(visible)
+            self.widgets[field_name].set_visible(visible=visible)
 
-    def set_field_enabled(self, field_name: str, enabled: bool) -> None:
+    def set_field_enabled(self, field_name: str, *, enabled: bool) -> None:
         """
         Set enabled state of a specific field.
 
         Args:
             field_name: Field name to set enabled state for
             enabled: True if field should be enabled
+
         """
         if field_name in self.widgets:
-            self.widgets[field_name].set_enabled(enabled)
+            self.widgets[field_name].set_enabled(enabled=enabled)
 
     def register_value_changed_callback(self, callback: Callable) -> None:
         """
@@ -144,6 +154,7 @@ class ConfigSectionWidget(ABC):
 
         Args:
             callback: Callback function to register
+
         """
         self._value_changed_callbacks.append(callback)
 
@@ -160,7 +171,7 @@ class QtConfigSectionWidget(ConfigSectionWidget):
     Qt implementation of the config section widget.
     """
 
-    def render(self, config: Optional[Dict[str, Any]] = None) -> Any:
+    def render(self, config: dict[str, Any] | None = None) -> Any:
         """
         Render the Qt section widget.
 
@@ -169,6 +180,7 @@ class QtConfigSectionWidget(ConfigSectionWidget):
 
         Returns:
             Any: Qt widget container
+
         """
         from PyQt5.QtWidgets import QFormLayout, QGroupBox, QLabel, QVBoxLayout
 
@@ -204,24 +216,26 @@ class QtConfigSectionWidget(ConfigSectionWidget):
 
         return self.container
 
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all form fields.
 
         Returns:
             Dict[str, Any]: Current field values
+
         """
         values = {}
         for field_name, widget in self.widgets.items():
             values[field_name] = widget.get_value()
         return values
 
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all form fields.
 
         Args:
             config: Configuration values to set
+
         """
         for field_name, value in config.items():
             if field_name in self.widgets:
@@ -233,6 +247,7 @@ class QtConfigSectionWidget(ConfigSectionWidget):
 
         Returns:
             ValidationResult: Validation result
+
         """
         all_errors = self.get_validation_errors()
         return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
@@ -250,8 +265,9 @@ class CollapsibleSectionWidget(ConfigSectionWidget):
         schema: ConfigurationSchema,
         framework: str = "qt",
         parent: Any = None,
+        *,
         expanded: bool = True,
-    ):
+    ) -> None:
         """
         Initialize the collapsible section widget.
 
@@ -260,6 +276,7 @@ class CollapsibleSectionWidget(ConfigSectionWidget):
             framework: UI framework ('qt')
             parent: Optional parent widget
             expanded: Whether section is expanded by default
+
         """
         super().__init__(schema, framework, parent)
         self.expanded = expanded
@@ -276,7 +293,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
     Qt implementation of the collapsible config section widget.
     """
 
-    def render(self, config: Optional[Dict[str, Any]] = None) -> Any:
+    def render(self, config: dict[str, Any] | None = None) -> Any:
         """
         Render the Qt collapsible section widget.
 
@@ -285,6 +302,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
 
         Returns:
             Any: Qt widget container
+
         """
         from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QWidget
 
@@ -326,24 +344,26 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
 
         return self.container
 
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all form fields.
 
         Returns:
             Dict[str, Any]: Current field values
+
         """
         values = {}
         for field_name, widget in self.widgets.items():
             values[field_name] = widget.get_value()
         return values
 
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all form fields.
 
         Args:
             config: Configuration values to set
+
         """
         for field_name, value in config.items():
             if field_name in self.widgets:
@@ -355,6 +375,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
 
         Returns:
             ValidationResult: Validation result
+
         """
         all_errors = self.get_validation_errors()
         return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
@@ -378,10 +399,10 @@ class TabbedSectionWidget(ConfigSectionWidget):
 
     def __init__(
         self,
-        sections: List[ConfigurationSchema],
+        sections: list[ConfigurationSchema],
         framework: str = "qt",
         parent: Any = None,
-    ):
+    ) -> None:
         """
         Initialize the tabbed section widget.
 
@@ -389,14 +410,15 @@ class TabbedSectionWidget(ConfigSectionWidget):
             sections: List of configuration schemas for each tab
             framework: UI framework ('qt')
             parent: Optional parent widget
+
         """
         self.sections = sections
-        self.section_widgets: List[ConfigSectionWidget] = []
+        self.section_widgets: list[ConfigSectionWidget] = []
         super().__init__(
             sections[0] if sections else ConfigurationSchema([]), framework, parent
         )
 
-    def render(self, config: Optional[Dict[str, Any]] = None) -> Any:
+    def render(self, config: dict[str, Any] | None = None) -> Any:
         """
         Render the tabbed section widget.
 
@@ -405,13 +427,14 @@ class TabbedSectionWidget(ConfigSectionWidget):
 
         Returns:
             Any: Qt tab widget container
+
         """
         if self.framework == "qt":
             return self._render_qt(config)
         else:
             return self._render_qt(config)
 
-    def _render_qt(self, config: Optional[Dict[str, Any]] = None) -> Any:
+    def _render_qt(self, config: dict[str, Any] | None = None) -> Any:
         """
         Render Qt tabbed section widget.
         """
@@ -431,24 +454,26 @@ class TabbedSectionWidget(ConfigSectionWidget):
 
         return self.container
 
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current values from all tabs.
 
         Returns:
             Dict[str, Any]: Current field values from all sections
+
         """
         values = {}
         for section_widget in self.section_widgets:
             values.update(section_widget.get_values())
         return values
 
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set values for all tabs.
 
         Args:
             config: Configuration values to set
+
         """
         for section_widget in self.section_widgets:
             section_widget.set_values(config)
@@ -459,6 +484,7 @@ class TabbedSectionWidget(ConfigSectionWidget):
 
         Returns:
             ValidationResult: Combined validation result
+
         """
         all_errors = []
         for section_widget in self.section_widgets:

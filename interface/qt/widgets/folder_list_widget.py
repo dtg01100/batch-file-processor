@@ -10,7 +10,7 @@ Fuzzy matching via the ``thefuzz`` library is used to filter folders by alias
 when a filter value is provided.
 """
 
-from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
+from typing import Any, Callable, Iterator, Protocol
 
 import thefuzz.process  # type: ignore
 from PyQt5.QtCore import Qt
@@ -38,7 +38,7 @@ class FolderTableProtocol(Protocol):
     ``folder_is_active``.
     """
 
-    def find(self, **kwargs: Any) -> Iterator[Dict[str, Any]]:
+    def find(self, **kwargs: Any) -> Iterator[dict[str, Any]]:
         """Return folders matching the given criteria.
 
         Args:
@@ -46,6 +46,7 @@ class FolderTableProtocol(Protocol):
 
         Returns:
             An iterator of folder dictionaries.
+
         """
         ...
 
@@ -57,10 +58,11 @@ class FolderTableProtocol(Protocol):
 
         Returns:
             The matching folder count.
+
         """
         ...
 
-    def find_one(self, **kwargs: Any) -> Optional[Dict[str, Any]]:
+    def find_one(self, **kwargs: Any) -> dict[str, Any] | None:
         """Return a single folder matching the given criteria, or ``None``.
 
         Args:
@@ -68,6 +70,7 @@ class FolderTableProtocol(Protocol):
 
         Returns:
             A folder dictionary or ``None``.
+
         """
         ...
 
@@ -110,6 +113,7 @@ class FolderListWidget(QWidget):
         ...     on_delete=on_delete,
         ...     filter_value="",
         ... )
+
     """
 
     def __init__(
@@ -121,7 +125,7 @@ class FolderListWidget(QWidget):
         on_toggle: Callable[[int], None],
         on_delete: Callable[[int, str], None],
         filter_value: str = "",
-        total_count_callback: Optional[Callable[[int, int], None]] = None,
+        total_count_callback: Callable[[int, int], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self._folders_table = folders_table
@@ -131,11 +135,11 @@ class FolderListWidget(QWidget):
         self._on_delete = on_delete
         self._filter_value = filter_value
         self._total_count_callback = total_count_callback
-        self._row_widgets: Dict[int, QWidget] = {}
-        self._folder_aliases: Dict[int, str] = {}
-        self._scroll_layout: Optional[QVBoxLayout] = None
-        self._scroll_area: Optional[QScrollArea] = None
-        self._empty_label: Optional[QLabel] = None
+        self._row_widgets: dict[int, QWidget] = {}
+        self._folder_aliases: dict[int, str] = {}
+        self._scroll_layout: QVBoxLayout | None = None
+        self._scroll_area: QScrollArea | None = None
+        self._empty_label: QLabel | None = None
         self._edit_button_min_width: int = 0
 
         self._build_widget()
@@ -155,7 +159,7 @@ class FolderListWidget(QWidget):
         main_layout.setSpacing(Theme.SPACING_LG_INT)
 
         # Get all folders sorted by alias
-        all_folders: List[Dict[str, Any]] = list(
+        all_folders: list[dict[str, Any]] = list(
             self._folders_table.find(order_by="alias")
         )
 
@@ -173,7 +177,7 @@ class FolderListWidget(QWidget):
     def _build_column(
         self,
         title: str,
-        folder_list: List[Dict[str, Any]],
+        folder_list: list[dict[str, Any]],
     ) -> QWidget:
         """Build a scrollable column for all folders.
 
@@ -183,6 +187,7 @@ class FolderListWidget(QWidget):
 
         Returns:
             A :class:`QWidget` containing the titled, scrollable column.
+
         """
         container = QWidget()
         container.setObjectName("card")
@@ -315,7 +320,7 @@ class FolderListWidget(QWidget):
 
     def _build_folder_row(
         self,
-        folder: Dict[str, Any],
+        folder: dict[str, Any],
         edit_button_min_width: int,
     ) -> QWidget:
         """Build a single folder row with status indicator and action buttons.
@@ -326,6 +331,7 @@ class FolderListWidget(QWidget):
 
         Returns:
             A :class:`QWidget` representing the folder row.
+
         """
         row_widget = QWidget()
         row_widget.setObjectName("folderCard")
@@ -496,6 +502,7 @@ class FolderListWidget(QWidget):
 
         Returns:
             ``True`` if the row was found and replaced, ``False`` otherwise.
+
         """
         old_row = self._row_widgets.get(folder_id)
         if old_row is None or self._scroll_layout is None:
@@ -532,6 +539,7 @@ class FolderListWidget(QWidget):
 
         Args:
             filter_text: The search string (empty string shows all).
+
         """
         self._filter_value = filter_text
 
@@ -575,7 +583,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)
+        btn.setProperty("compact", True)  # noqa: FBT003
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""
@@ -588,7 +596,7 @@ class FolderListWidget(QWidget):
         btn.style().polish(btn)
 
     def _calculate_edit_button_min_width(
-        self, folder_list: List[Dict[str, Any]]
+        self, folder_list: list[dict[str, Any]]
     ) -> int:
         """Calculate a robust minimum width for edit buttons using font metrics."""
         edit_texts = [

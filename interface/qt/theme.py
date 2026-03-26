@@ -1012,7 +1012,7 @@ class Theme:
         return cls._sanitize_stylesheet(raw)
 
     @staticmethod
-    def apply_theme(widget):
+    def apply_theme(widget) -> None:
         app = QApplication.instance()
         if app:
             # Apply a sanitized stylesheet to avoid Qt warnings about unsupported properties

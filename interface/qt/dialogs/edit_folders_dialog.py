@@ -5,7 +5,7 @@ Uses a decomposed architecture with dedicated builders and handlers.
 """
 
 import os
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 from PyQt5.QtWidgets import (
     QFileDialog,
@@ -36,16 +36,16 @@ class EditFoldersDialog(BaseDialog):
 
     def __init__(
         self,
-        parent: Optional[QWidget],
-        folder_config: Dict[str, Any],
+        parent: QWidget | None,
+        folder_config: dict[str, Any],
         title: str = "Edit Folder",
-        plugin_manager: Optional[PluginManager] = None,
-        ftp_service: Optional[FTPServiceProtocol] = None,
-        validator: Optional[FolderSettingsValidator] = None,
-        settings_provider: Optional[Callable] = None,
-        alias_provider: Optional[Callable] = None,
-        on_apply_success: Optional[Callable] = None,
-    ):
+        plugin_manager: PluginManager | None = None,
+        ftp_service: FTPServiceProtocol | None = None,
+        validator: FolderSettingsValidator | None = None,
+        settings_provider: Callable | None = None,
+        alias_provider: Callable | None = None,
+        on_apply_success: Callable | None = None,
+    ) -> None:
         super().__init__(parent, title)
         self._folder_config = folder_config
         self._ftp_service = ftp_service
@@ -55,7 +55,7 @@ class EditFoldersDialog(BaseDialog):
         self._on_apply_success = on_apply_success
 
         # Shared state
-        self._fields: Dict[str, Any] = {}
+        self._fields: dict[str, Any] = {}
         self.copy_to_directory: str = folder_config.get("copy_to_directory", "")
         self._settings = self._load_settings()
 
@@ -109,7 +109,7 @@ class EditFoldersDialog(BaseDialog):
             return self._settings_provider() or {}
         return {}
 
-    def _build_ui(self):
+    def _build_ui(self) -> None:
         """Delegate UI building to the UILayoutBuilder."""
         self.ui_builder.build_ui()
 
@@ -153,10 +153,10 @@ class EditFoldersDialog(BaseDialog):
         ),
     ]
 
-    def _populate_fields(self, config: Dict[str, Any]):
+    def _populate_fields(self, config: dict[str, Any]) -> None:
         """Populate UI fields from configuration."""
 
-        def to_bool(val, default=False):
+        def to_bool(val, *, default=False):
             if val is None:
                 return default
             if isinstance(val, bool):
@@ -166,7 +166,7 @@ class EditFoldersDialog(BaseDialog):
         for field_key, config_key, field_type, default in self._FIELD_SPECS:
             value = config.get(config_key, default)
             if field_type == "check":
-                self._set_check(field_key, to_bool(value))
+                self._set_check(field_key, value=to_bool(value))
             elif field_type == "text":
                 self._set_text(field_key, str(value or default))
             elif field_type == "combo":
@@ -184,11 +184,11 @@ class EditFoldersDialog(BaseDialog):
             want_convert = normalize_bool(config.get("process_edi")) or bool(
                 config.get("convert_to_format")
             )
-            edi_check.blockSignals(True)
+            edi_check.blockSignals(True)  # noqa: FBT003
             try:
                 edi_check.setChecked(want_convert)
             finally:
-                edi_check.blockSignals(False)
+                edi_check.blockSignals(False)  # noqa: FBT003
 
             self.dynamic_edi_builder._clear_dynamic_edi()
             if want_convert:
@@ -211,7 +211,7 @@ class EditFoldersDialog(BaseDialog):
                     convert_combo.currentText()
                 )
 
-    def _populate_fields_from_config(self, config: Dict[str, Any]):
+    def _populate_fields_from_config(self, config: dict[str, Any]) -> None:
         """Reload the dialog with a new configuration (e.g. after 'Copy Config').
 
         Identity fields (id, alias, folder_name) are preserved from the current
@@ -292,14 +292,14 @@ class EditFoldersDialog(BaseDialog):
         for idx in range(len(widgets) - 1):
             self.setTabOrder(widgets[idx], widgets[idx + 1])
 
-    def _focus_widget(self, widget: Optional[QWidget]) -> None:
+    def _focus_widget(self, widget: QWidget | None) -> None:
         if widget is None:
             return
         widget.setFocus()
         if hasattr(widget, "selectAll"):
             widget.selectAll()
 
-    def _widget_for_validation_field(self, field: str) -> Optional[QWidget]:
+    def _widget_for_validation_field(self, field: str) -> QWidget | None:
         field_map = {
             "alias": "folder_alias_field",
             "ftp_server": "ftp_server_field",
@@ -316,17 +316,17 @@ class EditFoldersDialog(BaseDialog):
             return None
         return self._fields.get(key)
 
-    def _set_check(self, key: str, value: bool):
+    def _set_check(self, key: str, *, value: bool) -> None:
         widget = self._fields.get(key)
         if widget and hasattr(widget, "setChecked"):
             widget.setChecked(value)
 
-    def _set_text(self, key: str, value: str):
+    def _set_text(self, key: str, value: str) -> None:
         widget = self._fields.get(key)
         if widget and hasattr(widget, "setText"):
             widget.setText(value)
 
-    def _set_combo(self, key: str, value: str):
+    def _set_combo(self, key: str, value: str) -> None:
         widget = self._fields.get(key)
         if widget and hasattr(widget, "setCurrentText"):
             widget.setCurrentText(value)
@@ -578,11 +578,11 @@ class EditFoldersDialog(BaseDialog):
             return self.dynamic_edi_builder.fields.get("a_record_padding_length")
         return None
 
-    def _show_folder_path(self):
+    def _show_folder_path(self) -> None:
         """Show the folder path in an informational dialog."""
         self.handlers.show_folder_path()
 
-    def _select_copy_directory(self):
+    def _select_copy_directory(self) -> None:
         """Open a directory picker for the copy destination."""
         initial = self.handlers.copy_to_directory
         if not initial or not os.path.isdir(initial):
@@ -594,11 +594,11 @@ class EditFoldersDialog(BaseDialog):
             self.handlers.copy_to_directory = folder
             self.copy_to_directory = folder
 
-    def _copy_config_from_other(self):
+    def _copy_config_from_other(self) -> None:
         """Copy configuration from the selected folder in the list."""
         self.handlers.copy_config_from_other()
 
-    def _on_ok(self):
+    def _on_ok(self) -> None:
         """Handle OK button: Validate and Apply."""
         if self.validate():
             self.apply()
@@ -623,7 +623,7 @@ class EditFoldersDialog(BaseDialog):
 
         if not result.is_valid:
             first_invalid_widget = None
-            grouped: Dict[str, list[str]] = {
+            grouped: dict[str, list[str]] = {
                 "Folder": [],
                 "Backends": [],
                 "FTP": [],
@@ -682,7 +682,7 @@ class EditFoldersDialog(BaseDialog):
             existing_aliases=existing_aliases,
         )
 
-    def apply(self):
+    def apply(self) -> None:
         """Extract data from UI and update the configuration dictionary."""
         extractor = QtFolderDataExtractor(
             self._fields,
@@ -797,7 +797,7 @@ class EditFoldersDialog(BaseDialog):
         if self._on_apply_success:
             self._on_apply_success(target)
 
-    def _sync_tweaks_plugin_to_flat_columns(self, target: Dict[str, Any]) -> None:
+    def _sync_tweaks_plugin_to_flat_columns(self, target: dict[str, Any]) -> None:
         """Write tweaks plugin_configurations values back to legacy flat DB columns.
 
         The orchestrator pipeline reads flat columns directly from the DB row and
@@ -814,7 +814,7 @@ class EditFoldersDialog(BaseDialog):
         except Exception:
             return []
 
-    def _apply_plugin_configurations(self, target: Dict[str, Any]) -> None:
+    def _apply_plugin_configurations(self, target: dict[str, Any]) -> None:
         self.plugin_config_mapper.extract_plugin_configurations(
             self._fields, framework="qt"
         )
@@ -823,5 +823,5 @@ class EditFoldersDialog(BaseDialog):
         # folders table yet. Only update internal state for UI.
         self.plugin_config_mapper.state_manager.mark_saved()
 
-    def get_fields(self) -> Dict[str, QWidget]:
+    def get_fields(self) -> dict[str, QWidget]:
         return dict(self._fields)

@@ -7,7 +7,7 @@ custom validation logic for their configuration fields.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, Union
 
 
 @dataclass
@@ -17,15 +17,16 @@ class ValidationResult:
     """
 
     success: bool
-    errors: List[str]
+    errors: list[str]
 
-    def __init__(self, success: bool = True, errors: List[str] = None):
+    def __init__(self, *, success: bool = True, errors: list[str] = None) -> None:
         """
         Initialize a validation result.
 
         Args:
             success: Whether the validation succeeded
             errors: List of error messages if validation failed
+
         """
         self.success = success
         self.errors = errors or []
@@ -36,6 +37,7 @@ class ValidationResult:
 
         Args:
             error: Error message to add
+
         """
         self.success = False
         self.errors.append(error)
@@ -49,6 +51,7 @@ class ValidationResult:
 
         Returns:
             ValidationResult: Merged validation result
+
         """
         return ValidationResult(
             success=self.success and other.success, errors=self.errors + other.errors
@@ -73,6 +76,7 @@ class Validator(ABC):
 
         Returns:
             ValidationResult: Validation result
+
         """
 
 
@@ -83,13 +87,14 @@ class RegexValidator(Validator):
 
     def __init__(
         self, regex: str, message: str = "Value does not match expected format"
-    ):
+    ) -> None:
         """
         Initialize a regex validator.
 
         Args:
             regex: Regular expression to match
             message: Error message if validation fails
+
         """
         self.regex = regex
         self.message = message
@@ -175,7 +180,7 @@ class RangeValidator(Validator):
         min_value: Union[int, float],
         max_value: Union[int, float],
         message: str = "Value must be between {min} and {max}",
-    ):
+    ) -> None:
         """
         Initialize a range validator.
 
@@ -183,6 +188,7 @@ class RangeValidator(Validator):
             min_value: Minimum allowed value
             max_value: Maximum allowed value
             message: Error message if validation fails
+
         """
         self.min_value = min_value
         self.max_value = max_value
@@ -211,7 +217,7 @@ class LengthValidator(Validator):
         min_length: int = 0,
         max_length: int = None,
         message: str = "Value must be between {min} and {max} characters long",
-    ):
+    ) -> None:
         """
         Initialize a length validator.
 
@@ -219,6 +225,7 @@ class LengthValidator(Validator):
             min_length: Minimum allowed length
             max_length: Maximum allowed length
             message: Error message if validation fails
+
         """
         self.min_length = min_length
         self.max_length = max_length
@@ -259,13 +266,14 @@ class CustomValidator(Validator):
         self,
         validation_func: Callable[[Any], ValidationResult],
         message: str = "Validation failed",
-    ):
+    ) -> None:
         """
         Initialize a custom validator.
 
         Args:
             validation_func: Custom validation function that returns a ValidationResult
             message: Default error message if validation fails
+
         """
         self.validation_func = validation_func
         self.message = message

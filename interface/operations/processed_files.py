@@ -11,6 +11,7 @@ def export_processed_report(
         folder_id: ID of the folder to export report for
         output_folder: Directory to save the report
         database_obj: Database object for data access
+
     """
 
     def avoid_duplicate_export_file(file_name: str, file_extension: str) -> str:

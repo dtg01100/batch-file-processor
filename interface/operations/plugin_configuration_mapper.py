@@ -16,7 +16,7 @@ import copy
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from dispatch.feature_flags import get_strict_testing_mode
 from interface.models.folder_configuration import FolderConfiguration
@@ -32,8 +32,8 @@ class ExtractedPluginConfig:
     """Container for extracted plugin configuration data."""
 
     format_name: str
-    config: Dict[str, Any]
-    validation_errors: List[str] = field(default_factory=list)
+    config: dict[str, Any]
+    validation_errors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -42,7 +42,7 @@ class PluginConfigPopulationResult:
 
     success: bool
     widget_count: int = 0
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -50,9 +50,9 @@ class PluginSectionState:
     """Represents a snapshot of plugin section state."""
 
     format_name: str
-    config: Dict[str, Any]
+    config: dict[str, Any]
     is_valid: bool = True
-    validation_errors: List[str] = field(default_factory=list)
+    validation_errors: list[str] = field(default_factory=list)
     timestamp: float = 0.0
 
 
@@ -66,21 +66,22 @@ class PluginSectionStateManager:
     - Undo/redo functionality
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the state manager."""
-        self._current_states: Dict[str, PluginSectionState] = {}
-        self._undo_stack: List[Dict[str, PluginSectionState]] = []
-        self._redo_stack: List[Dict[str, PluginSectionState]] = []
+        self._current_states: dict[str, PluginSectionState] = {}
+        self._undo_stack: list[dict[str, PluginSectionState]] = []
+        self._redo_stack: list[dict[str, PluginSectionState]] = []
         self._max_undo_levels = 50
         self._is_dirty = False
-        self._last_saved_state: Optional[Dict[str, PluginSectionState]] = None
+        self._last_saved_state: dict[str, PluginSectionState] | None = None
 
     def initialize_state(
         self,
         format_name: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
+        *,
         is_valid: bool = True,
-        validation_errors: List[str] = None,
+        validation_errors: list[str] = None,
     ) -> None:
         """
         Initialize state for a plugin section.
@@ -90,6 +91,7 @@ class PluginSectionStateManager:
             config: Configuration dictionary
             is_valid: Whether the configuration is valid
             validation_errors: List of validation errors
+
         """
         state = PluginSectionState(
             format_name=format_name,
@@ -105,9 +107,10 @@ class PluginSectionStateManager:
     def update_state(
         self,
         format_name: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
+        *,
         is_valid: bool = True,
-        validation_errors: List[str] = None,
+        validation_errors: list[str] = None,
     ) -> bool:
         """
         Update state for a plugin section.
@@ -120,6 +123,7 @@ class PluginSectionStateManager:
 
         Returns:
             bool: True if state was changed, False if unchanged
+
         """
         format_lower = format_name.lower()
         current_config = self._current_states.get(format_lower)
@@ -159,6 +163,7 @@ class PluginSectionStateManager:
 
         Returns:
             bool: True if undo was successful
+
         """
         if not self._undo_stack:
             return False
@@ -175,6 +180,7 @@ class PluginSectionStateManager:
 
         Returns:
             bool: True if redo was successful
+
         """
         if not self._redo_stack:
             return False
@@ -206,7 +212,7 @@ class PluginSectionStateManager:
             self._undo_stack.clear()
             self._redo_stack.clear()
 
-    def get_state(self, format_name: str) -> Optional[PluginSectionState]:
+    def get_state(self, format_name: str) -> PluginSectionState | None:
         """
         Get the current state for a plugin format.
 
@@ -215,24 +221,27 @@ class PluginSectionStateManager:
 
         Returns:
             Optional[PluginSectionState]: Current state or None
+
         """
         return self._current_states.get(format_name.lower())
 
-    def get_all_states(self) -> Dict[str, PluginSectionState]:
+    def get_all_states(self) -> dict[str, PluginSectionState]:
         """
         Get all current states.
 
         Returns:
             Dict[str, PluginSectionState]: All current states
+
         """
         return copy.deepcopy(self._current_states)
 
-    def get_all_configs(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_configs(self) -> dict[str, dict[str, Any]]:
         """
         Get all current configurations.
 
         Returns:
             Dict[str, Dict[str, Any]]: All configurations
+
         """
         return {name: state.config for name, state in self._current_states.items()}
 
@@ -251,23 +260,25 @@ class PluginSectionStateManager:
         """Check if redo is available."""
         return len(self._redo_stack) > 0
 
-    def get_invalid_sections(self) -> List[str]:
+    def get_invalid_sections(self) -> list[str]:
         """
         Get list of sections with validation errors.
 
         Returns:
             List[str]: List of format names with validation errors
+
         """
         return [
             name for name, state in self._current_states.items() if not state.is_valid
         ]
 
-    def get_all_validation_errors(self) -> List[str]:
+    def get_all_validation_errors(self) -> list[str]:
         """
         Get all validation errors from all sections.
 
         Returns:
             List[str]: All validation errors
+
         """
         errors = []
         for state in self._current_states.values():
@@ -291,14 +302,14 @@ class PluginConfigurationMapper:
     Qt widget system, providing a unified interface for working with plugin data.
     """
 
-    def __init__(self, plugin_manager: Optional[PluginManager] = None):
+    def __init__(self, plugin_manager: PluginManager | None = None) -> None:
         """Initialize the plugin configuration mapper."""
         self.plugin_manager = plugin_manager or get_shared_plugin_manager()
         self.state_manager = PluginSectionStateManager()
 
     def extract_plugin_configurations(
-        self, dialog_fields: Dict[str, Any], framework: str = "qt"
-    ) -> List[ExtractedPluginConfig]:
+        self, dialog_fields: dict[str, Any], framework: str = "qt"
+    ) -> list[ExtractedPluginConfig]:
         """
         Extract plugin configurations from the edit folders dialog.
 
@@ -309,6 +320,7 @@ class PluginConfigurationMapper:
         Returns:
             List[ExtractedPluginConfig]: Extracted plugin configurations with
             validation errors
+
         """
         extracted_configs = []
 
@@ -350,8 +362,8 @@ class PluginConfigurationMapper:
         return extracted_configs
 
     def _extract_plugin_config(
-        self, plugin: ConfigurationPlugin, dialog_fields: Dict[str, Any], framework: str
-    ) -> Dict[str, Any]:
+        self, plugin: ConfigurationPlugin, dialog_fields: dict[str, Any], framework: str
+    ) -> dict[str, Any]:
         """
         Extract configuration for a specific plugin.
 
@@ -362,6 +374,7 @@ class PluginConfigurationMapper:
 
         Returns:
             Dict[str, Any]: Extracted plugin configuration
+
         """
         config = {}
 
@@ -403,6 +416,7 @@ class PluginConfigurationMapper:
 
         Returns:
             Any: Widget value
+
         """
         if framework == "qt":
             return self._get_qt_widget_value(widget, field_name)
@@ -437,6 +451,7 @@ class PluginConfigurationMapper:
 
         Returns:
             Any: Widget value
+
         """
         from PyQt5.QtWidgets import (
             QCheckBox,
@@ -474,7 +489,7 @@ class PluginConfigurationMapper:
     def populate_plugin_widgets(
         self,
         folder_config: FolderConfiguration,
-        dialog_fields: Dict[str, Any],
+        dialog_fields: dict[str, Any],
         framework: str = "qt",
     ) -> PluginConfigPopulationResult:
         """
@@ -487,6 +502,7 @@ class PluginConfigurationMapper:
 
         Returns:
             PluginConfigPopulationResult: Result of the population operation
+
         """
         result = PluginConfigPopulationResult(success=True)
 
@@ -522,7 +538,10 @@ class PluginConfigurationMapper:
                                     )
 
                     self.state_manager.initialize_state(
-                        plugin.get_format_name(), config, True, []
+                        plugin.get_format_name(),
+                        config,
+                        is_valid=True,
+                        validation_errors=[],
                     )
             except Exception as e:
                 result.errors.append(
@@ -534,8 +553,8 @@ class PluginConfigurationMapper:
 
     def populate_plugin_widgets_from_dict(
         self,
-        folder_config_dict: Dict[str, Any],
-        dialog_fields: Dict[str, Any],
+        folder_config_dict: dict[str, Any],
+        dialog_fields: dict[str, Any],
         framework: str = "qt",
     ) -> PluginConfigPopulationResult:
         """
@@ -548,6 +567,7 @@ class PluginConfigurationMapper:
 
         Returns:
             PluginConfigPopulationResult: Result of the population operation
+
         """
         folder_config = FolderConfiguration.from_dict(folder_config_dict)
         return self.populate_plugin_widgets(folder_config, dialog_fields, framework)
@@ -560,6 +580,7 @@ class PluginConfigurationMapper:
             widget: Native widget instance
             value: Value to set
             framework: UI framework identifier
+
         """
         if framework == "qt":
             self._set_qt_widget_value(widget, value)
@@ -573,6 +594,7 @@ class PluginConfigurationMapper:
         Args:
             widget: Qt widget instance
             value: Value to set
+
         """
         from PyQt5.QtWidgets import (
             QCheckBox,
@@ -611,7 +633,7 @@ class PluginConfigurationMapper:
     def update_folder_configuration(
         self,
         folder_config: FolderConfiguration,
-        extracted_configs: List[ExtractedPluginConfig],
+        extracted_configs: list[ExtractedPluginConfig],
     ) -> None:
         """
         Update FolderConfiguration with extracted plugin configurations.
@@ -619,6 +641,7 @@ class PluginConfigurationMapper:
         Args:
             folder_config: Folder configuration to update
             extracted_configs: Extracted plugin configurations to apply
+
         """
         for config_data in extracted_configs:
             if not config_data.validation_errors:
@@ -630,9 +653,9 @@ class PluginConfigurationMapper:
 
     def update_folder_configuration_from_dict(
         self,
-        folder_config_dict: Dict[str, Any],
-        extracted_configs: List[ExtractedPluginConfig],
-    ) -> Dict[str, Any]:
+        folder_config_dict: dict[str, Any],
+        extracted_configs: list[ExtractedPluginConfig],
+    ) -> dict[str, Any]:
         """
         Update folder config dict with extracted plugin configurations.
 
@@ -642,6 +665,7 @@ class PluginConfigurationMapper:
 
         Returns:
             Dict[str, Any]: Updated folder configuration dictionary
+
         """
         plugin_configs = {}
 
@@ -654,7 +678,7 @@ class PluginConfigurationMapper:
 
     def validate_plugin_configurations(
         self, folder_config: FolderConfiguration
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Validate all plugin configurations in FolderConfiguration.
 
@@ -663,6 +687,7 @@ class PluginConfigurationMapper:
 
         Returns:
             List[str]: List of validation errors
+
         """
         errors = []
 
@@ -689,8 +714,8 @@ class PluginConfigurationMapper:
         return errors
 
     def validate_plugin_configurations_from_dict(
-        self, folder_config_dict: Dict[str, Any]
-    ) -> List[str]:
+        self, folder_config_dict: dict[str, Any]
+    ) -> list[str]:
         """
         Validate all plugin configurations in folder config dict.
 
@@ -699,6 +724,7 @@ class PluginConfigurationMapper:
 
         Returns:
             List[str]: List of validation errors
+
         """
         errors = []
 
@@ -726,7 +752,7 @@ class PluginConfigurationMapper:
 
         return errors
 
-    def get_plugin_configuration_fields(self, format_name: str) -> List[Dict[str, Any]]:
+    def get_plugin_configuration_fields(self, format_name: str) -> list[dict[str, Any]]:
         """
         Get the configuration fields for a specific plugin format.
 
@@ -735,6 +761,7 @@ class PluginConfigurationMapper:
 
         Returns:
             List[Dict[str, Any]]: List of field definitions with metadata
+
         """
         plugin = self.plugin_manager.get_configuration_plugin_by_format_name(
             format_name
@@ -764,17 +791,18 @@ class PluginConfigurationMapper:
 
         return []
 
-    def get_supported_plugin_formats(self) -> List[str]:
+    def get_supported_plugin_formats(self) -> list[str]:
         """
         Get all supported plugin formats.
 
         Returns:
             List[str]: List of supported plugin format names
+
         """
         config_plugins = self.plugin_manager.get_configuration_plugins()
         return [plugin.get_format_name() for plugin in config_plugins]
 
-    def serialize_plugin_config(self, format_name: str, config: Dict[str, Any]) -> str:
+    def serialize_plugin_config(self, format_name: str, config: dict[str, Any]) -> str:
         """
         Serialize plugin configuration to JSON string.
 
@@ -784,11 +812,12 @@ class PluginConfigurationMapper:
 
         Returns:
             str: JSON serialized configuration
+
         """
         data = {"format_name": format_name, "config": config}
         return json.dumps(data)
 
-    def deserialize_plugin_config(self, serialized: str) -> Tuple[str, Dict[str, Any]]:
+    def deserialize_plugin_config(self, serialized: str) -> tuple[str, dict[str, Any]]:
         """
         Deserialize plugin configuration from JSON string.
 
@@ -797,6 +826,7 @@ class PluginConfigurationMapper:
 
         Returns:
             Tuple[str, Dict[str, Any]]: Format name and configuration
+
         """
         data = json.loads(serialized)
         return data.get("format_name", ""), data.get("config", {})
@@ -807,6 +837,7 @@ class PluginConfigurationMapper:
 
         Returns:
             PluginSectionStateManager: State manager
+
         """
         return self.state_manager
 
@@ -819,7 +850,7 @@ class BasePluginConfigExtractor(ABC):
     """
 
     @abstractmethod
-    def extract(self, dialog_fields: Dict[str, Any]) -> List[ExtractedPluginConfig]:
+    def extract(self, dialog_fields: dict[str, Any]) -> list[ExtractedPluginConfig]:
         """
         Extract plugin configurations from dialog fields.
 
@@ -828,6 +859,7 @@ class BasePluginConfigExtractor(ABC):
 
         Returns:
             List[ExtractedPluginConfig]: Extracted plugin configurations
+
         """
 
 
@@ -836,11 +868,11 @@ class QtPluginConfigExtractor(BasePluginConfigExtractor):
     Qt-specific plugin configuration extractor.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Qt plugin config extractor."""
         self.mapper = PluginConfigurationMapper()
 
-    def extract(self, dialog_fields: Dict[str, Any]) -> List[ExtractedPluginConfig]:
+    def extract(self, dialog_fields: dict[str, Any]) -> list[ExtractedPluginConfig]:
         """
         Extract plugin configurations from Qt dialog fields.
 
@@ -849,6 +881,7 @@ class QtPluginConfigExtractor(BasePluginConfigExtractor):
 
         Returns:
             List[ExtractedPluginConfig]: Extracted plugin configurations
+
         """
         return self.mapper.extract_plugin_configurations(dialog_fields, framework="qt")
 
@@ -862,7 +895,7 @@ class BasePluginWidgetPopulator(ABC):
 
     @abstractmethod
     def populate(
-        self, folder_config: FolderConfiguration, dialog_fields: Dict[str, Any]
+        self, folder_config: FolderConfiguration, dialog_fields: dict[str, Any]
     ) -> PluginConfigPopulationResult:
         """
         Populate plugin widgets with data from FolderConfiguration.
@@ -873,6 +906,7 @@ class BasePluginWidgetPopulator(ABC):
 
         Returns:
             PluginConfigPopulationResult: Result of the population operation
+
         """
 
 
@@ -881,12 +915,12 @@ class QtPluginWidgetPopulator(BasePluginWidgetPopulator):
     Qt-specific plugin widget populator.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Qt plugin widget populator."""
         self.mapper = PluginConfigurationMapper()
 
     def populate(
-        self, folder_config: FolderConfiguration, dialog_fields: Dict[str, Any]
+        self, folder_config: FolderConfiguration, dialog_fields: dict[str, Any]
     ) -> PluginConfigPopulationResult:
         """
         Populate Qt plugin widgets with data from FolderConfiguration.
@@ -897,6 +931,7 @@ class QtPluginWidgetPopulator(BasePluginWidgetPopulator):
 
         Returns:
             PluginConfigPopulationResult: Result of the population operation
+
         """
         return self.mapper.populate_plugin_widgets(
             folder_config, dialog_fields, framework="qt"

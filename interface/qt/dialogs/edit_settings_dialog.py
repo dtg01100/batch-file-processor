@@ -1,7 +1,7 @@
 """Qt reimplementation of EditSettingsDialog for editing application-wide settings."""
 
 import os
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -33,20 +33,20 @@ class EditSettingsDialog(BaseDialog):
 
     def __init__(
         self,
-        parent: Optional[QWidget],
-        settings_data: Dict[str, Any],
+        parent: QWidget | None,
+        settings_data: dict[str, Any],
         title: str = "Edit Settings",
-        settings_provider: Optional[Callable[[], Dict]] = None,
-        oversight_provider: Optional[Callable[[], Dict]] = None,
-        update_settings: Optional[Callable[[Dict], None]] = None,
-        update_oversight: Optional[Callable[[Dict], None]] = None,
-        on_apply: Optional[Callable[[Dict], None]] = None,
-        refresh_callback: Optional[Callable[[], None]] = None,
-        count_email_backends: Optional[Callable[[], int]] = None,
-        count_disabled_folders: Optional[Callable[[], int]] = None,
-        disable_email_backends: Optional[Callable[[], None]] = None,
-        disable_folders_without_backends: Optional[Callable[[], None]] = None,
-        smtp_service: Optional[SMTPServiceProtocol] = None,
+        settings_provider: Callable[[], dict] | None = None,
+        oversight_provider: Callable[[], dict] | None = None,
+        update_settings: Callable[[dict], None] | None = None,
+        update_oversight: Callable[[dict], None] | None = None,
+        on_apply: Callable[[dict], None] | None = None,
+        refresh_callback: Callable[[], None] | None = None,
+        count_email_backends: Callable[[], int] | None = None,
+        count_disabled_folders: Callable[[], int] | None = None,
+        disable_email_backends: Callable[[], None] | None = None,
+        disable_folders_without_backends: Callable[[], None] | None = None,
+        smtp_service: SMTPServiceProtocol | None = None,
     ) -> None:
         self._settings_data = dict(settings_data) if settings_data else {}
         self._settings_provider = settings_provider
@@ -69,13 +69,13 @@ class EditSettingsDialog(BaseDialog):
         # Set minimum size for comfortable viewing of all form fields
         self.setMinimumSize(700, 700)
 
-    def _get_settings(self) -> Dict[str, Any]:
+    def _get_settings(self) -> dict[str, Any]:
         if self._settings_provider:
             result = self._settings_provider()
             return result if result else {}
         return {}
 
-    def body(self, parent: QWidget) -> Optional[QWidget]:
+    def body(self, parent: QWidget) -> QWidget | None:
         """Create dialog body."""
         # Use parent's existing layout instead of creating a new one
         layout = parent.layout()
@@ -345,14 +345,14 @@ class EditSettingsDialog(BaseDialog):
         if chosen:
             self._logs_directory = chosen
 
-    def _focus_invalid_field(self, widget: Optional[QWidget]) -> None:
+    def _focus_invalid_field(self, widget: QWidget | None) -> None:
         if widget is None:
             return
         widget.setFocus()
         if isinstance(widget, QLineEdit):
             widget.selectAll()
 
-    def _format_grouped_errors(self, errors_by_section: Dict[str, list[str]]) -> str:
+    def _format_grouped_errors(self, errors_by_section: dict[str, list[str]]) -> str:
         lines: list[str] = []
         for section, messages in errors_by_section.items():
             if not messages:
@@ -400,15 +400,15 @@ class EditSettingsDialog(BaseDialog):
         )
 
     def validate(self) -> bool:
-        errors_by_section: Dict[str, list[str]] = {
+        errors_by_section: dict[str, list[str]] = {
             "Email Settings": [],
             "Reporting": [],
             "Backup": [],
         }
-        first_invalid_widget: Optional[QWidget] = None
+        first_invalid_widget: QWidget | None = None
 
         def add_error(
-            section: str, message: str, widget: Optional[QWidget] = None
+            section: str, message: str, widget: QWidget | None = None
         ) -> None:
             nonlocal first_invalid_widget
             errors_by_section[section].append(message)

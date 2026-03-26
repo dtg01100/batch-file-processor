@@ -11,7 +11,7 @@ decoupled from any specific UI framework.
 
 from __future__ import annotations
 
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 try:
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
@@ -39,6 +39,7 @@ class UIServiceProtocol(Protocol):
         Args:
             title: Dialog title.
             message: Body text to display.
+
         """
         ...
 
@@ -48,6 +49,7 @@ class UIServiceProtocol(Protocol):
         Args:
             title: Dialog title.
             message: Body text describing the error.
+
         """
         ...
 
@@ -57,6 +59,7 @@ class UIServiceProtocol(Protocol):
         Args:
             title: Dialog title.
             message: Body text describing the warning.
+
         """
         ...
 
@@ -71,6 +74,7 @@ class UIServiceProtocol(Protocol):
 
         Returns:
             ``True`` if the user selected *Yes*, ``False`` otherwise.
+
         """
         ...
 
@@ -83,6 +87,7 @@ class UIServiceProtocol(Protocol):
 
         Returns:
             ``True`` if the user selected *OK*, ``False`` otherwise.
+
         """
         ...
 
@@ -91,7 +96,7 @@ class UIServiceProtocol(Protocol):
     def ask_directory(
         self,
         title: str = "Select Directory",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
     ) -> str:
         """Show a directory-selection dialog.
 
@@ -101,14 +106,15 @@ class UIServiceProtocol(Protocol):
 
         Returns:
             The selected directory path, or an empty string if cancelled.
+
         """
         ...
 
     def ask_open_filename(
         self,
         title: str = "Open File",
-        initial_dir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initial_dir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show a file-open dialog.
 
@@ -120,15 +126,16 @@ class UIServiceProtocol(Protocol):
 
         Returns:
             The selected file path, or an empty string if cancelled.
+
         """
         ...
 
     def ask_save_filename(
         self,
         title: str = "Save File",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
         default_ext: str = "",
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show a file-save dialog.
 
@@ -141,6 +148,7 @@ class UIServiceProtocol(Protocol):
 
         Returns:
             The selected file path, or an empty string if cancelled.
+
         """
         ...
 
@@ -169,6 +177,7 @@ class ProgressServiceProtocol(Protocol):
 
         Args:
             message: Text to display alongside the indicator.
+
         """
         ...
 
@@ -181,6 +190,7 @@ class ProgressServiceProtocol(Protocol):
 
         Args:
             message: New text to display.
+
         """
         ...
 
@@ -200,6 +210,7 @@ class ProgressServiceProtocol(Protocol):
             file_num: Current file index (1-based)
             file_total: Total number of files to process
             footer: Optional footer text
+
         """
         ...
 
@@ -208,6 +219,7 @@ class ProgressServiceProtocol(Protocol):
 
         Returns:
             ``True`` if the indicator is shown, ``False`` otherwise.
+
         """
         ...
 
@@ -218,6 +230,7 @@ class ProgressServiceProtocol(Protocol):
 
         Args:
             progress: Progress percentage from 0 to 100
+
         """
         ...
 
@@ -259,7 +272,7 @@ class NullUIService:
     def ask_directory(
         self,
         title: str = "Select Directory",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
@@ -267,8 +280,8 @@ class NullUIService:
     def ask_open_filename(
         self,
         title: str = "Open File",
-        initial_dir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initial_dir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
@@ -276,9 +289,9 @@ class NullUIService:
     def ask_save_filename(
         self,
         title: str = "Save File",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
         default_ext: str = "",
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
@@ -300,10 +313,11 @@ class QtUIService:
 
     Args:
         parent: Optional parent widget for dialogs.
+
     """
 
     def __init__(self, parent=None) -> None:
-        self._parent: Optional[QWidget] = parent
+        self._parent: QWidget | None = parent
 
     # -- informational dialogs ------------------------------------------------
 
@@ -347,7 +361,7 @@ class QtUIService:
 
     @staticmethod
     def _convert_filetypes(
-        filetypes: Optional[list[tuple[str, str]]],
+        filetypes: list[tuple[str, str]] | None,
     ) -> str:
         """Convert filetypes to a Qt filter string.
 
@@ -364,7 +378,7 @@ class QtUIService:
     def ask_directory(
         self,
         title: str = "Select Directory",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
     ) -> str:
         """Delegates to QFileDialog.getExistingDirectory."""
         result = QFileDialog.getExistingDirectory(
@@ -377,8 +391,8 @@ class QtUIService:
     def ask_open_filename(
         self,
         title: str = "Open File",
-        initial_dir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initial_dir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Delegates to QFileDialog.getOpenFileName."""
         filter_str = self._convert_filetypes(filetypes)
@@ -393,9 +407,9 @@ class QtUIService:
     def ask_save_filename(
         self,
         title: str = "Save File",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
         default_ext: str = "",
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Delegates to QFileDialog.getSaveFileName."""
         filter_str = self._convert_filetypes(filetypes)

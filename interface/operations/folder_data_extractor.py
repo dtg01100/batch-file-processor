@@ -6,7 +6,7 @@ from dialog fields and converting them to structured formats.
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 from core.utils.bool_utils import normalize_bool
 
@@ -105,7 +105,7 @@ class ExtractedDialogFields:
     copy_to_directory: str = ""
 
     # Plugin configurations
-    plugin_configurations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    plugin_configurations: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 class FolderDataExtractor:
@@ -116,12 +116,13 @@ class FolderDataExtractor:
     dialog widgets and converting them to a consistent format.
     """
 
-    def __init__(self, dialog_fields: Dict[str, Any]):
+    def __init__(self, dialog_fields: dict[str, Any]) -> None:
         """
         Initialize extractor with dialog field references.
 
         Args:
             dialog_fields: Dictionary mapping field names to dialog widget references
+
         """
         self.fields = dialog_fields
 
@@ -219,7 +220,7 @@ class FolderDataExtractor:
             return os.path.basename(extracted.folder_name)
         return ""
 
-    def _get_text(self, field_name: str, key: Optional[str] = None) -> str:
+    def _get_text(self, field_name: str, key: str | None = None) -> str:
         """Get text value from Entry widget."""
         widget = self.fields.get(field_name)
         if widget is None:

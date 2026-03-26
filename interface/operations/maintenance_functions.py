@@ -7,7 +7,7 @@ extracted from main_interface.py for better testability.
 import datetime
 import hashlib
 import os
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from core.ports.repositories import (
     IFolderRepository,
@@ -42,21 +42,21 @@ class MaintenanceFunctions:
     def __init__(
         self,
         database_obj: Any,
-        refresh_callback: Optional[Callable[[], None]] = None,
-        set_button_states_callback: Optional[Callable[[], None]] = None,
-        delete_folder_callback: Optional[Callable[[int], None]] = None,
-        database_path: Optional[str] = None,
-        running_platform: Optional[str] = None,
-        database_version: Optional[str] = None,
-        progress_callback: Optional[ProgressCallback] = None,
-        on_operation_start: Optional[Callable[[], None]] = None,
-        on_operation_end: Optional[Callable[[], None]] = None,
-        confirm_callback: Optional[Callable[[str], bool]] = None,
-        database_import_callback: Optional[Callable[[str], bool]] = None,
-        folder_repo: Optional[IFolderRepository] = None,
-        settings_repo: Optional[ISettingsRepository] = None,
-        processed_files_repo: Optional[IProcessedFilesRepository] = None,
-    ):
+        refresh_callback: Callable[[], None] | None = None,
+        set_button_states_callback: Callable[[], None] | None = None,
+        delete_folder_callback: Callable[[int], None] | None = None,
+        database_path: str | None = None,
+        running_platform: str | None = None,
+        database_version: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        on_operation_start: Callable[[], None] | None = None,
+        on_operation_end: Callable[[], None] | None = None,
+        confirm_callback: Callable[[str], bool] | None = None,
+        database_import_callback: Callable[[str], bool] | None = None,
+        folder_repo: IFolderRepository | None = None,
+        settings_repo: ISettingsRepository | None = None,
+        processed_files_repo: IProcessedFilesRepository | None = None,
+    ) -> None:
         """Initialize MaintenanceFunctions with dependencies.
 
         Args:
@@ -75,6 +75,7 @@ class MaintenanceFunctions:
             folder_repo: Optional folder repository for data access
             settings_repo: Optional settings repository for data access
             processed_files_repo: Optional processed files repository for data access
+
         """
         self._database_obj = database_obj
         self._refresh_callback = refresh_callback
@@ -94,14 +95,15 @@ class MaintenanceFunctions:
 
     def set_operation_callbacks(
         self,
-        on_start: Optional[Callable[[], None]],
-        on_end: Optional[Callable[[], None]],
+        on_start: Callable[[], None] | None,
+        on_end: Callable[[], None] | None,
     ) -> None:
         """Set callbacks invoked at the start and end of each operation.
 
         Args:
             on_start: Called before each maintenance operation begins.
             on_end: Called after each maintenance operation completes.
+
         """
         self._on_operation_start = on_start
         self._on_operation_end = on_end
@@ -111,6 +113,7 @@ class MaintenanceFunctions:
 
         Returns:
             The database object passed at construction time.
+
         """
         return self._database_obj
 
@@ -185,7 +188,7 @@ class MaintenanceFunctions:
             self._on_operation_start()
         users_refresh = False
 
-        def _remove_folders_iter(folders_iter, active_only: bool) -> None:
+        def _remove_folders_iter(folders_iter, *, active_only: bool) -> None:
             nonlocal users_refresh
             count = len(folders_iter) if hasattr(folders_iter, "__len__") else 0
             if count > 0:
@@ -220,12 +223,13 @@ class MaintenanceFunctions:
 
     def mark_active_as_processed(
         self,
-        selected_folder: Optional[int] = None,
+        selected_folder: int | None = None,
     ) -> None:
         """Mark all files in active folders as processed.
 
         Args:
             selected_folder: Optional specific folder ID, or None for all active folders
+
         """
         if selected_folder is None:
             if self._on_operation_start:
@@ -333,6 +337,7 @@ class MaintenanceFunctions:
 
         Args:
             backup_path: Path to the backup file
+
         """
         if self._database_import_callback is None:
             logger.debug("Database import callback not configured")

@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for ScannerWare format configuratio
 Provides support for ScannerWare-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition, FieldType
@@ -19,13 +19,14 @@ class ScannerWareConfiguration:
 
     def __init__(
         self,
+        *,
         a_record_padding: str = "",
         append_a_records: bool = False,
         a_record_append_text: str = "",
         force_txt_file_ext: bool = False,
         invoice_date_offset: int = 0,
         retail_uom: bool = False,
-    ):
+    ) -> None:
         self.a_record_padding = a_record_padding
         self.append_a_records = append_a_records
         self.a_record_append_text = a_record_append_text
@@ -72,7 +73,7 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.SCANNERWARE
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
@@ -124,14 +125,14 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> ScannerWareConfiguration:
+    def create_config(self, data: dict[str, Any]) -> ScannerWareConfiguration:
         """Create a configuration instance from raw data."""
         return ScannerWareConfiguration(
             a_record_padding=data.get("a_record_padding", ""),
@@ -142,7 +143,7 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
             retail_uom=data.get("retail_uom", False),
         )
 
-    def serialize_config(self, config: ScannerWareConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: ScannerWareConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {
             "a_record_padding": config.a_record_padding,
@@ -153,11 +154,11 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
             "retail_uom": config.retail_uom,
         }
 
-    def deserialize_config(self, data: Dict[str, Any]) -> ScannerWareConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> ScannerWareConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

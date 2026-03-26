@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for eStore eInvoice format configur
 Provides support for eStore eInvoice-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition, FieldType
@@ -22,7 +22,7 @@ class EStoreEInvoiceConfiguration:
         estore_store_number: str = "",
         estore_vendor_oid: str = "",
         estore_vendor_namevendoroid: str = "",
-    ):
+    ) -> None:
         self.estore_store_number = estore_store_number
         self.estore_vendor_oid = estore_vendor_oid
         self.estore_vendor_namevendoroid = estore_vendor_namevendoroid
@@ -68,7 +68,7 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.ESTORE_EINVOICE
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
@@ -99,14 +99,14 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> EStoreEInvoiceConfiguration:
+    def create_config(self, data: dict[str, Any]) -> EStoreEInvoiceConfiguration:
         """Create a configuration instance from raw data."""
         return EStoreEInvoiceConfiguration(
             estore_store_number=data.get("estore_store_number", ""),
@@ -114,7 +114,7 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
             estore_vendor_namevendoroid=data.get("estore_vendor_namevendoroid", ""),
         )
 
-    def serialize_config(self, config: EStoreEInvoiceConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: EStoreEInvoiceConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {
             "estore_store_number": config.estore_store_number,
@@ -122,11 +122,11 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
             "estore_vendor_namevendoroid": config.estore_vendor_namevendoroid,
         }
 
-    def deserialize_config(self, data: Dict[str, Any]) -> EStoreEInvoiceConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> EStoreEInvoiceConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

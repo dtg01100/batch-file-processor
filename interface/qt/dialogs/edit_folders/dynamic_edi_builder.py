@@ -4,7 +4,7 @@ Handles the construction and management of dynamic EDI configuration sections
 that appear based on user selections in the EDI options dropdown.
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from core.structured_logging import (
     generate_correlation_id,
@@ -45,14 +45,14 @@ class DynamicEDIBuilder:
 
     def __init__(
         self,
-        fields: Dict[str, Any],
-        folder_config: Dict[str, Any],
+        fields: dict[str, Any],
+        folder_config: dict[str, Any],
         dynamic_container: QWidget,
         dynamic_layout: QVBoxLayout,
-        on_convert_format_changed: Optional[Callable[[str], None]] = None,
-        on_dynamic_form_changed: Optional[Callable[[], None]] = None,
+        on_convert_format_changed: Callable[[str], None] | None = None,
+        on_dynamic_form_changed: Callable[[], None] | None = None,
         plugin_manager: Optional["PluginManager"] = None,
-    ):
+    ) -> None:
         """Initialize the dynamic EDI builder.
 
         Args:
@@ -61,6 +61,7 @@ class DynamicEDIBuilder:
             dynamic_container: Container widget for dynamic content
             dynamic_layout: Layout to manage dynamic content
             on_convert_format_changed: Callback for convert format changes
+
         """
         self.fields = fields
         self.folder_config = folder_config
@@ -120,7 +121,7 @@ class DynamicEDIBuilder:
             ),
         }
 
-    def _get_convert_formats(self) -> List[str]:
+    def _get_convert_formats(self) -> list[str]:
         """Get all available convert formats from configuration plugins."""
         formats = []
         for plugin in self.configuration_plugins:
@@ -140,6 +141,7 @@ class DynamicEDIBuilder:
         Returns:
             The display name that matches a combo item, or the original value
             if no match is found.
+
         """
         if not stored_value:
             return stored_value
@@ -196,7 +198,7 @@ class DynamicEDIBuilder:
         "upc_padding_pattern_entry",
     ]
 
-    def _snapshot_upc_override(self):
+    def _snapshot_upc_override(self) -> None:
         """Save current UPC override widget values as plain Python values.
 
         Called before any clear that would destroy these widgets, so that
@@ -221,7 +223,7 @@ class DynamicEDIBuilder:
             except RuntimeError:
                 pass  # widget already deleted
 
-    def _restore_upc_override_as_plain_values(self):
+    def _restore_upc_override_as_plain_values(self) -> None:
         """Write saved UPC override values as plain Python values into self.fields.
 
         This ensures the data extractor returns the last known user values
@@ -230,7 +232,7 @@ class DynamicEDIBuilder:
         for key, value in self._saved_upc_override.items():
             self.fields[key] = value
 
-    def _clear_dynamic_edi(self):
+    def _clear_dynamic_edi(self) -> None:
         """Clear dynamic EDI widgets and clean up field references."""
         log_with_context(
             logger,
@@ -304,13 +306,13 @@ class DynamicEDIBuilder:
             if generator_key in self.fields:
                 del self.fields[generator_key]
 
-    def _find_and_track_widget_keys(self, widget, keys_to_remove):
+    def _find_and_track_widget_keys(self, widget, keys_to_remove) -> None:
         """Recursively find all descendant widgets and track their field keys."""
         self._add_widget_key_if_found(widget, keys_to_remove)
         for child in widget.findChildren(QWidget):
             self._add_widget_key_if_found(child, keys_to_remove)
 
-    def _find_and_track_layout_keys(self, layout, keys_to_remove):
+    def _find_and_track_layout_keys(self, layout, keys_to_remove) -> None:
         """Find all widgets in a layout and track their field keys."""
         for i in range(layout.count()):
             item = layout.itemAt(i)
@@ -333,7 +335,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool):
+    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return
@@ -361,11 +363,11 @@ class DynamicEDIBuilder:
 
             QTimer.singleShot(100, self._clear_edi_processing_flag)
 
-    def _clear_edi_processing_flag(self):
+    def _clear_edi_processing_flag(self) -> None:
         """Clear the EDI processing flag after a delay."""
         self._edi_option_processing = False
 
-    def _build_do_nothing_area(self):
+    def _build_do_nothing_area(self) -> None:
         """Build the 'Do Nothing' EDI configuration section."""
         self.fields["process_edi"] = False
         # Explicitly clear convert_formats_var so the extractor saves
@@ -374,7 +376,7 @@ class DynamicEDIBuilder:
         label = QLabel("Send As Is")
         self.dynamic_layout.addWidget(label)
 
-    def _build_convert_edi_area(self):
+    def _build_convert_edi_area(self) -> None:
         """Build the 'Convert EDI' configuration section."""
         self.fields["process_edi"] = True
 
@@ -415,7 +417,7 @@ class DynamicEDIBuilder:
 
         self.dynamic_layout.addWidget(wrapper)
 
-    def handle_convert_format_changed(self, fmt: str):
+    def handle_convert_format_changed(self, fmt: str) -> None:
         """Handle convert format selection changes."""
         log_with_context(
             logger,
@@ -462,7 +464,7 @@ class DynamicEDIBuilder:
             if plugin:
                 self._build_plugin_config_sub(plugin)
 
-    def _clear_convert_sub(self):
+    def _clear_convert_sub(self) -> None:
         """Clear convert sub-widgets and clean up field references."""
         if not self.convert_sub_layout:
             return
@@ -501,6 +503,7 @@ class DynamicEDIBuilder:
 
         Returns:
             List of field keys to remove
+
         """
         keys_to_remove = []
         items_to_remove = []
@@ -575,7 +578,7 @@ class DynamicEDIBuilder:
                 result[plugin_key] = cfg[legacy_key]
         return result
 
-    def _build_plugin_config_sub(self, plugin: ConfigurationPlugin):
+    def _build_plugin_config_sub(self, plugin: ConfigurationPlugin) -> None:
         """Build plugin configuration sub-section."""
         schema = plugin.get_configuration_schema()
         if schema:
@@ -597,7 +600,7 @@ class DynamicEDIBuilder:
             if self.convert_sub_layout is not None:
                 self.convert_sub_layout.addWidget(form_widget)
 
-    def _build_csv_sub(self):
+    def _build_csv_sub(self) -> None:
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -747,7 +750,7 @@ class DynamicEDIBuilder:
         include_item_numbers_check,
         include_item_desc_check,
         column_sort_field,
-    ):
+    ) -> None:
         cfg = self.folder_config
         upc_check.setChecked(
             normalize_bool(cfg.get("calculate_upc_check_digit", False))
@@ -804,7 +807,7 @@ class DynamicEDIBuilder:
         )
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
-    def _build_scannerware_sub(self):
+    def _build_scannerware_sub(self) -> None:
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -859,7 +862,7 @@ class DynamicEDIBuilder:
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _build_simplified_csv_sub(self):
+    def _build_simplified_csv_sub(self) -> None:
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -901,7 +904,7 @@ class DynamicEDIBuilder:
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _build_estore_sub(self, fmt: str):
+    def _build_estore_sub(self, fmt: str) -> None:
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
         wrapper_layout.setContentsMargins(0, 0, 0, 0)
@@ -940,7 +943,7 @@ class DynamicEDIBuilder:
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _build_fintech_sub(self):
+    def _build_fintech_sub(self) -> None:
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
         wrapper_layout.setContentsMargins(0, 0, 0, 0)
@@ -959,7 +962,7 @@ class DynamicEDIBuilder:
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _build_basic_options_sub(self):
+    def _build_basic_options_sub(self) -> None:
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -967,7 +970,7 @@ class DynamicEDIBuilder:
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _build_tweak_edi_area(self):
+    def _build_tweak_edi_area(self) -> None:
         """Compatibility shim for legacy callers.
 
         The dedicated tweak mode has been retired. Route legacy invocations to

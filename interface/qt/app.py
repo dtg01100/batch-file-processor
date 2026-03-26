@@ -14,7 +14,7 @@ import multiprocessing
 import os
 import platform
 import sys
-from typing import Any, Optional
+from typing import Any
 
 import appdirs
 from PyQt5.QtCore import QTimer
@@ -50,18 +50,18 @@ class QtBatchFileSenderApp:
         appname: str = "Batch File Sender",
         version: str = "(Git Branch: Master)",
         database_version: str = CURRENT_DATABASE_VERSION,
-        database_obj: Optional[DatabaseObj] = None,
-        folder_manager: Optional[FolderManager] = None,
-        ui_service: Optional[UIServiceProtocol] = None,
-        progress_service: Optional[ProgressServiceProtocol] = None,
+        database_obj: DatabaseObj | None = None,
+        folder_manager: FolderManager | None = None,
+        ui_service: UIServiceProtocol | None = None,
+        progress_service: ProgressServiceProtocol | None = None,
     ) -> None:
         self._appname = appname
         self._version = version
         self._database_version = database_version
 
-        self._database: Optional[DatabaseObj] = database_obj
-        self._ui_service: Optional[UIServiceProtocol] = ui_service
-        self._progress_service: Optional[ProgressServiceProtocol] = progress_service
+        self._database: DatabaseObj | None = database_obj
+        self._ui_service: UIServiceProtocol | None = ui_service
+        self._progress_service: ProgressServiceProtocol | None = progress_service
 
         self._running_platform = platform.system()
         self._appdirs_module = appdirs
@@ -70,32 +70,32 @@ class QtBatchFileSenderApp:
         self._utils_module = utils
         self._backup_increment_module = backup_increment
 
-        self._config_folder: Optional[str] = None
-        self._database_path: Optional[str] = None
+        self._config_folder: str | None = None
+        self._database_path: str | None = None
 
-        self._folder_manager: Optional[FolderManager] = folder_manager
-        self._folder_repo: Optional[Any] = None
-        self._settings_repo: Optional[Any] = None
-        self._processed_files_repo: Optional[Any] = None
-        self._reporting_service: Optional[ReportingService] = None
+        self._folder_manager: FolderManager | None = folder_manager
+        self._folder_repo: Any | None = None
+        self._settings_repo: Any | None = None
+        self._processed_files_repo: Any | None = None
+        self._reporting_service: ReportingService | None = None
 
-        self._app: Optional[QApplication] = None
-        self._window: Optional[QMainWindow] = None
+        self._app: QApplication | None = None
+        self._window: QMainWindow | None = None
 
         self._folder_filter = ""
 
-        self._folder_list_widget: Optional[Any] = None
-        self._search_widget: Optional[Any] = None
-        self._right_panel_widget: Optional[QWidget] = None
+        self._folder_list_widget: Any | None = None
+        self._search_widget: Any | None = None
+        self._right_panel_widget: QWidget | None = None
 
-        self._process_folder_button: Optional[QPushButton] = None
-        self._processed_files_button: Optional[QPushButton] = None
-        self._allow_resend_button: Optional[QPushButton] = None
+        self._process_folder_button: QPushButton | None = None
+        self._processed_files_button: QPushButton | None = None
+        self._allow_resend_button: QPushButton | None = None
 
-        self._args: Optional[argparse.Namespace] = None
+        self._args: argparse.Namespace | None = None
 
-        self._logs_directory: Optional[dict] = None
-        self._errors_directory: Optional[dict] = None
+        self._logs_directory: dict | None = None
+        self._errors_directory: dict | None = None
 
         self._bootstrap = QtAppBootstrapService(self)
         self._window_controller = QtMainWindowController(self)
@@ -134,7 +134,7 @@ class QtBatchFileSenderApp:
     def _run_gui_self_test(self) -> int:
         return self._diagnostics.run_gui_self_test()
 
-    def initialize(self, args: Optional[list[str]] = None) -> None:
+    def initialize(self, args: list[str] | None = None) -> None:
         multiprocessing.freeze_support()
 
         self._configure_qt_platform()
@@ -253,7 +253,7 @@ class QtBatchFileSenderApp:
     def _configure_qt_platform(self) -> None:
         self._bootstrap.configure_qt_platform()
 
-    def _parse_arguments(self, args: Optional[list[str]] = None) -> None:
+    def _parse_arguments(self, args: list[str] | None = None) -> None:
         self._args = self._bootstrap.parse_arguments(args)
 
     def _setup_config_directories(self) -> None:
@@ -780,7 +780,7 @@ class QtBatchFileSenderApp:
         self._database.oversight_and_defaults.update(changes, ["id"])
 
     def _mark_active_as_processed_wrapper(
-        self, selected_folder: Optional[int] = None
+        self, selected_folder: int | None = None
     ) -> None:
         if self._folder_manager is None:
             return

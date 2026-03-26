@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from core.structured_logging import (
     generate_correlation_id,
@@ -50,7 +50,7 @@ class QtAppBootstrapService:
                 },
             )
 
-    def parse_arguments(self, args: Optional[list[str]] = None) -> argparse.Namespace:
+    def parse_arguments(self, args: list[str] | None = None) -> argparse.Namespace:
         correlation_id = generate_correlation_id()
         set_correlation_id(correlation_id)
         launch_options = argparse.ArgumentParser()

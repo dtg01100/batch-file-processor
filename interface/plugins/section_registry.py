@@ -8,7 +8,7 @@ components.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable
 
 
 class ConfigSectionBase(ABC):
@@ -27,6 +27,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             str: Unique section identifier
+
         """
 
     @classmethod
@@ -37,6 +38,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             str: Section title for display
+
         """
 
     @classmethod
@@ -47,6 +49,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             str: Section description
+
         """
 
     @classmethod
@@ -57,6 +60,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             ConfigurationSchema: Schema for this section's configuration
+
         """
 
     @classmethod
@@ -68,6 +72,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             int: Priority value (default: 100)
+
         """
         return 100
 
@@ -78,6 +83,7 @@ class ConfigSectionBase(ABC):
 
         Returns:
             bool: True if expanded by default
+
         """
         return True
 
@@ -90,7 +96,7 @@ class SectionRenderer(ABC):
     """
 
     @abstractmethod
-    def render(self, parent: Any, config: Optional[Dict[str, Any]] = None) -> Any:
+    def render(self, parent: Any, config: dict[str, Any] | None = None) -> Any:
         """
         Render the section in the parent widget.
 
@@ -100,24 +106,27 @@ class SectionRenderer(ABC):
 
         Returns:
             Any: Rendered section widget
+
         """
 
     @abstractmethod
-    def get_values(self) -> Dict[str, Any]:
+    def get_values(self) -> dict[str, Any]:
         """
         Get current configuration values from the rendered section.
 
         Returns:
             Dict[str, Any]: Current configuration values
+
         """
 
     @abstractmethod
-    def set_values(self, config: Dict[str, Any]) -> None:
+    def set_values(self, config: dict[str, Any]) -> None:
         """
         Set configuration values in the rendered section.
 
         Args:
             config: Configuration values to set
+
         """
 
     @abstractmethod
@@ -127,15 +136,17 @@ class SectionRenderer(ABC):
 
         Returns:
             bool: True if valid, False otherwise
+
         """
 
     @abstractmethod
-    def get_validation_errors(self) -> List[str]:
+    def get_validation_errors(self) -> list[str]:
         """
         Get validation errors from the section.
 
         Returns:
             List[str]: List of validation error messages
+
         """
 
 
@@ -147,17 +158,18 @@ class SectionRegistry:
     sections from plugins and the core system.
     """
 
-    _sections: Dict[str, Type[ConfigSectionBase]] = {}
-    _renderers: Dict[str, Callable] = {}
-    _plugin_sections: Dict[str, List[str]] = {}
+    _sections: dict[str, type[ConfigSectionBase]] = {}
+    _renderers: dict[str, Callable] = {}
+    _plugin_sections: dict[str, list[str]] = {}
 
     @classmethod
-    def register_section(cls, section_class: Type[ConfigSectionBase]) -> None:
+    def register_section(cls, section_class: type[ConfigSectionBase]) -> None:
         """
         Register a configuration section.
 
         Args:
             section_class: Section class to register
+
         """
         section_id = section_class.get_section_id()
         if section_id in cls._sections:
@@ -171,12 +183,13 @@ class SectionRegistry:
 
         Args:
             section_id: ID of section to unregister
+
         """
         cls._sections.pop(section_id, None)
         cls._renderers.pop(section_id, None)
 
     @classmethod
-    def get_section(cls, section_id: str) -> Optional[Type[ConfigSectionBase]]:
+    def get_section(cls, section_id: str) -> type[ConfigSectionBase] | None:
         """
         Get a registered section by ID.
 
@@ -185,23 +198,25 @@ class SectionRegistry:
 
         Returns:
             Optional[Type[ConfigSectionBase]]: Section class or None if not found
+
         """
         return cls._sections.get(section_id)
 
     @classmethod
-    def get_all_sections(cls) -> List[Type[ConfigSectionBase]]:
+    def get_all_sections(cls) -> list[type[ConfigSectionBase]]:
         """
         Get all registered sections sorted by priority.
 
         Returns:
             List[Type[ConfigSectionBase]]: List of section classes sorted by priority
+
         """
         sections = list(cls._sections.values())
         sections.sort(key=lambda s: s.get_priority())
         return sections
 
     @classmethod
-    def get_sections_by_plugin(cls, plugin_id: str) -> List[Type[ConfigSectionBase]]:
+    def get_sections_by_plugin(cls, plugin_id: str) -> list[type[ConfigSectionBase]]:
         """
         Get all sections registered by a specific plugin.
 
@@ -210,13 +225,14 @@ class SectionRegistry:
 
         Returns:
             List[Type[ConfigSectionBase]]: List of section classes for the plugin
+
         """
         section_ids = cls._plugin_sections.get(plugin_id, [])
         return [cls._sections[sid] for sid in section_ids if sid in cls._sections]
 
     @classmethod
     def register_plugin_section(
-        cls, plugin_id: str, section_class: Type[ConfigSectionBase]
+        cls, plugin_id: str, section_class: type[ConfigSectionBase]
     ) -> None:
         """
         Register a section as belonging to a specific plugin.
@@ -224,6 +240,7 @@ class SectionRegistry:
         Args:
             plugin_id: Plugin identifier
             section_class: Section class to register for the plugin
+
         """
         section_id = section_class.get_section_id()
         cls.register_section(section_class)
@@ -241,11 +258,12 @@ class SectionRegistry:
         Args:
             section_id: Section identifier
             renderer_factory: Callable that creates a SectionRenderer
+
         """
         cls._renderers[section_id] = renderer_factory
 
     @classmethod
-    def get_renderer(cls, section_id: str) -> Optional[Callable]:
+    def get_renderer(cls, section_id: str) -> Callable | None:
         """
         Get the renderer factory for a section.
 
@@ -254,6 +272,7 @@ class SectionRegistry:
 
         Returns:
             Optional[Callable]: Renderer factory or None if not found
+
         """
         return cls._renderers.get(section_id)
 
@@ -273,6 +292,7 @@ class SectionRegistry:
 
         Returns:
             int: Number of registered sections
+
         """
         return len(cls._sections)
 
@@ -292,6 +312,7 @@ class PluginSection(ConfigSectionBase):
 
         Returns:
             str: Plugin identifier
+
         """
         raise NotImplementedError("Subclasses must implement get_plugin_id")
 
@@ -302,5 +323,6 @@ class PluginSection(ConfigSectionBase):
 
         Returns:
             int: Priority value (default: 100)
+
         """
         return 100

@@ -8,13 +8,12 @@ easy to test and reuse.
 """
 
 import re
-from typing import List, Optional, Tuple
 
 # Default email regex pattern
 DEFAULT_EMAIL_PATTERN = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
 
 
-def validate_email(email: str, pattern: Optional[str] = None) -> bool:
+def validate_email(email: str, pattern: str | None = None) -> bool:
     """Validate an email address format.
 
     Uses a regex pattern to check if the email address has a valid format.
@@ -32,6 +31,7 @@ def validate_email(email: str, pattern: Optional[str] = None) -> bool:
         True
         >>> validate_email("invalid-email")
         False
+
     """
     if not email:
         return False
@@ -41,8 +41,8 @@ def validate_email(email: str, pattern: Optional[str] = None) -> bool:
 
 
 def validate_email_list(
-    emails: str, separator: str = ", ", pattern: Optional[str] = None
-) -> Tuple[bool, List[str]]:
+    emails: str, separator: str = ", ", pattern: str | None = None
+) -> tuple[bool, list[str]]:
     """Validate a list of email addresses.
 
     Splits the email string by the separator and validates each address.
@@ -62,6 +62,7 @@ def validate_email_list(
         (True, [])
         >>> validate_email_list("a@test.com, invalid")
         (False, ['invalid'])
+
     """
     if not emails:
         return True, []
@@ -86,6 +87,7 @@ def normalize_email(email: str) -> str:
     Example:
         >>> normalize_email("  TEST@EXAMPLE.COM  ")
         'test@example.com'
+
     """
     if not email:
         return ""
@@ -107,14 +109,16 @@ class EmailValidator:
         True
         >>> validator.validate_list("a@test.com; b@test.com", separator="; ")
         (True, [])
+
     """
 
-    def __init__(self, pattern: Optional[str] = None):
+    def __init__(self, pattern: str | None = None) -> None:
         """Initialize the email validator.
 
         Args:
             pattern: Optional custom regex pattern for validation.
                      If not provided, uses DEFAULT_EMAIL_PATTERN.
+
         """
         self.pattern = pattern or DEFAULT_EMAIL_PATTERN
 
@@ -126,12 +130,13 @@ class EmailValidator:
 
         Returns:
             True if valid format, False otherwise
+
         """
         return validate_email(email, self.pattern)
 
     def validate_list(
         self, emails: str, separator: str = "; "
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """Validate a list of email addresses.
 
         Args:
@@ -140,6 +145,7 @@ class EmailValidator:
 
         Returns:
             Tuple of (is_valid, invalid_emails)
+
         """
         return validate_email_list(emails, separator, self.pattern)
 
@@ -151,10 +157,11 @@ class EmailValidator:
 
         Returns:
             Lowercase, stripped email
+
         """
         return normalize_email(email)
 
-    def validate_and_normalize(self, email: str) -> Tuple[bool, str]:
+    def validate_and_normalize(self, email: str) -> tuple[bool, str]:
         """Validate and normalize an email address.
 
         Args:
@@ -162,12 +169,13 @@ class EmailValidator:
 
         Returns:
             Tuple of (is_valid, normalized_email)
+
         """
         normalized = self.normalize(email)
         is_valid = self.validate(normalized)
         return is_valid, normalized
 
-    def filter_valid(self, emails: List[str]) -> List[str]:
+    def filter_valid(self, emails: list[str]) -> list[str]:
         """Filter a list to only include valid emails.
 
         Args:
@@ -175,10 +183,11 @@ class EmailValidator:
 
         Returns:
             List of valid email addresses
+
         """
         return [e for e in emails if self.validate(e)]
 
-    def filter_invalid(self, emails: List[str]) -> List[str]:
+    def filter_invalid(self, emails: list[str]) -> list[str]:
         """Filter a list to only include invalid emails.
 
         Args:
@@ -186,5 +195,6 @@ class EmailValidator:
 
         Returns:
             List of invalid email addresses
+
         """
         return [e for e in emails if not self.validate(e)]

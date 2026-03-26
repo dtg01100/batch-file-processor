@@ -6,7 +6,7 @@ from the EditDialog class to enable comprehensive unit testing.
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from core.utils.bool_utils import normalize_bool
 from interface.models.folder_configuration import (
@@ -37,21 +37,21 @@ class ValidationError:
 class ValidationResult:
     """Result of validation operation."""
 
-    def __init__(self, is_valid: bool = True):
+    def __init__(self, *, is_valid: bool = True) -> None:
         self.is_valid = is_valid
-        self.errors: List[ValidationError] = []
-        self.warnings: List[ValidationError] = []
+        self.errors: list[ValidationError] = []
+        self.warnings: list[ValidationError] = []
 
-    def add_error(self, field: str, message: str):
+    def add_error(self, field: str, message: str) -> None:
         """Add an error to the result."""
         self.errors.append(ValidationError(field=field, message=message))
         self.is_valid = False
 
-    def add_warning(self, field: str, message: str):
+    def add_warning(self, field: str, message: str) -> None:
         """Add a warning to the result."""
         self.warnings.append(ValidationError(field=field, message=message))
 
-    def get_all_messages(self) -> List[str]:
+    def get_all_messages(self) -> list[str]:
         """Get all error and warning messages."""
         return [e.message for e in self.errors + self.warnings]
 
@@ -66,15 +66,16 @@ class FolderSettingsValidator:
 
     def __init__(
         self,
-        ftp_service: Optional[FTPServiceProtocol] = None,
-        existing_aliases: Optional[List[str]] = None,
-    ):
+        ftp_service: FTPServiceProtocol | None = None,
+        existing_aliases: list[str] | None = None,
+    ) -> None:
         """
         Initialize validator with optional dependencies.
 
         Args:
             ftp_service: Optional FTP service for connection testing
             existing_aliases: List of existing folder aliases for uniqueness check
+
         """
         self.ftp_service = ftp_service
         self.existing_aliases = existing_aliases or []
@@ -86,6 +87,7 @@ class FolderSettingsValidator:
         folder: str,
         username: str,
         password: str,
+        *,
         enabled: bool,
     ) -> ValidationResult:
         """
@@ -101,6 +103,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -154,7 +157,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_email_settings(
-        self, recipients: str, enabled: bool
+        self, recipients: str, *, enabled: bool
     ) -> ValidationResult:
         """
         Validate email settings.
@@ -165,6 +168,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -193,7 +197,7 @@ class FolderSettingsValidator:
         return bool(re.match(pattern, email))
 
     def validate_copy_settings(
-        self, destination: str, enabled: bool
+        self, destination: str, *, enabled: bool
     ) -> ValidationResult:
         """
         Validate copy backend settings.
@@ -204,6 +208,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -218,7 +223,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_alias(
-        self, alias: str, folder_name: str, current_alias: Optional[str] = None
+        self, alias: str, folder_name: str, current_alias: str | None = None
     ) -> ValidationResult:
         """
         Validate folder alias.
@@ -230,6 +235,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -256,6 +262,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -270,8 +277,9 @@ class FolderSettingsValidator:
         self,
         padding_text: str,
         padding_length: int,
+        *,
         enabled: bool,
-        convert_format: Optional[str] = None,
+        convert_format: str | None = None,
     ) -> ValidationResult:
         """
         Validate A-record padding settings.
@@ -284,6 +292,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -312,7 +321,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_upc_override(
-        self, enabled: bool, category_filter: str
+        self, *, enabled: bool, category_filter: str
     ) -> ValidationResult:
         """
         Validate UPC override settings.
@@ -323,6 +332,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -353,7 +363,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_backend_specific(
-        self, convert_format: str, division_id: Optional[str] = None
+        self, convert_format: str, division_id: str | None = None
     ) -> ValidationResult:
         """
         Validate backend-specific settings.
@@ -364,6 +374,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -379,7 +390,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_edi_split_requirements(
-        self, convert_format: str, split_edi: bool, prepend_dates: bool
+        self, convert_format: str, *, split_edi: bool, prepend_dates: bool
     ) -> ValidationResult:
         """
         Validate EDI split requirements.
@@ -391,6 +402,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with any validation errors
+
         """
         result = ValidationResult()
 
@@ -407,7 +419,7 @@ class FolderSettingsValidator:
         return result
 
     def validate_complete(
-        self, config: FolderConfiguration, current_alias: Optional[str] = None
+        self, config: FolderConfiguration, current_alias: str | None = None
     ) -> ValidationResult:
         """
         Validate complete folder configuration.
@@ -418,6 +430,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with all validation errors
+
         """
         return self._validate_config(
             config=config, current_alias=current_alias, include_extended_checks=True
@@ -426,7 +439,7 @@ class FolderSettingsValidator:
     def validate_extracted_fields(
         self,
         extracted_fields: "ExtractedDialogFields",
-        current_alias: Optional[str] = None,
+        current_alias: str | None = None,
     ) -> ValidationResult:
         """
         Validate extracted dialog fields.
@@ -437,6 +450,7 @@ class FolderSettingsValidator:
 
         Returns:
             ValidationResult with all validation errors
+
         """
         config = self._to_folder_configuration(extracted_fields)
         return self._validate_config(
@@ -514,7 +528,8 @@ class FolderSettingsValidator:
     def _validate_config(
         self,
         config: FolderConfiguration,
-        current_alias: Optional[str],
+        current_alias: str | None,
+        *,
         include_extended_checks: bool,
     ) -> ValidationResult:
         """Core validation path for full and extracted folder data."""

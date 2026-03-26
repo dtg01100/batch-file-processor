@@ -6,7 +6,7 @@ Provides support for Tweaks-specific configuration fields and validation based
 on the EDITweaker's TweakerConfig options.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition, FieldType
@@ -20,6 +20,7 @@ class TweaksConfiguration:
 
     def __init__(
         self,
+        *,
         pad_arec: bool = False,
         arec_padding: str = "",
         arec_padding_len: int = 0,
@@ -37,7 +38,7 @@ class TweaksConfiguration:
         split_prepaid_sales_tax_crec: bool = False,
         upc_target_length: int = 11,
         upc_padding_pattern: str = "           ",
-    ):
+    ) -> None:
         self.pad_arec = pad_arec
         self.arec_padding = arec_padding
         self.arec_padding_len = arec_padding_len
@@ -99,7 +100,7 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.TWEAKS
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = [
             # A-Record Padding
@@ -242,14 +243,14 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> TweaksConfiguration:
+    def create_config(self, data: dict[str, Any]) -> TweaksConfiguration:
         """Create a configuration instance from raw data."""
         return TweaksConfiguration(
             pad_arec=data.get("pad_arec", False),
@@ -277,7 +278,7 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
             upc_padding_pattern=data.get("upc_padding_pattern", "           "),
         )
 
-    def serialize_config(self, config: TweaksConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: TweaksConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         if isinstance(config, dict):
             return config
@@ -301,13 +302,13 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
             "upc_padding_pattern": config.upc_padding_pattern,
         }
 
-    def deserialize_config(self, data: Dict[str, Any]) -> TweaksConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> TweaksConfiguration:
         """Deserialize stored data into a configuration instance."""
         if isinstance(data, TweaksConfiguration):
             return data
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

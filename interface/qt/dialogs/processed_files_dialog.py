@@ -9,7 +9,7 @@ helper.
 from __future__ import annotations
 
 import os
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeyEvent
@@ -37,14 +37,14 @@ class ProcessedFilesDialog(BaseDialog):
 
     def __init__(
         self,
-        parent: Optional[QWidget],
+        parent: QWidget | None,
         database_obj: Any,
-        ui_service: Optional[UIServiceProtocol] = None,
+        ui_service: UIServiceProtocol | None = None,
     ) -> None:
         self._database_obj = database_obj
         self._ui_service = ui_service
 
-        self._selected_folder_id: Optional[int] = None
+        self._selected_folder_id: int | None = None
         self._output_folder: str = ""
         self._output_folder_confirmed: bool = False
         self._button_group = QButtonGroup()
@@ -136,7 +136,7 @@ class ProcessedFilesDialog(BaseDialog):
         scroll_area.setWidget(content)
         return scroll_area
 
-    def _get_folder_tuples(self) -> List[Tuple[int, str]]:
+    def _get_folder_tuples(self) -> list[tuple[int, str]]:
         # Use a single JOIN query to get distinct folder_id -> alias mapping
         # instead of N individual queries
         sql = """
@@ -153,7 +153,7 @@ class ProcessedFilesDialog(BaseDialog):
         self._rebuild_actions()
 
     def _rebuild_actions(self) -> None:
-        def _clear_layout(layout):
+        def _clear_layout(layout) -> None:
             while layout.count():
                 item = layout.takeAt(0)
                 if item is None:

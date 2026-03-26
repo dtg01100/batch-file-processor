@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for YellowDog CSV format configurat
 Provides support for YellowDog CSV-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition
@@ -17,7 +17,7 @@ from .validation_framework import ValidationResult
 class YellowDogCSVConfiguration:
     """YellowDog CSV configuration data class."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
@@ -59,31 +59,31 @@ class YellowDogCSVConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.YELLOWDOG_CSV
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = []
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> YellowDogCSVConfiguration:
+    def create_config(self, data: dict[str, Any]) -> YellowDogCSVConfiguration:
         """Create a configuration instance from raw data."""
         return YellowDogCSVConfiguration()
 
-    def serialize_config(self, config: YellowDogCSVConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: YellowDogCSVConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {}
 
-    def deserialize_config(self, data: Dict[str, Any]) -> YellowDogCSVConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> YellowDogCSVConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

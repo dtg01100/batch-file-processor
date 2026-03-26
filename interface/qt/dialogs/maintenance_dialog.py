@@ -6,7 +6,7 @@ Provides a QDialog wrapper around the toolkit-agnostic
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -32,13 +32,14 @@ class MaintenanceDialog(BaseDialog):
         parent: Optional parent widget.
         maintenance_functions: Pre-configured business-logic object.
         ui_service: UI service for confirmations and file dialogs.
+
     """
 
     def __init__(
         self,
-        parent: Optional[QWidget],
+        parent: QWidget | None,
         maintenance_functions: Any,
-        ui_service: Optional[UIServiceProtocol] = None,
+        ui_service: UIServiceProtocol | None = None,
     ) -> None:
         # Backward compatibility: some legacy call sites/tests still pass a
         # database object directly. If so, construct MaintenanceFunctions here.
@@ -56,7 +57,7 @@ class MaintenanceDialog(BaseDialog):
             self._on_operation_start, self._on_operation_end
         )
 
-    def body(self, parent: QWidget) -> Optional[QWidget]:
+    def body(self, parent: QWidget) -> QWidget | None:
         button_layout = QVBoxLayout()
         buttons = [
             ("Move all to active (Skips Settings Validation)", self._set_all_active),
@@ -90,15 +91,15 @@ class MaintenanceDialog(BaseDialog):
 
         return None
 
-    def _set_buttons_enabled(self, enabled: bool) -> None:
+    def _set_buttons_enabled(self, *, enabled: bool) -> None:
         for btn in self._buttons:
             btn.setEnabled(enabled)
 
     def _on_operation_start(self) -> None:
-        self._set_buttons_enabled(False)
+        self._set_buttons_enabled(enabled=False)
 
     def _on_operation_end(self) -> None:
-        self._set_buttons_enabled(True)
+        self._set_buttons_enabled(enabled=True)
 
     def _set_all_active(self) -> None:
         self._mf.set_all_active()
@@ -110,11 +111,11 @@ class MaintenanceDialog(BaseDialog):
         self._mf.clear_resend_flags()
 
     def _clear_queued_emails(self) -> None:
-        self._set_buttons_enabled(False)
+        self._set_buttons_enabled(enabled=False)
         try:
             self._mf.get_database().emails_table.delete()
         finally:
-            self._set_buttons_enabled(True)
+            self._set_buttons_enabled(enabled=True)
 
     def _mark_active_as_processed(self) -> None:
         self._mf.mark_active_as_processed()
@@ -142,10 +143,10 @@ class MaintenanceDialog(BaseDialog):
     @classmethod
     def open_dialog(
         cls,
-        parent: Optional[QWidget],
+        parent: QWidget | None,
         maintenance_functions: MaintenanceFunctions,
-        ui_service: Optional[UIServiceProtocol] = None,
-    ) -> Optional[MaintenanceDialog]:
+        ui_service: UIServiceProtocol | None = None,
+    ) -> MaintenanceDialog | None:
         if ui_service and not ui_service.ask_ok_cancel(
             "Maintenance",
             "Maintenance window is for advanced users only, potential for data "

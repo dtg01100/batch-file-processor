@@ -8,7 +8,7 @@ IFolderRepository, enabling testing without actual database connections.
 """
 
 import os
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.ports.repositories import IFolderRepository, ISettingsRepository
 
@@ -17,7 +17,7 @@ from core.ports.repositories import IFolderRepository, ISettingsRepository
 class TableProtocol(Protocol):
     """Protocol for database table operations."""
 
-    def find_one(self, **kwargs) -> Optional[dict]:
+    def find_one(self, **kwargs) -> dict | None:
         """Find a single record matching criteria."""
         ...
 
@@ -105,6 +105,7 @@ class FolderManager:
         {'folder_name': '/path/to/folder', 'alias': 'folder', ...}
         >>> manager.check_folder_exists("/path/to/folder")
         {'truefalse': True, 'matched_folder': {...}}
+
     """
 
     SKIP_LIST = [
@@ -124,16 +125,17 @@ class FolderManager:
 
     def __init__(
         self,
-        database: Optional[DatabaseProtocol] = None,
-        folder_repo: Optional[IFolderRepository] = None,
-        settings_repo: Optional[ISettingsRepository] = None,
-    ):
+        database: DatabaseProtocol | None = None,
+        folder_repo: IFolderRepository | None = None,
+        settings_repo: ISettingsRepository | None = None,
+    ) -> None:
         """Initialize the folder manager.
 
         Args:
             database: Database object implementing DatabaseProtocol (legacy)
             folder_repo: IFolderRepository implementation (preferred)
             settings_repo: ISettingsRepository for getting defaults (optional)
+
         """
         if folder_repo is None and (
             database is None or not isinstance(database, DatabaseProtocol)
@@ -146,9 +148,7 @@ class FolderManager:
         self._db = database  # Always store database if provided - needed for delete_folder_with_related
         self._settings_repo = settings_repo
 
-    def add_folder(
-        self, folder_path: str, template_data: Optional[dict] = None
-    ) -> dict:
+    def add_folder(self, folder_path: str, template_data: dict | None = None) -> dict:
         """Add a folder to the database using template defaults.
 
         Args:
@@ -157,6 +157,7 @@ class FolderManager:
 
         Returns:
             The inserted folder record
+
         """
         if template_data is None:
             if self._settings_repo is not None:
@@ -191,6 +192,7 @@ class FolderManager:
 
         Returns:
             Unique alias string
+
         """
         base_name = os.path.basename(folder_path)
         alias = base_name
@@ -219,6 +221,7 @@ class FolderManager:
             Dict with keys:
                 - truefalse: bool indicating if folder exists
                 - matched_folder: The matching folder dict or None
+
         """
         if self._folder_repo is not None:
             all_folders = self._folder_repo.find_all()
@@ -231,7 +234,7 @@ class FolderManager:
 
         return {"truefalse": False, "matched_folder": None}
 
-    def get_folder_by_id(self, folder_id: int) -> Optional[dict]:
+    def get_folder_by_id(self, folder_id: int) -> dict | None:
         """Get a folder by its ID.
 
         Args:
@@ -239,12 +242,13 @@ class FolderManager:
 
         Returns:
             Folder dict or None if not found
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.find_by_id(folder_id)
         return self._db.folders_table.find_one(id=folder_id)
 
-    def get_folder_by_name(self, folder_name: str) -> Optional[dict]:
+    def get_folder_by_name(self, folder_name: str) -> dict | None:
         """Get a folder by its name (path).
 
         Args:
@@ -252,12 +256,13 @@ class FolderManager:
 
         Returns:
             Folder dict or None if not found
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.find_by_path(folder_name)
         return self._db.folders_table.find_one(folder_name=folder_name)
 
-    def get_folder_by_alias(self, alias: str) -> Optional[dict]:
+    def get_folder_by_alias(self, alias: str) -> dict | None:
         """Get a folder by its alias.
 
         Args:
@@ -265,6 +270,7 @@ class FolderManager:
 
         Returns:
             Folder dict or None if not found
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.find_by_alias(alias)
@@ -280,6 +286,7 @@ class FolderManager:
 
         Returns:
             True if successful, False if folder not found
+
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
@@ -301,6 +308,7 @@ class FolderManager:
 
         Returns:
             True if successful, False if folder not found
+
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
@@ -320,6 +328,7 @@ class FolderManager:
 
         Returns:
             True if deleted, False if folder not found
+
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
@@ -348,6 +357,7 @@ class FolderManager:
             This method requires DatabaseProtocol for processed_files and
             emails_table access.
             Will raise AttributeError if used with IFolderRepository.
+
         """
         folder = self.get_folder_by_id(folder_id)
         if folder:
@@ -366,6 +376,7 @@ class FolderManager:
 
         Returns:
             List of active folder dicts
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.find_all(active_only=True)
@@ -376,13 +387,14 @@ class FolderManager:
 
         Returns:
             List of inactive folder dicts
+
         """
         if self._folder_repo is not None:
             all_folders = self._folder_repo.find_all(active_only=False)
             return [f for f in all_folders if not f.get("folder_is_active", True)]
         return list(self._db.folders_table.find(folder_is_active=False))
 
-    def get_all_folders(self, order_by: Optional[str] = "alias") -> list[dict]:
+    def get_all_folders(self, order_by: str | None = "alias") -> list[dict]:
         """Get all folders.
 
         Args:
@@ -395,6 +407,7 @@ class FolderManager:
         Note:
             The order_by parameter is only supported with DatabaseProtocol.
             IFolderRepository returns unordered results.
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.find_all()
@@ -402,7 +415,7 @@ class FolderManager:
             return list(self._db.folders_table.find(order_by=order_by))
         return list(self._db.folders_table.all())
 
-    def count_folders(self, active_only: bool = False) -> int:
+    def count_folders(self, *, active_only: bool = False) -> int:
         """Count folders.
 
         Args:
@@ -410,6 +423,7 @@ class FolderManager:
 
         Returns:
             Folder count
+
         """
         if self._folder_repo is not None:
             return self._folder_repo.count(active_only=active_only)
@@ -425,6 +439,7 @@ class FolderManager:
 
         Returns:
             True if updated, False if folder not found
+
         """
         if "id" not in folder_data:
             return False
@@ -446,6 +461,7 @@ class FolderManager:
 
         Returns:
             True if updated, False if folder not found
+
         """
         if "folder_name" not in folder_data:
             return False
@@ -460,7 +476,9 @@ class FolderManager:
             return True
         return False
 
-    def batch_add_folders(self, parent_path: str, skip_existing: bool = True) -> dict:
+    def batch_add_folders(
+        self, parent_path: str, *, skip_existing: bool = True
+    ) -> dict:
         """Add all subdirectories of a parent path as folders.
 
         Args:
@@ -469,6 +487,7 @@ class FolderManager:
 
         Returns:
             Dict with 'added' and 'skipped' counts
+
         """
         if not os.path.isdir(parent_path):
             return {"added": 0, "skipped": 0, "error": "Parent path is not a directory"}

@@ -9,7 +9,7 @@ capabilities.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition
@@ -33,6 +33,7 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             str: Format name for display purposes
+
         """
 
     @classmethod
@@ -43,21 +44,23 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             ConvertFormat: The format enum from folder_configuration
+
         """
 
     @classmethod
     @abstractmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """
         Get the list of field definitions for this configuration format.
 
         Returns:
             List[FieldDefinition]: List of field definitions that define the
             configuration schema for this format.
+
         """
 
     @abstractmethod
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """
         Validate configuration data against the format's schema.
 
@@ -66,10 +69,11 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             ValidationResult: Result of the validation operation
+
         """
 
     @abstractmethod
-    def create_config(self, data: Dict[str, Any]) -> Any:
+    def create_config(self, data: dict[str, Any]) -> Any:
         """
         Create a configuration instance from raw data.
 
@@ -78,10 +82,11 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             Any: Configuration instance specific to this format
+
         """
 
     @abstractmethod
-    def serialize_config(self, config: Any) -> Dict[str, Any]:
+    def serialize_config(self, config: Any) -> dict[str, Any]:
         """
         Serialize a configuration instance to dictionary format.
 
@@ -90,10 +95,11 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             Dict[str, Any]: Serialized configuration data
+
         """
 
     @abstractmethod
-    def deserialize_config(self, data: Dict[str, Any]) -> Any:
+    def deserialize_config(self, data: dict[str, Any]) -> Any:
         """
         Deserialize stored data into a configuration instance.
 
@@ -102,6 +108,7 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             Any: Configuration instance specific to this format
+
         """
 
     @classmethod
@@ -114,6 +121,7 @@ class ConfigurationPlugin(PluginBase, ABC):
 
         Returns:
             Optional[ConfigurationSchema]: Configuration schema for the plugin
+
         """
         from .config_schemas import ConfigurationSchema
 

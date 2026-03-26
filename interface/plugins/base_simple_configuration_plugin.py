@@ -7,7 +7,7 @@ and get_format_enum().
 """
 
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition
@@ -64,32 +64,32 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
         return "1.0.0"
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         return []
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> Any:
+    def create_config(self, data: dict[str, Any]) -> Any:
         """Create a configuration instance from raw data."""
         return type("SimpleConfig", (), {"__init__": lambda self: None})()
 
-    def serialize_config(self, config: Any) -> Dict[str, Any]:
+    def serialize_config(self, config: Any) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         if hasattr(config, "__dict__"):
             return config.__dict__.copy()
         return {}
 
-    def deserialize_config(self, data: Dict[str, Any]) -> Any:
+    def deserialize_config(self, data: dict[str, Any]) -> Any:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

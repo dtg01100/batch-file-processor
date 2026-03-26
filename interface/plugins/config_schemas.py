@@ -7,7 +7,7 @@ with built-in validation support.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Union
 
 from .validation_framework import ValidationResult, Validator
 
@@ -42,14 +42,15 @@ class FieldDefinition:
         label: str = "",
         description: str = "",
         default: Any = None,
+        *,
         required: bool = False,
-        validators: Optional[List[Validator]] = None,
-        choices: Optional[List[Dict[str, Any]]] = None,
-        min_value: Optional[Union[int, float]] = None,
-        max_value: Optional[Union[int, float]] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-    ):
+        validators: list[Validator] | None = None,
+        choices: list[dict[str, Any]] | None = None,
+        min_value: Union[int, float] | None = None,
+        max_value: Union[int, float] | None = None,
+        min_length: int | None = None,
+        max_length: int | None = None,
+    ) -> None:
         """
         Initialize a field definition.
 
@@ -66,6 +67,7 @@ class FieldDefinition:
             max_value: Maximum value (for numeric fields)
             min_length: Minimum length (for string fields)
             max_length: Maximum length (for string fields)
+
         """
         self.name = name
         self.field_type = field_type
@@ -89,6 +91,7 @@ class FieldDefinition:
 
         Returns:
             ValidationResult: Validation result
+
         """
         # Check required field
         if self.required and value is None:
@@ -109,7 +112,7 @@ class FieldDefinition:
 
         return ValidationResult(success=len(errors) == 0, errors=errors)
 
-    def _validate_by_type(self, value: Any) -> List[str]:
+    def _validate_by_type(self, value: Any) -> list[str]:
         """Validate value according to configured field type."""
         validators = {
             FieldType.STRING: self._validate_string,
@@ -126,7 +129,7 @@ class FieldDefinition:
             return []
         return validator(value)
 
-    def _validate_string(self, value: Any) -> List[str]:
+    def _validate_string(self, value: Any) -> list[str]:
         errors = []
         if not isinstance(value, str):
             errors.append(f"Field '{self.name}' must be a string")
@@ -142,7 +145,7 @@ class FieldDefinition:
             )
         return errors
 
-    def _validate_integer(self, value: Any) -> List[str]:
+    def _validate_integer(self, value: Any) -> list[str]:
         errors = []
         if not isinstance(value, int):
             errors.append(f"Field '{self.name}' must be an integer")
@@ -154,7 +157,7 @@ class FieldDefinition:
             errors.append(f"Field '{self.name}' must be at most {self.max_value}")
         return errors
 
-    def _validate_float(self, value: Any) -> List[str]:
+    def _validate_float(self, value: Any) -> list[str]:
         errors = []
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             errors.append(f"Field '{self.name}' must be a number")
@@ -166,28 +169,28 @@ class FieldDefinition:
             errors.append(f"Field '{self.name}' must be at most {self.max_value}")
         return errors
 
-    def _validate_boolean(self, value: Any) -> List[str]:
+    def _validate_boolean(self, value: Any) -> list[str]:
         return (
             [f"Field '{self.name}' must be a boolean"]
             if not isinstance(value, bool)
             else []
         )
 
-    def _validate_list(self, value: Any) -> List[str]:
+    def _validate_list(self, value: Any) -> list[str]:
         return (
             [f"Field '{self.name}' must be a list"]
             if not isinstance(value, list)
             else []
         )
 
-    def _validate_dict(self, value: Any) -> List[str]:
+    def _validate_dict(self, value: Any) -> list[str]:
         return (
             [f"Field '{self.name}' must be a dictionary"]
             if not isinstance(value, dict)
             else []
         )
 
-    def _validate_select(self, value: Any) -> List[str]:
+    def _validate_select(self, value: Any) -> list[str]:
         errors = []
 
         if self.choices and value not in [c["value"] for c in self.choices]:
@@ -195,7 +198,7 @@ class FieldDefinition:
             errors.append(f"Field '{self.name}' must be one of: {valid_choices}")
         return errors
 
-    def _validate_multi_select(self, value: Any) -> List[str]:
+    def _validate_multi_select(self, value: Any) -> list[str]:
         errors = []
         if not isinstance(value, list):
             errors.append(f"Field '{self.name}' must be a list")
@@ -220,17 +223,18 @@ class ConfigurationSchema:
     Contains all field definitions and provides validation methods.
     """
 
-    def __init__(self, fields: List[FieldDefinition]):
+    def __init__(self, fields: list[FieldDefinition]) -> None:
         """
         Initialize a configuration schema.
 
         Args:
             fields: List of field definitions
+
         """
         self.fields = fields
         self._field_map = {field.name: field for field in fields}
 
-    def get_field(self, name: str) -> Optional[FieldDefinition]:
+    def get_field(self, name: str) -> FieldDefinition | None:
         """
         Get a field definition by name.
 
@@ -239,10 +243,11 @@ class ConfigurationSchema:
 
         Returns:
             Optional[FieldDefinition]: Field definition or None if not found
+
         """
         return self._field_map.get(name)
 
-    def validate(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate(self, config: dict[str, Any]) -> ValidationResult:
         """
         Validate a configuration dictionary against this schema.
 
@@ -251,6 +256,7 @@ class ConfigurationSchema:
 
         Returns:
             ValidationResult: Validation result
+
         """
         all_errors = []
 
@@ -261,12 +267,13 @@ class ConfigurationSchema:
 
         return ValidationResult(success=len(all_errors) == 0, errors=all_errors)
 
-    def get_defaults(self) -> Dict[str, Any]:
+    def get_defaults(self) -> dict[str, Any]:
         """
         Get the default configuration values.
 
         Returns:
             Dict[str, Any]: Dictionary of field names to default values
+
         """
         return {
             field.name: field.default
@@ -274,30 +281,33 @@ class ConfigurationSchema:
             if field.default is not None
         }
 
-    def get_required_fields(self) -> List[str]:
+    def get_required_fields(self) -> list[str]:
         """
         Get the list of required field names.
 
         Returns:
             List[str]: List of required field names
+
         """
         return [field.name for field in self.fields if field.required]
 
-    def get_field_types(self) -> Dict[str, FieldType]:
+    def get_field_types(self) -> dict[str, FieldType]:
         """
         Get a dictionary mapping field names to their types.
 
         Returns:
             Dict[str, FieldType]: Field name to type mapping
+
         """
         return {field.name: field.field_type for field in self.fields}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the schema to a dictionary representation.
 
         Returns:
             Dict[str, Any]: Schema as a dictionary
+
         """
         return {
             "fields": [

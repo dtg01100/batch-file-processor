@@ -4,7 +4,7 @@ Provides toolkit-agnostic SMTP validation, decoupled from any UI framework.
 """
 
 import errno
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -17,7 +17,7 @@ class SMTPServiceProtocol(Protocol):
         smtp_port: str,
         username: str = "",
         password: str = "",
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Test SMTP server connection.
 
         Args:
@@ -28,6 +28,7 @@ class SMTPServiceProtocol(Protocol):
 
         Returns:
             Tuple of (success: bool, error_message: Optional[str])
+
         """
         ...
 
@@ -43,7 +44,7 @@ class SMTPService:
         socket errors are surfaced correctly.
         """
         visited: set[int] = set()
-        current: Optional[BaseException] = error
+        current: BaseException | None = error
 
         while current is not None and id(current) not in visited:
             visited.add(id(current))
@@ -70,7 +71,7 @@ class SMTPService:
         smtp_port: str,
         username: str = "",
         password: str = "",
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Test SMTP server connection."""
         import smtplib
 
@@ -89,7 +90,9 @@ class SMTPService:
 class MockSMTPService:
     """Mock SMTP service for testing."""
 
-    def __init__(self, success: bool = True, error_message: Optional[str] = None):
+    def __init__(
+        self, *, success: bool = True, error_message: str | None = None
+    ) -> None:
         self._success = success
         self._error_message = error_message
         self.last_call = None
@@ -100,7 +103,7 @@ class MockSMTPService:
         smtp_port: str,
         username: str = "",
         password: str = "",
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         self.last_call = {
             "smtp_server": smtp_server,
             "smtp_port": smtp_port,

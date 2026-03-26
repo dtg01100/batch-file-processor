@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor
@@ -39,7 +39,7 @@ class FileExistenceWorker(QThread):
     file_checked = pyqtSignal(dict)
     finished = pyqtSignal(int, int)
 
-    def __init__(self, files: List[Dict[str, Any]], parent: QWidget = None) -> None:
+    def __init__(self, files: list[dict[str, Any]], parent: QWidget = None) -> None:
         super().__init__(parent)
         self._files = files
         self._is_cancelled = False
@@ -79,9 +79,9 @@ class ResendDialog(BaseDialog):
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._database_connection = database_connection
-        self._service: Optional[ResendService] = None
-        self._all_files: List[Dict[str, Any]] = []
-        self._filtered_files: List[Dict[str, Any]] = []
+        self._service: ResendService | None = None
+        self._all_files: list[dict[str, Any]] = []
+        self._filtered_files: list[dict[str, Any]] = []
         self._selected_files: set = set()
         self._is_updating_selection = False
         self._ignore_table_selection_changes = False
@@ -92,7 +92,7 @@ class ResendDialog(BaseDialog):
 
         self._current_offset = 0
         self._total_files = 0
-        self._file_check_worker: Optional[FileExistenceWorker] = None
+        self._file_check_worker: FileExistenceWorker | None = None
         self._is_loading = False
         self._has_more_data = True
         self._search_text = ""
@@ -380,7 +380,7 @@ class ResendDialog(BaseDialog):
             checkbox.released.connect(self._on_checkbox_released)
             checkbox.stateChanged.connect(
                 lambda state, fid=file_info["id"]: self._on_file_selected(
-                    fid, state == Qt.CheckState.Checked
+                    fid, selected=state == Qt.CheckState.Checked
                 )
             )
             self._table.setCellWidget(row, 0, checkbox)
@@ -434,7 +434,7 @@ class ResendDialog(BaseDialog):
         self._file_check_worker.finished.connect(self._on_file_check_finished)
         self._file_check_worker.start()
 
-    def _on_file_checked(self, file_info: Dict[str, Any]) -> None:
+    def _on_file_checked(self, file_info: dict[str, Any]) -> None:
         """Handle individual file check result."""
         for f in self._filtered_files:
             if f["id"] == file_info["id"]:
@@ -474,7 +474,7 @@ class ResendDialog(BaseDialog):
         self._search_timer.stop()
         self._do_search_filter()
 
-    def _on_date_filter_toggled(self, checked: bool) -> None:
+    def _on_date_filter_toggled(self, checked: bool) -> None:  # noqa: FBT001
         """Handle date filter checkbox toggle."""
         self._date_from_input.setEnabled(checked)
         self._date_to_input.setEnabled(checked)
@@ -492,7 +492,7 @@ class ResendDialog(BaseDialog):
         """Clear date filters and reload data."""
         self._date_filter_checkbox.setChecked(False)
 
-    def _get_date_filters(self) -> tuple[Optional[str], Optional[str]]:
+    def _get_date_filters(self) -> tuple[str | None, str | None]:
         """Return date_from/date_to values for queries, or None if not set."""
         if not self._date_filter_checkbox.isChecked():
             return None, None
@@ -511,7 +511,7 @@ class ResendDialog(BaseDialog):
 
     @staticmethod
     def _matches_search_field(
-        file_info: Dict[str, Any], lower_text: str, field: str
+        file_info: dict[str, Any], lower_text: str, field: str
     ) -> bool:
         """Check if a row matches text based on selected search field."""
         if field == "file_name":
@@ -576,7 +576,7 @@ class ResendDialog(BaseDialog):
         self._update_pagination()
         self._update_status()
 
-    def _on_file_selected(self, file_id: int, selected: bool) -> None:
+    def _on_file_selected(self, file_id: int, *, selected: bool) -> None:
         """Handle file selection in table."""
         self._ignore_table_selection_changes = False
         if selected:
@@ -635,9 +635,9 @@ class ResendDialog(BaseDialog):
                 continue
             should_check = self._filtered_files[row]["id"] in self._selected_files
             if checkbox.isChecked() != should_check:
-                checkbox.blockSignals(True)
+                checkbox.blockSignals(True)  # noqa: FBT003
                 checkbox.setChecked(should_check)
-                checkbox.blockSignals(False)
+                checkbox.blockSignals(False)  # noqa: FBT003
 
         self._is_updating_selection = False
 
@@ -769,7 +769,7 @@ class ResendDialog(BaseDialog):
         """Mark selected files for resend."""
         try:
             file_ids = list(self._selected_files)
-            self._service.set_resend_flags_batch(file_ids, True)
+            self._service.set_resend_flags_batch(file_ids, resend_flag=True)
             selected_set = set(file_ids)
             for file_info in self._all_files:
                 if file_info["id"] in selected_set:
@@ -787,7 +787,7 @@ class ResendDialog(BaseDialog):
         """Clear resend flags for selected files."""
         try:
             file_ids = list(self._selected_files)
-            self._service.set_resend_flags_batch(file_ids, False)
+            self._service.set_resend_flags_batch(file_ids, resend_flag=False)
             selected_set = set(file_ids)
             for file_info in self._all_files:
                 if file_info["id"] in selected_set:
@@ -808,6 +808,7 @@ def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
     Args:
         parent: Parent widget
         database_connection: Database connection object
+
     """
     dialog = ResendDialog(parent, database_connection)
     if dialog._should_show:

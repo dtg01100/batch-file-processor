@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for Simplified CSV format configura
 Provides support for Simplified CSV-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition, FieldType
@@ -19,12 +19,13 @@ class SimplifiedCSVConfiguration:
 
     def __init__(
         self,
+        *,
         retail_uom: bool = False,
         include_headers: bool = False,
         include_item_numbers: bool = False,
         include_item_description: bool = False,
         simple_csv_sort_order: str = "",
-    ):
+    ) -> None:
         self.retail_uom = retail_uom
         self.include_headers = include_headers
         self.include_item_numbers = include_item_numbers
@@ -70,7 +71,7 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.SIMPLIFIED_CSV
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
@@ -111,14 +112,14 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> SimplifiedCSVConfiguration:
+    def create_config(self, data: dict[str, Any]) -> SimplifiedCSVConfiguration:
         """Create a configuration instance from raw data."""
         return SimplifiedCSVConfiguration(
             retail_uom=data.get("retail_uom", False),
@@ -128,7 +129,7 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
             simple_csv_sort_order=data.get("simple_csv_sort_order", ""),
         )
 
-    def serialize_config(self, config: SimplifiedCSVConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: SimplifiedCSVConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {
             "retail_uom": config.retail_uom,
@@ -138,11 +139,11 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
             "simple_csv_sort_order": config.simple_csv_sort_order,
         }
 
-    def deserialize_config(self, data: Dict[str, Any]) -> SimplifiedCSVConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> SimplifiedCSVConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

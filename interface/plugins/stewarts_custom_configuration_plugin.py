@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for Stewarts Custom format configur
 Provides support for Stewarts Custom-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition
@@ -17,7 +17,7 @@ from .validation_framework import ValidationResult
 class StewartsCustomConfiguration:
     """Stewarts Custom configuration data class."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
@@ -61,31 +61,31 @@ class StewartsCustomConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.STEWARTS_CUSTOM
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = []
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> StewartsCustomConfiguration:
+    def create_config(self, data: dict[str, Any]) -> StewartsCustomConfiguration:
         """Create a configuration instance from raw data."""
         return StewartsCustomConfiguration()
 
-    def serialize_config(self, config: StewartsCustomConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: StewartsCustomConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {}
 
-    def deserialize_config(self, data: Dict[str, Any]) -> StewartsCustomConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> StewartsCustomConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)

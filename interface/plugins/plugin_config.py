@@ -26,11 +26,12 @@ Example:
                 'help': 'The division identifier'
             }
         ]
+
 """
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal, Union
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class ConfigField:
         placeholder: Placeholder text for text fields.
         validator: Optional validation regex or callable.
         visible_if: Conditional visibility (dict with field: value pairs).
+
     """
 
     key: str
@@ -62,12 +64,12 @@ class ConfigField:
     default: Any
     required: bool = False
     help: str = ""
-    options: List[Union[str, tuple]] = field(default_factory=list)
-    min_value: Optional[Union[int, float]] = None
-    max_value: Optional[Union[int, float]] = None
+    options: list[Union[str, tuple]] = field(default_factory=list)
+    min_value: Union[int, float] | None = None
+    max_value: Union[int, float] | None = None
     placeholder: str = ""
-    validator: Optional[str] = None
-    visible_if: Optional[Dict[str, Any]] = None
+    validator: str | None = None
+    visible_if: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Validate field configuration."""
@@ -80,11 +82,11 @@ class ConfigField:
             )
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ConfigField":
+    def from_dict(cls, data: dict[str, Any]) -> "ConfigField":
         """Create ConfigField from dictionary."""
         return cls(**data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert ConfigField to dictionary."""
         return {
             "key": self.key,
@@ -112,17 +114,18 @@ class PluginConfigMixin:
         CONFIG_FIELDS: List of ConfigField definitions or dicts
     """
 
-    PLUGIN_ID: Optional[str] = None
-    PLUGIN_NAME: Optional[str] = None
+    PLUGIN_ID: str | None = None
+    PLUGIN_NAME: str | None = None
     PLUGIN_DESCRIPTION: str = ""
-    CONFIG_FIELDS: List[Union[ConfigField, Dict[str, Any]]] = []
+    CONFIG_FIELDS: list[Union[ConfigField, dict[str, Any]]] = []
 
     @classmethod
-    def get_config_fields(cls) -> List[ConfigField]:
+    def get_config_fields(cls) -> list[ConfigField]:
         """Get parsed configuration fields for this plugin.
 
         Returns:
             List of ConfigField objects.
+
         """
         fields = []
         for field_def in cls.CONFIG_FIELDS:
@@ -135,16 +138,17 @@ class PluginConfigMixin:
         return fields
 
     @classmethod
-    def get_default_config(cls) -> Dict[str, Any]:
+    def get_default_config(cls) -> dict[str, Any]:
         """Get default configuration values for this plugin.
 
         Returns:
             Dictionary of default values keyed by field key.
+
         """
         return {field.key: field.default for field in cls.get_config_fields()}
 
     @classmethod
-    def validate_config(cls, config: Dict[str, Any]) -> tuple[bool, List[str]]:
+    def validate_config(cls, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """Validate configuration values.
 
         Args:
@@ -152,6 +156,7 @@ class PluginConfigMixin:
 
         Returns:
             Tuple of (is_valid, error_messages).
+
         """
         errors = []
         fields = cls.get_config_fields()
@@ -223,6 +228,7 @@ class PluginConfigMixin:
 
         Returns:
             Configuration value.
+
         """
         if hasattr(self, "parameters_dict"):
             params = getattr(self, "parameters_dict")
@@ -234,8 +240,8 @@ class PluginConfigMixin:
 class PluginRegistry:
     """Registry for discovering and managing plugins."""
 
-    _convert_plugins: Dict[str, type] = {}
-    _send_plugins: Dict[str, type] = {}
+    _convert_plugins: dict[str, type] = {}
+    _send_plugins: dict[str, type] = {}
 
     @classmethod
     def register_convert_plugin(cls, plugin_class: type) -> None:
@@ -243,6 +249,7 @@ class PluginRegistry:
 
         Args:
             plugin_class: Plugin class with PLUGIN_ID attribute.
+
         """
         if not hasattr(plugin_class, "PLUGIN_ID") or not plugin_class.PLUGIN_ID:
             raise ValueError(f"Plugin {plugin_class.__name__} must define PLUGIN_ID")
@@ -255,6 +262,7 @@ class PluginRegistry:
 
         Args:
             plugin_class: Plugin class with PLUGIN_ID attribute.
+
         """
         if not hasattr(plugin_class, "PLUGIN_ID") or not plugin_class.PLUGIN_ID:
             raise ValueError(f"Plugin {plugin_class.__name__} must define PLUGIN_ID")
@@ -262,7 +270,7 @@ class PluginRegistry:
         cls._send_plugins[plugin_class.PLUGIN_ID] = plugin_class
 
     @classmethod
-    def get_convert_plugin(cls, plugin_id: str) -> Optional[type]:
+    def get_convert_plugin(cls, plugin_id: str) -> type | None:
         """Get a convert plugin by ID.
 
         Args:
@@ -270,11 +278,12 @@ class PluginRegistry:
 
         Returns:
             Plugin class or None.
+
         """
         return cls._convert_plugins.get(plugin_id)
 
     @classmethod
-    def get_send_plugin(cls, plugin_id: str) -> Optional[type]:
+    def get_send_plugin(cls, plugin_id: str) -> type | None:
         """Get a send plugin by ID.
 
         Args:
@@ -282,15 +291,17 @@ class PluginRegistry:
 
         Returns:
             Plugin class or None.
+
         """
         return cls._send_plugins.get(plugin_id)
 
     @classmethod
-    def list_convert_plugins(cls) -> List[tuple[str, str, str]]:
+    def list_convert_plugins(cls) -> list[tuple[str, str, str]]:
         """List all registered convert plugins.
 
         Returns:
             List of (plugin_id, plugin_name, description) tuples.
+
         """
         return [
             (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)
@@ -298,11 +309,12 @@ class PluginRegistry:
         ]
 
     @classmethod
-    def list_send_plugins(cls) -> List[tuple[str, str, str]]:
+    def list_send_plugins(cls) -> list[tuple[str, str, str]]:
         """List all registered send plugins.
 
         Returns:
             List of (plugin_id, plugin_name, description) tuples.
+
         """
         return [
             (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)
@@ -361,7 +373,7 @@ class PluginRegistry:
 
 def get_plugin_config(
     plugin_type: Literal["convert", "send"], plugin_id: str
-) -> Optional[List[ConfigField]]:
+) -> list[ConfigField] | None:
     """Get configuration fields for a plugin.
 
     Args:
@@ -370,6 +382,7 @@ def get_plugin_config(
 
     Returns:
         List of ConfigField objects or None if plugin not found.
+
     """
     if plugin_type == "convert":
         plugin_class = PluginRegistry.get_convert_plugin(plugin_id)

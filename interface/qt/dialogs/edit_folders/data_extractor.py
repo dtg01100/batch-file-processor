@@ -5,7 +5,7 @@ field name -> QWidget mappings and produces an ExtractedDialogFields dataclass,
 mirroring the Tkinter-based FolderDataExtractor but operating on PyQt5 widgets.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -33,10 +33,10 @@ class QtFolderDataExtractor:
 
     def __init__(
         self,
-        fields: Dict[str, Any],
-        plugin_manager: Optional[PluginManager] = None,
+        fields: dict[str, Any],
+        plugin_manager: PluginManager | None = None,
         copy_to_directory: str = "",
-    ):
+    ) -> None:
         self.fields = fields
         self._plugin_manager = plugin_manager or get_shared_plugin_manager()
         self._copy_to_directory = copy_to_directory
@@ -118,7 +118,7 @@ class QtFolderDataExtractor:
             plugin_configurations=plugin_configs,
         )
 
-    def _extract_plugin_configurations(self) -> Dict[str, Dict[str, Any]]:
+    def _extract_plugin_configurations(self) -> dict[str, dict[str, Any]]:
         """Extract plugin configurations from the form."""
         plugin_configs = {}
 

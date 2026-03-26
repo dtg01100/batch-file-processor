@@ -9,7 +9,6 @@ support testing and headless environments.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtGui import QColor, QPalette
@@ -39,9 +38,10 @@ class QtUIService:
     Args:
         parent: Optional parent widget for all dialogs.  When ``None``,
             dialogs are shown as top-level windows.
+
     """
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         self._parent = parent
 
     # -- informational dialogs ------------------------------------------------
@@ -65,6 +65,7 @@ class QtUIService:
 
         Returns:
             ``True`` if the user selected *Yes*, ``False`` otherwise.
+
         """
         result = QMessageBox.question(
             self._parent,
@@ -80,6 +81,7 @@ class QtUIService:
 
         Returns:
             ``True`` if the user selected *OK*, ``False`` otherwise.
+
         """
         result = QMessageBox.question(
             self._parent,
@@ -94,7 +96,7 @@ class QtUIService:
 
     @staticmethod
     def _convert_filetypes(
-        filetypes: Optional[list[tuple[str, str]]],
+        filetypes: list[tuple[str, str]] | None,
     ) -> str:
         """Convert Tkinter-style filetypes to a Qt filter string.
 
@@ -107,6 +109,7 @@ class QtUIService:
         Returns:
             A ``;;``-separated Qt filter string, or an empty string when
             *filetypes* is ``None`` or empty.
+
         """
         if not filetypes:
             return ""
@@ -118,12 +121,13 @@ class QtUIService:
     def ask_directory(
         self,
         title: str = "Select Directory",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
     ) -> str:
         """Show a directory-selection dialog via :class:`QFileDialog`.
 
         Returns:
             The selected directory path, or an empty string if cancelled.
+
         """
         result = QFileDialog.getExistingDirectory(
             self._parent,
@@ -135,13 +139,14 @@ class QtUIService:
     def ask_open_filename(
         self,
         title: str = "Open File",
-        initial_dir: Optional[str] = None,
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        initial_dir: str | None = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show a file-open dialog via :class:`QFileDialog`.
 
         Returns:
             The selected file path, or an empty string if cancelled.
+
         """
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getOpenFileName(
@@ -155,9 +160,9 @@ class QtUIService:
     def ask_save_filename(
         self,
         title: str = "Save File",
-        initial_dir: Optional[str] = None,
+        initial_dir: str | None = None,
         default_ext: str = "",
-        filetypes: Optional[list[tuple[str, str]]] = None,
+        filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Show a file-save dialog via :class:`QFileDialog`.
 
@@ -166,6 +171,7 @@ class QtUIService:
 
         Returns:
             The selected file path, or an empty string if cancelled.
+
         """
         filter_str = self._convert_filetypes(filetypes)
         path, _ = QFileDialog.getSaveFileName(
@@ -195,6 +201,7 @@ class QtProgressService(QObject):
     Args:
         parent: The widget to overlay.  The overlay is parented to this
             widget and resizes to match it.
+
     """
 
     def __init__(self, parent: QWidget) -> None:
@@ -240,6 +247,7 @@ class QtProgressService(QObject):
 
         Returns:
             The :class:`QFrame` overlay instance.
+
         """
         return self._overlay
 
@@ -252,7 +260,9 @@ class QtProgressService(QObject):
         overlay.setObjectName("qt_progress_overlay")
         overlay.setAutoFillBackground(True)
         # Ensure stylesheet background gets painted even with global QFrame styles.
-        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        overlay.setAttribute(
+            Qt.WidgetAttribute.WA_StyledBackground, True  # noqa: FBT003
+        )
         overlay.setStyleSheet(
             f"QFrame#qt_progress_overlay {{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
         )
@@ -332,7 +342,7 @@ class QtProgressService(QObject):
         animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         # Ping-pong effect: reverse direction when animation finishes
-        def on_animation_finished():
+        def on_animation_finished() -> None:
             current_dir = animation.direction()
             new_dir = (
                 QPropertyAnimation.Direction.Backward
@@ -473,6 +483,7 @@ class QtProgressService(QObject):
 
         Args:
             message: The message to display
+
         """
         self.update_message(message)
 
@@ -484,6 +495,7 @@ class QtProgressService(QObject):
 
         Args:
             total: The total progress value
+
         """
         # Store total for reference if needed
         self._total = total
@@ -496,6 +508,7 @@ class QtProgressService(QObject):
 
         Args:
             current: The current progress value
+
         """
         if hasattr(self, "_total") and self._total > 0:
             percentage = min(100, int((current / self._total) * 100))
@@ -528,6 +541,7 @@ class QtProgressService(QObject):
             file_num: Current file index (1-based)
             file_total: Total number of files to process
             footer: Optional footer text
+
         """
         if folder_total > 0:
             self._folder_label.setText(f"Folder {folder_num} of {folder_total}")
@@ -558,6 +572,7 @@ class QtProgressService(QObject):
 
         Args:
             progress: Progress percentage from 0 to 100
+
         """
         # Ensure progress is within valid range
         progress = max(0, min(100, progress))
@@ -582,6 +597,7 @@ class QtProgressService(QObject):
             folder_name: Current folder display name
             pending_for_folder: Pending files found in current folder
             pending_total: Accumulated pending files found so far
+
         """
         if folder_total <= 0:
             self._discovery_progress_bar.setValue(0)
@@ -645,6 +661,7 @@ class QtProgressService(QObject):
             file_num: Current file index within folder (1-based)
             file_total: Total files in current folder
             filename: Name of the file being scanned
+
         """
         # Show scanning status in the file label
         self._file_label.setText(f"Scanning: {filename} ({file_num}/{file_total})")
@@ -714,6 +731,7 @@ class QtProgressService(QObject):
         Args:
             folder_name: Display name of the folder being processed.
             total_files: Number of files to process in this folder.
+
         """
         self._current_folder_name = folder_name
         if folder_num is not None:
@@ -740,6 +758,7 @@ class QtProgressService(QObject):
         Args:
             current_file: 1-based current file index.
             total_files: Total files in current folder.
+
         """
         self._current_file_index = max(0, current_file)
         self._current_file_total = max(0, total_files)
@@ -769,11 +788,12 @@ class QtProgressService(QObject):
             footer="",
         )
 
-    def complete_folder(self, success: bool) -> None:
+    def complete_folder(self, *, success: bool) -> None:
         """Complete progress reporting for the current folder.
 
         Args:
             success: Whether folder processing succeeded.
+
         """
         status_text = "Completed" if success else "Completed with errors"
         folder_name = self._current_folder_name or "folder"

@@ -7,7 +7,7 @@ validation, and UI widget creation.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .config_schemas import ConfigurationSchema
 from .validation_framework import ValidationResult
@@ -29,6 +29,7 @@ class PluginBase(ABC):
 
         Returns:
             str: Plugin name for display purposes
+
         """
 
     @classmethod
@@ -42,6 +43,7 @@ class PluginBase(ABC):
 
         Returns:
             str: Unique plugin identifier
+
         """
 
     @classmethod
@@ -52,6 +54,7 @@ class PluginBase(ABC):
 
         Returns:
             str: Plugin description
+
         """
 
     @classmethod
@@ -62,10 +65,11 @@ class PluginBase(ABC):
 
         Returns:
             str: Plugin version string
+
         """
 
     @classmethod
-    def get_configuration_schema(cls) -> Optional[ConfigurationSchema]:
+    def get_configuration_schema(cls) -> ConfigurationSchema | None:
         """
         Get the configuration schema for the plugin.
 
@@ -75,11 +79,12 @@ class PluginBase(ABC):
 
         Returns:
             Optional[ConfigurationSchema]: Configuration schema or None
+
         """
         return None
 
     @abstractmethod
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialize the plugin with configuration.
 
@@ -87,6 +92,7 @@ class PluginBase(ABC):
 
         Args:
             config: Optional configuration dictionary
+
         """
 
     @abstractmethod
@@ -105,7 +111,7 @@ class PluginBase(ABC):
         Called when the plugin is deactivated or the application shuts down.
         """
 
-    def validate_configuration(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_configuration(self, config: dict[str, Any]) -> ValidationResult:
         """
         Validate configuration against the plugin's schema.
 
@@ -114,18 +120,20 @@ class PluginBase(ABC):
 
         Returns:
             ValidationResult: Validation result
+
         """
         schema = self.get_configuration_schema()
         if schema is not None:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def get_default_configuration(self) -> Dict[str, Any]:
+    def get_default_configuration(self) -> dict[str, Any]:
         """
         Get the default configuration values for the plugin.
 
         Returns:
             Dict[str, Any]: Default configuration values
+
         """
         schema = self.get_configuration_schema()
         if schema is not None:
@@ -145,9 +153,10 @@ class PluginBase(ABC):
 
         Returns:
             Any: UI widget for plugin configuration
+
         """
 
-    def update_configuration(self, config: Dict[str, Any]) -> ValidationResult:
+    def update_configuration(self, config: dict[str, Any]) -> ValidationResult:
         """
         Update the plugin's configuration.
 
@@ -156,6 +165,7 @@ class PluginBase(ABC):
 
         Returns:
             ValidationResult: Validation result of the new configuration
+
         """
         validation = self.validate_configuration(config)
         if validation.success:
@@ -172,11 +182,12 @@ class PluginBase(ABC):
 
         Returns:
             bool: True if compatible, False otherwise
+
         """
         return True
 
     @classmethod
-    def get_dependencies(cls) -> List[str]:
+    def get_dependencies(cls) -> list[str]:
         """
         Get the list of plugin dependencies.
 
@@ -185,5 +196,6 @@ class PluginBase(ABC):
 
         Returns:
             List[str]: List of dependency plugin identifiers
+
         """
         return []

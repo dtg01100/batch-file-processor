@@ -7,7 +7,7 @@ dual UI framework architecture.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .config_schemas import ConfigurationSchema, FieldType
 
@@ -29,6 +29,7 @@ class WidgetBase(ABC):
 
         Returns:
             Any: Native widget instance (Qt)
+
         """
 
     @abstractmethod
@@ -38,6 +39,7 @@ class WidgetBase(ABC):
 
         Args:
             value: Value to set
+
         """
 
     @abstractmethod
@@ -47,6 +49,7 @@ class WidgetBase(ABC):
 
         Returns:
             Any: Current widget value
+
         """
 
     @abstractmethod
@@ -56,6 +59,7 @@ class WidgetBase(ABC):
 
         Args:
             label: Label text
+
         """
 
     @abstractmethod
@@ -65,24 +69,27 @@ class WidgetBase(ABC):
 
         Args:
             description: Description text
+
         """
 
     @abstractmethod
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         """
         Set whether the widget is enabled.
 
         Args:
             enabled: True if widget should be enabled, False otherwise
+
         """
 
     @abstractmethod
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         """
         Set whether the widget is visible.
 
         Args:
             visible: True if widget should be visible, False otherwise
+
         """
 
     @abstractmethod
@@ -92,6 +99,7 @@ class WidgetBase(ABC):
 
         Returns:
             bool: True if value is valid, False otherwise
+
         """
 
     @abstractmethod
@@ -101,6 +109,7 @@ class WidgetBase(ABC):
 
         Returns:
             list: List of validation error messages
+
         """
 
 
@@ -126,6 +135,7 @@ class WidgetFactory(ABC):
 
         Returns:
             WidgetBase: Created widget instance
+
         """
 
 
@@ -140,18 +150,19 @@ class WidgetFactoryRegistry:
     _factories = {}
 
     @classmethod
-    def register_factory(cls, framework: str, factory: WidgetFactory):
+    def register_factory(cls, framework: str, factory: WidgetFactory) -> None:
         """
         Register a widget factory for a specific UI framework.
 
         Args:
             framework: UI framework identifier (e.g., 'qt')
             factory: Widget factory to register
+
         """
         cls._factories[framework] = factory
 
     @classmethod
-    def get_factory(cls, framework: str) -> Optional[WidgetFactory]:
+    def get_factory(cls, framework: str) -> WidgetFactory | None:
         """
         Get the widget factory for a specific UI framework.
 
@@ -160,6 +171,7 @@ class WidgetFactoryRegistry:
 
         Returns:
             Optional[WidgetFactory]: Widget factory or None if not found
+
         """
         return cls._factories.get(framework)
 
@@ -173,6 +185,7 @@ class WidgetFactoryRegistry:
 
         Returns:
             bool: True if factory exists, False otherwise
+
         """
         return framework in cls._factories
 
@@ -185,12 +198,13 @@ class ConfigurationWidgetBuilder:
     from configuration schemas.
     """
 
-    def __init__(self, framework: str = "qt"):
+    def __init__(self, framework: str = "qt") -> None:
         """
         Initialize the widget builder.
 
         Args:
             framework: UI framework to use ('qt')
+
         """
         self.framework = framework
         self.factory = WidgetFactoryRegistry.get_factory(framework)
@@ -199,7 +213,7 @@ class ConfigurationWidgetBuilder:
 
     def build_widgets_from_schema(
         self, schema: ConfigurationSchema, parent: Any = None
-    ) -> Dict[str, WidgetBase]:
+    ) -> dict[str, WidgetBase]:
         """
         Build widgets from a configuration schema.
 
@@ -209,6 +223,7 @@ class ConfigurationWidgetBuilder:
 
         Returns:
             Dict[str, WidgetBase]: Dictionary of field names to widget instances
+
         """
         widgets = {}
         for field in schema.fields:
@@ -230,6 +245,7 @@ class ConfigurationWidgetBuilder:
 
         Returns:
             Any: Container widget with all configuration fields
+
         """
         widgets = self.build_widgets_from_schema(schema, parent)
 
@@ -244,7 +260,7 @@ class ConfigurationWidgetBuilder:
     @abstractmethod
     def _layout_widgets(
         self,
-        widgets: Dict[str, WidgetBase],
+        widgets: dict[str, WidgetBase],
         schema: ConfigurationSchema,
         parent: Any = None,
     ) -> Any:
@@ -258,6 +274,7 @@ class ConfigurationWidgetBuilder:
 
         Returns:
             Any: Container widget with layout
+
         """
 
 
@@ -281,6 +298,7 @@ class QtWidgetFactory(WidgetFactory):
 
         Returns:
             WidgetBase: Created widget instance
+
         """
 
         if field_type == FieldType.STRING:
@@ -308,13 +326,14 @@ class QtWidgetBase(WidgetBase):
     Base class for Qt widgets.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         """
         Initialize the Qt widget base class.
 
         Args:
             field_definition: Field definition metadata
             parent: Optional parent widget
+
         """
         self.field_definition = field_definition
         self.widget = None
@@ -326,6 +345,7 @@ class QtWidgetBase(WidgetBase):
 
         Returns:
             Any: Qt widget instance
+
         """
         return self.widget
 
@@ -335,6 +355,7 @@ class QtWidgetBase(WidgetBase):
 
         Args:
             label: Label text
+
         """
         # For Qt, the label is typically managed separately in the layout
 
@@ -344,6 +365,7 @@ class QtWidgetBase(WidgetBase):
 
         Args:
             description: Description text
+
         """
 
     def validate(self) -> bool:
@@ -352,6 +374,7 @@ class QtWidgetBase(WidgetBase):
 
         Returns:
             bool: True if value is valid, False otherwise
+
         """
 
         value = self.get_value()
@@ -364,6 +387,7 @@ class QtWidgetBase(WidgetBase):
 
         Returns:
             list: List of validation error messages
+
         """
 
         value = self.get_value()
@@ -376,7 +400,7 @@ class QtLineEditWidget(QtWidgetBase):
     Qt line edit widget for string fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QLineEdit
 
@@ -391,10 +415,10 @@ class QtLineEditWidget(QtWidgetBase):
     def get_value(self) -> Any:
         return self.widget.text()
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -403,7 +427,7 @@ class QtSpinBoxWidget(QtWidgetBase):
     Qt spin box widget for integer fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QSpinBox
 
@@ -422,10 +446,10 @@ class QtSpinBoxWidget(QtWidgetBase):
     def get_value(self) -> Any:
         return self.widget.value()
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -434,7 +458,7 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
     Qt double spin box widget for float fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QDoubleSpinBox
 
@@ -454,10 +478,10 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
     def get_value(self) -> Any:
         return self.widget.value()
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -466,7 +490,7 @@ class QtComboBoxWidget(QtWidgetBase):
     Qt combo box widget for select fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QComboBox
 
@@ -487,10 +511,10 @@ class QtComboBoxWidget(QtWidgetBase):
     def get_value(self) -> Any:
         return self.widget.currentData()
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -499,7 +523,7 @@ class QtCheckBoxWidget(QtWidgetBase):
     Qt check box widget for boolean fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QCheckBox
 
@@ -517,10 +541,10 @@ class QtCheckBoxWidget(QtWidgetBase):
     def set_label(self, label: str) -> None:
         self.widget.setText(label)
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -529,7 +553,7 @@ class QtListWidgetWidget(QtWidgetBase):
     Qt list widget for multi-select fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
@@ -563,10 +587,10 @@ class QtListWidgetWidget(QtWidgetBase):
             selected.append(item.data(Qt.ItemDataRole.UserRole))
         return selected
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 
@@ -575,7 +599,7 @@ class QtTextEditWidget(QtWidgetBase):
     Qt text edit widget for list and dict fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None):
+    def __init__(self, field_definition: dict, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QTextEdit
 
@@ -599,10 +623,10 @@ class QtTextEditWidget(QtWidgetBase):
         except Exception:
             return {}
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         self.widget.setEnabled(enabled)
 
-    def set_visible(self, visible: bool) -> None:
+    def set_visible(self, *, visible: bool) -> None:
         self.widget.setVisible(visible)
 
 

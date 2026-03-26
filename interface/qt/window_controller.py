@@ -172,7 +172,7 @@ class QtMainWindowController:
         )
 
         if self._app._database.folders_table.count() == 0:
-            self._app._search_widget.set_enabled(False)
+            self._app._search_widget.set_enabled(enabled=False)
 
         parent_layout.addWidget(self._app._search_widget)
         parent_layout.addWidget(self._app._folder_list_widget, stretch=1)
@@ -210,7 +210,7 @@ class QtMainWindowController:
             idx = layout.indexOf(self._app._search_widget)
             layout.insertWidget(idx + 1, self._app._folder_list_widget, stretch=1)
             has_folders = self._app._database.folders_table.count() > 0
-            self._app._search_widget.set_enabled(has_folders)
+            self._app._search_widget.set_enabled(enabled=has_folders)
         else:
             layout.addWidget(self._app._folder_list_widget, stretch=1)
 

@@ -5,7 +5,7 @@ Provides a common base class for all Qt dialogs, replacing the tkinter Dialog cl
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -41,12 +41,13 @@ class BaseDialog(QDialog):
 
             def apply(self):
                 print("Applying changes")
+
     """
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
-        title: Optional[str] = None,
+        parent: QWidget | None = None,
+        title: str | None = None,
         action_mode: Literal["ok_cancel", "close_only", "none"] = "ok_cancel",
     ) -> None:
         super().__init__(parent)
@@ -90,7 +91,7 @@ class BaseDialog(QDialog):
         # Set reasonable default minimum size
         self.setMinimumSize(500, 400)
 
-    def body(self, parent: QWidget) -> Optional[QWidget]:
+    def body(self, parent: QWidget) -> QWidget | None:
         """Create dialog body.
 
         Override this method to add widgets to the dialog.
@@ -101,9 +102,10 @@ class BaseDialog(QDialog):
 
         Returns:
             Widget that should have initial focus, or None
+
         """
 
-    def _create_button_box(self) -> Optional[QDialogButtonBox]:
+    def _create_button_box(self) -> QDialogButtonBox | None:
         """Create dialog action buttons according to configured mode."""
         if self._action_mode == "none":
             return None
@@ -133,6 +135,7 @@ class BaseDialog(QDialog):
 
         Returns:
             True if validation passes, False otherwise
+
         """
         return True
 

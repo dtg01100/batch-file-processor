@@ -1,6 +1,6 @@
 """Qt implementation of the search/filter widget."""
 
-from typing import Callable, Optional
+from typing import Callable
 
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QKeySequence
@@ -19,16 +19,17 @@ class SearchWidget(QWidget):
         parent: Parent widget
         initial_value: Initial filter text
         on_filter_change: Optional callback for filter changes
+
     """
 
     filter_changed = pyqtSignal(str)
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
         initial_value: str = "",
-        on_filter_change: Optional[Callable[[str], None]] = None,
-    ):
+        on_filter_change: Callable[[str], None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self._filter_value = initial_value
         self._on_filter_change = on_filter_change
@@ -67,9 +68,9 @@ class SearchWidget(QWidget):
             or bool(self._pending_filter)
         )
         self._debounce_timer.stop()
-        self._entry.blockSignals(True)
+        self._entry.blockSignals(True)  # noqa: FBT003
         self._entry.clear()
-        self._entry.blockSignals(False)
+        self._entry.blockSignals(False)  # noqa: FBT003
         self._pending_filter = ""
         self._filter_value = ""
         self._escape_shortcut.setEnabled(False)
@@ -81,14 +82,16 @@ class SearchWidget(QWidget):
 
         Args:
             value: The new text value
+
         """
         self._entry.setText(value)
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the widget.
 
         Args:
             enabled: True to enable, False to disable
+
         """
         self._entry.setEnabled(enabled)
 

@@ -8,12 +8,12 @@ validation and serialization/deserialization methods.
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core.utils.bool_utils import normalize_bool
 
 
-def _bool_from_data(data: Dict[str, Any], key: str, default: bool = False) -> bool:
+def _bool_from_data(data: dict[str, Any], key: str, *, default: bool = False) -> bool:
     return normalize_bool(data.get(key, default))
 
 
@@ -53,7 +53,7 @@ class FTPConfiguration:
     password: str = ""
     folder: str = ""
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate FTP configuration."""
         errors = []
         if not self.server:
@@ -81,9 +81,9 @@ class EmailConfiguration:
 
     recipients: str = ""
     subject_line: str = ""
-    sender_address: Optional[str] = None
+    sender_address: str | None = None
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate email configuration."""
         errors = []
         if not self.recipients:
@@ -107,7 +107,7 @@ class CopyConfiguration:
 
     destination_directory: str = ""
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate copy configuration."""
         errors = []
         if not self.destination_directory:
@@ -125,7 +125,7 @@ class HTTPConfiguration:
     auth_type: str = ""
     api_key: str = ""
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate HTTP configuration."""
         errors = []
         if not self.url:
@@ -150,7 +150,7 @@ class EDIConfiguration:
     split_edi_filter_categories: str = "ALL"
     split_edi_filter_mode: str = "include"
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate EDI configuration."""
         errors = []
         if self.prepend_date_files and not self.split_edi:
@@ -168,7 +168,7 @@ class UPCOverrideConfiguration:
     target_length: int = 11
     padding_pattern: str = "           "
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate UPC override configuration."""
         errors = []
         if self.enabled and not self.category_filter:
@@ -196,7 +196,7 @@ class ARecordPaddingConfiguration:
     append_enabled: bool = False
     force_txt_extension: bool = False
 
-    def validate(self, convert_format: Optional[str] = None) -> List[str]:
+    def validate(self, convert_format: str | None = None) -> list[str]:
         """Validate A-record padding configuration."""
         errors = []
         if self.enabled:
@@ -221,7 +221,7 @@ class InvoiceDateConfiguration:
     custom_format_string: str = ""
     retail_uom: bool = False
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate invoice date configuration."""
         errors = []
         if self.offset not in range(-14, 15):
@@ -272,33 +272,33 @@ class FolderConfiguration:
     process_backend_http: bool = False
 
     # Backend configurations
-    ftp: Optional[FTPConfiguration] = None
-    email: Optional[EmailConfiguration] = None
-    copy: Optional[CopyConfiguration] = None
-    http: Optional[HTTPConfiguration] = None
+    ftp: FTPConfiguration | None = None
+    email: EmailConfiguration | None = None
+    copy: CopyConfiguration | None = None
+    http: HTTPConfiguration | None = None
 
     # EDI
-    edi: Optional[EDIConfiguration] = None
+    edi: EDIConfiguration | None = None
 
     # UPC Override
-    upc_override: Optional[UPCOverrideConfiguration] = None
+    upc_override: UPCOverrideConfiguration | None = None
 
     # A-Record
-    a_record_padding: Optional[ARecordPaddingConfiguration] = None
+    a_record_padding: ARecordPaddingConfiguration | None = None
 
     # Invoice Date
-    invoice_date: Optional[InvoiceDateConfiguration] = None
+    invoice_date: InvoiceDateConfiguration | None = None
 
     # Backend-specific
-    backend_specific: Optional[BackendSpecificConfiguration] = None
+    backend_specific: BackendSpecificConfiguration | None = None
 
     # CSV
-    csv: Optional[CSVConfiguration] = None
+    csv: CSVConfiguration | None = None
 
     # Plugin configurations - stored as dict of format -> config dict
-    plugin_configurations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    plugin_configurations: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    def get_plugin_configuration(self, format_name: str) -> Optional[Dict[str, Any]]:
+    def get_plugin_configuration(self, format_name: str) -> dict[str, Any] | None:
         """Get plugin configuration for a specific format.
 
         Args:
@@ -306,17 +306,19 @@ class FolderConfiguration:
 
         Returns:
             Optional[Dict[str, Any]]: Plugin configuration for the format, or None if not found
+
         """
         return self.plugin_configurations.get(format_name.lower())
 
     def set_plugin_configuration(
-        self, format_name: str, config: Dict[str, Any]
+        self, format_name: str, config: dict[str, Any]
     ) -> None:
         """Set plugin configuration for a specific format.
 
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
             config: Plugin configuration to store
+
         """
         self.plugin_configurations[format_name.lower()] = config
 
@@ -325,6 +327,7 @@ class FolderConfiguration:
 
         Args:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
+
         """
         if format_name.lower() in self.plugin_configurations:
             del self.plugin_configurations[format_name.lower()]
@@ -337,14 +340,16 @@ class FolderConfiguration:
 
         Returns:
             bool: True if configuration exists, False otherwise
+
         """
         return format_name.lower() in self.plugin_configurations
 
-    def validate_plugin_configurations(self) -> List[str]:
+    def validate_plugin_configurations(self) -> list[str]:
         """Validate all plugin configurations.
 
         Returns:
             List[str]: List of validation errors
+
         """
         errors = []
         from interface.plugins.plugin_manager import PluginManager
@@ -375,7 +380,7 @@ class FolderConfiguration:
         return errors
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "FolderConfiguration":
+    def from_dict(cls, data: dict[str, Any]) -> "FolderConfiguration":
         """Create FolderConfiguration from dictionary."""
         # Extract nested configurations
         ftp = None
@@ -509,7 +514,7 @@ class FolderConfiguration:
             plugin_configurations=data.get("plugin_configurations", {}),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert FolderConfiguration to dictionary for database."""
         data = {
             "folder_name": self.folder_name,
@@ -538,7 +543,7 @@ class FolderConfiguration:
 
         return data
 
-    def _add_ftp_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_ftp_to_dict(self, data: dict[str, Any]) -> None:
         """Add FTP settings to dictionary."""
         if self.ftp:
             data.update(
@@ -551,7 +556,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_email_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_email_to_dict(self, data: dict[str, Any]) -> None:
         """Add email settings to dictionary."""
         if self.email:
             data.update(
@@ -561,12 +566,12 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_copy_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_copy_to_dict(self, data: dict[str, Any]) -> None:
         """Add copy backend settings to dictionary."""
         if self.copy:
             data["copy_to_directory"] = self.copy.destination_directory
 
-    def _add_http_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_http_to_dict(self, data: dict[str, Any]) -> None:
         """Add HTTP backend settings to dictionary."""
         if self.http:
             data["http_url"] = self.http.url
@@ -575,7 +580,7 @@ class FolderConfiguration:
             data["http_auth_type"] = self.http.auth_type
             data["http_api_key"] = self.http.api_key
 
-    def _add_edi_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_edi_to_dict(self, data: dict[str, Any]) -> None:
         """Add EDI settings to dictionary."""
         if self.edi:
             data.update(
@@ -599,7 +604,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_upc_override_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_upc_override_to_dict(self, data: dict[str, Any]) -> None:
         """Add UPC override settings to dictionary."""
         if self.upc_override:
             data.update(
@@ -612,7 +617,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_a_record_padding_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_a_record_padding_to_dict(self, data: dict[str, Any]) -> None:
         """Add A-record padding settings to dictionary."""
         if self.a_record_padding:
             data.update(
@@ -630,7 +635,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_invoice_date_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_invoice_date_to_dict(self, data: dict[str, Any]) -> None:
         """Add invoice date settings to dictionary."""
         if self.invoice_date:
             data.update(
@@ -644,7 +649,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_backend_specific_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_backend_specific_to_dict(self, data: dict[str, Any]) -> None:
         """Add backend-specific settings to dictionary."""
         if self.backend_specific:
             data.update(
@@ -656,7 +661,7 @@ class FolderConfiguration:
                 }
             )
 
-    def _add_csv_to_dict(self, data: Dict[str, Any]) -> None:
+    def _add_csv_to_dict(self, data: dict[str, Any]) -> None:
         """Add CSV settings to dictionary."""
         if self.csv:
             data.update(

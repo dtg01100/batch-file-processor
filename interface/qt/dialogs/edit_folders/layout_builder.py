@@ -4,7 +4,7 @@ Constructs the complete UI layout for the Qt edit folders dialog,
 managing widget container creation, spacing, and scroll area setup.
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -32,18 +32,18 @@ class UILayoutBuilder:
     def __init__(
         self,
         dialog: QDialog,
-        fields: Dict[str, QWidget],
-        folder_config: Dict[str, Any],
-        alias_provider: Optional[Callable] = None,
-        on_copy_config: Optional[Callable] = None,
-        on_select_copy_dir: Optional[Callable] = None,
-        on_show_path: Optional[Callable] = None,
-        on_update_backend_states: Optional[Callable] = None,
-        on_convert_format_changed: Optional[Callable] = None,
-        on_dynamic_form_changed: Optional[Callable] = None,
-        on_ok: Optional[Callable] = None,
-        on_cancel: Optional[Callable] = None,
-    ):
+        fields: dict[str, QWidget],
+        folder_config: dict[str, Any],
+        alias_provider: Callable | None = None,
+        on_copy_config: Callable | None = None,
+        on_select_copy_dir: Callable | None = None,
+        on_show_path: Callable | None = None,
+        on_update_backend_states: Callable | None = None,
+        on_convert_format_changed: Callable | None = None,
+        on_dynamic_form_changed: Callable | None = None,
+        on_ok: Callable | None = None,
+        on_cancel: Callable | None = None,
+    ) -> None:
         """Initialize the UI layout builder.
 
         Args:
@@ -58,6 +58,7 @@ class UILayoutBuilder:
             on_convert_format_changed: Callback for convert format changes
             on_ok: Callback for OK button
             on_cancel: Callback for Cancel button
+
         """
         self.dialog = dialog
         self.fields = fields
@@ -195,7 +196,7 @@ class UILayoutBuilder:
 
         return self
 
-    def _add_dynamic_edi_container(self, container: QWidget):
+    def _add_dynamic_edi_container(self, container: QWidget) -> None:
         """Add dynamic EDI container to the specified widget."""
         # Find the layout of the container widget
         container_layout = container.layout()
@@ -210,7 +211,7 @@ class UILayoutBuilder:
         container_layout.addWidget(self.dynamic_edi_container)
         container_layout.addStretch()
 
-    def _add_edi_options_check(self, container: QWidget):
+    def _add_edi_options_check(self, container: QWidget) -> None:
         """Add Convert EDI checkbox to the EDI column."""
         container_layout = container.layout()
         if not container_layout:

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (
@@ -41,7 +41,7 @@ class DatabaseImportDialog(BaseDialog):
         running_platform: str,
         backup_path: str,
         current_db_version: str,
-        preselected_database_path: Optional[str] = None,
+        preselected_database_path: str | None = None,
     ) -> None:
         super().__init__(parent, "folders.db merging utility", action_mode="none")
 
@@ -49,8 +49,8 @@ class DatabaseImportDialog(BaseDialog):
         self._running_platform = running_platform
         self._backup_path = backup_path
         self._current_db_version = current_db_version
-        self._new_database_path: Optional[str] = None
-        self._database_migrate_job: Optional[DbMigrationJob] = None
+        self._new_database_path: str | None = None
+        self._database_migrate_job: DbMigrationJob | None = None
 
         self._setup_ui()
         if preselected_database_path:
@@ -180,7 +180,7 @@ class DatabaseImportDialog(BaseDialog):
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, message: str) -> None:
+    def _on_finished(self, success: bool, message: str) -> None:  # noqa: FBT001
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -269,7 +269,7 @@ class ImportThread(QThread):
             new_db_connection = sqlite_wrapper.Database.connect(self._new_db_path)
             new_db_version_table = new_db_connection["version"]
             new_db_version_dict = cast(
-                Optional[dict[str, Any]], new_db_version_table.find_one(id=1)
+                dict[str, Any] | None, new_db_version_table.find_one(id=1)
             )
             if new_db_version_dict is None:
                 raise KeyError("version")
@@ -284,7 +284,9 @@ class ImportThread(QThread):
                     "systems.\nThere is no guarantee that the imported folders will "
                     "work. Continue?",
                 ):
-                    self.finished.emit(False, "Import cancelled by user")
+                    self.finished.emit(
+                        False, "Import cancelled by user"  # noqa: FBT003
+                    )
                     return
 
             elif int(new_db_version) > int(self._db_version):
@@ -293,7 +295,9 @@ class ImportThread(QThread):
                     "The proposed database version is newer than the version "
                     "supported by this program.\nContinue?",
                 ):
-                    self.finished.emit(False, "Import cancelled by user")
+                    self.finished.emit(
+                        False, "Import cancelled by user"  # noqa: FBT003
+                    )
                     return
 
                 if not self._confirm(
@@ -301,7 +305,9 @@ class ImportThread(QThread):
                     "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
                     "TO CONTINUE?\nBackup is stored at: " + self._backup_path,
                 ):
-                    self.finished.emit(False, "Import cancelled by user")
+                    self.finished.emit(
+                        False, "Import cancelled by user"  # noqa: FBT003
+                    )
                     return
 
             elif new_db_version_dict.get("os") != self._platform:
@@ -312,7 +318,9 @@ class ImportThread(QThread):
                     "There is no guarantee that the imported folders will work. "
                     "Continue?",
                 ):
-                    self.finished.emit(False, "Import cancelled by user")
+                    self.finished.emit(
+                        False, "Import cancelled by user"  # noqa: FBT003
+                    )
                     return
 
             # Run the migration
@@ -320,7 +328,7 @@ class ImportThread(QThread):
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")
+            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")
@@ -355,16 +363,14 @@ class DbMigrationJob:
 
         original_db_version = original_db["version"]
         original_db_version_dict = cast(
-            Optional[dict[str, Any]], original_db_version.find_one(id=1)
+            dict[str, Any] | None, original_db_version.find_one(id=1)
         )
         if original_db_version_dict is None:
             raise KeyError("version")
 
         new_db = sqlite_wrapper.Database.connect(modified_new_path)
         new_db_version = new_db["version"]
-        new_db_version_dict = cast(
-            Optional[dict[str, Any]], new_db_version.find_one(id=1)
-        )
+        new_db_version_dict = cast(dict[str, Any] | None, new_db_version.find_one(id=1))
         if new_db_version_dict is None:
             raise KeyError("version")
 
@@ -474,7 +480,7 @@ def show_database_import_dialog(
     running_platform: str,
     backup_path: str,
     current_db_version: str,
-    preselected_database_path: Optional[str] = None,
+    preselected_database_path: str | None = None,
 ) -> None:
     """Show the database import dialog.
 
@@ -485,6 +491,7 @@ def show_database_import_dialog(
         backup_path: Path for backup files
         current_db_version: Current database version
         preselected_database_path: Optional path to preselect and show in UI
+
     """
     dialog = DatabaseImportDialog(
         parent,

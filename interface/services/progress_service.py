@@ -35,6 +35,7 @@ class ProgressCallback(Protocol):
 
         Args:
             progress: Progress percentage from 0 to 100
+
         """
         ...
 

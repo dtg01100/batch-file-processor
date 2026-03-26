@@ -6,7 +6,7 @@ This module provides toolkit-agnostic business logic for the resend interface.
 import os
 from collections import OrderedDict
 from operator import itemgetter
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 MAX_FOLDER_ALIAS_CACHE_SIZE = 1000
 
@@ -17,11 +17,12 @@ class ResendService:
     This service handles all database operations related to resend functionality.
     """
 
-    def __init__(self, database_connection):
+    def __init__(self, database_connection) -> None:
         """Initialize with database connection.
 
         Args:
             database_connection: The dataset database connection
+
         """
         self._db = database_connection
         self._processed_files = database_connection["processed_files"]
@@ -29,7 +30,7 @@ class ResendService:
         self._folder_alias_cache: OrderedDict[int, str] = OrderedDict()
 
     @staticmethod
-    def _get_sent_timestamp(processed_line: Dict[str, Any]) -> Any:
+    def _get_sent_timestamp(processed_line: dict[str, Any]) -> Any:
         """Return the best available resend timestamp for a processed file."""
         return processed_line.get("sent_date_time") or processed_line.get(
             "processed_at"
@@ -44,13 +45,14 @@ class ResendService:
 
         Returns:
             Total number of unique processed files.
+
         """
         sql = "SELECT COUNT(DISTINCT file_name || '-' || folder_id) AS cnt FROM processed_files"
         cur = self._db.raw_connection.execute(sql, [])
         row = cur.fetchone()
         return row["cnt"] if row else 0
 
-    def _get_folder_alias_batch(self, folder_ids: List[int]) -> Dict[int, str]:
+    def _get_folder_alias_batch(self, folder_ids: list[int]) -> dict[int, str]:
         """Get folder aliases for multiple folder IDs in a single query.
 
         Args:
@@ -58,6 +60,7 @@ class ResendService:
 
         Returns:
             Dictionary mapping folder_id to alias
+
         """
         result = {}
         for fid in folder_ids:
@@ -88,11 +91,12 @@ class ResendService:
 
         return result
 
-    def get_folder_list(self) -> List[Tuple[int, str]]:
+    def get_folder_list(self) -> list[tuple[int, str]]:
         """Get list of folders that have processed files.
 
         Returns:
             Sorted list of (folder_id, alias) tuples
+
         """
         folder_rows = list(self._processed_files.distinct("folder_id"))
         folder_ids = [row["folder_id"] for row in folder_rows]
@@ -113,7 +117,7 @@ class ResendService:
 
     def get_files_for_folder(
         self, folder_id: int, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get list of processable files for a folder.
 
         Args:
@@ -122,6 +126,7 @@ class ResendService:
 
         Returns:
             List of dicts with keys: file_name, resend_flag, id, sent_date_time
+
         """
         file_list = []
         file_name_list = []
@@ -151,6 +156,7 @@ class ResendService:
 
         Returns:
             Count of unique existing files
+
         """
         file_name_list = []
         for processed_line in self._processed_files.find(
@@ -162,16 +168,17 @@ class ResendService:
                 file_name_list.append(processed_line["file_name"])
         return len(file_name_list)
 
-    def set_resend_flag(self, file_id: int, resend_flag: bool) -> None:
+    def set_resend_flag(self, file_id: int, *, resend_flag: bool) -> None:
         """Set the resend flag for a processed file.
 
         Args:
             file_id: The processed file record ID
             resend_flag: Whether to enable resend
+
         """
         self._processed_files.update(dict(resend_flag=resend_flag, id=file_id), ["id"])
 
-    def set_resend_flags_batch(self, file_ids: List[int], resend_flag: bool) -> int:
+    def set_resend_flags_batch(self, file_ids: list[int], *, resend_flag: bool) -> int:
         """Set the resend flag for multiple processed files in a single query.
 
         Args:
@@ -180,6 +187,7 @@ class ResendService:
 
         Returns:
             Number of files updated
+
         """
         if not file_ids:
             return 0
@@ -194,17 +202,18 @@ class ResendService:
 
     def _get_files_with_ordering(
         self,
+        *,
         check_file_exists: bool = True,
         limit: int = 1000,
         offset: int = 0,
-        search_text: Optional[str] = None,
+        search_text: str | None = None,
         search_field: str = "all",
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Get files sorted by sent_date_time (most recent first), with processed_at fallback."""
         where_clauses = []
-        params: List[Any] = []
+        params: list[Any] = []
 
         if search_text:
             search_value = f"%{search_text}%"
@@ -288,12 +297,13 @@ class ResendService:
 
     def get_all_files_for_resend(
         self,
+        *,
         check_file_exists: bool = True,
         limit: int = 1000,
         offset: int = 0,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Get all processable files across all folders for resend interface.
 
         Args:
@@ -305,6 +315,7 @@ class ResendService:
         Returns:
             List of dicts with keys: id, folder_id, folder_alias, file_name,
             resend_flag, sent_date_time, file_exists
+
         """
         return self._get_files_with_ordering(
             check_file_exists=check_file_exists,
@@ -320,9 +331,9 @@ class ResendService:
         limit: int = 1000,
         offset: int = 0,
         search_field: str = "all",
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Search processable files by one specific field or all fields.
 
         Args:
@@ -336,6 +347,7 @@ class ResendService:
         Returns:
             List of dicts with keys: id, folder_id, folder_alias, file_name,
             resend_flag, sent_date_time, file_exists, invoice_numbers
+
         """
         return self._get_files_with_ordering(
             check_file_exists=True,

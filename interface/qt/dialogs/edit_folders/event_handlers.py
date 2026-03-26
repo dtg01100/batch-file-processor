@@ -6,7 +6,7 @@ checkbox toggles, and dropdown selections.
 """
 
 import os
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -39,16 +39,16 @@ class EventHandlers:
     def __init__(
         self,
         dialog: QDialog,
-        folder_config: Dict[str, Any],
-        fields: Dict[str, QWidget],
+        folder_config: dict[str, Any],
+        fields: dict[str, QWidget],
         copy_to_directory: str,
         validator: Any,
-        settings_provider: Optional[Callable] = None,
-        alias_provider: Optional[Callable] = None,
-        on_apply_success: Optional[Callable] = None,
-        data_extractor: Optional[Any] = None,
-        ftp_service: Optional[Any] = None,
-    ):
+        settings_provider: Callable | None = None,
+        alias_provider: Callable | None = None,
+        on_apply_success: Callable | None = None,
+        data_extractor: Any | None = None,
+        ftp_service: Any | None = None,
+    ) -> None:
         """Initialize event handlers.
 
         Args:
@@ -62,6 +62,7 @@ class EventHandlers:
             on_apply_success: Callback for successful application
             data_extractor: Data extractor instance
             ftp_service: FTP service instance
+
         """
         self.dialog = dialog
         self.folder_config = folder_config
@@ -90,7 +91,7 @@ class EventHandlers:
             },
         )
 
-    def update_active_state(self):
+    def update_active_state(self) -> None:
         """Update the active state of the folder and all child widgets."""
         active_btn = self.fields.get("active_checkbutton")
         if not isinstance(active_btn, (QCheckBox, QPushButton)):
@@ -169,7 +170,7 @@ class EventHandlers:
 
         self.update_backend_states()
 
-    def update_backend_states(self):
+    def update_backend_states(self) -> None:
         """Update the enabled/disabled state of backend-specific widgets."""
         active_btn = self.fields.get("active_checkbutton")
         is_active = active_btn.isChecked() if active_btn else False
@@ -233,7 +234,7 @@ class EventHandlers:
             if widget:
                 widget.setEnabled(edi_enabled)
 
-    def copy_config_from_other(self):
+    def copy_config_from_other(self) -> None:
         """Copy configuration from another selected folder."""
         others_list = self.fields.get("others_list")
         if not others_list:
@@ -281,7 +282,7 @@ class EventHandlers:
         if hasattr(self.dialog, "_populate_fields_from_config"):
             self.dialog._populate_fields_from_config(other_config)
 
-    def show_folder_path(self):
+    def show_folder_path(self) -> None:
         """Show the full path of the current folder."""
         path = self.folder_config.get("folder_name", "Unknown")
         log_with_context(
@@ -298,7 +299,7 @@ class EventHandlers:
         )
         QMessageBox.information(self.dialog, "Folder Path", path)
 
-    def select_copy_directory(self):
+    def select_copy_directory(self) -> None:
         """Select the directory for the copy backend."""
         initial = self.copy_to_directory
         if not initial or not os.path.isdir(initial):
@@ -330,7 +331,7 @@ class EventHandlers:
             if hasattr(self.dialog, "copy_to_directory"):
                 self.dialog.copy_to_directory = folder
 
-    def on_ok(self):
+    def on_ok(self) -> None:
         """Handle OK button click - validate and apply settings."""
         log_with_context(
             logger,
@@ -348,7 +349,7 @@ class EventHandlers:
         else:
             self.dialog.accept()
 
-    def on_cancel(self):
+    def on_cancel(self) -> None:
         """Handle Cancel button click."""
         log_with_context(
             logger,

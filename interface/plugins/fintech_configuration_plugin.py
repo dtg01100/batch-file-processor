@@ -5,7 +5,7 @@ Implements the ConfigurationPlugin interface for Fintech format configuration.
 Provides support for Fintech-specific configuration fields and validation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
 from .config_schemas import FieldDefinition, FieldType
@@ -17,7 +17,7 @@ from .validation_framework import ValidationResult
 class FintechConfiguration:
     """Fintech configuration data class."""
 
-    def __init__(self, fintech_division_id: str = ""):
+    def __init__(self, fintech_division_id: str = "") -> None:
         self.fintech_division_id = fintech_division_id
 
 
@@ -59,7 +59,7 @@ class FintechConfigurationPlugin(ConfigurationPlugin):
         return ConvertFormat.FINTECH
 
     @classmethod
-    def get_config_fields(cls) -> List[FieldDefinition]:
+    def get_config_fields(cls) -> list[FieldDefinition]:
         """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
@@ -74,28 +74,28 @@ class FintechConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: Dict[str, Any]) -> FintechConfiguration:
+    def create_config(self, data: dict[str, Any]) -> FintechConfiguration:
         """Create a configuration instance from raw data."""
         return FintechConfiguration(
             fintech_division_id=data.get("fintech_division_id", "")
         )
 
-    def serialize_config(self, config: FintechConfiguration) -> Dict[str, Any]:
+    def serialize_config(self, config: FintechConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {"fintech_division_id": config.fintech_division_id}
 
-    def deserialize_config(self, data: Dict[str, Any]) -> FintechConfiguration:
+    def deserialize_config(self, data: dict[str, Any]) -> FintechConfiguration:
         """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
 
-    def initialize(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         """Initialize the plugin with configuration."""
         if config:
             self._config = self.create_config(config)
