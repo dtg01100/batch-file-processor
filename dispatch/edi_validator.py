@@ -5,7 +5,6 @@ using dependency injection for file system operations.
 """
 
 from io import StringIO
-from typing import Optional
 
 from core.structured_logging import (
     get_logger,
@@ -28,13 +27,15 @@ class EDIValidator:
         errors: StringIO buffer for error messages
         has_errors: Flag indicating if validation errors occurred
         has_minor_errors: Flag indicating if minor errors occurred
+
     """
 
-    def __init__(self, file_system: Optional[FileSystemInterface] = None):
+    def __init__(self, file_system: FileSystemInterface | None = None) -> None:
         """Initialize the EDI validator.
 
         Args:
             file_system: Optional file system interface (uses RealFileSystem if None)
+
         """
         self.fs = file_system or RealFileSystem()
         self.errors: StringIO = StringIO()
@@ -50,6 +51,7 @@ class EDIValidator:
         Returns:
             Tuple of (is_valid, errors) where errors is a list of
             error messages (empty if valid)
+
         """
         import logging
 
@@ -147,6 +149,7 @@ class EDIValidator:
 
         Returns:
             Tuple of (is_valid, errors, warnings)
+
         """
         logger.debug("Validating EDI file (with warnings): %s", file_path)
         self.errors = StringIO()
@@ -208,6 +211,7 @@ class EDIValidator:
         Returns:
             Tuple of (is_valid, line_number) where line_number is the
             line where validation failed (0 if valid)
+
         """
         logger.debug("Checking EDI format: %s", file_path)
         try:
@@ -247,6 +251,7 @@ class EDIValidator:
         Returns:
             Tuple of (is_valid, line_number) where line_number is the
             line where validation failed (0 if valid)
+
         """
         if not line:
             return True, 0
@@ -281,6 +286,7 @@ class EDIValidator:
 
         Returns:
             List of issue messages
+
         """
         logger.debug("Checking EDI issues in: %s", file_path)
         issues: list[str] = []
@@ -347,6 +353,7 @@ class EDIValidator:
             content: File content to validate (already read)
             errors: List to append error messages to
             warnings: List to append warning messages to
+
         """
         try:
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
@@ -394,6 +401,7 @@ class EDIValidator:
 
         Returns:
             Error log as string
+
         """
         return self.errors.getvalue()
 
@@ -420,6 +428,7 @@ class RealFileSystem:
 
         Returns:
             File contents as string
+
         """
         with open(path, "r", encoding=encoding) as f:
             return f.read()
@@ -432,6 +441,7 @@ class RealFileSystem:
 
         Returns:
             File contents as bytes
+
         """
         with open(path, "rb") as f:
             return f.read()
@@ -442,6 +452,7 @@ class RealFileSystem:
         Args:
             path: Path to the file
             data: Bytes to write
+
         """
         with open(path, "wb") as f:
             f.write(data)
@@ -453,6 +464,7 @@ class RealFileSystem:
             path: Path to the file
             data: String to write
             encoding: Text encoding (default: utf-8)
+
         """
         with open(path, "w", encoding=encoding) as f:
             f.write(data)

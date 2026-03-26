@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 class ProgressReporter(Protocol):
@@ -16,7 +16,7 @@ class ProgressReporter(Protocol):
 
 
 class UIProgressReporter:
-    def __init__(self):
+    def __init__(self) -> None:
         self._parent = None
         self._overlay_text = ""
         self._footer = ""
@@ -57,7 +57,7 @@ class UIProgressReporter:
 
 
 class CLIProgressReporter:
-    def __init__(self, output: Optional[object] = None):
+    def __init__(self, output: object | None = None) -> None:
         self._output = output or sys.stdout
 
     def update(
@@ -99,7 +99,7 @@ class NullProgressReporter:
 
 
 class LoggingProgressReporter:
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger
 
     def update(

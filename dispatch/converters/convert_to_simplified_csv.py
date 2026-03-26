@@ -46,12 +46,13 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Extract and normalize parameters
         params = context.parameters_dict
 
         context.user_data["retail_uom"] = normalize_parameter(
-            params.get("retail_uom"), False
+            params.get("retail_uom"), default=False
         )
         context.user_data["inc_headers"] = normalize_parameter(
             params.get(
@@ -59,10 +60,10 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             )
         )
         context.user_data["inc_item_numbers"] = normalize_parameter(
-            params.get("include_item_numbers"), True
+            params.get("include_item_numbers"), default=True
         )
         context.user_data["inc_item_desc"] = normalize_parameter(
-            params.get("include_item_description"), True
+            params.get("include_item_description"), default=True
         )
         context.user_data["column_layout"] = (
             params.get(
@@ -92,6 +93,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         user_data = context.user_data
         column_layout = user_data["column_layout"]
@@ -126,6 +128,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         Args:
             rowdict: Dictionary containing row data
             context: The conversion context
+
         """
         user_data = context.user_data
         column_layout = user_data["column_layout"]
@@ -156,6 +159,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 
         Returns:
             True only for B records
+
         """
         return record_type == "B"
 
@@ -165,6 +169,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         user_data = context.user_data
         fields = dict(record.fields)  # Copy to allow modification
@@ -197,6 +202,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 
         Returns:
             Modified fields dictionary
+
         """
         return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
@@ -238,6 +244,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.csv'
+
     """
     converter = SimplifiedCSVConverter()
     return converter.edi_convert(

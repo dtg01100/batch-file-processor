@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from io import StringIO
-from typing import Any, Optional
+from typing import Any
 
 import scripts.record_error as record_error
 from core.structured_logging import (
@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 class ErrorLogger:
     """Legacy error logger preserved for compatibility."""
 
-    def __init__(self, errors_folder: str = "", run_log: Any = None):
+    def __init__(self, errors_folder: str = "", run_log: Any = None) -> None:
         self.errors_folder = errors_folder
         self.run_log = run_log
         self.folder_errors_log = StringIO()
@@ -89,23 +89,25 @@ class ErrorHandler:
         log_path: Optional path for error log files
         errors: List of recorded errors
         error_log: In-memory buffer for error messages
+
     """
 
     def __init__(
         self,
-        errors_folder: Optional[str] = None,
+        errors_folder: str | None = None,
         run_log: Any = None,
-        run_log_directory: Optional[str] = None,
-        database: Optional[DatabaseInterface] = None,
-        log_path: Optional[str] = None,
-        file_system: Optional[FileSystemInterface] = None,
-    ):
+        run_log_directory: str | None = None,
+        database: DatabaseInterface | None = None,
+        log_path: str | None = None,
+        file_system: FileSystemInterface | None = None,
+    ) -> None:
         """Initialize the error handler.
 
         Args:
             database: Optional database interface for error persistence
             log_path: Optional path for error log files
             file_system: Optional file system interface (uses RealFileSystem if None)
+
         """
         self.errors_folder = errors_folder or ""
         self.run_log = run_log
@@ -123,7 +125,7 @@ class ErrorHandler:
         folder: str,
         filename: str,
         error: Exception,
-        context: Optional[dict] = None,
+        context: dict | None = None,
         error_source: str = "Dispatch",
     ) -> None:
         """Record an error to all configured destinations.
@@ -134,6 +136,7 @@ class ErrorHandler:
             error: The exception that was raised
             context: Optional additional context
             error_source: Source module/component name
+
         """
         import logging
 
@@ -179,6 +182,7 @@ class ErrorHandler:
         error_message: str,
         filename: str,
         error_source: str,
+        *,
         threaded: bool = False,
     ) -> tuple:
         """Record error to run log and errors log (backward compatible).
@@ -196,6 +200,7 @@ class ErrorHandler:
 
         Returns:
             Tuple of (run_log, errors_log) for threaded mode
+
         """
         message = self._format_error_message(error_message, filename, error_source)
 
@@ -225,6 +230,7 @@ class ErrorHandler:
 
         Returns:
             Formatted error message string
+
         """
         return (
             f"At: {time.ctime()}\r\n"
@@ -238,6 +244,7 @@ class ErrorHandler:
 
         Args:
             error_record: Error record dictionary
+
         """
         message = self._format_error_message(
             error_record["error_message"],
@@ -251,6 +258,7 @@ class ErrorHandler:
 
         Args:
             error_record: Error record dictionary
+
         """
         try:
             self.db.insert(error_record)
@@ -264,9 +272,7 @@ class ErrorHandler:
             else:
                 sys.stderr.write(error_msg)
 
-    def write_error_log_file(
-        self, log_path: str, version: Optional[str] = None
-    ) -> bool:
+    def write_error_log_file(self, log_path: str, version: str | None = None) -> bool:
         """Write accumulated errors to a log file.
 
         Args:
@@ -275,6 +281,7 @@ class ErrorHandler:
 
         Returns:
             True if write was successful, False otherwise
+
         """
         try:
             # Ensure directory exists
@@ -300,6 +307,7 @@ class ErrorHandler:
 
         Returns:
             List of error record dictionaries
+
         """
         return self.errors.copy()
 
@@ -308,6 +316,7 @@ class ErrorHandler:
 
         Returns:
             Error log as string
+
         """
         return self.error_log.getvalue()
 
@@ -321,6 +330,7 @@ class ErrorHandler:
 
         Returns:
             True if errors have been recorded, False otherwise
+
         """
         return len(self.errors) > 0
 
@@ -329,6 +339,7 @@ class ErrorHandler:
 
         Returns:
             Number of errors
+
         """
         return len(self.errors)
 
@@ -427,7 +438,7 @@ class RealFileSystem:
 
 
 # Backward-compatible function interface
-def do(run_log, errors_log, error_message, filename, error_source, threaded=False):
+def do(run_log, errors_log, error_message, filename, error_source, *, threaded=False):
     """Backward-compatible error recording function.
 
     This function provides compatibility with the existing record_error.do()
@@ -443,8 +454,9 @@ def do(run_log, errors_log, error_message, filename, error_source, threaded=Fals
 
     Returns:
         Tuple of (run_log, errors_log) for threaded mode, or None
+
     """
     handler = ErrorHandler()
     return handler.record_error_to_logs(
-        run_log, errors_log, error_message, filename, error_source, threaded
+        run_log, errors_log, error_message, filename, error_source, threaded=threaded
     )

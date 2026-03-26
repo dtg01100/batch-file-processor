@@ -4,7 +4,7 @@ This module defines Protocol classes for the main dependencies in the dispatch
 system, enabling loose coupling and testability through dependency injection.
 """
 
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -22,10 +22,11 @@ class DatabaseInterface(Protocol):
 
         Returns:
             List of matching records as dictionaries
+
         """
         ...
 
-    def find_one(self, **kwargs) -> Optional[dict]:
+    def find_one(self, **kwargs) -> dict | None:
         """Find a single record matching the given criteria.
 
         Args:
@@ -33,6 +34,7 @@ class DatabaseInterface(Protocol):
 
         Returns:
             Single matching record or None if not found
+
         """
         ...
 
@@ -41,6 +43,7 @@ class DatabaseInterface(Protocol):
 
         Args:
             record: Dictionary of field name/value pairs to insert
+
         """
         ...
 
@@ -49,6 +52,7 @@ class DatabaseInterface(Protocol):
 
         Args:
             records: List of dictionaries to insert
+
         """
         ...
 
@@ -58,6 +62,7 @@ class DatabaseInterface(Protocol):
         Args:
             record: Dictionary with updated values and key fields
             keys: List of field names to use as keys for matching
+
         """
         ...
 
@@ -69,6 +74,7 @@ class DatabaseInterface(Protocol):
 
         Returns:
             Number of matching records
+
         """
         ...
 
@@ -80,6 +86,7 @@ class DatabaseInterface(Protocol):
 
         Returns:
             Query result (implementation-specific)
+
         """
         ...
 
@@ -100,6 +107,7 @@ class FileSystemInterface(Protocol):
 
         Returns:
             List of file paths (absolute or relative based on implementation)
+
         """
         ...
 
@@ -115,6 +123,7 @@ class FileSystemInterface(Protocol):
         Raises:
             FileNotFoundError: If file does not exist
             IOError: If file cannot be read
+
         """
         ...
 
@@ -127,6 +136,7 @@ class FileSystemInterface(Protocol):
 
         Returns:
             File contents as string
+
         """
         ...
 
@@ -136,6 +146,7 @@ class FileSystemInterface(Protocol):
         Args:
             path: Path to the file
             data: Bytes to write
+
         """
         ...
 
@@ -146,6 +157,7 @@ class FileSystemInterface(Protocol):
             path: Path to the file
             data: String to write
             encoding: Text encoding (default: utf-8)
+
         """
         ...
 
@@ -157,6 +169,7 @@ class FileSystemInterface(Protocol):
 
         Returns:
             True if file exists, False otherwise
+
         """
         ...
 
@@ -168,6 +181,7 @@ class FileSystemInterface(Protocol):
 
         Returns:
             True if directory exists, False otherwise
+
         """
         ...
 
@@ -176,6 +190,7 @@ class FileSystemInterface(Protocol):
 
         Args:
             path: Directory path to create
+
         """
         ...
 
@@ -184,6 +199,7 @@ class FileSystemInterface(Protocol):
 
         Args:
             path: Directory path to create
+
         """
         ...
 
@@ -193,6 +209,7 @@ class FileSystemInterface(Protocol):
         Args:
             src: Source file path
             dst: Destination file path
+
         """
         ...
 
@@ -201,6 +218,7 @@ class FileSystemInterface(Protocol):
 
         Args:
             path: Path to the file to remove
+
         """
         ...
 
@@ -212,6 +230,7 @@ class FileSystemInterface(Protocol):
 
         Returns:
             Absolute path
+
         """
         ...
 
@@ -234,6 +253,7 @@ class BackendInterface(Protocol):
 
         Raises:
             Exception: If send operation fails
+
         """
         ...
 
@@ -245,6 +265,7 @@ class BackendInterface(Protocol):
 
         Returns:
             List of validation error messages (empty if valid)
+
         """
         ...
 
@@ -253,6 +274,7 @@ class BackendInterface(Protocol):
 
         Returns:
             Human-readable backend name
+
         """
         ...
 
@@ -273,6 +295,7 @@ class ValidatorInterface(Protocol):
         Returns:
             Tuple of (is_valid, errors) where errors is a list of
             error messages (empty if valid)
+
         """
         ...
 
@@ -286,6 +309,7 @@ class ValidatorInterface(Protocol):
 
         Returns:
             Tuple of (is_valid, errors, warnings)
+
         """
         ...
 
@@ -303,7 +327,7 @@ class ErrorHandlerInterface(Protocol):
         folder: str,
         filename: str,
         error: Exception,
-        context: Optional[dict] = None,
+        context: dict | None = None,
         error_source: str = "Dispatch",
     ) -> None:
         """Record an error.
@@ -314,6 +338,7 @@ class ErrorHandlerInterface(Protocol):
             error: The exception that was raised
             context: Optional additional context
             error_source: Source module/component name
+
         """
         ...
 
@@ -322,6 +347,7 @@ class ErrorHandlerInterface(Protocol):
 
         Returns:
             List of error records
+
         """
         ...
 
@@ -342,6 +368,7 @@ class LogInterface(Protocol):
 
         Args:
             message: Message to write
+
         """
         ...
 
@@ -350,6 +377,7 @@ class LogInterface(Protocol):
 
         Args:
             lines: Lines to write
+
         """
         ...
 
@@ -358,6 +386,7 @@ class LogInterface(Protocol):
 
         Returns:
             Log contents as string
+
         """
         ...
 

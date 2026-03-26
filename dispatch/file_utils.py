@@ -8,7 +8,6 @@ import datetime
 import os
 import re
 import time
-from typing import Optional
 
 from core.structured_logging import (
     get_logger,
@@ -42,6 +41,7 @@ def build_output_filename(
 
     Returns:
         Constructed output filename (basename only, no path)
+
     """
     rename_template = params.get("rename_file", "").strip()
 
@@ -66,7 +66,7 @@ def build_output_filename(
 
 
 def build_error_log_filename(
-    alias: str, errors_folder: str, folder_name: str, timestamp: Optional[str] = None
+    alias: str, errors_folder: str, folder_name: str, timestamp: str | None = None
 ) -> str:
     """Build the full path for a folder error log file.
 
@@ -78,6 +78,7 @@ def build_error_log_filename(
 
     Returns:
         Full path to error log file
+
     """
     # Strip invalid characters from alias
     cleaned_alias = _INVALID_ALIAS_CHARS_RE.sub("", alias)
@@ -103,6 +104,7 @@ def get_file_extension(filename: str) -> str:
 
     Returns:
         File extension without the dot (e.g., "txt", "edi")
+
     """
     return os.path.splitext(filename)[1].lstrip(".")
 
@@ -115,6 +117,7 @@ def strip_invalid_filename_chars(filename: str) -> str:
 
     Returns:
         Filename with only alphanumeric, dots, spaces, and underscores
+
     """
     return re.sub("[^A-Za-z0-9. _]+", "", filename)
 
@@ -127,6 +130,7 @@ def ensure_directory_exists(path: str) -> bool:
 
     Returns:
         True if directory exists or was created, False on error
+
     """
     try:
         if not os.path.exists(path):
@@ -136,7 +140,7 @@ def ensure_directory_exists(path: str) -> bool:
         return False
 
 
-def list_files_in_directory(directory: str, files_only: bool = True) -> list[str]:
+def list_files_in_directory(directory: str, *, files_only: bool = True) -> list[str]:
     """List all files in a directory.
 
     Args:
@@ -145,6 +149,7 @@ def list_files_in_directory(directory: str, files_only: bool = True) -> list[str
 
     Returns:
         List of absolute file paths
+
     """
     if not os.path.isdir(directory):
         return []
@@ -186,6 +191,7 @@ def build_processed_file_record(
 
     Returns:
         Dictionary ready for database insertion
+
     """
     return {
         "file_name": str(original_filename),
@@ -212,7 +218,7 @@ def build_processed_file_record(
     }
 
 
-def do_clear_old_files(folder_path, maximum_files):
+def do_clear_old_files(folder_path, maximum_files) -> None:
     while True:
         files = os.listdir(folder_path)
         if len(files) <= maximum_files:

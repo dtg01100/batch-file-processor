@@ -8,7 +8,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from core.structured_logging import (
     StructuredLogger,
@@ -69,6 +69,7 @@ class ConverterResult:
         format_used: Format that was used for conversion
         success: True if conversion succeeded
         errors: List of error messages
+
     """
 
     output_path: str = ""
@@ -100,6 +101,7 @@ class ConverterInterface(Protocol):
 
         Returns:
             ConverterResult with conversion outcome
+
         """
         ...
 
@@ -119,6 +121,7 @@ class ModuleLoaderProtocol(Protocol):
 
         Raises:
             ImportError: If module cannot be loaded
+
         """
         ...
 
@@ -130,6 +133,7 @@ class ModuleLoaderProtocol(Protocol):
 
         Returns:
             True if module can be loaded
+
         """
         ...
 
@@ -148,6 +152,7 @@ class DefaultModuleLoader:
 
         Raises:
             ImportError: If module cannot be loaded
+
         """
         import importlib
 
@@ -161,6 +166,7 @@ class DefaultModuleLoader:
 
         Returns:
             True if module can be loaded
+
         """
         try:
             self.load_module(module_name)
@@ -183,16 +189,18 @@ class MockConverter:
         last_params: Last params dict passed to convert
         last_settings: Last settings dict passed to convert
         last_upc_dict: Last upc_dict passed to convert
+
     """
 
     def __init__(
         self,
-        result: Optional[ConverterResult] = None,
+        result: ConverterResult | None = None,
         output_path: str = "",
         format_used: str = "",
+        *,
         success: bool = True,
-        errors: Optional[list[str]] = None,
-    ):
+        errors: list[str] | None = None,
+    ) -> None:
         """Initialize the mock converter.
 
         Args:
@@ -201,6 +209,7 @@ class MockConverter:
             format_used: Format to report
             success: Whether to report success
             errors: List of error messages
+
         """
         if result is not None:
             self._result = result
@@ -212,11 +221,11 @@ class MockConverter:
                 errors=errors or [],
             )
         self.call_count: int = 0
-        self.last_input_path: Optional[str] = None
-        self.last_output_dir: Optional[str] = None
-        self.last_params: Optional[dict] = None
-        self.last_settings: Optional[dict] = None
-        self.last_upc_dict: Optional[dict] = None
+        self.last_input_path: str | None = None
+        self.last_output_dir: str | None = None
+        self.last_params: dict | None = None
+        self.last_settings: dict | None = None
+        self.last_upc_dict: dict | None = None
 
     def convert(
         self,
@@ -237,6 +246,7 @@ class MockConverter:
 
         Returns:
             The configured ConverterResult
+
         """
         self.call_count += 1
         self.last_input_path = input_path
@@ -260,6 +270,7 @@ class MockConverter:
 
         Args:
             result: The ConverterResult to return
+
         """
         self._result = result
 
@@ -275,20 +286,22 @@ class EDIConverterStep:
         module_loader: Module loader for loading conversion modules
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
+
     """
 
     def __init__(
         self,
-        module_loader: Optional[ModuleLoaderProtocol] = None,
-        error_handler: Optional[Any] = None,
-        file_system: Optional[FileSystemInterface] = None,
-    ):
+        module_loader: ModuleLoaderProtocol | None = None,
+        error_handler: Any | None = None,
+        file_system: FileSystemInterface | None = None,
+    ) -> None:
         """Initialize the converter step.
 
         Args:
             module_loader: Module loader for loading conversion modules
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
+
         """
         self._module_loader = module_loader or DefaultModuleLoader()
         self._error_handler = error_handler
@@ -318,12 +331,12 @@ class EDIConverterStep:
             return result
 
         is_disabled, result = self._is_process_edi_disabled(
-            process_edi,
-            convert_to_format,
-            input_path,
-            input_basename,
-            correlation_id,
-            start_time,
+            process_edi=process_edi,
+            convert_to_format=convert_to_format,
+            input_path=input_path,
+            input_basename=input_basename,
+            correlation_id=correlation_id,
+            start_time=start_time,
         )
         if is_disabled:
             return result
@@ -405,6 +418,7 @@ class EDIConverterStep:
 
         Returns:
             List of supported format names
+
         """
         return SUPPORTED_FORMATS.copy()
 
@@ -414,6 +428,7 @@ class EDIConverterStep:
         Args:
             filename: Filename being processed
             error_msg: Error message
+
         """
         if self._error_handler is None:
             return
@@ -433,12 +448,13 @@ class EDIConverterStep:
         input_basename: str,
         correlation_id: str,
         start_time: float,
-    ) -> tuple[bool, Optional[ConverterResult]]:
+    ) -> tuple[bool, ConverterResult | None]:
         """Check if conversion should be skipped (no format specified).
 
         Returns:
             Tuple of (is_noop, early_return_result). If is_noop is True,
             early_return_result contains the result to return.
+
         """
         if not convert_to_format:
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -459,18 +475,20 @@ class EDIConverterStep:
 
     def _is_process_edi_disabled(
         self,
+        *,
         process_edi: bool,
         convert_to_format: str,
         input_path: str,
         input_basename: str,
         correlation_id: str,
         start_time: float,
-    ) -> tuple[bool, Optional[ConverterResult]]:
+    ) -> tuple[bool, ConverterResult | None]:
         """Check if EDI processing is disabled.
 
         Returns:
             Tuple of (is_disabled, early_return_result). If is_disabled is True,
             early_return_result contains the result to return.
+
         """
         if not process_edi:
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -500,12 +518,13 @@ class EDIConverterStep:
         input_basename: str,
         correlation_id: str,
         start_time: float,
-    ) -> tuple[bool, Optional[ConverterResult]]:
+    ) -> tuple[bool, ConverterResult | None]:
         """Validate the conversion format is supported.
 
         Returns:
             Tuple of (is_invalid, early_return_result). If is_invalid is True,
             early_return_result contains the result to return.
+
         """
         if convert_to_format not in SUPPORTED_FORMATS:
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -551,12 +570,13 @@ class EDIConverterStep:
         input_basename: str,
         correlation_id: str,
         start_time: float,
-    ) -> tuple[bool, Optional[ConverterResult]]:
+    ) -> tuple[bool, ConverterResult | None]:
         """Ensure output directory exists, creating if necessary.
 
         Returns:
             Tuple of (failed, early_return_result). If failed is True,
             early_return_result contains the result to return.
+
         """
         if self._file_system and not self._file_system.dir_exists(output_dir):
             try:
@@ -594,12 +614,13 @@ class EDIConverterStep:
         input_basename: str,
         correlation_id: str,
         start_time: float,
-    ) -> tuple[Optional[Any], Optional[ConverterResult]]:
+    ) -> tuple[Any | None, ConverterResult | None]:
         """Load the converter module.
 
         Returns:
             Tuple of (module, error_result). If module is None,
             error_result contains the result to return.
+
         """
         StructuredLogger.log_debug(
             logger,
@@ -662,9 +683,9 @@ class EDIConverterStep:
         self,
         file_path: str,
         folder: dict,
-        settings: Optional[dict] = None,
-        upc_dict: Optional[dict] = None,
-        context: Optional[Any] = None,
+        settings: dict | None = None,
+        upc_dict: dict | None = None,
+        context: Any | None = None,
     ) -> str | None:
         """Execute convert step (wrapper for pipeline compatibility).
 
@@ -676,6 +697,7 @@ class EDIConverterStep:
 
         Returns:
             Path to converted file, or None if conversion failed/not needed
+
         """
         import shutil
         import tempfile
@@ -722,7 +744,7 @@ class EDIConverterStep:
             correlation_id=correlation_id,
         )
 
-        temp_dirs: Optional[list[str]] = None
+        temp_dirs: list[str] | None = None
         if context is not None and hasattr(context, "temp_dirs"):
             temp_dirs = context.temp_dirs
         elif "_pipeline_temp_dirs" in folder and isinstance(

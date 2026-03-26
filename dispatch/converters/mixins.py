@@ -20,11 +20,12 @@ Example:
         def process_a_record(self, record, context):
             self._init_customer_lookup(record.fields["invoice_number"])
             # ... use mixin methods
+
 """
 
 import decimal
 from abc import ABC
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from core.database import QueryRunner, create_query_runner
 from core.exceptions import CustomerLookupError
@@ -51,16 +52,17 @@ class DatabaseConnectionMixin(ABC):
     Attributes:
         query_object: The database QueryRunner
         _db_initialized: Whether the database connection has been established
+
     """
 
-    query_object: Optional[QueryRunner] = None
+    query_object: QueryRunner | None = None
     _db_initialized: bool = False
 
     def _init_db_connection(
         self,
-        settings_dict: Dict[str, Any],
+        settings_dict: dict[str, Any],
         database: str = "QGPL",
-        required_keys: Tuple[str, ...] = (
+        required_keys: tuple[str, ...] = (
             "as400_username",
             "as400_password",
             "as400_address",
@@ -73,6 +75,7 @@ class DatabaseConnectionMixin(ABC):
             settings_dict: Dictionary containing database connection settings
             database: Database name (default: QGPL)
             required_keys: Tuple of required settings keys
+
         """
         if self._db_initialized:
             return
@@ -121,31 +124,34 @@ class CustomerLookupMixin(ABC):
 
     Attributes:
         header_fields_dict: Current customer header fields
+
     """
 
-    header_fields_dict: Dict[str, Any] = {}
+    header_fields_dict: dict[str, Any] = {}
 
     def _get_customer_query_sql(self) -> str:
         """Return the SQL query template for customer lookup.
 
         Returns:
             SQL query string with :paramstyle: placeholders
+
         """
         raise NotImplementedError("Subclasses must implement _get_customer_query_sql()")
 
-    def _get_customer_header_field_names(self) -> List[str]:
+    def _get_customer_header_field_names(self) -> list[str]:
         """Return ordered list of field names for customer query results.
 
         Returns:
             List of field name strings matching query columns
+
         """
         raise NotImplementedError(
             "Subclasses must implement _get_customer_header_field_names()"
         )
 
     def _build_customer_header_dict(
-        self, header_fields: Dict[str, Any], header_fields_list: List[str]
-    ) -> Dict[str, Any]:
+        self, header_fields: dict[str, Any], header_fields_list: list[str]
+    ) -> dict[str, Any]:
         """Build customer header dictionary from query results.
 
         Override this to add custom field processing (e.g., None fallback).
@@ -156,6 +162,7 @@ class CustomerLookupMixin(ABC):
 
         Returns:
             Dictionary mapping field names to values
+
         """
         # Convert spaces to underscores in keys for compatibility
         result = {}
@@ -166,7 +173,7 @@ class CustomerLookupMixin(ABC):
 
     def _init_customer_lookup(
         self, invoice_number: str, query_object: QueryRunner
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Initialize customer lookup and fetch header fields.
 
         Args:
@@ -178,6 +185,7 @@ class CustomerLookupMixin(ABC):
 
         Raises:
             CustomerLookupError: If customer not found
+
         """
         query_sql = self._get_customer_query_sql()
         header_fields_list = self._get_customer_header_field_names()
@@ -209,15 +217,17 @@ class UOMLookupMixin(ABC):
 
     Attributes:
         uom_lookup_list: Cached list of UOM data from database
+
     """
 
-    uom_lookup_list: List[Dict[str, Any]] = []
+    uom_lookup_list: list[dict[str, Any]] = []
 
     def _get_uom_query_sql(self) -> str:
         """Return the SQL query template for UOM lookup.
 
         Returns:
             SQL query string with :paramstyle: placeholders
+
         """
         return """
             SELECT DISTINCT bubacd AS itemno,
@@ -229,7 +239,7 @@ class UOMLookupMixin(ABC):
 
     def _init_uom_lookup(
         self, invoice_number: str, query_object: QueryRunner
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Initialize UOM lookup and fetch UOM data.
 
         Args:
@@ -238,6 +248,7 @@ class UOMLookupMixin(ABC):
 
         Returns:
             List of dicts with keys: itemno, uom_mult, uom_code
+
         """
         self.uom_lookup_list = query_object.run_query(
             self._get_uom_query_sql(), (invoice_number,)
@@ -261,6 +272,7 @@ class UOMLookupMixin(ABC):
 
         Returns:
             UOM code string (e.g., 'EA', 'CS') or '?' if not found
+
         """
         if not self.uom_lookup_list:
             return "?"
@@ -304,10 +316,11 @@ class ItemProcessingMixin(ABC):
     Methods:
         _convert_to_item_total: Calculate item total from cost and quantity
         _generate_full_upc: Generate full 12-digit UPC from input
+
     """
 
     @staticmethod
-    def _convert_to_item_total(unit_cost: str, qty: str) -> Tuple[decimal.Decimal, int]:
+    def _convert_to_item_total(unit_cost: str, qty: str) -> tuple[decimal.Decimal, int]:
         """Calculate item total from unit cost and quantity.
 
         Args:
@@ -316,6 +329,7 @@ class ItemProcessingMixin(ABC):
 
         Returns:
             Tuple of (item_total as Decimal, qty_as_int)
+
         """
         wrkqtyint = safe_int(qty)
 
@@ -339,6 +353,7 @@ class ItemProcessingMixin(ABC):
 
         Returns:
             Full 12-digit UPC string or empty string if invalid
+
         """
         input_upc = input_upc.strip()
         if not input_upc:
@@ -491,8 +506,8 @@ STEWARTS_CUSTOMER_QUERY_SQL = _build_customer_query_sql(
 
 
 def build_jolley_header_dict(
-    header_fields: Dict[str, Any], header_fields_list: List[str]
-) -> Dict[str, Any]:
+    header_fields: dict[str, Any], header_fields_list: list[str]
+) -> dict[str, Any]:
     """Build Jolley-specific customer header dictionary with corporate fallback.
 
     Jolley-specific: falls back corporate fields to customer fields if None.
@@ -503,6 +518,7 @@ def build_jolley_header_dict(
 
     Returns:
         Dictionary with Jolley-specific corporate field fallback
+
     """
     # Convert spaces to underscores in keys for compatibility with field list
     result = {}

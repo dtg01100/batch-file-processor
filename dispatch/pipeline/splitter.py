@@ -6,7 +6,7 @@ wrapping the existing EDISplitter with pipeline integration.
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.structured_logging import (
@@ -45,7 +45,7 @@ def _normalize_true_false_only(value: Any) -> bool:
     return False
 
 
-def _normalize_include_flag(value: Any, default: bool = True) -> bool:
+def _normalize_include_flag(value: Any, *, default: bool = True) -> bool:
     """Normalize include_* flags with legacy string/int compatibility."""
     if value is None:
         return default
@@ -69,6 +69,7 @@ class SplitterResult:
         was_filtered: True if category filtering was applied
         skipped_invoices: Number of invoices skipped due to filtering
         errors: List of error messages
+
     """
 
     files: list[tuple[str, str, str]] = field(default_factory=list)
@@ -95,6 +96,7 @@ class SplitterInterface(Protocol):
 
         Returns:
             SplitterResult with split outcome
+
         """
         ...
 
@@ -111,6 +113,7 @@ class CreditDetectorProtocol(Protocol):
 
         Returns:
             True if the file is a credit memo
+
         """
         ...
 
@@ -126,6 +129,7 @@ class DefaultCreditDetector:
 
         Returns:
             True if the file is a credit memo
+
         """
         from core import utils
 
@@ -145,17 +149,19 @@ class MockSplitter:
         last_output_dir: Last output directory passed to split
         last_params: Last params dict passed to split
         last_upc_dict: Last upc_dict passed to split
+
     """
 
     def __init__(
         self,
-        result: Optional[SplitterResult] = None,
-        files: Optional[list[tuple[str, str, str]]] = None,
+        result: SplitterResult | None = None,
+        files: list[tuple[str, str, str]] | None = None,
+        *,
         was_split: bool = False,
         was_filtered: bool = False,
         skipped_invoices: int = 0,
-        errors: Optional[list[str]] = None,
-    ):
+        errors: list[str] | None = None,
+    ) -> None:
         """Initialize the mock splitter.
 
         Args:
@@ -165,6 +171,7 @@ class MockSplitter:
             was_filtered: Whether to report filtering occurred
             skipped_invoices: Number of skipped invoices to report
             errors: List of error messages
+
         """
         if result is not None:
             self._result = result
@@ -177,10 +184,10 @@ class MockSplitter:
                 errors=errors or [],
             )
         self.call_count: int = 0
-        self.last_input_path: Optional[str] = None
-        self.last_output_dir: Optional[str] = None
-        self.last_params: Optional[dict] = None
-        self.last_upc_dict: Optional[dict] = None
+        self.last_input_path: str | None = None
+        self.last_output_dir: str | None = None
+        self.last_params: dict | None = None
+        self.last_upc_dict: dict | None = None
 
     def split(
         self, input_path: str, output_dir: str, params: dict, upc_dict: dict
@@ -195,6 +202,7 @@ class MockSplitter:
 
         Returns:
             The configured SplitterResult
+
         """
         self.call_count += 1
         self.last_input_path = input_path
@@ -216,6 +224,7 @@ class MockSplitter:
 
         Args:
             result: The SplitterResult to return
+
         """
         self._result = result
 
@@ -223,11 +232,12 @@ class MockSplitter:
 class FilesystemAdapter:
     """Adapts FileSystemInterface to FilesystemProtocol."""
 
-    def __init__(self, fs: FileSystemInterface):
+    def __init__(self, fs: FileSystemInterface) -> None:
         """Initialize adapter with file system interface.
 
         Args:
             fs: FileSystemInterface implementation
+
         """
         self._fs = fs
 
@@ -275,15 +285,16 @@ class EDISplitterStep:
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
         credit_detector: Credit memo detector
+
     """
 
     def __init__(
         self,
-        splitter: Optional[EDISplitter] = None,
-        error_handler: Optional[Any] = None,
-        file_system: Optional[FileSystemInterface] = None,
-        credit_detector: Optional[CreditDetectorProtocol] = None,
-    ):
+        splitter: EDISplitter | None = None,
+        error_handler: Any | None = None,
+        file_system: FileSystemInterface | None = None,
+        credit_detector: CreditDetectorProtocol | None = None,
+    ) -> None:
         """Initialize the splitter step.
 
         Args:
@@ -291,6 +302,7 @@ class EDISplitterStep:
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
             credit_detector: Optional credit memo detector
+
         """
         self._file_system = file_system
         self._error_handler = error_handler
@@ -325,6 +337,7 @@ class EDISplitterStep:
 
         Returns:
             SplitterResult with split outcome
+
         """
         errors: list[str] = []
 
@@ -376,10 +389,10 @@ class EDISplitterStep:
                 upc_dict,
                 filter_categories,
                 filter_mode,
-                prepend_date,
-                include_invoices,
-                include_credits,
-                errors,
+                prepend_date=prepend_date,
+                include_invoices=include_invoices,
+                include_credits=include_credits,
+                errors=errors,
             )
         else:
             return self._filter_without_split(
@@ -394,6 +407,7 @@ class EDISplitterStep:
         upc_dict: dict,
         filter_categories: str,
         filter_mode: str,
+        *,
         prepend_date: bool,
         include_invoices: bool,
         include_credits: bool,
@@ -415,6 +429,7 @@ class EDISplitterStep:
 
         Returns:
             SplitterResult
+
         """
         try:
             config = SplitConfig(output_directory=output_dir, prepend_date=prepend_date)
@@ -433,7 +448,9 @@ class EDISplitterStep:
 
             if len(split_result.output_files) > 1:
                 filtered_files = self._filter_by_credit_invoice(
-                    split_result.output_files, include_invoices, include_credits
+                    split_result.output_files,
+                    include_invoices=include_invoices,
+                    include_credits=include_credits,
                 )
 
                 log_file_operation(
@@ -484,7 +501,9 @@ class EDISplitterStep:
                             split_result.output_files[0][0],
                         )
                         filtered_files = self._filter_by_credit_invoice(
-                            split_result.output_files, include_invoices, include_credits
+                            split_result.output_files,
+                            include_invoices=include_invoices,
+                            include_credits=include_credits,
                         )
                         return SplitterResult(
                             files=filtered_files,
@@ -552,6 +571,7 @@ class EDISplitterStep:
 
         Returns:
             SplitterResult
+
         """
         was_filtered = False
         output_path = input_path
@@ -600,6 +620,7 @@ class EDISplitterStep:
     def _filter_by_credit_invoice(
         self,
         files: list[tuple[str, str, str]],
+        *,
         include_invoices: bool,
         include_credits: bool,
     ) -> list[tuple[str, str, str]]:
@@ -612,6 +633,7 @@ class EDISplitterStep:
 
         Returns:
             Filtered list of file tuples
+
         """
         logger.debug(
             "Filtering %d files by credit/invoice (include_invoices=%s, include_credits=%s)",
@@ -647,6 +669,7 @@ class EDISplitterStep:
         Args:
             filename: Filename being processed
             error_msg: Error message
+
         """
         if self._error_handler is None:
             return
@@ -668,6 +691,7 @@ class EDISplitterStep:
 
         Returns:
             List of output file paths
+
         """
         import tempfile
 

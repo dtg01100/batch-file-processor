@@ -6,7 +6,7 @@ using Protocol interfaces for dependency injection and database abstraction.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.structured_logging import (
     get_logger,
@@ -28,6 +28,7 @@ class ProcessedFileRecord:
         sent_date_time: When the file was sent
         resend_flag: Whether the file is marked for resending
         additional_data: Any additional metadata
+
     """
 
     file_name: str
@@ -43,6 +44,7 @@ class ProcessedFileRecord:
 
         Returns:
             Dictionary representation of the record
+
         """
         return {
             "file_name": self.file_name,
@@ -65,6 +67,7 @@ class ProcessedFileRecord:
 
         Returns:
             ProcessedFileRecord instance
+
         """
         sent_date_time = data.get("sent_date_time")
         if isinstance(sent_date_time, str):
@@ -96,6 +99,7 @@ class DatabaseProtocol(Protocol):
         Args:
             table: Table name
             record: Record dictionary to insert
+
         """
         ...
 
@@ -108,10 +112,11 @@ class DatabaseProtocol(Protocol):
 
         Returns:
             List of matching records
+
         """
         ...
 
-    def find_one(self, table: str, **kwargs) -> Optional[dict]:
+    def find_one(self, table: str, **kwargs) -> dict | None:
         """Find a single record matching criteria.
 
         Args:
@@ -120,6 +125,7 @@ class DatabaseProtocol(Protocol):
 
         Returns:
             Single matching record or None
+
         """
         ...
 
@@ -130,6 +136,7 @@ class DatabaseProtocol(Protocol):
             table: Table name
             record: Record with updated values
             keys: List of field names to use as keys
+
         """
         ...
 
@@ -139,6 +146,7 @@ class DatabaseProtocol(Protocol):
         Args:
             table: Table name
             **kwargs: Field name/value pairs to filter by
+
         """
         ...
 
@@ -151,6 +159,7 @@ class DatabaseProtocol(Protocol):
 
         Returns:
             Number of matching records
+
         """
         ...
 
@@ -161,7 +170,7 @@ class InMemoryDatabase:
     Stores records in memory with simple query capabilities.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the in-memory database."""
         self._tables: dict[str, list[dict]] = {}
 
@@ -173,6 +182,7 @@ class InMemoryDatabase:
 
         Returns:
             List of records in the table
+
         """
         if table not in self._tables:
             self._tables[table] = []
@@ -184,6 +194,7 @@ class InMemoryDatabase:
         Args:
             table: Table name
             record: Record to insert
+
         """
         records = self._ensure_table(table)
         # Create a copy to avoid mutation issues
@@ -198,6 +209,7 @@ class InMemoryDatabase:
 
         Returns:
             List of matching records
+
         """
         records = self._ensure_table(table)
         if not kwargs:
@@ -214,7 +226,7 @@ class InMemoryDatabase:
                 results.append(dict(record))
         return results
 
-    def find_one(self, table: str, **kwargs) -> Optional[dict]:
+    def find_one(self, table: str, **kwargs) -> dict | None:
         """Find a single record matching criteria.
 
         Args:
@@ -223,6 +235,7 @@ class InMemoryDatabase:
 
         Returns:
             Single matching record or None
+
         """
         results = self.find(table, **kwargs)
         return results[0] if results else None
@@ -234,6 +247,7 @@ class InMemoryDatabase:
             table: Table name
             record: Record with updated values
             keys: List of field names to use as keys
+
         """
         records = self._ensure_table(table)
 
@@ -254,6 +268,7 @@ class InMemoryDatabase:
         Args:
             table: Table name
             **kwargs: Field name/value pairs to filter by
+
         """
         records = self._ensure_table(table)
 
@@ -276,14 +291,16 @@ class InMemoryDatabase:
 
         Returns:
             Number of matching records
+
         """
         return len(self.find(table, **kwargs))
 
-    def clear(self, table: Optional[str] = None) -> None:
+    def clear(self, table: str | None = None) -> None:
         """Clear all records from a table or all tables.
 
         Args:
             table: Optional table name, or None to clear all
+
         """
         if table:
             self._tables[table] = []
@@ -300,11 +317,12 @@ class ProcessedFilesTracker:
 
     TABLE_NAME = "processed_files"
 
-    def __init__(self, database: DatabaseProtocol):
+    def __init__(self, database: DatabaseProtocol) -> None:
         """Initialize the processed files tracker.
 
         Args:
             database: Database for storing tracking records
+
         """
         self.database = database
 
@@ -313,6 +331,7 @@ class ProcessedFilesTracker:
 
         Args:
             record: The processed file record to store
+
         """
         import logging
 
@@ -344,7 +363,7 @@ class ProcessedFilesTracker:
         file_name: str,
         folder_id: int,
         file_checksum: str,
-        sent_date_time: Optional[datetime] = None,
+        sent_date_time: datetime | None = None,
     ) -> None:
         """Record a sent file with simple parameters.
 
@@ -353,6 +372,7 @@ class ProcessedFilesTracker:
             folder_id: ID of the folder
             file_checksum: Checksum of the file
             sent_date_time: When the file was sent (defaults to now)
+
         """
         record = ProcessedFileRecord(
             file_name=file_name,
@@ -370,6 +390,7 @@ class ProcessedFilesTracker:
 
         Returns:
             List of processed file records for the folder
+
         """
         results = self.database.find(self.TABLE_NAME, folder_id=folder_id)
         return [ProcessedFileRecord.from_dict(r) for r in results]
@@ -382,13 +403,14 @@ class ProcessedFilesTracker:
 
         Returns:
             List of processed file records with the checksum
+
         """
         results = self.database.find(self.TABLE_NAME, file_checksum=checksum)
         return [ProcessedFileRecord.from_dict(r) for r in results]
 
     def get_file_by_name_and_folder(
         self, file_name: str, folder_id: int
-    ) -> Optional[ProcessedFileRecord]:
+    ) -> ProcessedFileRecord | None:
         """Get a specific file record by name and folder.
 
         Args:
@@ -397,6 +419,7 @@ class ProcessedFilesTracker:
 
         Returns:
             The processed file record, or None if not found
+
         """
         result = self.database.find_one(
             self.TABLE_NAME, file_name=file_name, folder_id=folder_id
@@ -412,6 +435,7 @@ class ProcessedFilesTracker:
 
         Returns:
             True if the file was found and marked, False otherwise
+
         """
         record = self.database.find_one(
             self.TABLE_NAME, file_name=file_name, folder_id=folder_id
@@ -436,6 +460,7 @@ class ProcessedFilesTracker:
 
         Returns:
             True if the file was found and updated, False otherwise
+
         """
         record = self.database.find_one(
             self.TABLE_NAME, file_name=file_name, folder_id=folder_id
@@ -450,7 +475,7 @@ class ProcessedFilesTracker:
         return True
 
     def get_files_for_resend(
-        self, folder_id: Optional[int] = None
+        self, folder_id: int | None = None
     ) -> list[ProcessedFileRecord]:
         """Get all files marked for resending.
 
@@ -459,6 +484,7 @@ class ProcessedFilesTracker:
 
         Returns:
             List of files marked for resending
+
         """
         if folder_id is not None:
             results = self.database.find(
@@ -478,6 +504,7 @@ class ProcessedFilesTracker:
 
         Returns:
             True if the file exists in tracking, False otherwise
+
         """
         return (
             self.database.count(
@@ -486,7 +513,7 @@ class ProcessedFilesTracker:
             > 0
         )
 
-    def count_files(self, folder_id: Optional[int] = None) -> int:
+    def count_files(self, folder_id: int | None = None) -> int:
         """Count processed files.
 
         Args:
@@ -494,6 +521,7 @@ class ProcessedFilesTracker:
 
         Returns:
             Number of processed files
+
         """
         if folder_id is not None:
             return self.database.count(self.TABLE_NAME, folder_id=folder_id)
@@ -505,6 +533,7 @@ class ProcessedFilesTracker:
         Args:
             file_name: Name of the file
             folder_id: ID of the folder
+
         """
         import logging
 
@@ -526,7 +555,7 @@ class ProcessedFilesTracker:
 
 
 def create_processed_files_tracker(
-    database: Optional[DatabaseProtocol] = None,
+    database: DatabaseProtocol | None = None,
 ) -> ProcessedFilesTracker:
     """Factory function to create a ProcessedFilesTracker.
 
@@ -535,6 +564,7 @@ def create_processed_files_tracker(
 
     Returns:
         Configured ProcessedFilesTracker instance
+
     """
     if database is None:
         database = InMemoryDatabase()

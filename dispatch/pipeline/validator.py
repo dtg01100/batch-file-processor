@@ -6,7 +6,7 @@ wrapping the existing EDIValidator with pipeline integration.
 
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.structured_logging import (
     get_logger,
@@ -30,6 +30,7 @@ class ValidationResult:
         errors: List of error messages
         warnings: List of warning messages
         log_output: Full log output for reporting
+
     """
 
     is_valid: bool
@@ -52,6 +53,7 @@ class ValidatorStepInterface(Protocol):
 
         Returns:
             ValidationResult with validation outcome
+
         """
         ...
 
@@ -63,6 +65,7 @@ class ValidatorStepInterface(Protocol):
 
         Returns:
             True if processing should be blocked on validation failure
+
         """
         ...
 
@@ -79,16 +82,18 @@ class MockValidator:
         call_count: Number of times validate was called
         last_file_path: Last file path passed to validate
         last_filename_for_log: Last filename_for_log passed to validate
+
     """
 
     def __init__(
         self,
+        *,
         should_pass: bool = True,
         should_have_minor_errors: bool = False,
-        errors: Optional[list[str]] = None,
-        warnings: Optional[list[str]] = None,
+        errors: list[str] | None = None,
+        warnings: list[str] | None = None,
         log_output: str = "",
-    ):
+    ) -> None:
         """Initialize the mock validator.
 
         Args:
@@ -97,6 +102,7 @@ class MockValidator:
             errors: List of error messages to return
             warnings: List of warning messages to return
             log_output: Log output string to return
+
         """
         self.should_pass = should_pass
         self.should_have_minor_errors = should_have_minor_errors
@@ -104,8 +110,8 @@ class MockValidator:
         self._warnings = warnings or []
         self._log_output = log_output
         self.call_count: int = 0
-        self.last_file_path: Optional[str] = None
-        self.last_filename_for_log: Optional[str] = None
+        self.last_file_path: str | None = None
+        self.last_filename_for_log: str | None = None
 
     def validate(self, file_path: str, filename_for_log: str) -> ValidationResult:
         """Mock validate method.
@@ -116,6 +122,7 @@ class MockValidator:
 
         Returns:
             ValidationResult based on mock configuration
+
         """
         self.call_count += 1
         self.last_file_path = file_path
@@ -137,6 +144,7 @@ class MockValidator:
 
         Returns:
             True if should_pass is False and report_edi_errors is True
+
         """
         if self.should_pass:
             return False
@@ -159,20 +167,22 @@ class EDIValidationStep:
         validator: EDI validator instance
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
+
     """
 
     def __init__(
         self,
-        validator: Optional[EDIValidator] = None,
-        error_handler: Optional[ErrorHandler] = None,
-        file_system: Optional[FileSystemInterface] = None,
-    ):
+        validator: EDIValidator | None = None,
+        error_handler: ErrorHandler | None = None,
+        file_system: FileSystemInterface | None = None,
+    ) -> None:
         """Initialize the validation step.
 
         Args:
             validator: EDI validator instance (creates new one if None)
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface for the validator
+
         """
         self._file_system = file_system
         self._validator = validator or EDIValidator(file_system=file_system)
@@ -191,6 +201,7 @@ class EDIValidationStep:
 
         Returns:
             ValidationResult with validation outcome
+
         """
         import logging
 
@@ -272,6 +283,7 @@ class EDIValidationStep:
 
         Returns:
             True if processing should be blocked on validation failure
+
         """
         report_edi_errors = params.get("report_edi_errors", False)
         return report_edi_errors
@@ -285,6 +297,7 @@ class EDIValidationStep:
 
         Returns:
             Tuple of (is_valid, errors_or_file_path)
+
         """
         logger.debug("Execute validation step for: %s", file_path)
         filename = folder.get("filename_for_log", file_path)
@@ -300,6 +313,7 @@ class EDIValidationStep:
 
         Returns:
             Error log as string
+
         """
         return self._error_log.getvalue()
 
@@ -320,6 +334,7 @@ class EDIValidationStep:
 
         Returns:
             Formatted log output string
+
         """
         logger.debug(
             "Building log output for %s (errors=%d, warnings=%d)",
@@ -341,6 +356,7 @@ class EDIValidationStep:
         Args:
             filename: Filename being processed
             errors: List of error messages
+
         """
         if self._error_handler is None:
             return

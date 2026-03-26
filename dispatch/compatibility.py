@@ -22,7 +22,7 @@ Deprecation Timeline:
 """
 
 import warnings
-from typing import Any, Dict
+from typing import Any
 
 from core.utils.bool_utils import normalize_bool
 
@@ -61,11 +61,12 @@ def parse_legacy_process_edi_flag(value: Any) -> bool:
 
     Returns:
         Boolean value
+
     """
     return _normalize_legacy_true_false(value)
 
 
-def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+def convert_backend_config(legacy_config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Convert legacy backend configuration to modern nested format.
 
     Args:
@@ -73,6 +74,7 @@ def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str,
 
     Returns:
         Modern nested configuration dict with 'copy', 'ftp', 'email' keys
+
     """
     return {
         "copy": {
@@ -97,7 +99,7 @@ def convert_backend_config(legacy_config: Dict[str, Any]) -> Dict[str, Dict[str,
     }
 
 
-def modern_config_to_legacy(modern_config: Dict[str, Any]) -> Dict[str, Any]:
+def modern_config_to_legacy(modern_config: dict[str, Any]) -> dict[str, Any]:
     """Convert modern backend configuration to legacy flat format.
 
     Args:
@@ -105,6 +107,7 @@ def modern_config_to_legacy(modern_config: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns:
         Legacy flat configuration dict
+
     """
     legacy = {}
 
@@ -131,7 +134,7 @@ def modern_config_to_legacy(modern_config: Dict[str, Any]) -> Dict[str, Any]:
     return legacy
 
 
-def legacy_config_to_modern(legacy_config: Dict[str, Any]) -> Dict[str, Any]:
+def legacy_config_to_modern(legacy_config: dict[str, Any]) -> dict[str, Any]:
     """Convert legacy folder configuration to modern format.
 
     Args:
@@ -139,6 +142,7 @@ def legacy_config_to_modern(legacy_config: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns:
         Modern configuration dict with nested 'edi' and 'backends' sections
+
     """
     modern = {
         "id": legacy_config.get("id"),
@@ -175,6 +179,7 @@ def __getattr__(name: str) -> Any:
 
     Raises:
         AttributeError: If the name doesn't exist in dispatch
+
     """
     # Map of legacy names to their new locations
     _import_map = {

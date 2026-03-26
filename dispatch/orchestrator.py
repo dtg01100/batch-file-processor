@@ -10,7 +10,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Optional
+from typing import Any
 
 from core.database import QueryRunner, create_query_runner
 from core.structured_logging import (
@@ -44,6 +44,7 @@ def _normalize_convert_to_format(value: Any) -> str:
         "Estore eInvoice" -> "estore_einvoice"
         "  Tweaks  " -> "tweaks"
         None -> ""
+
     """
     if value is None:
         return ""
@@ -73,22 +74,23 @@ class DispatchConfig:
         tweaker_step: Pipeline tweaker step
         file_processor: File processor service
         upc_dict: Cached UPC dictionary
+
     """
 
-    database: Optional[DatabaseInterface] = None
-    file_system: Optional[FileSystemInterface] = None
+    database: DatabaseInterface | None = None
+    file_system: FileSystemInterface | None = None
     backends: dict[str, BackendInterface] = field(default_factory=dict)
-    validator: Optional[ValidatorInterface] = None
-    error_handler: Optional[ErrorHandlerInterface] = None
+    validator: ValidatorInterface | None = None
+    error_handler: ErrorHandlerInterface | None = None
     settings: dict = field(default_factory=dict)
     version: str = "1.0.0"
-    upc_service: Optional[Any] = None
-    progress_reporter: Optional[Any] = None
-    validator_step: Optional[Any] = None
-    splitter_step: Optional[Any] = None
-    converter_step: Optional[Any] = None
-    tweaker_step: Optional[Any] = None
-    file_processor: Optional[Any] = None
+    upc_service: Any | None = None
+    progress_reporter: Any | None = None
+    validator_step: Any | None = None
+    splitter_step: Any | None = None
+    converter_step: Any | None = None
+    tweaker_step: Any | None = None
+    file_processor: Any | None = None
     upc_dict: dict = field(default_factory=dict)
 
 
@@ -103,6 +105,7 @@ class FolderResult:
         files_failed: Number of files that failed
         errors: List of error messages
         success: Whether the folder was processed successfully
+
     """
 
     folder_name: str
@@ -124,6 +127,7 @@ class FileResult:
         validated: Whether validation passed
         converted: Whether conversion was applied
         errors: List of error messages
+
     """
 
     file_name: str
@@ -156,13 +160,15 @@ class DispatchOrchestrator:
         config: Dispatch configuration
         send_manager: Manager for sending files to backends
         run_log: In-memory log of processing run
+
     """
 
-    def __init__(self, config: DispatchConfig):
+    def __init__(self, config: DispatchConfig) -> None:
         """Initialize the dispatch orchestrator.
 
         Args:
             config: Dispatch configuration
+
         """
         self.config = config
         self.validator = config.validator or EDIValidator()
@@ -171,7 +177,7 @@ class DispatchOrchestrator:
         self.run_log: StringIO = StringIO()
         self.processed_count: int = 0
         self.error_count: int = 0
-        self._last_upc_lookup_error: Optional[str] = None
+        self._last_upc_lookup_error: str | None = None
         logger.debug(
             "DispatchOrchestrator initialized (pipeline_steps: "
             "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
@@ -185,10 +191,10 @@ class DispatchOrchestrator:
         self,
         folder: dict,
         run_log: Any,
-        processed_files: Optional[DatabaseInterface] = None,
-        pre_discovered_files: Optional[list[str]] = None,
-        folder_num: Optional[int] = None,
-        folder_total: Optional[int] = None,
+        processed_files: DatabaseInterface | None = None,
+        pre_discovered_files: list[str] | None = None,
+        folder_num: int | None = None,
+        folder_total: int | None = None,
     ) -> FolderResult:
         """Process a single folder via the pipeline path.
 
@@ -199,6 +205,7 @@ class DispatchOrchestrator:
 
         Returns:
             FolderResult with processing outcome
+
         """
         correlation_id = get_or_create_correlation_id()
         folder_path = folder.get("folder_name", "")
@@ -236,11 +243,11 @@ class DispatchOrchestrator:
         self,
         folder: dict,
         run_log: Any,
-        processed_files: Optional[DatabaseInterface] = None,
-        upc_dict: Optional[dict] = None,
-        pre_discovered_files: Optional[list[str]] = None,
-        folder_num: Optional[int] = None,
-        folder_total: Optional[int] = None,
+        processed_files: DatabaseInterface | None = None,
+        upc_dict: dict | None = None,
+        pre_discovered_files: list[str] | None = None,
+        folder_num: int | None = None,
+        folder_total: int | None = None,
     ) -> FolderResult:
         """Process folder using new pipeline steps.
 
@@ -252,6 +259,7 @@ class DispatchOrchestrator:
 
         Returns:
             FolderResult with processing outcome
+
         """
         result = FolderResult(
             folder_name=folder.get("folder_name", ""), alias=folder.get("alias", "")
@@ -310,8 +318,8 @@ class DispatchOrchestrator:
     def discover_pending_files(
         self,
         folders: list[dict],
-        processed_files: Optional[DatabaseInterface] = None,
-        progress_reporter: Optional[Any] = None,
+        processed_files: DatabaseInterface | None = None,
+        progress_reporter: Any | None = None,
     ) -> tuple[list[list[str]], int]:
         """Discover files pending send for each folder.
 
@@ -330,6 +338,7 @@ class DispatchOrchestrator:
             Tuple of:
                 - List of pending-file lists aligned with ``folders`` order.
                 - Total number of pending files across all folders.
+
         """
         folder_total = len(folders)
         pending_lists: list[list[str]] = []
@@ -381,7 +390,7 @@ class DispatchOrchestrator:
         files: list[str],
         folder: dict,
         effective_upc_dict: dict,
-        processed_files: Optional[DatabaseInterface],
+        processed_files: DatabaseInterface | None,
         run_log: Any,
         result: FolderResult,
         total_files: int,
@@ -409,7 +418,7 @@ class DispatchOrchestrator:
         """Finalize folder result and notify progress reporter."""
         result.success = result.files_failed == 0
         if self.config.progress_reporter:
-            self.config.progress_reporter.complete_folder(result.success)
+            self.config.progress_reporter.complete_folder(success=result.success)
 
     def _folder_not_found_result(
         self, folder_path: str, run_log: Any, result: FolderResult
@@ -425,15 +434,16 @@ class DispatchOrchestrator:
     def _discover_and_filter_files(
         self,
         folder_path: str,
-        pre_discovered_files: Optional[list[str]],
-        processed_files: Optional[DatabaseInterface],
+        pre_discovered_files: list[str] | None,
+        processed_files: DatabaseInterface | None,
         folder: dict,
         run_log: Any,
-    ) -> Optional[list[str]]:
+    ) -> list[str] | None:
         """Discover files to process and filter already-processed files.
 
         Returns:
             List of file paths to process, or None if no files found (caller should return early).
+
         """
         files = list(pre_discovered_files) if pre_discovered_files is not None else None
 
@@ -463,8 +473,8 @@ class DispatchOrchestrator:
         self,
         folder: dict,
         total_files: int,
-        folder_num: Optional[int],
-        folder_total: Optional[int],
+        folder_num: int | None,
+        folder_total: int | None,
     ) -> None:
         """Initialize progress reporter for folder processing."""
         if not self.config.progress_reporter:
@@ -500,6 +510,7 @@ class DispatchOrchestrator:
 
         Returns:
             UPC dictionary (may be empty if initialization fails)
+
         """
         logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
         strict_db_mode = self._is_strict_database_lookup(settings)
@@ -556,7 +567,7 @@ class DispatchOrchestrator:
         return {}
 
     def _parse_upc_query_rows(
-        self, rows: list[Any], strict_testing_mode: bool
+        self, rows: list[Any], *, strict_testing_mode: bool
     ) -> dict[int, list[Any]]:
         """Build UPC lookup data from raw query rows.
 
@@ -592,7 +603,9 @@ class DispatchOrchestrator:
                 continue
         return upc_dict
 
-    def _close_upc_runner(self, runner: QueryRunner, strict_testing_mode: bool) -> None:
+    def _close_upc_runner(
+        self, runner: QueryRunner, *, strict_testing_mode: bool
+    ) -> None:
         """Close UPC query runner, surfacing failures in strict mode."""
         try:
             runner.close()
@@ -609,7 +622,7 @@ class DispatchOrchestrator:
         strict_db_mode = self._is_strict_database_lookup(settings)
         strict_testing_mode = get_strict_testing_mode()
 
-        if not self._validate_as400_settings(settings, strict_db_mode):
+        if not self._validate_as400_settings(settings, strict_db_mode=strict_db_mode):
             return {}
 
         runner_kwargs = self._build_upc_runner_kwargs(settings)
@@ -617,14 +630,22 @@ class DispatchOrchestrator:
         runner = create_query_runner(**runner_kwargs)
 
         try:
-            return self._execute_upc_query(runner, strict_db_mode, strict_testing_mode)
+            return self._execute_upc_query(
+                runner,
+                strict_db_mode=strict_db_mode,
+                strict_testing_mode=strict_testing_mode,
+            )
         except Exception as exc:
-            self._handle_upc_query_exception(exc, strict_db_mode, strict_testing_mode)
+            self._handle_upc_query_exception(
+                exc,
+                strict_db_mode=strict_db_mode,
+                strict_testing_mode=strict_testing_mode,
+            )
             return {}
         finally:
-            self._close_upc_runner(runner, strict_testing_mode)
+            self._close_upc_runner(runner, strict_testing_mode=strict_testing_mode)
 
-    def _validate_as400_settings(self, settings: dict, strict_db_mode: bool) -> bool:
+    def _validate_as400_settings(self, settings: dict, *, strict_db_mode: bool) -> bool:
         """Validate AS400 settings and handle missing credentials.
 
         Returns True if settings are valid, False if lookup should be skipped.
@@ -670,7 +691,7 @@ class DispatchOrchestrator:
         return runner_kwargs
 
     def _execute_upc_query(
-        self, runner: QueryRunner, strict_db_mode: bool, strict_testing_mode: bool
+        self, runner: QueryRunner, *, strict_db_mode: bool, strict_testing_mode: bool
     ) -> dict:
         """Execute UPC query and parse results into dictionary."""
         rows = runner.run_query(
@@ -695,7 +716,9 @@ class DispatchOrchestrator:
             self._last_upc_lookup_error = "fallback UPC query returned no rows"
             return {}
 
-        upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
+        upc_dict = self._parse_upc_query_rows(
+            rows, strict_testing_mode=strict_testing_mode
+        )
         if strict_db_mode and rows and not upc_dict:
             raise LookupError(
                 "database_lookup_mode is strict but UPC query returned no parseable rows"
@@ -707,7 +730,7 @@ class DispatchOrchestrator:
         return upc_dict
 
     def _handle_upc_query_exception(
-        self, exc: Exception, strict_db_mode: bool, strict_testing_mode: bool
+        self, exc: Exception, *, strict_db_mode: bool, strict_testing_mode: bool
     ) -> None:
         """Handle exceptions from UPC query execution."""
         self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
@@ -734,6 +757,7 @@ class DispatchOrchestrator:
 
         Returns:
             FileResult with processing outcome
+
         """
         import os
 
@@ -1036,6 +1060,7 @@ class DispatchOrchestrator:
 
         Returns:
             Tuple of (continue_processing, current_file_path)
+
         """
         should_validate = self._should_validate(context.effective_folder)
         logger.debug(
@@ -1086,6 +1111,7 @@ class DispatchOrchestrator:
         original_file_path: str,
         context: ProcessingContext,
         run_log: Any,
+        *,
         validation_passed: bool = True,
     ) -> tuple[str, bool]:
         """Apply converter and tweaker steps for a single file path.
@@ -1100,6 +1126,7 @@ class DispatchOrchestrator:
 
         Returns:
             Tuple of (final_file_path, did_convert)
+
         """
         did_convert = False
 
@@ -1166,6 +1193,7 @@ class DispatchOrchestrator:
 
     def _apply_validation_outcome(
         self,
+        *,
         is_valid: bool,
         errors_or_file: Any,
         current_file: str,
@@ -1178,6 +1206,7 @@ class DispatchOrchestrator:
 
         Returns:
             Tuple of (continue_processing, current_file_path)
+
         """
         result.validated = is_valid
 
@@ -1244,6 +1273,7 @@ class DispatchOrchestrator:
 
         Returns:
             List of enabled backend descriptions like "Copy: /path" or "FTP: server"
+
         """
         enabled = []
         if folder.get("process_backend_copy"):
@@ -1255,7 +1285,7 @@ class DispatchOrchestrator:
         return enabled
 
     def _normalize_edi_flags(
-        self, effective_folder: dict, has_convert_target: bool
+        self, effective_folder: dict, *, has_convert_target: bool
     ) -> None:
         """Normalize EDI-related flags in the folder dict.
 
@@ -1264,6 +1294,7 @@ class DispatchOrchestrator:
         Args:
             effective_folder: Folder configuration dictionary
             has_convert_target: Whether a conversion target is configured
+
         """
         if "convert_edi" not in effective_folder:
             process_edi_raw = effective_folder.get("process_edi")
@@ -1311,7 +1342,9 @@ class DispatchOrchestrator:
 
         has_convert_target = bool(effective_folder.get("convert_to_format"))
 
-        self._normalize_edi_flags(effective_folder, has_convert_target)
+        self._normalize_edi_flags(
+            effective_folder, has_convert_target=has_convert_target
+        )
 
         return ProcessingContext(
             folder=folder,
@@ -1328,6 +1361,7 @@ class DispatchOrchestrator:
 
         Raises:
             ValueError: If the template is absolute or contains path traversal
+
         """
         import os
 
@@ -1347,6 +1381,7 @@ class DispatchOrchestrator:
 
         Returns:
             Path to send (renamed copy, or original if no rename configured)
+
         """
         import datetime
         import os
@@ -1393,6 +1428,7 @@ class DispatchOrchestrator:
 
         Returns:
             True if file was sent successfully
+
         """
         import os
 
@@ -1448,6 +1484,7 @@ class DispatchOrchestrator:
 
         Returns:
             FileResult with processing outcome
+
         """
         correlation_id = get_or_create_correlation_id()
         folder_path = folder.get("folder_name", "")
@@ -1480,6 +1517,7 @@ class DispatchOrchestrator:
 
         Returns:
             True if folder exists, False otherwise
+
         """
         if self.config.file_system:
             return self.config.file_system.dir_exists(path)
@@ -1496,6 +1534,7 @@ class DispatchOrchestrator:
 
         Returns:
             List of file paths
+
         """
         if self.config.file_system:
             return self.config.file_system.list_files(path)
@@ -1516,10 +1555,10 @@ class DispatchOrchestrator:
         files: list[str],
         processed_files: DatabaseInterface,
         folder: dict,
-        folder_index: Optional[int] = None,
-        folder_total: Optional[int] = None,
-        folder_name: Optional[str] = None,
-        progress_reporter: Optional[Any] = None,
+        folder_index: int | None = None,
+        folder_total: int | None = None,
+        folder_name: str | None = None,
+        progress_reporter: Any | None = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.
 
@@ -1534,6 +1573,7 @@ class DispatchOrchestrator:
 
         Returns:
             List of unprocessed or resend-marked file paths
+
         """
         folder_id = folder.get("id") or folder.get("old_id")
         processed = processed_files.find(folder_id=folder_id)
@@ -1578,6 +1618,7 @@ class DispatchOrchestrator:
             processed_files: Database interface for processed files
             folder: Folder configuration
             file_result: Result of file processing
+
         """
         folder_id = folder.get("id") or folder.get("old_id")
 
@@ -1629,6 +1670,7 @@ class DispatchOrchestrator:
 
         Returns:
             MD5 checksum as hex string
+
         """
         import hashlib
 
@@ -1666,6 +1708,7 @@ class DispatchOrchestrator:
 
         Returns:
             Comma-separated string of invoice numbers, or empty string
+
         """
         try:
             from core.edi.edi_parser import capture_records
@@ -1709,6 +1752,7 @@ class DispatchOrchestrator:
 
         Returns:
             True if validation should be performed
+
         """
         return (
             normalize_bool(folder.get("process_edi"))
@@ -1722,6 +1766,7 @@ class DispatchOrchestrator:
         Args:
             run_log: Run log to write to
             message: Message to log
+
         """
         import logging
 
@@ -1743,6 +1788,7 @@ class DispatchOrchestrator:
         Args:
             run_log: Run log to write to
             message: Error message to log
+
         """
         import logging
 
@@ -1763,6 +1809,7 @@ class DispatchOrchestrator:
 
         Returns:
             Summary string
+
         """
         return f"{self.processed_count} processed, {self.error_count} errors"
 
@@ -1807,6 +1854,7 @@ class DispatchOrchestrator:
 
         Returns:
             Tuple of (has_errors: bool, summary: str)
+
         """
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.splitter import EDISplitterStep

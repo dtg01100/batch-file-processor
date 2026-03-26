@@ -8,7 +8,7 @@ platform-specific printing operations.
 import sys
 import textwrap
 from abc import ABC, abstractmethod
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.structured_logging import get_logger
 
@@ -31,6 +31,7 @@ class PrintServiceProtocol(Protocol):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         ...
 
@@ -42,6 +43,7 @@ class PrintServiceProtocol(Protocol):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         ...
 
@@ -50,6 +52,7 @@ class PrintServiceProtocol(Protocol):
 
         Returns:
             True if printing is available, False otherwise
+
         """
         ...
 
@@ -57,11 +60,12 @@ class PrintServiceProtocol(Protocol):
 class BasePrintService(ABC):
     """Base class for print services with common functionality."""
 
-    def __init__(self, line_width: int = 75):
+    def __init__(self, line_width: int = 75) -> None:
         """Initialize the print service.
 
         Args:
             line_width: Maximum line width for text wrapping
+
         """
         self.line_width = line_width
 
@@ -73,6 +77,7 @@ class BasePrintService(ABC):
 
         Returns:
             Formatted text with line wrapping
+
         """
         return "\r\n".join(
             textwrap.wrap(content, width=self.line_width, replace_whitespace=False)
@@ -97,15 +102,16 @@ class BasePrintService(ABC):
 class WindowsPrintService(BasePrintService):
     """Print service for Windows platforms using win32print."""
 
-    def __init__(self, line_width: int = 75):
+    def __init__(self, line_width: int = 75) -> None:
         """Initialize the Windows print service.
 
         Args:
             line_width: Maximum line width for text wrapping
+
         """
         super().__init__(line_width=line_width)
         self._win32print = None
-        self._printer_name: Optional[str] = None
+        self._printer_name: str | None = None
 
     def _get_win32print(self):
         """Lazy import win32print to avoid import errors on non-Windows."""
@@ -119,11 +125,12 @@ class WindowsPrintService(BasePrintService):
                 return None
         return self._win32print
 
-    def _get_default_printer(self) -> Optional[str]:
+    def _get_default_printer(self) -> str | None:
         """Get the default printer name.
 
         Returns:
             Default printer name or None if not available
+
         """
         win32print = self._get_win32print()
         if win32print is None:
@@ -142,6 +149,7 @@ class WindowsPrintService(BasePrintService):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         try:
             with open(file_path, "r") as f:
@@ -162,6 +170,7 @@ class WindowsPrintService(BasePrintService):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         win32print = self._get_win32print()
         if win32print is None:
@@ -207,6 +216,7 @@ class WindowsPrintService(BasePrintService):
 
         Returns:
             True if running on Windows with win32print available
+
         """
         return sys.platform == "win32" and self._get_win32print() is not None
 
@@ -214,12 +224,13 @@ class WindowsPrintService(BasePrintService):
 class UnixPrintService(BasePrintService):
     """Print service for Unix-like platforms using lpr command."""
 
-    def __init__(self, line_width: int = 75, lpr_path: str = "/usr/bin/lpr"):
+    def __init__(self, line_width: int = 75, lpr_path: str = "/usr/bin/lpr") -> None:
         """Initialize the Unix print service.
 
         Args:
             line_width: Maximum line width for text wrapping
             lpr_path: Path to the lpr command
+
         """
         super().__init__(line_width=line_width)
         self.lpr_path = lpr_path
@@ -232,6 +243,7 @@ class UnixPrintService(BasePrintService):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         try:
             with open(file_path, "r") as f:
@@ -252,6 +264,7 @@ class UnixPrintService(BasePrintService):
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         import subprocess
 
@@ -285,6 +298,7 @@ class UnixPrintService(BasePrintService):
 
         Returns:
             True if running on non-Windows with lpr available
+
         """
         if sys.platform == "win32":
             return False
@@ -300,12 +314,13 @@ class MockPrintService(BasePrintService):
     Records all print operations for verification in tests.
     """
 
-    def __init__(self, line_width: int = 75, should_fail: bool = False):
+    def __init__(self, line_width: int = 75, *, should_fail: bool = False) -> None:
         """Initialize the mock print service.
 
         Args:
             line_width: Maximum line width for text wrapping
             should_fail: If True, all print operations will fail
+
         """
         super().__init__(line_width=line_width)
         self.printed_files: list[str] = []
@@ -320,6 +335,7 @@ class MockPrintService(BasePrintService):
 
         Returns:
             False if should_fail is True, True otherwise
+
         """
         if self.should_fail:
             return False
@@ -335,6 +351,7 @@ class MockPrintService(BasePrintService):
 
         Returns:
             False if should_fail is True, True otherwise
+
         """
         if self.should_fail:
             return False
@@ -347,6 +364,7 @@ class MockPrintService(BasePrintService):
 
         Returns:
             Always True for testing
+
         """
         return True
 
@@ -355,19 +373,21 @@ class MockPrintService(BasePrintService):
         self.printed_files.clear()
         self.printed_content.clear()
 
-    def get_last_printed_file(self) -> Optional[str]:
+    def get_last_printed_file(self) -> str | None:
         """Get the most recently printed file.
 
         Returns:
             The last printed file path, or None if no files printed
+
         """
         return self.printed_files[-1] if self.printed_files else None
 
-    def get_last_printed_content(self) -> Optional[str]:
+    def get_last_printed_content(self) -> str | None:
         """Get the most recently printed content.
 
         Returns:
             The last printed content, or None if no content printed
+
         """
         return self.printed_content[-1] if self.printed_content else None
 
@@ -378,7 +398,7 @@ class NullPrintService(BasePrintService):
     Useful for headless operation or when printing is not needed.
     """
 
-    def __init__(self, line_width: int = 75):
+    def __init__(self, line_width: int = 75) -> None:
         """Initialize the null print service."""
         super().__init__(line_width=line_width)
 
@@ -390,6 +410,7 @@ class NullPrintService(BasePrintService):
 
         Returns:
             Always True
+
         """
         return True
 
@@ -401,6 +422,7 @@ class NullPrintService(BasePrintService):
 
         Returns:
             Always True
+
         """
         return True
 
@@ -409,6 +431,7 @@ class NullPrintService(BasePrintService):
 
         Returns:
             Always True
+
         """
         return True
 
@@ -420,12 +443,15 @@ class RunLogPrinter:
     print service for testability.
     """
 
-    def __init__(self, print_service: PrintServiceProtocol, line_width: int = 75):
+    def __init__(
+        self, print_service: PrintServiceProtocol, line_width: int = 75
+    ) -> None:
         """Initialize the run log printer.
 
         Args:
             print_service: Service for printing
             line_width: Maximum line width for text wrapping
+
         """
         self.print_service = print_service
         self.line_width = line_width
@@ -438,6 +464,7 @@ class RunLogPrinter:
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         if not self.print_service.is_available():
             logger.warning("Print service is not available")
@@ -453,6 +480,7 @@ class RunLogPrinter:
 
         Returns:
             True if printing was successful, False otherwise
+
         """
         if not self.print_service.is_available():
             logger.warning("Print service is not available")
@@ -469,6 +497,7 @@ def create_print_service(line_width: int = 75) -> PrintServiceProtocol:
 
     Returns:
         Platform-appropriate PrintService instance
+
     """
     if sys.platform == "win32":
         return WindowsPrintService(line_width=line_width)
@@ -484,6 +513,7 @@ def create_run_log_printer(line_width: int = 75) -> RunLogPrinter:
 
     Returns:
         Configured RunLogPrinter instance
+
     """
     print_service = create_print_service(line_width=line_width)
     return RunLogPrinter(print_service=print_service, line_width=line_width)

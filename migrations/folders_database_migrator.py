@@ -14,7 +14,7 @@ def _quote_identifier(name: str) -> str:
     return f'"{escaped}"'
 
 
-def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
+def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT") -> None:
     """Add a column to a table if it doesn't already exist.
 
     Args:
@@ -23,6 +23,7 @@ def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
         column_name: Name of the column to add.
         default_sql: SQL literal for the default value (e.g. '"default_val"', '0').
         sql_type: SQL column type (default "TEXT").
+
     """
     cursor = db.raw_connection.cursor()
     quoted_table = _quote_identifier(table_name)
@@ -35,14 +36,14 @@ def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT"):
     db.query(f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}")
 
 
-def _log_migration_step(from_version, to_version):
+def _log_migration_step(from_version, to_version) -> None:
     """Log migration step progress."""
     print(f"  Migrating: v{from_version} → v{to_version}")
 
 
 def upgrade_database(
     database_connection, config_folder, running_platform, target_version=None
-):
+) -> None:
     db_version = database_connection["version"]
     db_version_dict = db_version.find_one(id=1)
     if target_version and int(db_version_dict["version"]) >= int(target_version):
@@ -917,7 +918,7 @@ def upgrade_database(
     if db_version_dict["version"] == "39":
         conn = database_connection.raw_connection
 
-        def _rebuild_table_with_pk(table_name):
+        def _rebuild_table_with_pk(table_name) -> None:
             """Atomically rebuild *table_name* to add INTEGER PRIMARY KEY id.
 
             Wrapped in an explicit BEGIN/COMMIT so that if anything fails after
@@ -980,7 +981,7 @@ def upgrade_database(
             cursor.execute(f"PRAGMA table_info({quoted_table})")
             return {row[1] for row in cursor.fetchall()}
 
-        def _ensure_column(table_name, column_name, sql_type, default_sql):
+        def _ensure_column(table_name, column_name, sql_type, default_sql) -> None:
             if column_name in _existing_columns(table_name):
                 return
             quoted_table = _quote_identifier(table_name)

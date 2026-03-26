@@ -32,7 +32,7 @@ Example usage:
 import csv
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, TextIO
+from typing import Any, TextIO
 
 import core.utils as utils
 from core.database import QueryRunner, create_query_runner
@@ -49,11 +49,12 @@ class EDIRecord:
         record_type: The type of record ('A', 'B', or 'C')
         raw_line: The original raw line from the EDI file
         fields: Dictionary of parsed field values from the record
+
     """
 
     record_type: str
     raw_line: str
-    fields: Dict[str, str]
+    fields: dict[str, str]
 
 
 @dataclass
@@ -78,22 +79,23 @@ class ConversionContext:
         output_file: Output file handle (set by _initialize_output)
         csv_writer: CSV writer instance (commonly used, set by _initialize_output)
         user_data: Dictionary for converters to store custom state
+
     """
 
     # Input parameters
     edi_filename: str
     output_filename: str
-    settings_dict: Dict[str, Any]
-    parameters_dict: Dict[str, Any]
-    upc_lut: Dict[int, tuple]
+    settings_dict: dict[str, Any]
+    parameters_dict: dict[str, Any]
+    upc_lut: dict[int, tuple]
 
     # Internal state (initialized automatically)
-    arec_header: Optional[Dict[str, str]] = field(default=None)
+    arec_header: dict[str, str] | None = field(default=None)
     line_num: int = field(default=0)
     records_processed: int = field(default=0)
-    output_file: Optional[TextIO] = field(default=None, repr=False)
-    csv_writer: Optional[Any] = field(default=None, repr=False)
-    user_data: Dict[str, Any] = field(default_factory=dict)
+    output_file: TextIO | None = field(default=None, repr=False)
+    csv_writer: Any | None = field(default=None, repr=False)
+    user_data: dict[str, Any] = field(default_factory=dict)
 
     def get_output_path(self, extension: str = ".csv") -> str:
         """Get the full output file path with extension."""
@@ -141,9 +143,9 @@ class BaseEDIConverter(ABC):
         self,
         edi_process: str,
         output_filename: str,
-        settings_dict: Dict[str, Any],
-        parameters_dict: Dict[str, Any],
-        upc_lut: Dict[int, tuple],
+        settings_dict: dict[str, Any],
+        parameters_dict: dict[str, Any],
+        upc_lut: dict[int, tuple],
     ) -> str:
         """Main entry point - Template Method defining the conversion algorithm.
 
@@ -160,6 +162,7 @@ class BaseEDIConverter(ABC):
 
         Returns:
             Path to the generated output file
+
         """
         # Create conversion context to hold shared state
         context = ConversionContext(
@@ -195,6 +198,7 @@ class BaseEDIConverter(ABC):
 
         Args:
             context: The conversion context containing file paths and state
+
         """
         with open(context.edi_filename, encoding="utf-8") as work_file:
             work_file_lined = [n for n in work_file.readlines()]
@@ -227,6 +231,7 @@ class BaseEDIConverter(ABC):
         Args:
             record: The EDIRecord to process
             context: The conversion context
+
         """
         record_type = record.record_type
 
@@ -259,6 +264,7 @@ class BaseEDIConverter(ABC):
 
         Returns:
             True if the record should be processed, False otherwise
+
         """
         # Default: process all record types
         return True
@@ -281,6 +287,7 @@ class BaseEDIConverter(ABC):
         Example:
             context.output_file = open(context.get_output_path(), "w", newline="")
             context.csv_writer = csv.writer(context.output_file, dialect="excel")
+
         """
 
     @abstractmethod
@@ -302,6 +309,7 @@ class BaseEDIConverter(ABC):
                 record.fields['qty_of_units'],
                 ...
             ])
+
         """
 
     # ========================================================================
@@ -325,6 +333,7 @@ class BaseEDIConverter(ABC):
         Example override:
             super().process_a_record(record, context)  # Store header
             context.csv_writer.writerow(["Invoice:", record.fields['invoice_number']])
+
         """
         context.arec_header = record.fields
 
@@ -340,6 +349,7 @@ class BaseEDIConverter(ABC):
         Args:
             record: The EDIRecord containing the C record fields
             context: The conversion context
+
         """
 
     def _finalize_output(self, context: ConversionContext) -> None:
@@ -350,6 +360,7 @@ class BaseEDIConverter(ABC):
 
         Args:
             context: The conversion context
+
         """
         if context.output_file is not None:
             context.output_file.close()
@@ -366,6 +377,7 @@ class BaseEDIConverter(ABC):
         Args:
             record: The unknown EDIRecord
             context: The conversion context
+
         """
 
     def _cleanup_on_error(self, context: ConversionContext, error: Exception) -> None:
@@ -374,6 +386,7 @@ class BaseEDIConverter(ABC):
         Args:
             context: The conversion context
             error: The exception that was raised
+
         """
         if context.output_file is not None:
             try:
@@ -398,6 +411,7 @@ class BaseEDIConverter(ABC):
 
         Returns:
             The path to the generated output file
+
         """
         return context.get_output_path(".csv")
 
@@ -426,6 +440,7 @@ def create_csv_writer(
 
     Returns:
         Configured csv.writer instance
+
     """
     return csv.writer(
         file_handle, dialect=dialect, lineterminator=lineterminator, quoting=quoting
@@ -457,6 +472,7 @@ def normalize_parameter(
         False
         >>> normalize_parameter("DIV001", "DEFAULT")
         'DIV001'
+
     """
     if value is None or value == "":
         return default
@@ -485,7 +501,7 @@ class BaseConverter(ABC, PluginConfigMixin):
         self.parameters_dict = parameters_dict
         self.upc_lookup = upc_lookup
         self.lines: list[str] = []
-        self.current_a_record: Optional[dict] = None
+        self.current_a_record: dict | None = None
 
         format_id = parameters_dict.get("edi_format", "default")
         try:
@@ -563,7 +579,7 @@ class BaseConverter(ABC, PluginConfigMixin):
         return safe_int(qty)
 
     @staticmethod
-    def process_upc(upc_string: str, calc_check_digit: bool = True) -> str:
+    def process_upc(upc_string: str, *, calc_check_digit: bool = True) -> str:
         upc_string = upc_string.strip()
         try:
             int(upc_string)
@@ -595,7 +611,7 @@ class CSVConverter(BaseConverter):
             edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
         )
         self.csv_file: Any = None
-        self.output_file: Optional[TextIO] = None
+        self.output_file: TextIO | None = None
         self.csv_dialect: str = "excel"
         self.lineterminator: str = "\r\n"
         self.quoting = csv.QUOTE_ALL
@@ -644,7 +660,7 @@ class DBEnabledConverter(CSVConverter):
         super().__init__(
             edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
         )
-        self.query_object: Optional[QueryRunner] = None
+        self.query_object: QueryRunner | None = None
         self._db_connected = False
 
     def connect_db(self) -> None:
@@ -671,6 +687,7 @@ def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
     Args:
         converter_class: The converter class to instantiate
         format_name: Name of the format for logging (e.g., "jolley_custom", "csv")
+
     """
     import logging
     import os

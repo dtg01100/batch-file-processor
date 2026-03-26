@@ -10,7 +10,7 @@ import smtplib
 from dataclasses import dataclass, field
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from core.structured_logging import (
     get_logger,
@@ -31,6 +31,7 @@ class EmailConfig:
         smtp_password: Password for SMTP authentication
         from_address: Email address to send from
         use_tls: Whether to use TLS encryption
+
     """
 
     smtp_server: str
@@ -54,7 +55,7 @@ class EmailServiceProtocol(Protocol):
         to: list[str],
         subject: str,
         body: str,
-        attachments: Optional[list[dict]] = None,
+        attachments: list[dict] | None = None,
     ) -> bool:
         """Send an email.
 
@@ -66,6 +67,7 @@ class EmailServiceProtocol(Protocol):
 
         Returns:
             True if email was sent successfully, False otherwise
+
         """
         ...
 
@@ -83,6 +85,7 @@ class UIProtocol(Protocol):
 
         Args:
             message: Progress message to display
+
         """
         ...
 
@@ -95,6 +98,7 @@ class UIProtocol(Protocol):
             batch_number: Current batch number
             email_count: Current email/attachment count
             total_emails: Total number of emails to send
+
         """
         ...
 
@@ -105,11 +109,12 @@ class SMTPEmailService:
     This class handles actual email sending via SMTP.
     """
 
-    def __init__(self, config: EmailConfig):
+    def __init__(self, config: EmailConfig) -> None:
         """Initialize the SMTP email service.
 
         Args:
             config: Email configuration containing SMTP settings
+
         """
         self.config = config
 
@@ -118,7 +123,7 @@ class SMTPEmailService:
         to: list[str],
         subject: str,
         body: str,
-        attachments: Optional[list[dict]] = None,
+        attachments: list[dict] | None = None,
     ) -> bool:
         """Send an email via SMTP.
 
@@ -130,6 +135,7 @@ class SMTPEmailService:
 
         Returns:
             True if email was sent successfully, False otherwise
+
         """
         try:
             message = EmailMessage()
@@ -209,7 +215,7 @@ class MockEmailService:
     Records all sent emails for verification in tests.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the mock email service."""
         self.sent_emails: list[dict] = []
         self.should_fail: bool = False
@@ -219,7 +225,7 @@ class MockEmailService:
         to: list[str],
         subject: str,
         body: str,
-        attachments: Optional[list[dict]] = None,
+        attachments: list[dict] | None = None,
     ) -> bool:
         """Record an email send attempt.
 
@@ -231,6 +237,7 @@ class MockEmailService:
 
         Returns:
             False if should_fail is True, True otherwise
+
         """
         if self.should_fail:
             return False
@@ -249,11 +256,12 @@ class MockEmailService:
         """Clear all recorded emails."""
         self.sent_emails.clear()
 
-    def get_last_email(self) -> Optional[dict]:
+    def get_last_email(self) -> dict | None:
         """Get the most recently sent email.
 
         Returns:
             The last sent email dict, or None if no emails sent
+
         """
         return self.sent_emails[-1] if self.sent_emails else None
 
@@ -279,7 +287,7 @@ class MockUIService:
     Records all progress updates for verification.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the mock UI service."""
         self.progress_messages: list[str] = []
         self.email_progress_updates: list[dict] = []
@@ -289,6 +297,7 @@ class MockUIService:
 
         Args:
             message: Progress message to record
+
         """
         self.progress_messages.append(message)
 
@@ -301,6 +310,7 @@ class MockUIService:
             batch_number: Current batch number
             email_count: Current email/attachment count
             total_emails: Total number of emails to send
+
         """
         self.email_progress_updates.append(
             {
@@ -315,11 +325,12 @@ class MockUIService:
         self.progress_messages.clear()
         self.email_progress_updates.clear()
 
-    def get_last_progress(self) -> Optional[str]:
+    def get_last_progress(self) -> str | None:
         """Get the most recent progress message.
 
         Returns:
             The last progress message, or None if no messages
+
         """
         return self.progress_messages[-1] if self.progress_messages else None
 
@@ -332,10 +343,11 @@ class LogEntry:
         log_path: Path to the log file
         log_name: Display name for the log
         metadata: Additional metadata for the log
+
     """
 
     log_path: str
-    log_name: Optional[str] = None
+    log_name: str | None = None
     metadata: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -351,13 +363,14 @@ class LogSender:
     """
 
     def __init__(
-        self, email_service: EmailServiceProtocol, ui: Optional[UIProtocol] = None
-    ):
+        self, email_service: EmailServiceProtocol, ui: UIProtocol | None = None
+    ) -> None:
         """Initialize the log sender.
 
         Args:
             email_service: Service for sending emails
             ui: Optional UI service for progress updates
+
         """
         self.email_service = email_service
         self.ui = ui or NullUIService()
@@ -367,7 +380,7 @@ class LogSender:
         log_content: str,
         recipients: list[str],
         subject: str,
-        log_name: Optional[str] = None,
+        log_name: str | None = None,
     ) -> bool:
         """Send a log to recipients.
 
@@ -379,6 +392,7 @@ class LogSender:
 
         Returns:
             True if sent successfully, False otherwise
+
         """
         return self.email_service.send_email(
             to=recipients, subject=subject, body=log_content
@@ -394,6 +408,7 @@ class LogSender:
 
         Returns:
             True if sent successfully, False otherwise
+
         """
         attachment = {"path": log_path, "name": os.path.basename(log_path)}
 
@@ -425,6 +440,7 @@ class LogSender:
 
         Returns:
             Dict mapping log paths to send success status
+
         """
         results: dict[str, bool] = {}
 
@@ -466,7 +482,7 @@ class LogSender:
         body: str,
         batch_number: int = 1,
         total_batches: int = 1,
-        removal_queue: Optional[Any] = None,
+        removal_queue: Any | None = None,
     ) -> dict[str, bool]:
         """Send logs from a table structure (for backward compatibility).
 
@@ -484,6 +500,7 @@ class LogSender:
 
         Returns:
             Dict mapping log paths to send success status
+
         """
         logs = []
         log_records = []
@@ -519,7 +536,7 @@ class LogSender:
 
 
 def create_log_sender_from_settings(
-    settings: dict, ui: Optional[UIProtocol] = None
+    settings: dict, ui: UIProtocol | None = None
 ) -> LogSender:
     """Factory function to create a LogSender from settings dict.
 
@@ -529,6 +546,7 @@ def create_log_sender_from_settings(
 
     Returns:
         Configured LogSender instance
+
     """
     # Safely convert smtp_port to int, handling None or empty strings
     smtp_port_val = settings.get("smtp_port")

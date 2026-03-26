@@ -44,7 +44,7 @@ import csv
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import Any
 
 from core import utils
 from core.database import create_query_runner
@@ -69,14 +69,16 @@ class invFetcher:
     Attributes:
         settings: Database connection settings
         _fetcher: The underlying InvFetcher instance
+
     """
 
-    def __init__(self, settings_dict: Dict[str, Any]):
+    def __init__(self, settings_dict: dict[str, Any]) -> None:
         """Initialize the invoice fetcher adapter.
 
         Args:
             settings_dict: Dictionary containing database connection settings.
                 Must include: as400_username, as400_password, as400_address, odbc_driver
+
         """
         self.settings = settings_dict
         # Create a new QueryRunner for the core InvFetcher
@@ -123,6 +125,7 @@ class invFetcher:
 
         Returns:
             The PO number string
+
         """
         return self._fetcher.fetch_po(int(invoice_number))
 
@@ -134,6 +137,7 @@ class invFetcher:
 
         Returns:
             The customer name string
+
         """
         return self._fetcher.fetch_cust_name(int(invoice_number))
 
@@ -148,6 +152,7 @@ class invFetcher:
 
         Returns:
             The UOM description string (e.g., 'HI', 'LO', or specific UOM)
+
         """
         return self._fetcher.fetch_uom_desc(
             int(itemno), int(uommult), lineno, int(invno)
@@ -172,6 +177,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Get parameters
         params = context.parameters_dict
@@ -185,14 +191,14 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         self.inv_fetcher = invFetcher(context.settings_dict)
 
         # Initialize state
-        self.row_dict_list: List[dict] = []
+        self.row_dict_list: list[dict] = []
         self.shipper_mode = False
         self.shipper_parent_item = False
-        self.shipper_accum: List[Decimal] = []
-        self.invoice_accum: List[Decimal] = []
+        self.shipper_accum: list[Decimal] = []
+        self.invoice_accum: list[Decimal] = []
         self.shipper_line_number = 0
         self.invoice_index = 0
-        self.row_dict_header: Dict[str, Any] = {}
+        self.row_dict_header: dict[str, Any] = {}
         self.output_filename = ""
 
         # Generate output filename with timestamp
@@ -261,9 +267,9 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         self,
         edi_process: str,
         output_filename: str,
-        settings_dict: Dict[str, Any],
-        parameters_dict: Dict[str, Any],
-        upc_lut: Dict[int, tuple],
+        settings_dict: dict[str, Any],
+        parameters_dict: dict[str, Any],
+        upc_lut: dict[int, tuple],
     ) -> str:
         """Override to store context reference."""
         from dispatch.converters.convert_base import ConversionContext
@@ -300,6 +306,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         Args:
             record: The A record
             context: The conversion context
+
         """
         super().process_a_record(record, context)
 
@@ -339,6 +346,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         # Lookup UPC from the lookup table
         try:
@@ -404,6 +412,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         Args:
             record: The C record
             context: The conversion context
+
         """
         row_dict = {
             "Detail Type": "S",
@@ -431,6 +440,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Flush any remaining rows
         self._flush_write_queue()
@@ -448,6 +458,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 
         Returns:
             Path to the generated CSV file
+
         """
         return self.output_filename
 
@@ -460,9 +471,9 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 def edi_convert(
     edi_process: str,
     output_filename_initial: str,
-    settings_dict: Dict[str, Any],
-    parameters_dict: Dict[str, Any],
-    upc_lookup: Dict[int, tuple],
+    settings_dict: dict[str, Any],
+    parameters_dict: dict[str, Any],
+    upc_lookup: dict[int, tuple],
 ) -> str:
     """Convert EDI file to EStore E-Invoice Generic CSV format.
 
@@ -496,6 +507,7 @@ def edi_convert(
         ... )
         >>> print(result)
         '/output/path/eInvTestVendor.20240101120000.csv'
+
     """
     converter = EStoreEInvoiceGenericConverter()
     return converter.edi_convert(

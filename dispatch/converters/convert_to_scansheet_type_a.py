@@ -31,7 +31,7 @@ import math
 import os
 import tempfile
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import barcode
 import openpyxl
@@ -64,13 +64,13 @@ class ScanSheetTypeAConverter:
     and the database as the primary data source.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the converter."""
         self.query_object = None
         self.output_spreadsheet = None
         self.output_worksheet = None
         self.output_spreadsheet_name = ""
-        self.invoice_rows: List[int] = []
+        self.invoice_rows: list[int] = []
         self.invoice_row_counter = 0
         self._correlation_id = get_or_create_correlation_id()
         self._start_time = None
@@ -79,9 +79,9 @@ class ScanSheetTypeAConverter:
         self,
         edi_process: str,
         output_filename: str,
-        settings_dict: Dict[str, Any],
-        parameters_dict: Dict[str, Any],
-        upc_lookup: Dict[int, tuple],
+        settings_dict: dict[str, Any],
+        parameters_dict: dict[str, Any],
+        upc_lookup: dict[int, tuple],
     ) -> str:
         """Convert EDI file to ScanSheet Type A Excel format.
 
@@ -94,6 +94,7 @@ class ScanSheetTypeAConverter:
 
         Returns:
             Path to the generated Excel file
+
         """
         self._start_time = time.perf_counter()
         correlation_id = self._correlation_id
@@ -214,7 +215,7 @@ class ScanSheetTypeAConverter:
             )
             raise
 
-    def _extract_invoices_from_edi(self, edi_process: str) -> List[str]:
+    def _extract_invoices_from_edi(self, edi_process: str) -> list[str]:
         """Extract invoice numbers from the EDI file.
 
         Args:
@@ -222,6 +223,7 @@ class ScanSheetTypeAConverter:
 
         Returns:
             List of invoice numbers (last 7 digits)
+
         """
         invoice_list = []
         with open(edi_process, encoding="utf-8") as work_file:
@@ -242,11 +244,12 @@ class ScanSheetTypeAConverter:
         )
         return invoice_list
 
-    def _initialize_database(self, settings_dict: Dict[str, Any]) -> None:
+    def _initialize_database(self, settings_dict: dict[str, Any]) -> None:
         """Initialize database connection.
 
         Args:
             settings_dict: Application settings with DB credentials
+
         """
         StructuredLogger.log_debug(
             logger,
@@ -271,6 +274,7 @@ class ScanSheetTypeAConverter:
 
         Args:
             output_filename: Base path for output file (without extension)
+
         """
         self.output_spreadsheet = openpyxl.Workbook()
         self.output_worksheet = self.output_spreadsheet.worksheets[0]
@@ -287,11 +291,12 @@ class ScanSheetTypeAConverter:
             correlation_id=self._correlation_id,
         )
 
-    def _populate_workbook(self, invoice_list: List[str]) -> None:
+    def _populate_workbook(self, invoice_list: list[str]) -> None:
         """Populate the workbook with data from the database.
 
         Args:
             invoice_list: List of invoice numbers to query
+
         """
         total_rows = 0
 
@@ -362,6 +367,7 @@ class ScanSheetTypeAConverter:
 
         Args:
             adjust_worksheet: The worksheet to adjust
+
         """
         logger.debug("Adjusting column width for %s worksheet", adjust_worksheet.title)
         for col in adjust_worksheet.columns:
@@ -456,6 +462,7 @@ class ScanSheetTypeAConverter:
 
         Args:
             context: The conversion context (not used in this converter)
+
         """
         # Close database connection if it exists
         if hasattr(self, "query_object") and self.query_object is not None:
@@ -474,7 +481,7 @@ class ScanSheetTypeAConverter:
 
     def _generate_barcode(
         self, input_string: str, tempdir: str
-    ) -> Tuple[str, int, int]:
+    ) -> tuple[str, int, int]:
         """Generate a barcode image for the given UPC string.
 
         Args:
@@ -483,6 +490,7 @@ class ScanSheetTypeAConverter:
 
         Returns:
             Tuple of (image_path, width, height)
+
         """
         ean = barcode.get_barcode_class("UPCA")
         options = {
@@ -524,6 +532,7 @@ class ScanSheetTypeAConverter:
 
         Raises:
             ValueError: If the input is empty or invalid
+
         """
         if upc_barcode_string is None:
             raise ValueError("Input is empty")
@@ -551,9 +560,9 @@ class ScanSheetTypeAConverter:
 def edi_convert(
     edi_process: str,
     output_filename: str,
-    settings_dict: Dict[str, Any],
-    parameters_dict: Dict[str, Any],
-    upc_lookup: Dict[int, tuple],
+    settings_dict: dict[str, Any],
+    parameters_dict: dict[str, Any],
+    upc_lookup: dict[int, tuple],
 ) -> str:
     """Convert EDI file to ScanSheet Type A Excel format with barcodes.
 
@@ -580,6 +589,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.xlsx'
+
     """
     converter = ScanSheetTypeAConverter()
     return converter.edi_convert(

@@ -6,7 +6,6 @@ using dependency injection for testability.
 
 import importlib
 import os
-from typing import Optional
 
 from core.structured_logging import (
     get_logger,
@@ -27,6 +26,7 @@ class SendManager:
     Attributes:
         backends: Dictionary mapping backend names to backend instances
         results: Dictionary tracking send results per backend
+
     """
 
     # Default backend configuration mapping
@@ -59,15 +59,17 @@ class SendManager:
 
     def __init__(
         self,
-        backends: Optional[dict[str, BackendInterface]] = None,
+        backends: dict[str, BackendInterface] | None = None,
+        *,
         use_default_backends: bool = True,
-    ):
+    ) -> None:
         """Initialize the send manager.
 
         Args:
             backends: Optional dictionary of backend instances
             use_default_backends: If True, use default backend modules when
                 no backend instance is provided for a name
+
         """
         self.backends = backends or {}
         self.use_default_backends = use_default_backends
@@ -87,6 +89,7 @@ class SendManager:
 
         Returns:
             Dictionary mapping backend names to success status
+
         """
         self.results = {}
         self.errors = {}
@@ -178,6 +181,7 @@ class SendManager:
 
         Raises:
             Exception: If backend is not found or send fails
+
         """
         basename = os.path.basename(file_path)
         logger.debug("Sending %s via backend '%s'", basename, backend_name)
@@ -214,6 +218,7 @@ class SendManager:
 
         Returns:
             True if send was successful
+
         """
         config = self.DEFAULT_BACKENDS.get(backend_name)
         if not config:
@@ -249,6 +254,7 @@ class SendManager:
 
         Returns:
             Set of enabled backend names
+
         """
         enabled = set()
 
@@ -280,6 +286,7 @@ class SendManager:
 
         Returns:
             List of validation error messages (empty if valid)
+
         """
         errors = []
 
@@ -315,6 +322,7 @@ class SendManager:
 
         Returns:
             Dictionary mapping backend names to success status
+
         """
         return self.results.copy()
 
@@ -323,6 +331,7 @@ class SendManager:
 
         Returns:
             Dictionary mapping backend names to error messages
+
         """
         return self.errors.copy()
 
@@ -338,11 +347,12 @@ class MockBackend:
     This backend records all send calls for verification in tests.
     """
 
-    def __init__(self, should_succeed: bool = True):
+    def __init__(self, *, should_succeed: bool = True) -> None:
         """Initialize the mock backend.
 
         Args:
             should_succeed: If True, send() will succeed; if False, it will raise
+
         """
         self.should_succeed = should_succeed
         self.send_calls: list[tuple[dict, dict, str]] = []
@@ -358,6 +368,7 @@ class MockBackend:
 
         Raises:
             Exception: If should_succeed is False
+
         """
         self.send_calls.append((params.copy(), settings.copy(), filename))
 
@@ -372,6 +383,7 @@ class MockBackend:
 
         Returns:
             Empty list if should_succeed, otherwise list with error
+
         """
         self.validate_calls.append(params.copy())
 

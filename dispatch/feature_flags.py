@@ -25,6 +25,7 @@ def get_debug_mode() -> bool:
 
     Returns:
         True if DISPATCH_DEBUG_MODE is 'true'
+
     """
     return os.environ.get("DISPATCH_DEBUG_MODE", "false").lower() == "true"
 
@@ -37,6 +38,7 @@ def get_strict_testing_mode() -> bool:
 
     Returns:
         True if DISPATCH_STRICT_TESTING_MODE is 'true'
+
     """
     return os.environ.get("DISPATCH_STRICT_TESTING_MODE", "false").lower() == "true"
 
@@ -46,6 +48,7 @@ def get_feature_flags() -> dict:
 
     Returns:
         Dictionary of feature flag names to their current values
+
     """
     return {
         "debug_mode": get_debug_mode(),
@@ -53,7 +56,7 @@ def get_feature_flags() -> dict:
     }
 
 
-def set_feature_flag(name: str, value: bool) -> None:
+def set_feature_flag(name: str, *, value: bool) -> None:
     """Set a feature flag value.
 
     This sets the environment variable for the current process.
@@ -64,6 +67,7 @@ def set_feature_flag(name: str, value: bool) -> None:
 
     Raises:
         ValueError: If the feature flag name is unknown
+
     """
     flag_map = {
         "debug_mode": "DISPATCH_DEBUG_MODE",

@@ -42,7 +42,9 @@ class FileProcessorInterface(Protocol):
 class FileProcessor:
     """Adapter that delegates to DispatchOrchestrator as source of truth."""
 
-    def __init__(self, orchestrator: DispatchOrchestrator | None = None, **_: Any):
+    def __init__(
+        self, orchestrator: DispatchOrchestrator | None = None, **_: Any
+    ) -> None:
         self._orchestrator = orchestrator
 
     def process(self, file_path: str, folder: dict) -> str | None:
@@ -86,7 +88,9 @@ class FileProcessor:
 class MockFileProcessor:
     """Test double retained for compatibility with existing service tests."""
 
-    def __init__(self, result: FileProcessorResult | None = None, **kwargs: Any):
+    def __init__(
+        self, result: FileProcessorResult | None = None, **kwargs: Any
+    ) -> None:
         self._result = result or FileProcessorResult(**kwargs)
         self.call_count = 0
         self.last_file_path: str | None = None

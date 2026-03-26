@@ -65,6 +65,7 @@ def edi_convert(
 
     Raises:
         Exception: Any exception raised by EDITweaker on failure
+
     """
     # Create query runner adapter from settings
     query_runner = _create_query_runner_adapter(settings_dict)

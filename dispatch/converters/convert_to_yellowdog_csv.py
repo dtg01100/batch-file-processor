@@ -24,7 +24,6 @@ Backward Compatibility:
 import csv
 import logging
 from datetime import datetime
-from typing import Dict, List
 
 from core import utils
 from core.database import create_query_runner
@@ -60,6 +59,7 @@ class YellowDogConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Initialize invFetcher for database lookups
         settings_dict = context.settings_dict
@@ -113,9 +113,9 @@ class YellowDogConverter(BaseEDIConverter):
         self.inv_fetcher = InvFetcher(query_runner, inv_fetcher_settings)
 
         # Initialize batching state
-        self.arec_line: Dict[str, str] = {}
-        self.brec_lines: List[Dict[str, str]] = []
-        self.crec_lines: List[Dict[str, str]] = []
+        self.arec_line: dict[str, str] = {}
+        self.brec_lines: list[dict[str, str]] = []
+        self.crec_lines: list[dict[str, str]] = []
         self.brec_index = 0
 
         # Open output file and create CSV writer
@@ -152,6 +152,7 @@ class YellowDogConverter(BaseEDIConverter):
         Args:
             record: The A record
             context: The conversion context
+
         """
         # Flush previous invoice's records if we have any
         if self.brec_lines:
@@ -167,6 +168,7 @@ class YellowDogConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         self.brec_lines.append(record.fields)
 
@@ -176,6 +178,7 @@ class YellowDogConverter(BaseEDIConverter):
         Args:
             record: The C record
             context: The conversion context
+
         """
         self.crec_lines.append(record.fields)
 
@@ -184,6 +187,7 @@ class YellowDogConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Flush any remaining records
         if self.brec_lines or self.crec_lines:
@@ -202,6 +206,7 @@ class YellowDogConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         csv_writer = context.csv_writer
 
@@ -328,6 +333,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.csv'
+
     """
     import os
     import time

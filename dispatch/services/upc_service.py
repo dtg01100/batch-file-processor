@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 class QueryRunnerProtocol(Protocol):
-    def execute(self, query: str, params: Optional[dict] = None) -> list[tuple]: ...
+    def execute(self, query: str, params: dict | None = None) -> list[tuple]: ...
 
 
 @dataclass
@@ -14,17 +14,17 @@ class UPCServiceResult:
 
 
 class MockQueryRunner:
-    def __init__(self, mock_data: Optional[list[tuple]] = None):
+    def __init__(self, mock_data: list[tuple] | None = None) -> None:
         self._mock_data = mock_data or []
 
-    def execute(self, query: str, params: Optional[dict] = None) -> list[tuple]:
+    def execute(self, query: str, params: dict | None = None) -> list[tuple]:
         return self._mock_data
 
 
 class UPCService:
-    def __init__(self, query_runner: QueryRunnerProtocol):
+    def __init__(self, query_runner: QueryRunnerProtocol) -> None:
         self._query_runner = query_runner
-        self._upc_cache: Optional[dict[int, list]] = None
+        self._upc_cache: dict[int, list] | None = None
 
     def fetch_upc_dictionary(self, settings: dict) -> UPCServiceResult:
         query = """select
@@ -55,7 +55,7 @@ from dacdata.dsanrep dsanrep"""
                 ) from e
             return UPCServiceResult(upc_dict={}, success=False, errors=[str(e)])
 
-    def get_upc_for_item(self, item_number: int) -> Optional[str]:
+    def get_upc_for_item(self, item_number: int) -> str | None:
         if self._upc_cache is None:
             return None
         upc_list = self._upc_cache.get(item_number)
@@ -63,7 +63,7 @@ from dacdata.dsanrep dsanrep"""
             return upc_list[1]
         return None
 
-    def get_category_for_item(self, item_number: int) -> Optional[str]:
+    def get_category_for_item(self, item_number: int) -> str | None:
         if self._upc_cache is None:
             return None
         upc_list = self._upc_cache.get(item_number)

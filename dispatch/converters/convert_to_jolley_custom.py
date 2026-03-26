@@ -36,7 +36,7 @@ import csv
 import logging
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from core import utils
 from core.exceptions import CustomerLookupError
@@ -85,13 +85,13 @@ class JolleyCustomConverter(
         """Return the SQL query template for customer lookup."""
         return BASIC_CUSTOMER_QUERY_SQL
 
-    def _get_customer_header_field_names(self) -> List[str]:
+    def _get_customer_header_field_names(self) -> list[str]:
         """Return ordered list of field names for customer query results."""
         return list(BASIC_CUSTOMER_FIELDS_LIST)
 
     def _build_customer_header_dict(
-        self, header_fields: Dict[str, Any], header_fields_list: List[str]
-    ) -> Dict[str, Any]:
+        self, header_fields: dict[str, Any], header_fields_list: list[str]
+    ) -> dict[str, Any]:
         """Build customer header dictionary with Jolley-specific corporate fallback."""
         return build_jolley_header_dict(header_fields, header_fields_list)
 
@@ -100,12 +100,13 @@ class JolleyCustomConverter(
 
         Args:
             context: The conversion context
+
         """
         # Initialize database connection using mixin
         self._init_db_connection(context.settings_dict)
 
         # Initialize state
-        self.header_a_record: Dict[str, str] = {}
+        self.header_a_record: dict[str, str] = {}
 
         # Open output file and create CSV writer
         context.output_file = open(
@@ -119,6 +120,7 @@ class JolleyCustomConverter(
         Args:
             record: The A record
             context: The conversion context
+
         """
         super().process_a_record(record, context)
         self.header_a_record = record.fields
@@ -201,6 +203,7 @@ class JolleyCustomConverter(
         Args:
             record: The B record
             context: The conversion context
+
         """
         total_price, qtyint = self._convert_to_item_total(
             record.fields["unit_cost"], record.fields["qty_of_units"]
@@ -224,6 +227,7 @@ class JolleyCustomConverter(
         Args:
             record: The C record
             context: The conversion context
+
         """
         context.csv_writer.writerow(
             [
@@ -241,6 +245,7 @@ class JolleyCustomConverter(
 
         Args:
             context: The conversion context
+
         """
         # Write total row
         if self.header_a_record:
@@ -306,6 +311,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.csv'
+
     """
     correlation_id = get_or_create_correlation_id()
     start_time = time.perf_counter()

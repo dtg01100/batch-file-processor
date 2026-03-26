@@ -7,7 +7,6 @@ extracted from dispatch.py for testability.
 import hashlib
 import os
 import time
-from typing import Optional
 
 
 def generate_match_lists(processed_files: list[dict]) -> tuple[list, list, set]:
@@ -21,6 +20,7 @@ def generate_match_lists(processed_files: list[dict]) -> tuple[list, list, set]:
         - hash_dict: List of (file_name, file_checksum) tuples
         - name_dict: List of (file_checksum, file_name) tuples
         - resend_set: Set of checksums marked for resend
+
     """
     hash_dict = []
     name_dict = []
@@ -52,9 +52,10 @@ def generate_file_hash(
         FileNotFoundError: If file does not exist after retries
         PermissionError: If file cannot be read due to permissions
         IOError: If file cannot be read after max retries
+
     """
     absolute_path = os.path.abspath(file_path)
-    generated_checksum: Optional[str] = None
+    generated_checksum: str | None = None
     checksum_attempt = 1
 
     while generated_checksum is None:
@@ -90,6 +91,7 @@ def check_file_against_processed(
         tuple of (match_found, should_send)
         - match_found: True if checksum exists in name_dict
         - should_send: True if file should be sent (new or resend)
+
     """
     match_found = file_checksum in name_dict
     should_send = not match_found or file_checksum in resend_set
@@ -109,6 +111,7 @@ def process_file_hash_entry(source_file_struct: tuple) -> tuple[str, str, int, b
 
     Returns:
         tuple of (file_name, file_checksum, index_number, send_file)
+
     """
     file_path, index_number, processed_files_list, hash_dict, name_dict, resend_set = (
         source_file_struct
@@ -146,6 +149,7 @@ def build_hash_dictionaries(
         - folder_hash_dict: Maps file_name -> checksum
         - folder_name_dict: Maps checksum -> file_name
         - resend_flag_set: Set of checksums needing resend
+
     """
     hash_list, name_list, resend_set = generate_match_lists(
         folder_temp_processed_files_list

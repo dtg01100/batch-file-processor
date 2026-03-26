@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def apply_migration(database_connection):
+def apply_migration(database_connection) -> bool | None:
     """
     Migration to add plugin_config column to the folders table.
     This migration is applied when upgrading from database version 32 to 33.

@@ -7,7 +7,7 @@ using the edi_tweaks module.
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from core.structured_logging import (
     StructuredLogger,
@@ -28,6 +28,7 @@ class TweakerResult:
         success: True if tweaking succeeded
         was_tweaked: True if tweaking was actually applied
         errors: List of error messages
+
     """
 
     output_path: str = ""
@@ -59,6 +60,7 @@ class TweakerInterface(Protocol):
 
         Returns:
             TweakerResult with tweak outcome
+
         """
         ...
 
@@ -86,6 +88,7 @@ class TweakFunctionProtocol(Protocol):
 
         Returns:
             Path to the output file
+
         """
         ...
 
@@ -104,16 +107,18 @@ class MockTweaker:
         last_params: Last params dict passed to tweak
         last_settings: Last settings dict passed to tweak
         last_upc_dict: Last upc_dict passed to tweak
+
     """
 
     def __init__(
         self,
-        result: Optional[TweakerResult] = None,
+        result: TweakerResult | None = None,
         output_path: str = "",
+        *,
         success: bool = True,
         was_tweaked: bool = True,
-        errors: Optional[list[str]] = None,
-    ):
+        errors: list[str] | None = None,
+    ) -> None:
         """Initialize the mock tweaker.
 
         Args:
@@ -122,6 +127,7 @@ class MockTweaker:
             success: Whether to report success
             was_tweaked: Whether to report was_tweaked
             errors: List of error messages
+
         """
         if result is not None:
             self._result = result
@@ -133,11 +139,11 @@ class MockTweaker:
                 errors=errors or [],
             )
         self.call_count: int = 0
-        self.last_input_path: Optional[str] = None
-        self.last_output_dir: Optional[str] = None
-        self.last_params: Optional[dict] = None
-        self.last_settings: Optional[dict] = None
-        self.last_upc_dict: Optional[dict] = None
+        self.last_input_path: str | None = None
+        self.last_output_dir: str | None = None
+        self.last_params: dict | None = None
+        self.last_settings: dict | None = None
+        self.last_upc_dict: dict | None = None
 
     def tweak(
         self,
@@ -158,6 +164,7 @@ class MockTweaker:
 
         Returns:
             The configured TweakerResult
+
         """
         self.call_count += 1
         self.last_input_path = input_path
@@ -181,6 +188,7 @@ class MockTweaker:
 
         Args:
             result: The TweakerResult to return
+
         """
         self._result = result
 
@@ -195,20 +203,22 @@ class EDITweakerStep:
         tweak_function: Function for applying EDI tweaks
         error_handler: Optional error handler for recording errors
         file_system: Optional file system interface
+
     """
 
     def __init__(
         self,
-        tweak_function: Optional[TweakFunctionProtocol] = None,
-        error_handler: Optional[Any] = None,
-        file_system: Optional[FileSystemInterface] = None,
-    ):
+        tweak_function: TweakFunctionProtocol | None = None,
+        error_handler: Any | None = None,
+        file_system: FileSystemInterface | None = None,
+    ) -> None:
         """Initialize the tweaker step.
 
         Args:
             tweak_function: Function for applying EDI tweaks (defaults to modern EDITweaker)
             error_handler: Optional error handler for recording errors
             file_system: Optional file system interface
+
         """
         # Use the modern EDITweaker class from core.edi
         from core.edi.edi_tweaker import EDITweaker, _create_query_runner_adapter
@@ -231,6 +241,7 @@ class EDITweakerStep:
 
             Returns:
                 Path to output file
+
             """
             query_runner = _create_query_runner_adapter(settings_dict)
             tweaker = EDITweaker(query_runner)
@@ -267,6 +278,7 @@ class EDITweakerStep:
 
         Returns:
             TweakerResult with tweak outcome
+
         """
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
@@ -405,6 +417,7 @@ class EDITweakerStep:
         Args:
             filename: Filename being processed
             error_msg: Error message
+
         """
         if self._error_handler is None:
             return
@@ -422,8 +435,8 @@ class EDITweakerStep:
         file_path: str,
         folder: dict,
         upc_dict: dict,
-        settings: Optional[dict] = None,
-        context: Optional[Any] = None,
+        settings: dict | None = None,
+        context: Any | None = None,
     ) -> str | None:
         """Execute tweak step (wrapper for pipeline compatibility).
 
@@ -435,6 +448,7 @@ class EDITweakerStep:
 
         Returns:
             Path to tweaked file, or None if tweaking failed/not needed
+
         """
         import os
         import shutil
@@ -470,7 +484,7 @@ class EDITweakerStep:
             correlation_id=correlation_id,
         )
 
-        temp_dirs: Optional[list[str]] = None
+        temp_dirs: list[str] | None = None
         if context is not None and hasattr(context, "temp_dirs"):
             temp_dirs = context.temp_dirs
         elif "_pipeline_temp_dirs" in folder and isinstance(

@@ -49,17 +49,18 @@ class ScannerWareConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Extract and normalize parameters
         params = context.parameters_dict
 
         context.user_data["arec_padding"] = params.get("a_record_padding", "")
         context.user_data["append_arec"] = normalize_parameter(
-            params.get("append_a_records"), False
+            params.get("append_a_records"), default=False
         )
         context.user_data["append_arec_text"] = params.get("a_record_append_text", "")
         context.user_data["force_txt_ext"] = normalize_parameter(
-            params.get("force_txt_file_ext"), False
+            params.get("force_txt_file_ext"), default=False
         )
         context.user_data["invoice_date_offset"] = params.get("invoice_date_offset", 0)
 
@@ -81,6 +82,7 @@ class ScannerWareConverter(BaseEDIConverter):
         Args:
             record: The A record
             context: The conversion context
+
         """
         user_data = context.user_data
         fields = record.fields
@@ -124,6 +126,7 @@ class ScannerWareConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         fields = record.fields
 
@@ -150,6 +153,7 @@ class ScannerWareConverter(BaseEDIConverter):
         Args:
             record: The C record
             context: The conversion context
+
         """
         fields = record.fields
 
@@ -173,6 +177,7 @@ class ScannerWareConverter(BaseEDIConverter):
 
         Returns:
             The path to the generated output file
+
         """
         return context.user_data.get("output_path", context.output_filename)
 
@@ -214,6 +219,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.txt'
+
     """
     converter = ScannerWareConverter()
     return converter.edi_convert(

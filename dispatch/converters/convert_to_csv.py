@@ -60,38 +60,39 @@ class CSVConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Extract and normalize parameters
         params = context.parameters_dict
 
         context.user_data["calc_upc"] = normalize_parameter(
-            params.get("calculate_upc_check_digit"), False
+            params.get("calculate_upc_check_digit"), default=False
         )
         context.user_data["inc_arec"] = normalize_parameter(
-            params.get("include_a_records"), False
+            params.get("include_a_records"), default=False
         )
         context.user_data["inc_crec"] = normalize_parameter(
-            params.get("include_c_records"), False
+            params.get("include_c_records"), default=False
         )
         context.user_data["inc_headers"] = normalize_parameter(
-            params.get("include_headers"), True
+            params.get("include_headers"), default=True
         )
         context.user_data["filter_ampersand"] = normalize_parameter(
-            params.get("filter_ampersand"), False
+            params.get("filter_ampersand"), default=False
         )
         context.user_data["pad_arec"] = normalize_parameter(
-            params.get("pad_a_records"), False
+            params.get("pad_a_records"), default=False
         )
         context.user_data["arec_padding"] = params.get("a_record_padding", "")
         context.user_data["override_upc"] = normalize_parameter(
-            params.get("override_upc_bool"), False
+            params.get("override_upc_bool"), default=False
         )
         context.user_data["override_upc_level"] = params.get("override_upc_level", 1)
         context.user_data["override_upc_category_filter"] = params.get(
             "override_upc_category_filter", "ALL"
         )
         context.user_data["retail_uom"] = normalize_parameter(
-            params.get("retail_uom"), False
+            params.get("retail_uom"), default=False
         )
         context.user_data["upc_target_length"] = int(
             params.get("upc_target_length", 11) or 11
@@ -138,6 +139,7 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             True if the record should be processed
+
         """
         user_data = context.user_data
 
@@ -156,6 +158,7 @@ class CSVConverter(BaseEDIConverter):
         Args:
             record: The A record
             context: The conversion context
+
         """
         user_data = context.user_data
 
@@ -187,6 +190,7 @@ class CSVConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         user_data = context.user_data
         fields = dict(record.fields)  # Copy to allow modification
@@ -207,7 +211,7 @@ class CSVConverter(BaseEDIConverter):
         cost = utils.convert_to_price(fields["unit_cost"])
         suggested_retail = utils.convert_to_price(fields["suggested_retail_price"])
         description = self._process_description(
-            fields["description"], user_data["filter_ampersand"]
+            fields["description"], filter_ampersand=user_data["filter_ampersand"]
         )
         case_pack = self._process_quantity(fields["unit_multiplier"])
         item_number = self._process_quantity(fields["vendor_item"])
@@ -231,6 +235,7 @@ class CSVConverter(BaseEDIConverter):
         Args:
             record: The C record
             context: The conversion context
+
         """
         context.csv_writer.writerow(
             [
@@ -254,6 +259,7 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             Modified fields dictionary
+
         """
         user_data = context.user_data
         return apply_retail_uom(
@@ -272,6 +278,7 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             Modified fields dictionary
+
         """
         user_data = context.user_data
         return apply_upc_override(
@@ -292,6 +299,7 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             Processed UPC string for output
+
         """
         calc_upc = user_data["calc_upc"]
         if calc_upc:
@@ -313,11 +321,12 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             Quantity with leading zeros stripped, or original if all zeros
+
         """
-        return format_quantity(qty_str, allow_negative=True)
+        return format_quantity(qty_str)
 
     @staticmethod
-    def _process_description(desc: str, filter_ampersand: bool) -> str:
+    def _process_description(desc: str, *, filter_ampersand: bool) -> str:
         """Process description field.
 
         Args:
@@ -326,6 +335,7 @@ class CSVConverter(BaseEDIConverter):
 
         Returns:
             Processed description
+
         """
         return filter_description(desc, filter_ampersand=filter_ampersand)
 
@@ -367,6 +377,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.csv'
+
     """
     converter = CSVConverter()
     return converter.edi_convert(

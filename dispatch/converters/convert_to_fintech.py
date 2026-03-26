@@ -63,6 +63,7 @@ class FintechConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context with output_filename
+
         """
         # Store the division ID in user_data for use in record processing
         context.user_data["fintech_division_id"] = context.parameters_dict.get(
@@ -111,6 +112,7 @@ class FintechConverter(BaseEDIConverter):
         Args:
             record: The B record containing line item fields
             context: The conversion context with arec_header and upc_lut
+
         """
         # Get the current A record header for invoice context
         arec_header = context.arec_header
@@ -179,6 +181,7 @@ class FintechConverter(BaseEDIConverter):
         Args:
             record: The C record containing charge fields
             context: The conversion context with arec_header
+
         """
         # Get the current A record header for invoice context
         arec_header = context.arec_header
@@ -222,6 +225,7 @@ class FintechConverter(BaseEDIConverter):
 
         Returns:
             "EA" if multiplier > 1, "CS" otherwise
+
         """
         if uommult > 1:
             return "EA"
@@ -237,6 +241,7 @@ class FintechConverter(BaseEDIConverter):
 
         Returns:
             Formatted date string in MM/DD/YYYY format
+
         """
         return utils.datetime_from_invtime(inv_date).strftime("%m/%d/%Y")
 
@@ -278,6 +283,7 @@ def edi_convert(
         ... )
         >>> print(result)
         'output.csv'
+
     """
     import os
     import time

@@ -18,10 +18,11 @@ Example:
         if context.user_data.get("retail_uom"):
             fields = apply_retail_uom(fields, context.upc_lut,
                                       context.user_data["upc_target_length"])
+
 """
 
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any
 
 from core.utils import (
     calc_check_digit,
@@ -31,11 +32,11 @@ from core.utils import (
 
 
 def apply_retail_uom(
-    fields: Dict[str, str],
-    upc_lut: Dict[int, tuple],
+    fields: dict[str, str],
+    upc_lut: dict[int, tuple],
     upc_target_length: int = 11,
     upc_padding: str = "           ",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Apply retail UOM transformation to B record fields.
 
     Converts costs and quantities from case-level to each-level (retail) UOM.
@@ -48,6 +49,7 @@ def apply_retail_uom(
 
     Returns:
         Modified fields dictionary
+
     """
     # Validate fields can be parsed
     try:
@@ -92,11 +94,11 @@ def apply_retail_uom(
 
 
 def apply_upc_override(
-    fields: Dict[str, str],
-    upc_lut: Dict[int, tuple],
+    fields: dict[str, str],
+    upc_lut: dict[int, tuple],
     override_level: int = 1,
     category_filter: str = "ALL",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Apply UPC override from lookup table.
 
     Args:
@@ -107,6 +109,7 @@ def apply_upc_override(
 
     Returns:
         Modified fields dictionary
+
     """
     try:
         vendor_item = int(fields["vendor_item"].strip())
@@ -137,7 +140,8 @@ def apply_upc_override(
 
 
 def process_upc_for_output(
-    fields: Dict[str, str],
+    fields: dict[str, str],
+    *,
     calc_check_digit_flag: bool = True,
     upc_target_length: int = 11,
     upc_padding: str = "           ",
@@ -155,6 +159,7 @@ def process_upc_for_output(
 
     Returns:
         Processed UPC string for output
+
     """
     upc_field = fields.get("upc_number", "").strip()
 
@@ -185,7 +190,8 @@ def process_upc_for_output(
 
 
 def process_upc_with_prefix(
-    fields: Dict[str, str],
+    fields: dict[str, str],
+    *,
     calc_check_digit_flag: bool = True,
     upc_target_length: int = 11,
     upc_padding: str = "           ",
@@ -202,9 +208,13 @@ def process_upc_with_prefix(
 
     Returns:
         Tab-prefixed processed UPC string for output
+
     """
     upc = process_upc_for_output(
-        fields, calc_check_digit_flag, upc_target_length, upc_padding
+        fields,
+        calc_check_digit_flag=calc_check_digit_flag,
+        upc_target_length=upc_target_length,
+        upc_padding=upc_padding,
     )
     return "\t" + upc if calc_check_digit_flag and upc.strip() else upc
 
@@ -212,6 +222,7 @@ def process_upc_with_prefix(
 def format_retail_price(
     unit_cost: str,
     unit_multiplier: str,
+    *,
     as_string: bool = True,
 ) -> Any:
     """Calculate and format retail price from case cost.
@@ -225,6 +236,7 @@ def format_retail_price(
 
     Returns:
         Formatted price string (e.g., "5.99") or Decimal
+
     """
     try:
         case_cost = Decimal(unit_cost.strip()) / 100
@@ -238,7 +250,7 @@ def format_retail_price(
         return "0.00" if as_string else Decimal("0.00")
 
 
-def format_quantity(qty_str: str, allow_negative: bool = True) -> Any:
+def format_quantity(qty_str: str, *, allow_negative: bool = True) -> Any:
     """Format quantity string, stripping leading zeros.
 
     Args:
@@ -247,6 +259,7 @@ def format_quantity(qty_str: str, allow_negative: bool = True) -> Any:
 
     Returns:
         Integer quantity or original string if non-numeric
+
     """
     qty_str = qty_str.strip()
 
@@ -264,7 +277,7 @@ def format_quantity(qty_str: str, allow_negative: bool = True) -> Any:
         return qty_str
 
 
-def filter_description(desc: str, filter_ampersand: bool = False) -> str:
+def filter_description(desc: str, *, filter_ampersand: bool = False) -> str:
     """Process description field for output.
 
     Args:
@@ -273,6 +286,7 @@ def filter_description(desc: str, filter_ampersand: bool = False) -> str:
 
     Returns:
         Processed description
+
     """
     desc = desc.rstrip()
     if filter_ampersand:
@@ -280,7 +294,7 @@ def filter_description(desc: str, filter_ampersand: bool = False) -> str:
     return desc
 
 
-def parse_decimal_field(value: str) -> Optional[Decimal]:
+def parse_decimal_field(value: str) -> Decimal | None:
     """Parse a decimal value from a string, handling errors.
 
     Args:
@@ -288,6 +302,7 @@ def parse_decimal_field(value: str) -> Optional[Decimal]:
 
     Returns:
         Decimal value or None if parsing fails
+
     """
     if not value or not value.strip():
         return None

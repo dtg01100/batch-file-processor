@@ -33,7 +33,7 @@ import csv
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import Any
 
 from core import utils
 from core.structured_logging import get_logger
@@ -62,6 +62,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Get parameters
         params = context.parameters_dict
@@ -71,11 +72,11 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         self.upc_lookup = context.upc_lut
 
         # Initialize state
-        self.row_dict_list: List[dict] = []
+        self.row_dict_list: list[dict] = []
         self.shipper_mode = False
         self.shipper_parent_item = False
-        self.shipper_accum: List[Decimal] = []
-        self.invoice_accum: List[Decimal] = []
+        self.shipper_accum: list[Decimal] = []
+        self.invoice_accum: list[Decimal] = []
         self.shipper_line_number = 0
         self.invoice_index = 0
         self.output_filename = ""
@@ -133,9 +134,9 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         self,
         edi_process: str,
         output_filename: str,
-        settings_dict: Dict[str, Any],
-        parameters_dict: Dict[str, Any],
-        upc_lut: Dict[int, tuple],
+        settings_dict: dict[str, Any],
+        parameters_dict: dict[str, Any],
+        upc_lut: dict[int, tuple],
     ) -> str:
         """Override to store context reference for _csv_file property."""
         # Create context to hold shared state
@@ -173,6 +174,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         Args:
             record: The A record
             context: The conversion context
+
         """
         super().process_a_record(record, context)
 
@@ -214,6 +216,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         Args:
             record: The B record
             context: The conversion context
+
         """
         # Lookup UPC from the lookup table
         try:
@@ -279,6 +282,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 
         Args:
             context: The conversion context
+
         """
         # Flush any remaining rows
         self._flush_write_queue()
@@ -296,6 +300,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 
         Returns:
             Path to the generated CSV file
+
         """
         return self.output_filename
 
@@ -342,6 +347,7 @@ def edi_convert(
         ... )
         >>> print(result)
         '/output/path/eInvTestVendor.20240101120000.csv'
+
     """
     converter = EStoreEInvoiceConverter()
     return converter.edi_convert(

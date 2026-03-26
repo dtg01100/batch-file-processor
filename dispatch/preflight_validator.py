@@ -9,7 +9,7 @@ the run.
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from core.structured_logging import get_logger
 from dispatch.send_manager import SendManager
@@ -81,7 +81,7 @@ class PreflightValidator:
 
     def __init__(
         self,
-        send_manager: Optional[SendManager] = None,
+        send_manager: SendManager | None = None,
         os_module: Any = None,
     ) -> None:
         self._send_manager = send_manager or SendManager()
@@ -100,6 +100,7 @@ class PreflightValidator:
 
         Returns:
             PreflightResult containing any issues found.
+
         """
         result = PreflightResult()
 
