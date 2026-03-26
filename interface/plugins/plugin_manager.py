@@ -181,6 +181,11 @@ class PluginManager:
                     except Exception as e:
                         print(f"Error extracting configuration plugin {name}: {e}")
 
+    def _ensure_initialized(self) -> None:
+        """Ensure plugins are initialized before access."""
+        if not self._initialized:
+            self.initialize_plugins()
+
     def get_configuration_plugins(self) -> List[ConfigurationPlugin]:
         """
         Get all available configuration plugins.
@@ -188,8 +193,7 @@ class PluginManager:
         Returns:
             List[ConfigurationPlugin]: List of all configuration plugin instances
         """
-        if not self._initialized:
-            self.initialize_plugins()
+        self._ensure_initialized()
 
         return list(self._configuration_plugins.values())
 
@@ -205,8 +209,7 @@ class PluginManager:
         Returns:
             Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
         """
-        if not self._initialized:
-            self.initialize_plugins()
+        self._ensure_initialized()
 
         return self._configuration_plugins.get(format_enum)
 
@@ -222,8 +225,7 @@ class PluginManager:
         Returns:
             Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
         """
-        if not self._initialized:
-            self.initialize_plugins()
+        self._ensure_initialized()
 
         for plugin in self._configuration_plugins.values():
             if plugin.get_format_name().lower() == format_name.lower():
