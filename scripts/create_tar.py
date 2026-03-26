@@ -4,7 +4,7 @@ import sys
 import tarfile
 
 
-def create_tar():
+def create_tar() -> None:
     """Create tar stream from /src/dist directory to stdout"""
     try:
         with tarfile.open(fileobj=sys.stdout.buffer, mode="w|") as tar:

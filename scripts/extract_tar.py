@@ -4,7 +4,7 @@ import sys
 import tarfile
 
 
-def extract_tar():
+def extract_tar() -> None:
     """Extract tar stream from stdin to /src directory"""
     os.makedirs("/src", exist_ok=True)
     try:

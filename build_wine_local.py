@@ -142,7 +142,7 @@ def format_bundle_validation_errors(issues: list[str]) -> str:
     return "\n".join(f"  - {issue}" for issue in issues)
 
 
-def run_wine(cmd, cwd=None, check=True, timeout=None):
+def run_wine(cmd, cwd=None, *, check=True, timeout=None):
     """Run a command through Wine."""
     wine_cmd = ["wine"] + cmd
     env = os.environ.copy()
@@ -195,7 +195,7 @@ def setup_python():
     return python_dir
 
 
-def install_pip(python_dir):
+def install_pip(python_dir) -> None:
     """Install pip in the embeddable Python."""
     print("Installing pip...")
 
@@ -271,7 +271,7 @@ def get_dependency_marker_metadata(req_file: Path) -> dict[str, str]:
 
 
 def get_dependency_reinstall_reason(
-    marker_path: Path, req_file: Path, force_reinstall: bool = False
+    marker_path: Path, req_file: Path, *, force_reinstall: bool = False
 ) -> str | None:
     """Return why dependencies must be reinstalled, or None when cache is valid."""
     if force_reinstall:
@@ -292,7 +292,7 @@ def get_dependency_reinstall_reason(
     return None
 
 
-def install_dependencies(python_dir):
+def install_dependencies(python_dir) -> None:
     """Install project dependencies."""
     print("Installing dependencies...")
 
@@ -364,7 +364,7 @@ def install_dependencies(python_dir):
     print("Dependencies installed.")
 
 
-def build_executable(python_dir):
+def build_executable(python_dir) -> bool:
     """Build the Windows executable using PyInstaller."""
     print("Building Windows executable...")
 
@@ -447,7 +447,7 @@ def build_executable(python_dir):
     return True
 
 
-def verify_build():
+def verify_build() -> bool:
     """Verify the build output."""
     bundle_dir = get_windows_bundle_dir(DIST_DIR)
     issues = validate_windows_bundle(bundle_dir)
@@ -489,7 +489,7 @@ def verify_build():
         return False
 
 
-def main():
+def main() -> None:
     print("=" * 60)
     print("Building Windows Executable with Wine")
     print("=" * 60)

@@ -26,7 +26,7 @@ def do(
     total_emails,
     run_summary_string,
     progress_callback: ProgressCallback = None,
-):
+) -> None:
     if progress_callback is None:
         progress_callback = NullProgressCallback()
 

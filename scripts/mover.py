@@ -7,7 +7,7 @@ It has been refactored to remove tkinter dependencies.
 import os
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable
 
 import scripts.backup_increment as backup_increment
 from backend.database import sqlite_wrapper
@@ -27,6 +27,7 @@ class DbMigrationThing:
     Attributes:
         original_folder_path: Path to the original database file
         new_folder_path: Path to the new database file to import from
+
     """
 
     def __init__(self, original_folder_path: str, new_folder_path: str) -> None:
@@ -37,8 +38,8 @@ class DbMigrationThing:
 
     def do_migrate(
         self,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
-        original_database_path: Optional[str] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+        original_database_path: str | None = None,
     ) -> None:
         """Perform the database migration.
 
@@ -47,13 +48,14 @@ class DbMigrationThing:
                 reporting progress. Replaces tkinter progress_bar parameter.
             original_database_path: Path to the original database file. If not
                 provided, uses self.original_folder_path.
+
         """
         if original_database_path is None:
             original_database_path = self.original_folder_path
 
         _thread_result: dict = {"modified_new_folder_path": None, "error": None}
 
-        def database_preimport_operations():
+        def database_preimport_operations() -> None:
             try:
                 original_database_connection_for_migrate = (
                     sqlite_wrapper.Database.connect(original_database_path)

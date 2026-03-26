@@ -8,7 +8,7 @@ DB_PATH = os.path.join(
 )
 
 
-def redact():
+def redact() -> None:
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 

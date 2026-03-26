@@ -8,7 +8,6 @@ Cross-platform alternative to run_tests.sh.
 import argparse
 import subprocess
 import sys
-from typing import List, Optional
 
 
 # ANSI color codes
@@ -63,12 +62,12 @@ def print_warning(text: str) -> None:
 
 
 def build_pytest_command(
-    marker: Optional[str],
+    marker: str | None,
     verbose: bool,
     exitfirst: bool,
     timeout: int,
-    extra_args: List[str],
-) -> List[str]:
+    extra_args: list[str],
+) -> list[str]:
     """Build the pytest command."""
     cmd = [sys.executable, "-m", "pytest", "tests", "-v"]
 
@@ -88,10 +87,10 @@ def build_pytest_command(
 
 
 def run_tests(
-    marker: Optional[str],
+    marker: str | None,
     description: str,
     args: argparse.Namespace,
-    extra_args: Optional[List[str]] = None,
+    extra_args: list[str] | None = None,
 ) -> int:
     """Run tests with the given marker."""
     print_header(description)

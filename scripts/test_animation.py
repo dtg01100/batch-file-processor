@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 class RotatableLabel(QLabel):
     """A QLabel that supports rotation animation"""
 
-    def __init__(self, text: str = "", parent=None):
+    def __init__(self, text: str = "", parent=None) -> None:
         super().__init__(text, parent)
         self._rotation = 0
 
@@ -29,7 +29,7 @@ class RotatableLabel(QLabel):
         return self._rotation
 
     @rotation.setter
-    def rotation(self, value):
+    def rotation(self, value) -> None:
         """Setter for rotation property"""
         self._rotation = value % 360
         transform = QTransform().rotate(self._rotation)
@@ -39,7 +39,7 @@ class RotatableLabel(QLabel):
 class TestWindow(QWidget):
     """Test window to display the animated label"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Rotation Animation Test")
         self.setGeometry(100, 100, 400, 300)

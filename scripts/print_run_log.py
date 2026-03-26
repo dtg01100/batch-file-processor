@@ -9,7 +9,7 @@ from core.structured_logging import get_logger
 logger = get_logger(__name__)
 
 
-def do(filename):
+def do(filename) -> None:
     filename = filename.read()
     # word wrap the log, so that it completely is on page
     formatted_log = "\r\n".join(

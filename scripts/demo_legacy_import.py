@@ -27,14 +27,14 @@ from backend.database import sqlite_wrapper
 from migrations import folders_database_migrator
 
 
-def print_section(title):
+def print_section(title) -> None:
     """Print a section header."""
     print(f"\n{'=' * 60}")
     print(f" {title}")
     print("=" * 60)
 
 
-def print_subsection(title):
+def print_subsection(title) -> None:
     """Print a subsection header."""
     print(f"\n--- {title} ---")
 
@@ -99,7 +99,7 @@ def get_database_version(db_path):
     return row
 
 
-def main():
+def main() -> None:
     """Run the demonstration."""
 
     # Paths
@@ -263,10 +263,10 @@ def main():
         class MockThread:
             class _ProgressSignal:
                 @staticmethod
-                def emit(*args):
+                def emit(*args) -> None:
                     print(f"  Progress: {args[2]}")
 
-            def __init__(self):
+            def __init__(self) -> None:
                 self.progress = self._ProgressSignal()
 
         mock_thread = MockThread()

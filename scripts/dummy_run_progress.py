@@ -14,7 +14,6 @@ Run independently to test the progress overlay.
 """
 
 import sys
-from typing import Optional
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
@@ -36,8 +35,8 @@ class ProgressDemoWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.progress_service: Optional[QtProgressService] = None
-        self.demo_timer: Optional[QTimer] = None
+        self.progress_service: QtProgressService | None = None
+        self.demo_timer: QTimer | None = None
         self.current_demo_step = 0
         self.init_ui()
 

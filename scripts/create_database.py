@@ -6,7 +6,7 @@ from core.database import schema
 
 def do(
     database_version, database_path, config_folder, running_platform
-):  # create database file with default settings
+) -> None:  # create database file with default settings
     database_connection = sqlite_wrapper.Database.connect(
         database_path
     )  # connect to database

@@ -22,7 +22,7 @@ from interface.qt.app import QtBatchFileSenderApp
 logger = get_logger(__name__)
 
 
-def main():
+def main() -> None:
     """Initialize and run the Batch File Sender application with Qt UI."""
     setup_logging()
     logger.debug("Logging initialized")

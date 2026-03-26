@@ -28,7 +28,6 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Type
 
 # Ensure the project root is in sys.path so we can import 'interface' package
 # when running as a script without installation
@@ -140,7 +139,7 @@ def _emit_startup_import_error(exc: ImportError | OSError) -> None:
     print("\n".join(lines), file=sys.stderr)
 
 
-def _load_qt_app_class() -> Type[object]:
+def _load_qt_app_class() -> type[object]:
     try:
         module = importlib.import_module("interface.qt.app")
     except (ImportError, OSError) as exc:

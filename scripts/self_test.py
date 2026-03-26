@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 
-def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
+def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -> int:
     """Standalone self-test with no Qt dependencies.
 
     Returns 0 if all required checks pass, 1 otherwise.
@@ -16,18 +16,18 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)"):
     failed = 0
     qt_warnings = []
 
-    def ok(label):
+    def ok(label) -> None:
         nonlocal passed
         passed += 1
         print(f"  ✓ {label}")
 
-    def fail(label, reason=""):
+    def fail(label, reason="") -> None:
         nonlocal failed
         failed += 1
         extra = f" -- {reason}" if reason else ""
         print(f"  ✗ {label}{extra}")
 
-    def qt_warn(label, reason=""):
+    def qt_warn(label, reason="") -> None:
         extra = f" -- {reason}" if reason else ""
         qt_warnings.append(f"{label}{extra}")
         print(f"  ? {label} (optional){extra}")
