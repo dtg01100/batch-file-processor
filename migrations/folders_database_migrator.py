@@ -3,6 +3,10 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# Magic string constants
+CSV_SORT_ORDER = "upc_number,qty_of_units,unit_cost,description,vendor_item"
+REPLACEME_PLACEHOLDER = "replaceme"
+
 
 def _quote_identifier(name: str) -> str:
     """Quote a SQL identifier, escaping any embedded quotes."""
@@ -465,7 +469,7 @@ def upgrade_database(
                 "alter table 'folders' add column 'simple_csv_sort_order'"
             )
             database_connection.query(
-                'UPDATE "folders" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"'
+                'UPDATE "folders" SET "simple_csv_sort_order" = CSV_SORT_ORDER'
             )
         except RuntimeError:
             logger.debug("Column already exists, skipping (idempotent)")
@@ -473,7 +477,7 @@ def upgrade_database(
             "alter table 'administrative' add column 'simple_csv_sort_order'"
         )
         database_connection.query(
-            'UPDATE "administrative" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"'
+            'UPDATE "administrative" SET "simple_csv_sort_order" = CSV_SORT_ORDER'
         )
         update_version = dict(id=1, version="23", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -564,7 +568,7 @@ def upgrade_database(
                 "alter table 'folders' add column 'estore_vendor_NameVendorOID'"
             )
             database_connection.query(
-                'UPDATE "folders" SET "estore_vendor_NameVendorOID" = "replaceme"'
+                'UPDATE "folders" SET "estore_vendor_NameVendorOID" = REPLACEME_PLACEHOLDER'
             )
         except RuntimeError:
             logger.debug("Column already exists, skipping (idempotent)")
@@ -582,7 +586,7 @@ def upgrade_database(
             "alter table 'administrative' add column 'estore_vendor_NameVendorOID'"
         )
         database_connection.query(
-            "UPDATE 'administrative' SET 'estore_vendor_NameVendorOID' = 'replaceme'"
+            "UPDATE 'administrative' SET 'estore_vendor_NameVendorOID' = REPLACEME_PLACEHOLDER"
         )
         update_version = dict(id=1, version="26", os=running_platform)
         db_version.update(update_version, ["id"])

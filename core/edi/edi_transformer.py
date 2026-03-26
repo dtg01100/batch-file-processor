@@ -2,20 +2,13 @@ import logging
 from decimal import Decimal
 
 from core.structured_logging import get_logger, log_with_context
+from core.utils.safe_parse import safe_int
 
 logger = get_logger(__name__)
 
 
 def dac_str_int_to_int(dacstr: str) -> int:
-    if dacstr.strip() == "":
-        return 0
-    try:
-        if dacstr.startswith("-"):
-            return int(dacstr[1:]) - (int(dacstr[1:]) * 2)
-        else:
-            return int(dacstr)
-    except ValueError:
-        return 0
+    return safe_int(dacstr)
 
 
 def convert_to_price(value):

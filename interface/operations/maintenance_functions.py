@@ -9,12 +9,15 @@ import hashlib
 import os
 from typing import Any, Callable, Optional
 
+from core.structured_logging import get_logger
 from core.ports.repositories import (
     IFolderRepository,
     IProcessedFilesRepository,
     ISettingsRepository,
 )
 from interface.services.progress_service import NullProgressCallback, ProgressCallback
+
+logger = get_logger(__name__)
 
 
 class MaintenanceFunctions:
@@ -238,7 +241,7 @@ class MaintenanceFunctions:
             if folder_dict:
                 self._database_obj.folders_table_list = [folder_dict]
             else:
-                print(f"Warning: Folder with id {selected_folder} not found")
+                logger.debug("Warning: Folder with id %s not found", selected_folder)
                 self._database_obj.folders_table_list = []
         folder_total = len(self._database_obj.folders_table_list)
         if selected_folder is None:
@@ -289,7 +292,7 @@ class MaintenanceFunctions:
             file_total = len(filtered_files)
             file_count = 0
             for filename in filtered_files:
-                print(filename)
+                logger.debug("Processing file: %s", filename)
                 file_count += 1
                 self._progress.update_message(
                     "adding files to processed list...\n\n"
@@ -332,7 +335,7 @@ class MaintenanceFunctions:
             backup_path: Path to the backup file
         """
         if self._database_import_callback is None:
-            print("Database import callback not configured")
+            logger.debug("Database import callback not configured")
             return
 
         if self._database_import_callback(backup_path):
@@ -341,7 +344,7 @@ class MaintenanceFunctions:
             self._progress.show("Working...")
             self._database_obj.reload()
             settings_dict = self._database_obj.get_settings_or_default()
-            print(settings_dict["enable_email"])
+            logger.debug("Email enabled in settings: %s", settings_dict["enable_email"])
             if not settings_dict["enable_email"]:
                 for email_backend_to_disable in self._database_obj.folders_table.find(
                     process_backend_email=True

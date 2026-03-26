@@ -17,6 +17,9 @@ from datetime import datetime
 from decimal import Decimal
 
 from core.database import create_query_runner
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
@@ -386,7 +389,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
             raise ValueError("unit_multiplier cannot be zero")
         int(record["qty_of_units"].strip())
     except Exception:
-        print("cannot parse b record field, skipping")
+        logger.debug("cannot parse b record field, skipping")
         return False
 
     # Get the each-level UPC from lookup
@@ -414,7 +417,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         record["unit_multiplier"] = "000001"
         return True
     except Exception as error:
-        print(error)
+        logger.debug("error applying retail UOM transform: %s", error)
         return False
 
 

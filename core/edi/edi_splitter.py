@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Optional, Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
+from core.utils.utils import filter_b_records_by_category
 
 
 @runtime_checkable
@@ -192,58 +193,6 @@ def _col_to_excel(col: int) -> str:
         (div, mod) = divmod(div - 1, 26)
         excel_col = chr(mod + 65) + excel_col
     return excel_col
-
-
-def filter_b_records_by_category(
-    b_records: list[str], upc_dict: dict, filter_categories: str, filter_mode: str
-) -> list[str]:
-    """Filter B records based on item category.
-
-    Args:
-        b_records: List of B record lines to filter
-        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
-        filter_categories: String of comma-separated categories or "ALL"
-        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
-
-    Returns:
-        List of filtered B record lines
-    """
-    if filter_categories == "ALL":
-        return b_records
-
-    if not upc_dict:
-        return b_records
-
-    categories_list = [c.strip() for c in filter_categories.split(",")]
-    filtered_records = []
-
-    for record in b_records:
-        try:
-            b_rec_dict = capture_records(record)
-            if b_rec_dict is None:
-                # Include unparsable records in output
-                filtered_records.append(record)
-                continue
-            vendor_item = int(b_rec_dict["vendor_item"].strip())
-
-            if vendor_item in upc_dict:
-                item_category = str(upc_dict[vendor_item][0])
-                category_in_list = item_category in categories_list
-
-                if filter_mode == "include":
-                    if category_in_list:
-                        filtered_records.append(record)
-                else:  # exclude mode
-                    if not category_in_list:
-                        filtered_records.append(record)
-            else:
-                # Item not in upc_dict - include by default (fail-open)
-                filtered_records.append(record)
-        except (ValueError, KeyError):
-            # On error, include the record (fail-open)
-            filtered_records.append(record)
-
-    return filtered_records
 
 
 def filter_edi_file_by_category(
@@ -489,6 +438,69 @@ class EDISplitter:
         """
         self.filesystem = filesystem
 
+    def _start_new_invoice(
+        self,
+        line: str,
+        count: int,
+        config: SplitConfig,
+    ) -> tuple[
+        int,
+        Optional[str],
+        list[str],
+        list[str],
+        Optional[str],
+        Optional[tuple[str, str, str]],
+    ]:
+        """Start a new invoice and return updated state.
+
+        Args:
+            line: The A record line
+            count: Current invoice count
+            config: Split configuration
+
+        Returns:
+            Tuple of (count, current_a_record, current_b_records,
+                     current_c_records, current_output_path, output_file_entry)
+            output_file_entry is None if the line couldn't be parsed
+        """
+        count += 1
+        line_dict = capture_records(line)
+
+        if line_dict is None:
+            return count, None, [], [], None, None
+
+        output_path, file_name_prefix, file_name_suffix = _build_split_filename(
+            line_dict,
+            count,
+            config,
+        )
+        return (
+            count,
+            line,
+            [],
+            [],
+            output_path,
+            (output_path, file_name_prefix, file_name_suffix),
+        )
+
+    def _process_b_record(
+        self,
+        line: str,
+        current_b_records: list[str],
+    ) -> list[str]:
+        """Append a B record to the current invoice."""
+        current_b_records.append(line)
+        return current_b_records
+
+    def _process_c_record(
+        self,
+        line: str,
+        current_c_records: list[str],
+    ) -> list[str]:
+        """Append a C record to the current invoice."""
+        current_c_records.append(line)
+        return current_c_records
+
     def split_edi(
         self,
         content: str,
@@ -549,30 +561,22 @@ class EDISplitter:
                 skipped_invoices += skipped_delta
                 write_counter += written_delta
 
-                # Start new invoice
-                count += 1
-                line_dict = capture_records(line)
-
-                if line_dict is None:
-                    continue
-
-                output_path, file_name_prefix, file_name_suffix = _build_split_filename(
-                    line_dict,
+                result = self._start_new_invoice(line, count, config)
+                (
                     count,
-                    config,
-                )
-                output_files.append((output_path, file_name_prefix, file_name_suffix))
-
-                # Reset for new invoice
-                current_a_record = line
-                current_b_records = []
-                current_c_records = []
-                current_output_path = output_path
+                    current_a_record,
+                    current_b_records,
+                    current_c_records,
+                    current_output_path,
+                    output_file_entry,
+                ) = result
+                if output_file_entry is not None:
+                    output_files.append(output_file_entry)
 
             elif line.startswith("B"):
-                current_b_records.append(line)
+                current_b_records = self._process_b_record(line, current_b_records)
             elif line.startswith("C"):
-                current_c_records.append(line)
+                current_c_records = self._process_c_record(line, current_c_records)
 
         # Process last invoice
         skipped_delta, written_delta = _finalize_current_invoice(

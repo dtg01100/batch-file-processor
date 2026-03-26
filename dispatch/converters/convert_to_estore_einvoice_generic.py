@@ -41,6 +41,7 @@ Backward Compatibility:
 """
 
 import csv
+import logging
 import os
 from datetime import datetime
 from decimal import Decimal
@@ -49,11 +50,14 @@ from typing import Any, Dict, List
 from core import utils
 from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
+from core.structured_logging import get_logger
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
 )
+
+logger = get_logger(__name__)
 
 
 class invFetcher:
@@ -241,7 +245,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
                 self.shipper_accum
             )
             self.shipper_accum.clear()
-            print("leave shipper mode")
+            logger.debug("leave shipper mode")
             self.shipper_mode = False
 
     def _flush_write_queue(self) -> None:
@@ -341,7 +345,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         try:
             upc_entry = self.upc_lookup[int(record.fields["vendor_item"])][1]
         except KeyError:
-            print("cannot find each upc")
+            logger.debug("cannot find each upc")
             upc_entry = record.fields["upc_number"]
 
         # Create detail row
@@ -367,7 +371,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         # Check if this is a shipper parent item
         if record.fields["parent_item_number"] == record.fields["vendor_item"]:
             self._leave_shipper_mode()
-            print("enter shipper mode")
+            logger.debug("enter shipper mode")
             self.shipper_mode = True
             self.shipper_parent_item = True
             row_dict["Detail Type"] = "D"
@@ -388,7 +392,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
                 try:
                     self._leave_shipper_mode()
                 except Exception as error:
-                    print(error)
+                    logger.debug("error leaving shipper mode: %s", error)
 
         # Merge header with detail row and add to list
         self.row_dict_list.append({**self.row_dict_header, **row_dict})

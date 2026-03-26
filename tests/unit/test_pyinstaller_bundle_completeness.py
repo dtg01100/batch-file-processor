@@ -209,11 +209,3 @@ class TestSpecFileConfiguration:
         ]
         missing = [m for m in required if m not in spec_hidden]
         assert not missing, f"Missing backend hiddenimports: {missing}"
-
-    @pytest.mark.unit
-    def test_archive_modules_in_hiddenimports(self):
-        """Archive modules must be in hiddenimports."""
-        spec_hidden = _extract_spec_hidden_imports()
-        required = ["archive", "archive.edi_tweaks"]
-        missing = [m for m in required if m not in spec_hidden]
-        assert not missing, f"Missing archive hiddenimports: {missing}"

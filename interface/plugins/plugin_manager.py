@@ -10,10 +10,13 @@ import os
 import pkgutil
 from typing import Any, Dict, List, Optional, Type
 
+from core.structured_logging import get_logger
 from ..models.folder_configuration import ConvertFormat
 from .configuration_plugin import ConfigurationPlugin
 from .plugin_base import PluginBase
 from .validation_framework import ValidationResult
+
+logger = get_logger(__name__)
 
 
 class PluginManager:
@@ -92,7 +95,9 @@ class PluginManager:
                     try:
                         self._load_plugin_module(module_path, discovered)
                     except Exception as e:
-                        print(f"Error loading plugin module {module_path}: {e}")
+                        logger.debug(
+                            "Error loading plugin module %s: %s", module_path, e
+                        )
 
     def _discover_plugins_in_package(
         self, package_name: str, discovered: List[str]
@@ -113,9 +118,11 @@ class PluginManager:
                         try:
                             self._load_plugin_module_by_name(module_name, discovered)
                         except Exception as e:
-                            print(f"Error loading plugin module {module_name}: {e}")
+                            logger.debug(
+                                "Error loading plugin module %s: %s", module_name, e
+                            )
         except ImportError as e:
-            print(f"Error importing package {package_name}: {e}")
+            logger.debug("Error importing package %s: %s", package_name, e)
 
     def _load_plugin_module(self, module_path: str, discovered: List[str]) -> None:
         """
@@ -179,7 +186,9 @@ class PluginManager:
                         if format_enum not in self._configuration_plugin_classes:
                             self._configuration_plugin_classes[format_enum] = obj
                     except Exception as e:
-                        print(f"Error extracting configuration plugin {name}: {e}")
+                        logger.debug(
+                            "Error extracting configuration plugin %s: %s", name, e
+                        )
 
     def _ensure_initialized(self) -> None:
         """Ensure plugins are initialized before access."""
@@ -385,11 +394,13 @@ class PluginManager:
                         format_enum = plugin_class.get_format_enum()
                         self._configuration_plugins[format_enum] = plugin
                     except Exception as e:
-                        print(f"Error storing configuration plugin {plugin_id}: {e}")
+                        logger.debug(
+                            "Error storing configuration plugin %s: %s", plugin_id, e
+                        )
 
             except Exception as e:
                 plugin_id = getattr(plugin_class, "get_identifier", lambda: "Unknown")()
-                print(f"Error initializing plugin {plugin_id}: {e}")
+                logger.debug("Error initializing plugin %s: %s", plugin_id, e)
 
         self._initialized = True
         return initialized

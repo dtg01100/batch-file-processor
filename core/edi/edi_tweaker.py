@@ -211,7 +211,6 @@ class EDITweaker:
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
 
-        # Update config from params
         if params:
             self.config = TweakerConfig.from_params(params)
 
@@ -226,10 +225,8 @@ class EDITweaker:
         )
 
         try:
-            # Open input file with retry logic
             work_file = self._open_input_with_retry(input_path)
 
-            # Read all lines
             work_file_lined = [n for n in work_file.readlines()]
             work_file.close()
 
@@ -242,14 +239,11 @@ class EDITweaker:
                 correlation_id=correlation_id,
             )
 
-            # Handle force_txt_file_ext
             if self.config.force_txt_file_ext:
                 output_path = output_path + ".txt"
 
-            # Open output file with retry logic
             output_file = self._open_output_with_retry(output_path)
 
-            # Process all records
             self._process_records(work_file_lined, output_file, upc_dict)
 
             output_file.close()
@@ -352,7 +346,6 @@ class EDITweaker:
             input_edi_dict = utils.capture_records(line)
             writeable_line = line
 
-            # Log intermediate progress every 100 records
             if line_num > 0 and line_num % 100 == 0:
                 StructuredLogger.log_debug(
                     logger,
@@ -404,7 +397,6 @@ class EDITweaker:
         invoice_num = fields["invoice_number"]
         self.crec_appender.set_invoice_number(int(invoice_num))
 
-        # Date offset transformation
         if self.config.invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]
             if not invoice_date_string == "000000":
@@ -416,7 +408,6 @@ class EDITweaker:
                     offset_invoice_date, "%m%d%y"
                 )
 
-        # Custom date format
         if self.config.invoice_date_custom_format:
             invoice_date_string = fields["invoice_date"]
             try:
@@ -427,13 +418,11 @@ class EDITweaker:
             except ValueError:
                 fields["invoice_date"] = "ERROR"
 
-        # A record padding
         if self.config.pad_arec:
             padding = self.config.arec_padding
             width = self.config.arec_padding_len
             fields["cust_vendor"] = f"{padding:<{width}}"
 
-        # Build A record line
         line_builder = [
             fields["record_type"],
             fields["cust_vendor"],
@@ -442,7 +431,6 @@ class EDITweaker:
             fields["invoice_total"],
         ]
 
-        # Append PO number to A record
         if self.config.append_arec:
             append_text = self.config.append_arec_text
             if "%po_str%" in append_text:
@@ -466,19 +454,10 @@ class EDITweaker:
         Returns:
             Formatted B record line
         """
-        # UPC override transformation
-        if self.config.override_upc:
-            fields = self._apply_upc_override(fields, upc_dict)
+        fields = self._transform_upc_override(fields, upc_dict)
+        fields = self._transform_retail_uom(fields, upc_dict)
+        fields = self._transform_upc_calc(fields)
 
-        # Retail UOM transformation
-        if self.config.retail_uom:
-            fields = self._apply_retail_uom(fields, upc_dict)
-
-        # UPC check digit calculation
-        if self.config.calc_upc:
-            fields = self._apply_upc_calc(fields)
-
-        # Determine parent-item handling AFTER UPC and numeric tweaks
         projected_line = "".join(
             (
                 fields["record_type"],
@@ -494,21 +473,9 @@ class EDITweaker:
                 fields["parent_item_number"],
             )
         )
-        if len(projected_line) < 76:
-            fields["parent_item_number"] = ""
+        fields = self._validate_parent_item_length(fields, projected_line)
+        fields = self._handle_negative_digits(fields)
 
-        # Handle negative digits
-        for field_name in [
-            "unit_cost",
-            "unit_multiplier",
-            "qty_of_units",
-            "suggested_retail_price",
-        ]:
-            tempfield = fields[field_name].replace("-", "")
-            if len(tempfield) != len(fields[field_name]):
-                fields[field_name] = "-" + tempfield
-
-        # Build B record line
         return "".join(
             (
                 fields["record_type"],
@@ -540,10 +507,9 @@ class EDITweaker:
             self.config.split_prepaid_sales_tax_crec
             and self.crec_appender.unappended_records
         ):
-            # Check if this is a "TAB Sales Tax" record
             if fields.get("description", "").startswith("TABSales Tax"):
                 self.crec_appender.fetch_splitted_sales_tax_totals(output_file)
-                return ""  # Don't write the original C record
+                return ""
 
         return (
             fields["record_type"]
@@ -597,11 +563,13 @@ class EDITweaker:
                 raise ValueError
             int(fields["qty_of_units"].strip())
         except Exception as e:
-            logger.debug("Skipping retail UOM transform for fields due to validation error: %s", e)
+            logger.debug(
+                "Skipping retail UOM transform for fields due to validation error: %s",
+                e,
+            )
             return fields
 
         try:
-            # Get UPC for each (retail) from lookup
             each_upc_string = upc_dict[item_number][1][:11].ljust(11)
         except (KeyError, IndexError):
             each_upc_string = self.config.upc_padding_pattern[:11]
@@ -624,7 +592,10 @@ class EDITweaker:
             fields["upc_number"] = each_upc_string
             fields["unit_multiplier"] = "000001"
         except Exception as e:
-            logger.debug("Error during retail UOM transformation, fields unchanged: %s", e)
+            logger.debug(
+                "Error during retail UOM transformation, fields unchanged: %s",
+                e,
+            )
 
         return fields
 
@@ -650,10 +621,8 @@ class EDITweaker:
             upc_len = len(str(proposed_upc))
 
             if upc_len == self.config.upc_target_length:
-                # Exact match, is valid
                 pass
             elif upc_len == 12 and self.config.upc_target_length == 13:
-                # Pad a 12-char UPC with check digit to length 13
                 fields["upc_number"] = str(proposed_upc).rjust(
                     self.config.upc_target_length,
                     (
@@ -663,15 +632,88 @@ class EDITweaker:
                     ),
                 )
             elif upc_len == 11:
-                # Add check digit to 11-char base UPC
                 check_digit = utils.calc_check_digit(proposed_upc)
                 fields["upc_number"] = str(proposed_upc) + str(check_digit)
             elif upc_len == 8:
-                # Convert UPC-E to UPC-A
                 fields["upc_number"] = str(utils.convert_UPCE_to_UPCA(proposed_upc))
         else:
             fields["upc_number"] = self.config.upc_padding_pattern[
                 : self.config.upc_target_length
             ]
 
+        return fields
+
+    def _transform_upc_override(self, fields: dict, upc_dict: dict) -> dict:
+        """Apply UPC override transformation if enabled.
+
+        Args:
+            fields: B record fields
+            upc_dict: UPC lookup dictionary
+
+        Returns:
+            Modified fields dictionary
+        """
+        if self.config.override_upc:
+            fields = self._apply_upc_override(fields, upc_dict)
+        return fields
+
+    def _transform_retail_uom(self, fields: dict, upc_dict: dict) -> dict:
+        """Apply retail UOM transformation if enabled.
+
+        Args:
+            fields: B record fields
+            upc_dict: UPC lookup dictionary
+
+        Returns:
+            Modified fields dictionary
+        """
+        if self.config.retail_uom:
+            fields = self._apply_retail_uom(fields, upc_dict)
+        return fields
+
+    def _transform_upc_calc(self, fields: dict) -> dict:
+        """Apply UPC check digit calculation if enabled.
+
+        Args:
+            fields: B record fields
+
+        Returns:
+            Modified fields dictionary
+        """
+        if self.config.calc_upc:
+            fields = self._apply_upc_calc(fields)
+        return fields
+
+    def _handle_negative_digits(self, fields: dict) -> dict:
+        """Handle negative digits in numeric fields.
+
+        Args:
+            fields: B record fields
+
+        Returns:
+            Modified fields dictionary
+        """
+        for field_name in [
+            "unit_cost",
+            "unit_multiplier",
+            "qty_of_units",
+            "suggested_retail_price",
+        ]:
+            tempfield = fields[field_name].replace("-", "")
+            if len(tempfield) != len(fields[field_name]):
+                fields[field_name] = "-" + tempfield
+        return fields
+
+    def _validate_parent_item_length(self, fields: dict, projected_line: str) -> dict:
+        """Validate and adjust parent item length.
+
+        Args:
+            fields: B record fields
+            projected_line: Projected line string for length validation
+
+        Returns:
+            Modified fields dictionary
+        """
+        if len(projected_line) < 76:
+            fields["parent_item_number"] = ""
         return fields

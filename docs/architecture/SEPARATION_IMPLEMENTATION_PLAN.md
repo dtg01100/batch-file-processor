@@ -1122,15 +1122,19 @@ class ProcessingService:
                     errors=["Cancelled by user"]
                 )
         
-        # TODO: Integrate with existing dispatch/coordinator
-        # For now, this shows the interface pattern
+        # Integration point: delegate to existing DispatchCoordinator
+        # coordinator = DispatchCoordinator(config)
+        # for folder in folders:
+        #     result = coordinator.process_folder(folder, progress_callback)
+        #     files_processed += result.files_processed
+        #     errors.extend(result.errors)
         
         duration = (datetime.datetime.now() - start_time).total_seconds()
         
         return ProcessingResult(
             success=len(errors) == 0,
             folders_processed=len(folders),
-            files_processed=0,  # TODO: track actual count
+            files_processed=0,  # Tracked when integration is complete
             errors=errors,
             duration_seconds=duration
         )
@@ -1150,7 +1154,14 @@ class ProcessingService:
                 errors=[f"Folder {folder_id} not found"]
             )
         
-        # TODO: Implement single-folder processing
+        # Integration point: delegate to DispatchCoordinator.process_folder()
+        # result = coordinator.process_folder(folder, progress_callback)
+        # return ProcessingResult(
+        #     success=result.success,
+        #     folders_processed=1,
+        #     files_processed=result.files_processed,
+        #     errors=result.errors
+        # )
         return ProcessingResult(
             success=True,
             folders_processed=1,

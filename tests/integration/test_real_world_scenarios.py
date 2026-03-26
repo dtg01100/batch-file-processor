@@ -171,25 +171,25 @@ def test_full_real_world_workflow(workspace):
 
     # 5. Verify file was processed and copied to output_1
     # Note: If this fails, it's because processed file recording is missing in orchestrator.
-    assert (
-        result.files_processed == 1
-    ), f"Expected 1 file processed, got {result.files_processed}. Errors: {result.errors}"
+    assert result.files_processed == 1, (
+        f"Expected 1 file processed, got {result.files_processed}. Errors: {result.errors}"
+    )
     assert (workspace["output_1"] / "test_invoice.edi").exists()
 
     # Verify it's in processed_files
     processed = db.processed_files.find_one(folder_id=folder_id)
-    assert (
-        processed is not None
-    ), "File should have been recorded in processed_files table"
+    assert processed is not None, (
+        "File should have been recorded in processed_files table"
+    )
     assert processed["file_name"] == str(test_file_path)
 
     # 6. Run again (no change) and verify it's skipped
     orchestrator.reset()
     run_log = MockLog()
     result_skip = orchestrator.process_folder(folder_rec, run_log, db.processed_files)
-    assert (
-        result_skip.files_processed == 0
-    ), "File should have been skipped as duplicate"
+    assert result_skip.files_processed == 0, (
+        "File should have been skipped as duplicate"
+    )
 
     # 7. Change settings (Copy backend to output_2)
     db.folders_table.update(
@@ -210,16 +210,16 @@ def test_full_real_world_workflow(workspace):
     result_resend = orchestrator.process_folder(folder_rec, run_log, db.processed_files)
 
     # 10. Verify file was processed and copied to output_2
-    assert (
-        result_resend.files_processed == 1
-    ), "File should have been re-processed due to resend_flag"
+    assert result_resend.files_processed == 1, (
+        "File should have been re-processed due to resend_flag"
+    )
     assert (workspace["output_2"] / "test_invoice.edi").exists()
 
     # 11. Verify resend_flag is cleared
     processed_after = db.processed_files.find_one(id=processed["id"])
-    assert (
-        processed_after["resend_flag"] == 0
-    ), "resend_flag should be cleared after successful re-processing"
+    assert processed_after["resend_flag"] == 0, (
+        "resend_flag should be cleared after successful re-processing"
+    )
 
 
 def test_tweaking_scenario(workspace):
@@ -273,7 +273,7 @@ def test_tweaking_scenario(workspace):
 
     from dispatch.pipeline.tweaker import EDITweakerStep
 
-    with mock.patch("archive.edi_tweaks.query_runner"):
+    with mock.patch("core.database.create_query_runner"):
         config = DispatchConfig(
             database=db,
             settings={
@@ -302,9 +302,9 @@ def test_tweaking_scenario(workspace):
     # The check digit for 01234567890 is 5.
     # So the UPC should be 012345678905 (12 digits)
     # The B record should start with B012345678905
-    assert (
-        "B012345678905" in output_content
-    ), f"UPC should have check digit appended. Content: {output_content}"
+    assert "B012345678905" in output_content, (
+        f"UPC should have check digit appended. Content: {output_content}"
+    )
 
 
 def test_csv_conversion_with_options(workspace):
@@ -368,9 +368,9 @@ def test_csv_conversion_with_options(workspace):
     if csv_files:
         csv_content = csv_files[0].read_text()
         # Should have headers
-        assert (
-            "UPC" in csv_content or "VENDOR" in csv_content
-        ), "CSV should contain headers"
+        assert "UPC" in csv_content or "VENDOR" in csv_content, (
+            "CSV should contain headers"
+        )
 
 
 def test_all_conversion_formats(workspace):
@@ -423,9 +423,9 @@ def test_all_conversion_formats(workspace):
         folder_rec = db.folders_table.find_one(id=folder_id)
         result = orchestrator.process_folder(folder_rec, run_log, db.processed_files)
 
-        assert (
-            result.files_processed == 1
-        ), f"Format {fmt} failed. Errors: {result.errors}"
+        assert result.files_processed == 1, (
+            f"Format {fmt} failed. Errors: {result.errors}"
+        )
 
         # Verify some output file was created
         output_files = list(workspace["output_1"].glob(f"*{fmt.split('_')[0]}*"))
@@ -501,9 +501,9 @@ def test_simplified_csv_with_options(workspace):
         apple_pos = csv_content.find("APPLE")
         zebra_pos = csv_content.find("ZEBRA")
         if apple_pos > 0 and zebra_pos > 0:
-            assert (
-                apple_pos < zebra_pos
-            ), "Items should be sorted alphabetically by description"
+            assert apple_pos < zebra_pos, (
+                "Items should be sorted alphabetically by description"
+            )
 
 
 def test_email_backend(workspace):
@@ -571,9 +571,9 @@ def test_email_backend(workspace):
         assert result.files_processed == 1, f"Errors: {result.errors}"
 
         # Verify email was sent
-        assert (
-            mock_smtp_instance.send_message.called
-        ), "Email send_message should have been called"
+        assert mock_smtp_instance.send_message.called, (
+            "Email send_message should have been called"
+        )
 
 
 def test_ftp_backend(workspace):
@@ -692,7 +692,7 @@ def test_conversion_with_tweaking(workspace):
     test_file_path.write_text(test_file_content)
 
     # Process with both steps
-    with mock.patch("archive.edi_tweaks.query_runner"):
+    with mock.patch("core.database.create_query_runner"):
         config = DispatchConfig(
             database=db,
             settings={
@@ -813,35 +813,35 @@ def test_csv_option_individual(workspace, option, value, expected_behavior):
     # Behavior-specific assertions (relaxed - works for both CSV and EDI formats)
     if expected_behavior == "headers_present" and output_files[0].suffix == ".csv":
         # Only check for CSV headers if it's actually a CSV file
-        assert (
-            "upc_number" in lines[0] or "UPC" in lines[0]
-        ), "Headers should be present"
+        assert "upc_number" in lines[0] or "UPC" in lines[0], (
+            "Headers should be present"
+        )
     elif expected_behavior == "no_headers" and output_files[0].suffix == ".csv":
-        assert not (
-            "upc_number" in lines[0] or "UPC" in lines[0]
-        ), "Headers should not be present"
+        assert not ("upc_number" in lines[0] or "UPC" in lines[0]), (
+            "Headers should not be present"
+        )
     elif expected_behavior == "a_records_present" and output_files[0].suffix == ".csv":
         # For CSV, A records would be included as rows
-        assert any(
-            "VENDOR" in line for line in lines
-        ), "A records should be present in CSV"
+        assert any("VENDOR" in line for line in lines), (
+            "A records should be present in CSV"
+        )
     elif expected_behavior == "no_a_records" and output_files[0].suffix == ".csv":
         # When A records are excluded, CSV might still have other data
         # This is more about CSV structure than content
         pass  # Just verify file was created successfully
     elif expected_behavior == "c_records_present" and output_files[0].suffix == ".csv":
         # For CSV, C records would be included as charge rows
-        assert any(
-            "CHARGER" in line or "CHARGE" in line for line in lines
-        ), "C records should be present in CSV"
+        assert any("CHARGER" in line or "CHARGE" in line for line in lines), (
+            "C records should be present in CSV"
+        )
     elif expected_behavior == "no_c_records" and output_files[0].suffix == ".csv":
         # When C records are excluded from CSV, verify charges aren't present
         pass  # Just verify file was created successfully
     # For other cases, just verify the file was created and has content
     else:
-        assert (
-            len(output_content) > 0
-        ), f"Output file should have content for {option}={value}"
+        assert len(output_content) > 0, (
+            f"Output file should have content for {option}={value}"
+        )
 
 
 @pytest.mark.parametrize(("option", "value"), SIMPLIFIED_CSV_OPTION_CASES)
@@ -897,9 +897,9 @@ def test_simplified_csv_option_individual(workspace, option, value):
     if len(output_files) == 0:
         # If no CSV, check for any output files
         output_files = list(workspace["output_1"].glob("*"))
-    assert (
-        len(output_files) >= 1
-    ), f"Expected CSV output for simplified {option}={value}"
+    assert len(output_files) >= 1, (
+        f"Expected CSV output for simplified {option}={value}"
+    )
 
     output_content = output_files[0].read_text()
 
@@ -971,7 +971,7 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
     # Mock query_runner and process
     from dispatch.pipeline.tweaker import EDITweakerStep
 
-    with mock.patch("archive.edi_tweaks.query_runner"):
+    with mock.patch("core.database.create_query_runner"):
         config_obj = DispatchConfig(
             database=db,
             settings={
@@ -1004,22 +1004,22 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
     # Specific validations
     if tweak_option == "calculate_upc_check_digit":
         if value:
-            assert (
-                "B012345678905" in output_content
-            ), "UPC check digit should be appended when enabled"
+            assert "B012345678905" in output_content, (
+                "UPC check digit should be appended when enabled"
+            )
         else:
-            assert (
-                "B012345678905" not in output_content
-            ), "UPC check digit should not be appended when disabled"
+            assert "B012345678905" not in output_content, (
+                "UPC check digit should not be appended when disabled"
+            )
     elif tweak_option == "append_a_records":
         if value:
-            assert (
-                "APPENDED" in output_content
-            ), "A record should have appended text when enabled"
+            assert "APPENDED" in output_content, (
+                "A record should have appended text when enabled"
+            )
         else:
-            assert (
-                "APPENDED" not in output_content
-            ), "A record should not have appended text when disabled"
+            assert "APPENDED" not in output_content, (
+                "A record should not have appended text when disabled"
+            )
 
 
 # Test common option combinations
@@ -1075,7 +1075,7 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
     needs_tweaker = config_overrides.get("tweak_edi", False)
 
     if needs_tweaker:
-        with mock.patch("archive.edi_tweaks.query_runner"):
+        with mock.patch("core.database.create_query_runner"):
             config_obj = DispatchConfig(
                 database=db,
                 settings={
@@ -1167,9 +1167,9 @@ def test_all_formats_with_options(workspace, format_name, options):
     folder_rec = db.folders_table.find_one(id=folder_id)
     result = orchestrator.process_folder(folder_rec, run_log, db.processed_files)
 
-    assert (
-        result.files_processed == 1
-    ), f"{format_name} with {options} - Errors: {result.errors}"
+    assert result.files_processed == 1, (
+        f"{format_name} with {options} - Errors: {result.errors}"
+    )
 
     output_files = list(workspace["output_1"].glob("*"))
     assert len(output_files) >= 1, f"{format_name} should produce output"

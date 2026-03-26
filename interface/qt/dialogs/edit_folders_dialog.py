@@ -120,6 +120,39 @@ class EditFoldersDialog(BaseDialog):
                 lambda _checked: self._refresh_tab_order()
             )
 
+    _FIELD_SPECS = [
+        ("active_checkbutton", "folder_is_active", "check", False),
+        ("process_backend_copy_check", "process_backend_copy", "check", False),
+        ("process_backend_ftp_check", "process_backend_ftp", "check", False),
+        ("process_backend_email_check", "process_backend_email", "check", False),
+        ("process_backend_http_check", "process_backend_http", "check", False),
+        ("folder_alias_field", "alias", "text", ""),
+        ("ftp_server_field", "ftp_server", "text", ""),
+        ("ftp_port_field", "ftp_port", "text", ""),
+        ("ftp_folder_field", "ftp_folder", "text", ""),
+        ("ftp_username_field", "ftp_username", "text", ""),
+        ("ftp_password_field", "ftp_password", "text", ""),
+        ("email_recipient_field", "email_to", "text", ""),
+        ("email_sender_subject_field", "email_subject_line", "text", ""),
+        ("http_url_field", "http_url", "text", ""),
+        ("http_headers_field", "http_headers", "text", ""),
+        ("http_field_name_field", "http_field_name", "text", "file"),
+        ("http_auth_type_var", "http_auth_type", "combo", ""),
+        ("http_api_key_field", "http_api_key", "text", ""),
+        ("force_edi_check_var", "force_edi_validation", "check", False),
+        ("split_edi", "split_edi", "check", False),
+        ("split_edi_send_invoices", "split_edi_include_invoices", "check", False),
+        ("split_edi_send_credits", "split_edi_include_credits", "check", False),
+        ("prepend_file_dates", "prepend_date_files", "check", False),
+        ("rename_file_field", "rename_file", "text", ""),
+        (
+            "split_edi_filter_categories_entry",
+            "split_edi_filter_categories",
+            "text",
+            "ALL",
+        ),
+    ]
+
     def _populate_fields(self, config: Dict[str, Any]):
         """Populate UI fields from configuration."""
 
@@ -130,65 +163,15 @@ class EditFoldersDialog(BaseDialog):
                 return val
             return normalize_bool(val)
 
-        # Active state
-        active_btn = self._fields.get("active_checkbutton")
-        if active_btn:
-            active_btn.setChecked(to_bool(config.get("folder_is_active"), False))
+        for field_key, config_key, field_type, default in self._FIELD_SPECS:
+            value = config.get(config_key, default)
+            if field_type == "check":
+                self._set_check(field_key, to_bool(value))
+            elif field_type == "text":
+                self._set_text(field_key, str(value or default))
+            elif field_type == "combo":
+                self._set_combo(field_key, str(value or default))
 
-        # Backend checks
-        self._set_check(
-            "process_backend_copy_check", to_bool(config.get("process_backend_copy"))
-        )
-        self._set_check(
-            "process_backend_ftp_check", to_bool(config.get("process_backend_ftp"))
-        )
-        self._set_check(
-            "process_backend_email_check", to_bool(config.get("process_backend_email"))
-        )
-        self._set_check(
-            "process_backend_http_check", to_bool(config.get("process_backend_http"))
-        )
-
-        # Text fields
-        self._set_text("folder_alias_field", str(config.get("alias") or ""))
-        self._set_text("ftp_server_field", str(config.get("ftp_server") or ""))
-        self._set_text("ftp_port_field", str(config.get("ftp_port") or ""))
-        self._set_text("ftp_folder_field", str(config.get("ftp_folder") or ""))
-        self._set_text("ftp_username_field", str(config.get("ftp_username") or ""))
-        self._set_text("ftp_password_field", str(config.get("ftp_password") or ""))
-        self._set_text("email_recipient_field", str(config.get("email_to") or ""))
-        self._set_text(
-            "email_sender_subject_field", str(config.get("email_subject_line") or "")
-        )
-        self._set_text("http_url_field", str(config.get("http_url") or ""))
-        self._set_text("http_headers_field", str(config.get("http_headers") or ""))
-        self._set_text(
-            "http_field_name_field", str(config.get("http_field_name") or "file")
-        )
-        self._set_combo(
-            "http_auth_type_var", str(config.get("http_auth_type") or "")
-        )
-        self._set_text("http_api_key_field", str(config.get("http_api_key") or ""))
-
-        # EDI base settings
-        self._set_check(
-            "force_edi_check_var", to_bool(config.get("force_edi_validation"))
-        )
-        self._set_check("split_edi", to_bool(config.get("split_edi")))
-        self._set_check(
-            "split_edi_send_invoices", to_bool(config.get("split_edi_include_invoices"))
-        )
-        self._set_check(
-            "split_edi_send_credits", to_bool(config.get("split_edi_include_credits"))
-        )
-        self._set_check("prepend_file_dates", to_bool(config.get("prepend_date_files")))
-        self._set_text("rename_file_field", str(config.get("rename_file") or ""))
-        self._set_text(
-            "split_edi_filter_categories_entry",
-            str(config.get("split_edi_filter_categories") or "ALL"),
-        )
-
-        # Filter mode
         mode_combo = self._fields.get("split_edi_filter_mode")
         if mode_combo:
             filter_mode = config.get("split_edi_filter_mode") or "include"
@@ -196,10 +179,6 @@ class EditFoldersDialog(BaseDialog):
             if idx >= 0:
                 mode_combo.setCurrentIndex(idx)
 
-        # Convert EDI checkbox
-        # Block signals while setting the checked state to avoid the timer-based
-        # _edi_option_processing flag racing with _populate_fields.  We call the
-        # builder method directly below so the sub-form is always built correctly.
         edi_check = self.dynamic_edi_builder.edi_options_check
         if edi_check:
             want_convert = normalize_bool(config.get("process_edi")) or bool(
@@ -211,17 +190,12 @@ class EditFoldersDialog(BaseDialog):
             finally:
                 edi_check.blockSignals(False)
 
-            # Directly rebuild the sub-form, bypassing the timer-flag guard so
-            # _populate_fields always produces the correct layout regardless of
-            # any pending _edi_option_processing state from widget construction.
             self.dynamic_edi_builder._clear_dynamic_edi()
             if want_convert:
                 self.dynamic_edi_builder._build_convert_edi_area()
             else:
                 self.dynamic_edi_builder._build_do_nothing_area()
 
-        # Convert format combo + sub-form -- updated *after* folder_config is already
-        # reflecting the new values so the sub-form builders read the right data.
         convert_combo = self.dynamic_edi_builder.convert_format_combo
         if convert_combo:
             new_fmt = self.dynamic_edi_builder._resolve_format_display_name(
@@ -231,11 +205,8 @@ class EditFoldersDialog(BaseDialog):
                 convert_combo, new_fmt
             )
             if idx >= 0:
-                # Changing the index fires handle_convert_format_changed which rebuilds
-                # the sub-form widgets from self.dynamic_edi_builder.folder_config.
                 convert_combo.setCurrentIndex(idx)
             else:
-                # Format not found; force a rebuild of whatever is currently selected.
                 self.dynamic_edi_builder.handle_convert_format_changed(
                     convert_combo.currentText()
                 )

@@ -11,6 +11,7 @@ Key Components:
 - UI abstraction layer: Framework-agnostic widget creation
 """
 
+from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import ConfigurationSchema, FieldDefinition, FieldType
 from .configuration_plugin import ConfigurationPlugin
 from .csv_configuration_plugin import CSVConfigurationPlugin
@@ -33,6 +34,7 @@ __all__ = [
     "PluginBase",
     "PluginManager",
     "ConfigurationPlugin",
+    "BaseSimpleConfigurationPlugin",
     "ConfigurationSchema",
     "FieldType",
     "FieldDefinition",
