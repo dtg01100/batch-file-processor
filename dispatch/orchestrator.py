@@ -1164,6 +1164,24 @@ class DispatchOrchestrator:
         "split_prepaid_sales_tax_crec": False,
     }
 
+    def _detect_enabled_backends(self, folder: dict) -> list[str]:
+        """Detect which backends are enabled for a folder.
+
+        Args:
+            folder: Folder configuration dictionary
+
+        Returns:
+            List of enabled backend descriptions like "Copy: /path" or "FTP: server"
+        """
+        enabled = []
+        if folder.get("process_backend_copy"):
+            enabled.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
+        if folder.get("process_backend_ftp"):
+            enabled.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
+        if folder.get("process_backend_email"):
+            enabled.append(f"Email: {folder.get('email_to', 'N/A')}")
+        return enabled
+
     def _build_processing_context(
         self, folder: dict, upc_dict: dict
     ) -> ProcessingContext:
@@ -1480,14 +1498,8 @@ class DispatchOrchestrator:
         )
 
         # Construct sent_to string for the database
-        sent_to = []
-        if folder.get("process_backend_copy"):
-            sent_to.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
-        if folder.get("process_backend_ftp"):
-            sent_to.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
-        if folder.get("process_backend_email"):
-            sent_to.append(f"Email: {folder.get('email_to', 'N/A')}")
-        sent_to_str = ", ".join(sent_to) if sent_to else "N/A"
+        enabled_backends = self._detect_enabled_backends(folder)
+        sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
 
         invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
 
