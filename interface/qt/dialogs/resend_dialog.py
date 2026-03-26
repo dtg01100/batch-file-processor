@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -720,11 +720,11 @@ class ResendDialog(BaseDialog):
 
         self._filtered_files = self._all_files.copy()
         self._populate_table()
-        self._update_pagination()
         self._update_status()
 
         self._is_loading = False
         self._loading_label.setText("")
+        self._update_pagination()
 
         QTimer.singleShot(100, self._check_files_exist_async)
 

@@ -211,3 +211,42 @@ class TestResendDialogEdgeCases:
             _, title, message = mock_critical.call_args[0]
             assert title == "Database Error"
             assert "Database error" in message
+
+    def test_load_more_button_reenabled_when_more_pages_exist(self, qtbot, monkeypatch):
+        """Load More should re-enable after a successful page load when more data exists."""
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        db_conn = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+
+        first_page = [
+            {"id": 1, "folder_id": 1, "folder_alias": "F", "file_name": "f1", "resend_flag": False, "sent_date_time": "2025-01-01T10:00:00"},
+            {"id": 2, "folder_id": 1, "folder_alias": "F", "file_name": "f2", "resend_flag": False, "sent_date_time": "2025-01-02T10:00:00"},
+        ]
+        second_page = [
+            {"id": 3, "folder_id": 1, "folder_alias": "F", "file_name": "f3", "resend_flag": False, "sent_date_time": "2025-01-03T10:00:00"},
+            {"id": 4, "folder_id": 1, "folder_alias": "F", "file_name": "f4", "resend_flag": False, "sent_date_time": "2025-01-04T10:00:00"},
+        ]
+
+        mock_service.get_all_files_for_resend.side_effect = [first_page, second_page, []]
+
+        monkeypatch.setattr(ResendDialog, "PAGE_SIZE", 2)
+
+        with patch(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            return_value=mock_service,
+        ):
+            dialog = ResendDialog(None, db_conn)
+            qtbot.addWidget(dialog)
+
+            assert dialog._load_more_button.isEnabled() is True
+            dialog._load_more_button.click()
+
+            assert len(dialog._all_files) == 4
+            assert dialog._load_more_button.isEnabled() is True
+
+            dialog._load_more_button.click()
+            assert len(dialog._all_files) == 4
+            assert dialog._load_more_button.isEnabled() is False
