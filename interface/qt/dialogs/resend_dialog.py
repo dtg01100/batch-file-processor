@@ -84,6 +84,7 @@ class ResendDialog(BaseDialog):
         self._filtered_files: List[Dict[str, Any]] = []
         self._selected_files: set = set()
         self._is_updating_selection = False
+        self._ignore_table_selection_changes = False
         self._should_show = True
         self._search_timer = QTimer()
         self._search_timer.setSingleShot(True)
@@ -371,6 +372,8 @@ class ResendDialog(BaseDialog):
         for row, file_info in enumerate(self._filtered_files):
             checkbox = QCheckBox()
             checkbox.setChecked(file_info["id"] in self._selected_files)
+            checkbox.pressed.connect(self._on_checkbox_pressed)
+            checkbox.released.connect(self._on_checkbox_released)
             checkbox.stateChanged.connect(
                 lambda state, fid=file_info["id"]: self._on_file_selected(
                     fid, state == Qt.CheckState.Checked
@@ -571,6 +574,7 @@ class ResendDialog(BaseDialog):
 
     def _on_file_selected(self, file_id: int, selected: bool) -> None:
         """Handle file selection in table."""
+        self._ignore_table_selection_changes = False
         if selected:
             self._selected_files.add(file_id)
         else:
@@ -592,10 +596,25 @@ class ResendDialog(BaseDialog):
             self._is_updating_selection = False
 
         self._update_bulk_actions()
+        self._update_status()
+
+    def _on_checkbox_pressed(self) -> None:
+        """Handle checkbox press to suppress selection syncing temporarily."""
+        # When user presses checkbox inside the table, we temporarily suppress
+        # _on_table_selection_changed so row selection updates don't conflict
+        # with the checkbox-state event stream. This prevents a rapid select+clear
+        # flip-flop when both checkbox stateChanged and table selection change
+        # events fire.
+        self._ignore_table_selection_changes = True
+
+    def _on_checkbox_released(self) -> None:
+        """Handle checkbox release and clear selection suppression."""
+        # Allow table selection changes again after checkbox action completes.
+        self._ignore_table_selection_changes = False
 
     def _on_table_selection_changed(self) -> None:
         """Sync checkbox state when user selects rows."""
-        if self._is_updating_selection:
+        if self._is_updating_selection or self._ignore_table_selection_changes:
             return
 
         self._is_updating_selection = True

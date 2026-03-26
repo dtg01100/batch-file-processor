@@ -1271,6 +1271,47 @@ class TestResendDialog:
         assert dialog._selected_files == {1, 2}
         assert dialog._bulk_action_frame.isHidden() is False
 
+    def test_checkbox_toggle_stays_consistent(self, qtbot, monkeypatch):
+        from interface.qt.dialogs.resend_dialog import ResendDialog
+
+        mock_db = MagicMock()
+
+        mock_service = MagicMock()
+        mock_service.has_processed_files.return_value = True
+        mock_service.get_all_files_for_resend.return_value = [
+            {
+                "id": 1,
+                "folder_id": 5,
+                "folder_alias": "Test Folder",
+                "file_name": "test1.txt",
+                "resend_flag": False,
+                "sent_date_time": "2024-01-01T00:00:00",
+            }
+        ]
+
+        monkeypatch.setattr(
+            "interface.qt.dialogs.resend_dialog.ResendService",
+            lambda *args: mock_service,
+        )
+
+        dialog = ResendDialog(None, mock_db)
+        qtbot.addWidget(dialog)
+
+        checkbox = dialog._table.cellWidget(0, 0)
+        assert checkbox is not None
+
+        checkbox.click()
+        qtbot.wait(50)
+
+        assert checkbox.isChecked() is True
+        assert dialog._selected_files == {1}
+
+        checkbox.click()
+        qtbot.wait(50)
+
+        assert checkbox.isChecked() is False
+        assert dialog._selected_files == set()
+
     def test_date_range_filters_search(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
