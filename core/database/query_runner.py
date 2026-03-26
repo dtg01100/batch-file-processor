@@ -9,7 +9,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.structured_logging import get_logger, log_database_call
 
@@ -94,6 +94,7 @@ class ConnectionConfig:
         dsn: AS/400 hostname or IP address (SYSTEM= in the ODBC connection string)
         database: Database/library name (default: QGPL)
         odbc_driver: ODBC driver name (default: IBM i Access ODBC Driver 64-bit)
+
     """
 
     username: str
@@ -120,6 +121,7 @@ class DatabaseConnectionProtocol(Protocol):
 
         Returns:
             List of dictionaries representing query results
+
         """
         ...
 
@@ -135,11 +137,12 @@ class PyODBCConnection:
     a clean interface for executing queries.
     """
 
-    def __init__(self, config: ConnectionConfig):
+    def __init__(self, config: ConnectionConfig) -> None:
         """Initialize the connection with configuration.
 
         Args:
             config: Connection configuration containing credentials and DSN
+
         """
         self.config = config
         self._connection = None
@@ -154,6 +157,7 @@ class PyODBCConnection:
 
         Raises:
             ConnectionError: If the database connection cannot be established.
+
         """
         import pyodbc
 
@@ -208,6 +212,7 @@ class PyODBCConnection:
 
         Returns:
             List of dictionaries with column names as keys
+
         """
         assert_read_only_sql(query)
         start_time = time.perf_counter()
@@ -329,9 +334,9 @@ class MockConnection:
     and returns preset results for testing purposes.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the mock connection with empty state."""
-        self.executed_queries: list[tuple[str, Optional[tuple]]] = []
+        self.executed_queries: list[tuple[str, tuple | None]] = []
         self.results: list[list[dict]] = []
 
     def execute(self, query: str, params: tuple = None) -> list[dict]:
@@ -343,6 +348,7 @@ class MockConnection:
 
         Returns:
             Preset results from the results queue, or empty list if none
+
         """
         self.executed_queries.append((query, params))
         return self.results.pop(0) if self.results else []
@@ -355,6 +361,7 @@ class MockConnection:
 
         Args:
             results: List of dictionaries to return on next execute call
+
         """
         self.results.append(results)
 
@@ -367,11 +374,12 @@ class SQLiteConnection:
     to use a real database with pre-populated test data instead of mocks.
     """
 
-    def __init__(self, db_path: str = ":memory:"):
+    def __init__(self, db_path: str = ":memory:") -> None:
         """Initialize the SQLite connection.
 
         Args:
             db_path: Path to SQLite database file, or ":memory:" for in-memory DB
+
         """
         self.db_path = db_path
         self._connection = None
@@ -381,6 +389,7 @@ class SQLiteConnection:
 
         Returns:
             sqlite3 connection object
+
         """
         import sqlite3
 
@@ -398,6 +407,7 @@ class SQLiteConnection:
 
         Returns:
             List of dictionaries with column names as keys
+
         """
         import sqlite3
 
@@ -442,6 +452,7 @@ class SQLiteConnection:
 
         Args:
             script: SQL script to execute
+
         """
 
         conn = self._connect()
@@ -460,11 +471,12 @@ class QueryRunner:
     queries with support for dependency injection of connections.
     """
 
-    def __init__(self, connection: DatabaseConnectionProtocol):
+    def __init__(self, connection: DatabaseConnectionProtocol) -> None:
         """Initialize with a database connection.
 
         Args:
             connection: Any object implementing DatabaseConnectionProtocol
+
         """
         self.connection = connection
 
@@ -477,11 +489,12 @@ class QueryRunner:
 
         Returns:
             List of dictionaries representing query results
+
         """
         assert_read_only_sql(query)
         return self.connection.execute(query, params)
 
-    def run_query_single(self, query: str, params: tuple = None) -> Optional[dict]:
+    def run_query_single(self, query: str, params: tuple = None) -> dict | None:
         """Execute a query and return single result.
 
         Args:
@@ -490,6 +503,7 @@ class QueryRunner:
 
         Returns:
             First result as dictionary, or None if no results
+
         """
         results = self.run_query(query, params)
         return results[0] if results else None
@@ -504,6 +518,7 @@ class QueryRunner:
 
         Returns:
             List of dictionaries representing query results
+
         """
         return self.run_query(query, params)
 
@@ -533,6 +548,7 @@ def create_query_runner(
 
     Returns:
         QueryRunner instance with PyODBCConnection
+
     """
     config = ConnectionConfig(username, password, dsn, database, odbc_driver)
     connection = PyODBCConnection(config)

@@ -25,6 +25,7 @@ class QueryRunnerProtocol(Protocol):
 
         Returns:
             List of query results
+
         """
         ...
 
@@ -37,6 +38,7 @@ class CRecordConfig:
         default_uom: Default unit of measure
         default_vendor_oid: Default vendor order ID
         charge_type: Charge type code for C records
+
     """
 
     default_uom: str = "EA"
@@ -52,14 +54,18 @@ class CRecGenerator:
 
     Attributes:
         unappended_records: Whether there are unappended records pending
+
     """
 
-    def __init__(self, query_runner: QueryRunnerProtocol, config: CRecordConfig = None):
+    def __init__(
+        self, query_runner: QueryRunnerProtocol, config: CRecordConfig = None
+    ) -> None:
         """Initialize with a query runner and optional config.
 
         Args:
             query_runner: Any object implementing QueryRunnerProtocol
             config: Optional configuration for C-record generation
+
         """
         self._query_runner = query_runner
         self._invoice_number = "0"
@@ -73,6 +79,7 @@ class CRecGenerator:
 
         Args:
             invoice_number: Invoice number for subsequent operations
+
         """
         self._invoice_number = invoice_number
         self.unappended_records = True
@@ -85,6 +92,7 @@ class CRecGenerator:
 
         Args:
             output_file: File handle to write C records to
+
         """
         qry_ret = self._query_runner.run_query(
             """
@@ -126,6 +134,7 @@ class CRecGenerator:
 
         Returns:
             9-character amount string suitable for EDI output
+
         """
         if amount < 0:
             amount_builder = amount - (amount * 2)
@@ -148,6 +157,7 @@ class CRecGenerator:
             type_str: Charge type description
             amount: Charge amount
             output_file: File handle to write to
+
         """
         desc_str = type_str.ljust(25, " ")
         amount_str = self._format_amount_str(amount)
@@ -166,6 +176,7 @@ class CRecGenerator:
 
         Returns:
             Formatted C record string
+
         """
         desc_str = description.ljust(25, " ")
         amount_str = self._format_amount_str(amount)
@@ -182,6 +193,7 @@ class CRecGenerator:
 
         Returns:
             List of formatted C record strings
+
         """
         records = []
         for charge in charges:

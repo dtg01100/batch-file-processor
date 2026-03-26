@@ -24,6 +24,7 @@ def normalize_bool(value: Any) -> bool:
         normalize_bool(0) → False
         normalize_bool(None) → False
         normalize_bool("") → False
+
     """
     if isinstance(value, bool):
         return value
@@ -61,6 +62,7 @@ def to_db_bool(value: Any) -> int:
         to_db_bool("True") → 1
         to_db_bool(False) → 0
         to_db_bool(None) → 0
+
     """
     return 1 if normalize_bool(value) else 0
 
@@ -84,5 +86,6 @@ def from_db_bool(value: Any) -> bool:
         from_db_bool("1") → True
         from_db_bool(0) → False
         from_db_bool("False") → False
+
     """
     return normalize_bool(value)

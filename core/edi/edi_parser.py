@@ -4,7 +4,6 @@ Pure functions for parsing EDI A, B, and C records.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 _default_parser = None
 
@@ -35,6 +34,7 @@ class ARecord:
         invoice_number: 10-character invoice number
         invoice_date: 6-character date (MMDDYY)
         invoice_total: 10-character total (cents as integer, may be negative)
+
     """
 
     record_type: str
@@ -60,6 +60,7 @@ class BRecord:
         suggested_retail_price: 5-character retail price
         price_multi_pack: 3-character multi-pack price
         parent_item_number: 6-character parent item number
+
     """
 
     record_type: str
@@ -84,6 +85,7 @@ class CRecord:
         charge_type: 3-character charge type code
         description: 25-character description
         amount: 9-character amount
+
     """
 
     record_type: str
@@ -92,7 +94,7 @@ class CRecord:
     amount: str
 
 
-def capture_records(line: str, parser=None) -> Optional[dict]:
+def capture_records(line: str, parser=None) -> dict | None:
     """Parse an EDI record line into a dictionary.
 
     Args:
@@ -107,6 +109,7 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
     Example:
         >>> capture_records("AVENDOR0000000001120240000000123\\n")
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
+
     """
     # Handle parser parameter
     if parser is not None:
@@ -185,6 +188,7 @@ def parse_a_record(line: str) -> ARecord:
 
     Raises:
         ValueError: If line is not an A record
+
     """
     fields = capture_records(line)
     if not fields or fields["record_type"] != "A":
@@ -203,6 +207,7 @@ def parse_b_record(line: str) -> BRecord:
 
     Raises:
         ValueError: If line is not a B record
+
     """
     fields = capture_records(line)
     if not fields or fields["record_type"] != "B":
@@ -221,6 +226,7 @@ def parse_c_record(line: str) -> CRecord:
 
     Raises:
         ValueError: If line is not a C record
+
     """
     fields = capture_records(line)
     if not fields or fields["record_type"] != "C":
@@ -246,6 +252,7 @@ def build_a_record(
 
     Returns:
         Complete A record line with newline
+
     """
     line = f"A{cust_vendor}{invoice_number}{invoice_date}{invoice_total}{append_text}\n"
     return line
@@ -279,6 +286,7 @@ def build_b_record(
 
     Returns:
         Complete B record line with newline
+
     """
     return (
         f"B{upc_number}{description}{vendor_item}{unit_cost}"
@@ -297,5 +305,6 @@ def build_c_record(charge_type: str, description: str, amount: str) -> str:
 
     Returns:
         Complete C record line with newline
+
     """
     return f"C{charge_type}{description}{amount}\n"

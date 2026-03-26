@@ -6,7 +6,7 @@ into individual invoice files with support for category filtering.
 
 import os
 from dataclasses import dataclass
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
 from core.utils.utils import filter_b_records_by_category
@@ -28,6 +28,7 @@ class FilesystemProtocol(Protocol):
 
         Returns:
             File contents as string
+
         """
         ...
 
@@ -38,6 +39,7 @@ class FilesystemProtocol(Protocol):
             path: File path to write
             content: Content to write
             encoding: File encoding (default: utf-8)
+
         """
         ...
 
@@ -47,6 +49,7 @@ class FilesystemProtocol(Protocol):
         Args:
             path: File path to write
             content: Binary content to write
+
         """
         ...
 
@@ -58,6 +61,7 @@ class FilesystemProtocol(Protocol):
 
         Returns:
             True if file exists
+
         """
         ...
 
@@ -69,6 +73,7 @@ class FilesystemProtocol(Protocol):
 
         Returns:
             True if directory exists
+
         """
         ...
 
@@ -77,6 +82,7 @@ class FilesystemProtocol(Protocol):
 
         Args:
             path: Directory path to create
+
         """
         ...
 
@@ -85,6 +91,7 @@ class FilesystemProtocol(Protocol):
 
         Args:
             path: File path to remove
+
         """
         ...
 
@@ -96,6 +103,7 @@ class FilesystemProtocol(Protocol):
 
         Returns:
             List of file names
+
         """
         ...
 
@@ -150,6 +158,7 @@ class SplitConfig:
         filename_stem: Original input file stem to prepend to split file names,
             ensuring uniqueness when multiple files are split to the same directory.
             If empty, split files are named A_split.inv, B_split.cr, etc.
+
     """
 
     output_directory: str
@@ -167,6 +176,7 @@ class SplitResult:
         skipped_invoices: Number of invoices skipped due to filtering
         total_lines_written: Total lines written across all files
         original_invoice_count: Number of invoices in source file before filtering
+
     """
 
     output_files: list[tuple[str, str, str]]
@@ -186,6 +196,7 @@ def _col_to_excel(col: int) -> str:
 
     Credit:
         Nodebody on StackOverflow: http://stackoverflow.com/a/19154642
+
     """
     excel_col = str()
     div = col
@@ -217,6 +228,7 @@ def filter_edi_file_by_category(
 
     Returns:
         True if any filtering was applied, False if no filtering occurred
+
     """
     if filter_categories == "ALL":
         _copy_file(input_file, output_file)
@@ -391,10 +403,10 @@ def _ensure_crlf(line: str) -> str:
 
 def _finalize_current_invoice(
     filesystem: FilesystemProtocol,
-    current_a_record: Optional[str],
+    current_a_record: str | None,
     current_b_records: list[str],
     current_c_records: list[str],
-    current_output_path: Optional[str],
+    current_output_path: str | None,
     output_files: list[tuple[str, str, str]],
     upc_dict: dict,
     filter_categories: str,
@@ -430,11 +442,12 @@ class EDISplitter:
     with optional filtering of B records by category.
     """
 
-    def __init__(self, filesystem: FilesystemProtocol):
+    def __init__(self, filesystem: FilesystemProtocol) -> None:
         """Initialize EDISplitter with filesystem.
 
         Args:
             filesystem: Filesystem implementation for I/O operations
+
         """
         self.filesystem = filesystem
 
@@ -445,11 +458,11 @@ class EDISplitter:
         config: SplitConfig,
     ) -> tuple[
         int,
-        Optional[str],
+        str | None,
         list[str],
         list[str],
-        Optional[str],
-        Optional[tuple[str, str, str]],
+        str | None,
+        tuple[str, str, str] | None,
     ]:
         """Start a new invoice and return updated state.
 
@@ -462,6 +475,7 @@ class EDISplitter:
             Tuple of (count, current_a_record, current_b_records,
                      current_c_records, current_output_path, output_file_entry)
             output_file_entry is None if the line couldn't be parsed
+
         """
         count += 1
         line_dict = capture_records(line)
@@ -523,6 +537,7 @@ class EDISplitter:
 
         Raises:
             ValueError: If no valid invoices after filtering
+
         """
         lines = content.split("\n")
 
@@ -540,9 +555,9 @@ class EDISplitter:
         write_counter = 0
 
         current_b_records: list[str] = []
-        current_a_record: Optional[str] = None
+        current_a_record: str | None = None
         current_c_records: list[str] = []
-        current_output_path: Optional[str] = None
+        current_output_path: str | None = None
         count = 0
 
         for line in lines:
@@ -620,6 +635,7 @@ class EDISplitter:
 
         Returns:
             SplitResult with output files and statistics
+
         """
         content = self.filesystem.read_file(input_path)
         # Populate filename_stem from input path so split files get unique names

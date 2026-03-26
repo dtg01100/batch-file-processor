@@ -85,6 +85,7 @@ def _build_split_file_metadata(
     count: int,
     edi_process: str,
     work_directory: str,
+    *,
     prepend_date_files: bool,
 ) -> tuple[str, str, str]:
     """Build output path and filename metadata for a split EDI invoice."""
@@ -137,6 +138,7 @@ def _write_split_edi_files(
     work_file_lined: list[str],
     edi_process: str,
     work_directory: str,
+    *,
     prepend_date_files: bool,
 ) -> tuple[list[tuple[str, str, str]], int]:
     """Write split invoice files and return metadata list with written line count."""
@@ -207,7 +209,7 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
             work_file_lined,
             edi_process,
             work_directory,
-            parameters_dict["prepend_date_files"],
+            prepend_date_files=parameters_dict["prepend_date_files"],
         )
 
         _validate_split_counts(
@@ -219,7 +221,7 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     return edi_send_list
 
 
-def do_clear_old_files(folder_path, maximum_files):
+def do_clear_old_files(folder_path, maximum_files) -> None:
     while True:
         files = os.listdir(folder_path)
         if len(files) <= maximum_files:
@@ -251,6 +253,7 @@ def qty_to_int(qty: str) -> int:
         qty_to_int("5") → 5
         qty_to_int("-3") → -3
         qty_to_int("invalid") → 0
+
     """
     try:
         if qty.startswith("-"):
@@ -260,12 +263,13 @@ def qty_to_int(qty: str) -> int:
         return 0
 
 
-def add_row(csv_writer, rowdict: dict):
+def add_row(csv_writer, rowdict: dict) -> None:
     """Write a dictionary row to a CSV file.
 
     Args:
         csv_writer: A csv.writer object to write to.
         rowdict: A dictionary whose values will be written as a row.
+
     """
     column_list = []
     for cell in rowdict.values():
@@ -280,19 +284,20 @@ class cRecGenerator:
     non-prepaid amounts, then writes them as separate C records.
     """
 
-    def __init__(self, settings_dict):
+    def __init__(self, settings_dict) -> None:
         """Initialize the C record generator.
 
         Args:
             settings_dict: Dictionary containing database connection settings.
                 Must include: as400_username, as400_password, as400_address, odbc_driver
+
         """
         self.query_object = None
         self._invoice_number = "0"
         self.unappended_records = False
         self.settings = settings_dict
 
-    def _db_connect(self):
+    def _db_connect(self) -> None:
         """Establish database connection."""
         self.query_object = create_query_runner(
             username=self.settings["as400_username"],
@@ -302,16 +307,17 @@ class cRecGenerator:
             odbc_driver=f"{self.settings['odbc_driver']}",
         )
 
-    def set_invoice_number(self, invoice_number):
+    def set_invoice_number(self, invoice_number) -> None:
         """Set the current invoice number and mark records as unappended.
 
         Args:
             invoice_number: The invoice number to query for sales tax data.
+
         """
         self._invoice_number = invoice_number
         self.unappended_records = True
 
-    def fetch_splitted_sales_tax_totals(self, write_func):
+    def fetch_splitted_sales_tax_totals(self, write_func) -> None:
         """Fetch and write split sales tax totals as C records.
 
         Queries the database for prepaid and non-prepaid sales tax amounts
@@ -319,6 +325,7 @@ class cRecGenerator:
 
         Args:
             write_func: A callable that accepts a string to write (e.g., file.write).
+
         """
         if self.query_object is None:
             self._db_connect()
@@ -342,7 +349,7 @@ class cRecGenerator:
         qry_ret_non_prepaid = qry_ret[0]["non_prepaid"]
         qry_ret_prepaid = qry_ret[0]["prepaid"]
 
-        def _write_line(typestr: str, amount: int, wprocfile):
+        def _write_line(typestr: str, amount: int, wprocfile) -> None:
             descstr = typestr.ljust(25, " ")
             if amount < 0:
                 amount_builder = amount - (amount * 2)
@@ -378,6 +385,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
 
     Returns:
         True if transformation was applied, False otherwise.
+
     """
 
     # Validate record fields can be parsed
@@ -441,6 +449,7 @@ def apply_upc_override(
 
     Returns:
         True if override was applied, False otherwise.
+
     """
     try:
         if not upc_lookup:
@@ -485,6 +494,7 @@ def filter_b_records_by_category(
 
     Returns:
         List of filtered B record lines
+
     """
     if filter_categories == "ALL":
         return b_records
@@ -546,6 +556,7 @@ def filter_edi_file_by_category(
 
     Returns:
         True if any filtering was applied, False if no filtering occurred
+
     """
     # Handle ALL mode - no filtering needed
     if filter_categories == "ALL":

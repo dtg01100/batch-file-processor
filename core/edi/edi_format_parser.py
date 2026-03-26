@@ -14,11 +14,12 @@ Example:
 
     # Add a custom format
     parser = EDIFormatParser.from_file('/path/to/custom_format.json')
+
 """
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class EDIFormatError(Exception):
@@ -41,12 +42,13 @@ class EDIFormatParser:
         encoding: File encoding (default: utf-8)
         record_types: Dictionary of record type definitions
         validation_rules: Optional validation rules
+
     """
 
     # Class-level registry of loaded formats
-    _format_registry: Dict[str, "EDIFormatParser"] = {}
+    _format_registry: dict[str, "EDIFormatParser"] = {}
 
-    def __init__(self, format_config: Dict[str, Any]) -> None:
+    def __init__(self, format_config: dict[str, Any]) -> None:
         """Initialize parser with format configuration.
 
         Args:
@@ -54,6 +56,7 @@ class EDIFormatParser:
 
         Raises:
             EDIFormatError: If configuration is invalid
+
         """
         self._validate_config(format_config)
 
@@ -90,6 +93,7 @@ class EDIFormatParser:
 
         Raises:
             EDIFormatError: If file cannot be loaded or parsed
+
         """
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -104,7 +108,7 @@ class EDIFormatParser:
 
     @classmethod
     def load_format(
-        cls, format_id: str, formats_dir: Optional[str] = None
+        cls, format_id: str, formats_dir: str | None = None
     ) -> "EDIFormatParser":
         """Load format by ID from the formats directory.
 
@@ -118,6 +122,7 @@ class EDIFormatParser:
 
         Raises:
             EDIFormatError: If format cannot be found or loaded
+
         """
         # Check registry first
         if format_id in cls._format_registry:
@@ -161,13 +166,14 @@ class EDIFormatParser:
 
         Returns:
             EDIFormatParser for the default format
+
         """
         return cls.load_format("default")
 
     @classmethod
     def list_available_formats(
-        cls, formats_dir: Optional[str] = None
-    ) -> List[Dict[str, str]]:
+        cls, formats_dir: str | None = None
+    ) -> list[dict[str, str]]:
         """List all available format definitions.
 
         Args:
@@ -176,6 +182,7 @@ class EDIFormatParser:
         Returns:
             List of dictionaries with format metadata:
             [{'id': 'default', 'name': 'Default Format', 'version': '1.0'}, ...]
+
         """
         if formats_dir is None:
             module_dir = Path(__file__).parent
@@ -207,7 +214,7 @@ class EDIFormatParser:
 
         return formats
 
-    def _validate_config(self, config: Dict[str, Any]) -> None:
+    def _validate_config(self, config: dict[str, Any]) -> None:
         """Validate format configuration structure.
 
         Args:
@@ -215,6 +222,7 @@ class EDIFormatParser:
 
         Raises:
             EDIFormatError: If configuration is invalid
+
         """
         required_fields = ["format_id", "format_name", "format_version", "record_types"]
         for field in required_fields:
@@ -234,7 +242,7 @@ class EDIFormatParser:
             if "fields" not in record_config:
                 raise EDIFormatError(f"Record type {record_type} missing fields")
 
-    def identify_record_type(self, line: str) -> Optional[str]:
+    def identify_record_type(self, line: str) -> str | None:
         """Identify the record type from a line.
 
         Args:
@@ -242,6 +250,7 @@ class EDIFormatParser:
 
         Returns:
             Record type identifier (e.g., 'A', 'B', 'C') or None if not recognized
+
         """
         if not line:
             return None
@@ -253,7 +262,7 @@ class EDIFormatParser:
 
         return None
 
-    def parse_line(self, line: str) -> Optional[Dict[str, str]]:
+    def parse_line(self, line: str) -> dict[str, str] | None:
         """Parse an EDI record line into a dictionary of fields.
 
         Args:
@@ -267,6 +276,7 @@ class EDIFormatParser:
             >>> parser.parse_line('A000001INV00001011221251000012345')
             {'record_type': 'A', 'cust_vendor': '000001',
              'invoice_number': 'INV0000101', ...}
+
         """
         if not line or line.strip() == "":
             return None
@@ -297,7 +307,7 @@ class EDIFormatParser:
 
         return result
 
-    def get_record_type_config(self, record_type: str) -> Optional[Dict[str, Any]]:
+    def get_record_type_config(self, record_type: str) -> dict[str, Any] | None:
         """Get configuration for a specific record type.
 
         Args:
@@ -305,12 +315,13 @@ class EDIFormatParser:
 
         Returns:
             Record type configuration dictionary or None if not found
+
         """
         return self.record_types.get(record_type)
 
     def get_field_definition(
         self, record_type: str, field_name: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get definition for a specific field in a record type.
 
         Args:
@@ -319,6 +330,7 @@ class EDIFormatParser:
 
         Returns:
             Field definition dictionary or None if not found
+
         """
         record_config = self.get_record_type_config(record_type)
         if not record_config:
@@ -338,6 +350,7 @@ class EDIFormatParser:
 
         Returns:
             True if file starts correctly, False otherwise
+
         """
         if "file_must_start_with" not in self.validation_rules:
             return True
@@ -345,11 +358,12 @@ class EDIFormatParser:
         expected_start = self.validation_rules["file_must_start_with"]
         return first_line.startswith(expected_start)
 
-    def get_allowed_record_types(self) -> List[str]:
+    def get_allowed_record_types(self) -> list[str]:
         """Get list of allowed record type identifiers.
 
         Returns:
             List of record type identifiers (e.g., ['A', 'B', 'C'])
+
         """
         if "allowed_record_types" in self.validation_rules:
             return self.validation_rules["allowed_record_types"]
@@ -358,8 +372,8 @@ class EDIFormatParser:
 
 # Convenience function for backward compatibility
 def capture_records_with_format(
-    line: str, parser: Optional[EDIFormatParser] = None
-) -> Optional[Dict[str, str]]:
+    line: str, parser: EDIFormatParser | None = None
+) -> dict[str, str] | None:
     """Parse an EDI line using specified format parser.
 
     This is a convenience function that maintains compatibility with
@@ -371,6 +385,7 @@ def capture_records_with_format(
 
     Returns:
         Dictionary with parsed fields or None
+
     """
     if parser is None:
         parser = EDIFormatParser.get_default_parser()

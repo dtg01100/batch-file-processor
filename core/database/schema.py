@@ -466,6 +466,7 @@ def _extract_object_name(stmt: str) -> str | None:
 
     Returns:
         Table/index name if extractable, None otherwise
+
     """
     import re
 

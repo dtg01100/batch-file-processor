@@ -40,7 +40,7 @@ def convert_to_price_decimal(value):
         return 0
 
 
-def detect_invoice_is_credit(edi_process):
+def detect_invoice_is_credit(edi_process) -> bool:
     from core.edi.edi_parser import capture_records
 
     first_line = None

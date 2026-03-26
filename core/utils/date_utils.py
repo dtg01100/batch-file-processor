@@ -41,6 +41,7 @@ def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> st
 
     Returns:
         A formatted date string in mm/dd/yy format, or "Not Available" if parsing fails.
+
     """
     try:
         stripped_date_value = str(date_string).strip()

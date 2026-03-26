@@ -29,6 +29,7 @@ class QueryRunnerProtocol(Protocol):
 
         Returns:
             List of dictionaries representing query results
+
         """
         ...
 
@@ -48,14 +49,18 @@ class InvFetcher:
         po: Cached PO number
         custname: Cached customer name
         custno: Cached customer number
+
     """
 
-    def __init__(self, query_runner: QueryRunnerProtocol, settings: dict = None):
+    def __init__(
+        self, query_runner: QueryRunnerProtocol, settings: dict = None
+    ) -> None:
         """Initialize InvFetcher with query runner.
 
         Args:
             query_runner: Query runner implementing QueryRunnerProtocol
             settings: Optional settings dictionary (for backward compatibility)
+
         """
         self._query_runner = query_runner
         self.settings = settings or {}
@@ -84,6 +89,7 @@ class InvFetcher:
 
         Returns:
             PO number string, or empty string if not found
+
         """
         if invoice_number == self.last_invoice_number:
             return self.po
@@ -174,6 +180,7 @@ class InvFetcher:
 
         Returns:
             Customer name string
+
         """
         self.fetch_po(invoice_number)
         return self.custname
@@ -186,6 +193,7 @@ class InvFetcher:
 
         Returns:
             Customer number
+
         """
         self.fetch_po(invoice_number)
         return self.custno
@@ -204,6 +212,7 @@ class InvFetcher:
 
         Returns:
             Unit of measure description string
+
         """
         if invno != self.last_invno:
             self.uom_lut = {0: "N/A"}
@@ -297,6 +306,7 @@ class InvFetcher:
 
         Returns:
             Unit of measure description string
+
         """
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:

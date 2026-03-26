@@ -210,6 +210,7 @@ def redact_string(s: str, visible_chars: int = DEFAULT_VISIBLE_CHARS) -> str:
 
     Returns:
         Redacted string like "****abc123" or "****" if empty/None
+
     """
     if not s:
         return "****"
@@ -230,6 +231,7 @@ def redact_value(value: Any, visible_chars: int = DEFAULT_VISIBLE_CHARS) -> Any:
 
     Returns:
         Redacted value appropriate to the input type
+
     """
     if value is None:
         return None
@@ -262,6 +264,7 @@ def redact_sensitive_data(
         >>> data = {"username": "john", "password": "secret123"}
         >>> redact_sensitive_data(data)
         {'username': 'john', 'password': '****3123'}
+
     """
     if not isinstance(data, dict):
         return data
@@ -285,6 +288,7 @@ def hash_sensitive_value(value: str) -> str:
 
     Returns:
         Truncated hash string (first 16 chars)
+
     """
     if not value:
         return "****"
@@ -301,6 +305,7 @@ def get_correlation_id() -> str | None:
 
     Returns:
         Current correlation ID or None if not set
+
     """
     return _correlation_id_var.get()
 
@@ -310,6 +315,7 @@ def set_correlation_id(correlation_id: str | None) -> None:
 
     Args:
         correlation_id: Correlation ID to set, or None to clear
+
     """
     _correlation_id_var.set(correlation_id)
 
@@ -324,6 +330,7 @@ def generate_correlation_id() -> str:
 
     Returns:
         A new UUID-based correlation ID
+
     """
     return uuid.uuid4().hex[:16]
 
@@ -333,6 +340,7 @@ def get_or_create_correlation_id() -> str:
 
     Returns:
         Existing correlation ID if set, otherwise a new one
+
     """
     corr_id = _correlation_id_var.get()
     if corr_id:
@@ -347,6 +355,7 @@ def get_trace_id() -> str | None:
 
     Returns:
         Current trace ID or None if not set
+
     """
     return _trace_id_var.get()
 
@@ -356,6 +365,7 @@ def set_trace_id(trace_id: str | None) -> None:
 
     Args:
         trace_id: Trace ID to set, or None to clear
+
     """
     _trace_id_var.set(trace_id)
 
@@ -365,6 +375,7 @@ def get_component() -> str | None:
 
     Returns:
         Current component name or None if not set
+
     """
     return _component_var.get()
 
@@ -374,6 +385,7 @@ def set_component(component: str | None) -> None:
 
     Args:
         component: Component name to set, or None to clear
+
     """
     _component_var.set(component)
 
@@ -383,6 +395,7 @@ def get_operation() -> str | None:
 
     Returns:
         Current operation name or None if not set
+
     """
     return _operation_var.get()
 
@@ -392,6 +405,7 @@ def set_operation(operation: str | None) -> None:
 
     Args:
         operation: Operation name to set, or None to clear
+
     """
     _operation_var.set(operation)
 
@@ -412,6 +426,7 @@ def get_logger(name: str) -> logging.Logger:
 
     Returns:
         Configured logger instance
+
     """
     return logging.getLogger(name)
 
@@ -442,6 +457,7 @@ def get_structured_logger(
         ...     __name__, component="convert", operation="edi"
         ... )
         >>> logger.info("Starting")  # Auto-includes component and operation
+
     """
     logger = get_logger(name)
 
@@ -474,6 +490,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
         >>> logger = StructuredLogAdapter(base_logger)
         >>> set_correlation_id("abc123")
         >>> logger.info("Processing started")  # correlation_id auto-included
+
     """
 
     def __init__(
@@ -484,7 +501,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
         auto_correlation: bool = True,
         auto_component: bool = True,
         auto_operation: bool = True,
-    ):
+    ) -> None:
         """Initialize the adapter.
 
         Args:
@@ -493,6 +510,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
             auto_correlation: Whether to auto-inject correlation_id
             auto_component: Whether to auto-inject component
             auto_operation: Whether to auto-inject operation
+
         """
         super().__init__(logger, extra or {})
         self.auto_correlation = auto_correlation
@@ -581,6 +599,7 @@ def log_with_context(
         ...     operation="convert",
         ...     context={"records_processed": 100}
         ... )
+
     """
     extra: dict[str, Any] = {
         "correlation_id": correlation_id or get_correlation_id(),
@@ -632,6 +651,7 @@ def log_file_operation(
 
     Example:
         >>> log_file_operation(logger, "read", "/path/to/file.csv", file_size=1024)
+
     """
     path = Path(file_path)
 
@@ -725,6 +745,7 @@ def log_backend_call(
         ...     success=True,
         ...     duration_ms=500
         ... )
+
     """
     extra: dict[str, Any] = {
         "correlation_id": correlation_id or get_correlation_id(),
@@ -825,6 +846,7 @@ def log_database_call(
         ...     duration_ms=45.2,
         ...     success=True
         ... )
+
     """
     extra: dict[str, Any] = {
         "correlation_id": correlation_id or get_correlation_id(),
@@ -908,6 +930,7 @@ class StructuredLogger:
 
         Returns:
             Logger name
+
         """
         return module
 
@@ -924,6 +947,7 @@ class StructuredLogger:
 
         Returns:
             Dictionary with base structured fields
+
         """
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -952,6 +976,7 @@ class StructuredLogger:
             module: Module name (typically __name__)
             args: Positional arguments (will be sanitized)
             kwargs: Keyword arguments (will be sanitized)
+
         """
         if not logger.isEnabledFor(logging.DEBUG):
             return
@@ -1003,6 +1028,7 @@ class StructuredLogger:
             module: Module name (typically __name__)
             result: Function return value (will be sanitized)
             duration_ms: Execution duration in milliseconds
+
         """
         if not logger.isEnabledFor(logging.DEBUG):
             return
@@ -1049,6 +1075,7 @@ class StructuredLogger:
             error: The exception that was raised
             context: Additional context about the error
             duration_ms: Execution duration in milliseconds before error
+
         """
         fields = StructuredLogger._build_base_fields(module, func_name)
         fields["level"] = "ERROR"
@@ -1088,6 +1115,7 @@ class StructuredLogger:
             module: Module name (typically __name__)
             message: Debug message
             **kwargs: Additional structured fields to log
+
         """
         if not logger.isEnabledFor(logging.DEBUG):
             return
@@ -1126,6 +1154,7 @@ class StructuredLogger:
             data_shape: Dict describing data shape
                 (e.g., {"records": 50, "type": "list"})
             decision: Any branch decision made (e.g., "using_retail_uom", "skipped")
+
         """
         if not logger.isEnabledFor(logging.DEBUG):
             return
@@ -1177,6 +1206,7 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
         def convert_edi(input_path, output_path, settings):
             # Entry and exit are automatically logged
             pass
+
     """
     func_name = func.__name__
     module = func.__module__
@@ -1277,13 +1307,15 @@ class CorrelationContext:
         with CorrelationContext("my-correlation-id"):
             # All logs within this block will have the correlation ID
             process_files()
+
     """
 
-    def __init__(self, correlation_id: str | None = None):
+    def __init__(self, correlation_id: str | None = None) -> None:
         """Initialize context manager.
 
         Args:
             correlation_id: Correlation ID to set, or None to generate new
+
         """
         self.correlation_id = correlation_id or generate_correlation_id()
         self.previous_id: str | None = None
@@ -1334,7 +1366,7 @@ class JSONFormatter(logging.Formatter):
         indent: int | None = None,
         sort_keys: bool = False,
         ensure_ascii: bool = False,
-    ):
+    ) -> None:
         """Initialize the formatter.
 
         Args:
@@ -1345,6 +1377,7 @@ class JSONFormatter(logging.Formatter):
             indent: JSON indentation (None for compact, int for pretty-print)
             sort_keys: Whether to sort JSON keys
             ensure_ascii: Whether to escape non-ASCII characters
+
         """
         super().__init__(fmt, datefmt, style)  # type: ignore[arg-type]
         self.indent = indent
@@ -1359,6 +1392,7 @@ class JSONFormatter(logging.Formatter):
 
         Returns:
             JSON-compatible representation of the value
+
         """
         if value is None:
             return None
@@ -1432,6 +1466,7 @@ class JSONFormatter(logging.Formatter):
 
         Returns:
             JSON string representation
+
         """
         # Build base fields from record
         log_data: dict[str, Any] = {

@@ -5,7 +5,7 @@ data from the database using dependency injection for testability.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -25,6 +25,7 @@ class QueryRunnerProtocol(Protocol):
 
         Returns:
             List of query results
+
         """
         ...
 
@@ -38,6 +39,7 @@ class POData:
         vendor_name: Name of the vendor
         order_date: Date of the order
         vendor_oid: Vendor order ID
+
     """
 
     po_number: str
@@ -54,15 +56,17 @@ class POFetcher:
 
     Attributes:
         DEFAULT_PO: Default PO number returned when not found
+
     """
 
     DEFAULT_PO = "no_po_found    "
 
-    def __init__(self, query_runner: QueryRunnerProtocol):
+    def __init__(self, query_runner: QueryRunnerProtocol) -> None:
         """Initialize with a query runner.
 
         Args:
             query_runner: Any object implementing QueryRunnerProtocol
+
         """
         self._query_runner = query_runner
 
@@ -74,6 +78,7 @@ class POFetcher:
 
         Returns:
             PO number string, or default if not found
+
         """
         qry_ret = self._query_runner.run_query(
             """
@@ -90,7 +95,7 @@ class POFetcher:
         value = row["bte4cd"] if isinstance(row, dict) else row[0]
         return str(value)
 
-    def fetch_po_data(self, invoice_number: int) -> Optional[POData]:
+    def fetch_po_data(self, invoice_number: int) -> POData | None:
         """Fetch complete PO data for an invoice.
 
         Args:
@@ -98,6 +103,7 @@ class POFetcher:
 
         Returns:
             POData object if found, None otherwise
+
         """
         qry_ret = self._query_runner.run_query(
             """
@@ -137,6 +143,7 @@ class POFetcher:
 
         Returns:
             List of dictionaries containing line item data
+
         """
         qry_ret = self._query_runner.run_query(
             """

@@ -20,6 +20,7 @@ def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
         safe_int(None) → 0
         safe_int("invalid", -1) → -1
         safe_int("-5") → -5
+
     """
     if value is None:
         return default
@@ -58,6 +59,7 @@ def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> flo
         safe_float(None) → 0.0
         safe_float("invalid", -1.0) → -1.0
         safe_float("-3.14") → -3.14
+
     """
     if value is None:
         return default

@@ -24,6 +24,7 @@ Example:
         params=params_dict,
         upc_dict=upc_lut,
     )
+
 """
 
 import os
@@ -31,7 +32,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, Optional, Protocol, TextIO, runtime_checkable
+from typing import Any, Protocol, TextIO, runtime_checkable
 
 from core.edi.c_rec_generator import CRecGenerator
 from core.edi.po_fetcher import POFetcher
@@ -64,6 +65,7 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
 
     Returns:
         QueryRunner implementing TweakerQueryRunnerProtocol
+
     """
     from core.database import create_query_runner
 
@@ -98,6 +100,7 @@ class TweakerConfig:
         split_prepaid_sales_tax_crec: Split prepaid sales tax
         upc_target_length: Target UPC length
         upc_padding_pattern: Pattern for UPC padding
+
     """
 
     pad_arec: bool = False
@@ -119,7 +122,7 @@ class TweakerConfig:
     upc_padding_pattern: str = "           "
 
     @classmethod
-    def from_params(cls, params: Dict[str, Any]) -> "TweakerConfig":
+    def from_params(cls, params: dict[str, Any]) -> "TweakerConfig":
         """Create config from parameters dictionary.
 
         Args:
@@ -127,6 +130,7 @@ class TweakerConfig:
 
         Returns:
             TweakerConfig instance
+
         """
         from core.utils.bool_utils import normalize_bool
 
@@ -170,18 +174,20 @@ class EDITweaker:
         config: Tweaker configuration
         crec_appender: C-record generator for split tax
         po_fetcher: PO number fetcher
+
     """
 
     def __init__(
         self,
         query_runner: TweakerQueryRunnerProtocol,
-        config: Optional[TweakerConfig] = None,
-    ):
+        config: TweakerConfig | None = None,
+    ) -> None:
         """Initialize the EDITweaker.
 
         Args:
             query_runner: Object implementing TweakerQueryRunnerProtocol
             config: Optional configuration (defaults to TweakerConfig())
+
         """
         self.query_runner = query_runner
         self.config = config or TweakerConfig()
@@ -192,9 +198,9 @@ class EDITweaker:
         self,
         input_path: str,
         output_path: str,
-        settings: Dict[str, Any],
-        params: Dict[str, Any],
-        upc_dict: Dict[int, tuple],
+        settings: dict[str, Any],
+        params: dict[str, Any],
+        upc_dict: dict[int, tuple],
     ) -> str:
         """Apply EDI tweaks to a file.
 
@@ -207,6 +213,7 @@ class EDITweaker:
 
         Returns:
             Path to the output file (may include .txt extension)
+
         """
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
@@ -335,6 +342,7 @@ class EDITweaker:
             lines: List of input lines
             output_file: Output file handle
             upc_dict: UPC lookup dictionary
+
         """
         from core import utils
 
@@ -393,6 +401,7 @@ class EDITweaker:
 
         Returns:
             Formatted A record line
+
         """
         invoice_num = fields["invoice_number"]
         self.crec_appender.set_invoice_number(int(invoice_num))
@@ -453,6 +462,7 @@ class EDITweaker:
 
         Returns:
             Formatted B record line
+
         """
         fields = self._transform_upc_override(fields, upc_dict)
         fields = self._transform_retail_uom(fields, upc_dict)
@@ -502,6 +512,7 @@ class EDITweaker:
 
         Returns:
             Formatted C record line (may include generated split tax records)
+
         """
         if (
             self.config.split_prepaid_sales_tax_crec
@@ -526,6 +537,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         try:
             vendor_item = int(fields["vendor_item"].strip())
@@ -554,6 +566,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         try:
             item_number = int(fields["vendor_item"].strip())
@@ -607,6 +620,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         from core import utils
 
@@ -652,6 +666,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         if self.config.override_upc:
             fields = self._apply_upc_override(fields, upc_dict)
@@ -666,6 +681,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         if self.config.retail_uom:
             fields = self._apply_retail_uom(fields, upc_dict)
@@ -679,6 +695,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         if self.config.calc_upc:
             fields = self._apply_upc_calc(fields)
@@ -692,6 +709,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         for field_name in [
             "unit_cost",
@@ -713,6 +731,7 @@ class EDITweaker:
 
         Returns:
             Modified fields dictionary
+
         """
         if len(projected_line) < 76:
             fields["parent_item_number"] = ""

@@ -28,6 +28,7 @@ def calc_check_digit(value: str | int) -> int:
     Example:
         >>> calc_check_digit("04180000026")
         5
+
     """
     check_digit = 0
     odd_pos = True
@@ -55,6 +56,7 @@ def convert_upce_to_upca(upce_value: str) -> str:
     Example:
         >>> convert_upce_to_upca("04182635")
         '041800000265'
+
     """
     if len(upce_value) == 6:
         middle_digits = upce_value
@@ -99,6 +101,7 @@ def validate_upc(upc: str) -> bool:
         True
         >>> validate_upc("041800000260")
         False
+
     """
     if not upc or not upc.isdigit():
         return False
@@ -130,6 +133,7 @@ def pad_upc(upc: str, target_length: int, fill_char: str = " ") -> str:
         '     12345'
         >>> pad_upc("123456789", 5)
         '12345'
+
     """
     if len(upc) >= target_length:
         return upc[:target_length]
@@ -149,6 +153,7 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
 
     Returns:
         True if transformation was applied, False otherwise.
+
     """
     from decimal import Decimal
 

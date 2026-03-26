@@ -110,6 +110,7 @@ def setup_logging(
         2. ``BFS_LOG_LEVEL`` environment variable (DEBUG/INFO/WARNING/ERROR/CRITICAL)
         3. ``DISPATCH_DEBUG_MODE`` environment variable (``"true"`` → DEBUG)
         4. Default: ``logging.INFO``
+
     """
     root_logger = logging.getLogger()
 
@@ -188,6 +189,7 @@ def setup_structured_logging(
     -------
     logging.Logger
         The root logger instance.
+
     """
     # Temporarily force JSON format
     original_format = os.environ.get("BFS_LOG_FORMAT")
@@ -234,6 +236,7 @@ class RunLogHandler(logging.Handler):
         call :meth:`set_run_log` later to attach a target.
     level:
         Minimum level for this handler.  Defaults to ``logging.INFO``.
+
     """
 
     def __init__(
@@ -317,6 +320,7 @@ class RunLogAdapter(logging.LoggerAdapter):
         adapter.extra["file"] = "INV_001.edi"
         adapter.info("Converted OK")
         # -> "[ACME_Corp/INV_001.edi] Converted OK"
+
     """
 
     def __init__(
@@ -373,6 +377,7 @@ class AuditLogger:
         audit.log_user_action("login", username="admin", success=True)
         audit.log_config_change("update_folder", folder="ACME_Corp", changed_by="admin")
         audit.log_file_access("process", file_path="/path/to/file.edi")
+
     """
 
     def __init__(self, name: str = "audit") -> None:
@@ -380,6 +385,7 @@ class AuditLogger:
 
         Args:
             name: Logger name for the audit logger
+
         """
         self._logger = logging.getLogger(name)
         self._correlation_id_var: ContextVar[str | None] = ContextVar(
@@ -391,6 +397,7 @@ class AuditLogger:
         action: str,
         level: int,
         details: dict[str, Any] | None = None,
+        *,
         exc_info: bool = False,
     ) -> None:
         """Internal log method with structured fields.
@@ -400,6 +407,7 @@ class AuditLogger:
             level: Log level to use
             details: Additional details about the action
             exc_info: Whether to include exception info
+
         """
         extra: dict[str, Any] = {
             "audit_action": action,
@@ -420,6 +428,7 @@ class AuditLogger:
 
         Args:
             correlation_id: Correlation ID to set, or None to clear
+
         """
         self._correlation_id_var.set(correlation_id)
 
@@ -427,6 +436,7 @@ class AuditLogger:
         self,
         action: str,
         username: str | None = None,
+        *,
         success: bool = True,
         reason: str | None = None,
         **kwargs: Any,
@@ -439,6 +449,7 @@ class AuditLogger:
             success: Whether the action succeeded
             reason: Reason for failure if success is False
             **kwargs: Additional context fields
+
         """
         details: dict[str, Any] = {"username": username, "success": success}
         if reason:
@@ -466,6 +477,7 @@ class AuditLogger:
             changed_by: User who made the change
             changes: Dict of field -> (old_value, new_value) tuples
             **kwargs: Additional context fields
+
         """
         details: dict[str, Any] = {
             "target_type": target_type,
@@ -487,6 +499,7 @@ class AuditLogger:
         file_path: str | None = None,
         folder_alias: str | None = None,
         performed_by: str | None = None,
+        *,
         success: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -499,6 +512,7 @@ class AuditLogger:
             performed_by: User or system component performing the action
             success: Whether the action succeeded
             **kwargs: Additional context fields
+
         """
         details: dict[str, Any] = {
             "file_path": file_path,
@@ -517,6 +531,7 @@ class AuditLogger:
         backend_type: str | None = None,
         backend_name: str | None = None,
         changed_by: str | None = None,
+        *,
         success: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -529,6 +544,7 @@ class AuditLogger:
             changed_by: User who made the change
             success: Whether the action succeeded
             **kwargs: Additional context fields
+
         """
         details: dict[str, Any] = {
             "backend_type": backend_type,
@@ -555,6 +571,7 @@ class AuditLogger:
             severity: Severity level ("low", "medium", "high", "critical")
             description: Human-readable description
             **kwargs: Additional context fields
+
         """
         details: dict[str, Any] = {
             "severity": severity,
@@ -580,6 +597,7 @@ def _safe_value(value: Any) -> Any:
 
     Returns:
         A safe representation of the value
+
     """
     if value is None:
         return None
