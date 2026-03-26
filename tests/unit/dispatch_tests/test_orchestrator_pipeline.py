@@ -561,9 +561,7 @@ class TestGetUPCDictionary:
         with pytest.raises(LookupError, match="no parseable rows"):
             orchestrator._get_upc_dictionary(settings)
 
-    def test_optional_mode_logs_reason_for_unparseable_rows(
-        self, monkeypatch, caplog
-    ):
+    def test_optional_mode_logs_reason_for_unparseable_rows(self, monkeypatch, caplog):
         """Optional mode should return empty dict and log preserved failure reason."""
         monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         rows = [{"bad_key": "bad_value"}]
@@ -1329,7 +1327,9 @@ class TestOrchestratorPipelineHelpers:
             {},
         )
 
-        assert context.effective_folder["convert_to_format"] == "estore_einvoice_generic"
+        assert (
+            context.effective_folder["convert_to_format"] == "estore_einvoice_generic"
+        )
 
 
 # =============================================================================
@@ -1461,7 +1461,7 @@ class TestExtractInvoiceNumbers:
         KeyError if the key was missing. Now it uses rec.get("invoice_number", "").
         """
         # Create a test EDI file with an A record that has all fields
-        edi_content = "AVENDOR00000000011234567890123456\n"
+        edi_content = "AVENDOR12345678901234567890123456\n"
         test_file = tmp_path / "test.edi"
         test_file.write_text(edi_content)
 
@@ -1475,9 +1475,9 @@ class TestExtractInvoiceNumbers:
         """Test that duplicate invoice numbers are deduplicated."""
         # Two A records with the same invoice number
         edi_content = (
-            "AVENDOR00000000011234567890123456\n"
+            "AVENDOR12345678901234567890123456\n"
             "BVENDOR_ITEM                     \n"
-            "AVENDOR00000000011234567890123456\n"
+            "AVENDOR12345678901234567890123456\n"
             "BVENDOR_ITEM                     \n"
         )
         test_file = tmp_path / "test.edi"

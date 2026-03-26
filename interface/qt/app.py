@@ -374,7 +374,7 @@ class QtBatchFileSenderApp:
                 self._folder_manager.add_folder(folder)
                 added += 1
 
-        print(f"done adding {added} folders")
+        logger.info("done adding %s folders", added)
         if self._progress_service:
             self._progress_service.hide()
         self._ui_service.show_info(
@@ -698,7 +698,7 @@ class QtBatchFileSenderApp:
                 )
                 return True
             except Exception as e:
-                print(f"Database import failed: {e}")
+                logger.debug("Database import failed: %s", e)
                 return False
 
         maintenance = MaintenanceFunctions(
@@ -813,7 +813,7 @@ class QtBatchFileSenderApp:
             os.remove(test_file_path)
             return True
         except IOError as log_directory_error:
-            print(str(log_directory_error))
+            logger.debug("Logs directory check failed: %s", log_directory_error)
             return False
 
     def _log_critical_error(self, error) -> None:

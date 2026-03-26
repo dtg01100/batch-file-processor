@@ -26,6 +26,7 @@ from typing import Any, Dict, Optional
 from core.utils import (
     calc_check_digit,
     convert_UPCE_to_UPCA,
+    safe_int,
 )
 
 
@@ -126,8 +127,7 @@ def apply_upc_override(
                 do_update = True
 
         if do_update:
-            if isinstance(override_level, str):
-                override_level = int(override_level)
+            override_level = safe_int(override_level)
             fields["upc_number"] = upc_data[override_level]
 
     except (KeyError, ValueError, IndexError):
@@ -159,11 +159,7 @@ def process_upc_for_output(
     upc_field = fields.get("upc_number", "").strip()
 
     # Check if UPC is blank
-    blank_upc = False
-    try:
-        int(upc_field.rstrip())
-    except ValueError:
-        blank_upc = True
+    blank_upc = safe_int(upc_field, -1) == -1
 
     if blank_upc:
         return upc_padding[:upc_target_length]

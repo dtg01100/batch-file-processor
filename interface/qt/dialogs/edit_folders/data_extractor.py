@@ -15,9 +15,12 @@ from PyQt5.QtWidgets import (
     QSpinBox,
 )
 
+from core.structured_logging import get_logger
 from interface.operations.folder_data_extractor import ExtractedDialogFields
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
+
+logger = get_logger(__name__)
 
 
 class QtFolderDataExtractor:
@@ -136,8 +139,10 @@ class QtFolderDataExtractor:
                     # generator references and continue.
                     continue
                 except Exception as e:
-                    print(
-                        f"Error extracting plugin configuration for {plugin.get_format_name()}: {e}"
+                    logger.debug(
+                        "Error extracting plugin configuration for %s: %s",
+                        plugin.get_format_name(),
+                        e,
                     )
 
         return plugin_configs

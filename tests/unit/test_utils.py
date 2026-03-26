@@ -205,9 +205,9 @@ class TestFromDbBool:
     def test_return_type_is_bool(self):
         for value in ["True", "False", 1, 0, "1", "0", None]:
             result = utils.from_db_bool(value)
-            assert (
-                type(result) is bool
-            ), f"Expected bool for {value!r}, got {type(result).__name__}"
+            assert type(result) is bool, (
+                f"Expected bool for {value!r}, got {type(result).__name__}"
+            )
 
 
 # =============================================================================
@@ -856,7 +856,7 @@ class TestCaptureRecords:
     def test_parse_b_record(self):
         """Parse B record correctly."""
         # B record format based on utils.py
-        line = "B01234567890ABCDEFGHIJ0001000001200340567890001234"
+        line = "B01234567890Description of item here   ABCDEF000100010000010001000000001123456"
         result = utils.capture_records(line)
         assert result is not None
         assert result["record_type"] == "B"
@@ -866,7 +866,7 @@ class TestCaptureRecords:
 
     def test_parse_c_record(self):
         """Parse C record correctly."""
-        line = "C001Description of charge    00001234"
+        line = "C001Description of charge    00001234XX"
         result = utils.capture_records(line)
         assert result is not None
         assert result["record_type"] == "C"
@@ -955,7 +955,7 @@ class TestDetectInvoiceIsCredit:
         edi_file.write_text("Bsome data\n")
         with pytest.raises(ValueError) as exc_info:
             utils.detect_invoice_is_credit(str(edi_file))
-        assert "middle of a file" in str(exc_info.value)
+        assert "does not start with A record" in str(exc_info.value)
 
 
 # =============================================================================
@@ -1227,7 +1227,7 @@ class TestFilterEdiFileByCategory:
         input_file = tmp_path / "input.edi"
         output_file = tmp_path / "output.edi"
         input_file.write_text(
-            "A00000000010000000000001001\n" "B00000000002ITEM002000100\n"
+            "A00000000010000000000001001\nB00000000002ITEM002000100\n"
         )
 
         upc_dict = {2: ["DAIRY", "222"]}

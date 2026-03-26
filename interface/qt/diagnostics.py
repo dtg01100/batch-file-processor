@@ -75,7 +75,6 @@ class QtDiagnosticsService:
             "backend.ftp_backend",
             "backend.email_backend",
             "archive",
-            "archive.edi_tweaks",
             "lxml",
             "lxml.etree",
         ]

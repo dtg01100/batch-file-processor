@@ -29,7 +29,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from core.database import QueryRunner, create_query_runner
 from core.exceptions import CustomerLookupError
 from core.structured_logging import get_logger
-from core.utils import calc_check_digit, convert_to_price, convert_UPCE_to_UPCA
+from core.utils import (
+    calc_check_digit,
+    convert_to_price,
+    convert_UPCE_to_UPCA,
+    safe_int,
+)
 
 logger = get_logger(__name__)
 
@@ -312,15 +317,7 @@ class ItemProcessingMixin(ABC):
         Returns:
             Tuple of (item_total as Decimal, qty_as_int)
         """
-        # Handle negative quantities (credit memos)
-        if qty.startswith("-"):
-            wrkqty = int(qty[1:])
-            wrkqtyint = wrkqty - (wrkqty * 2)
-        else:
-            try:
-                wrkqtyint = int(qty)
-            except ValueError:
-                wrkqtyint = 0
+        wrkqtyint = safe_int(qty)
 
         try:
             item_total = decimal.Decimal(convert_to_price(unit_cost)) * wrkqtyint
@@ -377,8 +374,7 @@ class ItemProcessingMixin(ABC):
 # Shared SQL Queries for Customer Lookups
 # =============================================================================
 
-# Base customer query SQL shared between Stewarts and Jolley converters
-BASIC_CUSTOMER_QUERY_SQL = """
+CUSTOMER_QUERY_SQL_TEMPLATE = """
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
         ohhst.btcfdt AS "Invoice Date",
         TRIM(ohhst.btfdtx) AS "Terms Code",
@@ -386,6 +382,7 @@ BASIC_CUSTOMER_QUERY_SQL = """
         dsabrep.abbvst AS "Customer Status",
         dsabrep.ababnb AS "Customer Number",
         TRIM(dsabrep.abaatx) AS "Customer Name",
+        {customer_store_number_field}
         TRIM(dsabrep.ababtx) AS "Customer Address",
         TRIM(dsabrep.abaetx) AS "Customer Town",
         TRIM(dsabrep.abaftx) AS "Customer State",
@@ -421,7 +418,7 @@ BASIC_CUSTOMER_QUERY_SQL = """
     WHERE ohhst.bthhnb = ?
 """
 
-BASIC_CUSTOMER_FIELDS_LIST = [
+CUSTOMER_FIELDS_LIST_BASE = [
     "Salesperson_Name",
     "Invoice_Date",
     "Terms_Code",
@@ -448,51 +445,10 @@ BASIC_CUSTOMER_FIELDS_LIST = [
     "Corporate_Customer_Email_2",
 ]
 
-# Stewarts-specific: includes Customer_Store_Number
-STEWARTS_CUSTOMER_QUERY_SQL = """
-    SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
-        ohhst.btcfdt AS "Invoice Date",
-        TRIM(ohhst.btfdtx) AS "Terms Code",
-        dsagrep.agrrnb AS "Terms Duration",
-        dsabrep.abbvst AS "Customer Status",
-        dsabrep.ababnb AS "Customer Number",
-        TRIM(dsabrep.abaatx) AS "Customer Name",
-        dsabrep.abaknb AS "Customer Store Number",
-        TRIM(dsabrep.ababtx) AS "Customer Address",
-        TRIM(dsabrep.abaetx) AS "Customer Town",
-        TRIM(dsabrep.abaftx) AS "Customer State",
-        TRIM(dsabrep.abagtx) AS "Customer Zip",
-        CONCAT(dsabrep.abadnb, dsabrep.abaenb) AS "Customer Phone",
-        TRIM(cvgrrep.grm9xt) AS "Customer Email",
-        TRIM(cvgrrep.grnaxt) AS "Customer Email 2",
-        dsabrep_corp.abbvst AS "Corporate Customer Status",
-        dsabrep_corp.ababnb AS "Corporate Customer Number",
-        TRIM(dsabrep_corp.abaatx) AS "Corporate Customer Name",
-        TRIM(dsabrep_corp.ababtx) AS "Corporate Customer Address",
-        TRIM(dsabrep_corp.abaetx) AS "Corporate Customer Town",
-        TRIM(dsabrep_corp.abaftx) AS "Corporate Customer State",
-        TRIM(dsabrep_corp.abagtx) AS "Corporate Customer Zip",
-        CONCAT(dsabrep_corp.abadnb, dsabrep.abaenb) AS "Corporate Customer Phone",
-        TRIM(cvgrrep_corp.grm9xt) AS "Corporate Customer Email",
-        TRIM(cvgrrep_corp.grnaxt) AS "Corporate Customer Email 2"
-    FROM dacdata.ohhst ohhst
-        INNER JOIN dacdata.dsabrep dsabrep
-            ON ohhst.btabnb = dsabrep.ababnb
-        LEFT OUTER JOIN dacdata.cvgrrep cvgrrep
-            ON dsabrep.ababnb = cvgrrep.grabnb
-        INNER JOIN dacdata.dsadrep dsadrep
-            ON dsabrep.abajcd = dsadrep.adaecd
-        INNER JOIN dacdata.dsagrep dsagrep
-            ON ohhst.bta0cd = dsagrep.aga0cd
-        LEFT OUTER JOIN dacdata.dsabrep dsabrep_corp
-            ON dsabrep.abalnb = dsabrep_corp.ababnb
-        LEFT OUTER JOIN dacdata.cvgrrep cvgrrep_corp
-            ON dsabrep_corp.ababnb = cvgrrep_corp.grabnb
-        LEFT OUTER JOIN dacdata.dsadrep dsadrep_corp
-            ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
-    WHERE ohhst.bthhnb = ?
-"""
+CUSTOMER_STORE_NUMBER_FIELD_BASIC = ""
+CUSTOMER_STORE_NUMBER_FIELD_STEWARTS = 'dsabrep.abaknb AS "Customer Store Number",'
 
+BASIC_CUSTOMER_FIELDS_LIST = CUSTOMER_FIELDS_LIST_BASE
 STEWARTS_CUSTOMER_FIELDS_LIST = [
     "Salesperson_Name",
     "Invoice_Date",
@@ -520,6 +476,18 @@ STEWARTS_CUSTOMER_FIELDS_LIST = [
     "Corporate_Customer_Email",
     "Corporate_Customer_Email_2",
 ]
+
+
+def _build_customer_query_sql(customer_store_number_field: str) -> str:
+    return CUSTOMER_QUERY_SQL_TEMPLATE.format(
+        customer_store_number_field=customer_store_number_field
+    )
+
+
+BASIC_CUSTOMER_QUERY_SQL = _build_customer_query_sql(CUSTOMER_STORE_NUMBER_FIELD_BASIC)
+STEWARTS_CUSTOMER_QUERY_SQL = _build_customer_query_sql(
+    CUSTOMER_STORE_NUMBER_FIELD_STEWARTS
+)
 
 
 def build_jolley_header_dict(

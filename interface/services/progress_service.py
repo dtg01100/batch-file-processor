@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Protocol, runtime_checkable
+
+logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -71,23 +74,23 @@ class CLIProgressCallback:
     def show(self, message: str = "") -> None:
         self._visible = True
         if message:
-            print(f"[PROGRESS] {message}")
+            logger.debug("[PROGRESS] %s", message)
 
     def hide(self) -> None:
         self._visible = False
-        print("[PROGRESS] Done")
+        logger.debug("[PROGRESS] Done")
 
     def update_message(self, message: str) -> None:
         if self._visible:
-            print(f"[PROGRESS] {message}")
+            logger.debug("[PROGRESS] %s", message)
 
     def is_visible(self) -> bool:
         return self._visible
 
     def update_progress(self, progress: int) -> None:
         if self._visible:
-            print(f"[PROGRESS] {progress}%")
+            logger.debug("[PROGRESS] %s%%", progress)
 
     def set_indeterminate(self) -> None:
         if self._visible:
-            print("[PROGRESS] Processing...")
+            logger.debug("[PROGRESS] Processing...")

@@ -34,6 +34,7 @@ from core.structured_logging import (
     log_file_operation,
     log_with_context,
 )
+from core.utils import safe_int
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -243,7 +244,7 @@ class YellowDogConverter(BaseEDIConverter):
                 curline["vendor_item"],
                 curline["unit_multiplier"],
                 lineno,
-                int(invoice_number) if invoice_number.isdigit() else 0,
+                safe_int(invoice_number),
             )
 
             csv_writer.writerow(

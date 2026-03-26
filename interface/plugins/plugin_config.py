@@ -28,8 +28,11 @@ Example:
         ]
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, Union
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -333,7 +336,7 @@ class PluginRegistry:
                     ):  # Has convert method
                         cls.register_convert_plugin(attr)
             except Exception as e:
-                print(f"Failed to load convert plugin {module_name}: {e}")
+                logger.debug("Failed to load convert plugin %s: %s", module_name, e)
 
         # Discover send plugins
         for filepath in glob.glob("*_backend.py"):
@@ -353,7 +356,7 @@ class PluginRegistry:
                     ):  # Has send method
                         cls.register_send_plugin(attr)
             except Exception as e:
-                print(f"Failed to load send plugin {module_name}: {e}")
+                logger.debug("Failed to load send plugin %s: %s", module_name, e)
 
 
 def get_plugin_config(

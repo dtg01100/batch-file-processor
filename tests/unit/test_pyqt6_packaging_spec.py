@@ -128,7 +128,6 @@ def test_spec_hiddenimports_includes_all_app_modules_requiring_bundling():
         "interface.qt.dialogs.edit_folders_dialog",
         "interface.qt.dialogs.edit_folders.data_extractor",
         "archive",
-        "archive.edi_tweaks",
         "PyQt5.sip",
     ]
 
@@ -181,11 +180,10 @@ def test_spec_hiddenimports_includes_all_backend_modules():
 
 @pytest.mark.unit
 def test_spec_hiddenimports_includes_archive_modules():
-    """archive and archive.edi_tweaks must be listed in hiddenimports."""
+    """archive must be listed in hiddenimports."""
     hidden_imports = _extract_hidden_imports()
 
     assert "archive" in hidden_imports
-    assert "archive.edi_tweaks" in hidden_imports
 
 
 @pytest.mark.unit

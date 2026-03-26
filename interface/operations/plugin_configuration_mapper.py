@@ -448,25 +448,28 @@ class PluginConfigurationMapper:
             QTextEdit,
         )
 
-        if isinstance(widget, QLineEdit):
-            return widget.text()
-        elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-            return widget.value()
-        elif isinstance(widget, QComboBox):
-            return widget.currentData()
-        elif isinstance(widget, QCheckBox):
-            return widget.isChecked()
-        elif isinstance(widget, QListWidget):
-            return self._get_qt_list_widget_value(widget)
-        elif isinstance(widget, QTextEdit):
+        _WIDGET_VALUE_GETTERS = {
+            QLineEdit: lambda w: w.text(),
+            QSpinBox: lambda w: w.value(),
+            QDoubleSpinBox: lambda w: w.value(),
+            QComboBox: lambda w: w.currentData(),
+            QCheckBox: lambda w: w.isChecked(),
+            QListWidget: lambda w: self._get_qt_list_widget_value(w),
+        }
+
+        for widget_type, getter in _WIDGET_VALUE_GETTERS.items():
+            if isinstance(widget, widget_type):
+                return getter(widget)
+
+        if isinstance(widget, QTextEdit):
             return self._get_qt_text_edit_value(widget, field_name)
-        else:
-            if get_strict_testing_mode():
-                raise TypeError(
-                    "Unsupported Qt widget type for field "
-                    f"'{field_name}': {type(widget).__name__}"
-                )
-            return ""
+
+        if get_strict_testing_mode():
+            raise TypeError(
+                "Unsupported Qt widget type for field "
+                f"'{field_name}': {type(widget).__name__}"
+            )
+        return ""
 
     def populate_plugin_widgets(
         self,
@@ -581,23 +584,28 @@ class PluginConfigurationMapper:
             QTextEdit,
         )
 
-        if isinstance(widget, QLineEdit):
-            widget.setText(str(value))
-        elif isinstance(widget, QSpinBox):
-            widget.setValue(int(value))
-        elif isinstance(widget, QDoubleSpinBox):
-            widget.setValue(float(value))
-        elif isinstance(widget, QComboBox):
-            index = widget.findData(value)
-            if index >= 0:
-                widget.setCurrentIndex(index)
-        elif isinstance(widget, QCheckBox):
-            widget.setChecked(bool(value))
-        elif isinstance(widget, QListWidget):
-            for i in range(widget.count()):
-                item = widget.item(i)
-                item.setSelected(item.data(0) in value)
-        elif isinstance(widget, QTextEdit):
+        _WIDGET_VALUE_SETTERS = {
+            QLineEdit: lambda w, v: w.setText(str(v)),
+            QSpinBox: lambda w, v: w.setValue(int(v)),
+            QDoubleSpinBox: lambda w, v: w.setValue(float(v)),
+            QComboBox: lambda w, v: (
+                w.setCurrentIndex(w.findData(v)) if w.findData(v) >= 0 else None
+            ),
+            QCheckBox: lambda w, v: w.setChecked(bool(v)),
+            QListWidget: lambda w, v: (
+                [
+                    w.item(i).setSelected(w.item(i).data(0) in v)
+                    for i in range(w.count())
+                ]
+            ),
+        }
+
+        for widget_type, setter in _WIDGET_VALUE_SETTERS.items():
+            if isinstance(widget, widget_type):
+                setter(widget, value)
+                return
+
+        if isinstance(widget, QTextEdit):
             widget.setText(json.dumps(value, indent=2))
 
     def update_folder_configuration(

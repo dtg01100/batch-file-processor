@@ -61,21 +61,24 @@ class FTPService(FTPServiceProtocol):
                     ftp.cwd(folder)
                     return FTPConnectionResult(success=True)
 
-                except Exception:
+                except Exception as e:
+                    logger.debug("FTP cwd failed: %s", e)
                     return FTPConnectionResult(
                         success=False,
                         error_message="FTP Folder Field Incorrect",
                         error_type="cwd",
                     )
 
-            except Exception:
+            except Exception as e:
+                logger.debug("FTP login failed: %s", e)
                 return FTPConnectionResult(
                     success=False,
                     error_message="FTP Username or Password Incorrect",
                     error_type="login",
                 )
 
-        except Exception:
+        except Exception as e:
+            logger.debug("FTP server connection failed: %s", e)
             return FTPConnectionResult(
                 success=False,
                 error_message="FTP Server or Port Field Incorrect",

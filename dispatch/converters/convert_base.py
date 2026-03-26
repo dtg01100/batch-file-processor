@@ -30,6 +30,9 @@ Example usage:
 """
 
 import csv
+import logging
+import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, TextIO
@@ -37,6 +40,13 @@ from typing import Any, Dict, Optional, TextIO
 import core.utils as utils
 from core.database import QueryRunner, create_query_runner
 from core.edi.edi_format_parser import EDIFormatParser
+from core.structured_logging import (
+    get_logger,
+    get_or_create_correlation_id,
+    log_file_operation,
+    log_with_context,
+)
+from core.utils import safe_int
 from interface.plugins.plugin_config import PluginConfigMixin
 
 
@@ -559,17 +569,7 @@ class BaseConverter(ABC, PluginConfigMixin):
 
     @staticmethod
     def qty_to_int(qty: str) -> int:
-        qty = qty.strip()
-        if qty.startswith("-"):
-            try:
-                wrkqty = int(qty[1:])
-                return wrkqty - (wrkqty * 2)
-            except ValueError:
-                return 0
-        try:
-            return int(qty)
-        except ValueError:
-            return 0
+        return safe_int(qty)
 
     @staticmethod
     def process_upc(upc_string: str, calc_check_digit: bool = True) -> str:

@@ -7,6 +7,7 @@ The class supports dependency injection for testability.
 """
 
 import copy
+import logging
 import os
 import time
 import zipfile
@@ -14,6 +15,8 @@ from io import StringIO
 from typing import Any, Optional, Protocol, runtime_checkable
 
 from interface.services.progress_service import ProgressCallback
+
+logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -370,7 +373,7 @@ class ReportingService:
             )
             self._db.emails_table_batch.delete()
         except Exception as email_send_error:
-            print(email_send_error)
+            logger.debug("Email send batch failed: %s", email_send_error)
             self._db.emails_table_batch.delete()
 
     def _handle_email_error(
@@ -397,10 +400,9 @@ class ReportingService:
                 if self._normalize_bool(
                     reporting_config.get("report_printing_fallback")
                 ):
-                    print(
-                        "Emailing report log failed with error: "
-                        + str(error)
-                        + ", printing file\r\n"
+                    logger.info(
+                        "Emailing report log failed with error: %s, printing file",
+                        error,
                     )
                     run_log.write(
                         "Emailing report log failed with error: "
@@ -408,10 +410,9 @@ class ReportingService:
                         + ", printing file\r\n"
                     )
                 else:
-                    print(
-                        "Emailing report log failed with error: "
-                        + str(error)
-                        + ", printing disabled, stopping\r\n"
+                    logger.info(
+                        "Emailing report log failed with error: %s, printing disabled, stopping",
+                        error,
                     )
                     run_log.write(
                         "Emailing report log failed with error: "
@@ -425,10 +426,9 @@ class ReportingService:
                     with open(run_log_file, "r", encoding="utf-8") as run_log:
                         self._print_run_log.do(run_log)
                 except Exception as printing_error:
-                    print(
-                        "printing error log failed with error: "
-                        + str(printing_error)
-                        + "\r\n"
+                    logger.debug(
+                        "Printing error log failed with error: %s",
+                        printing_error,
                     )
                     if run_log_file:
                         with open(run_log_file, "a", encoding="utf-8") as run_log:

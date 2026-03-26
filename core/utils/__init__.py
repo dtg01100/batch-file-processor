@@ -17,6 +17,7 @@ from .date_utils import (
     datetime_from_invtime,
     prettify_dates,
 )
+from .safe_parse import safe_float, safe_int
 
 # Import legacy utils for backward compatibility
 from .utils import (
@@ -47,6 +48,8 @@ __all__ = [
     "datetime_from_invtime",
     "dactime_from_invtime",
     "prettify_dates",
+    "safe_int",
+    "safe_float",
     # Legacy utils
     "apply_retail_uom_transform",
     "apply_upc_override",

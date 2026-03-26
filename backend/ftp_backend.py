@@ -20,6 +20,79 @@ from core.structured_logging import (
 logger = get_logger(__name__)
 
 
+def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None:
+    """Ensure the remote directory exists, creating it if necessary.
+
+    Args:
+        client: FTP client instance
+        remote_dir: Remote directory path to ensure exists
+    """
+    if remote_dir and remote_dir != "/":
+        path_parts = [
+            part for part in remote_dir.replace("\\", "/").strip("/").split("/") if part
+        ]
+
+        current_path = ""
+        for part in path_parts:
+            current_path += "/" + part
+            try:
+                client.cwd(current_path)
+            except (ftplib.error_perm, ftplib.error_temp, OSError):
+                client.mkd(current_path)
+                client.cwd(current_path)
+
+
+def _try_tls_connection(
+    use_tls: bool,
+    process_parameters: dict,
+    ftp_client: Optional[FTPClientProtocol],
+) -> FTPClientProtocol:
+    if ftp_client is not None:
+        client = ftp_client
+    else:
+        client = create_ftp_client(use_tls=use_tls)
+
+    logger.debug(
+        "Connecting to ftp server: %s",
+        process_parameters["ftp_server"],
+    )
+    client.connect(
+        str(process_parameters["ftp_server"]),
+        process_parameters["ftp_port"],
+    )
+    logger.debug("Logging in to %s", process_parameters["ftp_server"])
+    client.login(
+        process_parameters["ftp_username"],
+        process_parameters["ftp_password"],
+    )
+    return client
+
+
+def _handle_ftp_error(
+    error: Exception,
+    provider_index: int,
+    use_tls_options: list,
+    send_file,
+    logger,
+) -> None:
+    """Handle FTP error and determine if fallback to next TLS option is possible.
+
+    Args:
+        error: The exception that occurred
+        provider_index: Index of current TLS option in use_tls_options
+        use_tls_options: List of TLS options being tried
+        send_file: File object to seek back to beginning for retry
+        logger: Logger instance
+
+    Raises:
+        Exception: If all TLS options have been exhausted
+    """
+    if provider_index + 1 == len(use_tls_options):
+        raise
+    logger.debug("Falling back to non-TLS...")
+    send_file.seek(0)
+
+
 def do(
     process_parameters: dict,
     settings_dict: dict,
@@ -50,7 +123,6 @@ def do(
     counter = 0
     correlation_id = os.urandom(4).hex()
 
-    # Try TLS first, then fall back to non-TLS
     use_tls_options = [True, False]
 
     log_file_operation(
@@ -68,55 +140,16 @@ def do(
                 file_size = os.path.getsize(filename)
 
                 for provider_index, use_tls in enumerate(use_tls_options):
-                    # Create client - either injected or real
-                    if ftp_client is not None:
-                        client = ftp_client
-                    else:
-                        client = create_ftp_client(use_tls=use_tls)
-
                     try:
-                        logger.debug(
-                            "Connecting to ftp server: %s",
-                            process_parameters["ftp_server"],
-                        )
                         start_time = time.perf_counter()
-                        client.connect(
-                            str(process_parameters["ftp_server"]),
-                            process_parameters["ftp_port"],
-                        )
-                        logger.debug(
-                            "Logging in to %s", process_parameters["ftp_server"]
-                        )
-                        client.login(
-                            process_parameters["ftp_username"],
-                            process_parameters["ftp_password"],
+                        client = _try_tls_connection(
+                            use_tls, process_parameters, ftp_client
                         )
                         logger.debug("Sending File %s...", filename_no_path)
 
-                        # Ensure remote directory exists
-                        remote_dir = process_parameters["ftp_folder"]
-                        if remote_dir and remote_dir != "/":
-                            # Normalize path separators and remove leading/trailing slashes for processing
-                            path_parts = [
-                                part
-                                for part in remote_dir.replace("\\", "/")
-                                .strip("/")
-                                .split("/")
-                                if part
-                            ]
-
-                            # Batch path creation: check existing dirs and create missing ones
-                            # Start from root and build up, only creating what's needed
-                            current_path = ""
-                            for part in path_parts:
-                                current_path += "/" + part
-                                try:
-                                    # Check if directory exists by trying to change to it
-                                    client.cwd(current_path)
-                                except (ftplib.error_perm, ftplib.error_temp, OSError):
-                                    # Directory doesn't exist, create it and change into it
-                                    client.mkd(current_path)
-                                    client.cwd(current_path)
+                        _ensure_remote_directory(
+                            client, process_parameters["ftp_folder"]
+                        )
 
                         client.storbinary("stor " + filename_no_path, send_file)
                         duration_ms = (time.perf_counter() - start_time) * 1000
@@ -155,10 +188,13 @@ def do(
                             retry_count=counter,
                             correlation_id=correlation_id,
                         )
-                        if provider_index + 1 == len(use_tls_options):
-                            raise
-                        logger.debug("Falling back to non-TLS...")
-                        send_file.seek(0)
+                        _handle_ftp_error(
+                            error,
+                            provider_index,
+                            use_tls_options,
+                            send_file,
+                            logger,
+                        )
                     finally:
                         try:
                             client.close()

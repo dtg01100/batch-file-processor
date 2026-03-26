@@ -265,56 +265,32 @@ class DispatchOrchestrator:
         self._log_message(run_log, f"entering folder: {alias}")
 
         if not self._folder_exists(folder_path):
-            error_msg = f"Folder not found: {folder_path}"
-            result.errors.append(error_msg)
-            result.success = False
-            result.files_failed = 1
-            self._log_error(run_log, error_msg)
-            return result
+            return self._folder_not_found_result(folder_path, run_log, result)
 
-        files = list(pre_discovered_files) if pre_discovered_files is not None else None
+        files = self._discover_and_filter_files(
+            folder_path=folder_path,
+            pre_discovered_files=pre_discovered_files,
+            processed_files=processed_files,
+            folder=folder,
+            run_log=run_log,
+        )
 
         if files is None:
-            files = self._get_files_in_folder(folder_path)
-
-            if not files:
-                self._log_message(run_log, f"No files in directory: {folder_path}")
-                return result
-
-            logger.debug(
-                "Found %d files in %s, filtering for already-processed...",
-                len(files),
-                folder_path,
-            )
-
-            if processed_files:
-                files = self._filter_processed_files(files, processed_files, folder)
+            return result
 
         logger.debug("After filter: %d files to process in %s", len(files), folder_path)
-
-        if not files:
-            self._log_message(run_log, f"No new files in directory: {folder_path}")
-            return result
 
         self._log_message(
             run_log, f"{len(files)} found in {folder_path} (pipeline mode)"
         )
 
         total_files = len(files)
-        if self.config.progress_reporter:
-            progress = self.config.progress_reporter
-            if hasattr(progress, "start_folder"):
-                try:
-                    progress.start_folder(
-                        folder.get("alias", folder_path),
-                        total_files,
-                        folder_num=folder_num,
-                        folder_total=folder_total,
-                    )
-                except TypeError:
-                    # Backward compatibility for callbacks that only accept
-                    # (folder_name, total_files).
-                    progress.start_folder(folder.get("alias", folder_path), total_files)
+        self._init_progress_reporter(
+            folder=folder,
+            total_files=total_files,
+            folder_num=folder_num,
+            folder_total=folder_total,
+        )
 
         effective_upc_dict = upc_dict if upc_dict is not None else self.config.upc_dict
 
@@ -434,6 +410,81 @@ class DispatchOrchestrator:
         result.success = result.files_failed == 0
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(result.success)
+
+    def _folder_not_found_result(
+        self, folder_path: str, run_log: Any, result: FolderResult
+    ) -> FolderResult:
+        """Create error result for missing folder."""
+        error_msg = f"Folder not found: {folder_path}"
+        result.errors.append(error_msg)
+        result.success = False
+        result.files_failed = 1
+        self._log_error(run_log, error_msg)
+        return result
+
+    def _discover_and_filter_files(
+        self,
+        folder_path: str,
+        pre_discovered_files: Optional[list[str]],
+        processed_files: Optional[DatabaseInterface],
+        folder: dict,
+        run_log: Any,
+    ) -> Optional[list[str]]:
+        """Discover files to process and filter already-processed files.
+
+        Returns:
+            List of file paths to process, or None if no files found (caller should return early).
+        """
+        files = list(pre_discovered_files) if pre_discovered_files is not None else None
+
+        if files is None:
+            files = self._get_files_in_folder(folder_path)
+
+            if not files:
+                self._log_message(run_log, f"No files in directory: {folder_path}")
+                return None
+
+            logger.debug(
+                "Found %d files in %s, filtering for already-processed...",
+                len(files),
+                folder_path,
+            )
+
+            if processed_files:
+                files = self._filter_processed_files(files, processed_files, folder)
+
+        if not files:
+            self._log_message(run_log, f"No new files in directory: {folder_path}")
+            return None
+
+        return files
+
+    def _init_progress_reporter(
+        self,
+        folder: dict,
+        total_files: int,
+        folder_num: Optional[int],
+        folder_total: Optional[int],
+    ) -> None:
+        """Initialize progress reporter for folder processing."""
+        if not self.config.progress_reporter:
+            return
+
+        progress = self.config.progress_reporter
+        if not hasattr(progress, "start_folder"):
+            return
+
+        try:
+            progress.start_folder(
+                folder.get("alias", folder.get("folder_name", "")),
+                total_files,
+                folder_num=folder_num,
+                folder_total=folder_total,
+            )
+        except TypeError:
+            progress.start_folder(
+                folder.get("alias", folder.get("folder_name", "")), total_files
+            )
 
     @staticmethod
     def _is_strict_database_lookup(settings: dict) -> bool:
@@ -555,32 +606,51 @@ class DispatchOrchestrator:
         This mirrors legacy dispatch behavior and serves as a fallback path when
         no ``upc_service`` is configured in ``DispatchConfig``.
         """
-        required_keys = (
-            "as400_username",
-            "as400_password",
-            "as400_address",
-        )
         strict_db_mode = self._is_strict_database_lookup(settings)
         strict_testing_mode = get_strict_testing_mode()
-        missing_keys = [key for key in required_keys if not settings.get(key)]
-        if missing_keys:
-            self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
-                missing_keys
-            )
-            if strict_db_mode:
-                raise ValueError(
-                    "database_lookup_mode is strict but AS400 settings are missing: "
-                    + ", ".join(missing_keys)
-                )
-            logger.warning(
-                "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
-                ", ".join(missing_keys),
-            )
+
+        if not self._validate_as400_settings(settings, strict_db_mode):
             return {}
 
+        runner_kwargs = self._build_upc_runner_kwargs(settings)
+
+        runner = create_query_runner(**runner_kwargs)
+
+        try:
+            return self._execute_upc_query(runner, strict_db_mode, strict_testing_mode)
+        except Exception as exc:
+            self._handle_upc_query_exception(exc, strict_db_mode, strict_testing_mode)
+            return {}
+        finally:
+            self._close_upc_runner(runner, strict_testing_mode)
+
+    def _validate_as400_settings(self, settings: dict, strict_db_mode: bool) -> bool:
+        """Validate AS400 settings and handle missing credentials.
+
+        Returns True if settings are valid, False if lookup should be skipped.
+        """
+        required_keys = ("as400_username", "as400_password", "as400_address")
+        missing_keys = [key for key in required_keys if not settings.get(key)]
+        if not missing_keys:
+            return True
+
+        self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
+            missing_keys
+        )
+        if strict_db_mode:
+            raise ValueError(
+                "database_lookup_mode is strict but AS400 settings are missing: "
+                + ", ".join(missing_keys)
+            )
+        logger.warning(
+            "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
+            ", ".join(missing_keys),
+        )
+        return False
+
+    def _build_upc_runner_kwargs(self, settings: dict) -> dict:
+        """Build kwargs for QueryRunner from AS400 settings."""
         odbc_driver_raw = str(settings.get("odbc_driver", "") or "").strip()
-        # Legacy DB defaults may contain a placeholder value that is not a real
-        # driver name. In that case, allow QueryRunner's default driver to apply.
         if odbc_driver_raw.lower().startswith("select odbc driver"):
             odbc_driver_raw = ""
 
@@ -597,57 +667,59 @@ class DispatchOrchestrator:
                 "AS400 settings did not provide a usable ODBC driver; "
                 "using QueryRunner default"
             )
+        return runner_kwargs
 
-        runner = create_query_runner(**runner_kwargs)
+    def _execute_upc_query(
+        self, runner: QueryRunner, strict_db_mode: bool, strict_testing_mode: bool
+    ) -> dict:
+        """Execute UPC query and parse results into dictionary."""
+        rows = runner.run_query(
+            """
+            select
+                dsanrep.anbacd as anbacd,
+                dsanrep.anbbcd as anbbcd,
+                strip(dsanrep.anbgcd) as anbgcd,
+                strip(dsanrep.anbhcd) as anbhcd,
+                strip(dsanrep.anbicd) as anbicd,
+                strip(dsanrep.anbjcd) as anbjcd
+            from dacdata.dsanrep dsanrep
+            """
+        )
 
-        try:
-            rows = runner.run_query(
-                """
-                select
-                    dsanrep.anbacd as anbacd,
-                    dsanrep.anbbcd as anbbcd,
-                    strip(dsanrep.anbgcd) as anbgcd,
-                    strip(dsanrep.anbhcd) as anbhcd,
-                    strip(dsanrep.anbicd) as anbicd,
-                    strip(dsanrep.anbjcd) as anbjcd
-                from dacdata.dsanrep dsanrep
-                """
+        if strict_db_mode and not rows:
+            raise LookupError(
+                "database_lookup_mode is strict but UPC query returned no rows"
             )
 
-            if strict_db_mode and not rows:
-                raise LookupError(
-                    "database_lookup_mode is strict but UPC query returned no rows"
-                )
-
-            if not rows:
-                self._last_upc_lookup_error = "fallback UPC query returned no rows"
-                return {}
-
-            upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
-            if strict_db_mode and rows and not upc_dict:
-                raise LookupError(
-                    "database_lookup_mode is strict but UPC query returned no parseable rows"
-                )
-            if not upc_dict:
-                self._last_upc_lookup_error = (
-                    "fallback UPC query returned rows, but none were parseable"
-                )
-            return upc_dict
-        except Exception as exc:
-            self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
-            if strict_db_mode:
-                raise
-            # Preserve RuntimeError messages that already have specific context
-            if strict_testing_mode:
-                if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
-                    raise
-                raise RuntimeError(
-                    "Failed to fetch UPC dictionary via fallback query"
-                ) from exc
-            logger.exception("Failed to fetch UPC dictionary via fallback query")
+        if not rows:
+            self._last_upc_lookup_error = "fallback UPC query returned no rows"
             return {}
-        finally:
-            self._close_upc_runner(runner, strict_testing_mode)
+
+        upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
+        if strict_db_mode and rows and not upc_dict:
+            raise LookupError(
+                "database_lookup_mode is strict but UPC query returned no parseable rows"
+            )
+        if not upc_dict:
+            self._last_upc_lookup_error = (
+                "fallback UPC query returned rows, but none were parseable"
+            )
+        return upc_dict
+
+    def _handle_upc_query_exception(
+        self, exc: Exception, strict_db_mode: bool, strict_testing_mode: bool
+    ) -> None:
+        """Handle exceptions from UPC query execution."""
+        self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
+        if strict_db_mode:
+            raise
+        if strict_testing_mode:
+            if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
+                raise
+            raise RuntimeError(
+                "Failed to fetch UPC dictionary via fallback query"
+            ) from exc
+        logger.exception("Failed to fetch UPC dictionary via fallback query")
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
@@ -1164,6 +1236,52 @@ class DispatchOrchestrator:
         "split_prepaid_sales_tax_crec": False,
     }
 
+    def _detect_enabled_backends(self, folder: dict) -> list[str]:
+        """Detect which backends are enabled for a folder.
+
+        Args:
+            folder: Folder configuration dictionary
+
+        Returns:
+            List of enabled backend descriptions like "Copy: /path" or "FTP: server"
+        """
+        enabled = []
+        if folder.get("process_backend_copy"):
+            enabled.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
+        if folder.get("process_backend_ftp"):
+            enabled.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
+        if folder.get("process_backend_email"):
+            enabled.append(f"Email: {folder.get('email_to', 'N/A')}")
+        return enabled
+
+    def _normalize_edi_flags(
+        self, effective_folder: dict, has_convert_target: bool
+    ) -> None:
+        """Normalize EDI-related flags in the folder dict.
+
+        Modifies effective_folder in place.
+
+        Args:
+            effective_folder: Folder configuration dictionary
+            has_convert_target: Whether a conversion target is configured
+        """
+        if "convert_edi" not in effective_folder:
+            process_edi_raw = effective_folder.get("process_edi")
+            if process_edi_raw is None:
+                effective_folder["convert_edi"] = has_convert_target
+            else:
+                effective_folder["convert_edi"] = normalize_bool(process_edi_raw)
+
+        _process_edi_raw = effective_folder.get("process_edi")
+        if has_convert_target and _process_edi_raw is None:
+            effective_folder["process_edi"] = True
+
+        if "process_edi" not in effective_folder and (
+            effective_folder.get("split_edi", False)
+            or effective_folder.get("convert_edi", False)
+        ):
+            effective_folder["process_edi"] = True
+
     def _build_processing_context(
         self, folder: dict, upc_dict: dict
     ) -> ProcessingContext:
@@ -1193,31 +1311,7 @@ class DispatchOrchestrator:
 
         has_convert_target = bool(effective_folder.get("convert_to_format"))
 
-        # Map DB field process_edi → convert_edi (orchestrator's internal gate).
-        # The database stores process_edi=True to mean "convert EDI to another format".
-        # The orchestrator uses convert_edi to gate the converter step.
-        if "convert_edi" not in effective_folder:
-            process_edi_raw = effective_folder.get("process_edi")
-            # Respect explicit process_edi on the folder; only infer from
-            # convert_to_format when process_edi is missing/NULL (legacy rows).
-            if process_edi_raw is None:
-                effective_folder["convert_edi"] = has_convert_target
-            else:
-                effective_folder["convert_edi"] = normalize_bool(process_edi_raw)
-
-        # Defensive normalization: if an explicit conversion target exists and
-        # process_edi is not set (NULL in DB), infer that conversion was intended.
-        # This handles legacy folders created before the process_edi column existed.
-        # Do NOT override an explicit process_edi=False (user chose "Do Nothing").
-        _process_edi_raw = effective_folder.get("process_edi")
-        if has_convert_target and _process_edi_raw is None:
-            effective_folder["process_edi"] = True
-
-        if "process_edi" not in effective_folder and (
-            effective_folder.get("split_edi", False)
-            or effective_folder.get("convert_edi", False)
-        ):
-            effective_folder["process_edi"] = True
+        self._normalize_edi_flags(effective_folder, has_convert_target)
 
         return ProcessingContext(
             folder=folder,
@@ -1225,6 +1319,20 @@ class DispatchOrchestrator:
             settings=self.config.settings,
             upc_dict=upc_dict,
         )
+
+    def _validate_rename_template(self, template: str) -> None:
+        """Validate the rename template for security issues.
+
+        Args:
+            template: The filename template to validate
+
+        Raises:
+            ValueError: If the template is absolute or contains path traversal
+        """
+        import os
+
+        if os.path.isabs(template) or ".." in template:
+            raise ValueError(f"Invalid filename pattern in rename template: {template}")
 
     def _apply_file_rename(self, file_path: str, context: Any) -> str:
         """Return a renamed copy of file_path if rename_file is configured.
@@ -1262,8 +1370,7 @@ class DispatchOrchestrator:
         if hasattr(context, "temp_dirs"):
             context.temp_dirs.append(temp_dir)
 
-        if os.path.isabs(new_name) or ".." in new_name:
-            raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
+        self._validate_rename_template(new_name)
 
         full_dest = os.path.join(temp_dir, new_name)
         if not full_dest.startswith(temp_dir + os.sep) and full_dest != temp_dir:
@@ -1480,14 +1587,8 @@ class DispatchOrchestrator:
         )
 
         # Construct sent_to string for the database
-        sent_to = []
-        if folder.get("process_backend_copy"):
-            sent_to.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
-        if folder.get("process_backend_ftp"):
-            sent_to.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
-        if folder.get("process_backend_email"):
-            sent_to.append(f"Email: {folder.get('email_to', 'N/A')}")
-        sent_to_str = ", ".join(sent_to) if sent_to else "N/A"
+        enabled_backends = self._detect_enabled_backends(folder)
+        sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
 
         invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
 

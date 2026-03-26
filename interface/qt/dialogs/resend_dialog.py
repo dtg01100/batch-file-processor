@@ -27,6 +27,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from core.constants import MAX_DATE, MIN_DATE
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 from interface.services.resend_service import ResendService
@@ -204,16 +205,24 @@ class ResendDialog(BaseDialog):
         today = QDate.currentDate()
         week_ago = today.addDays(-7)
         self._date_from_input.setDate(week_ago)
-        self._date_from_input.setMinimumDate(QDate(1900, 1, 1))
-        self._date_from_input.setMaximumDate(QDate(9999, 12, 31))
+        self._date_from_input.setMinimumDate(
+            QDate(MIN_DATE.year, MIN_DATE.month, MIN_DATE.day)
+        )
+        self._date_from_input.setMaximumDate(
+            QDate(MAX_DATE.year, MAX_DATE.month, MAX_DATE.day)
+        )
         self._date_from_input.dateChanged.connect(self._on_date_range_changed)
         self._date_from_input.setAccessibleName("Start date")
 
         self._date_to_input = self._create_date_edit_with_today_button()
         self._date_to_input.setDisplayFormat("yyyy-MM-dd")
         self._date_to_input.setDate(today)
-        self._date_to_input.setMinimumDate(QDate(1900, 1, 1))
-        self._date_to_input.setMaximumDate(QDate(9999, 12, 31))
+        self._date_to_input.setMinimumDate(
+            QDate(MIN_DATE.year, MIN_DATE.month, MIN_DATE.day)
+        )
+        self._date_to_input.setMaximumDate(
+            QDate(MAX_DATE.year, MAX_DATE.month, MAX_DATE.day)
+        )
         self._date_to_input.dateChanged.connect(self._on_date_range_changed)
         self._date_to_input.setAccessibleName("End date")
 

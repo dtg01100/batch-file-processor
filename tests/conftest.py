@@ -181,6 +181,63 @@ def real_admin_row(migrated_v42_db):
 
 
 @pytest.fixture
+def mock_as400_query_runner(monkeypatch):
+    """Provide a deterministic AS/400 query runner for full-pipeline tests.
+
+    This replaces the legacy ODBC query runner and returns a predictable
+    customer header + UOM lookup sequence so tests do not depend on external
+    AS/400 connectivity.
+    """
+
+    class DummyQueryRunner:
+        def __init__(self):
+            self.call_count = 0
+
+        def run_query(self, query, params=None):
+            self.call_count += 1
+            if self.call_count == 1:
+                return [
+                    {
+                        "Salesperson_Name": "Salesperson",
+                        "Invoice_Date": "2025-01-01",
+                        "Terms_Code": "NET30",
+                        "Terms_Duration": "30",
+                        "Customer_Status": "A",
+                        "Customer_Number": "12345",
+                        "Customer_Name": "Test Customer",
+                        "Customer_Address": "123 Main St",
+                        "Customer_Town": "Anytown",
+                        "Customer_State": "ST",
+                        "Customer_Zip": "12345",
+                        "Customer_Phone": "5551234567",
+                        "Customer_Email": "test@email.com",
+                        "Customer_Email_2": "",
+                        "Corporate_Customer_Status": "A",
+                        "Corporate_Customer_Number": "12345",
+                        "Corporate_Customer_Name": "Corporate Customer",
+                        "Corporate_Customer_Address": "456 Corp St",
+                        "Corporate_Customer_Town": "Corptown",
+                        "Corporate_Customer_State": "ST",
+                        "Corporate_Customer_Zip": "54321",
+                        "Corporate_Customer_Phone": "5559876543",
+                        "Corporate_Customer_Email": "corp@email.com",
+                        "Corporate_Customer_Email_2": "",
+                    }
+                ]
+            if self.call_count == 2:
+                return [{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}]
+            return []
+
+    dummy = DummyQueryRunner()
+    monkeypatch.setattr(
+        "dispatch.converters.mixins.create_query_runner",
+        lambda *args, **kwargs: dummy,
+    )
+
+    return dummy
+
+
+@pytest.fixture
 def temp_database(tmp_path):
     """Create a temporary database for testing.
 

@@ -33,6 +33,7 @@ from core.structured_logging import (
     log_file_operation,
     log_with_context,
 )
+from core.utils import safe_int
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -121,44 +122,36 @@ class FintechConverter(BaseEDIConverter):
         inv_fetcher = context.user_data["inv_fetcher"]
 
         # Get UPC data from lookup table
-        try:
-            vendor_item = int(record.fields["vendor_item"])
-        except ValueError:
+        vendor_item = safe_int(record.fields["vendor_item"])
+        if vendor_item == 0 and record.fields["vendor_item"]:
             logger.warning(
                 "Invalid vendor_item value %r; defaulting to 0",
                 record.fields["vendor_item"],
             )
-            vendor_item = 0
         upc_data = context.upc_lut.get(vendor_item, ("", "", ""))
         upc_pack = upc_data[1] if len(upc_data) > 1 else ""
         upc_case = upc_data[2] if len(upc_data) > 2 else ""
 
-        try:
-            invoice_number_int = int(arec_header["invoice_number"])
-        except ValueError:
+        invoice_number_int = safe_int(arec_header["invoice_number"])
+        if invoice_number_int == 0 and arec_header["invoice_number"]:
             logger.warning(
                 "Invalid invoice_number value %r; defaulting to 0",
                 arec_header["invoice_number"],
             )
-            invoice_number_int = 0
 
-        try:
-            qty_shipped = int(record.fields["qty_of_units"])
-        except ValueError:
+        qty_shipped = safe_int(record.fields["qty_of_units"])
+        if qty_shipped == 0 and record.fields["qty_of_units"]:
             logger.warning(
                 "Invalid qty_of_units value %r; defaulting to 0",
                 record.fields["qty_of_units"],
             )
-            qty_shipped = 0
 
-        try:
-            unit_multiplier = int(record.fields["unit_multiplier"])
-        except ValueError:
+        unit_multiplier = safe_int(record.fields["unit_multiplier"])
+        if unit_multiplier == 0 and record.fields["unit_multiplier"]:
             logger.warning(
                 "Invalid unit_multiplier value %r; defaulting to 0",
                 record.fields["unit_multiplier"],
             )
-            unit_multiplier = 0
 
         # Write the CSV row
         context.csv_writer.writerow(
@@ -196,14 +189,12 @@ class FintechConverter(BaseEDIConverter):
         fintech_division_id = context.user_data["fintech_division_id"]
         inv_fetcher = context.user_data["inv_fetcher"]
 
-        try:
-            invoice_number_int = int(arec_header["invoice_number"])
-        except ValueError:
+        invoice_number_int = safe_int(arec_header["invoice_number"])
+        if invoice_number_int == 0 and arec_header["invoice_number"]:
             logger.warning(
                 "Invalid invoice_number value %r; defaulting to 0",
                 arec_header["invoice_number"],
             )
-            invoice_number_int = 0
 
         # Write the CSV row for charge
         context.csv_writer.writerow(
