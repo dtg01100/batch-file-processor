@@ -4,7 +4,7 @@ SQLite processed-files repository implementation.
 Wraps the DatabaseObj / Table API to implement IProcessedFilesRepository.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from core.ports.repositories import IProcessedFilesRepository
 
@@ -14,6 +14,7 @@ class SqliteProcessedFilesRepository(IProcessedFilesRepository):
 
     Args:
         database_obj: A ``DatabaseObj`` instance (or compatible mock).
+
     """
 
     def __init__(self, database_obj: Any) -> None:
@@ -49,6 +50,6 @@ class SqliteProcessedFilesRepository(IProcessedFilesRepository):
         self._db.processed_files.delete(folder_id=folder_id)
         return count
 
-    def find_by_hash(self, file_hash: str) -> Optional[Dict[str, Any]]:
+    def find_by_hash(self, file_hash: str) -> dict[str, Any] | None:
         """Return the processed-file record for *file_hash*, or None."""
         return self._db.processed_files.find_one(file_hash=file_hash)

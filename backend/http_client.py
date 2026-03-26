@@ -5,7 +5,7 @@ that conform to the HTTPClientProtocol interface.
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
@@ -28,24 +28,26 @@ class RealHTTPClient:
     Attributes:
         timeout: Default timeout for requests in seconds
         _session: The underlying requests session object
+
     """
 
-    def __init__(self, timeout: float = 30.0):
+    def __init__(self, timeout: float = 30.0) -> None:
         """Initialize HTTP client.
 
         Args:
             timeout: Default timeout for HTTP requests in seconds
+
         """
         self.timeout = timeout
-        self._session: Optional[requests.Session] = None
+        self._session: requests.Session | None = None
 
     def post(
         self,
         url: str,
-        data: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[float] = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
     ) -> requests.Response:
         """Send a POST request.
 
@@ -61,6 +63,7 @@ class RealHTTPClient:
 
         Raises:
             requests.RequestException: If the request fails
+
         """
         get_or_create_correlation_id()
         start_time = time.perf_counter()
@@ -143,16 +146,17 @@ class MockHTTPClient:
     Attributes:
         posts: List of (url, data, files, headers) tuples from post calls
         errors: List of errors to raise on subsequent operations
+
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize mock HTTP client with empty tracking lists."""
-        self.posts: List[tuple] = []
-        self.errors: List[Exception] = []
+        self.posts: list[tuple] = []
+        self.errors: list[Exception] = []
         self._current_error_index = 0
         self._response_status_code: int = 200
         self._response_text: str = ""
-        self._response_headers: Dict[str, str] = {}
+        self._response_headers: dict[str, str] = {}
 
     def _raise_error_if_set(self) -> None:
         """Raise next error from errors list if available."""
@@ -164,10 +168,10 @@ class MockHTTPClient:
     def post(
         self,
         url: str,
-        data: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[float] = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
     ) -> "MockHTTPResponse":
         """Record POST request.
 
@@ -180,6 +184,7 @@ class MockHTTPClient:
 
         Returns:
             MockHTTPResponse object
+
         """
         self._raise_error_if_set()
         self.posts.append((url, data, files, headers))
@@ -193,7 +198,7 @@ class MockHTTPClient:
         self,
         status_code: int = 200,
         text: str = "",
-        headers: Optional[Dict[str, str]] = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         """Configure the response for the next POST.
 
@@ -201,6 +206,7 @@ class MockHTTPClient:
             status_code: HTTP status code to return
             text: Response body text
             headers: Response headers
+
         """
         self._response_status_code = status_code
         self._response_text = text
@@ -211,6 +217,7 @@ class MockHTTPClient:
 
         Args:
             error: Exception to raise
+
         """
         self.errors.append(error)
 
@@ -231,20 +238,22 @@ class MockHTTPResponse:
         status_code: HTTP status code
         text: Response body text
         headers: Response headers dictionary
+
     """
 
     def __init__(
         self,
         status_code: int,
         text: str = "",
-        headers: Optional[Dict[str, str]] = None,
-    ):
+        headers: dict[str, str] | None = None,
+    ) -> None:
         """Initialize mock response.
 
         Args:
             status_code: HTTP status code
             text: Response body text
             headers: Response headers
+
         """
         self.status_code = status_code
         self.text = text
@@ -259,13 +268,16 @@ class MockHTTPResponse:
 
         Raises:
             ValueError: If text is not valid JSON
+
         """
         import json
 
         return json.loads(self.text)
 
 
-def create_http_client(timeout: float = 30.0, mock: bool = False) -> HTTPClientProtocol:
+def create_http_client(
+    *, timeout: float = 30.0, mock: bool = False
+) -> HTTPClientProtocol:
     """Factory function to create HTTP client.
 
     Args:
@@ -274,6 +286,7 @@ def create_http_client(timeout: float = 30.0, mock: bool = False) -> HTTPClientP
 
     Returns:
         HTTP client instance
+
     """
     if mock:
         return MockHTTPClient()

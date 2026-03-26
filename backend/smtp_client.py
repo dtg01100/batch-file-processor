@@ -6,7 +6,7 @@ that conform to the SMTPClientProtocol interface.
 
 import smtplib
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from backend.protocols import SMTPClientProtocol
 from core.structured_logging import (
@@ -26,9 +26,10 @@ class RealSMTPClient:
     Attributes:
         config: Configuration dictionary with server settings
         _connection: The underlying smtplib.SMTP connection object
+
     """
 
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None) -> None:
         """Initialize SMTP client.
 
         Args:
@@ -38,9 +39,10 @@ class RealSMTPClient:
                 - username: Authentication username
                 - password: Authentication password
                 - use_tls: Whether to use TLS (default True)
+
         """
         self.config = config or {}
-        self._connection: Optional[smtplib.SMTP] = None
+        self._connection: smtplib.SMTP | None = None
 
     def connect(self, host: str, port: int = 587, timeout: float = 30) -> None:
         """Connect to SMTP server.
@@ -49,6 +51,7 @@ class RealSMTPClient:
             host: Server hostname or IP address
             port: Server port number
             timeout: Connection timeout in seconds (default 30)
+
         """
         get_or_create_correlation_id()
         start_time = time.perf_counter()
@@ -86,6 +89,7 @@ class RealSMTPClient:
 
         Raises:
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -102,6 +106,7 @@ class RealSMTPClient:
         Raises:
             smtplib.SMTPAuthenticationError: If authentication fails
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -147,6 +152,7 @@ class RealSMTPClient:
 
         Raises:
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -201,6 +207,7 @@ class RealSMTPClient:
 
         Raises:
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -272,6 +279,7 @@ class RealSMTPClient:
 
         Raises:
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -282,6 +290,7 @@ class RealSMTPClient:
 
         Args:
             level: Debug level (0 = no output, 1 = commands, 2 = commands + data)
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -292,6 +301,7 @@ class RealSMTPClient:
 
         Raises:
             RuntimeError: If not connected to server
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to SMTP server")
@@ -316,6 +326,7 @@ class RealSMTPClient:
 
         Returns:
             Connected and authenticated SMTP client
+
         """
         client = cls(config)
         client.connect(config["host"], config["port"])
@@ -347,19 +358,20 @@ class MockSMTPClient:
         starttls_called: Whether starttls was called
         quit_called: Whether quit was called
         close_called: Whether close was called
+
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize mock SMTP client with empty tracking state."""
-        self.connections: List[tuple] = []
-        self.logins: List[tuple] = []
-        self.emails_sent: List[Dict[str, Any]] = []
+        self.connections: list[tuple] = []
+        self.logins: list[tuple] = []
+        self.emails_sent: list[dict[str, Any]] = []
         self.starttls_calls: int = 0
         self.ehlo_calls: int = 0
         self.quit_called: bool = False
         self.close_called: bool = False
-        self.debug_level: Optional[int] = None
-        self.errors: List[Exception] = []
+        self.debug_level: int | None = None
+        self.errors: list[Exception] = []
         self._current_error_index: int = 0
         self._connected: bool = False
 
@@ -376,6 +388,7 @@ class MockSMTPClient:
         Args:
             host: Server hostname
             port: Server port
+
         """
         self._raise_error_if_set()
         self.connections.append((host, port))
@@ -392,6 +405,7 @@ class MockSMTPClient:
         Args:
             user: Username
             password: Password
+
         """
         self._raise_error_if_set()
         self.logins.append((user, password))
@@ -406,6 +420,7 @@ class MockSMTPClient:
 
         Returns:
             Empty dict (all recipients accepted)
+
         """
         self._raise_error_if_set()
         self.emails_sent.append(
@@ -421,6 +436,7 @@ class MockSMTPClient:
 
         Returns:
             Empty dict (all recipients accepted)
+
         """
         self._raise_error_if_set()
         self.emails_sent.append(
@@ -455,6 +471,7 @@ class MockSMTPClient:
 
         Args:
             level: Debug level
+
         """
         self.debug_level = level
 
@@ -463,6 +480,7 @@ class MockSMTPClient:
 
         Args:
             error: Exception to raise
+
         """
         self.errors.append(error)
 
@@ -487,7 +505,7 @@ class MockSMTPClient:
 
 
 def create_smtp_client(
-    config: Optional[dict] = None, mock: bool = False
+    *, config: dict | None = None, mock: bool = False
 ) -> SMTPClientProtocol:
     """Factory function to create SMTP client.
 
@@ -497,6 +515,7 @@ def create_smtp_client(
 
     Returns:
         SMTP client instance
+
     """
     if mock:
         return MockSMTPClient()

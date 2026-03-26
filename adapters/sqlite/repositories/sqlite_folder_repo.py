@@ -9,7 +9,7 @@ No Qt dependencies — safe to import in any context.
 """
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core.ports.repositories import IFolderRepository
 
@@ -30,6 +30,7 @@ class SqliteFolderRepository(IFolderRepository):
         db = DatabaseObj(...)
         repo = SqliteFolderRepository(db)
         folders = repo.find_all(active_only=True)
+
     """
 
     def __init__(self, database_obj: Any) -> None:
@@ -39,17 +40,17 @@ class SqliteFolderRepository(IFolderRepository):
     # IFolderRepository implementation
     # ------------------------------------------------------------------
 
-    def find_all(self, active_only: bool = False) -> List[Dict[str, Any]]:
+    def find_all(self, active_only: bool = False) -> list[dict[str, Any]]:
         """Return all folder records, optionally filtered to active only."""
         if active_only:
             return list(self._db.folders_table.find(folder_is_active=True))
         return list(self._db.folders_table.all())
 
-    def find_by_id(self, folder_id: int) -> Optional[Dict[str, Any]]:
+    def find_by_id(self, folder_id: int) -> dict[str, Any] | None:
         """Return the folder record with the given primary key."""
         return self._db.folders_table.find_one(id=folder_id)
 
-    def find_by_path(self, path: str) -> Optional[Dict[str, Any]]:
+    def find_by_path(self, path: str) -> dict[str, Any] | None:
         """Return the folder record whose path matches, using normalised comparison.
 
         Path normalisation is applied so that trailing slashes and
@@ -61,11 +62,11 @@ class SqliteFolderRepository(IFolderRepository):
                 return folder
         return None
 
-    def find_by_alias(self, alias: str) -> Optional[Dict[str, Any]]:
+    def find_by_alias(self, alias: str) -> dict[str, Any] | None:
         """Return the folder record with the given alias."""
         return self._db.folders_table.find_one(alias=alias)
 
-    def insert(self, folder_data: Dict[str, Any]) -> None:
+    def insert(self, folder_data: dict[str, Any]) -> None:
         """Insert a new folder record.
 
         The caller must *not* include an 'id' key — the database assigns it.
@@ -73,11 +74,12 @@ class SqliteFolderRepository(IFolderRepository):
         data = {k: v for k, v in folder_data.items() if k != "id"}
         self._db.folders_table.insert(data)
 
-    def update(self, folder_data: Dict[str, Any]) -> None:
+    def update(self, folder_data: dict[str, Any]) -> None:
         """Update an existing folder record identified by 'id'.
 
         Raises:
             ValueError: If 'id' is not present in *folder_data*.
+
         """
         if "id" not in folder_data:
             raise ValueError("folder_data must contain 'id' to update a folder")

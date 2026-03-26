@@ -5,7 +5,7 @@ Wraps the DatabaseObj / Table API to implement IEmailQueueRepository.
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 from core.ports.repositories import IEmailQueueRepository
 
@@ -15,6 +15,7 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
     Args:
         database_obj: A ``DatabaseObj`` instance (or compatible mock).
+
     """
 
     def __init__(self, database_obj: Any) -> None:
@@ -24,15 +25,16 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
     # IEmailQueueRepository implementation
     # ------------------------------------------------------------------
 
-    def enqueue(self, email_data: Dict[str, Any]) -> None:
+    def enqueue(self, email_data: dict[str, Any]) -> None:
         """Add an email to the outbound queue.
 
         Args:
             email_data: Dict of email fields (folder_alias, log, folder_id).
+
         """
         self._db.emails_table.insert(email_data)
 
-    def dequeue_batch(self, max_size: int, max_count: int) -> List[Dict[str, Any]]:
+    def dequeue_batch(self, max_size: int, max_count: int) -> list[dict[str, Any]]:
         """Return a batch of emails ready to send.
 
         Args:
@@ -41,6 +43,7 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
         Returns:
             List of email dicts.
+
         """
         all_emails = self._db.emails_table.all()
         batch = []
@@ -59,7 +62,7 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
         return batch
 
-    def _get_email_size(self, email: Dict[str, Any]) -> int:
+    def _get_email_size(self, email: dict[str, Any]) -> int:
         """Get the byte size of an email's log file.
 
         Args:
@@ -67,19 +70,21 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
         Returns:
             Size in bytes, or 0 if file doesn't exist.
+
         """
         log_path = email.get("log")
         if log_path and os.path.isfile(log_path):
             return os.path.getsize(log_path)
         return 0
 
-    def mark_sent(self, email_ids: List[int]) -> None:
+    def mark_sent(self, email_ids: list[int]) -> None:
         """Mark emails as successfully sent.
 
         Moves emails from emails_to_send to sent_emails_removal_queue.
 
         Args:
             email_ids: List of email primary keys to mark.
+
         """
         for email_id in email_ids:
             email = self._db.emails_table.find_one(id=email_id)
@@ -100,6 +105,7 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
         Returns:
             Number of records deleted.
+
         """
         count = self._db.emails_table.count()
         self._db.emails_table.delete()

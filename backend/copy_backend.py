@@ -4,8 +4,6 @@ This module copies files to local directories with
 injectable file operations support for testing.
 """
 
-from typing import Optional
-
 from backend.file_operations import create_file_operations
 from backend.protocols import FileOperationsProtocol
 
@@ -47,7 +45,7 @@ def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
-    file_ops: Optional[FileOperationsProtocol] = None,
+    file_ops: FileOperationsProtocol | None = None,
 ) -> bool:
     """Copy a file to a local directory.
 
@@ -64,6 +62,7 @@ def do(
 
     Raises:
         IOError: If file cannot be copied after 10 retries
+
     """
     file_pass = False
     counter = 0
@@ -101,13 +100,15 @@ class CopyBackend:
 
     Attributes:
         file_ops: File operations instance (injectable for testing)
+
     """
 
-    def __init__(self, file_ops: Optional[FileOperationsProtocol] = None):
+    def __init__(self, file_ops: FileOperationsProtocol | None = None) -> None:
         """Initialize copy backend.
 
         Args:
             file_ops: Optional injectable file operations for testing.
+
         """
         self.file_ops = file_ops
 
@@ -123,6 +124,7 @@ class CopyBackend:
 
         Returns:
             True if successful
+
         """
         return do(process_parameters, settings_dict, filename, self.file_ops)
 
@@ -138,6 +140,7 @@ class CopyBackend:
 
         Returns:
             True if successful
+
         """
         return self.copy(process_parameters, settings_dict, filename)
 
@@ -147,5 +150,6 @@ class CopyBackend:
 
         Returns:
             File operations instance
+
         """
         return create_file_operations()

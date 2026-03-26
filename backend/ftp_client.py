@@ -6,7 +6,7 @@ that conform to the FTPClientProtocol interface.
 
 import ftplib
 import time
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from backend.protocols import FTPClientProtocol
 from core.structured_logging import (
@@ -27,24 +27,27 @@ class RealFTPClient:
     Attributes:
         use_tls: Whether to use TLS/SSL for the connection
         _connection: The underlying ftplib connection object
+
     """
 
-    def __init__(self, use_tls: bool = False):
+    def __init__(self, *, use_tls: bool = False) -> None:
         """Initialize FTP client.
 
         Args:
             use_tls: If True, use FTP_TLS for secure connections
+
         """
         self.use_tls = use_tls
-        self._connection: Optional[ftplib.FTP | ftplib.FTP_TLS] = None
+        self._connection: ftplib.FTP | ftplib.FTP_TLS | None = None
 
-    def connect(self, host: str, port: int, timeout: Optional[float] = None) -> None:
+    def connect(self, host: str, port: int, timeout: float | None = None) -> None:
         """Connect to FTP server.
 
         Args:
             host: Server hostname or IP address
             port: Server port number
             timeout: Optional connection timeout in seconds
+
         """
         get_or_create_correlation_id()
         start_time = time.perf_counter()
@@ -95,6 +98,7 @@ class RealFTPClient:
 
         Raises:
             ftplib.error_perm: If authentication fails
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -135,6 +139,7 @@ class RealFTPClient:
 
         Raises:
             ftplib.error_perm: If directory doesn't exist or no permission
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -148,6 +153,7 @@ class RealFTPClient:
             cmd: FTP command (e.g., "STOR filename")
             fp: File-like object to read data from
             blocksize: Block size for transfer
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -203,17 +209,18 @@ class RealFTPClient:
             finally:
                 self._connection = None
 
-    def set_pasv(self, passive: bool) -> None:
+    def set_pasv(self, *, passive: bool) -> None:
         """Set passive mode for data transfers.
 
         Args:
             passive: True for passive mode, False for active
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
         self._connection.set_pasv(passive)
 
-    def nlst(self, directory: str = "") -> List[str]:
+    def nlst(self, *, passive: bool) -> list[str]:
         """List files in directory.
 
         Args:
@@ -221,6 +228,7 @@ class RealFTPClient:
 
         Returns:
             List of file names
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -233,6 +241,7 @@ class RealFTPClient:
             cmd: FTP command (e.g., "RETR filename")
             callback: Function to call for each block of data
             blocksize: Block size for transfer
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -274,6 +283,7 @@ class RealFTPClient:
 
         Returns:
             Path of created directory
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -284,6 +294,7 @@ class RealFTPClient:
 
         Args:
             filename: File to delete
+
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
@@ -334,23 +345,24 @@ class MockFTPClient:
         files_sent: List of (cmd, data) tuples from storbinary calls
         directories_changed: List of directory paths from cwd calls
         errors: List of errors to raise on subsequent operations
+
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize mock FTP client with empty tracking lists."""
-        self.connections: List[Tuple[str, int, Optional[float]]] = []
-        self.logins: List[Tuple[str, str]] = []
-        self.files_sent: List[Tuple[str, bytes]] = []
-        self.directories_changed: List[str] = []
-        self.passive_mode_settings: List[bool] = []
-        self.nlst_results: List[str] = []
-        self.directories_created: List[str] = []
-        self.files_deleted: List[str] = []
-        self.files_retrieved: List[Tuple[str, bytes]] = []
-        self.errors: List[Exception] = []
+        self.connections: list[tuple[str, int, float | None]] = []
+        self.logins: list[tuple[str, str]] = []
+        self.files_sent: list[tuple[str, bytes]] = []
+        self.directories_changed: list[str] = []
+        self.passive_mode_settings: list[bool] = []
+        self.nlst_results: list[str] = []
+        self.directories_created: list[str] = []
+        self.files_deleted: list[str] = []
+        self.files_retrieved: list[tuple[str, bytes]] = []
+        self.errors: list[Exception] = []
         self._connected = False
         self._current_error_index = 0
-        self._nlst_return_value: List[str] = []
+        self._nlst_return_value: list[str] = []
         self._file_contents: dict = {}
 
     def _raise_error_if_set(self) -> None:
@@ -360,13 +372,14 @@ class MockFTPClient:
             self._current_error_index += 1
             raise error
 
-    def connect(self, host: str, port: int, timeout: Optional[float] = None) -> None:
+    def connect(self, host: str, port: int, timeout: float | None = None) -> None:
         """Record connection attempt.
 
         Args:
             host: Server hostname
             port: Server port
             timeout: Connection timeout
+
         """
         self._raise_error_if_set()
         self.connections.append((host, port, timeout))
@@ -378,6 +391,7 @@ class MockFTPClient:
         Args:
             user: Username
             password: Password
+
         """
         self._raise_error_if_set()
         self.logins.append((user, password))
@@ -387,6 +401,7 @@ class MockFTPClient:
 
         Args:
             directory: Directory path
+
         """
         self._raise_error_if_set()
         self.directories_changed.append(directory)
@@ -398,6 +413,7 @@ class MockFTPClient:
             cmd: FTP command
             fp: File-like object
             blocksize: Block size (ignored in mock)
+
         """
         self._raise_error_if_set()
         data = fp.read()
@@ -413,15 +429,16 @@ class MockFTPClient:
         """Record close command."""
         self._connected = False
 
-    def set_pasv(self, passive: bool) -> None:
+    def set_pasv(self, *, passive: bool) -> None:
         """Record passive mode setting.
 
         Args:
             passive: Passive mode setting
+
         """
         self.passive_mode_settings.append(passive)
 
-    def nlst(self, directory: str = "") -> List[str]:
+    def nlst(self, *, directory: str = "") -> list[str]:
         """Return mock file listing.
 
         Args:
@@ -429,6 +446,7 @@ class MockFTPClient:
 
         Returns:
             Pre-configured list of files
+
         """
         self._raise_error_if_set()
         self.nlst_results.append(directory)
@@ -441,6 +459,7 @@ class MockFTPClient:
             cmd: FTP command
             callback: Callback function
             blocksize: Block size (ignored in mock)
+
         """
         self._raise_error_if_set()
         filename = cmd.split()[-1] if " " in cmd else cmd
@@ -456,6 +475,7 @@ class MockFTPClient:
 
         Returns:
             Directory path
+
         """
         self._raise_error_if_set()
         self.directories_created.append(directory)
@@ -466,15 +486,17 @@ class MockFTPClient:
 
         Args:
             filename: File to delete
+
         """
         self._raise_error_if_set()
         self.files_deleted.append(filename)
 
-    def set_nlst_return_value(self, files: List[str]) -> None:
+    def set_nlst_return_value(self, files: list[str]) -> None:
         """Set return value for nlst calls.
 
         Args:
             files: List of file names to return
+
         """
         self._nlst_return_value = files
 
@@ -484,6 +506,7 @@ class MockFTPClient:
         Args:
             filename: File name
             content: File contents
+
         """
         self._file_contents[filename] = content
 
@@ -492,6 +515,7 @@ class MockFTPClient:
 
         Args:
             error: Exception to raise
+
         """
         self.errors.append(error)
 
@@ -518,7 +542,9 @@ class MockFTPClient:
         self._file_contents.clear()
 
 
-def create_ftp_client(use_tls: bool = False, mock: bool = False) -> FTPClientProtocol:
+def create_ftp_client(
+    *, use_tls: bool = False, mock: bool = False
+) -> FTPClientProtocol:
     """Factory function to create FTP client.
 
     Args:
@@ -527,6 +553,7 @@ def create_ftp_client(use_tls: bool = False, mock: bool = False) -> FTPClientPro
 
     Returns:
         FTP client instance
+
     """
     if mock:
         return MockFTPClient()

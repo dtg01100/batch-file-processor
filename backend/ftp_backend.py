@@ -7,7 +7,6 @@ injectable client support for testing.
 import ftplib
 import os
 import time
-from typing import Optional
 
 from backend.ftp_client import create_ftp_client
 from backend.protocols import FTPClientProtocol
@@ -26,6 +25,7 @@ def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None
     Args:
         client: FTP client instance
         remote_dir: Remote directory path to ensure exists
+
     """
     if remote_dir and remote_dir != "/":
         path_parts = [
@@ -43,9 +43,10 @@ def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None
 
 
 def _try_tls_connection(
+    *,
     use_tls: bool,
     process_parameters: dict,
-    ftp_client: Optional[FTPClientProtocol],
+    ftp_client: FTPClientProtocol | None,
 ) -> FTPClientProtocol:
     if ftp_client is not None:
         client = ftp_client
@@ -86,6 +87,7 @@ def _handle_ftp_error(
 
     Raises:
         Exception: If all TLS options have been exhausted
+
     """
     if provider_index + 1 == len(use_tls_options):
         raise
@@ -97,7 +99,7 @@ def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
-    ftp_client: Optional[FTPClientProtocol] = None,
+    ftp_client: FTPClientProtocol | None = None,
 ) -> bool:
     """Send a file via FTP/FTPS.
 
@@ -118,6 +120,7 @@ def do(
 
     Raises:
         Exception: If file cannot be sent after 10 retries
+
     """
     file_pass = False
     counter = 0
@@ -143,7 +146,9 @@ def do(
                     try:
                         start_time = time.perf_counter()
                         client = _try_tls_connection(
-                            use_tls, process_parameters, ftp_client
+                            use_tls=use_tls,
+                            process_parameters=process_parameters,
+                            ftp_client=ftp_client,
                         )
                         logger.debug("Sending File %s...", filename_no_path)
 
@@ -232,13 +237,15 @@ class FTPBackend:
 
     Attributes:
         ftp_client: FTP client instance (injectable for testing)
+
     """
 
-    def __init__(self, ftp_client: Optional[FTPClientProtocol] = None):
+    def __init__(self, ftp_client: FTPClientProtocol | None = None) -> None:
         """Initialize FTP backend.
 
         Args:
             ftp_client: Optional injectable FTP client for testing.
+
         """
         self.ftp_client = ftp_client
 
@@ -254,11 +261,12 @@ class FTPBackend:
 
         Returns:
             True if successful
+
         """
         return do(process_parameters, settings_dict, filename, self.ftp_client)
 
     @staticmethod
-    def create_client(use_tls: bool = False) -> FTPClientProtocol:
+    def create_client(*, use_tls: bool = False) -> FTPClientProtocol:
         """Create an FTP client.
 
         Args:
@@ -266,5 +274,6 @@ class FTPBackend:
 
         Returns:
             FTP client instance
+
         """
         return create_ftp_client(use_tls=use_tls)

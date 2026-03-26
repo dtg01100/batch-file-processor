@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core.utils.bool_utils import normalize_bool, to_db_bool
 
@@ -45,10 +45,11 @@ class Table:
         Args:
             conn: SQLite database connection
             name: Name of the table
+
         """
         self._conn = conn
         self._name = name
-        self._boolean_columns: Optional[set] = None
+        self._boolean_columns: set | None = None
 
     _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE = {
         "folders": {
@@ -131,6 +132,7 @@ class Table:
 
         Returns:
             Safely quoted identifier
+
         """
         # Replace any double quotes with two double quotes (SQL standard escaping)
         safe_name = name.replace('"', '""')
@@ -145,6 +147,7 @@ class Table:
 
         Returns:
             Set of column names that should be treated as booleans
+
         """
         if self._boolean_columns is not None:
             return self._boolean_columns
@@ -177,7 +180,7 @@ class Table:
         self._boolean_columns = boolean_cols
         return boolean_cols
 
-    def _row_to_dict(self, row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
+    def _row_to_dict(self, row: sqlite3.Row | None) -> dict[str, Any] | None:
         """Convert a database row to a dictionary.
 
         Converts INTEGER boolean columns (0/1) to Python bool.
@@ -188,6 +191,7 @@ class Table:
 
         Returns:
             Dictionary representation of the row, or None if row is None
+
         """
         if row is None:
             return None
@@ -228,7 +232,7 @@ class Table:
             return to_db_bool(value)
         return self._serialize_value(value)
 
-    def _build_where_clause(self, kwargs: Dict[str, Any]) -> tuple[str, list[Any]]:
+    def _build_where_clause(self, kwargs: dict[str, Any]) -> tuple[str, list[Any]]:
         boolean_cols = self._get_boolean_columns()
         clauses: list[str] = []
         values: list[Any] = []
@@ -265,6 +269,7 @@ class Table:
 
         Returns:
             Value suitable for SQLite binding
+
         """
         # Convert booleans to integers (0/1)
         if isinstance(v, bool):
@@ -287,7 +292,7 @@ class Table:
         except (TypeError, ValueError):
             return str(v)
 
-    def find_one(self, **kwargs) -> Optional[Dict[str, Any]]:
+    def find_one(self, **kwargs) -> dict[str, Any] | None:
         """Find a single record matching the given criteria.
 
         Args:
@@ -298,6 +303,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         if kwargs:
@@ -312,11 +318,11 @@ class Table:
 
     def find(
         self,
-        order_by: Optional[str] = None,
-        _limit: Optional[int] = None,
-        _offset: Optional[int] = None,
+        order_by: str | None = None,
+        _limit: int | None = None,
+        _offset: int | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find all records matching the given criteria.
 
         Args:
@@ -330,6 +336,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         sql = f"SELECT * FROM {quoted_table}"
@@ -357,7 +364,7 @@ class Table:
             if row_dict is not None
         ]
 
-    def all(self) -> List[Dict[str, Any]]:
+    def all(self) -> list[dict[str, Any]]:
         """Get all records from the table.
 
         Returns:
@@ -365,6 +372,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         cur = self._conn.execute(f"SELECT * FROM {quoted_table}")
@@ -375,7 +383,7 @@ class Table:
             if row_dict is not None
         ]
 
-    def insert(self, record: Dict[str, Any]) -> int:
+    def insert(self, record: dict[str, Any]) -> int:
         """Insert a new record into the table.
 
         Args:
@@ -387,6 +395,7 @@ class Table:
         Raises:
             ValueError: If record is empty
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         keys = list(record.keys())
         if not keys:
@@ -414,6 +423,7 @@ class Table:
         Raises:
             ValueError: If records is empty
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         if not records:
             return
@@ -430,7 +440,7 @@ class Table:
         self._conn.executemany(sql, values)
         self._conn.commit()
 
-    def update(self, record: Dict[str, Any], keys: List[str]) -> None:
+    def update(self, record: dict[str, Any], keys: list[str]) -> None:
         """Update an existing record.
 
         Args:
@@ -439,6 +449,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         set_keys = [k for k in record.keys() if k not in keys]
         if not set_keys:
@@ -469,6 +480,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         if not kwargs:
@@ -492,6 +504,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         if kwargs:
@@ -505,7 +518,7 @@ class Table:
         row = cur.fetchone()
         return int(row[0]) if row is not None else 0
 
-    def upsert(self, record: Dict[str, Any], keys: List[str]) -> None:
+    def upsert(self, record: dict[str, Any], keys: list[str]) -> None:
         """Insert or update a record.
 
         If a record matching the key columns exists, updates it.
@@ -517,6 +530,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
@@ -545,6 +559,7 @@ class Table:
         Note:
             This is provided for compatibility with migration code.
             New code should use explicit schema definitions.
+
         """
         # Map type strings to SQLite types
         type_lower = column_type.lower()
@@ -570,7 +585,7 @@ class Table:
             # Column already exists or cannot be added
             pass
 
-    def distinct(self, column: str) -> List[Dict[str, Any]]:
+    def distinct(self, column: str) -> list[dict[str, Any]]:
         """Get distinct values for a column.
 
         Args:
@@ -581,6 +596,7 @@ class Table:
 
         Raises:
             sqlite3.OperationalError: If table or column doesn't exist
+
         """
         quoted_table = self._quote_identifier(self._name)
         sql = f"SELECT DISTINCT * FROM {quoted_table} ORDER BY {self._quote_identifier(column)}"
@@ -611,6 +627,7 @@ class Database:
 
         Args:
             path: Path to the database file, or ":memory:" for in-memory database
+
         """
         self._path = path
         self._conn = sqlite3.connect(path, check_same_thread=False)
@@ -638,15 +655,17 @@ class Database:
 
         Returns:
             The underlying sqlite3.Connection object
+
         """
         return self._conn
 
     @property
-    def tables(self) -> List[str]:
+    def tables(self) -> list[str]:
         """Get list of table names in the database.
 
         Returns:
             List of table names
+
         """
         cur = self._conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -665,6 +684,7 @@ class Database:
 
         Returns:
             Table object for the given name
+
         """
         return Table(self._conn, table_name)
 
@@ -675,7 +695,7 @@ class Database:
         except sqlite3.Error:
             pass
 
-    def query(self, sql: str) -> List[Dict[str, Any]]:
+    def query(self, sql: str) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
 
         Args:
@@ -684,6 +704,7 @@ class Database:
         Returns:
             List of dictionaries representing result rows.
             Returns empty list on error.
+
         """
         try:
             cur = self._conn.execute(sql)
@@ -729,6 +750,7 @@ class Database:
 
         Returns:
             Database object
+
         """
         if path == "":
             path = ":memory:"
@@ -746,6 +768,7 @@ def connect(url: str) -> Database:
 
     Raises:
         ValueError: If URL format is invalid
+
     """
     prefix = "sqlite:///"
     if not isinstance(url, str) or not url.startswith(prefix):

@@ -11,7 +11,8 @@ import datetime
 import os
 import sys
 import traceback
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 from backend.database import sqlite_wrapper
 from core.database import schema
@@ -33,6 +34,7 @@ class DatabaseConnectionProtocol(Protocol):
 
         Returns:
             Table object for the given name
+
         """
         ...
 
@@ -45,7 +47,7 @@ class DatabaseConnectionProtocol(Protocol):
 class TableProtocol(Protocol):
     """Protocol for database table operations."""
 
-    def find_one(self, **kwargs) -> Optional[dict]:
+    def find_one(self, **kwargs) -> dict | None:
         """Find a single record matching criteria."""
         ...
 
@@ -103,6 +105,7 @@ class DatabaseObj:
         ... )
         >>> folder = db.folders_table.find_one(id=1)
         >>> db.close()
+
     """
 
     def __init__(
@@ -111,14 +114,14 @@ class DatabaseObj:
         database_version: str,
         config_folder: str,
         running_platform: str,
-        connection: Optional[DatabaseConnectionProtocol] = None,
-        create_database_func: Optional[callable] = None,
-        migrator_func: Optional[callable] = None,
-        backup_func: Optional[callable] = None,
-        show_error_func: Optional[callable] = None,
-        show_popup_func: Optional[callable] = None,
-        destroy_popup_func: Optional[callable] = None,
-    ):
+        connection: DatabaseConnectionProtocol | None = None,
+        create_database_func: Callable[..., Any] | None = None,
+        migrator_func: Callable[..., Any] | None = None,
+        backup_func: Callable[..., Any] | None = None,
+        show_error_func: Callable[..., Any] | None = None,
+        show_popup_func: Callable[..., Any] | None = None,
+        destroy_popup_func: Callable[..., Any] | None = None,
+    ) -> None:
         """Initialize the database object.
 
         Args:
@@ -133,6 +136,7 @@ class DatabaseObj:
             show_error_func: Optional function to show error dialogs
             show_popup_func: Optional function to show popup dialogs
             destroy_popup_func: Optional function to destroy popup dialogs
+
         """
         self._database_path = database_path
         self._database_version = database_version
@@ -229,6 +233,7 @@ class DatabaseObj:
 
         Raises:
             SystemExit: If database version is incompatible
+
         """
         db_version = self.database_connection["version"]
         db_version_dict = db_version.find_one(id=1)
@@ -368,6 +373,7 @@ class DatabaseObj:
 
         Returns:
             Tuple of (is_valid, list_of_errors)
+
         """
         errors = []
 
@@ -422,6 +428,7 @@ class DatabaseObj:
 
         Raises:
             Exception: Re-raises the original exception after logging
+
         """
         # Log full traceback to file before re-raising
         try:
@@ -451,6 +458,7 @@ class DatabaseObj:
 
         Raises:
             SystemExit: Always exits the program
+
         """
         self._handle_critical_error(error)
 
@@ -460,10 +468,11 @@ class DatabaseObj:
 
         Returns:
             The database connection object
+
         """
         return self.database_connection
 
-    def query(self, sql: str) -> List[Dict[str, Any]]:
+    def query(self, sql: str) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
 
         This is a convenience method that delegates to the underlying
@@ -475,6 +484,7 @@ class DatabaseObj:
         Returns:
             List of dictionaries representing result rows.
             Returns empty list on error.
+
         """
         return self.database_connection.query(sql)
 
@@ -516,7 +526,7 @@ class DatabaseObj:
         self.close()
         return False  # Don't suppress exceptions
 
-    def get_folder(self, folder_name: str) -> Optional[dict]:
+    def get_folder(self, folder_name: str) -> dict | None:
         """Get a folder configuration by name.
 
         Args:
@@ -524,6 +534,7 @@ class DatabaseObj:
 
         Returns:
             Folder configuration dict or None if not found
+
         """
         return self.folders_table.find_one(folder_name=folder_name)
 
@@ -532,10 +543,11 @@ class DatabaseObj:
 
         Returns:
             List of all folder configuration dicts
+
         """
         return list(self.folders_table.all())
 
-    def get_setting(self, key: str) -> Optional[Any]:
+    def get_setting(self, key: str) -> Any | None:
         """Get a setting value by key.
 
         Args:
@@ -543,6 +555,7 @@ class DatabaseObj:
 
         Returns:
             Setting value or None if not found
+
         """
         row = self.settings.find_one(key=key)
         return row["value"] if row else None
@@ -553,14 +566,16 @@ class DatabaseObj:
         Args:
             key: Setting key
             value: Setting value
+
         """
         self.settings.upsert({"key": key, "value": value}, ["key"])
 
-    def get_default_settings(self) -> Optional[dict]:
+    def get_default_settings(self) -> dict | None:
         """Get the default settings from administrative table.
 
         Returns:
             Default settings dict or None if not found
+
         """
         return self.oversight_and_defaults.find_one(id=1)
 
@@ -569,6 +584,7 @@ class DatabaseObj:
 
         Args:
             settings: Settings dict to update
+
         """
         settings["id"] = 1
         self.oversight_and_defaults.update(settings, ["id"])
@@ -578,7 +594,7 @@ class DatabaseObj:
     # ------------------------------------------------------------------
 
     def _get_singleton_or_default(
-        self, table_name: str, table_obj: Any, default_factory: callable
+        self, table_name: str, table_obj: Any, default_factory: Callable[..., Any]
     ) -> dict:
         """Get a singleton record by id=1, creating with defaults if missing.
 
@@ -589,6 +605,7 @@ class DatabaseObj:
 
         Returns:
             The singleton record dictionary
+
         """
         record = table_obj.find_one(id=1)
         if record is None:
@@ -654,13 +671,14 @@ class DatabaseObj:
 
         Raises:
             ValueError: If folder is not found
+
         """
         folder = self.folders_table.find_one(**kwargs)
         if folder is None:
             raise ValueError(f"Required folder not found with criteria: {kwargs}")
         return folder
 
-    def find_folder_optional(self, **kwargs) -> Optional[dict]:
+    def find_folder_optional(self, **kwargs) -> dict | None:
         """Find a folder configuration, returning None if not found.
 
         This is an explicit wrapper that documents the intent that
@@ -671,5 +689,6 @@ class DatabaseObj:
 
         Returns:
             Folder configuration dictionary or None
+
         """
         return self.folders_table.find_one(**kwargs)

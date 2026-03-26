@@ -6,7 +6,6 @@ with injectable client support for testing.
 
 import os
 import time
-from typing import Optional
 
 from backend.http_client import create_http_client
 from backend.protocols import HTTPClientProtocol
@@ -27,6 +26,7 @@ def _parse_headers(headers_string: str) -> dict[str, str]:
 
     Returns:
         Dictionary of header name to value mappings
+
     """
     headers: dict[str, str] = {}
     if not headers_string:
@@ -51,6 +51,7 @@ def _build_url_with_query(url: str, api_key: str) -> str:
 
     Returns:
         URL with api_key query parameter appended
+
     """
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}api_key={api_key}"
@@ -65,6 +66,7 @@ def _add_bearer_auth(headers: dict[str, str], api_key: str) -> dict[str, str]:
 
     Returns:
         Updated headers with Authorization header added
+
     """
     headers = dict(headers)
     headers["Authorization"] = f"Bearer {api_key}"
@@ -75,7 +77,7 @@ def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
-    http_client: Optional[HTTPClientProtocol] = None,
+    http_client: HTTPClientProtocol | None = None,
 ) -> bool:
     """Send a file via HTTP POST.
 
@@ -96,6 +98,7 @@ def do(
 
     Raises:
         Exception: If file cannot be sent after 10 retries
+
     """
     file_pass = False
     counter = 0
@@ -250,13 +253,15 @@ class HTTPBackend:
 
     Attributes:
         http_client: HTTP client instance (injectable for testing)
+
     """
 
-    def __init__(self, http_client: Optional[HTTPClientProtocol] = None):
+    def __init__(self, http_client: HTTPClientProtocol | None = None) -> None:
         """Initialize HTTP backend.
 
         Args:
             http_client: Optional injectable HTTP client for testing.
+
         """
         self.http_client = http_client
 
@@ -272,6 +277,7 @@ class HTTPBackend:
 
         Returns:
             True if successful
+
         """
         return do(process_parameters, settings_dict, filename, self.http_client)
 
@@ -284,5 +290,6 @@ class HTTPBackend:
 
         Returns:
             HTTP client instance
+
         """
         return create_http_client(timeout=timeout)

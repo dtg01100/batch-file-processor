@@ -10,7 +10,6 @@ import os
 import re
 import time
 from email.message import EmailMessage
-from typing import Optional
 
 from backend.protocols import SMTPClientProtocol
 from backend.smtp_client import create_smtp_client
@@ -32,7 +31,7 @@ def _is_network_unreachable(error: Exception) -> bool:
     Traverses wrapped exceptions to catch nested socket errors.
     """
     visited: set[int] = set()
-    current: Optional[BaseException] = error
+    current: BaseException | None = error
 
     while current is not None and id(current) not in visited:
         visited.add(id(current))
@@ -53,7 +52,7 @@ def do(
     process_parameters: dict,
     settings: dict,
     filename: str,
-    smtp_client: Optional[SMTPClientProtocol] = None,
+    smtp_client: SMTPClientProtocol | None = None,
 ) -> bool:
     """Send a file via email.
 
@@ -76,6 +75,7 @@ def do(
 
     Raises:
         Exception: If email cannot be sent after 10 retries
+
     """
     file_pass = False
     counter = 0
@@ -235,13 +235,15 @@ class EmailBackend:
 
     Attributes:
         smtp_client: SMTP client instance (injectable for testing)
+
     """
 
-    def __init__(self, smtp_client: Optional[SMTPClientProtocol] = None):
+    def __init__(self, smtp_client: SMTPClientProtocol | None = None) -> None:
         """Initialize email backend.
 
         Args:
             smtp_client: Optional injectable SMTP client for testing.
+
         """
         self.smtp_client = smtp_client
 
@@ -255,11 +257,12 @@ class EmailBackend:
 
         Returns:
             True if successful
+
         """
         return do(process_parameters, settings, filename, self.smtp_client)
 
     @staticmethod
-    def create_client(config: Optional[dict] = None) -> SMTPClientProtocol:
+    def create_client(config: dict | None = None) -> SMTPClientProtocol:
         """Create an SMTP client.
 
         Args:
@@ -267,5 +270,6 @@ class EmailBackend:
 
         Returns:
             SMTP client instance
+
         """
         return create_smtp_client(config=config)

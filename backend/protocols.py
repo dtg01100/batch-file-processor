@@ -6,7 +6,7 @@ enabling dependency injection and testability for send backends.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import requests
@@ -24,13 +24,14 @@ class FTPClientProtocol(Protocol):
     to enable testing without actual FTP connections.
     """
 
-    def connect(self, host: str, port: int, timeout: Optional[float] = None) -> None:
+    def connect(self, host: str, port: int, timeout: float | None = None) -> None:
         """Connect to FTP server.
 
         Args:
             host: Server hostname or IP address
             port: Server port number
             timeout: Optional connection timeout in seconds
+
         """
         ...
 
@@ -40,6 +41,7 @@ class FTPClientProtocol(Protocol):
         Args:
             user: Username for authentication
             password: Password for authentication
+
         """
         ...
 
@@ -48,6 +50,7 @@ class FTPClientProtocol(Protocol):
 
         Args:
             directory: Directory path to change to
+
         """
         ...
 
@@ -58,6 +61,7 @@ class FTPClientProtocol(Protocol):
             cmd: FTP command (e.g., "STOR filename")
             fp: File-like object to read data from
             blocksize: Block size for transfer
+
         """
         ...
 
@@ -69,11 +73,12 @@ class FTPClientProtocol(Protocol):
         """Close connection unconditionally."""
         ...
 
-    def set_pasv(self, passive: bool) -> None:
+    def set_pasv(self, *, passive: bool) -> None:
         """Set passive mode for data transfers.
 
         Args:
             passive: True for passive mode, False for active
+
         """
         ...
 
@@ -92,6 +97,7 @@ class SMTPClientProtocol(Protocol):
         Args:
             host: Server hostname or IP address
             port: Server port number
+
         """
         ...
 
@@ -105,6 +111,7 @@ class SMTPClientProtocol(Protocol):
         Args:
             user: Username for authentication
             password: Password for authentication
+
         """
         ...
 
@@ -118,6 +125,7 @@ class SMTPClientProtocol(Protocol):
 
         Returns:
             Dictionary of rejected recipients (empty if all accepted)
+
         """
         ...
 
@@ -129,6 +137,7 @@ class SMTPClientProtocol(Protocol):
 
         Returns:
             Dictionary of rejected recipients (empty if all accepted)
+
         """
         ...
 
@@ -149,6 +158,7 @@ class SMTPClientProtocol(Protocol):
 
         Args:
             level: Debug level (0 = no output, 1 = commands, 2 = commands + data)
+
         """
         ...
 
@@ -167,6 +177,7 @@ class FileOperationsProtocol(Protocol):
         Args:
             src: Source file path
             dst: Destination file path
+
         """
         ...
 
@@ -178,15 +189,17 @@ class FileOperationsProtocol(Protocol):
 
         Returns:
             True if path exists, False otherwise
+
         """
         ...
 
-    def makedirs(self, path: str, exist_ok: bool = False) -> None:
+    def makedirs(self, path: str, *, exist_ok: bool = False) -> None:
         """Create directory and all parent directories.
 
         Args:
             path: Directory path to create
             exist_ok: If True, don't raise error if directory exists
+
         """
         ...
 
@@ -195,6 +208,7 @@ class FileOperationsProtocol(Protocol):
 
         Args:
             path: File path to remove
+
         """
         ...
 
@@ -203,6 +217,7 @@ class FileOperationsProtocol(Protocol):
 
         Args:
             path: Directory path to remove
+
         """
         ...
 
@@ -214,6 +229,7 @@ class FileOperationsProtocol(Protocol):
 
         Returns:
             Base name (final component) of path
+
         """
         ...
 
@@ -225,6 +241,7 @@ class FileOperationsProtocol(Protocol):
 
         Returns:
             Directory name of path
+
         """
         ...
 
@@ -236,6 +253,7 @@ class FileOperationsProtocol(Protocol):
 
         Returns:
             Joined path
+
         """
         ...
 
@@ -267,5 +285,6 @@ class HTTPClientProtocol(Protocol):
 
         Returns:
             Response object
+
         """
         ...
