@@ -1,6 +1,6 @@
 """Safe parsing utilities for converting strings to numbers with defaults."""
 
-from typing import Optional, Union
+from typing import Union
 
 
 def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:

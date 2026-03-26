@@ -11,6 +11,7 @@ import pkgutil
 from typing import Any, Dict, List, Optional, Type
 
 from core.structured_logging import get_logger
+
 from ..models.folder_configuration import ConvertFormat
 from .configuration_plugin import ConfigurationPlugin
 from .plugin_base import PluginBase

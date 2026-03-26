@@ -43,9 +43,11 @@ def convert_to_price_decimal(value):
 def detect_invoice_is_credit(edi_process):
     from core.edi.edi_parser import capture_records
 
+    first_line = None
     try:
         with open(edi_process, encoding="utf-8") as work_file:  # open input file
-            fields = capture_records(work_file.readline())
+            first_line = work_file.readline()
+            fields = capture_records(first_line)
     except (OSError, IOError) as e:
         log_with_context(
             logger,
@@ -64,6 +66,10 @@ def detect_invoice_is_credit(edi_process):
             operation="detect_invoice_is_credit",
             context={"file_path": edi_process},
         )
+        if first_line and first_line[0] not in ("A", " "):
+            raise ValueError(
+                "EDI file does not start with A record at beginning of file"
+            )
         return False
 
     if fields["record_type"] != "A":
