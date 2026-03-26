@@ -1171,7 +1171,8 @@ def upgrade_database(
                 # Do NOT touch folders where process_edi was explicitly set to 0;
                 # those folders intentionally disabled conversion and must keep
                 # passing through.
-                cursor.execute(f"""
+                cursor.execute(
+                    f"""
                     UPDATE {table}
                     SET process_edi = 1,
                         tweak_edi   = 0
@@ -1179,7 +1180,8 @@ def upgrade_database(
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                       AND (process_edi IS NULL OR process_edi != 0)
-                """)
+                """
+                )
             except Exception:
                 pass  # Column may not exist in older schemas
 
@@ -1187,21 +1189,24 @@ def upgrade_database(
                 # Case A (disabled): real format stored but processing was
                 # explicitly off.  Only retire the deprecated tweak_edi flag;
                 # leave process_edi=0 and convert_to_format untouched.
-                cursor.execute(f"""
+                cursor.execute(
+                    f"""
                     UPDATE {table}
                     SET tweak_edi = 0
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                       AND process_edi = 0
-                """)
+                """
+                )
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
                 # Case B (enabled): no format stored – the intent was EDI tweaks.
                 # Only promote when processing was enabled or unset.
-                cursor.execute(f"""
+                cursor.execute(
+                    f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
                         process_edi       = 1,
@@ -1209,20 +1214,23 @@ def upgrade_database(
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                       AND (process_edi IS NULL OR process_edi != 0)
-                """)
+                """
+                )
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
                 # Case B (disabled): no format stored and processing was
                 # explicitly off.  Only retire the deprecated tweak_edi flag.
-                cursor.execute(f"""
+                cursor.execute(
+                    f"""
                     UPDATE {table}
                     SET tweak_edi = 0
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                       AND process_edi = 0
-                """)
+                """
+                )
             except Exception:
                 pass  # Column may not exist in older schemas
 
@@ -1237,22 +1245,26 @@ def upgrade_database(
         cursor = database_connection.raw_connection.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE folders
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
-            """)
+            """
+            )
         except Exception:
             pass
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE administrative
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
-            """)
+            """
+            )
         except Exception:
             pass
 

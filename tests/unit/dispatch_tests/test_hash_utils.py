@@ -155,8 +155,9 @@ class TestGenerateFileHash:
 
     def test_generate_hash_uses_exact_max_retries_for_failures(self):
         """Regression: generate_file_hash should attempt exactly max_retries times on failure."""
-        with patch("dispatch.hash_utils.open", side_effect=OSError("fail")) as mock_open, patch(
-            "dispatch.hash_utils.time.sleep"
+        with (
+            patch("dispatch.hash_utils.open", side_effect=OSError("fail")) as mock_open,
+            patch("dispatch.hash_utils.time.sleep"),
         ):
             with pytest.raises(OSError, match="fail"):
                 generate_file_hash("/tmp/nonexistent", max_retries=3)
@@ -389,6 +390,8 @@ class TestGenerateFileHashRetryCount:
             # attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> attempt 4 succeeds
             # But with the fix: attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> then raise
             # So with 1 failure, we should have 2 attempts total (initial + 1 retry)
-            assert call_count[0] == 2, f"Expected 2 attempts (1 fail + 1 success), got {call_count[0]}"
+            assert (
+                call_count[0] == 2
+            ), f"Expected 2 attempts (1 fail + 1 success), got {call_count[0]}"
         finally:
             os.unlink(temp_path)

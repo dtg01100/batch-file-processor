@@ -17,9 +17,6 @@ from datetime import datetime
 from decimal import Decimal
 
 from core.database import create_query_runner
-from core.structured_logging import get_logger
-
-logger = get_logger(__name__)
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
@@ -36,12 +33,15 @@ from core.edi.upc_utils import (
 from core.edi.upc_utils import (
     convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
 )
+from core.structured_logging import get_logger
 from core.utils.date_utils import (
     dactime_from_datetime,  # noqa: F401
     dactime_from_invtime,  # noqa: F401
     datetime_from_dactime,  # noqa: F401
     datetime_from_invtime,  # noqa: F401
 )
+
+logger = get_logger(__name__)
 
 
 # ============================================================================

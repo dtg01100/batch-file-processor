@@ -75,8 +75,7 @@ class FileProcessor:
             was_split=normalize_bool(folder.get("split_edi", False)),
             was_converted=file_result.converted,
             was_tweaked=(
-                str(folder.get("convert_to_format", "")).strip().lower()
-                == "tweaks"
+                str(folder.get("convert_to_format", "")).strip().lower() == "tweaks"
             ),
             files_sent=file_result.sent,
             checksum=file_result.checksum,

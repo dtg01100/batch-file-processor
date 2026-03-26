@@ -1235,7 +1235,9 @@ class TestAppSmokeActions:
 class TestEditFoldersDialogStress:
     """Stress tests for EditFoldersDialog to find robustness issues."""
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_sparse_config_tweak_edi_crash_prevention(self, qtbot):
         """Test that switching to Tweak EDI with missing config keys doesn't crash.
 
@@ -1272,7 +1274,9 @@ class TestEditFoldersDialogStress:
         assert dialog._tweak_upc_target_length.text() == "11"
         assert dialog._tweak_override_upc_level.currentText() == "1"
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_malformed_types_in_config(self, qtbot):
         """Test that malformed data types in config are handled gracefully."""
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog

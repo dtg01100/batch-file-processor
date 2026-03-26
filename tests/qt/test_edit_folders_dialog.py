@@ -1079,9 +1079,9 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         # The convert_formats_var key should be removed since it's part of Convert EDI
-        assert "convert_formats_var" not in dialog._fields, (
-            "convert_formats_var should be removed when unchecking Convert EDI"
-        )
+        assert (
+            "convert_formats_var" not in dialog._fields
+        ), "convert_formats_var should be removed when unchecking Convert EDI"
 
     def test_clear_convert_sub_removes_field_references(
         self, qtbot, sample_folder_config
@@ -1124,9 +1124,9 @@ class TestWidgetCleanupAndLifecycle:
         )
 
         # Verify upc_var_check was cleaned up (ScannerWare doesn't use it)
-        assert "upc_var_check" not in dialog._fields, (
-            "upc_var_check should be removed when switching from CSV format"
-        )
+        assert (
+            "upc_var_check" not in dialog._fields
+        ), "upc_var_check should be removed when switching from CSV format"
 
     def test_switching_from_tweaks_to_do_nothing_removes_plugin_generator_refs(
         self, qtbot, sample_folder_config, capsys
@@ -1156,9 +1156,9 @@ class TestWidgetCleanupAndLifecycle:
         dialog._convert_format_combo.setCurrentText("Tweaks")
         # handle_convert_format_changed is synchronous; key is present immediately.
         dialog.dynamic_edi_builder.handle_convert_format_changed("Tweaks")
-        assert "plugin_config_tweaks_configuration_generator" in dialog._fields, (
-            "Tweaks plugin form was not built by handle_convert_format_changed"
-        )
+        assert (
+            "plugin_config_tweaks_configuration_generator" in dialog._fields
+        ), "Tweaks plugin form was not built by handle_convert_format_changed"
 
         dialog._edi_options_check.setChecked(False)
         qtbot.waitUntil(

@@ -41,7 +41,6 @@ Backward Compatibility:
 """
 
 import csv
-import logging
 import os
 from datetime import datetime
 from decimal import Decimal

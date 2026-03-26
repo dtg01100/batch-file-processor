@@ -75,9 +75,11 @@ def test_process_directories_writes_validation_report_when_enabled(
 
     app._utils_module = SimpleNamespace(
         do_clear_old_files=lambda *_: None,
-        normalize_bool=lambda v: bool(v)
-        if isinstance(v, bool)
-        else str(v).strip().lower() in {"true", "1", "yes", "on"},
+        normalize_bool=lambda v: (
+            bool(v)
+            if isinstance(v, bool)
+            else str(v).strip().lower() in {"true", "1", "yes", "on"}
+        ),
     )
 
     app._database = MagicMock()
@@ -98,12 +100,18 @@ def test_process_directories_writes_validation_report_when_enabled(
 
     folders_table = MagicMock()
     folders_table.count.return_value = 1
-    folders_table.find.return_value = [{"id": 1, "alias": "A", "folder_name": str(tmp_path)}]
+    folders_table.find.return_value = [
+        {"id": 1, "alias": "A", "folder_name": str(tmp_path)}
+    ]
 
     monkeypatch.setattr("dispatch.DispatchOrchestrator", _FakeOrchestrator)
-    monkeypatch.setattr("dispatch.pipeline.validator.EDIValidationStep", _FakeValidationStep)
+    monkeypatch.setattr(
+        "dispatch.pipeline.validator.EDIValidationStep", _FakeValidationStep
+    )
     monkeypatch.setattr("dispatch.pipeline.splitter.EDISplitterStep", _FakeSplitterStep)
-    monkeypatch.setattr("dispatch.pipeline.converter.EDIConverterStep", _FakeConverterStep)
+    monkeypatch.setattr(
+        "dispatch.pipeline.converter.EDIConverterStep", _FakeConverterStep
+    )
     monkeypatch.setattr("dispatch.pipeline.tweaker.EDITweakerStep", _FakeTweakerStep)
 
     coordinator = QtRunCoordinator(app)
@@ -116,5 +124,7 @@ def test_process_directories_writes_validation_report_when_enabled(
     assert "EDI Validation Report" in validator_text
     assert "Critical validation error" in validator_text
 
-    inserted_logs = [c.args[0]["log"] for c in app._database.emails_table.insert.call_args_list]
+    inserted_logs = [
+        c.args[0]["log"] for c in app._database.emails_table.insert.call_args_list
+    ]
     assert any("Validator Log" in log_path for log_path in inserted_logs)

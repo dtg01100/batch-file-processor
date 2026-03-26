@@ -1424,9 +1424,9 @@ class TestEstoreEinvoiceGenericFilenameRegression(TestEstoreEinvoiceGenericFixtu
             sample_upc_lut,
         )
 
-        assert os.path.dirname(result) == str(out_dir), (
-            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
-        )
+        assert os.path.dirname(result) == str(
+            out_dir
+        ), f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
 
 
 if __name__ == "__main__":

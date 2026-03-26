@@ -166,7 +166,9 @@ class Theme:
         """Return an absolute path for a theme asset located under interface/qt/assets."""
         # Qt stylesheet url(...) parsing is most reliable with forward slashes,
         # especially on Windows where backslashes can be interpreted as escapes.
-        return (Path(__file__).resolve().parent / "assets" / filename).resolve().as_posix()
+        return (
+            (Path(__file__).resolve().parent / "assets" / filename).resolve().as_posix()
+        )
 
     @staticmethod
     def get_button_stylesheet(variant="default"):

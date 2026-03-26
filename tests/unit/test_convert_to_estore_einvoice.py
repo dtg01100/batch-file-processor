@@ -1207,7 +1207,9 @@ class TestEstoreEinvoiceShipperModeRegression(TestEstoreEinvoiceFixtures):
             rows = list(reader)
 
         d_rows = [r for r in rows if r[0] == "D"]
-        assert len(d_rows) == 2, f"Expected 2 D rows (parent + child), got {len(d_rows)}"
+        assert (
+            len(d_rows) == 2
+        ), f"Expected 2 D rows (parent + child), got {len(d_rows)}"
 
         detail_types = {r[1] for r in d_rows}
         assert "D" in detail_types, "Shipper parent must have Detail Type 'D'"
@@ -1287,6 +1289,6 @@ class TestEstoreEinvoiceFilenameRegression(TestEstoreEinvoiceFixtures):
             sample_upc_lut,
         )
 
-        assert os.path.dirname(result) == str(out_dir), (
-            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
-        )
+        assert os.path.dirname(result) == str(
+            out_dir
+        ), f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"

@@ -630,7 +630,6 @@ class TestPluginFormatAlignment:
         is in SUPPORTED_FORMATS but has no plugin, users won't see it in the UI
         dropdown but could still trigger it via database values.
         """
-        from interface.models.folder_configuration import ConvertFormat
         from interface.plugins.plugin_manager import PluginManager
 
         manager = PluginManager()

@@ -597,7 +597,9 @@ class TestMigrationContents:
         # Folder 1: process_edi=0 must stay 0 — only tweak_edi is cleared
         assert folders[0]["process_edi"] == 0, "process_edi=0 must not be promoted to 1"
         assert folders[0]["tweak_edi"] == 0
-        assert folders[0]["convert_to_format"] == "csv", "convert_to_format must be unchanged"
+        assert (
+            folders[0]["convert_to_format"] == "csv"
+        ), "convert_to_format must be unchanged"
         # Folder 2: process_edi=0, empty format — tweak_edi cleared, no format added
         assert folders[1]["process_edi"] == 0, "process_edi=0 must not be promoted to 1"
         assert folders[1]["tweak_edi"] == 0

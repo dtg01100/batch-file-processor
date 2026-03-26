@@ -9,12 +9,12 @@ import hashlib
 import os
 from typing import Any, Callable, Optional
 
-from core.structured_logging import get_logger
 from core.ports.repositories import (
     IFolderRepository,
     IProcessedFilesRepository,
     ISettingsRepository,
 )
+from core.structured_logging import get_logger
 from interface.services.progress_service import NullProgressCallback, ProgressCallback
 
 logger = get_logger(__name__)

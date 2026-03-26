@@ -28,12 +28,12 @@ from interface.plugins.simplified_csv_configuration_plugin import (
 from interface.plugins.stewarts_custom_configuration_plugin import (
     StewartsCustomConfigurationPlugin,
 )
+from interface.plugins.tweaks_configuration_plugin import (
+    TweaksConfigurationPlugin,
+)
 from interface.plugins.validation_framework import ValidationResult
 from interface.plugins.yellowdog_csv_configuration_plugin import (
     YellowDogCSVConfigurationPlugin,
-)
-from interface.plugins.tweaks_configuration_plugin import (
-    TweaksConfigurationPlugin,
 )
 
 PLUGIN_CASES = [
@@ -292,9 +292,9 @@ def test_tweaks_legacy_field_map_covers_all_known_columns():
     # the TweaksConfigurationPlugin field names.
     plugin_field_names = {f.name for f in TweaksConfigurationPlugin.get_config_fields()}
     for legacy_col, plugin_field in mapping.items():
-        assert isinstance(legacy_col, str) and legacy_col, (
-            f"Legacy column key must be a non-empty string: {legacy_col!r}"
-        )
+        assert (
+            isinstance(legacy_col, str) and legacy_col
+        ), f"Legacy column key must be a non-empty string: {legacy_col!r}"
         assert plugin_field in plugin_field_names, (
             f"Legacy column '{legacy_col}' maps to '{plugin_field}' "
             f"which is not a TweaksConfigurationPlugin field. "

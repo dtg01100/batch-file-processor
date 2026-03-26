@@ -477,7 +477,9 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
         assert "FTP:" in message
         assert "Email:" in message
 
-    @pytest.mark.skip(reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead")
+    @pytest.mark.skip(
+        reason="Tweak EDI dropdown option removed - use Convert EDI with Tweaks format instead"
+    )
     def test_dynamic_edi_controls_remain_focusable_after_mode_change(self, qtbot):
         dialog = _make_dialog(
             qtbot,

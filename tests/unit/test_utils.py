@@ -205,9 +205,9 @@ class TestFromDbBool:
     def test_return_type_is_bool(self):
         for value in ["True", "False", 1, 0, "1", "0", None]:
             result = utils.from_db_bool(value)
-            assert type(result) is bool, (
-                f"Expected bool for {value!r}, got {type(result).__name__}"
-            )
+            assert (
+                type(result) is bool
+            ), f"Expected bool for {value!r}, got {type(result).__name__}"
 
 
 # =============================================================================

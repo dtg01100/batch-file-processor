@@ -123,6 +123,7 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
     if line.startswith("A"):
         if len(line) < 33:
             import logging
+
             logging.getLogger(__name__).debug(
                 "A record line too short: expected >=33 chars, got %d", len(line)
             )
@@ -137,6 +138,7 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
     elif line.startswith("B"):
         if len(line) < 70:
             import logging
+
             logging.getLogger(__name__).debug(
                 "B record line too short: expected >=70 chars, got %d", len(line)
             )
@@ -157,6 +159,7 @@ def capture_records(line: str, parser=None) -> Optional[dict]:
     elif line.startswith("C"):
         if len(line) < 38:
             import logging
+
             logging.getLogger(__name__).debug(
                 "C record line too short: expected >=38 chars, got %d", len(line)
             )

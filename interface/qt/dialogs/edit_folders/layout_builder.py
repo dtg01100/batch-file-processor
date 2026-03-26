@@ -11,7 +11,6 @@ from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QScrollArea,
     QVBoxLayout,

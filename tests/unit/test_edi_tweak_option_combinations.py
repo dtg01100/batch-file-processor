@@ -11,15 +11,15 @@ Tests cover:
 - Edge cases and boundary conditions
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from dispatch.pipeline.tweaker import EDITweakerStep
 from core.edi.edi_tweaker import EDITweaker
-import logging
+from dispatch.pipeline.tweaker import EDITweakerStep
 
 
 class TestEDITweakBooleanCombinations:

@@ -335,9 +335,7 @@ class TestHTTPBackend:
         assert "file" in files
         assert files["file"][0] == basename
 
-    def test_http_post_uses_custom_field_name(
-        self, sample_settings_dict, sample_file
-    ):
+    def test_http_post_uses_custom_field_name(self, sample_settings_dict, sample_file):
         """http_backend.do() uses the configured field_name for the file."""
         from backend import http_backend
         from backend.http_client import MockHTTPClient
@@ -357,9 +355,7 @@ class TestHTTPBackend:
         url, data, files, headers = mock_client.posts[0]
         assert "my_custom_field" in files
 
-    def test_http_post_with_bearer_auth(
-        self, sample_settings_dict, sample_file
-    ):
+    def test_http_post_with_bearer_auth(self, sample_settings_dict, sample_file):
         """http_backend.do() adds Bearer token when auth_type is 'bearer'."""
         from backend import http_backend
         from backend.http_client import MockHTTPClient
@@ -382,9 +378,7 @@ class TestHTTPBackend:
         assert "Authorization" in headers
         assert headers["Authorization"] == "Bearer my-secret-token"
 
-    def test_http_post_with_query_auth(
-        self, sample_settings_dict, sample_file
-    ):
+    def test_http_post_with_query_auth(self, sample_settings_dict, sample_file):
         """http_backend.do() appends api_key as query param when auth_type is 'query'."""
         from backend import http_backend
         from backend.http_client import MockHTTPClient
@@ -405,9 +399,7 @@ class TestHTTPBackend:
         url, data, files, headers = mock_client.posts[0]
         assert "api_key=my-api-key" in url
 
-    def test_http_post_parses_custom_headers(
-        self, sample_settings_dict, sample_file
-    ):
+    def test_http_post_parses_custom_headers(self, sample_settings_dict, sample_file):
         """http_backend.do() parses newline-separated headers correctly."""
         from backend import http_backend
         from backend.http_client import MockHTTPClient

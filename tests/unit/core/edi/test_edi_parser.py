@@ -423,7 +423,9 @@ class TestRecordIntegration:
     def test_capture_records_truncated_b_record_with_partial_parent(self):
         """Regression: B record with parent but less than 76 chars should return partial parent."""
         # 70-75 chars: has all required fields but parent is truncated
-        line_75 = "B00123456789Test Item Description    123456001234010000010000500123     \n"
+        line_75 = (
+            "B00123456789Test Item Description    123456001234010000010000500123     \n"
+        )
         result = capture_records(line_75)
 
         assert result is not None

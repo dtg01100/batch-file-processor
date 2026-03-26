@@ -81,9 +81,9 @@ class TestSearchWidgetContrast:
         bg_color = QColor(Theme.BACKGROUND)
         ratio = contrast_ratio(fg_color, bg_color)
 
-        assert ratio >= 4.5, (
-            f"Search entry focus state contrast {ratio:.2f}:1 is below WCAG AA 4.5:1"
-        )
+        assert (
+            ratio >= 4.5
+        ), f"Search entry focus state contrast {ratio:.2f}:1 is below WCAG AA 4.5:1"
 
 
 @pytest.mark.qt

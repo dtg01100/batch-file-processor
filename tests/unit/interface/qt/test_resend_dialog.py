@@ -222,15 +222,47 @@ class TestResendDialogEdgeCases:
         mock_service.has_processed_files.return_value = True
 
         first_page = [
-            {"id": 1, "folder_id": 1, "folder_alias": "F", "file_name": "f1", "resend_flag": False, "sent_date_time": "2025-01-01T10:00:00"},
-            {"id": 2, "folder_id": 1, "folder_alias": "F", "file_name": "f2", "resend_flag": False, "sent_date_time": "2025-01-02T10:00:00"},
+            {
+                "id": 1,
+                "folder_id": 1,
+                "folder_alias": "F",
+                "file_name": "f1",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-01T10:00:00",
+            },
+            {
+                "id": 2,
+                "folder_id": 1,
+                "folder_alias": "F",
+                "file_name": "f2",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-02T10:00:00",
+            },
         ]
         second_page = [
-            {"id": 3, "folder_id": 1, "folder_alias": "F", "file_name": "f3", "resend_flag": False, "sent_date_time": "2025-01-03T10:00:00"},
-            {"id": 4, "folder_id": 1, "folder_alias": "F", "file_name": "f4", "resend_flag": False, "sent_date_time": "2025-01-04T10:00:00"},
+            {
+                "id": 3,
+                "folder_id": 1,
+                "folder_alias": "F",
+                "file_name": "f3",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-03T10:00:00",
+            },
+            {
+                "id": 4,
+                "folder_id": 1,
+                "folder_alias": "F",
+                "file_name": "f4",
+                "resend_flag": False,
+                "sent_date_time": "2025-01-04T10:00:00",
+            },
         ]
 
-        mock_service.get_all_files_for_resend.side_effect = [first_page, second_page, []]
+        mock_service.get_all_files_for_resend.side_effect = [
+            first_page,
+            second_page,
+            [],
+        ]
 
         monkeypatch.setattr(ResendDialog, "PAGE_SIZE", 2)
 

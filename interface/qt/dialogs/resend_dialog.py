@@ -106,18 +106,21 @@ class ResendDialog(BaseDialog):
         date_edit = QDateEdit()
         date_edit.setCalendarPopup(True)
 
-        date_edit.setStyleSheet("""
+        date_edit.setStyleSheet(
+            """
             QDateEdit {
                 background-color: white;
                 color: black;
             }
-        """)
+        """
+        )
 
         calendar = date_edit.calendarWidget()
         if calendar is not None:
             calendar.setNavigationBarVisible(True)
 
-            calendar.setStyleSheet("""
+            calendar.setStyleSheet(
+                """
                 QCalendarWidget {
                     background-color: white;
                     color: black;
@@ -136,7 +139,8 @@ class ResendDialog(BaseDialog):
                     background-color: white;
                     color: black;
                 }
-            """)
+            """
+            )
 
             nav_bar = calendar.findChild(QToolButton, "qt_calendar_navigation_bar")
             if nav_bar is not None:

@@ -665,9 +665,9 @@ class TestEDIFieldsMapping:
         for field, expected_value in expected_edi_fields.items():
             # Navigate to EDI field
             actual_value = getattr(loaded_config.edi, field)
-            assert actual_value == expected_value, (
-                f"EDI field {field} mismatch after roundtrip"
-            )
+            assert (
+                actual_value == expected_value
+            ), f"EDI field {field} mismatch after roundtrip"
 
 
 class TestCSVFieldsMapping:

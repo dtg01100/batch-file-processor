@@ -4,6 +4,7 @@ This module tests the refactored log sender with mock services.
 """
 
 from unittest.mock import patch
+
 from dispatch.log_sender import (
     EmailConfig,
     LogEntry,
@@ -350,7 +351,9 @@ class TestLogSender:
         assert len(email["attachments"]) == 1
         assert email["attachments"][0]["name"] == "test.log"
 
-    def test_smtp_service_unknown_attachment_mime_falls_back_to_octet_stream(self, tmp_path):
+    def test_smtp_service_unknown_attachment_mime_falls_back_to_octet_stream(
+        self, tmp_path
+    ):
         """Regression: unknown attachment ctype should default to application/octet-stream."""
         unknown_file = tmp_path / "unknown_file.unknown"
         unknown_file.write_text("content")
@@ -373,7 +376,9 @@ class TestLogSender:
                 to=["recipient@example.com"],
                 subject="Test",
                 body="Body",
-                attachments=[{"path": str(unknown_file), "name": "unknown_file.unknown"}],
+                attachments=[
+                    {"path": str(unknown_file), "name": "unknown_file.unknown"}
+                ],
             )
 
             assert success is True
@@ -381,7 +386,11 @@ class TestLogSender:
 
             message_sent = server.send_message.call_args[0][0]
             # There should be one attachment and it should use octet-stream
-            payloads = [part for part in message_sent.iter_parts() if part.get_content_disposition() == "attachment"]
+            payloads = [
+                part
+                for part in message_sent.iter_parts()
+                if part.get_content_disposition() == "attachment"
+            ]
             assert len(payloads) == 1
             assert payloads[0].get_content_type() == "application/octet-stream"
 
