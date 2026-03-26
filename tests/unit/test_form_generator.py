@@ -102,13 +102,13 @@ class TestFormGenerator:
         widget = generator.widgets["age"]
         mock1 = __import__("unittest.mock", fromlist=["MagicMock"]).MagicMock()
         widget.set_visible = mock1
-        generator.set_field_visibility("age", False)
-        mock1.assert_called_once_with(False)
+        generator.set_field_visibility("age", visible=False)
+        mock1.assert_called_once_with(visible=False)
 
         mock2 = __import__("unittest.mock", fromlist=["MagicMock"]).MagicMock()
         widget.set_visible = mock2
-        generator.set_field_visibility("age", True)
-        mock2.assert_called_once_with(True)
+        generator.set_field_visibility("age", visible=True)
+        mock2.assert_called_once_with(visible=True)
 
     @pytest.mark.qt
     def test_field_enabled(self, qtbot):
@@ -123,11 +123,11 @@ class TestFormGenerator:
         assert generator.widgets["email"].get_widget().isEnabled()
 
         # Disable a field
-        generator.set_field_enabled("age", False)
+        generator.set_field_enabled("age", enabled=False)
         assert not generator.widgets["age"].get_widget().isEnabled()
 
         # Enable it again
-        generator.set_field_enabled("age", True)
+        generator.set_field_enabled("age", enabled=True)
         assert generator.widgets["age"].get_widget().isEnabled()
 
     def test_validation_empty_form(self):
@@ -215,7 +215,7 @@ class TestComplexFormGenerator:
         generator._update_dependent_fields("employed")
         assert mock_set_visible.call_args_list[-1] == __import__(
             "unittest.mock", fromlist=["call"]
-        ).call(False)
+        ).call(visible=False)
 
 
 class TestPluginSectionCommunication:

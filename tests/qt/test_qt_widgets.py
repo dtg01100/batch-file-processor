@@ -139,7 +139,7 @@ class TestSearchWidget:
 
         widget = SearchWidget()
         qtbot.addWidget(widget)
-        widget.set_enabled(False)
+        widget.set_enabled(enabled=False)
         assert not widget.entry.isEnabled()
 
     def test_set_enabled_true(self, qtbot):
@@ -147,8 +147,8 @@ class TestSearchWidget:
 
         widget = SearchWidget()
         qtbot.addWidget(widget)
-        widget.set_enabled(False)
-        widget.set_enabled(True)
+        widget.set_enabled(enabled=False)
+        widget.set_enabled(enabled=True)
         assert widget.entry.isEnabled()
 
     def test_callback_connected(self, qtbot):

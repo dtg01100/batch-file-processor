@@ -448,11 +448,11 @@ class TestSearchWidgetComprehensive:
 
         assert widget.entry.isEnabled()
 
-        widget.set_enabled(False)
+        widget.set_enabled(enabled=False)
 
         assert not widget.entry.isEnabled()
 
-        widget.set_enabled(True)
+        widget.set_enabled(enabled=True)
 
         assert widget.entry.isEnabled()
 
