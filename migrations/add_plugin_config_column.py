@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def apply_migration(database_connection):
     """
     Migration to add plugin_config column to the folders table.
@@ -14,8 +19,7 @@ def apply_migration(database_connection):
                 "UPDATE 'folders' SET plugin_config = '{}' WHERE plugin_config IS NULL"
             )
         except RuntimeError:
-            # Column may already exist, which is fine
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         # Some schema versions also have plugin_config on administrative table
         try:
@@ -26,8 +30,7 @@ def apply_migration(database_connection):
                 "UPDATE 'administrative' SET plugin_config = '{}' WHERE plugin_config IS NULL"
             )
         except RuntimeError:
-            # Column may already exist, which is fine
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         # Add split_edi_filter columns to folders table
         try:
@@ -38,7 +41,7 @@ def apply_migration(database_connection):
                 "UPDATE 'folders' SET split_edi_filter_categories = 'ALL' WHERE split_edi_filter_categories IS NULL"
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         try:
             database_connection.query(
@@ -48,7 +51,7 @@ def apply_migration(database_connection):
                 "UPDATE 'folders' SET split_edi_filter_mode = 'include' WHERE split_edi_filter_mode IS NULL"
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         # Add split_edi_filter columns to administrative table
         try:
@@ -59,7 +62,7 @@ def apply_migration(database_connection):
                 "UPDATE 'administrative' SET split_edi_filter_categories = 'ALL' WHERE split_edi_filter_categories IS NULL"
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         try:
             database_connection.query(
@@ -69,7 +72,7 @@ def apply_migration(database_connection):
                 "UPDATE 'administrative' SET split_edi_filter_mode = 'include' WHERE split_edi_filter_mode IS NULL"
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
 
         return True
     except Exception as e:

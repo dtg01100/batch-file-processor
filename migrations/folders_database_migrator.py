@@ -1,4 +1,7 @@
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 
 def _quote_identifier(name: str) -> str:
@@ -441,7 +444,7 @@ def upgrade_database(
                 'UPDATE "folders" SET "include_item_description" = 0'
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
         database_connection.query(
             "alter table 'administrative' add column 'include_item_description'"
         )
@@ -465,7 +468,7 @@ def upgrade_database(
                 'UPDATE "folders" SET "simple_csv_sort_order" = "upc_number,qty_of_units,unit_cost,description,vendor_item"'
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
         database_connection.query(
             "alter table 'administrative' add column 'simple_csv_sort_order'"
         )
@@ -532,7 +535,7 @@ def upgrade_database(
                 'UPDATE "folders" SET "split_prepaid_sales_tax_crec" = 0'
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
         database_connection.query(
             "alter table 'administrative' add column 'split_prepaid_sales_tax_crec'"
         )
@@ -564,7 +567,7 @@ def upgrade_database(
                 'UPDATE "folders" SET "estore_vendor_NameVendorOID" = "replaceme"'
             )
         except RuntimeError:
-            pass
+            logger.debug("Column already exists, skipping (idempotent)")
         database_connection.query(
             "alter table 'administrative' add column 'estore_store_number'"
         )

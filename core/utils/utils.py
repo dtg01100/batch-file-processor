@@ -41,90 +41,12 @@ from core.utils.date_utils import (
 )
 
 
-def normalize_bool(value) -> bool:
-    """Convert any value to Python boolean.
-
-    Args:
-        value: Value to convert to boolean
-
-    Returns:
-        Boolean representation of the value
-
-    Examples:
-        normalize_bool(True) → True
-        normalize_bool(False) → False
-        normalize_bool("true") → True
-        normalize_bool("1") → True
-        normalize_bool(0) → False
-        normalize_bool(None) → False
-    """
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return False
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        stripped = value.strip().lower()
-        if stripped in ("true", "1", "yes", "on", "y"):
-            return True
-        if stripped in ("false", "0", "no", "off", ""):
-            return False
-        return bool(value.strip())
-    return bool(value)
-
-
-def to_db_bool(value) -> int:
-    """Convert value to SQLite boolean integer (0 or 1).
-
-    Args:
-        value: Value to convert
-
-    Returns:
-        1 for True, 0 for False
-
-    Examples:
-        to_db_bool(True) → 1
-        to_db_bool(False) → 0
-        to_db_bool("yes") → 1
-        to_db_bool(None) → 0
-    """
-    return 1 if normalize_bool(value) else 0
-
-
-def from_db_bool(value) -> bool:
-    """Convert SQLite boolean integer to Python boolean.
-
-    Args:
-        value: SQLite boolean value (0, 1, or similar)
-
-    Returns:
-        Boolean representation
-
-    Examples:
-        from_db_bool(1) → True
-        from_db_bool(0) → False
-        from_db_bool("1") → True
-        from_db_bool("0") → False
-    """
-    if value is None:
-        return False
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        return value.lower() in ("1", "true", "yes", "on")
-    return bool(value)
-
-
 # ============================================================================
 # Backward Compatibility Re-exports
 # ============================================================================
 # These imports allow existing code to continue importing from utils.py
 # New code should import directly from core modules
 
-# Note: normalize_bool, to_db_bool, from_db_bool are imported above
 # Note: date functions are imported above
 # Note: capture_records, _get_default_parser are imported above
 # Note: calc_check_digit, convert_UPCE_to_UPCA are imported above
