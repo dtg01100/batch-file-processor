@@ -337,19 +337,31 @@ class TestPipelineConvertToJolleyCustom:
     Requires as400_username/password/address in settings.
     """
 
-    def test_produces_jolley_output(self, base_folder_params, base_settings):
+    def test_produces_jolley_output(
+        self,
+        base_folder_params,
+        base_settings,
+        mock_as400_query_runner,
+    ):
         base_folder_params["convert_to_format"] = "jolley_custom"
         result, backend = _run(base_folder_params, base_settings)
 
         assert result.success
         assert result.files_processed == 1
         assert len(backend.received) == 1
+        assert mock_as400_query_runner.call_count >= 2
 
-    def test_jolley_output_has_content(self, base_folder_params, base_settings):
+    def test_jolley_output_has_content(
+        self,
+        base_folder_params,
+        base_settings,
+        mock_as400_query_runner,
+    ):
         base_folder_params["convert_to_format"] = "jolley_custom"
         _, backend = _run(base_folder_params, base_settings)
 
         assert len(backend.first_content) > 0
+        assert mock_as400_query_runner.call_count >= 2
 
 
 class TestPipelineConvertToStewartsCustom:
@@ -358,17 +370,31 @@ class TestPipelineConvertToStewartsCustom:
     Requires as400_username/password/address in settings.
     """
 
-    def test_produces_stewarts_output(self, base_folder_params, base_settings):
+    def test_produces_stewarts_output(
+        self,
+        base_folder_params,
+        base_settings,
+        mock_as400_query_runner,
+    ):
         base_folder_params["convert_to_format"] = "stewarts_custom"
         result, backend = _run(base_folder_params, base_settings)
 
         assert result.success
         assert result.files_processed == 1
         assert len(backend.received) == 1
+        assert mock_as400_query_runner.call_count >= 2
 
-    def test_stewarts_output_has_content(self, base_folder_params, base_settings):
+    def test_stewarts_output_has_content(
+        self,
+        base_folder_params,
+        base_settings,
+        mock_as400_query_runner,
+    ):
         base_folder_params["convert_to_format"] = "stewarts_custom"
         _, backend = _run(base_folder_params, base_settings)
+
+        assert len(backend.first_content) > 0
+        assert mock_as400_query_runner.call_count >= 2
 
         assert len(backend.first_content) > 0
 

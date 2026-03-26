@@ -892,7 +892,7 @@ class TestConvertToStewartsCustom:
                     }
                 ],
                 # UOM lookup list query result (list of dicts with itemno, uom_mult, uom_code)
-                [[{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}]],
+                [{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}],
             ]
             mock_qr_class.return_value = mock_qr_instance
 
@@ -1019,7 +1019,7 @@ class TestConvertToJolleyCustom:
                     }
                 ],
                 # UOM lookup list query result (list of dicts with itemno, uom_mult, uom_code)
-                [[{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}]],
+                [{"itemno": "123456", "uom_mult": "1", "uom_code": "EA"}],
             ]
             mock_qr_class.return_value = mock_qr_instance
 
