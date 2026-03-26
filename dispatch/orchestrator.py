@@ -606,32 +606,51 @@ class DispatchOrchestrator:
         This mirrors legacy dispatch behavior and serves as a fallback path when
         no ``upc_service`` is configured in ``DispatchConfig``.
         """
-        required_keys = (
-            "as400_username",
-            "as400_password",
-            "as400_address",
-        )
         strict_db_mode = self._is_strict_database_lookup(settings)
         strict_testing_mode = get_strict_testing_mode()
-        missing_keys = [key for key in required_keys if not settings.get(key)]
-        if missing_keys:
-            self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
-                missing_keys
-            )
-            if strict_db_mode:
-                raise ValueError(
-                    "database_lookup_mode is strict but AS400 settings are missing: "
-                    + ", ".join(missing_keys)
-                )
-            logger.warning(
-                "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
-                ", ".join(missing_keys),
-            )
+
+        if not self._validate_as400_settings(settings, strict_db_mode):
             return {}
 
+        runner_kwargs = self._build_upc_runner_kwargs(settings)
+
+        runner = create_query_runner(**runner_kwargs)
+
+        try:
+            return self._execute_upc_query(runner, strict_db_mode, strict_testing_mode)
+        except Exception as exc:
+            self._handle_upc_query_exception(exc, strict_db_mode, strict_testing_mode)
+            return {}
+        finally:
+            self._close_upc_runner(runner, strict_testing_mode)
+
+    def _validate_as400_settings(self, settings: dict, strict_db_mode: bool) -> bool:
+        """Validate AS400 settings and handle missing credentials.
+
+        Returns True if settings are valid, False if lookup should be skipped.
+        """
+        required_keys = ("as400_username", "as400_password", "as400_address")
+        missing_keys = [key for key in required_keys if not settings.get(key)]
+        if not missing_keys:
+            return True
+
+        self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
+            missing_keys
+        )
+        if strict_db_mode:
+            raise ValueError(
+                "database_lookup_mode is strict but AS400 settings are missing: "
+                + ", ".join(missing_keys)
+            )
+        logger.warning(
+            "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
+            ", ".join(missing_keys),
+        )
+        return False
+
+    def _build_upc_runner_kwargs(self, settings: dict) -> dict:
+        """Build kwargs for QueryRunner from AS400 settings."""
         odbc_driver_raw = str(settings.get("odbc_driver", "") or "").strip()
-        # Legacy DB defaults may contain a placeholder value that is not a real
-        # driver name. In that case, allow QueryRunner's default driver to apply.
         if odbc_driver_raw.lower().startswith("select odbc driver"):
             odbc_driver_raw = ""
 
@@ -648,57 +667,59 @@ class DispatchOrchestrator:
                 "AS400 settings did not provide a usable ODBC driver; "
                 "using QueryRunner default"
             )
+        return runner_kwargs
 
-        runner = create_query_runner(**runner_kwargs)
+    def _execute_upc_query(
+        self, runner: QueryRunner, strict_db_mode: bool, strict_testing_mode: bool
+    ) -> dict:
+        """Execute UPC query and parse results into dictionary."""
+        rows = runner.run_query(
+            """
+            select
+                dsanrep.anbacd as anbacd,
+                dsanrep.anbbcd as anbbcd,
+                strip(dsanrep.anbgcd) as anbgcd,
+                strip(dsanrep.anbhcd) as anbhcd,
+                strip(dsanrep.anbicd) as anbicd,
+                strip(dsanrep.anbjcd) as anbjcd
+            from dacdata.dsanrep dsanrep
+            """
+        )
 
-        try:
-            rows = runner.run_query(
-                """
-                select
-                    dsanrep.anbacd as anbacd,
-                    dsanrep.anbbcd as anbbcd,
-                    strip(dsanrep.anbgcd) as anbgcd,
-                    strip(dsanrep.anbhcd) as anbhcd,
-                    strip(dsanrep.anbicd) as anbicd,
-                    strip(dsanrep.anbjcd) as anbjcd
-                from dacdata.dsanrep dsanrep
-                """
+        if strict_db_mode and not rows:
+            raise LookupError(
+                "database_lookup_mode is strict but UPC query returned no rows"
             )
 
-            if strict_db_mode and not rows:
-                raise LookupError(
-                    "database_lookup_mode is strict but UPC query returned no rows"
-                )
-
-            if not rows:
-                self._last_upc_lookup_error = "fallback UPC query returned no rows"
-                return {}
-
-            upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
-            if strict_db_mode and rows and not upc_dict:
-                raise LookupError(
-                    "database_lookup_mode is strict but UPC query returned no parseable rows"
-                )
-            if not upc_dict:
-                self._last_upc_lookup_error = (
-                    "fallback UPC query returned rows, but none were parseable"
-                )
-            return upc_dict
-        except Exception as exc:
-            self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
-            if strict_db_mode:
-                raise
-            # Preserve RuntimeError messages that already have specific context
-            if strict_testing_mode:
-                if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
-                    raise
-                raise RuntimeError(
-                    "Failed to fetch UPC dictionary via fallback query"
-                ) from exc
-            logger.exception("Failed to fetch UPC dictionary via fallback query")
+        if not rows:
+            self._last_upc_lookup_error = "fallback UPC query returned no rows"
             return {}
-        finally:
-            self._close_upc_runner(runner, strict_testing_mode)
+
+        upc_dict = self._parse_upc_query_rows(rows, strict_testing_mode)
+        if strict_db_mode and rows and not upc_dict:
+            raise LookupError(
+                "database_lookup_mode is strict but UPC query returned no parseable rows"
+            )
+        if not upc_dict:
+            self._last_upc_lookup_error = (
+                "fallback UPC query returned rows, but none were parseable"
+            )
+        return upc_dict
+
+    def _handle_upc_query_exception(
+        self, exc: Exception, strict_db_mode: bool, strict_testing_mode: bool
+    ) -> None:
+        """Handle exceptions from UPC query execution."""
+        self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
+        if strict_db_mode:
+            raise
+        if strict_testing_mode:
+            if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
+                raise
+            raise RuntimeError(
+                "Failed to fetch UPC dictionary via fallback query"
+            ) from exc
+        logger.exception("Failed to fetch UPC dictionary via fallback query")
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
