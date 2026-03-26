@@ -140,15 +140,10 @@ class FakeTable:
     def distinct(self, column: str) -> list[dict]:
         """Get distinct values for a column."""
         self._track_call("distinct")
-        seen = set()
-        results = []
-        for record in self._data:
-            if column in record:
-                val = record[column]
-                if val not in seen:
-                    seen.add(val)
-                    results.append({column: val})
-        return results
+        seen_vals = dict.fromkeys(
+            record[column] for record in self._data if column in record
+        )
+        return [{column: val} for val in seen_vals]
 
     def reset_mock(self) -> None:
         """Reset call tracker."""

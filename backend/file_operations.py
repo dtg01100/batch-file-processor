@@ -580,13 +580,12 @@ class MockFileOperations:
 
         """
         # Return files that are direct children of this path
-        results = []
-        for file_path in self._files:
-            if file_path.startswith(path + "/"):
-                remaining = file_path[len(path) + 1 :]
-                if "/" not in remaining:
-                    results.append(remaining)
-        return results
+        prefix = path + "/"
+        return [
+            file_path[len(prefix):]
+            for file_path in self._files
+            if file_path.startswith(prefix) and "/" not in file_path[len(prefix):]
+        ]
 
     def getsize(self, path: str) -> int:
         """Get file size in bytes.

@@ -1724,16 +1724,14 @@ class DispatchOrchestrator:
                 with open(file_path, "r", errors="replace") as f:
                     content = f.read()
 
-            seen = []
-            seen_set = set()
+            seen: dict[str, None] = {}
             for line in content.splitlines():
                 try:
                     rec = capture_records(line)
                     if rec and rec.get("record_type") == "A":
                         inv_num = rec.get("invoice_number", "").strip()
-                        if inv_num and inv_num not in seen_set:
-                            seen.append(inv_num)
-                            seen_set.add(inv_num)
+                        if inv_num:
+                            seen[inv_num] = None
                 except (ValueError, KeyError):
                     continue
 

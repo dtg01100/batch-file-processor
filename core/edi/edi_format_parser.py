@@ -278,7 +278,7 @@ class EDIFormatParser:
              'invoice_number': 'INV0000101', ...}
 
         """
-        if not line or line.strip() == "":
+        if not line or not line.strip():
             return None
 
         # Identify record type

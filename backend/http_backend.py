@@ -28,18 +28,14 @@ def _parse_headers(headers_string: str) -> dict[str, str]:
         Dictionary of header name to value mappings
 
     """
-    headers: dict[str, str] = {}
     if not headers_string:
-        return headers
-
-    for line in headers_string.strip().split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        if ":" in line:
-            key, value = line.split(":", 1)
-            headers[key.strip()] = value.strip()
-    return headers
+        return {}
+    return {
+        key.strip(): value.strip()
+        for raw in headers_string.strip().split("\n")
+        if (line := raw.strip()) and ":" in line
+        for key, value in [line.split(":", 1)]
+    }
 
 
 def _build_url_with_query(url: str, api_key: str) -> str:

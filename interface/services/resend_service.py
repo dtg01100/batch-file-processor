@@ -257,7 +257,7 @@ class ResendService:
         cur = self._db.raw_connection.execute(sql, params)
         processed_lines = [dict(row) for row in cur.fetchall()]
 
-        folder_ids = list(set(line["folder_id"] for line in processed_lines))
+        folder_ids = list(dict.fromkeys(line["folder_id"] for line in processed_lines))
         folder_aliases = self._get_folder_alias_batch(folder_ids)
 
         file_list = []

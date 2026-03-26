@@ -174,10 +174,10 @@ class DynamicEDIBuilder:
         if not text:
             return -1
         text_lower = text.lower()
-        for i in range(combo.count()):
-            if combo.itemText(i).lower() == text_lower:
-                return i
-        return -1
+        return next(
+            (i for i in range(combo.count()) if combo.itemText(i).lower() == text_lower),
+            -1,
+        )
 
     def build_edi_options_check(self) -> QCheckBox:
         """Build and configure the Convert EDI checkbox."""

@@ -252,13 +252,7 @@ class InMemoryDatabase:
         records = self._ensure_table(table)
 
         for i, existing in enumerate(records):
-            match = True
-            for key in keys:
-                if existing.get(key) != record.get(key):
-                    match = False
-                    break
-            if match:
-                # Update the record
+            if all(existing.get(key) == record.get(key) for key in keys):
                 records[i] = dict(record)
                 return
 

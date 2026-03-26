@@ -130,7 +130,7 @@ def _validate_split_counts(
         raise Exception("total lines in output files do not match input file")
     if len(edi_send_list) != a_record_count:
         raise Exception('mismatched number of "A" records')
-    if len(edi_send_list) < 1:
+    if not edi_send_list:
         raise Exception("No Split EDIs")
 
 
@@ -153,7 +153,7 @@ def _write_split_edi_files(
             if writeable_line.startswith("A"):
                 count += 1
                 line_dict = capture_records(writeable_line)
-                if len(edi_send_list) != 0:
+                if edi_send_list:
                     f.close()
                 output_file_path, file_name_prefix, file_name_suffix = (
                     _build_split_file_metadata(
@@ -271,10 +271,7 @@ def add_row(csv_writer, rowdict: dict) -> None:
         rowdict: A dictionary whose values will be written as a row.
 
     """
-    column_list = []
-    for cell in rowdict.values():
-        column_list.append(cell)
-    csv_writer.writerow(column_list)
+    csv_writer.writerow(list(rowdict.values()))
 
 
 class cRecGenerator:
@@ -358,9 +355,7 @@ class cRecGenerator:
 
             amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
             if amount < 0:
-                temp_amount_list = list(amountstr)
-                temp_amount_list[0] = "-"
-                amountstr = "".join(temp_amount_list)
+                amountstr = "-" + amountstr[1:]
             linebuilder = f"CTAB{descstr}{amountstr}\n"
             wprocfile(linebuilder)
 

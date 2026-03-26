@@ -120,7 +120,7 @@ def capture_records(line: str, parser=None) -> dict | None:
             raise EDIParseError("Not An EDI")
         return result
 
-    if not line or line.startswith("\x1a") or line.strip() == "":
+    if not line or line.startswith("\x1a") or not line.strip():
         return None
 
     if line.startswith("A"):

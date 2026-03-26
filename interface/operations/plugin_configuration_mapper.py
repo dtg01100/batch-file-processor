@@ -606,6 +606,10 @@ class PluginConfigurationMapper:
             QTextEdit,
         )
 
+        def _set_list_widget_selection(w: QListWidget, v: object) -> None:
+            for i in range(w.count()):
+                w.item(i).setSelected(w.item(i).data(0) in v)
+
         _WIDGET_VALUE_SETTERS = {
             QLineEdit: lambda w, v: w.setText(str(v)),
             QSpinBox: lambda w, v: w.setValue(int(v)),
@@ -614,12 +618,7 @@ class PluginConfigurationMapper:
                 w.setCurrentIndex(w.findData(v)) if w.findData(v) >= 0 else None
             ),
             QCheckBox: lambda w, v: w.setChecked(bool(v)),
-            QListWidget: lambda w, v: (
-                [
-                    w.item(i).setSelected(w.item(i).data(0) in v)
-                    for i in range(w.count())
-                ]
-            ),
+            QListWidget: _set_list_widget_selection,
         }
 
         for widget_type, setter in _WIDGET_VALUE_SETTERS.items():

@@ -388,14 +388,12 @@ class ScanSheetTypeAConverter:
         logger.debug("creating temp directory")
         with tempfile.TemporaryDirectory() as tempdir:
             logger.debug("temp directory created as: %s", tempdir)
-            count = 0
             save_counter = 0
             barcodes_generated = 0
             barcodes_skipped = 0
 
-            for _ in self.output_worksheet.iter_rows():
+            for count, _ in enumerate(self.output_worksheet.iter_rows(), start=1):
                 try:
-                    count += 1
                     if count not in self.invoice_rows:
                         upc_barcode_string = str(
                             self.output_worksheet["B" + str(count)].value
