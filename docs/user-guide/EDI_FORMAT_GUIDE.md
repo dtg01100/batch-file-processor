@@ -191,6 +191,43 @@ The default format includes three record types:
 
 ## Integration Points
 
+### Processing Pipeline (User-oriented)
+
+The orchestrator drives each file through the pipeline in `dispatch/orchestrator.py`.
+
+Typical per-file behavior:
+- File is discovered and deduplicated (using history from `processed_files`).
+- Validation is applied if `folder["validate_edi"]` is `True` or validator plugin is installed.
+- Splitting is applied if `folder["split_edi"]` is `True` via the configured splitter plugin.
+- Conversion is applied if `folder["convert_edi"]` is `True` and `convert_to_format` is set.
+- Tweaks are applied if `folder["tweak_edi"]` is `True` and a tweaker plugin exists.
+- File is sent to enabled backend(s) (copy/ftp/email), with file rename rules and post-processing status updates.
+
+Key folder config flags:
+- `split_edi`: true/false
+- `convert_edi`: true/false
+- `convert_to_format`: converter format id (eg `csv`, `fintech`)
+- `tweak_edi`: true/false
+- `rename_file`: optional send filename template
+
+Example folder config snippet:
+
+```ini
+[folder_1]
+folder_is_active = True
+folder_name = /incoming
+split_edi = True
+convert_edi = True
+convert_to_format = csv
+tweak_edi = False
+
+# backends
+copy_to_directory = /outgoing
+
+# vendor-specific options
+fintech_division_id = 10
+```
+
 ### Converters
 
 All converters automatically use the format parser through `utils.capture_records()`. No changes needed.

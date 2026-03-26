@@ -72,11 +72,15 @@ class FileDiscoverer:
 ### 3.3 Hash-Based Deduplication
 
 ```python
-# dispatch/coordinator.py
+# dispatch/orchestrator.py
 class ProcessingContext:
-    def __init__(self):
-        self.hash_thread_return_queue = queue.Queue()
-        self.upc_dict = {}
+    def __init__(self, folder, effective_folder, settings, upc_dict):
+        self.folder = folder
+        self.effective_folder = effective_folder
+        self.settings = settings
+        self.upc_dict = upc_dict
+        self.temp_dirs = []
+        self.temp_files = []
 ```
 
 ## 4. EDI Processing Pipeline
@@ -94,21 +98,40 @@ flowchart LR
 
 ### 4.2 Conversion Flow
 
+The conversion flow in `dispatch/orchestrator.py` is implemented in the `_apply_conversion_and_tweaks()` helper and integrates with the split behavior in `_process_split_pipeline()`.
+
+- `convert_edi` flag controls whether conversion is run at all.
+- `convert_to_format` sets the target plugin format (e.g., `csv`, `fintech`).
+- `converter_step` is injected via `DispatchConfig` and is required for the conversion stage.
+- Conversion is optional on split output and can be applied per split file.
+- If `convert_to_format` is set but no output file is returned, a runtime error is raised.
+
 ```mermaid
 flowchart TD
-    A[EDI File] --> B{Split EDI?}
-    B -->|Yes| C[EDISplitter]
-    B -->|No| D[Use Original]
-    C --> E[Process Each Transaction]
-    E --> F{Convert EDI?}
-    F -->|Yes| G[EDIConverter]
-    F -->|No| H[Skip]
-    G --> I{Tweak EDI?}
-    I -->|Yes| J[EDITweaker]
-    I -->|No| K[Continue]
-    J --> L[Send to Backends]
-    H --> L
-    D --> L
+    A[EDI File] --> B{Validate EDI?}
+    B -->|No| C[Use original file]
+    B -->|Yes| D[Run Validator]
+    D --> E{Valid?}
+    E -->|No| F[Handle based on policy]
+    E -->|Yes| G[Split EDI?]
+
+    G -->|Yes| H[Split into temp files]
+    H --> I[For each split file: Conversion + Tweak + Send]
+    G -->|No| J[Original file]
+
+    J --> K{Convert EDI?}
+    K -->|Yes| L[EDIConverterStep.execute()]
+    K -->|No| M[Skip Conversion]
+
+    L --> N{Did conversion produce output?}
+    N -->|Yes| O[Set current file to output]
+    N -->|No| P[if convert_to_format non-empty -> ERROR]
+
+    O --> Q{Tweak EDI?}
+    Q -->|Yes| R[TweakerStep.execute()]
+    Q -->|No| S[Send unchanged/converted]
+
+    F --> T[Send original to backends (if configured)]
 ```
 
 ### 4.3 EDI Record Types
@@ -282,11 +305,11 @@ flowchart TD
 ### 9.1 Summary Generation
 
 ```python
-# dispatch/coordinator.py
-def process(self) -> Tuple[bool, str]:
+# dispatch/orchestrator.py
+def process_folder(self, folder, run_log, ... ) -> FolderResult:
     # ... processing ...
-    run_summary_string = f"{processed_counter} processed, {error_counter} errors{edi_validator_error_report_string}"
-    return error_counter > 0, run_summary_string
+    result = FolderResult(...)
+    return result
 ```
 
 ### 9.2 Summary Format

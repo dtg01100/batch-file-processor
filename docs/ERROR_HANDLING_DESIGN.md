@@ -349,31 +349,27 @@ flowchart TD
 
 ## 7. Error Flow in Processing
 
-### 7.1 Dispatch Coordinator Integration
+### 7.1 Dispatch Orchestrator Integration
 
 ```python
-# dispatch/coordinator.py usage pattern
-class DispatchCoordinator:
-    def __init__(self, ...):
-        self.error_handler = ErrorHandler(
-            errors_folder=self.errors_folder,
-            run_log=self.run_log,
-            run_log_directory=self.run_log_directory
+# dispatch/orchestrator.py usage pattern
+class DispatchOrchestrator:
+    def __init__(self, config):
+        self.error_handler = config.error_handler or ErrorHandler(
+            errors_folder=config.settings.get('errors_folder'),
+            run_log=None,
+            run_log_directory=config.settings.get('run_log_directory')
         )
-    
-    def process_file(self, filename):
+
+    def _execute_file_pipeline(self, ...):
         try:
-            # Process file...
+            ...
         except Exception as e:
-            self.error_handler.log_file_error(
-                str(e), filename, "Dispatch"
-            )
-    
-    def finalize_folder(self, folder_name, folder_alias, version):
+            self.error_handler.record_error(...)
+
+    def _finalize_folder_result(self, result):
         if self.error_handler.has_errors():
-            self.error_handler.write_folder_errors_report(
-                folder_name, folder_alias, version
-            )
+            self.error_handler.write_folder_errors_report(...)
 ```
 
 ### 7.2 Error Categories

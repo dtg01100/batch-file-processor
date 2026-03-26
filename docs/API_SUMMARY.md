@@ -138,18 +138,29 @@ class DatabaseManager:
 
 ## 4. Processing Layer APIs
 
-### 4.1 DispatchCoordinator (`dispatch/coordinator.py`)
+### 4.1 DispatchOrchestrator (`dispatch/orchestrator.py`)
 
 ```python
-class DispatchCoordinator:
-    def __init__(self, database_connection, folders_database, run_log,
-                 emails_table, run_log_directory, reporting, processed_files,
-                 root, args, version, errors_folder, settings, simple_output=None)
-    
-    def process(self) -> Tuple[bool, str]:
-        """Main processing function. Returns (has_errors, run_summary_string)."""
-        pass
+class DispatchOrchestrator:
+    def __init__(self, config: DispatchConfig):
+        self.config = config
+        self.validator = config.validator or EDIValidator()
+        self.send_manager = SendManager(backends=config.backends)
+        self.error_handler = config.error_handler or ErrorHandler()
+
+    def process_folder(
+        self,
+        folder: dict,
+        run_log: Any,
+        processed_files: Optional[DatabaseInterface] = None,
+        pre_discovered_files: Optional[list[str]] = None,
+        folder_num: Optional[int] = None,
+        folder_total: Optional[int] = None,
+    ) -> FolderResult:
+        ...
 ```
+
+Legacy `DispatchCoordinator` documentation has been replaced; the modern pipeline lives in the orchestrator module.
 
 ### 4.2 SendManager (`dispatch/send_manager.py`)
 
@@ -229,10 +240,9 @@ def main() -> int:
 ### 6.2 Processing Entry
 
 ```python
-# dispatch/coordinator.py
-def process(database_connection, folders_database, run_log, emails_table,
-            run_log_directory, reporting, processed_files, root, args,
-            version, errors_folder, settings, simple_output=None) -> Tuple[bool, str]:
+# dispatch/orchestrator.py
+def process_folder(folder, run_log, processed_files=None,
+            pre_discovered_files=None, folder_num=None, folder_total=None) -> FolderResult:
 ```
 
 ## 7. Return Types
@@ -258,7 +268,8 @@ List[SendResult]  # One result per backend
 | `interface/ui/main_window.py` | Main window |
 | `core/database/connection.py` | Database wrappers |
 | `core/database/manager.py` | Database manager |
-| `dispatch/coordinator.py` | Processing coordinator |
+| `dispatch/orchestrator.py` | Processing orchestrator |
+| `dispatch/coordinator.py` | Legacy orchestrator (deprecated) |
 | `dispatch/send_manager.py` | Send manager |
 | `dispatch/edi_processor.py` | EDI components |
 | `convert_base.py` | Converter base |

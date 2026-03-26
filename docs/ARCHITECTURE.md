@@ -6,7 +6,7 @@
 
 ## 1. System Overview
 
-Batch File Processor is a Qt5-based GUI application for processing EDI/batch files through a pluggable converter and send backend architecture. The system handles the complete pipeline from file discovery through EDI parsing, format conversion, and delivery.
+Batch File Processor is a PyQt5-based GUI application for processing EDI/batch files through a pluggable converter and send backend architecture. The system handles the complete pipeline from file discovery through EDI parsing, format conversion, and delivery.
 
 ### 1.1 Primary Goals
 
@@ -221,7 +221,8 @@ Files requiring special attention due to size or complexity:
 | File | Lines | Concern |
 |------|-------|---------|
 | [`folders_database_migrator.py`](folders_database_migrator.py:1) | 896 | Long migration script, many branches |
-| [`dispatch/coordinator.py`](dispatch/coordinator.py:50) | 893 | Orchestration, mixes concerns |
+| [`dispatch/orchestrator.py`](dispatch/orchestrator.py:1) | 1100 | Orchestration, pipeline control |
+| [`dispatch/coordinator.py`](dispatch/coordinator.py:50) | 893 | Legacy orchestrator (deprecated) |
 | [`interface/ui/dialogs/edit_folder_dialog.py`](interface/ui/dialogs/edit_folder_dialog.py:1) | 730 | Dialog builder |
 | [`interface/operations/processing.py`](interface/operations/processing.py:1) | 625 | Processing orchestration |
 | [`convert_base.py`](convert_base.py:1) | 607 | Converter base + helpers |

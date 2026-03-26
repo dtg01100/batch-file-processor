@@ -63,34 +63,28 @@ flowchart TB
 
 ## 3. Key Components
 
-### 3.1 DispatchCoordinator (`dispatch/coordinator.py`)
+### 3.1 DispatchOrchestrator (`dispatch/orchestrator.py`)
 
-Main orchestrator for the batch processing system.
+Main orchestrator for the batch processing system. The old `dispatch/coordinator.py` path is maintained for historical reference and may be removed after the refactor is fully stable.
 
 **Key Responsibilities:**
-- Load UPC data from database
-- Load active folders from database
-- Create hash thread for file discovery
-- Process each folder sequentially
-- Handle EDI validation errors
-- Generate processing summary
+- Create and manage `DispatchConfig` and pipeline component dependencies
+- Load and normalize folder settings, including conversion/split/tweak flags
+- Discover and filter files per folder (duplicate detection, processed tracking)
+- Execute per-file pipeline: validation, split, conversion, tweaks, send
+- Log per-folder/per-file results and cleanup temporary artifacts
 
 **Processing Flow:**
 ```python
-class DispatchCoordinator:
-    def process(self) -> Tuple[bool, str]:
-        self.context.reset()
-        self._load_upc_data()
-        self.context.parameters_dict_list = self.db_manager.get_active_folders()
-        
-        hash_thread = self._create_hash_thread(temp_processed_files_list)
-        hash_thread.start()
-        
-        for parameters_dict in self.context.parameters_dict_list:
-            folder_errors = self._process_folder(parameters_dict, ...)
-        
-        return error_counter > 0, run_summary_string
+class DispatchOrchestrator:
+    def process_folder(self, folder: dict, run_log: Any, ... ) -> FolderResult:
+        self._log_message(...)
+        files = self._discover_and_filter_files(...)
+        self._process_folder_files(...)
+        return result
 ```
+
+`Process` function is now implemented on a per-folder basis and supports pipeline overrides via `DispatchConfig` values.
 
 ### 3.2 ProcessingContext
 
@@ -485,7 +479,8 @@ for result in send_results:
 
 | File | Lines | Concern |
 |------|-------|---------|
-| `dispatch/coordinator.py` | 893 | Orchestration, mixes concerns |
+| `dispatch/orchestrator.py` | 1100 | Orchestration, pipeline control |
+| `dispatch/coordinator.py` | 893 | Legacy orchestration (deprecated) |
 | `dispatch.py` | 569 | Legacy code, depth 100 |
 
 ### 8.2 Refactoring Opportunities
@@ -519,16 +514,11 @@ def test_process_single_file():
 ### 10.1 Main Processing Entry
 
 ```python
-# dispatch/coordinator.py
-def process(database_connection, folders_database, run_log, emails_table,
-            run_log_directory, reporting, processed_files, root, args,
-            version, errors_folder, settings, simple_output=None):
-    coordinator = DispatchCoordinator(
-        database_connection=database_connection,
-        folders_database=folders_database,
-        ...
-    )
-    return coordinator.process()
+# dispatch/orchestrator.py
+def process_folder(folder, run_log, processed_files=None,
+            pre_discovered_files=None, folder_num=None, folder_total=None):
+    orchestrator = DispatchOrchestrator(config=BuildDispatchConfig(...))
+    return orchestrator.process_folder(folder, run_log,...)
 ```
 
 ### 10.2 Command-Line Entry
