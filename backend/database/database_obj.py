@@ -577,19 +577,32 @@ class DatabaseObj:
     # Safe accessor methods to prevent None reference errors
     # ------------------------------------------------------------------
 
-    def get_settings_or_default(self) -> dict:
-        """Get application settings, creating with defaults if missing.
+    def _get_singleton_or_default(
+        self, table_name: str, table_obj: Any, default_factory: callable
+    ) -> dict:
+        """Get a singleton record by id=1, creating with defaults if missing.
 
-        Settings should always exist (id=1), but this method ensures
-        we never crash with None access.
+        Args:
+            table_name: Name of table for error messages
+            table_obj: Table wrapper object with find_one() and insert()
+            default_factory: Callable that returns default dictionary
 
         Returns:
-            Settings dictionary with guaranteed keys
+            The singleton record dictionary
         """
-        settings = self.settings.find_one(id=1)
-        if settings is None:
-            # Create default settings if missing
-            default_settings = {
+        record = table_obj.find_one(id=1)
+        if record is None:
+            default_record = default_factory()
+            table_obj.insert(default_record)
+            return default_record
+        return record
+
+    def get_settings_or_default(self) -> dict:
+        """Get application settings, creating with defaults if missing."""
+        return self._get_singleton_or_default(
+            "settings",
+            self.settings,
+            lambda: {
                 "id": 1,
                 "enable_email": False,
                 "email_address": "",
@@ -604,23 +617,15 @@ class DatabaseObj:
                 "enable_interval_backups": False,
                 "backup_counter": 0,
                 "backup_counter_maximum": 100,
-            }
-            self.settings.insert(default_settings)
-            return default_settings
-        return settings
+            },
+        )
 
     def get_oversight_or_default(self) -> dict:
-        """Get oversight and defaults record, creating if missing.
-
-        This is a singleton record (id=1) that should always exist.
-
-        Returns:
-            Oversight and defaults dictionary
-        """
-        oversight = self.oversight_and_defaults.find_one(id=1)
-        if oversight is None:
-            # Create default oversight record if missing
-            default_oversight = {
+        """Get oversight and defaults record, creating if missing."""
+        return self._get_singleton_or_default(
+            "oversight",
+            self.oversight_and_defaults,
+            lambda: {
                 "id": 1,
                 "logs_directory": os.path.join(
                     os.path.expanduser("~"), "BatchFileSenderLogs"
@@ -633,10 +638,8 @@ class DatabaseObj:
                 "single_add_folder_prior": os.path.expanduser("~"),
                 "batch_add_folder_prior": os.path.expanduser("~"),
                 "export_processed_folder_prior": os.path.expanduser("~"),
-            }
-            self.oversight_and_defaults.insert(default_oversight)
-            return default_oversight
-        return oversight
+            },
+        )
 
     def find_folder_required(self, **kwargs) -> dict:
         """Find a folder configuration, raising an error if not found.
