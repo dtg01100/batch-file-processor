@@ -491,7 +491,13 @@ class TestNullFieldDefaultsFromDB:
                 # invoice_date_offset deliberately omitted
             }
         )
-        result, backend = _run_folder_from_db(temp_db, fid)
+        as400 = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "h",
+            "odbc_driver": "IBM i Access ODBC Driver",
+        }
+        result, backend = _run_folder_from_db(temp_db, fid, as400)
 
         assert result.success
         # With offset=0, date should be unchanged

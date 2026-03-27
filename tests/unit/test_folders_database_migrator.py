@@ -603,3 +603,102 @@ class TestMigrationVersion48:
         assert folder["process_edi"] == 0
 
         db_conn.close()
+
+
+class TestMigrationVersion49to50:
+    """Test v49 -> v50: add process_backend_http column with automatic repair."""
+
+    def test_v49_to_v50_adds_process_backend_http_column(self, tmp_path):
+        """Migration from v49 to v50 adds process_backend_http to both tables."""
+        db_path = str(tmp_path / "test_v49_v50.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="49", os="Linux"))
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=1, convert_to_format="csv")
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "50"
+
+        # Verify column exists in folders table
+        cursor = db_conn.raw_connection.cursor()
+        cursor.execute('PRAGMA table_info("folders")')
+        folders_columns = [row[1] for row in cursor.fetchall()]
+        assert "process_backend_http" in folders_columns
+
+        # Verify column exists in administrative table
+        cursor.execute('PRAGMA table_info("administrative")')
+        admin_columns = [row[1] for row in cursor.fetchall()]
+        assert "process_backend_http" in admin_columns
+
+        # Verify default value is 0
+        folder = db_conn["folders"].find_one(alias="A")
+        assert folder["process_backend_http"] == 0
+
+        db_conn.close()
+
+    def test_v50_repair_adds_missing_process_backend_http_column(self, tmp_path):
+        """Repair step at v50 adds missing process_backend_http columns."""
+        db_path = str(tmp_path / "test_v50_repair.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        # Simulate broken state: version 50 but missing column
+        db_conn["version"].insert(dict(version="50", os="Linux"))
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=1, convert_to_format="csv")
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        # Manually remove the column to simulate failed migration
+        # (schema.ensure_schema may have added it)
+        db_conn.raw_connection.execute(
+            'ALTER TABLE "folders" DROP COLUMN "process_backend_http"'
+        )
+
+        # Run migration - should trigger repair
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        # Verify column was added by repair
+        cursor = db_conn.raw_connection.cursor()
+        cursor.execute('PRAGMA table_info("folders")')
+        folders_columns = [row[1] for row in cursor.fetchall()]
+        assert "process_backend_http" in folders_columns
+
+        # Verify default value is 0
+        folder = db_conn["folders"].find_one(alias="A")
+        assert folder["process_backend_http"] == 0
+
+        db_conn.close()
+
+    def test_v50_repair_is_idempotent(self, tmp_path):
+        """Running migration multiple times at v50 is safe."""
+        db_path = str(tmp_path / "test_v50_idempotent.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="50", os="Linux"))
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=1)
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        # Run migration twice - should be safe
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "50"
+
+        folder = db_conn["folders"].find_one(alias="A")
+        assert folder["process_backend_http"] == 0
+
+        db_conn.close()

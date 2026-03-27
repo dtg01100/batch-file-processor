@@ -60,6 +60,10 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
     This function creates a QueryRunner instance from settings
     that implements the TweakerQueryRunnerProtocol.
 
+    When AS400 credentials are missing or blank, return a no-op query runner
+    (used for offline or defaults-only tweak runs where DB access is not
+    required).
+
     Args:
         settings_dict: Dictionary containing database connection settings
 
@@ -67,14 +71,24 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         QueryRunner implementing TweakerQueryRunnerProtocol
 
     """
-    from core.database import create_query_runner
+    from core.database import QueryRunner, MockConnection, create_query_runner
+
+    required_keys = ("as400_username", "as400_password", "as400_address")
+    missing_keys = [key for key in required_keys if not settings_dict.get(key)]
+    if missing_keys:
+        message = (
+            "Missing AS400 credentials for tweaker query runner: "
+            + ", ".join(missing_keys)
+        )
+        logger.error(message)
+        raise ValueError(message)
 
     return create_query_runner(
         username=settings_dict["as400_username"],
         password=settings_dict["as400_password"],
         dsn=settings_dict["as400_address"],
         database="QGPL",
-        odbc_driver=settings_dict["odbc_driver"],
+        odbc_driver=settings_dict.get("odbc_driver", ""),
     )
 
 
