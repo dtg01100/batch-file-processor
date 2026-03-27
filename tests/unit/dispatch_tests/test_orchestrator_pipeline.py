@@ -1299,13 +1299,12 @@ class TestOrchestratorPipelineHelpers:
 
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_promotes_process_edi_when_format_set(self):
-        """process_edi=False with a convert_to_format set is treated as enabled.
+    def test_build_processing_context_respects_explicit_passthrough_mode(self):
+        """Explicit process_edi=False remains passthrough even with stale format.
 
-        This is the contradictory DB state that v48 migration corrects in bulk.
-        The orchestrator promotes it at runtime so processing is not silently
-        skipped, matching the UI which treats any folder with convert_to_format
-        configured as having EDI enabled.
+        Legacy rows can retain a non-empty convert_to_format from a previous
+        selection while mode is explicitly set to Do Nothing/Passthrough.
+        Runtime must honor explicit mode and avoid inferring conversion.
         """
         orchestrator = DispatchOrchestrator(DispatchConfig())
 
@@ -1318,19 +1317,80 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["convert_to_format"] == "tweaks"
+        assert context.effective_folder["convert_edi"] is False
+        assert context.effective_folder["process_edi"] == "False"
+
+    def test_build_processing_context_legacy_tweak_enables_tweaks_converter(self):
+        """Legacy tweak_edi=True must route through tweaks converter.
+
+        This preserves old "Enable Tweaks" behavior from legacy configs, even
+        when process_edi is stale/False.
+        """
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": "False",
+                "tweak_edi": True,
+                "convert_to_format": "Tweaks",
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "tweaks"
         assert context.effective_folder["convert_edi"] is True
-        # process_edi must also be promoted so the converter step, which reads
-        # process_edi directly from the params dict, is not blocked by the old
-        # False value (double-gate: orchestrator gate + converter internal gate).
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_promotes_process_edi_both_gates(self, tmp_path):
-        """Promotion writes process_edi=True so the converter's internal gate passes.
+    def test_build_processing_context_maps_legacy_tweak_flag_to_tweaks_format(self):
+        """Legacy tweak_edi=True is normalized to 'tweaks'."""
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": None,
+                "tweak_edi": True,
+                "convert_to_format": "",
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "tweaks"
+        # Missing mode + mapped format should infer conversion.
+        assert context.effective_folder["convert_edi"] is True
+        assert context.effective_folder["process_edi"] is True
+
+    def test_build_processing_context_legacy_tweak_flag_overrides_stale_format(
+        self,
+    ):
+        """Legacy tweak_edi=True must route through tweaks converter.
+
+        Old rows can contain stale convert_to_format values from prior mode
+        switches. If tweak mode was enabled, runtime must use the tweaks
+        converter regardless of that stale format.
+        """
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": None,
+                "tweak_edi": True,
+                "convert_to_format": "csv",
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "tweaks"
+
+    def test_build_processing_context_infers_convert_when_mode_missing_both_gates(
+        self, tmp_path
+    ):
+        """Legacy rows missing mode infer conversion from format and align gates.
 
         EDIConverterStep.convert() reads process_edi directly from the params
-        dict (effective_folder).  If _normalize_edi_flags only set convert_edi=True
-        without also updating process_edi, the converter would still see False and
-        skip conversion silently.  This test catches that double-gate bug.
+        dict (effective_folder).  If _normalize_edi_flags only set
+        convert_edi=True without also updating process_edi, the converter would
+        still see False and skip conversion silently. This test catches that
+        double-gate bug for mode-missing legacy rows.
         """
         import textwrap
 
@@ -1359,7 +1419,7 @@ class TestOrchestratorPipelineHelpers:
             DispatchConfig(converter_step=CapturingConverter())
         )
         folder = {
-            "process_edi": "False",
+            "process_edi": None,
             "convert_to_format": "csv",
             "process_backend_copy": True,
             "copy_to_directory": str(tmp_path / "out"),
@@ -1369,12 +1429,12 @@ class TestOrchestratorPipelineHelpers:
         orchestrator.process_file(str(edi_file), folder)
 
         assert CapturingConverter.call_count == 1, (
-            "Converter was not called — process_edi=False blocked the converter "
-            "even though convert_to_format was set (double-gate bug)"
+            "Converter was not called — missing legacy mode should infer convert "
+            "from convert_to_format (double-gate bug)"
         )
         assert captured_params.get("process_edi") is True, (
-            "Converter received process_edi=False; promotion did not write through "
-            "to effective_folder (double-gate bug)"
+            "Converter received process_edi!=True; inferred convert mode did not "
+            "write through to effective_folder (double-gate bug)"
         )
 
     def test_build_processing_context_normalizes_noisy_convert_format(self):

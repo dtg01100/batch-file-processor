@@ -1296,34 +1296,29 @@ class DispatchOrchestrator:
             has_convert_target: Whether a conversion target is configured
 
         """
+        process_edi_raw = effective_folder.get("process_edi")
+        legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
+
+        process_edi_bool = (
+            normalize_bool(process_edi_raw) if process_edi_raw is not None else False
+        )
+
         if "convert_edi" not in effective_folder:
-            process_edi_raw = effective_folder.get("process_edi")
-            if process_edi_raw is None:
+            # Legacy mode-aware behavior:
+            # - Explicit process_edi values are treated as authoritative.
+            # - Legacy tweak_edi=True forces conversion via tweaks compatibility.
+            # - convert_to_format is only used as a fallback inference when mode
+            #   flags are absent (NULL/missing in older rows).
+            if legacy_tweak_enabled:
+                effective_folder["convert_edi"] = True
+            elif process_edi_raw is None:
                 effective_folder["convert_edi"] = has_convert_target
             else:
-                process_edi_bool = normalize_bool(process_edi_raw)
-                # If process_edi is explicitly False but a conversion target is
-                # configured, the DB is in an inconsistent state: the UI treats
-                # any folder with convert_to_format set as having EDI enabled.
-                # The v48 migration corrects this in bulk; this guard handles
-                # any rows that arrive in the contradictory state at runtime.
-                if not process_edi_bool and has_convert_target:
-                    alias = effective_folder.get("alias", "<unknown>")
-                    logger.warning(
-                        "Folder %s has process_edi=False but convert_to_format=%r; "
-                        "treating as enabled. Run the database migration to fix "
-                        "this permanently.",
-                        alias,
-                        effective_folder.get("convert_to_format"),
-                    )
-                    process_edi_bool = True
-                    # Also update process_edi in the dict so the converter step,
-                    # which reads process_edi directly from params, also sees True.
-                    effective_folder["process_edi"] = True
                 effective_folder["convert_edi"] = process_edi_bool
 
-        _process_edi_raw = effective_folder.get("process_edi")
-        if has_convert_target and _process_edi_raw is None:
+        # Converter step still checks process_edi in its own gate. Keep both gates
+        # aligned when conversion is enabled by mode inference above.
+        if effective_folder.get("convert_edi", False):
             effective_folder["process_edi"] = True
 
         if "process_edi" not in effective_folder and (
@@ -1349,15 +1344,25 @@ class DispatchOrchestrator:
                 "upc_target_length"
             ]
 
+        # Legacy compatibility shim:
+        # Prior to tweaks being subsumed into converter formats, tweak mode was
+        # represented by tweak_edi=True.  Route any such row through the tweaks
+        # converter at runtime so old "Enable Tweaks" behavior is preserved.
+        raw_convert_format = effective_folder.get("convert_to_format", "")
+        if normalize_bool(effective_folder.get("tweak_edi", False)):
+            raw_convert_format = "tweaks"
+
         # Normalize convert format early so legacy/stale variants are treated
         # consistently in downstream gates.
         effective_folder["convert_to_format"] = _normalize_convert_to_format(
-            effective_folder.get("convert_to_format", "")
+            raw_convert_format
         )
 
-        # convert_to_format is the single source of truth for conversion mode.
-        # tweak_edi is a deprecated column that is zeroed out by migration v44→v45;
-        # it is not read at runtime.
+        # Runtime conversion gating is mode-aware:
+        # - Explicit process_edi values are respected.
+        # - convert_to_format is used as a fallback only when process_edi is
+        #   missing/NULL on legacy rows.
+        # - tweak_edi is deprecated and represented as convert_to_format='tweaks'.
 
         has_convert_target = bool(effective_folder.get("convert_to_format"))
 
