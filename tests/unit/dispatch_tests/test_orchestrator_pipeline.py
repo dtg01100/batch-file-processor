@@ -1359,14 +1359,14 @@ class TestOrchestratorPipelineHelpers:
         assert context.effective_folder["convert_edi"] is True
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_legacy_tweak_flag_overrides_stale_format(
+    def test_build_processing_context_legacy_tweak_flag_overrides_explicit_format(
         self,
     ):
         """Legacy tweak_edi=True must route through tweaks converter.
 
         Old rows can contain stale convert_to_format values from prior mode
-        switches. If tweak mode was enabled, runtime must use the tweaks
-        converter regardless of that stale format.
+        switches. To preserve old behavior, tweak mode remains authoritative
+        and routes through the tweaks converter.
         """
         orchestrator = DispatchOrchestrator(DispatchConfig())
 
@@ -1380,6 +1380,8 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["convert_to_format"] == "tweaks"
+        assert context.effective_folder["convert_edi"] is True
+        assert context.effective_folder["process_edi"] is True
 
     def test_build_processing_context_infers_convert_when_mode_missing_both_gates(
         self, tmp_path

@@ -1346,10 +1346,11 @@ class DispatchOrchestrator:
 
         # Legacy compatibility shim:
         # Prior to tweaks being subsumed into converter formats, tweak mode was
-        # represented by tweak_edi=True.  Route any such row through the tweaks
-        # converter at runtime so old "Enable Tweaks" behavior is preserved.
+        # represented by tweak_edi=True. Preserve old behavior by routing any
+        # tweak-enabled row through convert_to_format='tweaks'.
         raw_convert_format = effective_folder.get("convert_to_format", "")
-        if normalize_bool(effective_folder.get("tweak_edi", False)):
+        legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
+        if legacy_tweak_enabled:
             raw_convert_format = "tweaks"
 
         # Normalize convert format early so legacy/stale variants are treated
