@@ -1301,7 +1301,26 @@ class DispatchOrchestrator:
             if process_edi_raw is None:
                 effective_folder["convert_edi"] = has_convert_target
             else:
-                effective_folder["convert_edi"] = normalize_bool(process_edi_raw)
+                process_edi_bool = normalize_bool(process_edi_raw)
+                # If process_edi is explicitly False but a conversion target is
+                # configured, the DB is in an inconsistent state: the UI treats
+                # any folder with convert_to_format set as having EDI enabled.
+                # The v48 migration corrects this in bulk; this guard handles
+                # any rows that arrive in the contradictory state at runtime.
+                if not process_edi_bool and has_convert_target:
+                    alias = effective_folder.get("alias", "<unknown>")
+                    logger.warning(
+                        "Folder %s has process_edi=False but convert_to_format=%r; "
+                        "treating as enabled. Run the database migration to fix "
+                        "this permanently.",
+                        alias,
+                        effective_folder.get("convert_to_format"),
+                    )
+                    process_edi_bool = True
+                    # Also update process_edi in the dict so the converter step,
+                    # which reads process_edi directly from params, also sees True.
+                    effective_folder["process_edi"] = True
+                effective_folder["convert_edi"] = process_edi_bool
 
         _process_edi_raw = effective_folder.get("process_edi")
         if has_convert_target and _process_edi_raw is None:

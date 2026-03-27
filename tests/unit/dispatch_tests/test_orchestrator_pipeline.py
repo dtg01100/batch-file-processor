@@ -1299,8 +1299,14 @@ class TestOrchestratorPipelineHelpers:
 
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_respects_explicit_process_edi_false(self):
-        """Explicit process_edi=False takes priority over convert_to_format."""
+    def test_build_processing_context_promotes_process_edi_when_format_set(self):
+        """process_edi=False with a convert_to_format set is treated as enabled.
+
+        This is the contradictory DB state that v48 migration corrects in bulk.
+        The orchestrator promotes it at runtime so processing is not silently
+        skipped, matching the UI which treats any folder with convert_to_format
+        configured as having EDI enabled.
+        """
         orchestrator = DispatchOrchestrator(DispatchConfig())
 
         context = orchestrator._build_processing_context(
@@ -1312,8 +1318,64 @@ class TestOrchestratorPipelineHelpers:
         )
 
         assert context.effective_folder["convert_to_format"] == "tweaks"
-        assert context.effective_folder["process_edi"] == "False"
-        assert context.effective_folder["convert_edi"] is False
+        assert context.effective_folder["convert_edi"] is True
+        # process_edi must also be promoted so the converter step, which reads
+        # process_edi directly from the params dict, is not blocked by the old
+        # False value (double-gate: orchestrator gate + converter internal gate).
+        assert context.effective_folder["process_edi"] is True
+
+    def test_build_processing_context_promotes_process_edi_both_gates(self, tmp_path):
+        """Promotion writes process_edi=True so the converter's internal gate passes.
+
+        EDIConverterStep.convert() reads process_edi directly from the params
+        dict (effective_folder).  If _normalize_edi_flags only set convert_edi=True
+        without also updating process_edi, the converter would still see False and
+        skip conversion silently.  This test catches that double-gate bug.
+        """
+        import textwrap
+
+        edi_file = tmp_path / "test.edi"
+        edi_file.write_text(
+            textwrap.dedent("""\
+            HDR*TEST
+            """)
+        )
+
+        captured_params: dict = {}
+
+        class CapturingConverter:
+            """Records the params dict it receives."""
+
+            call_count = 0
+
+            def execute(
+                self, file_path, folder, settings=None, upc_dict=None, context=None
+            ):
+                CapturingConverter.call_count += 1
+                captured_params.update(folder)
+                return file_path  # pass-through
+
+        orchestrator = DispatchOrchestrator(
+            DispatchConfig(converter_step=CapturingConverter())
+        )
+        folder = {
+            "process_edi": "False",
+            "convert_to_format": "csv",
+            "process_backend_copy": True,
+            "copy_to_directory": str(tmp_path / "out"),
+        }
+        (tmp_path / "out").mkdir()
+
+        orchestrator.process_file(str(edi_file), folder)
+
+        assert CapturingConverter.call_count == 1, (
+            "Converter was not called — process_edi=False blocked the converter "
+            "even though convert_to_format was set (double-gate bug)"
+        )
+        assert captured_params.get("process_edi") is True, (
+            "Converter received process_edi=False; promotion did not write through "
+            "to effective_folder (double-gate bug)"
+        )
 
     def test_build_processing_context_normalizes_noisy_convert_format(self):
         """Noisy legacy convert format strings should be canonicalized for runtime use."""

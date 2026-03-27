@@ -89,15 +89,15 @@ class TestUpgradeDatabase:
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
-        # Start at version 47 (current)
-        db_conn["version"].insert(dict(version="47", os="Linux"))
+        # Start at version 48 (current)
+        db_conn["version"].insert(dict(version="48", os="Linux"))
         db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -116,7 +116,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -134,7 +134,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -152,7 +152,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -170,7 +170,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -188,7 +188,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -229,7 +229,7 @@ class TestMigrationEdgeCases:
 
         version_record = db_conn["version"].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record["version"]) <= 47
+        assert int(version_record["version"]) <= 48
 
         db_conn.close()
 
@@ -361,7 +361,7 @@ class TestMigrationVersion41:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "47"
+        assert version_record["version"] == "48"
 
         db_conn.close()
 
@@ -557,19 +557,27 @@ class TestMigrationContents:
 
         db_conn.close()
 
-    def test_v45_preserves_process_edi_false_with_tweak_edi(self, tmp_path):
-        """Migration must NOT flip process_edi from 0 to 1 when it was explicitly disabled.
+    def test_v45_clears_tweak_edi_v48_promotes_process_edi(self, tmp_path):
+        """v44→v48 migration chain: tweak_edi is cleared, process_edi promoted when format set.
 
-        Folders with process_edi=0 (user disabled EDI processing) should keep
-        passing through even if tweak_edi=1 was also set.  The deprecated
-        tweak_edi flag is cleared, but process_edi=0 is preserved.
+        Starting from v44:
+        - v45 clears tweak_edi
+        - v48 promotes process_edi=0→1 for folders that have a convert_to_format
+
+        Folders with process_edi=0 AND a format configured end up with process_edi=1
+        because the UI already treats them as enabled (the v48 migration corrects
+        the data to match what the UI shows).
+
+        Folders with process_edi=0 AND no format remain at 0 — they are genuinely
+        disabled with nothing to send.
         """
         db_path = str(tmp_path / "test_v45_disabled.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
         db_conn["version"].insert(dict(version="44", os="Linux"))
-        # Folder: process_edi explicitly disabled + tweak_edi=1 + non-empty format
+        # Folder: process_edi=0 + tweak_edi=1 + non-empty format
+        # After v48: process_edi promoted to 1 (format present → intended to convert)
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled",
@@ -579,7 +587,8 @@ class TestMigrationContents:
                 convert_to_format="csv",
             )
         )
-        # Folder: process_edi explicitly disabled + tweak_edi=1 + empty format
+        # Folder: process_edi=0 + tweak_edi=1 + empty format
+        # After v48: process_edi stays 0 (no format → genuinely disabled)
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled_empty",
@@ -593,19 +602,99 @@ class TestMigrationContents:
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        folders = list(db_conn["folders"].all())
-        # Folder 1: process_edi=0 must stay 0 — only tweak_edi is cleared
-        assert folders[0]["process_edi"] == 0, "process_edi=0 must not be promoted to 1"
-        assert folders[0]["tweak_edi"] == 0
-        assert (
-            folders[0]["convert_to_format"] == "csv"
-        ), "convert_to_format must be unchanged"
-        # Folder 2: process_edi=0, empty format — tweak_edi cleared, no format added
-        assert folders[1]["process_edi"] == 0, "process_edi=0 must not be promoted to 1"
-        assert folders[1]["tweak_edi"] == 0
-        assert folders[1]["convert_to_format"] in (
-            "",
-            None,
-        ), "convert_to_format must stay empty when processing is disabled"
+        folders = {f["alias"]: f for f in db_conn["folders"].all()}
+        # Folder with format: promoted by v48
+        assert folders["Disabled"]["process_edi"] == 1, (
+            "process_edi=0 with a format must be promoted to 1 by v48"
+        )
+        assert folders["Disabled"]["tweak_edi"] == 0
+        assert folders["Disabled"]["convert_to_format"] == "csv"
+        # Folder without format: stays disabled
+        assert folders["DisabledEmpty"]["process_edi"] == 0, (
+            "process_edi=0 with no format must remain 0"
+        )
+        assert folders["DisabledEmpty"]["tweak_edi"] == 0
+        assert folders["DisabledEmpty"]["convert_to_format"] in ("", None)
+
+        db_conn.close()
+
+
+class TestMigrationVersion48:
+    """Test v47 -> v48: promote process_edi for folders with a conversion target."""
+
+    def test_v48_promotes_process_edi_when_format_set(self, tmp_path):
+        """Folders with process_edi=False but a convert_to_format get process_edi=1."""
+        db_path = str(tmp_path / "test_v48.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="47", os="Linux"))
+        # Affected: process_edi=0 with a real format
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=0, convert_to_format="csv")
+        )
+        db_conn["folders"].insert(
+            dict(
+                folder_name="/b",
+                alias="B",
+                process_edi="False",
+                convert_to_format="Estore eInvoice Generic",
+            )
+        )
+        # Not affected: process_edi=0, no format
+        db_conn["folders"].insert(
+            dict(folder_name="/c", alias="C", process_edi=0, convert_to_format="")
+        )
+        # Not affected: do_nothing format
+        db_conn["folders"].insert(
+            dict(
+                folder_name="/d",
+                alias="D",
+                process_edi=0,
+                convert_to_format="do_nothing",
+            )
+        )
+        # Not affected: already enabled
+        db_conn["folders"].insert(
+            dict(folder_name="/e", alias="E", process_edi=1, convert_to_format="csv")
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "48"
+
+        folders = {f["alias"]: f for f in db_conn["folders"].all()}
+        assert folders["A"]["process_edi"] == 1, "should be promoted"
+        assert folders["B"]["process_edi"] == 1, "should be promoted"
+        assert folders["C"]["process_edi"] == 0, "no format — must not be promoted"
+        assert folders["D"]["process_edi"] == 0, "do_nothing — must not be promoted"
+        assert folders["E"]["process_edi"] == 1, "already enabled — unchanged"
+
+        db_conn.close()
+
+    def test_v48_idempotent(self, tmp_path):
+        """Running migration on an already-v48 database does nothing."""
+        db_path = str(tmp_path / "test_v48_idempotent.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="48", os="Linux"))
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=0, convert_to_format="csv")
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        version_record = db_conn["version"].find_one(id=1)
+        assert version_record["version"] == "48"
+        # process_edi must NOT have been touched (migration skipped)
+        folder = db_conn["folders"].find_one(alias="A")
+        assert folder["process_edi"] == 0
 
         db_conn.close()
