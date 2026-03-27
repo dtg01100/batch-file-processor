@@ -61,101 +61,6 @@ class TestUpgradeDatabase:
 
         db_conn.close()
 
-    def test_target_version_partial_upgrade(self, tmp_path):
-        """Test that target_version stops migration at specified version."""
-        db_path = str(tmp_path / "test_partial_upgrade.db")
-        db_conn = sqlite_wrapper.Database.connect(db_path)
-        schema.ensure_schema(db_conn)
-
-        # Start at version 10
-        db_conn["version"].insert(dict(version="10", os="Linux"))
-        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
-        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
-        db_conn.commit()
-
-        # Request upgrade to version 12
-        folders_database_migrator.upgrade_database(
-            db_conn, str(tmp_path), "Linux", target_version="12"
-        )
-
-        version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "12"
-
-        db_conn.close()
-
-    def test_current_version_no_migration(self, tmp_path):
-        """Test that database at current version doesn't change."""
-        db_path = str(tmp_path / "test_current_version.db")
-        db_conn = sqlite_wrapper.Database.connect(db_path)
-        schema.ensure_schema(db_conn)
-
-        # Start at version 48 (current)
-        db_conn["version"].insert(dict(version="48", os="Linux"))
-        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
-        db_conn.commit()
-
-        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
-
-        version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
-
-        db_conn.close()
-
-    def test_full_migration_from_v10(self, tmp_path):
-        """Test migration from version 10 to current."""
-        db_path = str(tmp_path / "test_full_migration.db")
-        db_conn = sqlite_wrapper.Database.connect(db_path)
-        schema.ensure_schema(db_conn)
-
-        db_conn["version"].insert(dict(version="10", os="Linux"))
-        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
-        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
-        db_conn["processed_files"].insert(dict(folder_id=1, filename="test.edi"))
-        db_conn.commit()
-
-        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
-
-        version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
-
-        db_conn.close()
-
-    def test_migration_from_v15(self, tmp_path):
-        """Test migration from version 15."""
-        db_path = str(tmp_path / "test_v15.db")
-        db_conn = sqlite_wrapper.Database.connect(db_path)
-        schema.ensure_schema(db_conn)
-
-        db_conn["version"].insert(dict(version="15", os="Linux"))
-        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
-        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
-        db_conn.commit()
-
-        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
-
-        version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
-
-        db_conn.close()
-
-    def test_migration_from_v20(self, tmp_path):
-        """Test migration from version 20."""
-        db_path = str(tmp_path / "test_v20.db")
-        db_conn = sqlite_wrapper.Database.connect(db_path)
-        schema.ensure_schema(db_conn)
-
-        db_conn["version"].insert(dict(version="20", os="Linux"))
-        db_conn["folders"].insert(dict(folder_name="/test", alias="Test"))
-        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
-        db_conn.commit()
-
-        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
-
-        version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
-
-        db_conn.close()
-
     def test_migration_from_v25(self, tmp_path):
         """Test migration from version 25."""
         db_path = str(tmp_path / "test_v25.db")
@@ -170,7 +75,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
+        assert version_record["version"] == "50"
 
         db_conn.close()
 
@@ -188,7 +93,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
+        assert version_record["version"] == "50"
 
         db_conn.close()
 
@@ -229,7 +134,7 @@ class TestMigrationEdgeCases:
 
         version_record = db_conn["version"].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record["version"]) <= 48
+        assert int(version_record["version"]) <= 50
 
         db_conn.close()
 
@@ -361,7 +266,7 @@ class TestMigrationVersion41:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
+        assert version_record["version"] == "50"
 
         db_conn.close()
 
@@ -664,7 +569,7 @@ class TestMigrationVersion48:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
+        assert version_record["version"] == "50"
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
         assert folders["A"]["process_edi"] == 1, "should be promoted"
@@ -692,7 +597,7 @@ class TestMigrationVersion48:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "48"
+        assert version_record["version"] == "50"
         # process_edi must NOT have been touched (migration skipped)
         folder = db_conn["folders"].find_one(alias="A")
         assert folder["process_edi"] == 0

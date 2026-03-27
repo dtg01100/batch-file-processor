@@ -116,9 +116,9 @@ class TestHiddenImports:
                 collected = collect_submodules(package)
                 assert len(collected) > 0, f"No submodules collected for {package}"
 
-                assert (
-                    "collect_submodules" in hook_content
-                ), f"Hook for {package} should use collect_submodules"
+                assert "collect_submodules" in hook_content, (
+                    f"Hook for {package} should use collect_submodules"
+                )
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):
@@ -219,27 +219,22 @@ class TestHiddenImports:
             content = f.read()
 
         assert "hookspath" in content, "Spec file should configure hookspath"
-        assert (
-            "['hooks']" in content or '"hooks"' in content
-        ), "Spec file should include 'hooks' in hookspath"
+        assert "['hooks']" in content or '"hooks"' in content, (
+            "Spec file should include 'hooks' in hookspath"
+        )
 
-    def test_windows_bundle_validation_targets_qt_runtime(self):
-        """Verify Windows bundle validation checks the Qt runtime pieces."""
-        required_paths = set(build_wine_local.REQUIRED_WINDOWS_BUNDLE_PATHS)
+    def test_windows_bundle_validation_checks_exe_size(self):
+        """Verify Windows bundle validation checks executable minimum size."""
+        assert build_wine_local.WINDOWS_MINIMUM_EXE_SIZE >= 5 * 1024 * 1024
 
-        assert "_internal/PyQt5/QtWidgets.pyd" in required_paths
-        assert "_internal/PyQt5/Qt5/bin/Qt5Widgets.dll" in required_paths
-        assert "_internal/PyQt5/plugins/platforms/qwindows.dll" in required_paths
-        assert "_internal/python311.dll" in required_paths
-
-    def test_windows_bundle_dir_uses_dist_windows(self):
-        """The Wine/local Windows build should write to dist_windows."""
-        assert build_wine_local.get_windows_bundle_dir(
+    def test_windows_executable_path_uses_dist_windows(self):
+        """The Wine/local Windows build should write a single exe to dist_windows."""
+        assert build_wine_local.get_windows_executable_path(
             PROJECT_ROOT / build_wine_local.WINDOWS_DIST_DIRNAME
         ) == (
             PROJECT_ROOT
             / build_wine_local.WINDOWS_DIST_DIRNAME
-            / build_wine_local.WINDOWS_BUNDLE_NAME
+            / build_wine_local.WINDOWS_EXECUTABLE_NAME
         )
 
     def test_windows_dockerfile_uses_image_entrypoint(self):

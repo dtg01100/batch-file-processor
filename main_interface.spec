@@ -55,24 +55,14 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 exe = EXE(
     pyz,
     a.scripts,
-    [],
-    [],
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     name='Batch File Sender',
-    exclude_binaries=True,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=True,
     icon=None,
-)
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=False,
-    name='Batch File Sender',
 )

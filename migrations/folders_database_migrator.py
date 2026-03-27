@@ -1402,29 +1402,44 @@ def upgrade_database(
     if target_version and int(db_version_dict["version"]) >= int(target_version):
         return
 
-    if str(db_version_dict["version"]) == "48":
-        # Add missing process_backend_http column to folders and administrative tables
-        def _existing_columns(table_name):
-            cursor = database_connection.raw_connection.cursor()
-            quoted_table = _quote_identifier(table_name)
-            cursor.execute(f"PRAGMA table_info({quoted_table})")
-            return {row[1] for row in cursor.fetchall()}
+    def _existing_columns(table_name):
+        cursor = database_connection.raw_connection.cursor()
+        quoted_table = _quote_identifier(table_name)
+        cursor.execute(f"PRAGMA table_info({quoted_table})")
+        return {row[1] for row in cursor.fetchall()}
 
-        def _ensure_column(table_name, column_name, sql_type, default_sql) -> None:
-            if column_name in _existing_columns(table_name):
-                return
-            quoted_table = _quote_identifier(table_name)
-            quoted_column = _quote_identifier(column_name)
-            database_connection.query(
+    def _ensure_column(table_name, column_name, sql_type, default_sql) -> None:
+        if column_name in _existing_columns(table_name):
+            return
+        quoted_table = _quote_identifier(table_name)
+        quoted_column = _quote_identifier(column_name)
+        conn = database_connection.raw_connection
+        try:
+            conn.execute(
                 f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
             )
-            database_connection.query(
-                f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}"
-            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to add column {quoted_column} to table {quoted_table}: {e}"
+            ) from e
+        try:
+            conn.execute(f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}")
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to set default value for column {quoted_column} in table {quoted_table}: {e}"
+            ) from e
 
-        for table_name in ("folders", "administrative"):
-            _ensure_column(table_name, "process_backend_http", "INTEGER", "0")
-
+    if str(db_version_dict["version"]) == "48":
         update_version = dict(id=1, version="49", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("48", "49")
+
+    db_version_dict = db_version.find_one(id=1)
+
+    if str(db_version_dict["version"]) == "49":
+        for table_name in ("folders", "administrative"):
+            _ensure_column(table_name, "process_backend_http", "INTEGER", "0")
+
+        update_version = dict(id=1, version="50", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("49", "50")

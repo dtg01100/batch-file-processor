@@ -150,13 +150,10 @@ def test_install_dependencies_reuses_cache_when_marker_matches(tmp_path, monkeyp
 
 @pytest.mark.unit
 def test_write_windows_deployment_notes_creates_bundle_guidance(tmp_path):
-    bundle_dir = tmp_path / build_wine_local.WINDOWS_BUNDLE_NAME
-    bundle_dir.mkdir()
+    notes_path = build_wine_local.write_windows_deployment_notes(tmp_path)
 
-    notes_path = build_wine_local.write_windows_deployment_notes(bundle_dir)
-
-    assert notes_path == bundle_dir / build_wine_local.WINDOWS_DEPLOYMENT_NOTES_NAME
+    assert notes_path == tmp_path / build_wine_local.WINDOWS_DEPLOYMENT_NOTES_NAME
     notes_text = notes_path.read_text(encoding="utf-8")
     assert "Visual C++ 2015-2022 Redistributable (x64)" in notes_text
-    assert build_wine_local.WINDOWS_EXECUTABLE_NAME in notes_text
+    assert "single-file executable" in notes_text
     assert build_wine_local.PYINSTALLER_VERSION in notes_text

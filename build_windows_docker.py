@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 from build_wine_local import (
-    WINDOWS_BUNDLE_NAME,
     WINDOWS_EXECUTABLE_NAME,
     format_bundle_validation_errors,
     validate_windows_bundle,
@@ -74,17 +73,16 @@ def _copy_dist_from_container(project_root: Path) -> None:
 
 
 def _validate_extracted_bundle(dist_dir: Path) -> int:
-    """Validate the extracted Windows bundle contents."""
-    bundle_dir = dist_dir / WINDOWS_BUNDLE_NAME
-    issues = validate_windows_bundle(bundle_dir)
+    """Validate the extracted Windows executable."""
+    exe_path = dist_dir / WINDOWS_EXECUTABLE_NAME
+    issues = validate_windows_bundle(exe_path)
 
     if issues:
-        print("❌ Build completed but bundle validation failed")
+        print("❌ Build completed but executable validation failed")
         print(format_bundle_validation_errors(issues))
         _print_dist_contents(dist_dir)
         return 1
 
-    exe_path = bundle_dir / WINDOWS_EXECUTABLE_NAME
     if not exe_path.exists():
         print("❌ Build completed but executable not found")
         _print_dist_contents(dist_dir)

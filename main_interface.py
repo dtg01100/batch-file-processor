@@ -44,6 +44,10 @@ _FROZEN_QT_PATHS = (
 
 def _resolve_bundle_root() -> Path:
     if getattr(sys, "frozen", False):
+        # Single-file mode: PyInstaller extracts to sys._MEIPASS at runtime
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass)
         return Path(sys.executable).resolve().parent
     return Path(_script_dir)
 
@@ -60,8 +64,8 @@ def _build_startup_error_lines(exc: ImportError | OSError) -> list[str]:
             "Redistributable (x64) and Windows UCRT."
         ),
         (
-            "- Keep the full extracted Batch File Sender bundle together; "
-            "do not move the .exe away from _internal/."
+            "- This is a single-file executable; if the error persists, "
+            "re-download the .exe."
         ),
     ]
 

@@ -37,43 +37,14 @@ WINE_PREFIX = (
     .expanduser()
     .resolve()
 )
-REQUIRED_WINDOWS_BUNDLE_PATHS = (
-    WINDOWS_EXECUTABLE_NAME,
-    "_internal/PyQt5/QtCore.pyd",
-    "_internal/PyQt5/QtGui.pyd",
-    "_internal/PyQt5/QtWidgets.pyd",
-    "_internal/PyQt5/Qt5/bin/Qt5Core.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5Gui.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5Widgets.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5Network.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5PrintSupport.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5Svg.dll",
-    "_internal/PyQt5/Qt5/bin/Qt5Xml.dll",
-    "_internal/PyQt5/plugins/platforms/qwindows.dll",
-    "_internal/python311.dll",
-    "_internal/VCRUNTIME140.dll",
-)
-FORBIDDEN_WINDOWS_BUNDLE_GLOBS = (
-    "_internal/*.so",
-    "_internal/**/*.so",
-    "_internal/*.so.*",
-    "_internal/**/*.so.*",
-    "_internal/libQt5*.so*",
-    "_internal/libpython*.so*",
-)
-FORBIDDEN_WINDOWS_BUNDLE_NAMES = {
-    "python3",
-    "python3.11",
-    "libpython3.11.so.1.0",
-}
+WINDOWS_MINIMUM_EXE_SIZE = 5 * 1024 * 1024  # 5 MB — single-file bundles are large
 
 WINDOWS_DEPLOYMENT_NOTES = f"""Batch File Sender Windows Deployment Notes
 ========================================
 
-Bundle contents
----------------
-- Keep the entire extracted '{WINDOWS_BUNDLE_NAME}' directory together.
-- Do not copy only '{WINDOWS_EXECUTABLE_NAME}' by itself.
+Deployment
+----------
+- '{WINDOWS_EXECUTABLE_NAME}' is a single-file executable — no extra files needed.
 - Do not launch the executable from inside a zip file.
 
 Workstation prerequisites
@@ -96,43 +67,45 @@ def ensure_wine_prefix() -> None:
     print(f"Using WINEPREFIX: {WINE_PREFIX}")
 
 
-def get_windows_bundle_dir(dist_dir: Path = DIST_DIR) -> Path:
-    """Return the expected Windows bundle directory for a dist root."""
-    return Path(dist_dir) / WINDOWS_BUNDLE_NAME
+def get_windows_executable_path(dist_dir: Path = DIST_DIR) -> Path:
+    """Return the expected Windows executable path for a dist root (single-file mode)."""
+    return Path(dist_dir) / WINDOWS_EXECUTABLE_NAME
 
 
-def write_windows_deployment_notes(bundle_dir: Path) -> Path:
-    """Write Windows deployment guidance into the built bundle."""
-    notes_path = Path(bundle_dir) / WINDOWS_DEPLOYMENT_NOTES_NAME
+# Backward-compat alias used by build_windows_docker.py
+get_windows_bundle_dir = get_windows_executable_path
+
+
+def write_windows_deployment_notes(output_dir: Path) -> Path:
+    """Write Windows deployment guidance next to the built executable."""
+    notes_path = Path(output_dir) / WINDOWS_DEPLOYMENT_NOTES_NAME
     notes_path.write_text(WINDOWS_DEPLOYMENT_NOTES, encoding="utf-8")
     return notes_path
 
 
-def validate_windows_bundle(bundle_dir: Path) -> list[str]:
-    """Return validation errors for a Windows PyInstaller bundle."""
-    bundle_dir = Path(bundle_dir)
+def validate_windows_bundle(exe_path: Path) -> list[str]:
+    """Return validation errors for a single-file Windows PyInstaller executable."""
+    exe_path = Path(exe_path)
     issues = []
 
-    if not bundle_dir.exists():
-        return [f"Bundle directory not found: {bundle_dir}"]
+    if not exe_path.exists():
+        return [f"Executable not found: {exe_path}"]
 
-    for relative_path in REQUIRED_WINDOWS_BUNDLE_PATHS:
-        if not (bundle_dir / relative_path).exists():
-            issues.append(f"Missing required Windows bundle file: {relative_path}")
+    if not exe_path.is_file():
+        issues.append(f"Expected a regular file but got: {exe_path}")
 
-    linux_artifacts = {
-        path.relative_to(bundle_dir).as_posix()
-        for pattern in FORBIDDEN_WINDOWS_BUNDLE_GLOBS
-        for path in bundle_dir.glob(pattern)
-    }
-    linux_artifacts.update(
-        path.relative_to(bundle_dir).as_posix()
-        for path in bundle_dir.rglob("*")
-        if path.name in FORBIDDEN_WINDOWS_BUNDLE_NAMES
-    )
+    size = exe_path.stat().st_size
+    if size < WINDOWS_MINIMUM_EXE_SIZE:
+        issues.append(
+            f"Executable is suspiciously small ({size:,} bytes, "
+            f"minimum {WINDOWS_MINIMUM_EXE_SIZE:,} bytes)"
+        )
 
-    for artifact in sorted(linux_artifacts):
-        issues.append(f"Found Linux-only artifact in Windows bundle: {artifact}")
+    # Check for Linux artifacts next to the exe (should not exist in single-file mode)
+    parent = exe_path.parent
+    linux_artifacts = sorted(p.name for p in parent.glob("*.so*") if p != exe_path)
+    for artifact in linux_artifacts:
+        issues.append(f"Found Linux-only artifact next to executable: {artifact}")
 
     return issues
 
@@ -426,22 +399,23 @@ def build_executable(python_dir) -> bool:
                 print(line)
         return False
 
-    staged_bundle = get_windows_bundle_dir(run_staging_dir)
-    if not staged_bundle.exists():
+    staged_exe = get_windows_executable_path(run_staging_dir)
+    if not staged_exe.exists():
         print("Build failed: staged output not found.")
         return False
 
-    issues = validate_windows_bundle(staged_bundle)
+    issues = validate_windows_bundle(staged_exe)
     if issues:
-        print("Build failed validation checks for a Windows bundle:")
+        print("Build failed validation checks for a Windows executable:")
         print(format_bundle_validation_errors(issues))
         return False
 
-    final_bundle = get_windows_bundle_dir(DIST_DIR)
-    if final_bundle.exists():
-        shutil.rmtree(final_bundle, ignore_errors=True)
-    shutil.copytree(staged_bundle, final_bundle)
-    write_windows_deployment_notes(final_bundle)
+    final_exe = get_windows_executable_path(DIST_DIR)
+    DIST_DIR.mkdir(parents=True, exist_ok=True)
+    if final_exe.exists():
+        final_exe.unlink()
+    shutil.copy2(staged_exe, final_exe)
+    write_windows_deployment_notes(DIST_DIR)
 
     print("Build completed!")
     return True
@@ -449,19 +423,17 @@ def build_executable(python_dir) -> bool:
 
 def verify_build() -> bool:
     """Verify the build output."""
-    bundle_dir = get_windows_bundle_dir(DIST_DIR)
-    issues = validate_windows_bundle(bundle_dir)
+    exe_path = get_windows_executable_path(DIST_DIR)
+    issues = validate_windows_bundle(exe_path)
 
     if issues:
-        print("❌ Build completed but bundle validation failed")
+        print("❌ Build completed but executable validation failed")
         print(format_bundle_validation_errors(issues))
         if DIST_DIR.exists():
             print("\nContents of dist directory:")
-            for item in DIST_DIR.rglob("*"):
+            for item in DIST_DIR.iterdir():
                 print(f"  {item.relative_to(DIST_DIR)}")
         return False
-
-    exe_path = bundle_dir / WINDOWS_EXECUTABLE_NAME
 
     if exe_path.exists():
         size = exe_path.stat().st_size
@@ -473,19 +445,18 @@ def verify_build() -> bool:
 
         # List all files in the dist directory
         print("\nBuild artifacts:")
-        for item in sorted(DIST_DIR.rglob("*")):
-            rel_path = item.relative_to(DIST_DIR)
+        for item in sorted(DIST_DIR.iterdir()):
             if item.is_file():
                 file_size = item.stat().st_size
-                print(f"  {rel_path} ({file_size / 1024:.1f} KB)")
+                print(f"  {item.name} ({file_size / 1024:.1f} KB)")
 
         return True
     else:
         print("❌ Build completed but executable not found")
         if DIST_DIR.exists():
             print("\nContents of dist directory:")
-            for item in DIST_DIR.rglob("*"):
-                print(f"  {item.relative_to(DIST_DIR)}")
+            for item in DIST_DIR.iterdir():
+                print(f"  {item.name}")
         return False
 
 

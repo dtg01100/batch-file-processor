@@ -11,7 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from build_wine_local import format_bundle_validation_errors, validate_windows_bundle
+from build_wine_local import (
+    WINDOWS_EXECUTABLE_NAME,
+    format_bundle_validation_errors,
+    validate_windows_bundle,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -22,7 +26,7 @@ pytestmark = [
 
 # Project root is the top-level repo directory
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-EXECUTABLE_REL = Path("dist") / "Batch File Sender" / "Batch File Sender.exe"
+EXECUTABLE_REL = Path("dist") / "Batch File Sender.exe"
 EXECUTABLE_PATH = PROJECT_ROOT / EXECUTABLE_REL
 IMAGE = "docker.io/batonogov/pyinstaller-windows:v4.0.1"
 
@@ -96,9 +100,9 @@ def windows_executable(docker_cmd):
         f"--- stderr (last 2000 chars) ---\n{result.stderr[-2000:]}"
     )
 
-    assert (
-        EXECUTABLE_PATH.exists()
-    ), f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
+    assert EXECUTABLE_PATH.exists(), (
+        f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
+    )
 
     return EXECUTABLE_PATH
 
@@ -123,20 +127,18 @@ class TestWindowsExecutable:
         assert size_mb > 1, f"Executable is suspiciously small: {size_mb:.2f} MB"
 
     def test_windows_bundle_contains_required_qt_runtime(self, windows_executable):
-        """The built bundle contains the expected Windows Qt runtime files."""
-        bundle_dir = Path(windows_executable).parent
-        issues = validate_windows_bundle(bundle_dir)
+        """The built executable passes single-file validation checks."""
+        exe_path = Path(windows_executable)
+        issues = validate_windows_bundle(exe_path)
 
         assert not issues, (
-            "Built Windows bundle failed validation.\n"
+            "Built Windows executable failed validation.\n"
             f"{format_bundle_validation_errors(issues)}"
         )
 
     def test_windows_self_test_via_wine(self, windows_executable, docker_cmd):
         """Running --self-test on the .exe via Wine succeeds."""
-        wine_cmd = (
-            "wine '/src/dist/Batch File Sender/Batch File Sender.exe' --self-test"
-        )
+        wine_cmd = "wine '/src/dist/Batch File Sender.exe' --self-test"
 
         run_cmd = docker_cmd + [
             "run",
@@ -161,13 +163,12 @@ class TestWindowsExecutable:
             f"--- stderr ---\n{result.stderr}"
         )
         assert "Self-test passed" in result.stdout, (
-            f"Expected 'Self-test passed' in stdout.\n"
-            f"--- stdout ---\n{result.stdout}"
+            f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
         )
 
     def test_windows_help_flag_via_wine(self, windows_executable, docker_cmd):
         """Running --help on the .exe via Wine shows expected flags."""
-        wine_cmd = "wine '/src/dist/Batch File Sender/Batch File Sender.exe' --help"
+        wine_cmd = "wine '/src/dist/Batch File Sender.exe' --help"
 
         run_cmd = docker_cmd + [
             "run",
@@ -192,10 +193,8 @@ class TestWindowsExecutable:
             f"--- stderr ---\n{result.stderr}"
         )
         assert "--self-test" in result.stdout, (
-            f"--self-test not found in --help output.\n"
-            f"--- stdout ---\n{result.stdout}"
+            f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
         )
         assert "--automatic" in result.stdout, (
-            f"--automatic not found in --help output.\n"
-            f"--- stdout ---\n{result.stdout}"
+            f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
         )
