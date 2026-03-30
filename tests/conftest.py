@@ -230,7 +230,7 @@ def mock_as400_query_runner(monkeypatch):
 
     dummy = DummyQueryRunner()
     monkeypatch.setattr(
-        "dispatch.converters.mixins.create_query_runner",
+        "core.database.create_query_runner",
         lambda *args, **kwargs: dummy,
     )
 

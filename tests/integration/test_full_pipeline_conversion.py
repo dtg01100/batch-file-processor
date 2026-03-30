@@ -283,7 +283,9 @@ class TestPipelineConvertToFintech:
 class TestPipelineConvertToYellowdogCSV:
     """Full pipeline: EDI → YellowDog CSV."""
 
-    def test_produces_yellowdog_csv(self, base_folder_params, base_settings):
+    def test_produces_yellowdog_csv(
+        self, base_folder_params, base_settings, mock_as400_query_runner
+    ):
         base_folder_params["convert_to_format"] = "yellowdog_csv"
         result, backend = _run(base_folder_params, base_settings)
 
@@ -291,7 +293,9 @@ class TestPipelineConvertToYellowdogCSV:
         assert result.files_processed == 1
         assert backend.first_filename.endswith(".csv")
 
-    def test_yellowdog_csv_has_upc_column(self, base_folder_params, base_settings):
+    def test_yellowdog_csv_has_upc_column(
+        self, base_folder_params, base_settings, mock_as400_query_runner
+    ):
         base_folder_params["convert_to_format"] = "yellowdog_csv"
         _, backend = _run(base_folder_params, base_settings)
 
@@ -322,7 +326,9 @@ class TestPipelineConvertToEstoreEinvoice:
 class TestPipelineConvertToEstoreEinvoiceGeneric:
     """Full pipeline: EDI → Estore eInvoice Generic."""
 
-    def test_produces_estore_generic_output(self, base_folder_params, base_settings):
+    def test_produces_estore_generic_output(
+        self, base_folder_params, base_settings, mock_as400_query_runner
+    ):
         base_folder_params["convert_to_format"] = "estore_einvoice_generic"
         result, backend = _run(base_folder_params, base_settings)
 
