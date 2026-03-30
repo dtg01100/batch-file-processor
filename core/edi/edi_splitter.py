@@ -252,15 +252,15 @@ def filter_edi_file_by_category(
 
 def _copy_file(input_file: str, output_file: str) -> None:
     """Copy input text file to output file."""
-    with open(input_file, "r") as infile:
+    with open(input_file, "r", encoding="utf-8") as infile:
         content = infile.read()
-    with open(output_file, "w") as outfile:
+    with open(output_file, "w", encoding="utf-8") as outfile:
         outfile.write(content)
 
 
 def _read_lines(input_file: str) -> list[str]:
     """Read all text lines from an input file."""
-    with open(input_file, "r") as infile:
+    with open(input_file, "r", encoding="utf-8") as infile:
         return infile.readlines()
 
 
@@ -539,7 +539,7 @@ class EDISplitter:
             ValueError: If no valid invoices after filtering
 
         """
-        lines = content.split("\n")
+        lines = content.splitlines()
 
         # Count A records to check max limit
         a_record_count = sum(1 for line in lines if line.startswith("A"))

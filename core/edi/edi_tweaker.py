@@ -76,9 +76,8 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
     required_keys = ("as400_username", "as400_password", "as400_address")
     missing_keys = [key for key in required_keys if not settings_dict.get(key)]
     if missing_keys:
-        message = (
-            "Missing AS400 credentials for tweaker query runner: "
-            + ", ".join(missing_keys)
+        message = "Missing AS400 credentials for tweaker query runner: " + ", ".join(
+            missing_keys
         )
         logger.error(message)
         raise ValueError(message)
@@ -327,7 +326,7 @@ class EDITweaker:
         max_retries = 5
         for attempt in range(max_retries):
             try:
-                return open(filepath, "w", newline="\r\n")
+                return open(filepath, "w", encoding="utf-8", newline="\r\n")
             except Exception as error:
                 if attempt + 1 < max_retries:
                     sleep_time = (attempt + 1) * (attempt + 1)

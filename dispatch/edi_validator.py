@@ -217,7 +217,7 @@ class EDIValidator:
         try:
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
-            lines = content.split("\n")
+            lines = content.splitlines()
 
             # Check first character is 'A'
             if not lines or len(lines[0]) == 0 or lines[0][0] != "A":
@@ -294,7 +294,7 @@ class EDIValidator:
         try:
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
-            lines = content.split("\n")
+            lines = content.splitlines()
 
             for line_num, line in enumerate(lines, start=1):
                 if not line or line[0] != "B":
@@ -358,7 +358,7 @@ class EDIValidator:
         try:
             # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
-            lines = content.split("\n")
+            lines = content.splitlines()
 
             for line_num, line in enumerate(lines, start=1):
                 if not line or line[0] != "B":
