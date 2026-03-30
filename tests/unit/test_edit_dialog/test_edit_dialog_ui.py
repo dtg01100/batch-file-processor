@@ -325,7 +325,6 @@ class TestExtractedDialogFieldsIntegration:
         fields = ExtractedDialogFields(
             process_edi=True,
             convert_to_format="csv",
-            tweak_edi=True,
             split_edi=True,
             split_edi_include_invoices=True,
             split_edi_include_credits=False,
@@ -335,7 +334,6 @@ class TestExtractedDialogFieldsIntegration:
 
         assert fields.process_edi is True
         assert fields.convert_to_format == "csv"
-        assert fields.tweak_edi is True
         assert fields.split_edi is True
         assert fields.prepend_date_files is True
 
@@ -412,7 +410,6 @@ class TestFolderDataExtractorIntegration:
         fields = {
             "process_edi": self._mock_value("True"),
             "convert_formats_var": self._mock_value("csv"),
-            "tweak_edi": self._mock_bool(True),
             "split_edi": self._mock_bool(False),
             "prepend_file_dates": self._mock_bool(False),
         }
@@ -422,7 +419,6 @@ class TestFolderDataExtractorIntegration:
 
         assert extracted.process_edi is True
         assert extracted.convert_to_format == "csv"
-        assert extracted.tweak_edi is True
         assert extracted.split_edi is False
 
     def _mock_text(self, value):

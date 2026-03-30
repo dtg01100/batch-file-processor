@@ -965,7 +965,7 @@ class TestFilterModeCombinations:
         assert result_exclude == b_records
 
     def test_case_insensitive_category_matching(self):
-        """Category matching should be case-sensitive for string comparison."""
+        """Category matching should be case-insensitive for string comparison."""
         b_records = [
             create_b_record(123456),
         ]
@@ -973,11 +973,11 @@ class TestFilterModeCombinations:
             123456: ["abc", "upc1", "upc2", "upc3", "upc4"],
         }
 
-        # Filter with different case
+        # Filter with different case - case-insensitive matching should find "abc" == "ABC"
         result = filter_b_records_by_category(
             b_records, upc_dict, filter_categories="ABC", filter_mode="include"
         )
 
-        # String comparison is case-sensitive "abc" != "ABC"
-        # So the record is not in filter, and it's not unknown, so excluded
-        assert len(result) == 0
+        # Case-insensitive comparison: "abc" == "ABC" (both lowercased)
+        # So the record matches the filter and is included
+        assert len(result) == 1

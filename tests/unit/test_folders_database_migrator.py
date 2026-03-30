@@ -25,7 +25,7 @@ class TestLogMigrationStep:
         folders_database_migrator._log_migration_step("5", "6")
 
         captured = capsys.readouterr()
-        assert "Migrating: v5 → v6" in captured.out
+        assert "Migrating: v5 -> v6" in captured.out
 
     def test_log_migration_step_multiple_versions(self, capsys):
         """Test logging multiple migration steps."""
@@ -33,8 +33,8 @@ class TestLogMigrationStep:
         folders_database_migrator._log_migration_step("11", "12")
 
         captured = capsys.readouterr()
-        assert "Migrating: v10 → v11" in captured.out
-        assert "Migrating: v11 → v12" in captured.out
+        assert "Migrating: v10 -> v11" in captured.out
+        assert "Migrating: v11 -> v12" in captured.out
 
 
 class TestUpgradeDatabase:

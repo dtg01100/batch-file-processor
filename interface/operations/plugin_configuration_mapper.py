@@ -79,7 +79,6 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        *,
         is_valid: bool = True,
         validation_errors: list[str] = None,
     ) -> None:
@@ -108,7 +107,6 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        *,
         is_valid: bool = True,
         validation_errors: list[str] = None,
     ) -> bool:

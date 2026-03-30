@@ -85,7 +85,6 @@ class TestExtractedDialogFields:
         # EDI defaults
         assert fields.process_edi is False
         assert fields.convert_to_format == ""
-        assert fields.tweak_edi is False
         assert fields.split_edi is False
         assert fields.split_edi_include_invoices is False
         assert fields.split_edi_include_credits is False
@@ -259,7 +258,6 @@ class TestFolderDataExtractor:
 
         assert result.process_edi is False
         assert result.convert_to_format == "csv"
-        assert result.tweak_edi is True
         assert result.split_edi is False
         assert result.split_edi_include_invoices is True
         assert result.split_edi_include_credits is True

@@ -55,8 +55,9 @@ class TestBaseDialogActionModes:
 class TestNonApplyDialogRejectContracts:
     def test_processed_files_close_button_rejects(self, qtbot):
         db = FakeDatabaseObj()
-        dialog = ProcessedFilesDialog(None, db)
-        qtbot.addWidget(dialog)
+        with patch.object(ProcessedFilesDialog, "_get_folder_tuples", return_value=[]):
+            dialog = ProcessedFilesDialog(None, db)
+            qtbot.addWidget(dialog)
 
         close_btn = dialog._button_box.button(QDialogButtonBox.StandardButton.Close)
         with qtbot.waitSignal(dialog.rejected, timeout=1000):
@@ -131,8 +132,11 @@ class TestAccessibilityContracts:
                 "administrative": [{"id": 1}],
             }
         )
-        dialog = ProcessedFilesDialog(None, db)
-        qtbot.addWidget(dialog)
+        with patch.object(
+            ProcessedFilesDialog, "_get_folder_tuples", return_value=[(10, "Alpha")]
+        ):
+            dialog = ProcessedFilesDialog(None, db)
+            qtbot.addWidget(dialog)
 
         dialog._on_folder_selected(10)
         assert dialog._export_btn.accessibleName()
@@ -207,7 +211,7 @@ class TestBaseDialogHelperUsageGuards:
         qtbot.addWidget(dialog)
 
         # Select a file, then attempt to mark for resend which calls the service
-        dialog._on_file_selected(1, True)
+        dialog._on_file_selected(1, selected=True)
         with patch.object(BaseDialog, "show_error") as show_error:
             dialog._mark_selected_for_resend()
             show_error.assert_called_once()

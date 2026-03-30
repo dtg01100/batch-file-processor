@@ -277,7 +277,7 @@ class TestFolderSettingsValidator:
     def test_validate_edi_split_requirements_prepend_dates(self, validator):
         """Test EDI split validation for prepending dates."""
         result = validator.validate_edi_split_requirements(
-            convert_format="csv", split_edi=False, prepend_dates=True, tweak_edi=False
+            convert_format="csv", split_edi=False, prepend_dates=True
         )
 
         assert result.is_valid is False
@@ -289,7 +289,6 @@ class TestFolderSettingsValidator:
             convert_format="jolley_custom",
             split_edi=False,
             prepend_dates=False,
-            tweak_edi=False,
         )
 
         assert result.is_valid is False

@@ -522,12 +522,12 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
                 "process_backend_copy": True,
             },
         )
-        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        dialog.dynamic_edi_builder.edi_options_check.setChecked(True)
         qtbot.waitUntil(lambda: "convert_formats_var" in dialog._fields, timeout=1000)
 
         assert (
-            dialog.dynamic_edi_builder.edi_options_combo.accessibleName()
-            == "EDI options"
+            dialog.dynamic_edi_builder.edi_options_check.accessibleName()
+            == "Convert EDI"
         )
         assert (
             dialog._fields["convert_formats_var"].accessibleName() == "Convert format"
@@ -550,7 +550,7 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
             },
         )
 
-        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        dialog.dynamic_edi_builder.edi_options_check.setChecked(True)
         qtbot.waitUntil(
             lambda: (
                 "override_upc_bool" in dialog._fields
