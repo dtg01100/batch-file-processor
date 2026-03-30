@@ -81,9 +81,9 @@ class QtDiagnosticsService:
 
         optional_modules = []
         if sys.platform != "win32":
-            optional_modules = ["pyodbc", "PIL"]
+            optional_modules = ["PIL"]
         else:
-            required_modules.extend(["pyodbc", "PIL"])
+            required_modules.extend(["PIL"])
 
         print("\n1. Checking module imports...")
         for module in required_modules:
