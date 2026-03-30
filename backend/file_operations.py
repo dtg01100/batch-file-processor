@@ -347,7 +347,7 @@ class RealFileOperations:
 
         """
         logger.debug("Renaming %s -> %s", src, dst)
-        os.rename(src, dst)
+        shutil.move(src, dst)
 
     def stat(self, path: str) -> os.stat_result:
         """Get file status.
@@ -513,9 +513,8 @@ class MockFileOperations:
             Base name (final component) of path
 
         """
-        # Simple implementation - split on /
-        parts = path.replace("\\", "/").split("/")
-        return parts[-1] if parts else ""
+        # Normalize backslashes so os.path works on all platforms
+        return os.path.basename(path.replace("\\", "/"))
 
     def dirname(self, path: str) -> str:
         """Get directory name of path.
@@ -527,11 +526,8 @@ class MockFileOperations:
             Directory name of path
 
         """
-        # Simple implementation - split on /
-        parts = path.replace("\\", "/").split("/")
-        if len(parts) > 1:
-            return "/".join(parts[:-1])
-        return ""
+        # Normalize backslashes so os.path works on all platforms
+        return os.path.dirname(path.replace("\\", "/"))
 
     def join(self, *paths: str) -> str:
         """Join path components.
@@ -543,7 +539,7 @@ class MockFileOperations:
             Joined path
 
         """
-        return "/".join(paths)
+        return os.path.join(*paths)
 
     def isfile(self, path: str) -> bool:
         """Check if path is a file.
@@ -580,11 +576,11 @@ class MockFileOperations:
 
         """
         # Return files that are direct children of this path
-        prefix = path + "/"
+        prefix = os.path.join(path, "")
         return [
-            file_path[len(prefix):]
+            file_path[len(prefix) :]
             for file_path in self._files
-            if file_path.startswith(prefix) and "/" not in file_path[len(prefix):]
+            if file_path.startswith(prefix) and os.sep not in file_path[len(prefix) :]
         ]
 
     def getsize(self, path: str) -> int:
@@ -667,7 +663,7 @@ class MockFileOperations:
         """
         if path.startswith("/"):
             return path
-        return "/" + path
+        return "/" + path.replace("\\", "/")
 
     def add_existing_path(self, path: str) -> None:
         """Add a path to the mock filesystem.
