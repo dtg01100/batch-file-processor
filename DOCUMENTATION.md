@@ -84,7 +84,7 @@ The **Batch File Processor** (also known as "Batch File Sender") is a Python-bas
 - **GUI Interface**: Tkinter-based desktop application for configuration management
 - **Multi-threading**: Parallel file processing using ThreadPoolExecutor and ProcessPoolExecutor
 - **Database Storage**: SQLite database for configuration and processed file tracking
-- **AS400 Integration**: ODBC connectivity for fetching additional invoice/customer data
+- **AS400 Integration**: SSH/db2ssh connectivity for fetching additional invoice/customer data
 - **EDI Splitting**: Split multi-invoice EDI files into individual invoices
 - **Category Filtering**: Filter EDI records by item category
 
@@ -373,7 +373,7 @@ Tracks all processed files:
 #### `settings` Table
 Global application settings:
 - Email configuration
-- AS400/ODBC connection settings
+- AS400 SSH/db2ssh connection settings
 - Backup configuration
 
 #### `administrative` Table
@@ -553,7 +553,7 @@ class invFetcher:
 |---------|---------|
 | `dataset` | Database abstraction layer |
 | `SQLAlchemy` | ORM for database operations |
-| `pyodbc` | ODBC connectivity for AS400 |
+
 | `openpyxl` | Excel file generation |
 | `python-barcode` | Barcode image generation |
 | `Pillow` | Image processing for barcodes |
@@ -594,7 +594,7 @@ Configured via the GUI and stored in the `settings` table:
 | `email_password` | SMTP password |
 | `email_smtp_server` | SMTP server hostname |
 | `smtp_port` | SMTP port (default: 587) |
-| `odbc_driver` | ODBC driver name for AS400 |
+| `ssh_connection_string` | SSH/db2ssh connection string for AS400 |
 | `as400_address` | AS400 server address |
 | `as400_username` | AS400 username |
 | `as400_password` | AS400 password |

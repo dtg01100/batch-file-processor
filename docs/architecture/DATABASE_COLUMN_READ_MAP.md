@@ -88,7 +88,8 @@
 - **backup_counter_maximum** — run_coordinator.py:53 (checked); threshold for auto-backup
 
 ### NOT CURRENTLY USED (legacy fields in schema):
-- **odbc_driver**, **as400_address**, **as400_username**, **as400_password** — AS/400 legacy fields (unused in modern code)
+- **odbc_driver** — REMOVED; ODBC connection no longer used
+- **as400_address**, **as400_username**, **as400_password** — used with SSH/db2ssh tunnel for DB2 connections (not legacy)
 - **folder_is_active**, **copy_to_directory**, **convert_to_format**, **process_edi**, etc. — these are folder-level settings, not global settings
 - **created_at**, **updated_at** — timestamp fields
 
@@ -134,7 +135,7 @@ All columns in `administrative` mirror those in `folders` and should be consider
 
 **folders:** folder_name, alias, folder_is_active, copy_to_directory, process_edi, convert_to_format, calculate_upc_check_digit, upc_target_length, upc_padding_pattern, include_a_records, include_c_records, include_headers, filter_ampersand, tweak_edi, pad_a_records, a_record_padding, a_record_padding_length, invoice_date_custom_format_string, invoice_date_custom_format, reporting_email, report_email_destination, process_backend_copy, backend_copy_destination, process_backend_email, process_backend_ftp, email_to, email_subject_line, ftp_server, ftp_port, ftp_folder, ftp_username, ftp_password, process_edi_output, edi_output_folder, split_edi, force_edi_validation, append_a_records, a_record_append_text, force_txt_file_ext, invoice_date_offset, retail_uom, force_each_upc, include_item_numbers, include_item_description, simple_csv_sort_order, split_prepaid_sales_tax_crec, estore_store_number, estore_Vendor_OId, estore_vendor_NameVendorOID, prepend_date_files, rename_file, estore_c_record_OID, override_upc_bool, override_upc_level, override_upc_category_filter, split_edi_include_invoices, split_edi_include_credits, fintech_division_id, split_edi_filter_categories, split_edi_filter_mode, plugin_config/plugin_configurations, created_at, updated_at
 
-**settings:** id, enable_email, email_address, email_username, email_password, email_smtp_server, smtp_port, odbc_driver, as400_address, as400_username, as400_password, backup_counter, backup_counter_maximum, enable_interval_backups, folder_is_active, copy_to_directory, convert_to_format, process_edi, calculate_upc_check_digit, upc_target_length, upc_padding_pattern, include_a_records, include_c_records, include_headers, filter_ampersand, tweak_edi, pad_a_records, a_record_padding, a_record_padding_length, invoice_date_custom_format_string, invoice_date_custom_format, reporting_email, folder_name, alias, report_email_destination, process_backend_copy, backend_copy_destination, process_edi_output, edi_output_folder, created_at, updated_at
+**settings:** id, enable_email, email_address, email_username, email_password, email_smtp_server, smtp_port, as400_address, as400_username, as400_password, backup_counter, backup_counter_maximum, enable_interval_backups, folder_is_active, copy_to_directory, convert_to_format, process_edi, calculate_upc_check_digit, upc_target_length, upc_padding_pattern, include_a_records, include_c_records, include_headers, filter_ampersand, tweak_edi, pad_a_records, a_record_padding, a_record_padding_length, invoice_date_custom_format_string, invoice_date_custom_format, reporting_email, folder_name, alias, report_email_destination, process_backend_copy, backend_copy_destination, process_edi_output, edi_output_folder, created_at, updated_at
 
 **processed_files:** id, file_name, folder_alias, md5, file_checksum, resend_flag, folder_id, created_at, processed_at, filename, original_path, processed_path, status, error_message, convert_format, sent_to, invoice_numbers
 
@@ -150,7 +151,7 @@ All columns in `administrative` mirror those in `folders` and should be consider
 
 2. **Settings Table Duplication**: Many folder-level settings are defined in the `settings` table (copy_to_directory, convert_to_format, process_edi, etc.) but are actually folder-specific. These should NOT be in the global settings table.
 
-3. **Legacy AS/400 Fields**: odbc_driver, as400_address, as400_username, as400_password in settings are never accessed in modern code.
+3. **Legacy AS/400 Fields**: odbc_driver was removed; as400_address, as400_username, as400_password are now used with SSH/db2ssh tunnel for DB2 connections.
 
 4. **Administrative Table**: Confirmed as deprecated by migration v37. Code should not read from it.
 

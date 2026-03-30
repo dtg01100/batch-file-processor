@@ -229,8 +229,8 @@ The `QueryRunner` class accepts any object that satisfies the `DatabaseConnectio
 
 ```python
 # Real implementation
-config = ConnectionConfig(...)
-real_connection = PyODBCConnection(config)
+config = DB2SSHConnectionConfig(...)
+real_connection = DB2SSHConnection(config)
 runner = QueryRunner(real_connection)
 
 # Mock implementation for testing

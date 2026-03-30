@@ -58,7 +58,6 @@ Global application settings stored in the `settings` table:
 | `backup_counter` | INTEGER | 0 | Current backup count |
 | `backup_counter_maximum` | INTEGER | 200 | Maximum backups before cleanup |
 | `enable_interval_backups` | INTEGER | 1 | Enable periodic database backups |
-| `odbc_driver` | TEXT | "Select ODBC Driver..." | AS/400 ODBC driver selection |
 | `as400_address` | TEXT | "" | AS/400 server address |
 | `as400_username` | TEXT | "" | AS/400 login username |
 | `as400_password` | TEXT | "" | AS/400 login password |

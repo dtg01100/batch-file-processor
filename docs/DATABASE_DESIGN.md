@@ -234,7 +234,6 @@ CREATE TABLE settings (
     backup_counter INTEGER,
     backup_counter_maximum INTEGER,
     enable_interval_backups INTEGER,
-    odbc_driver TEXT,
     as400_address TEXT,
     as400_username TEXT,
     as400_password TEXT,

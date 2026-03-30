@@ -666,12 +666,9 @@ Provides database query execution with dependency injection support.
 |-------|-------------|
 | `username` | Database username |
 | `password` | Database password |
-| `dsn` | ODBC Data Source Name |
 | `database` | Database name |
 
 **Protocol**: [`DatabaseConnectionProtocol`](core/database/query_runner.py:30)
-
-**Implementation**: [`PyODBCConnection`](core/database/query_runner.py:54)
 
 ### 5.5 Converter Modules
 
@@ -861,7 +858,6 @@ sequenceDiagram
 | `dataset` | 1.6.2 | SQL abstraction layer |
 | `SQLAlchemy` | 1.4.49 | Database toolkit |
 | `alembic` | 1.7.7 | Database migrations |
-| `pyodbc` | 5.0.1 | ODBC connectivity |
 
 #### 7.2.4 Networking
 
