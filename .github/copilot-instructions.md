@@ -2,7 +2,14 @@
 
 ## Project Overview
 
-Batch File Processor is a PyQt6 desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
+Batch File Processor is a PyQt5 desktop application (project is intentionally Qt5) that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
+
+## AI Agent Workflow (bootstrap)
+1. Discover existing convention files: `.github/copilot-instructions.md`, `AGENTS.md`, `README.md`.
+2. Inspect docs: `docs/`, `docs/testing/TESTING.md`, architecture docs, and AGENTS references.
+3. Prefer incremental evaluation: targeted `pytest` subset vs full suite (`-m` markers, explicit test ids).
+4. When editing docs, preserve existing valuable content and add links rather than duplicate.
+5. For new code, include regression test and marker scope; for bugfixes, implement narrow assertion coverage.
 
 ## Documentation
 
@@ -50,6 +57,12 @@ black --check .
 black .
 ```
 
+# Targeted test strategy (preferred for large suite)
+- For a single test: `pytest tests/unit/test_foo.py::test_bar_function`
+- For file-level targets: `pytest tests/unit/test_foo.py`
+- For marker sets: `pytest -m "integration and database"`
+- For quick failure-focused debug: `pytest -x --timeout=30`
+
 **Never run tests without a timeout.** A hanging test is a bug. If a test hangs, use `pytest -x --timeout=30` to identify it.
 
 ### Testing Philosophy
@@ -62,7 +75,7 @@ Prefer:
 - Test doubles only for: external services (FTP/SMTP), UI display servers, or
   truly expensive operations
 
-**Qt/PyQt6 Testing Requirements:**
+**Qt/PyQt5 Testing Requirements:**
 - ALWAYS use real Qt widgets in tests with the offscreen backend (QT_QPA_PLATFORM=offscreen)
 - NEVER implement fake/mock Qt API classes (e.g., don't create FakeWidget, FakeEvent, etc.)
 - Use `qtbot` fixture for widget interactions and signal testing
@@ -99,8 +112,9 @@ The pipeline is mandatory and runs sequentially in `dispatch/orchestrator.py`:
 
 1. **Validator** – validates EDI format
 2. **Splitter** – splits invoices/credits into individual files
-3. **Converter** – converts to target format (CSV, Fintech, EStore, etc.)
-4. **Tweaker** – post-conversion modifications
+3. **Converter** – converts to target format (CSV, Fintech, EStore, etc.), including the `tweaks` target now handled through converter modules
+
+Tweaks are no longer a separate post-conversion step; they are now a converter target (`convert_to_format='tweaks'`) and are executed by `dispatch/converters/convert_to_tweaks.py`.
 
 Each step lives in `dispatch/pipeline/` and implements a Protocol-based interface. Steps are optional; configure them via `DispatchConfig`. Entry point: `process_folder_with_pipeline()`.
 
