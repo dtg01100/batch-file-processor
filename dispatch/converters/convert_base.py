@@ -665,12 +665,13 @@ class DBEnabledConverter(CSVConverter):
 
     def connect_db(self) -> None:
         if not self._db_connected:
+            ssh_key_filename = self.settings_dict.get("ssh_key_filename", "")
             self.query_object = create_query_runner(
                 username=self.settings_dict["as400_username"],
                 password=self.settings_dict["as400_password"],
                 dsn=self.settings_dict["as400_address"],
                 database="QGPL",
-                odbc_driver=f"{self.settings_dict['odbc_driver']}",
+                ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
             )
             self._db_connected = True
 

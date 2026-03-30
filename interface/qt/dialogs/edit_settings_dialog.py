@@ -5,7 +5,6 @@ from typing import Any, Callable
 
 from PyQt5.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -98,43 +97,53 @@ class EditSettingsDialog(BaseDialog):
         return None
 
     def _build_as400_section(self) -> QGroupBox:
-        group = QGroupBox("AS400 Database Connection")
+        group = QGroupBox("AS400 Database Connection (via SSH)")
         form = QFormLayout(group)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-
-        self._odbc_driver_combo = QComboBox()
-        try:
-            import pyodbc
-
-            self._odbc_driver_combo.addItems(pyodbc.drivers())
-        except ImportError:
-            pass
 
         self._as400_address = QLineEdit()
         self._as400_username = QLineEdit()
         self._as400_password = QLineEdit()
+        self._ssh_key_file = QLineEdit()
+        self._ssh_key_browse = QPushButton("...")
+        self._ssh_key_browse.clicked.connect(self._browse_ssh_key)
+
         self._as400_password.setEchoMode(QLineEdit.EchoMode.Password)
         self._as400_address.setMinimumWidth(260)
         self._as400_username.setMinimumWidth(260)
         self._as400_password.setMinimumWidth(260)
+        self._ssh_key_file.setMinimumWidth(200)
 
-        self._odbc_driver_combo.setAccessibleName("ODBC driver")
-        self._odbc_driver_combo.setAccessibleDescription(
-            "ODBC driver for AS400 database connection"
-        )
         self._as400_address.setAccessibleName("AS400 address")
         self._as400_address.setAccessibleDescription("Hostname or IP of AS400 server")
         self._as400_username.setAccessibleName("AS400 username")
         self._as400_username.setAccessibleDescription("Username for AS400 login")
         self._as400_password.setAccessibleName("AS400 password")
         self._as400_password.setAccessibleDescription("Password for AS400 login")
+        self._ssh_key_file.setAccessibleName("SSH key file")
+        self._ssh_key_file.setAccessibleDescription("Path to SSH private key file")
 
-        form.addRow("ODBC &Driver:", self._odbc_driver_combo)
+        key_layout = QHBoxLayout()
+        key_layout.addWidget(self._ssh_key_file)
+        key_layout.addWidget(self._ssh_key_browse)
+
         form.addRow("AS400 &Address:", self._as400_address)
         form.addRow("AS400 &Username:", self._as400_username)
         form.addRow("AS400 &Password:", self._as400_password)
+        form.addRow("SSH &Key File:", key_layout)
 
         return group
+
+    def _browse_ssh_key(self) -> None:
+        """Open file browser for SSH private key."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select SSH Private Key",
+            "",
+            "SSH Keys (*.pem *.ppk *id_rsa *id_ed25519);;All Files (*)",
+        )
+        if file_path:
+            self._ssh_key_file.setText(file_path)
 
     def _build_email_section(self) -> QGroupBox:
         group = QGroupBox("Email Settings")
@@ -266,17 +275,10 @@ class EditSettingsDialog(BaseDialog):
         return group
 
     def _populate_fields(self) -> None:
-        current_driver = self._settings.get("odbc_driver", "")
-        idx = self._odbc_driver_combo.findText(current_driver)
-        if idx >= 0:
-            self._odbc_driver_combo.setCurrentIndex(idx)
-        elif current_driver:
-            self._odbc_driver_combo.addItem(current_driver)
-            self._odbc_driver_combo.setCurrentText(current_driver)
-
         self._as400_address.setText(self._settings.get("as400_address", ""))
         self._as400_username.setText(self._settings.get("as400_username", ""))
         self._as400_password.setText(self._settings.get("as400_password", ""))
+        self._ssh_key_file.setText(self._settings.get("ssh_key_filename", ""))
 
         self._enable_email_cb.setChecked(
             utils.normalize_bool(self._settings.get("enable_email", False))
@@ -520,10 +522,10 @@ class EditSettingsDialog(BaseDialog):
             self._enable_report_printing_cb.isChecked()
         )
 
-        self._settings["odbc_driver"] = self._odbc_driver_combo.currentText()
         self._settings["as400_address"] = self._as400_address.text()
         self._settings["as400_username"] = self._as400_username.text()
         self._settings["as400_password"] = self._as400_password.text()
+        self._settings["ssh_key_filename"] = self._ssh_key_file.text()
         self._settings["enable_email"] = self._enable_email_cb.isChecked()
         self._settings["email_address"] = self._email_address.text()
         self._settings["email_username"] = self._email_username.text()

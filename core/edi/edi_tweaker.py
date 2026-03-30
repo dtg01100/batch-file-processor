@@ -71,7 +71,7 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         QueryRunner implementing TweakerQueryRunnerProtocol
 
     """
-    from core.database import QueryRunner, MockConnection, create_query_runner
+    from core.database import create_query_runner
 
     required_keys = ("as400_username", "as400_password", "as400_address")
     missing_keys = [key for key in required_keys if not settings_dict.get(key)]
@@ -82,12 +82,13 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         logger.error(message)
         raise ValueError(message)
 
+    ssh_key_filename = settings_dict.get("ssh_key_filename", "")
     return create_query_runner(
         username=settings_dict["as400_username"],
         password=settings_dict["as400_password"],
         dsn=settings_dict["as400_address"],
         database="QGPL",
-        odbc_driver=settings_dict.get("odbc_driver", ""),
+        ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
     )
 
 

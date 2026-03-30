@@ -77,17 +77,18 @@ class invFetcher:
 
         Args:
             settings_dict: Dictionary containing database connection settings.
-                Must include: as400_username, as400_password, as400_address, odbc_driver
+                Must include: as400_username, as400_password, as400_address
 
         """
         self.settings = settings_dict
         # Create a new QueryRunner for the core InvFetcher
+        ssh_key_filename = self.settings.get("ssh_key_filename", "")
         runner = create_query_runner(
             username=self.settings["as400_username"],
             password=self.settings["as400_password"],
             dsn=self.settings["as400_address"],
             database="QGPL",
-            odbc_driver=f"{self.settings['odbc_driver']}",
+            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
         )
         # Create adapter for the core InvFetcher's protocol
         self._fetcher = InvFetcher(runner, settings_dict)

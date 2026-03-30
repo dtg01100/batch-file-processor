@@ -671,23 +671,15 @@ class DispatchOrchestrator:
 
     def _build_upc_runner_kwargs(self, settings: dict) -> dict:
         """Build kwargs for QueryRunner from AS400 settings."""
-        odbc_driver_raw = str(settings.get("odbc_driver", "") or "").strip()
-        if odbc_driver_raw.lower().startswith("select odbc driver"):
-            odbc_driver_raw = ""
-
         runner_kwargs = {
             "username": settings["as400_username"],
             "password": settings["as400_password"],
             "dsn": settings["as400_address"],
             "database": "QGPL",
         }
-        if odbc_driver_raw:
-            runner_kwargs["odbc_driver"] = odbc_driver_raw
-        else:
-            logger.info(
-                "AS400 settings did not provide a usable ODBC driver; "
-                "using QueryRunner default"
-            )
+        ssh_key_filename = settings.get("ssh_key_filename", "")
+        if ssh_key_filename:
+            runner_kwargs["ssh_key_filename"] = ssh_key_filename
         return runner_kwargs
 
     def _execute_upc_query(

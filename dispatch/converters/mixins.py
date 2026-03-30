@@ -66,7 +66,6 @@ class DatabaseConnectionMixin(ABC):
             "as400_username",
             "as400_password",
             "as400_address",
-            "odbc_driver",
         ),
     ) -> None:
         """Initialize the database connection.
@@ -86,14 +85,13 @@ class DatabaseConnectionMixin(ABC):
                 f"Missing required database settings: {', '.join(missing_keys)}"
             )
 
+        ssh_key_filename = settings_dict.get("ssh_key_filename", "")
         self.query_object = create_query_runner(
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
             database=database,
-            odbc_driver=settings_dict.get(
-                "odbc_driver", "IBM i Access ODBC Driver 64-bit"
-            ),
+            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
         )
         self._db_initialized = True
         logger.debug("Database connection initialized for %s", self.__class__.__name__)

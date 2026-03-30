@@ -286,7 +286,7 @@ class cRecGenerator:
 
         Args:
             settings_dict: Dictionary containing database connection settings.
-                Must include: as400_username, as400_password, as400_address, odbc_driver
+                Must include: as400_username, as400_password, as400_address
 
         """
         self.query_object = None
@@ -296,12 +296,13 @@ class cRecGenerator:
 
     def _db_connect(self) -> None:
         """Establish database connection."""
+        ssh_key_filename = self.settings.get("ssh_key_filename", "")
         self.query_object = create_query_runner(
             username=self.settings["as400_username"],
             password=self.settings["as400_password"],
             dsn=self.settings["as400_address"],
             database="QGPL",
-            odbc_driver=f"{self.settings['odbc_driver']}",
+            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
         )
 
     def set_invoice_number(self, invoice_number) -> None:

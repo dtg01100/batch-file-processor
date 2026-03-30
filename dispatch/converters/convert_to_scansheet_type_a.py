@@ -260,13 +260,13 @@ class ScanSheetTypeAConverter:
             correlation_id=self._correlation_id,
         )
 
+        ssh_key_filename = settings_dict.get("ssh_key_filename", "")
         self.query_object = core.database.create_query_runner(
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
-            odbc_driver=settings_dict.get(
-                "odbc_driver", "IBM i Access ODBC Driver 64-bit"
-            ),
+            database="QGPL",
+            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
         )
 
     def _initialize_workbook(self, output_filename: str) -> None:

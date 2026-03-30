@@ -75,7 +75,6 @@ class YellowDogConverter(BaseEDIConverter):
             "as400_username",
             "as400_password",
             "as400_address",
-            "odbc_driver",
         )
         missing_keys = [key for key in required_keys if not settings_dict.get(key)]
 
@@ -88,12 +87,13 @@ class YellowDogConverter(BaseEDIConverter):
         query_runner = None
         if not missing_keys:
             try:
+                ssh_key_filename = settings_dict.get("ssh_key_filename", "")
                 query_runner = create_query_runner(
                     username=settings_dict["as400_username"],
                     password=settings_dict["as400_password"],
                     dsn=settings_dict["as400_address"],
                     database="QGPL",
-                    odbc_driver=settings_dict["odbc_driver"],
+                    ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
                 )
                 logger.debug("YellowDog database lookup runner initialized")
             except Exception:
