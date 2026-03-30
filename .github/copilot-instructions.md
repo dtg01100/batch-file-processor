@@ -149,6 +149,33 @@ Tests use strict markers (`--strict-markers`). Decorate new tests appropriately:
 | `backend` | FTP/SMTP/copy backend tests |
 | `slow` | Tests taking >30 seconds |
 
+## Convert Backend Selection
+
+**Philosophy**: Fail-fast is preferred over silent fallback. An incorrect format should cause the run to fail rather than send in the wrong format or pass through unchanged.
+
+### Current Protections
+- **Whitelist validation**: `dispatch/pipeline/converter.py:391` checks format against `SUPPORTED_FORMATS` list
+- **Module interface check**: Verifies `edi_convert` function exists after loading module
+- **No-output detection**: `orchestrator.py:1063-1068` raises error if conversion requested but no output produced
+
+### Agent Guidelines
+- When adding new converters, register a corresponding `ConfigurationPlugin` (not just the module)
+- Never add runtime "smart" fallback logic to route to a different format
+- Unknown/empty `convert_to_format` values should result in no conversion, not a fallback to "csv"
+- Database migrations should validate `convert_to_format` values against the whitelist
+
+### Where to Learn More
+See `docs/architecture/backend-selection-hardening.md` for detailed guidance including edge cases and testing recommendations.
+
+## Markdown Organization
+
+- Prefer updating existing documentation over creating a new Markdown file.
+- Keep repository Markdown organized: do not add AI-generated reports, plans, audits, or summaries to the repository root unless the user explicitly asks for that location.
+- Place new permanent Markdown documentation under `docs/` in the most relevant subdirectory.
+- Keep ephemeral agent artifacts in the session workspace, not the repository.
+- Use concise, descriptive kebab-case filenames.
+- See [`docs-handling.instructions.md`](docs-handling.instructions.md) for full documentation organization guidelines.
+
 ## Test Fixtures
 
 - `tests/conftest.py` – shared fixtures including a legacy v32 database and mock events
