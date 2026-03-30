@@ -160,6 +160,7 @@ FORMAT_OPTION_CASES: Final[list[tuple[str, dict[str, int]]]] = [
     ("scansheet_type_a", {}),
     ("stewarts_custom", {}),
     ("yellowdog_csv", {}),
+    ("tweaks", {}),
 ]
 
 

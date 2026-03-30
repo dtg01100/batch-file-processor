@@ -149,3 +149,61 @@ class TestProtocolCompliance:
         mock_conn = MockConnection()
         runner = QueryRunner(mock_conn)
         assert runner.connection is mock_conn
+
+
+def test_db_enabled_converter_connect_db_uses_core_database_create_query_runner(
+    monkeypatch,
+):
+    """Ensure DBEnabledConverter resolves create_query_runner at call-time."""
+    from dispatch.converters.convert_base import DBEnabledConverter
+
+    called = {}
+
+    def fake_create_query_runner(**kwargs):
+        called["called"] = True
+        return QueryRunner(MockConnection())
+
+    monkeypatch.setattr("core.database.create_query_runner", fake_create_query_runner)
+
+    class DummyDBEnabledConverter(DBEnabledConverter):
+        def process_record_a(self, record):
+            pass
+
+        def process_record_b(self, record):
+            pass
+
+        def process_record_c(self, record):
+            pass
+
+    converter = DummyDBEnabledConverter(
+        "input.edi",
+        "output",
+        {"as400_username": "u", "as400_password": "p", "as400_address": "host"},
+        {},
+        {},
+    )
+
+    converter.connect_db()
+
+    assert called.get("called", False)
+    assert converter.query_object is not None
+    assert converter._db_connected is True
+
+
+def test_crec_generator_db_connect_uses_core_database_create_query_runner(monkeypatch):
+    """Ensure cRecGenerator resolves create_query_runner at call-time."""
+    from core.utils.utils import cRecGenerator
+
+    called = {}
+
+    def fake_create_query_runner(**kwargs):
+        called["called"] = True
+        return QueryRunner(MockConnection())
+
+    monkeypatch.setattr("core.database.create_query_runner", fake_create_query_runner)
+
+    cri = cRecGenerator({"as400_username": "u", "as400_password": "p", "as400_address": "host"})
+    cri._db_connect()
+
+    assert called.get("called", False)
+    assert cri.query_object is not None

@@ -1,7 +1,5 @@
 """Additional tests for ResendDialog to improve coverage."""
 
-from unittest.mock import MagicMock
-
 import pytest
 from PyQt5.QtCore import Qt
 
@@ -16,11 +14,39 @@ def _make_dialog(qtbot, mock_database_obj, monkeypatch):
     """Return a ResendDialog with QMessageBox mocked to prevent modal hangs."""
     from interface.qt.dialogs.resend_dialog import ResendDialog
 
-    mock_msgbox = MagicMock()
-    monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", mock_msgbox)
+    class FakeMessageBox:
+        info_calls = 0
+        critical_calls = 0
+        warning_calls = 0
+        question_calls = 0
+
+        @classmethod
+        def information(cls, *_args, **_kwargs):
+            cls.info_calls += 1
+
+        @classmethod
+        def critical(cls, *_args, **_kwargs):
+            cls.critical_calls += 1
+
+        @classmethod
+        def warning(cls, *_args, **_kwargs):
+            cls.warning_calls += 1
+
+        @classmethod
+        def question(cls, *_args, **_kwargs):
+            cls.question_calls += 1
+            return None
+
+    monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", FakeMessageBox)
+    monkeypatch.setattr(
+        "interface.qt.dialogs.resend_dialog.ResendDialog._check_files_exist_async",
+        lambda self: None,
+    )
+    monkeypatch.setattr("PyQt5.QtCore.QTimer.singleShot", lambda *_args, **_kwargs: None)
+
     dialog = ResendDialog(None, mock_database_obj.database_connection)
     qtbot.addWidget(dialog)
-    return dialog, mock_msgbox
+    return dialog, FakeMessageBox
 
 
 def _make_dialog_with_data(qtbot, mock_database_obj, monkeypatch, tmp_path):
@@ -113,7 +139,7 @@ class TestResendDialogFolderDisplay:
         dialog, mock_msgbox = _make_dialog(qtbot, mock_database_obj, monkeypatch)
 
         assert dialog._should_show is False
-        mock_msgbox.information.assert_called_once()
+        assert mock_msgbox.info_calls == 1
 
     def test_folder_button_click_loads_files(
         self, qtbot, mock_database_obj, monkeypatch, tmp_path

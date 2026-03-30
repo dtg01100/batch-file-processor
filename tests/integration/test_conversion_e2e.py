@@ -852,8 +852,8 @@ class TestConvertToStewartsCustom:
 
         output_path = str(tmp_path / "output_stewarts")
 
-        # Mock create_query_runner in mixins where it's used via DatabaseConnectionMixin
-        with patch("dispatch.converters.mixins.create_query_runner") as mock_qr_class:
+        # Mock create_query_runner in core.database where DatabaseConnectionMixin now resolves it
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             # QueryRunner.run_query returns list[dict]
@@ -978,8 +978,8 @@ class TestConvertToJolleyCustom:
 
         output_path = str(tmp_path / "output_jolley")
 
-        # Mock create_query_runner in mixins where it's used via DatabaseConnectionMixin
-        with patch("dispatch.converters.mixins.create_query_runner") as mock_qr_class:
+        # Mock create_query_runner in core.database where DatabaseConnectionMixin now resolves it
+        with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
             # First call is for header_fields, second call is for uom_lookup_list
             # QueryRunner.run_query returns list[dict]

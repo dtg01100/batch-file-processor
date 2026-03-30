@@ -46,23 +46,30 @@ def temp_db():
 class TestDialogLifecycle:
     """Test dialog creation, opening, and closing."""
 
-    def test_resend_dialog_with_no_processed_files(self, qapp, temp_db):
+    def test_resend_dialog_with_no_processed_files(self, qapp, temp_db, monkeypatch):
         """Test ResendDialog when no processed files exist."""
-        from unittest.mock import patch
 
-        # Mock QMessageBox to prevent GUI interaction during test
-        with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_msg_box:
-            # ResendDialog should handle empty database gracefully
-            dialog = ResendDialog(None, temp_db.database_connection)
+        info_calls = {"count": 0}
 
-            # Dialog should not crash during construction
-            assert dialog is not None
+        def fake_information(*_args, **_kwargs):
+            info_calls["count"] += 1
 
-            # _should_show flag should be False (nothing to show)
-            assert dialog._should_show is False
+        monkeypatch.setattr(
+            "PyQt5.QtWidgets.QMessageBox.information",
+            fake_information,
+        )
 
-            # Verify that the info message was shown
-            mock_msg_box.assert_called_once()
+        # ResendDialog should handle empty database gracefully
+        dialog = ResendDialog(None, temp_db.database_connection)
+
+        # Dialog should not crash during construction
+        assert dialog is not None
+
+        # _should_show flag should be False (nothing to show)
+        assert dialog._should_show is False
+
+        # Verify that the info message was shown
+        assert info_calls["count"] == 1
 
         # Clean up
         dialog.close()
@@ -109,22 +116,26 @@ class TestDialogLifecycle:
             dialog.close()
             dialog.deleteLater()
 
-    def test_processed_files_dialog_creation(self, qapp, temp_db):
+    def test_processed_files_dialog_creation(self, qapp, temp_db, monkeypatch):
         """Test ProcessedFilesDialog can be created."""
-        from unittest.mock import patch
 
-        # Mock _get_folder_tuples to avoid .distinct() issues
-        with patch.object(ProcessedFilesDialog, "_get_folder_tuples", return_value=[]):
-            dialog = ProcessedFilesDialog(
-                parent=None, database_obj=temp_db, ui_service=None
-            )
+        # Monkeypatch _get_folder_tuples to avoid database queries during test.
+        monkeypatch.setattr(
+            ProcessedFilesDialog,
+            "_get_folder_tuples",
+            lambda self: [],
+        )
 
-            assert dialog is not None
-            assert dialog._database_obj is temp_db
+        dialog = ProcessedFilesDialog(
+            parent=None, database_obj=temp_db, ui_service=None
+        )
 
-            # Clean up
-            dialog.close()
-            dialog.deleteLater()
+        assert dialog is not None
+        assert dialog._database_obj is temp_db
+
+        # Clean up
+        dialog.close()
+        dialog.deleteLater()
 
     def test_maintenance_dialog_creation(self, qapp, temp_db):
         """Test MaintenanceDialog can be created."""

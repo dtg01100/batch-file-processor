@@ -11,6 +11,7 @@ from backend.database import sqlite_wrapper
 from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
