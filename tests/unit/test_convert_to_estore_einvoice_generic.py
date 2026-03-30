@@ -227,7 +227,6 @@ def inv_fetcher_with_test_db(test_query_runner):
         "as400_username": "test_user",
         "as400_password": "test_pass",
         "as400_address": "test.address.com",
-        "odbc_driver": "ODBC Driver 17 for SQL Server",
     }
 
     # Create wrapper - it will use create_query_runner internally, so we need to patch
@@ -334,7 +333,6 @@ class TestEstoreEinvoiceGenericFixtures:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test.address.com",
-            "odbc_driver": "ODBC Driver 17 for SQL Server",
         }
 
     @pytest.fixture
@@ -375,7 +373,6 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
                 "as400_username": "test_user",
                 "as400_password": "test_pass",
                 "as400_address": "test.address.com",
-                "odbc_driver": "ODBC Driver 17 for SQL Server",
             }
         )
         assert fetcher is not None
@@ -589,9 +586,9 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             ]
 
             for col in expected_columns:
-                assert any(
-                    col in h for h in header_row
-                ), f"Column {col} not found in header"
+                assert any(col in h for h in header_row), (
+                    f"Column {col} not found in header"
+                )
 
     def test_store_number_in_output(
         self,
@@ -1424,9 +1421,9 @@ class TestEstoreEinvoiceGenericFilenameRegression(TestEstoreEinvoiceGenericFixtu
             sample_upc_lut,
         )
 
-        assert os.path.dirname(result) == str(
-            out_dir
-        ), f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
+        assert os.path.dirname(result) == str(out_dir), (
+            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
+        )
 
 
 if __name__ == "__main__":

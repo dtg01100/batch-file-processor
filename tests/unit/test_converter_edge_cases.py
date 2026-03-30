@@ -112,7 +112,6 @@ def default_settings_dict():
         "as400_username": "",
         "as400_password": "",
         "as400_address": "",
-        "odbc_driver": "",
     }
 
 
@@ -434,7 +433,6 @@ class TestConverterEmptyFileHandling:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test_host",
-            "odbc_driver": "test_driver",
         }
 
         with patch("core.database.create_query_runner") as mock_qr_class:
@@ -510,7 +508,6 @@ class TestConverterEmptyFileHandling:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test_host",
-            "odbc_driver": "test_driver",
         }
 
         with patch("core.database.create_query_runner"):
@@ -537,7 +534,6 @@ class TestConverterEmptyFileHandling:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test_host",
-            "odbc_driver": "test_driver",
         }
 
         with patch("core.database.create_query_runner") as mock_qr_class:
@@ -623,7 +619,6 @@ class TestConverterEmptyFileHandling:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test_host",
-            "odbc_driver": "test_driver",
         }
 
         with patch("core.database.create_query_runner"):

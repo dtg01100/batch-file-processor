@@ -236,7 +236,6 @@ def default_settings_dict():
         "as400_username": "test_user",
         "as400_password": "test_pass",
         "as400_address": "test.example.com",
-        "odbc_driver": "IBM i Access ODBC Driver",
     }
 
 
@@ -345,9 +344,9 @@ class TestConvertToCSV:
 
         # Should have header + A record + B record
         a_record_found = any(row[0] == "A" for row in rows)
-        assert (
-            a_record_found
-        ), "A record should be in output when include_a_records is True"
+        assert a_record_found, (
+            "A record should be in output when include_a_records is True"
+        )
 
     def test_convert_with_c_records(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
@@ -370,9 +369,9 @@ class TestConvertToCSV:
 
         # Should have C record
         c_record_found = any(row[0] == "C" for row in rows)
-        assert (
-            c_record_found
-        ), "C record should be in output when include_c_records is True"
+        assert c_record_found, (
+            "C record should be in output when include_c_records is True"
+        )
 
     def test_convert_ampersand_filtering(self, tmp_path, sample_upc_lut):
         """Test that ampersands are replaced with AND when filter is enabled."""
@@ -502,9 +501,9 @@ class TestConvertToFintech:
         assert result is not None
 
         # result already includes .csv extension
-        assert os.path.exists(
-            result
-        ), "Output CSV should be created even with missing UPCs"
+        assert os.path.exists(result), (
+            "Output CSV should be created even with missing UPCs"
+        )
 
         # Read the output and verify empty UPC fields
         with open(result, "r", encoding="utf-8") as f:
@@ -520,12 +519,12 @@ class TestConvertToFintech:
         for row in rows[1:]:  # Skip header
             if len(row) > 8:
                 # upc_pack (index 7) and upc_case (index 8) should be empty
-                assert (
-                    row[7] == ""
-                ), f"upc_pack should be empty for missing UPC, got: {row[7]}"
-                assert (
-                    row[8] == ""
-                ), f"upc_case should be empty for missing UPC, got: {row[8]}"
+                assert row[7] == "", (
+                    f"upc_pack should be empty for missing UPC, got: {row[7]}"
+                )
+                assert row[8] == "", (
+                    f"upc_case should be empty for missing UPC, got: {row[8]}"
+                )
 
 
 # =============================================================================
@@ -653,9 +652,9 @@ class TestConvertToSimplifiedCSV:
 
         # First row should not be header
         if len(rows) > 0:
-            assert (
-                rows[0][0] != "UPC"
-            ), "First row should not be header when include_headers is False"
+            assert rows[0][0] != "UPC", (
+                "First row should not be header when include_headers is False"
+            )
 
     def test_convert_column_order(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
@@ -736,14 +735,14 @@ class TestConvertToYellowdogCSV:
         assert len(rows) >= 2, "CSV should have header and data rows"
         # Customer name should come from test DB ("Test Customer Name")
         cust_name_col = rows[0].index("Customer Name")
-        assert (
-            rows[1][cust_name_col] == "Test Customer Name"
-        ), f"Customer name should be from test DB, got: {rows[1][cust_name_col]}"
+        assert rows[1][cust_name_col] == "Test Customer Name", (
+            f"Customer name should be from test DB, got: {rows[1][cust_name_col]}"
+        )
         # PO number should come from test DB ("PO12345")
         po_col = rows[0].index("Customer PO Number")
-        assert (
-            rows[1][po_col] == "PO12345"
-        ), f"PO number should be from test DB, got: {rows[1][po_col]}"
+        assert rows[1][po_col] == "PO12345", (
+            f"PO number should be from test DB, got: {rows[1][po_col]}"
+        )
 
 
 # =============================================================================
@@ -1055,9 +1054,9 @@ class TestConversionEdgeCases:
         )
 
         # Should create output file even with empty input
-        assert os.path.exists(
-            result
-        ), "Output file should be created even for empty input"
+        assert os.path.exists(result), (
+            "Output file should be created even for empty input"
+        )
 
     def test_unicode_in_description(
         self, tmp_path, default_parameters_dict, sample_upc_lut
@@ -1191,9 +1190,9 @@ class TestConversionEdgeCases:
         # Note: The exact handling depends on the EDI format and converter logic
         quantity_value = rows[1][1]  # Second column is Quantity
         # Verify the quantity was processed (it should be an integer)
-        assert quantity_value.lstrip(
-            "-"
-        ).isdigit(), f"Quantity should be numeric, got {quantity_value}"
+        assert quantity_value.lstrip("-").isdigit(), (
+            f"Quantity should be numeric, got {quantity_value}"
+        )
 
 
 # =============================================================================
@@ -1221,9 +1220,9 @@ class TestOutputFormatValidation:
             content = f.read()
 
         # CSV should use CRLF line endings
-        assert (
-            b"\r\n" in content
-        ), "CSV should use CRLF line endings for Excel compatibility"
+        assert b"\r\n" in content, (
+            "CSV should use CRLF line endings for Excel compatibility"
+        )
 
     def test_csv_quotes_all_fields(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut

@@ -3,41 +3,12 @@
 import pytest
 
 from core.database.query_runner import (
-    ConnectionConfig,
     DatabaseConnectionProtocol,
     MockConnection,
-    PyODBCConnection,
     QueryRunner,
     assert_read_only_sql,
     create_query_runner,
 )
-
-
-class TestConnectionConfig:
-    """Tests for ConnectionConfig dataclass."""
-
-    def test_create_config_with_defaults(self):
-        """Test creating config with default database."""
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        assert config.username == "user"
-        assert config.password == "pass"
-        assert config.dsn == "TEST"
-        assert config.database == "QGPL"
-
-    def test_create_config_with_custom_database(self):
-        """Test creating config with custom database."""
-        config = ConnectionConfig(
-            username="user", password="pass", dsn="TEST", database="CUSTOM"
-        )
-        assert config.database == "CUSTOM"
-
-    def test_config_is_frozen_safe(self):
-        """Test that config attributes are accessible."""
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        # Dataclasses allow attribute access
-        assert config.username == "user"
-        assert config.password == "pass"
-        assert config.dsn == "TEST"
 
 
 class TestMockConnection:
@@ -129,117 +100,17 @@ class TestQueryRunner:
         runner.close()  # Should not raise
 
 
-class TestPyODBCConnection:
-    """Tests for PyODBCConnection class."""
-
-    def test_init_stores_config(self):
-        """Test that init stores configuration."""
-        config = ConnectionConfig(
-            username="user", password="pass", dsn="TEST", database="MYDB"
-        )
-        conn = PyODBCConnection(config)
-        assert conn.config == config
-        assert conn._connection is None
-
-    def test_close_handles_none_connection(self):
-        """Test that close handles None connection gracefully."""
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        conn = PyODBCConnection(config)
-        conn.close()  # Should not raise
-
-    def test_execute_returns_empty_when_driver_has_no_result_metadata(self):
-        """If driver reports no result metadata, fetchall should not be called."""
-
-        class FakeCursor:
-            description = None
-
-            def __init__(self):
-                self.fetchall_called = False
-
-            def execute(self, query, params=None):
-                return None
-
-            def fetchall(self):
-                self.fetchall_called = True
-                raise RuntimeError("fetchall() should not be called")
-
-            def close(self):
-                pass
-
-        class FakeConnection:
-            def __init__(self):
-                self.cursor_instance = FakeCursor()
-
-            def cursor(self):
-                return self.cursor_instance
-
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        conn = PyODBCConnection(config)
-        fake_connection = FakeConnection()
-        conn._connection = fake_connection
-
-        result = conn.execute("SELECT 1", ())
-
-        assert result == []
-        assert fake_connection.cursor_instance.fetchall_called is False
-
-    def test_execute_passes_empty_tuple_params(self):
-        """Empty tuple params should still use parameterized execute path."""
-
-        class FakeCursor:
-            description = [("id",)]
-
-            def __init__(self):
-                self.execute_calls = []
-
-            def execute(self, query, params=None):
-                self.execute_calls.append((query, params))
-                return None
-
-            def fetchall(self):
-                return [(1,)]
-
-            def close(self):
-                pass
-
-        class FakeConnection:
-            def __init__(self):
-                self.cursor_instance = FakeCursor()
-
-            def cursor(self):
-                return self.cursor_instance
-
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        conn = PyODBCConnection(config)
-        fake_connection = FakeConnection()
-        conn._connection = fake_connection
-
-        result = conn.execute("SELECT 1", ())
-
-        assert fake_connection.cursor_instance.execute_calls == [("SELECT 1", ())]
-        assert result == [{"id": 1}]
-
-
 class TestCreateQueryRunner:
     """Tests for create_query_runner factory function."""
 
-    def test_creates_runner_with_config(self):
-        """Test that factory creates QueryRunner with PyODBCConnection."""
-        runner = create_query_runner("user", "pass", "TEST", "DB")
-        assert isinstance(runner, QueryRunner)
-        assert isinstance(runner.connection, PyODBCConnection)
-
-    def test_creates_runner_with_default_database(self):
-        """Test that factory uses default database when not specified."""
+    def test_creates_query_runner_instance(self):
+        """Test that factory creates a QueryRunner instance."""
         runner = create_query_runner("user", "pass", "TEST")
         assert isinstance(runner, QueryRunner)
-        # Cast to PyODBCConnection to access config
-        assert isinstance(runner.connection, PyODBCConnection)
-        assert runner.connection.config.database == "QGPL"
 
 
 class TestReadOnlySqlPolicy:
-    """Tests for ODBC read-only SQL contract."""
+    """Tests for read-only SQL contract."""
 
     def test_assert_read_only_accepts_select(self):
         """SELECT statements should be accepted."""
@@ -273,21 +144,8 @@ class TestProtocolCompliance:
         conn = MockConnection()
         assert isinstance(conn, DatabaseConnectionProtocol)
 
-    def test_pyodbc_connection_satisfies_protocol(self):
-        """Test that PyODBCConnection satisfies DatabaseConnectionProtocol."""
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        conn = PyODBCConnection(config)
-        assert isinstance(conn, DatabaseConnectionProtocol)
-
     def test_query_runner_accepts_protocol(self):
         """Test that QueryRunner accepts any protocol implementation."""
-        # Using MockConnection
         mock_conn = MockConnection()
-        runner1 = QueryRunner(mock_conn)
-        assert runner1.connection is mock_conn
-
-        # Using PyODBCConnection
-        config = ConnectionConfig(username="user", password="pass", dsn="TEST")
-        pyodbc_conn = PyODBCConnection(config)
-        runner2 = QueryRunner(pyodbc_conn)
-        assert runner2.connection is pyodbc_conn
+        runner = QueryRunner(mock_conn)
+        assert runner.connection is mock_conn

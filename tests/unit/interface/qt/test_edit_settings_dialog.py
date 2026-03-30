@@ -26,7 +26,6 @@ from interface.services.smtp_service import SMTPService
 def sample_settings():
     """Provide sample settings data (from settings_provider)."""
     return {
-        "odbc_driver": "iSeries Access ODBC Driver",
         "as400_address": "test.server.com",
         "as400_username": "testuser",
         "as400_password": "testpass",
@@ -160,7 +159,6 @@ class TestEditSettingsDialogUI:
         qtbot.addWidget(dialog)
 
         # Check AS400 section widgets
-        assert hasattr(dialog, "_odbc_driver_combo")
         assert hasattr(dialog, "_as400_address")
         assert hasattr(dialog, "_as400_username")
         assert hasattr(dialog, "_as400_password")
@@ -222,38 +220,6 @@ class TestEditSettingsDialogAS400:
         assert dialog._as400_address.text() == sample_settings["as400_address"]
         assert dialog._as400_username.text() == sample_settings["as400_username"]
         assert dialog._as400_password.text() == sample_settings["as400_password"]
-
-    def test_odbc_driver_combo(
-        self, qtbot, sample_settings, sample_oversight, mock_callbacks
-    ):
-        """Test ODBC driver combo box is populated."""
-        dialog = _make_dialog(
-            settings_data=sample_oversight,
-            settings_provider=MagicMock(return_value=sample_settings),
-            **mock_callbacks,
-        )
-        qtbot.addWidget(dialog)
-
-        # Should have driver set from settings or default
-        current_text = dialog._odbc_driver_combo.currentText()
-        assert current_text is not None
-
-    def test_odbc_driver_custom_value(
-        self, qtbot, sample_settings, sample_oversight, mock_callbacks
-    ):
-        """Test custom ODBC driver is added to combo."""
-        custom_driver = "Custom ODBC Driver"
-        custom_settings = sample_settings.copy()
-        custom_settings["odbc_driver"] = custom_driver
-
-        dialog = _make_dialog(
-            settings_data=sample_oversight,
-            settings_provider=MagicMock(return_value=custom_settings),
-            **mock_callbacks,
-        )
-        qtbot.addWidget(dialog)
-
-        assert dialog._odbc_driver_combo.currentText() == custom_driver
 
 
 class TestEditSettingsDialogEmail:

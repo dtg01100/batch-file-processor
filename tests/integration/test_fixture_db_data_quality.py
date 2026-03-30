@@ -35,9 +35,9 @@ class TestRealFolderConfigFromDict:
         assert len(real_folder_rows) == 5, "Expected 5 diverse folder rows"
         for row in real_folder_rows:
             fc = FolderConfiguration.from_dict(row)
-            assert (
-                fc.folder_name
-            ), f"folder_name should not be empty for row id={row.get('id')}"
+            assert fc.folder_name, (
+                f"folder_name should not be empty for row id={row.get('id')}"
+            )
 
     def test_edi_config_populated_from_real_data(self, real_folder_row):
         """EDI sub-configuration is populated and convert_to_format is a string."""
@@ -68,9 +68,9 @@ class TestRealFolderConfigAtScale:
                     f"Row id={row.get('id')} alias={row.get('alias')!r}: {exc}"
                 )
         assert count == 530, f"Expected 530 folder rows, got {count}"
-        assert (
-            failures == []
-        ), f"{len(failures)} folder(s) failed to parse:\n" + "\n".join(failures)
+        assert failures == [], (
+            f"{len(failures)} folder(s) failed to parse:\n" + "\n".join(failures)
+        )
 
     def test_all_folders_roundtrip(self, migrated_v42_db):
         """First 50 folders survive a from_dict -> to_dict round-trip."""
@@ -78,9 +78,9 @@ class TestRealFolderConfigAtScale:
             fc = FolderConfiguration.from_dict(row)
             result = fc.to_dict()
             assert isinstance(result, dict)
-            assert (
-                "folder_name" in result
-            ), f"Round-tripped dict missing 'folder_name' for row id={row.get('id')}"
+            assert "folder_name" in result, (
+                f"Round-tripped dict missing 'folder_name' for row id={row.get('id')}"
+            )
 
 
 @pytest.mark.slow
@@ -89,7 +89,7 @@ class TestRealSettingsIntegrity:
 
     def test_settings_have_expected_keys(self, real_settings_row):
         """Core settings keys exist and have non-None values."""
-        for key in ("smtp_port", "email_smtp_server", "odbc_driver"):
+        for key in ("smtp_port", "email_smtp_server"):
             assert key in real_settings_row, f"Missing key: {key}"
             assert real_settings_row[key] is not None, f"{key} should not be None"
 

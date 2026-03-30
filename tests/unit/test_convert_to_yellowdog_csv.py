@@ -80,7 +80,6 @@ class TestConvertToYellowdogCSVFixtures:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test.address.com",
-            "odbc_driver": "ODBC Driver 17 for SQL Server",
         }
 
     @pytest.fixture
@@ -492,7 +491,6 @@ class TestConvertToYellowdogCSVStrictMode(TestConvertToYellowdogCSVFixtures):
         default_settings["as400_username"] = ""
         default_settings["as400_password"] = ""
         default_settings["as400_address"] = ""
-        default_settings["odbc_driver"] = ""
 
         with pytest.raises(ValueError):
             convert_to_yellowdog_csv.edi_convert(

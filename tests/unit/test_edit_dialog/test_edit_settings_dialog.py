@@ -226,15 +226,6 @@ class TestEditSettingsDialogFieldPopulation:
         assert dialog._enable_backup_cb.isChecked() is True
         assert dialog._backup_interval_spin.value() == 200
 
-    def test_odbc_driver_added_when_not_in_list(self, qtbot):
-        """Test that a custom ODBC driver is added to the combo if not present."""
-        mock_settings = {"odbc_driver": "My Custom ODBC Driver"}
-        dialog = _make_dialog(
-            qtbot, settings_provider=MagicMock(return_value=mock_settings)
-        )
-
-        assert dialog._odbc_driver_combo.currentText() == "My Custom ODBC Driver"
-
     def test_empty_settings_use_defaults(self, qtbot):
         """Test that empty settings result in sensible defaults."""
         dialog = _make_dialog(qtbot)
@@ -619,7 +610,6 @@ class TestEditSettingsDialogBaseDialogPattern:
         dialog = _make_dialog(qtbot)
 
         # Verify all four section widgets exist
-        assert hasattr(dialog, "_odbc_driver_combo")  # AS400 section
         assert hasattr(dialog, "_enable_email_cb")  # Email section
         assert hasattr(dialog, "_enable_reporting_cb")  # Reporting section
         assert hasattr(dialog, "_enable_backup_cb")  # Backup section

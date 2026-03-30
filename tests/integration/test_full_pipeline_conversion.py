@@ -68,7 +68,6 @@ def base_settings():
         "as400_username": "test_user",
         "as400_password": "test_pass",
         "as400_address": "test.example.com",
-        "odbc_driver": "IBM i Access ODBC Driver",
     }
 
 

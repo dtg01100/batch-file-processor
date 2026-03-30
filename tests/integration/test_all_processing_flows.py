@@ -301,9 +301,9 @@ C00000004000060000
         assert isinstance(result, bool), "Should return boolean"
         # Output file should exist if filtering was successful
         if result:
-            assert (
-                output_file.exists() or test_file.exists()
-            ), "File should be created or modified"
+            assert output_file.exists() or test_file.exists(), (
+                "File should be created or modified"
+            )
 
     def test_filter_drops_non_matching_invoices(self, temp_workspace):
         """Test that invoices with no matching category records are dropped."""
@@ -390,7 +390,6 @@ class TestEDITweakingFlow:
             "as400_username": "testuser",
             "as400_password": "testpass",
             "as400_address": "test.as400.local",
-            "odbc_driver": "{ODBC Driver 17 for SQL Server}",
         }
 
     def test_date_offset_tweak(
@@ -866,9 +865,9 @@ C00000003000030000
         result2 = orchestrator.process_folder(folder_config, run_log)
         assert result2.success is True, "Second attempt should succeed"
         assert result2.files_failed == 0, "Second attempt should have no failures"
-        assert (
-            result2.files_processed == 2
-        ), "Second attempt should process all input files"
+        assert result2.files_processed == 2, (
+            "Second attempt should process all input files"
+        )
 
     def test_full_lifecycle_flow(self, temp_workspace):
         """Test complete lifecycle: config → process → track → resend → cleanup.

@@ -24,7 +24,6 @@ class TestInvFetcher:
             "as400_username": "user",
             "as400_password": "pass",
             "as400_address": "host",
-            "odbc_driver": "driver",
         }
 
     @pytest.fixture

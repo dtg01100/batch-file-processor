@@ -123,9 +123,9 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert (
-                col in admin_columns
-            ), f"administrative table should have {col} column"
+            assert col in admin_columns, (
+                f"administrative table should have {col} column"
+            )
 
         # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")
@@ -807,7 +807,6 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             email_password TEXT DEFAULT '',
             email_smtp_server TEXT DEFAULT '',
             smtp_port INTEGER DEFAULT 587,
-            odbc_driver TEXT DEFAULT '',
             as400_address TEXT DEFAULT '',
             as400_username TEXT DEFAULT '',
             as400_password TEXT DEFAULT '',

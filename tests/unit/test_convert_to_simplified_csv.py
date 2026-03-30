@@ -71,7 +71,6 @@ class TestConvertToSimplifiedCSVFixtures:
             "as400_username": "test_user",
             "as400_password": "test_pass",
             "as400_address": "test.address.com",
-            "odbc_driver": "ODBC Driver 17 for SQL Server",
         }
 
 

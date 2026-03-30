@@ -327,7 +327,6 @@ def base_settings() -> dict:
         "as400_username": "test_user",
         "as400_password": "test_pass",
         "as400_address": "test.example.com",
-        "odbc_driver": "IBM i Access ODBC Driver",
     }
 
 
@@ -485,7 +484,6 @@ class TestGetUPCDictionary:
             "as400_username": "u",
             "as400_password": "p",
             "as400_address": "host",
-            "odbc_driver": "IBM i Access ODBC Driver",
             "database_lookup_mode": "optional",
         }
 
@@ -524,7 +522,6 @@ class TestGetUPCDictionary:
             "as400_username": "u",
             "as400_password": "p",
             "as400_address": "host",
-            "odbc_driver": "IBM i Access ODBC Driver",
             "database_lookup_mode": "optional",
         }
 
@@ -554,7 +551,6 @@ class TestGetUPCDictionary:
             "as400_username": "u",
             "as400_password": "p",
             "as400_address": "host",
-            "odbc_driver": "IBM i Access ODBC Driver",
             "database_lookup_mode": "strict",
         }
 
@@ -576,7 +572,6 @@ class TestGetUPCDictionary:
             "as400_username": "u",
             "as400_password": "p",
             "as400_address": "host",
-            "odbc_driver": "IBM i Access ODBC Driver",
             "database_lookup_mode": "optional",
         }
 
