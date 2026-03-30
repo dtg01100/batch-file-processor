@@ -1303,7 +1303,11 @@ class DispatchOrchestrator:
             normalize_bool(process_edi_raw) if process_edi_raw is not None else False
         )
 
-        if "convert_edi" not in effective_folder:
+        # tweak_edi=True always forces conversion via tweaks format,
+        # regardless of whether convert_edi key already exists.
+        if legacy_tweak_enabled:
+            effective_folder["convert_edi"] = True
+        elif "convert_edi" not in effective_folder:
             # Legacy mode-aware behavior:
             # - Explicit process_edi values are treated as authoritative.
             # - Legacy tweak_edi=True forces conversion via tweaks compatibility.
