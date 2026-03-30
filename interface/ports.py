@@ -11,6 +11,7 @@ decoupled from any specific UI framework.
 
 from __future__ import annotations
 
+import os
 from typing import Protocol, runtime_checkable
 
 try:
@@ -419,7 +420,7 @@ class QtUIService:
             initial_dir or "",
             filter_str,
         )
-        if path and default_ext and "." not in path.rsplit("/", 1)[-1]:
+        if path and default_ext and "." not in os.path.basename(path):
             path += default_ext
         return path or ""
 

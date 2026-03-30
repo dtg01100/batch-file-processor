@@ -9,6 +9,7 @@ support testing and headless environments.
 from __future__ import annotations
 
 import logging
+import os
 
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtGui import QColor, QPalette
@@ -180,7 +181,7 @@ class QtUIService:
             initial_dir or "",
             filter_str,
         )
-        if path and default_ext and "." not in path.rsplit("/", 1)[-1]:
+        if path and default_ext and "." not in os.path.basename(path):
             path += default_ext
         return path or ""
 
@@ -261,7 +262,8 @@ class QtProgressService(QObject):
         overlay.setAutoFillBackground(True)
         # Ensure stylesheet background gets painted even with global QFrame styles.
         overlay.setAttribute(
-            Qt.WidgetAttribute.WA_StyledBackground, True  # noqa: FBT003
+            Qt.WidgetAttribute.WA_StyledBackground,
+            True,  # noqa: FBT003
         )
         overlay.setStyleSheet(
             f"QFrame#qt_progress_overlay {{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
