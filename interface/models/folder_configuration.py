@@ -144,6 +144,7 @@ class EDIConfiguration:
     split_edi_include_invoices: bool = False
     split_edi_include_credits: bool = False
     prepend_date_files: bool = False
+    tweak_edi: bool = False
     convert_to_format: str = ""
     force_edi_validation: bool = False
     rename_file: str = ""
@@ -428,6 +429,7 @@ class FolderConfiguration:
         # EDI configuration
         edi = EDIConfiguration(
             process_edi=_bool_from_data(data, "process_edi"),
+            tweak_edi=_bool_from_data(data, "tweak_edi"),
             split_edi=_bool_from_data(data, "split_edi"),
             split_edi_include_invoices=_bool_from_data(
                 data, "split_edi_include_invoices"
@@ -594,6 +596,7 @@ class FolderConfiguration:
                         self.edi.split_edi_include_credits
                     ),
                     "prepend_date_files": normalize_bool(self.edi.prepend_date_files),
+                    "tweak_edi": normalize_bool(self.edi.tweak_edi),
                     "convert_to_format": self.edi.convert_to_format,
                     "force_edi_validation": normalize_bool(
                         self.edi.force_edi_validation

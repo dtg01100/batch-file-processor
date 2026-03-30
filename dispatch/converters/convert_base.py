@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from typing import Any, TextIO
 
 import core.utils as utils
-from core.database import QueryRunner, create_query_runner
+from core.database import QueryRunner
 from core.edi.edi_format_parser import EDIFormatParser
 from core.utils import safe_int
 from interface.plugins.plugin_config import PluginConfigMixin
@@ -666,7 +666,9 @@ class DBEnabledConverter(CSVConverter):
     def connect_db(self) -> None:
         if not self._db_connected:
             ssh_key_filename = self.settings_dict.get("ssh_key_filename", "")
-            self.query_object = create_query_runner(
+            from core import database as core_database
+
+            self.query_object = core_database.create_query_runner(
                 username=self.settings_dict["as400_username"],
                 password=self.settings_dict["as400_password"],
                 dsn=self.settings_dict["as400_address"],

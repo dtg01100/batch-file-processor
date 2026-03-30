@@ -16,8 +16,6 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
-from core.database import create_query_runner
-
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
 from core.edi.edi_transformer import (
@@ -297,7 +295,9 @@ class cRecGenerator:
     def _db_connect(self) -> None:
         """Establish database connection."""
         ssh_key_filename = self.settings.get("ssh_key_filename", "")
-        self.query_object = create_query_runner(
+        from core import database as core_database
+
+        self.query_object = core_database.create_query_runner(
             username=self.settings["as400_username"],
             password=self.settings["as400_password"],
             dsn=self.settings["as400_address"],

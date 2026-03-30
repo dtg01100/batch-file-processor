@@ -27,7 +27,7 @@ import decimal
 from abc import ABC
 from typing import Any
 
-from core.database import QueryRunner, create_query_runner
+from core.database import QueryRunner
 from core.exceptions import CustomerLookupError
 from core.structured_logging import get_logger
 from core.utils import (
@@ -85,8 +85,14 @@ class DatabaseConnectionMixin(ABC):
                 f"Missing required database settings: {', '.join(missing_keys)}"
             )
 
+        # Import create_query_runner at call-time to allow tests to monkeypatch
+        # core.database.create_query_runner. Importing at module-level binds the
+        # symbol too early and makes test monkeypatches ineffective when other
+        # modules capture the name during import.
+        from core import database as core_database
+
         ssh_key_filename = settings_dict.get("ssh_key_filename", "")
-        self.query_object = create_query_runner(
+        self.query_object = core_database.create_query_runner(
             username=settings_dict["as400_username"],
             password=settings_dict["as400_password"],
             dsn=settings_dict["as400_address"],
