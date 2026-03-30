@@ -33,7 +33,7 @@ def ensure_schema(database_connection) -> None:
             email_password TEXT,
             email_smtp_server TEXT,
             smtp_port INTEGER,
-            odbc_driver TEXT,
+            ssh_key_filename TEXT,
             as400_address TEXT,
             as400_username TEXT,
             as400_password TEXT,

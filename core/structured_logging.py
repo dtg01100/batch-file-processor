@@ -108,7 +108,6 @@ REDACTION_PATTERNS: frozenset[str] = frozenset(
         "as400_password",
         "db_password",
         "database_password",
-        "odbc_driver",
         "connection_string",
         "conn_string",
         # Network/FTP
