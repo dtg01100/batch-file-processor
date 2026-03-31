@@ -11,7 +11,6 @@ import time
 
 from core.structured_logging import (
     get_logger,
-    log_file_operation,
 )
 
 logger = get_logger(__name__)
@@ -217,39 +216,4 @@ def build_processed_file_record(
     }
 
 
-def do_clear_old_files(folder_path, maximum_files) -> None:
-    while True:
-        files = os.listdir(folder_path)
-        if len(files) <= maximum_files:
-            break
-
-        def _safe_ctime(f):
-            try:
-                return os.path.getctime(os.path.join(folder_path, f))
-            except OSError:
-                return float("inf")
-
-        oldest = min(files, key=_safe_ctime)
-        oldest_path = os.path.join(folder_path, oldest)
-        try:
-            os.remove(oldest_path)
-            log_file_operation(
-                logger,
-                "delete",
-                oldest_path,
-                file_type="log",
-                success=True,
-                context={"reason": "cleanup", "max_files": maximum_files},
-            )
-        except FileNotFoundError:
-            pass  # already deleted by another process
-        except Exception as e:
-            log_file_operation(
-                logger,
-                "delete",
-                oldest_path,
-                file_type="log",
-                success=False,
-                error=e,
-                context={"reason": "cleanup", "max_files": maximum_files},
-            )
+from core.utils import do_clear_old_files  # noqa: F401 - re-exported for backward compat

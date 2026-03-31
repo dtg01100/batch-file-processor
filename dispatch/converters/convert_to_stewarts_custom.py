@@ -28,17 +28,9 @@ Backward Compatibility:
 
 import csv
 import logging
-import os
-import time
 from typing import Any
 
 from core import utils
-from core.structured_logging import (
-    get_logger,
-    get_or_create_correlation_id,
-    log_file_operation,
-    log_with_context,
-)
 from core.utils import prettify_dates
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -53,8 +45,6 @@ from dispatch.converters.mixins import (
     ItemProcessingMixin,
     UOMLookupMixin,
 )
-
-logger = get_logger(__name__)
 
 
 class StewartsCustomConverter(
@@ -308,104 +298,9 @@ class StewartsCustomConverter(
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_dict: dict,
-) -> str:
-    """Convert EDI file to Stewarts Custom CSV format with database lookups.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates a StewartsCustomConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename: Base path for output file (without extension)
-        settings_dict: Application settings dictionary with DB credentials
-        parameters_dict: Conversion parameters (Stewarts has no specific params)
-        upc_dict: UPC lookup table (not used in this converter)
-
-    Returns:
-        Path to the generated CSV file
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "output",
-        ...     {'as400_username': 'user', 'as400_password': 'pass', ...},
-        ...     {},
-        ...     {}
-        ... )
-        >>> print(result)
-        'output.csv'
-
-    """
-    correlation_id = get_or_create_correlation_id()
-    start_time = time.perf_counter()
-
-    log_with_context(
-        logger,
-        logging.INFO,
-        "Starting Stewarts Custom conversion",
-        operation="edi_convert",
-        context={
-            "input_file": os.path.basename(edi_process),
-            "output_file": os.path.basename(output_filename) + ".csv",
-            "format": "stewarts_custom",
-        },
-    )
-    log_file_operation(
-        logger,
-        "read",
-        edi_process,
-        file_type="edi",
-        correlation_id=correlation_id,
-    )
-
-    try:
-        converter = StewartsCustomConverter()
-        result = converter.edi_convert(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_dict
-        )
-        duration_ms = (time.perf_counter() - start_time) * 1000
-
-        log_with_context(
-            logger,
-            logging.INFO,
-            "Stewarts Custom conversion completed",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "output_file": os.path.basename(result),
-                "format": "stewarts_custom",
-                "duration_ms": round(duration_ms, 2),
-            },
-        )
-        log_file_operation(
-            logger,
-            "write",
-            result,
-            file_type="csv",
-            success=True,
-            duration_ms=duration_ms,
-            correlation_id=correlation_id,
-        )
-        return result
-    except Exception as e:
-        duration_ms = (time.perf_counter() - start_time) * 1000
-        log_with_context(
-            logger,
-            logging.ERROR,
-            f"Stewarts Custom conversion failed: {e}",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "format": "stewarts_custom",
-                "duration_ms": round(duration_ms, 2),
-                "error": str(e),
-            },
-        )
-        raise
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    StewartsCustomConverter, format_name="stewarts_custom"
+)

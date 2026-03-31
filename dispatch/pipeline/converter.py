@@ -16,33 +16,10 @@ from core.structured_logging import (
     get_or_create_correlation_id,
     redact_sensitive_data,
 )
-from core.utils.bool_utils import normalize_bool
+from core.utils import normalize_bool, normalize_convert_to_format
 from dispatch.interfaces import FileSystemInterface
 
 logger = get_logger(__name__)
-
-
-def _normalize_process_edi_flag(value: Any) -> bool:
-    """Normalize process_edi to boolean.
-
-    Handles all stored forms: string "True"/"False" (legacy), integer 1/0
-    (modern), and string "1"/"0" (produced by the v41→v42 migration due to
-    SQLite TEXT affinity converting integer writes back to strings).
-    """
-    return normalize_bool(value)
-
-
-def _normalize_convert_to_format(value: Any) -> str:
-    """Normalize convert format into canonical module token.
-
-    Handles legacy casing/spacing/hyphens and noisy punctuation.
-    """
-    if value is None:
-        return ""
-    normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
-    normalized = re.sub(r"[^a-z0-9_]", "_", normalized)
-    normalized = re.sub(r"_+", "_", normalized).strip("_")
-    return normalized
 
 
 SUPPORTED_FORMATS = [
@@ -320,9 +297,9 @@ class EDIConverterStep:
         start_time = time.perf_counter()
 
         raw_convert_to_format = params.get("convert_to_format", "")
-        convert_to_format = _normalize_convert_to_format(raw_convert_to_format)
+        convert_to_format = normalize_convert_to_format(raw_convert_to_format)
         input_basename = os.path.basename(input_path)
-        process_edi = _normalize_process_edi_flag(params.get("process_edi", False))
+        process_edi = normalize_bool(params.get("process_edi", False))
 
         is_noop, result = self._is_noop_conversion(
             convert_to_format, input_path, input_basename, correlation_id, start_time

@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any
 
-from core.database import QueryRunner, create_query_runner
 from core.structured_logging import (
     CorrelationContext,
     get_logger,
@@ -24,10 +23,9 @@ from core.structured_logging import (
     log_file_operation,
     log_with_context,
 )
-from core.utils.bool_utils import normalize_bool
+from core.utils import normalize_bool, normalize_convert_to_format
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
-from dispatch.feature_flags import get_strict_testing_mode
 from dispatch.interfaces import (
     BackendInterface,
     DatabaseInterface,
@@ -36,25 +34,10 @@ from dispatch.interfaces import (
     ValidatorInterface,
 )
 from dispatch.send_manager import SendManager
+from dispatch.services.file_processor import FileProcessor, FileResult, ProcessingContext
+from dispatch.services.upc_service import UPCLookupService
 
 logger = get_logger(__name__)
-
-
-def _normalize_convert_to_format(value: Any) -> str:
-    """Normalize convert_to_format into a predictable module-friendly token.
-
-    Examples:
-        "Estore eInvoice" -> "estore_einvoice"
-        "  Tweaks  " -> "tweaks"
-        None -> ""
-
-    """
-    if value is None:
-        return ""
-    normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
-    normalized = re.sub(r"[^a-z0-9_]", "_", normalized)
-    normalized = re.sub(r"_+", "_", normalized).strip("_")
-    return normalized
 
 
 @dataclass
@@ -119,38 +102,14 @@ class FolderResult:
     success: bool = True
 
 
-@dataclass
-class FileResult:
-    """Result of processing a single file.
+class _ValidatorAdapter:
+    """Adapts a ValidatorInterface (.validate()) to the pipeline step execute() interface."""
 
-    Attributes:
-        file_name: Name of the processed file
-        checksum: MD5 checksum of the file
-        sent: Whether the file was sent successfully
-        validated: Whether validation passed
-        converted: Whether conversion was applied
-        errors: List of error messages
+    def __init__(self, validator: Any) -> None:
+        self._validator = validator
 
-    """
-
-    file_name: str
-    checksum: str
-    sent: bool = False
-    validated: bool = True
-    converted: bool = False
-    errors: list[str] = field(default_factory=list)
-
-
-@dataclass
-class ProcessingContext:
-    """Per-file mutable processing state for pipeline execution."""
-
-    folder: dict
-    effective_folder: dict
-    settings: dict
-    upc_dict: dict
-    temp_dirs: list[str] = field(default_factory=list)
-    temp_files: list[str] = field(default_factory=list)
+    def execute(self, file_path: str, folder: dict) -> tuple[bool, list]:
+        return self._validator.validate(file_path)
 
 
 class DispatchOrchestrator:
@@ -180,7 +139,22 @@ class DispatchOrchestrator:
         self.run_log: StringIO = StringIO()
         self.processed_count: int = 0
         self.error_count: int = 0
-        self._last_upc_lookup_error: str | None = None
+        # Initialize services
+        self.upc_service = UPCLookupService(config.settings)
+        # Wrap legacy ValidatorInterface (.validate()) as a pipeline step (.execute())
+        # so FileProcessor can use it uniformly regardless of which config key was set.
+        effective_validator_step = config.validator_step
+        if effective_validator_step is None and config.validator:
+            effective_validator_step = _ValidatorAdapter(config.validator)
+        self.file_processor = FileProcessor(
+            send_manager=self.send_manager,
+            error_handler=self.error_handler,
+            validator_step=effective_validator_step,
+            splitter_step=config.splitter_step,
+            converter_step=config.converter_step,
+            tweaker_step=config.tweaker_step,
+            file_system=config.file_system,
+        )
         logger.debug(
             "DispatchOrchestrator initialized (pipeline_steps: "
             "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
@@ -504,7 +478,7 @@ class DispatchOrchestrator:
         return mode in {"strict", "required", "test"}
 
     def _get_upc_dictionary(self, settings: dict) -> dict:
-        """Get or fetch UPC dictionary.
+        """Get or fetch UPC dictionary using the UPC lookup service.
 
         Args:
             settings: Application settings
@@ -513,234 +487,28 @@ class DispatchOrchestrator:
             UPC dictionary (may be empty if initialization fails)
 
         """
-        logger.debug("Fetching UPC dictionary (cached=%s)", bool(self.config.upc_dict))
-        strict_db_mode = self._is_strict_database_lookup(settings)
-        strict_testing_mode = get_strict_testing_mode()
-        self._last_upc_lookup_error = None
-
         if self.config.upc_dict:
             return self.config.upc_dict
 
-        if self.config.upc_service:
-            try:
-                upc_dict = self.config.upc_service.get_dictionary()
-                if upc_dict:
-                    self.config.upc_dict = upc_dict
-                    logger.debug("UPC dictionary loaded: %d entries", len(upc_dict))
-                    return upc_dict
-            except Exception as exc:
-                if strict_db_mode:
-                    raise
-                if strict_testing_mode:
-                    raise RuntimeError(
-                        "Failed to fetch UPC dictionary from upc_service"
-                    ) from exc
-                logger.exception("Failed to fetch UPC dictionary from upc_service")
-
-        # Backward-compatible fallback for app/runtime usage where no explicit
-        # upc_service is injected into DispatchConfig.
-        fallback_dict = self._fetch_upc_dictionary_from_settings(settings)
-        if fallback_dict:
-            self.config.upc_dict = fallback_dict
-            logger.debug(
-                "UPC dictionary loaded via fallback query: %d entries",
-                len(fallback_dict),
-            )
-            return fallback_dict
-
-        # UPC dict could not be loaded - converters needing UPC data will fail
-        # silently or produce degraded output
-        if self._last_upc_lookup_error:
-            logger.warning(
-                "UPC dictionary is empty: fallback query failed (%s). "
-                "Check AS400 host/user/password and ODBC driver settings.",
-                self._last_upc_lookup_error,
-            )
-        else:
-            logger.warning(
-                "UPC dictionary is empty: no service configured and fallback query "
-                "did not return usable rows"
-            )
-        if strict_db_mode:
-            raise RuntimeError(
-                "database_lookup_mode is strict but UPC dictionary could not be loaded"
-            )
-        return {}
-
-    def _parse_upc_query_rows(
-        self, rows: list[Any], *, strict_testing_mode: bool
-    ) -> dict[int, list[Any]]:
-        """Build UPC lookup data from raw query rows.
-
-        Supports dictionary rows (case-insensitive column names) and positional
-        tuple/list rows where expected columns are in this order:
-        anbacd, anbbcd, anbgcd, anbhcd, anbicd, anbjcd.
-        """
-        upc_dict = {}
-        for row in rows:
-            try:
-                if isinstance(row, dict):
-                    normalized_row = {
-                        str(key).strip().lower(): value for key, value in row.items()
-                    }
-                    item_number = int(normalized_row["anbacd"])
-                    upc_dict[item_number] = [
-                        normalized_row["anbbcd"],
-                        normalized_row["anbgcd"],
-                        normalized_row["anbhcd"],
-                        normalized_row["anbicd"],
-                        normalized_row["anbjcd"],
-                    ]
-                elif isinstance(row, (tuple, list)):
-                    item_number = int(row[0])
-                    upc_dict[item_number] = [row[1], row[2], row[3], row[4], row[5]]
-                else:
-                    raise TypeError(f"Unsupported UPC row type: {type(row).__name__}")
-            except (TypeError, ValueError, KeyError, IndexError) as exc:
-                if strict_testing_mode:
-                    raise RuntimeError(
-                        f"Malformed UPC row returned from fallback query: {row!r}"
-                    ) from exc
-                continue
-        return upc_dict
-
-    def _close_upc_runner(
-        self, runner: QueryRunner, *, strict_testing_mode: bool
-    ) -> None:
-        """Close UPC query runner, surfacing failures in strict mode."""
-        try:
-            runner.close()
-        except Exception as exc:
-            if strict_testing_mode:
-                raise RuntimeError("Failed to close UPC query runner") from exc
-
-    def _fetch_upc_dictionary_from_settings(self, settings: dict) -> dict:
-        """Fetch UPC dictionary directly from AS400 using app settings.
-
-        This mirrors legacy dispatch behavior and serves as a fallback path when
-        no ``upc_service`` is configured in ``DispatchConfig``.
-        """
         strict_db_mode = self._is_strict_database_lookup(settings)
-        strict_testing_mode = get_strict_testing_mode()
-
-        if not self._validate_as400_settings(settings, strict_db_mode=strict_db_mode):
-            return {}
-
-        runner_kwargs = self._build_upc_runner_kwargs(settings)
-
-        runner = create_query_runner(**runner_kwargs)
-
-        try:
-            return self._execute_upc_query(
-                runner,
-                strict_db_mode=strict_db_mode,
-                strict_testing_mode=strict_testing_mode,
-            )
-        except Exception as exc:
-            self._handle_upc_query_exception(
-                exc,
-                strict_db_mode=strict_db_mode,
-                strict_testing_mode=strict_testing_mode,
-            )
-            return {}
-        finally:
-            self._close_upc_runner(runner, strict_testing_mode=strict_testing_mode)
-
-    def _validate_as400_settings(self, settings: dict, *, strict_db_mode: bool) -> bool:
-        """Validate AS400 settings and handle missing credentials.
-
-        Returns True if settings are valid, False if lookup should be skipped.
-        """
-        required_keys = ("as400_username", "as400_password", "as400_address")
-        missing_keys = [key for key in required_keys if not settings.get(key)]
-        if not missing_keys:
-            return True
-
-        self._last_upc_lookup_error = "missing AS400 settings: " + ", ".join(
-            missing_keys
+        self.upc_service.settings = settings
+        result = self.upc_service.get_dictionary(
+            upc_service=self.config.upc_service,
+            strict_db_mode=strict_db_mode,
         )
-        if strict_db_mode:
-            raise ValueError(
-                "database_lookup_mode is strict but AS400 settings are missing: "
-                + ", ".join(missing_keys)
-            )
-        logger.warning(
-            "Cannot fetch UPC dictionary: missing AS400 credentials (%s)",
-            ", ".join(missing_keys),
-        )
-        return False
+        if result:
+            self.config.upc_dict = result
+        return result
 
-    def _build_upc_runner_kwargs(self, settings: dict) -> dict:
-        """Build kwargs for QueryRunner from AS400 settings."""
-        runner_kwargs = {
-            "username": settings["as400_username"],
-            "password": settings["as400_password"],
-            "dsn": settings["as400_address"],
-            "database": "QGPL",
-        }
-        ssh_key_filename = settings.get("ssh_key_filename", "")
-        if ssh_key_filename:
-            runner_kwargs["ssh_key_filename"] = ssh_key_filename
-        return runner_kwargs
-
-    def _execute_upc_query(
-        self, runner: QueryRunner, *, strict_db_mode: bool, strict_testing_mode: bool
-    ) -> dict:
-        """Execute UPC query and parse results into dictionary."""
-        rows = runner.run_query(
-            """
-            select
-                dsanrep.anbacd as anbacd,
-                dsanrep.anbbcd as anbbcd,
-                strip(dsanrep.anbgcd) as anbgcd,
-                strip(dsanrep.anbhcd) as anbhcd,
-                strip(dsanrep.anbicd) as anbicd,
-                strip(dsanrep.anbjcd) as anbjcd
-            from dacdata.dsanrep dsanrep
-            """
-        )
-
-        if strict_db_mode and not rows:
-            raise LookupError(
-                "database_lookup_mode is strict but UPC query returned no rows"
-            )
-
-        if not rows:
-            self._last_upc_lookup_error = "fallback UPC query returned no rows"
-            return {}
-
-        upc_dict = self._parse_upc_query_rows(
-            rows, strict_testing_mode=strict_testing_mode
-        )
-        if strict_db_mode and rows and not upc_dict:
-            raise LookupError(
-                "database_lookup_mode is strict but UPC query returned no parseable rows"
-            )
-        if not upc_dict:
-            self._last_upc_lookup_error = (
-                "fallback UPC query returned rows, but none were parseable"
-            )
-        return upc_dict
-
-    def _handle_upc_query_exception(
-        self, exc: Exception, *, strict_db_mode: bool, strict_testing_mode: bool
-    ) -> None:
-        """Handle exceptions from UPC query execution."""
-        self._last_upc_lookup_error = f"{type(exc).__name__}: {exc}"
-        if strict_db_mode:
-            raise
-        if strict_testing_mode:
-            if isinstance(exc, RuntimeError) and "Malformed UPC row" in str(exc):
-                raise
-            raise RuntimeError(
-                "Failed to fetch UPC dictionary via fallback query"
-            ) from exc
-        logger.exception("Failed to fetch UPC dictionary via fallback query")
+    @property
+    def _last_upc_lookup_error(self) -> str | None:
+        """Return the last error from the UPC lookup service."""
+        return self.upc_service.last_error
 
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
     ) -> FileResult:
-        """Process single file with pipeline.
+        """Process single file with pipeline using the FileProcessor service.
 
         Args:
             file_path: Path to the file to process
@@ -752,42 +520,14 @@ class DispatchOrchestrator:
             FileResult with processing outcome
 
         """
-        correlation_id = get_or_create_correlation_id()
-        result = FileResult(file_name=file_path, checksum="")
-        context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
-        file_basename = os.path.basename(file_path)
-
-        log_file_operation(
-            logger,
-            "process",
-            file_path,
-            correlation_id=correlation_id,
-            file_type="edi",
+        context = self._build_processing_context(folder, upc_dict)
+        return self.file_processor.process_file(
+            file_path=file_path,
+            folder=folder,
+            upc_dict=upc_dict,
+            run_log=run_log,
+            effective_folder=context.effective_folder,
         )
-        logger.debug("Processing file: %s", file_basename)
-
-        try:
-            self._execute_file_pipeline(
-                file_path=file_path,
-                file_basename=file_basename,
-                context=context,
-                result=result,
-                run_log=run_log,
-            )
-
-        except Exception as e:
-            result.errors.append(str(e))
-            self.error_handler.record_error(
-                folder=folder.get("folder_name", ""),
-                filename=file_path,
-                error=e,
-                context={"folder_config": folder, "pipeline_mode": True},
-            )
-
-        finally:
-            self._cleanup_temp_artifacts(context)
-
-        return result
 
     def _execute_file_pipeline(
         self,
@@ -1350,7 +1090,7 @@ class DispatchOrchestrator:
 
         # Normalize convert format early so legacy/stale variants are treated
         # consistently in downstream gates.
-        effective_folder["convert_to_format"] = _normalize_convert_to_format(
+        effective_folder["convert_to_format"] = normalize_convert_to_format(
             raw_convert_format
         )
 

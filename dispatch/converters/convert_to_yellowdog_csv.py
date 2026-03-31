@@ -28,11 +28,7 @@ from datetime import datetime
 from core import utils
 from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
-from core.structured_logging import (
-    get_logger,
-    log_file_operation,
-    log_with_context,
-)
+from core.structured_logging import get_logger
 from core.utils import safe_int
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -87,14 +83,9 @@ class YellowDogConverter(BaseEDIConverter):
         query_runner = None
         if not missing_keys:
             try:
-                ssh_key_filename = settings_dict.get("ssh_key_filename", "")
-                query_runner = create_query_runner(
-                    username=settings_dict["as400_username"],
-                    password=settings_dict["as400_password"],
-                    dsn=settings_dict["as400_address"],
-                    database="QGPL",
-                    ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-                )
+                from core.database.query_runner import create_query_runner_from_settings
+
+                query_runner = create_query_runner_from_settings(settings_dict)
                 logger.debug("YellowDog database lookup runner initialized")
             except Exception:
                 if strict_db_mode:
@@ -300,109 +291,9 @@ class YellowDogConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lookup: dict,
-) -> str:
-    """Convert EDI file to YellowDog CSV format with database lookups.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates a YellowDogConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename: Base path for output file (without extension)
-        settings_dict: Application settings dictionary with DB credentials
-        parameters_dict: Conversion parameters (YellowDog has no specific params)
-        upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "output",
-        ...     {'as400_username': 'user', 'as400_password': 'pass', ...},
-        ...     {},
-        ...     {}
-        ... )
-        >>> print(result)
-        'output.csv'
-
-    """
-    import os
-    import time
-
-    from core.structured_logging import get_or_create_correlation_id
-
-    correlation_id = get_or_create_correlation_id()
-    start_time = time.perf_counter()
-
-    log_with_context(
-        logger,
-        logging.INFO,
-        "Starting YellowDog CSV conversion",
-        operation="edi_convert",
-        context={
-            "input_file": os.path.basename(edi_process),
-            "output_file": os.path.basename(output_filename) + ".csv",
-            "format": "yellowdog_csv",
-        },
-    )
-    log_file_operation(
-        logger,
-        "read",
-        edi_process,
-        file_type="edi",
-        correlation_id=correlation_id,
-    )
-
-    try:
-        converter = YellowDogConverter()
-        result = converter.edi_convert(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
-        )
-        duration_ms = (time.perf_counter() - start_time) * 1000
-
-        log_with_context(
-            logger,
-            logging.INFO,
-            "YellowDog CSV conversion completed",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "output_file": os.path.basename(result),
-                "format": "yellowdog_csv",
-                "duration_ms": round(duration_ms, 2),
-            },
-        )
-        log_file_operation(
-            logger,
-            "write",
-            result,
-            file_type="csv",
-            success=True,
-            duration_ms=duration_ms,
-            correlation_id=correlation_id,
-        )
-        return result
-    except Exception as e:
-        duration_ms = (time.perf_counter() - start_time) * 1000
-        log_with_context(
-            logger,
-            logging.ERROR,
-            f"YellowDog CSV conversion failed: {e}",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "format": "yellowdog_csv",
-                "duration_ms": round(duration_ms, 2),
-                "error": str(e),
-            },
-        )
-        raise
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    YellowDogConverter, format_name="yellowdog_csv"
+)

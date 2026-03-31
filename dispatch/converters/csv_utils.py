@@ -189,36 +189,6 @@ def process_upc_for_output(
     return upc_string
 
 
-def process_upc_with_prefix(
-    fields: dict[str, str],
-    *,
-    calc_check_digit_flag: bool = True,
-    upc_target_length: int = 11,
-    upc_padding: str = "           ",
-) -> str:
-    """Process UPC field for CSV output with tab prefix.
-
-    Same as process_upc_for_output but prepends a tab character.
-
-    Args:
-        fields: The B record fields dictionary
-        calc_check_digit_flag: Whether to calculate check digit
-        upc_target_length: Target UPC length for padding
-        upc_padding: Padding pattern for missing UPCs
-
-    Returns:
-        Tab-prefixed processed UPC string for output
-
-    """
-    upc = process_upc_for_output(
-        fields,
-        calc_check_digit_flag=calc_check_digit_flag,
-        upc_target_length=upc_target_length,
-        upc_padding=upc_padding,
-    )
-    return "\t" + upc if calc_check_digit_flag and upc.strip() else upc
-
-
 def format_retail_price(
     unit_cost: str,
     unit_multiplier: str,
@@ -293,20 +263,3 @@ def filter_description(desc: str, *, filter_ampersand: bool = False) -> str:
         desc = desc.replace("&", "AND")
     return desc
 
-
-def parse_decimal_field(value: str) -> Decimal | None:
-    """Parse a decimal value from a string, handling errors.
-
-    Args:
-        value: String value to parse
-
-    Returns:
-        Decimal value or None if parsing fails
-
-    """
-    if not value or not value.strip():
-        return None
-    try:
-        return Decimal(value.strip())
-    except Exception:
-        return None

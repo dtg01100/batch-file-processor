@@ -82,14 +82,9 @@ class invFetcher:
         """
         self.settings = settings_dict
         # Create a new QueryRunner for the core InvFetcher
-        ssh_key_filename = self.settings.get("ssh_key_filename", "")
-        runner = create_query_runner(
-            username=self.settings["as400_username"],
-            password=self.settings["as400_password"],
-            dsn=self.settings["as400_address"],
-            database="QGPL",
-            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-        )
+        from core.database.query_runner import create_query_runner_from_settings
+
+        runner = create_query_runner_from_settings(settings_dict)
         # Create adapter for the core InvFetcher's protocol
         self._fetcher = InvFetcher(runner, settings_dict)
 

@@ -484,204 +484,17 @@ def normalize_parameter(
     return value
 
 
-class BaseConverter(ABC, PluginConfigMixin):
-    """Legacy converter base preserved for older converter plugins."""
-
-    def __init__(
-        self,
-        edi_process: str,
-        output_filename: str,
-        settings_dict: dict,
-        parameters_dict: dict,
-        upc_lookup: dict,
-    ) -> None:
-        self.edi_process = edi_process
-        self.output_filename = output_filename
-        self.settings_dict = settings_dict
-        self.parameters_dict = parameters_dict
-        self.upc_lookup = upc_lookup
-        self.lines: list[str] = []
-        self.current_a_record: dict | None = None
-
-        format_id = parameters_dict.get("edi_format", "default")
-        try:
-            self.edi_parser = EDIFormatParser.load_format(format_id)
-        except Exception as e:
-            from dispatch.feature_flags import get_strict_testing_mode
-
-            if get_strict_testing_mode():
-                raise RuntimeError(
-                    f"Failed to load EDI format parser for format '{format_id}'"
-                ) from e
-            self.edi_parser = None
-
-    @abstractmethod
-    def initialize_output(self) -> None:
-        """Initialize the output resource before record processing."""
-
-    @abstractmethod
-    def process_record_a(self, record: dict) -> None:
-        """Process an A record."""
-
-    @abstractmethod
-    def process_record_b(self, record: dict) -> None:
-        """Process a B record."""
-
-    @abstractmethod
-    def process_record_c(self, record: dict) -> None:
-        """Process a C record."""
-
-    @abstractmethod
-    def finalize_output(self) -> str:
-        """Finalize output and return the generated filename."""
-
-    def convert(self) -> str:
-        """Execute the legacy conversion lifecycle."""
-        with open(self.edi_process, encoding="utf-8") as work_file:
-            self.lines = work_file.readlines()
-
-        self.initialize_output()
-
-        for line in self.lines:
-            try:
-                record = utils.capture_records(line, self.edi_parser)
-            except Exception as error:
-                if "Not An EDI" in str(error):
-                    continue
-                raise
-
-            if record is None:
-                continue
-
-            record_type = record.get("record_type")
-            if record_type == "A":
-                self.current_a_record = record
-                self.process_record_a(record)
-            elif record_type == "B":
-                self.process_record_b(record)
-            elif record_type == "C":
-                self.process_record_c(record)
-
-        return self.finalize_output()
-
-    @staticmethod
-    def convert_to_price(value: str) -> str:
-        if not value or len(value) < 2:
-            return "0.00"
-        dollars = value[:-2].lstrip("0")
-        if dollars == "":
-            dollars = "0"
-        cents = value[-2:]
-        return f"{dollars}.{cents}"
-
-    @staticmethod
-    def qty_to_int(qty: str) -> int:
-        return safe_int(qty)
-
-    @staticmethod
-    def process_upc(upc_string: str, *, calc_check_digit: bool = True) -> str:
-        upc_string = upc_string.strip()
-        try:
-            int(upc_string)
-        except ValueError:
-            return ""
-
-        if len(upc_string) == 12:
-            return upc_string
-        if len(upc_string) == 11 and calc_check_digit:
-            return upc_string + str(utils.calc_check_digit(upc_string))
-        if len(upc_string) == 8:
-            upca = utils.convert_UPCE_to_UPCA(upc_string)
-            return upca if isinstance(upca, str) else ""
-        return ""
-
-
-class CSVConverter(BaseConverter):
-    """Legacy CSV converter base preserved for older plugins."""
-
-    def __init__(
-        self,
-        edi_process: str,
-        output_filename: str,
-        settings_dict: dict,
-        parameters_dict: dict,
-        upc_lookup: dict,
-    ) -> None:
-        super().__init__(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
-        )
-        self.csv_file: Any = None
-        self.output_file: TextIO | None = None
-        self.csv_dialect: str = "excel"
-        self.lineterminator: str = "\r\n"
-        self.quoting = csv.QUOTE_ALL
-
-    def initialize_output(self) -> None:
-        output_path = self.output_filename + ".csv"
-        self.output_file = open(output_path, "w", newline="", encoding="utf-8")
-        self.csv_file = csv.writer(
-            self.output_file,
-            dialect=self.csv_dialect,
-            lineterminator=self.lineterminator,
-            quoting=self.quoting,
-        )
-
-    def write_header(self, headers: list[str]) -> None:
-        if self.csv_file is None:
-            raise RuntimeError(
-                "CSV file not initialized. Call initialize_output() first."
-            )
-        self.csv_file.writerow(headers)
-
-    def write_row(self, row: list[Any]) -> None:
-        if self.csv_file is None:
-            raise RuntimeError(
-                "CSV file not initialized. Call initialize_output() first."
-            )
-        self.csv_file.writerow(row)
-
-    def finalize_output(self) -> str:
-        if self.output_file is not None:
-            self.output_file.close()
-        return self.output_filename + ".csv"
-
-
-class DBEnabledConverter(CSVConverter):
-    """Legacy DB-enabled converter base preserved for older plugins."""
-
-    def __init__(
-        self,
-        edi_process: str,
-        output_filename: str,
-        settings_dict: dict,
-        parameters_dict: dict,
-        upc_lookup: dict,
-    ) -> None:
-        super().__init__(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
-        )
-        self.query_object: QueryRunner | None = None
-        self._db_connected = False
-
-    def connect_db(self) -> None:
-        if not self._db_connected:
-            ssh_key_filename = self.settings_dict.get("ssh_key_filename", "")
-            from core import database as core_database
-
-            self.query_object = core_database.create_query_runner(
-                username=self.settings_dict["as400_username"],
-                password=self.settings_dict["as400_password"],
-                dsn=self.settings_dict["as400_address"],
-                database="QGPL",
-                ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-            )
-            self._db_connected = True
-
-    def run_query(self, query_string: str) -> list:
-        self.connect_db()
-        if self.query_object is None:
-            raise RuntimeError("Failed to initialize database connection")
-        return self.query_object.run_query(query_string)
+# =============================================================================
+# Legacy Converter Classes Removed
+# =============================================================================
+# The following legacy classes have been removed:
+# - BaseConverter (use BaseEDIConverter instead)
+# - CSVConverter (use BaseEDIConverter with CSV initialization instead)
+# - DBEnabledConverter (use DatabaseConnectionMixin + BaseEDIConverter instead)
+#
+# All converters should now use the modern BaseEDIConverter class and mixins
+# from this module or dispatch.converters.mixins.
+# =============================================================================
 
 
 def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
@@ -730,9 +543,7 @@ def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
         )
 
         try:
-            converter = converter_class(
-                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
-            )
+            converter = converter_class()
             result = converter.edi_convert(
                 edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
             )

@@ -79,25 +79,18 @@ class DatabaseConnectionMixin(ABC):
         if self._db_initialized:
             return
 
-        missing_keys = [key for key in required_keys if not settings_dict.get(key)]
+        missing_keys = [key for key in required_keys if key not in settings_dict or not settings_dict[key]]
         if missing_keys:
             raise ValueError(
                 f"Missing required database settings: {', '.join(missing_keys)}"
             )
 
-        # Import create_query_runner at call-time to allow tests to monkeypatch
-        # core.database.create_query_runner. Importing at module-level binds the
-        # symbol too early and makes test monkeypatches ineffective when other
-        # modules capture the name during import.
-        from core import database as core_database
+        # Use the convenience wrapper to create query runner from settings
+        from core.database.query_runner import create_query_runner_from_settings
 
         ssh_key_filename = settings_dict.get("ssh_key_filename", "")
-        self.query_object = core_database.create_query_runner(
-            username=settings_dict["as400_username"],
-            password=settings_dict["as400_password"],
-            dsn=settings_dict["as400_address"],
-            database=database,
-            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
+        self.query_object = create_query_runner_from_settings(
+            settings_dict, database=database
         )
         self._db_initialized = True
         logger.debug("Database connection initialized for %s", self.__class__.__name__)

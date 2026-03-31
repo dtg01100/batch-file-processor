@@ -260,14 +260,9 @@ class ScanSheetTypeAConverter:
             correlation_id=self._correlation_id,
         )
 
-        ssh_key_filename = settings_dict.get("ssh_key_filename", "")
-        self.query_object = core.database.create_query_runner(
-            username=settings_dict["as400_username"],
-            password=settings_dict["as400_password"],
-            dsn=settings_dict["as400_address"],
-            database="QGPL",
-            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-        )
+        from core.database.query_runner import create_query_runner_from_settings
+
+        self.query_object = create_query_runner_from_settings(settings_dict)
 
     def _initialize_workbook(self, output_filename: str) -> None:
         """Initialize the Excel workbook.

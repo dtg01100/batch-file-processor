@@ -28,11 +28,6 @@ import logging
 
 from core import utils
 from core.edi.inv_fetcher import InvFetcher
-from core.structured_logging import (
-    get_logger,
-    log_file_operation,
-    log_with_context,
-)
 from core.utils import safe_int
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -40,8 +35,6 @@ from dispatch.converters.convert_base import (
     EDIRecord,
     create_csv_writer,
 )
-
-logger = get_logger(__name__)
 
 
 class FintechConverter(BaseEDIConverter):
@@ -250,113 +243,9 @@ class FintechConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lut: dict,
-) -> str:
-    """Convert EDI file to Fintech CSV format.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates a FintechConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename: Base path for output file (without extension)
-        settings_dict: Application settings dictionary
-        parameters_dict: Conversion parameters (must include 'fintech_division_id')
-        upc_lut: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "output",
-        ...     settings_dict,
-        ...     {'fintech_division_id': 'DIV001'},
-        ...     {123456: ('CAT1', 'upc_pack', 'upc_case')}
-        ... )
-        >>> print(result)
-        'output.csv'
-
-    """
-    import os
-    import time
-
-    from core.structured_logging import get_or_create_correlation_id
-
-    correlation_id = get_or_create_correlation_id()
-    start_time = time.perf_counter()
-    division_id = parameters_dict.get("fintech_division_id", "")
-
-    log_with_context(
-        logger,
-        logging.INFO,
-        "Starting Fintech conversion",
-        operation="edi_convert",
-        context={
-            "input_file": os.path.basename(edi_process),
-            "output_file": os.path.basename(output_filename) + ".csv",
-            "format": "fintech",
-            "division_id": division_id,
-        },
-    )
-    log_file_operation(
-        logger,
-        "read",
-        edi_process,
-        file_type="edi",
-        correlation_id=correlation_id,
-    )
-
-    try:
-        converter = FintechConverter()
-        result = converter.edi_convert(
-            edi_process, output_filename, settings_dict, parameters_dict, upc_lut
-        )
-        duration_ms = (time.perf_counter() - start_time) * 1000
-
-        log_with_context(
-            logger,
-            logging.INFO,
-            "Fintech conversion completed",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "output_file": os.path.basename(result),
-                "format": "fintech",
-                "division_id": division_id,
-                "duration_ms": round(duration_ms, 2),
-            },
-        )
-        log_file_operation(
-            logger,
-            "write",
-            result,
-            file_type="csv",
-            success=True,
-            duration_ms=duration_ms,
-            correlation_id=correlation_id,
-        )
-        return result
-    except Exception as e:
-        duration_ms = (time.perf_counter() - start_time) * 1000
-        log_with_context(
-            logger,
-            logging.ERROR,
-            f"Fintech conversion failed: {e}",
-            operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "format": "fintech",
-                "division_id": division_id,
-                "duration_ms": round(duration_ms, 2),
-                "error": str(e),
-            },
-        )
-        raise
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    FintechConverter, format_name="fintech"
+)

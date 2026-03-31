@@ -13,36 +13,10 @@ from core.structured_logging import (
     get_logger,
     log_file_operation,
 )
-from core.utils.bool_utils import normalize_bool
+from core.utils.bool_utils import normalize_bool, normalize_db_bool
 from dispatch.interfaces import FileSystemInterface
 
 logger = get_logger(__name__)
-
-
-def _normalize_true_false_only(value: Any) -> bool:
-    """Normalize split_edi and prepend_date_files to boolean.
-
-    Handles all stored forms: string "True"/"False" (legacy), integer 1/0
-    (modern), and string "1"/"0" (produced by the v41→v42 migration due to
-    SQLite TEXT affinity converting integer writes back to strings).
-
-    Does NOT accept "yes"/"no" or other truthy strings - only the documented
-    legacy formats.
-    """
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return False
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        stripped = value.strip()
-        lower_val = stripped.lower()
-        if lower_val in ("true", "1"):
-            return True
-        if lower_val in ("false", "0", ""):
-            return False
-    return False
 
 
 def _normalize_include_flag(value: Any, *, default: bool = True) -> bool:
@@ -341,11 +315,11 @@ class EDISplitterStep:
         """
         errors: list[str] = []
 
-        split_edi = _normalize_true_false_only(params.get("split_edi", False))
+        split_edi = normalize_db_bool(params.get("split_edi", False))
 
         filter_categories = params.get("split_edi_filter_categories", "ALL")
         filter_mode = params.get("split_edi_filter_mode", "include")
-        prepend_date = _normalize_true_false_only(
+        prepend_date = normalize_db_bool(
             params.get("prepend_date_files", False)
         )
 
