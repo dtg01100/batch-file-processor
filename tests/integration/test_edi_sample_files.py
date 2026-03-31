@@ -28,9 +28,13 @@ try:
     AIOSMTPD_AVAILABLE = True
 except Exception:
     AIOSMTPD_AVAILABLE = False
-from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import FTPHandler
-from pyftpdlib.servers import FTPServer
+try:
+    from pyftpdlib.authorizers import DummyAuthorizer  # type: ignore
+    from pyftpdlib.handlers import FTPHandler  # type: ignore
+    from pyftpdlib.servers import FTPServer  # type: ignore
+    PYFTPDLIB_AVAILABLE = True
+except Exception:
+    PYFTPDLIB_AVAILABLE = False
 
 from core.edi.edi_parser import capture_records
 from dispatch.pipeline.splitter import EDISplitterStep
@@ -81,6 +85,8 @@ def _free_port():
 
 @pytest.fixture
 def live_ftp_server(tmp_path):
+    if not PYFTPDLIB_AVAILABLE:
+        pytest.skip("pyftpdlib not installed")
     root = str(tmp_path / "ftp_root")
     os.makedirs(root)
     port = _free_port()
