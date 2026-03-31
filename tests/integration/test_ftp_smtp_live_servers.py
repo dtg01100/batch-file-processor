@@ -18,10 +18,19 @@ from email import message_from_bytes
 from typing import List, Optional
 
 import pytest
-from aiosmtpd.controller import Controller
-from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import FTPHandler
-from pyftpdlib.servers import FTPServer
+try:
+    from aiosmtpd.controller import Controller  # type: ignore
+    AIOSMTPD_AVAILABLE = True
+except Exception:
+    AIOSMTPD_AVAILABLE = False
+
+try:
+    from pyftpdlib.authorizers import DummyAuthorizer  # type: ignore
+    from pyftpdlib.handlers import FTPHandler  # type: ignore
+    from pyftpdlib.servers import FTPServer  # type: ignore
+    PYFTPDLIB_AVAILABLE = True
+except Exception:
+    PYFTPDLIB_AVAILABLE = False
 
 from backend import email_backend, ftp_backend
 from backend.email_backend import EmailBackend
@@ -122,6 +131,8 @@ class _FTPFixture:
 @pytest.fixture()
 def ftp_server(tmp_path):
     """Start a real FTP server; yield (_FTPFixture, process_parameters dict)."""
+    if not PYFTPDLIB_AVAILABLE:
+        pytest.skip("pyftpdlib not installed")
     root = tmp_path / "ftproot"
     root.mkdir()
     port = _free_port()
@@ -165,6 +176,8 @@ class _CapturingHandler:
 @pytest.fixture()
 def smtp_server():
     """Start a real SMTP server; yield (handler, settings dict)."""
+    if not AIOSMTPD_AVAILABLE:
+        pytest.skip("aiosmtpd not installed")
     handler = _CapturingHandler()
     port = _free_port()
     controller = Controller(handler, hostname="127.0.0.1", port=port)
