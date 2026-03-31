@@ -10,6 +10,7 @@ This theme system implements contemporary design principles including:
 """
 
 import re
+import sys
 from pathlib import Path
 
 from PyQt5.QtWidgets import QApplication
@@ -166,9 +167,12 @@ class Theme:
         """Return an absolute path for a theme asset located under interface/qt/assets."""
         # Qt stylesheet url(...) parsing is most reliable with forward slashes,
         # especially on Windows where backslashes can be interpreted as escapes.
-        return (
-            (Path(__file__).resolve().parent / "assets" / filename).resolve().as_posix()
-        )
+        # On Windows, Qt requires the file:/// prefix for absolute paths in stylesheets.
+        asset_path = (Path(__file__).resolve().parent / "assets" / filename).resolve()
+        path_str = asset_path.as_posix()
+        if sys.platform == "win32":
+            return f"file:///{path_str}"
+        return path_str
 
     @staticmethod
     def get_button_stylesheet(variant="default"):
