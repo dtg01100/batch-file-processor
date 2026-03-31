@@ -92,6 +92,29 @@ class UIServiceProtocol(Protocol):
         """
         ...
 
+    def ask_three_choices(
+        self,
+        title: str,
+        message: str,
+        choice1: str,
+        choice2: str,
+        choice3: str,
+    ) -> int:
+        """Prompt the user with a three-choice question.
+
+        Args:
+            title: Dialog title.
+            message: Question or informational text.
+            choice1: Label for first button.
+            choice2: Label for second button.
+            choice3: Label for third button (cancel-like).
+
+        Returns:
+            0 if user selected choice1, 1 if choice2, 2 if choice3.
+
+        """
+        ...
+
     # -- file / directory dialogs ---------------------------------------------
 
     def ask_directory(
@@ -270,6 +293,17 @@ class NullUIService:
         """Returns ``False`` (the safe/conservative default)."""
         return False
 
+    def ask_three_choices(
+        self,
+        title: str,
+        message: str,
+        choice1: str,
+        choice2: str,
+        choice3: str,
+    ) -> int:
+        """Returns -1 (cancel/default)."""
+        return -1
+
     def ask_directory(
         self,
         title: str = "Select Directory",
@@ -357,6 +391,32 @@ class QtUIService:
             QMessageBox.StandardButton.Cancel,
         )
         return result == QMessageBox.StandardButton.Ok
+
+    def ask_three_choices(
+        self,
+        title: str,
+        message: str,
+        choice1: str,
+        choice2: str,
+        choice3: str,
+    ) -> int:
+        """Prompt the user with a three-choice question."""
+        msg_box = QMessageBox(self._parent)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        btn1 = msg_box.addButton(choice1, QMessageBox.ButtonRole.AcceptRole)
+        btn2 = msg_box.addButton(choice2, QMessageBox.ButtonRole.AcceptRole)
+        btn3 = msg_box.addButton(choice3, QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(btn1)
+        msg_box.exec()
+        clicked = msg_box.clickedButton()
+        if clicked == btn1:
+            return 0
+        elif clicked == btn2:
+            return 1
+        elif clicked == btn3:
+            return 2
+        return -1
 
     # -- file / directory dialogs ---------------------------------------------
 

@@ -84,6 +84,14 @@ class TestNullUIService:
         result = service.ask_ok_cancel("Title", "Message")
         assert result is False
 
+    def test_ask_three_choices_returns_minus_one(self):
+        """Test that ask_three_choices() returns -1 (safe default)."""
+        service = NullUIService()
+        result = service.ask_three_choices(
+            "Title", "Message", "Choice 1", "Choice 2", "Cancel"
+        )
+        assert result == -1
+
     def test_ask_directory_returns_empty_string(self):
         """Test that ask_directory() returns empty string."""
         service = NullUIService()
@@ -227,6 +235,60 @@ class TestQtUIService:
         result = service.ask_ok_cancel("Test Title", "Test Message")
 
         assert result is False
+
+    @patch("interface.ports.QMessageBox")
+    def test_ask_three_choices_returns_0_when_first_clicked(self, mock_qmessagebox):
+        """Test that ask_three_choices() returns 0 when first button clicked."""
+        mock_btn1 = MagicMock()
+        mock_btn2 = MagicMock()
+        mock_btn3 = MagicMock()
+        mock_msg_box_instance = MagicMock()
+        mock_qmessagebox.return_value = mock_msg_box_instance
+        mock_msg_box_instance.addButton.side_effect = [mock_btn1, mock_btn2, mock_btn3]
+        mock_msg_box_instance.clickedButton.return_value = mock_btn1
+
+        service = QtUIService()
+        result = service.ask_three_choices(
+            "Title", "Message", "Add", "Edit", "Cancel"
+        )
+
+        assert result == 0
+
+    @patch("interface.ports.QMessageBox")
+    def test_ask_three_choices_returns_1_when_second_clicked(self, mock_qmessagebox):
+        """Test that ask_three_choices() returns 1 when second button clicked."""
+        mock_btn1 = MagicMock()
+        mock_btn2 = MagicMock()
+        mock_btn3 = MagicMock()
+        mock_msg_box_instance = MagicMock()
+        mock_qmessagebox.return_value = mock_msg_box_instance
+        mock_msg_box_instance.addButton.side_effect = [mock_btn1, mock_btn2, mock_btn3]
+        mock_msg_box_instance.clickedButton.return_value = mock_btn2
+
+        service = QtUIService()
+        result = service.ask_three_choices(
+            "Title", "Message", "Add", "Edit", "Cancel"
+        )
+
+        assert result == 1
+
+    @patch("interface.ports.QMessageBox")
+    def test_ask_three_choices_returns_2_when_third_clicked(self, mock_qmessagebox):
+        """Test that ask_three_choices() returns 2 when third button clicked."""
+        mock_btn1 = MagicMock()
+        mock_btn2 = MagicMock()
+        mock_btn3 = MagicMock()
+        mock_msg_box_instance = MagicMock()
+        mock_qmessagebox.return_value = mock_msg_box_instance
+        mock_msg_box_instance.addButton.side_effect = [mock_btn1, mock_btn2, mock_btn3]
+        mock_msg_box_instance.clickedButton.return_value = mock_btn3
+
+        service = QtUIService()
+        result = service.ask_three_choices(
+            "Title", "Message", "Add", "Edit", "Cancel"
+        )
+
+        assert result == 2
 
     @patch("interface.ports.QFileDialog")
     def test_ask_directory_returns_selected_path(self, mock_qfiledialog):
