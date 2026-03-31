@@ -114,8 +114,8 @@ class TestColumnBuilders:
 class TestDynamicEDIBuilder:
     """Tests for dynamic EDI field builder."""
 
-    def test_build_edi_options_combo(self, qtbot):
-        """Test building EDI options combo."""
+    def test_build_edi_options_check(self, qtbot):
+        """Test building EDI options check."""
         from interface.qt.dialogs.edit_folders.dynamic_edi_builder import (
             DynamicEDIBuilder,
         )
@@ -136,13 +136,11 @@ class TestDynamicEDIBuilder:
             dynamic_layout=dynamic_layout,
         )
 
-        # Build EDI options combo
-        combo = builder.build_edi_options_combo()
+        # Build EDI options check
+        check = builder.build_edi_options_check()
 
-        assert combo is not None
-        assert isinstance(combo, QComboBox)
-        # Should have Do Nothing, Convert EDI options
-        assert combo.count() == 2
+        assert check is not None
+        assert isinstance(check, QCheckBox)
 
     def test_edi_option_changed(self, qtbot):
         """Test EDI option change handling."""
@@ -166,9 +164,9 @@ class TestDynamicEDIBuilder:
             dynamic_layout=dynamic_layout,
         )
 
-        # Build combo and trigger change
-        combo = builder.build_edi_options_combo()
-        combo.setCurrentText("Convert EDI")
+        # Build check and trigger change
+        check = builder.build_edi_options_check()
+        check.setChecked(True)
 
         # Should have created process_edi hidden field
         assert "process_edi" in fields
@@ -195,17 +193,11 @@ class TestDynamicEDIBuilder:
             dynamic_layout=dynamic_layout,
         )
 
-        # Build EDI options combo first
-        builder.edi_options_combo = QComboBox()
-        builder.edi_options_combo.addItems(["Do Nothing", "Convert EDI", "Tweak EDI"])
-        builder.edi_options_combo.setCurrentText("Convert EDI")
-
-        # Need to also set up the convert sub container
+        # Need to set up the convert sub container for format-specific options
         builder.convert_sub_container = QWidget()
         builder.convert_sub_layout = QVBoxLayout(builder.convert_sub_container)
 
-        # Now handle format change - this bypasses _build_convert_edi_area
-        # so convert_formats_var won't be set. But CSV fields will be created.
+        # Handle format change - builds format-specific options
         builder.handle_convert_format_changed("csv")
 
         # Should have created CSV-specific fields (upc check is one of them)
@@ -528,12 +520,7 @@ class TestComponentIntegration:
             dynamic_layout=dynamic_layout,
         )
 
-        # Set up EDI options combo
-        builder.edi_options_combo = QComboBox()
-        builder.edi_options_combo.addItems(["Do Nothing", "Convert EDI", "Tweak EDI"])
-        builder.edi_options_combo.setCurrentText("Convert EDI")
-
-        # Set up convert sub container
+        # Set up convert sub container for format-specific options
         builder.convert_sub_container = QWidget()
         builder.convert_sub_layout = QVBoxLayout(builder.convert_sub_container)
 

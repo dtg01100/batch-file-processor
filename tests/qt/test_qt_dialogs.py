@@ -429,13 +429,13 @@ class TestEditFoldersDialog:
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
 
-        dialog.dynamic_edi_builder.edi_options_combo.setCurrentText("Convert EDI")
+        dialog.dynamic_edi_builder.edi_options_check.setChecked(True)
         qtbot.waitUntil(lambda: "convert_formats_var" in dialog._fields, timeout=1000)
         convert_combo = dialog._fields["convert_formats_var"]
         options = [convert_combo.itemText(i) for i in range(convert_combo.count())]
         assert "CSV" in options
 
-    def test_edi_options_combo_contains_expected_values(
+    def test_edi_options_check_contains_expected_label(
         self, qtbot, sample_folder_config
     ):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
@@ -443,12 +443,9 @@ class TestEditFoldersDialog:
         dialog = EditFoldersDialog(None, sample_folder_config)
         qtbot.addWidget(dialog)
 
-        edi_combo = dialog.dynamic_edi_builder.edi_options_combo
-        options = [edi_combo.itemText(i) for i in range(edi_combo.count())]
-        assert options == [
-            "Do Nothing",
-            "Convert EDI",
-        ]
+        edi_check = dialog.dynamic_edi_builder.edi_options_check
+        assert edi_check.text() == "Convert EDI"
+        assert edi_check.isCheckable() is True
 
     def test_disabled_folder_validates(self, qtbot, sample_folder_config):
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog

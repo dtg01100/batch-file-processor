@@ -500,13 +500,13 @@ class TestQtBatchFileSenderApp:
         app._database.oversight_and_defaults.update.assert_not_called()
         app._folder_manager.add_folder.assert_not_called()
 
-    def test_batch_add_folders_adds_and_skips(self, tmp_path, monkeypatch):
+    def test_batch_add_folders_adds_all_folders(self, tmp_path, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
         root = tmp_path / "parent"
         root.mkdir()
-        (root / "exists").mkdir()
-        (root / "new1").mkdir()
+        (root / "folder1").mkdir()
+        (root / "folder2").mkdir()
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
@@ -521,18 +521,13 @@ class TestQtBatchFileSenderApp:
         app._ui_service.ask_directory.return_value = str(root)
         app._ui_service.ask_ok_cancel.return_value = True
 
-        def _exists_check(path):
-            return {"truefalse": path.endswith("exists")}
-
-        app._folder_manager.check_folder_exists.side_effect = _exists_check
-
         start_dir = os.getcwd()
         app._batch_add_folders()
 
         app._database.oversight_and_defaults.update.assert_called_once()
-        app._folder_manager.add_folder.assert_called_once()
+        assert app._folder_manager.add_folder.call_count == 2
         app._ui_service.show_info.assert_called_once_with(
-            "Batch Add Complete", "1 folders added, 1 folders skipped."
+            "Batch Add Complete", "2 folders added."
         )
         app._refresh_users_list.assert_called_once()
         assert os.getcwd() == start_dir
@@ -554,8 +549,9 @@ class TestQtBatchFileSenderApp:
         app._folder_manager.check_folder_exists.return_value = {
             "truefalse": True,
             "matched_folder": {"id": 55, "folder_name": "/tmp/existing"},
+            "all_matched_folders": [{"id": 55, "folder_name": "/tmp/existing"}],
         }
-        app._ui_service.ask_ok_cancel.return_value = True
+        app._ui_service.ask_three_choices.return_value = 1
 
         monkeypatch.setattr("interface.qt.app.os.path.exists", lambda *_: True)
 
@@ -1631,6 +1627,7 @@ class TestQtAppInteractionWorkflows:
         app._folder_manager.check_folder_exists.return_value = {
             "truefalse": True,
             "matched_folder": {"id": 55, "folder_name": "/tmp/existing"},
+            "all_matched_folders": [{"id": 55, "folder_name": "/tmp/existing"}],
         }
         app._ui_service.ask_ok_cancel.return_value = False
 
