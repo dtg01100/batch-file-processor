@@ -4,12 +4,6 @@ This module contains service classes that provide specialized functionality
 for the dispatch pipeline.
 """
 
-from dispatch.services.file_processor import (
-    FileProcessor,
-    FileProcessorInterface,
-    FileProcessorResult,
-    MockFileProcessor,
-)
 from dispatch.services.progress_reporter import (
     CLIProgressReporter,
     LoggingProgressReporter,
@@ -36,9 +30,4 @@ __all__ = [
     "CLIProgressReporter",
     "NullProgressReporter",
     "LoggingProgressReporter",
-    # File Processor
-    "FileProcessorResult",
-    "FileProcessorInterface",
-    "MockFileProcessor",
-    "FileProcessor",
 ]
