@@ -159,7 +159,7 @@ def _write_split_edi_files(
                         count,
                         edi_process,
                         work_directory,
-                        prepend_date_files,
+                        prepend_date_files=prepend_date_files,
                     )
                 )
                 edi_send_list.append(
@@ -269,7 +269,7 @@ def add_row(csv_writer, rowdict: dict) -> None:
         rowdict: A dictionary whose values will be written as a row.
 
     """
-    csv_writer.writerow(list(rowdict.values()))
+    csv_writer.writerow(rowdict.values())
 
 
 class cRecGenerator:
