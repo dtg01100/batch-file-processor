@@ -213,6 +213,8 @@ class FolderManager:
         """Check if a folder already exists in database.
 
         Compares normalized paths to handle different path formats.
+        Returns ALL matching folders to support multiple configurations
+        per source directory.
 
         Args:
             folder_path: Path to check
@@ -220,7 +222,8 @@ class FolderManager:
         Returns:
             Dict with keys:
                 - truefalse: bool indicating if folder exists
-                - matched_folder: The matching folder dict or None
+                - matched_folder: The first matching folder dict or None
+                - all_matched_folders: List of all matching folder dicts
 
         """
         if self._folder_repo is not None:
@@ -228,11 +231,19 @@ class FolderManager:
         else:
             all_folders = self._db.folders_table.all()
 
-        for folder in all_folders:
-            if os.path.normpath(folder["folder_name"]) == os.path.normpath(folder_path):
-                return {"truefalse": True, "matched_folder": folder}
+        matched_folders = [
+            folder for folder in all_folders
+            if os.path.normpath(folder["folder_name"]) == os.path.normpath(folder_path)
+        ]
 
-        return {"truefalse": False, "matched_folder": None}
+        if matched_folders:
+            return {
+                "truefalse": True,
+                "matched_folder": matched_folders[0],
+                "all_matched_folders": matched_folders
+            }
+
+        return {"truefalse": False, "matched_folder": None, "all_matched_folders": []}
 
     def get_folder_by_id(self, folder_id: int) -> dict | None:
         """Get a folder by its ID.

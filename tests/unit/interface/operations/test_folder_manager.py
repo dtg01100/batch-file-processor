@@ -103,6 +103,23 @@ class TestFolderManager:
 
         assert result["truefalse"] is True
 
+    def test_check_folder_exists_multiple_matches(self, manager, mock_db, tmp_path):
+        """Test that check_folder_exists returns all matched folders."""
+        folder_path = str(tmp_path)
+        # Multiple configs pointing to same source directory
+        mock_db.folders_table.all.return_value = [
+            {"folder_name": folder_path, "alias": "config1", "id": 1},
+            {"folder_name": folder_path, "alias": "config2", "id": 2},
+        ]
+
+        result = manager.check_folder_exists(folder_path)
+
+        assert result["truefalse"] is True
+        assert result["matched_folder"]["alias"] == "config1"  # First one
+        assert len(result["all_matched_folders"]) == 2
+        assert result["all_matched_folders"][0]["alias"] == "config1"
+        assert result["all_matched_folders"][1]["alias"] == "config2"
+
     def test_disable_folder(self, manager, mock_db):
         """Test disabling a folder."""
         mock_db.folders_table.find_one.return_value = {
