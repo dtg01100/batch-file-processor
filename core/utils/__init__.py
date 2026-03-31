@@ -9,7 +9,8 @@ This package contains small, focused utility modules organized by functionality:
 
 from core.edi.edi_parser import EDIParseError
 
-from .bool_utils import from_db_bool, normalize_bool, to_db_bool
+from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
+from .format_utils import normalize_convert_to_format
 from .date_utils import (
     dactime_from_datetime,
     dactime_from_invtime,
@@ -41,6 +42,8 @@ from .utils import (
 
 __all__ = [
     "normalize_bool",
+    "normalize_db_bool",
+    "normalize_convert_to_format",
     "to_db_bool",
     "from_db_bool",
     "dactime_from_datetime",

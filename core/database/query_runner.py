@@ -338,3 +338,50 @@ def create_query_runner(
     )
     connection = DB2SSHConnection(config)
     return QueryRunner(connection)
+
+
+def create_query_runner_from_settings(
+    settings_dict: dict,
+    database: str = "QGPL",
+) -> QueryRunner:
+    """Create a QueryRunner from a settings dictionary.
+
+    Convenience wrapper that extracts AS400 connection parameters
+    from the standard settings dictionary format used throughout
+    the batch file processor.
+
+    Args:
+        settings_dict: Application settings dictionary containing:
+            - as400_username: SSH username for IBM i
+            - as400_password: SSH password for IBM i
+            - as400_address: IBM i hostname or IP address
+            - ssh_key_filename: Optional path to SSH private key
+        database: Database/library name (default: QGPL)
+
+    Returns:
+        QueryRunner instance with DB2SSHConnection
+
+    Raises:
+        ValueError: If required settings are missing
+
+    Example:
+        >>> runner = create_query_runner_from_settings(settings_dict)
+        >>> results = runner.run_query("SELECT * FROM F0001", {})
+
+    """
+    required_keys = ["as400_username", "as400_password", "as400_address"]
+    missing_keys = [key for key in required_keys if not settings_dict.get(key)]
+    if missing_keys:
+        raise ValueError(
+            f"Missing required database settings: {', '.join(missing_keys)}"
+        )
+
+    ssh_key_filename = settings_dict.get("ssh_key_filename", "")
+
+    return create_query_runner(
+        username=settings_dict["as400_username"],
+        password=settings_dict["as400_password"],
+        dsn=settings_dict["as400_address"],
+        database=database,
+        ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
+    )

@@ -6,15 +6,11 @@ injectable client support for testing.
 
 import ftplib
 import os
-import time
 
+from backend.backend_base import BackendBase
 from backend.ftp_client import create_ftp_client
 from backend.protocols import FTPClientProtocol
-from core.structured_logging import (
-    get_logger,
-    log_backend_call,
-    log_file_operation,
-)
+from core.structured_logging import get_logger, log_file_operation
 
 logger = get_logger(__name__)
 
@@ -42,78 +38,21 @@ def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None
                 client.cwd(current_path)
 
 
-def _try_tls_connection(
-    *,
-    use_tls: bool,
-    process_parameters: dict,
-    ftp_client: FTPClientProtocol | None,
-) -> FTPClientProtocol:
-    if ftp_client is not None:
-        client = ftp_client
-    else:
-        client = create_ftp_client(use_tls=use_tls)
-
-    logger.debug(
-        "Connecting to ftp server: %s",
-        process_parameters["ftp_server"],
-    )
-    client.connect(
-        str(process_parameters["ftp_server"]),
-        process_parameters["ftp_port"],
-    )
-    logger.debug("Logging in to %s", process_parameters["ftp_server"])
-    client.login(
-        process_parameters["ftp_username"],
-        process_parameters["ftp_password"],
-    )
-    return client
-
-
-def _handle_ftp_error(
-    error: Exception,
-    provider_index: int,
-    use_tls_options: list,
-    send_file,
-    logger,
-) -> None:
-    """Handle FTP error and determine if fallback to next TLS option is possible.
-
-    Args:
-        error: The exception that occurred
-        provider_index: Index of current TLS option in use_tls_options
-        use_tls_options: List of TLS options being tried
-        send_file: File object to seek back to beginning for retry
-        logger: Logger instance
-
-    Raises:
-        Exception: If all TLS options have been exhausted
-
-    """
-    if provider_index + 1 == len(use_tls_options):
-        raise
-    logger.debug("Falling back to non-TLS...")
-    send_file.seek(0)
-
-
 def do(
     process_parameters: dict,
     settings_dict: dict,
     filename: str,
     ftp_client: FTPClientProtocol | None = None,
+    disable_retry: bool = False,
 ) -> bool:
     """Send a file via FTP/FTPS.
 
     Args:
-        process_parameters: Dictionary containing FTP connection parameters:
-            - ftp_server: FTP server hostname
-            - ftp_port: FTP server port
-            - ftp_username: FTP username
-            - ftp_password: FTP password
-            - ftp_folder: Remote directory path
+        process_parameters: Dictionary containing FTP connection parameters
         settings_dict: Settings dictionary (not used by FTP backend)
         filename: Local file path to send
-        ftp_client: Optional injectable FTP client for testing.
-                   If None, creates real FTP clients.
+        ftp_client: Optional injectable FTP client for testing
+        disable_retry: If True, skip retry logic (for faster tests)
 
     Returns:
         True if file was sent successfully
@@ -122,132 +61,162 @@ def do(
         Exception: If file cannot be sent after 10 retries
 
     """
-    file_pass = False
-    counter = 0
-    correlation_id = os.urandom(4).hex()
-
-    use_tls_options = [True, False]
-
-    log_file_operation(
-        logger,
-        "read",
-        filename,
-        file_type="edi",
-        correlation_id=correlation_id,
-    )
-
-    while not file_pass:
-        try:
-            with open(filename, "rb") as send_file:
-                filename_no_path = os.path.basename(filename)
-                file_size = os.path.getsize(filename)
-
-                for provider_index, use_tls in enumerate(use_tls_options):
-                    try:
-                        start_time = time.perf_counter()
-                        client = _try_tls_connection(
-                            use_tls=use_tls,
-                            process_parameters=process_parameters,
-                            ftp_client=ftp_client,
-                        )
-                        logger.debug("Sending File %s...", filename_no_path)
-
-                        _ensure_remote_directory(
-                            client, process_parameters["ftp_folder"]
-                        )
-
-                        client.storbinary("stor " + filename_no_path, send_file)
-                        duration_ms = (time.perf_counter() - start_time) * 1000
-                        logger.info("Successfully sent file %s", filename_no_path)
-                        log_backend_call(
-                            logger,
-                            "ftp",
-                            "upload",
-                            endpoint=f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}/{process_parameters.get('ftp_folder', '')}",
-                            success=True,
-                            duration_ms=duration_ms,
-                            correlation_id=correlation_id,
-                        )
-                        log_file_operation(
-                            logger,
-                            "write",
-                            filename_no_path,
-                            file_size=file_size,
-                            file_type="edi",
-                            success=True,
-                            correlation_id=correlation_id,
-                        )
-                        file_pass = True
-                        break
-                    except Exception as error:
-                        duration_ms = (time.perf_counter() - start_time) * 1000
-                        logger.warning("FTP error: %s", error)
-                        log_backend_call(
-                            logger,
-                            "ftp",
-                            "upload",
-                            endpoint=f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}",
-                            success=False,
-                            error=error,
-                            duration_ms=duration_ms,
-                            retry_count=counter,
-                            correlation_id=correlation_id,
-                        )
-                        _handle_ftp_error(
-                            error,
-                            provider_index,
-                            use_tls_options,
-                            send_file,
-                            logger,
-                        )
-                    finally:
-                        try:
-                            client.close()
-                        except Exception as e:
-                            logger.debug("Failed to close FTP client: %s", e)
-
-        except Exception as ftp_error:
-            if counter == 10:
-                logger.error("Retried 10 times, passing exception to dispatch")
-                log_backend_call(
-                    logger,
-                    "ftp",
-                    "upload",
-                    endpoint=f"{process_parameters.get('ftp_server', '')}",
-                    success=False,
-                    error=ftp_error,
-                    retry_count=counter,
-                    correlation_id=correlation_id,
-                )
-                raise
-            counter += 1
-            logger.warning(
-                "Encountered an error. Retry number %d: %s", counter, ftp_error
-            )
-            time.sleep(2)
-
-    return file_pass
+    backend = FTPBackend(ftp_client=ftp_client, disable_retry=disable_retry)
+    return backend.send(process_parameters, settings_dict, filename)
 
 
-class FTPBackend:
+class FTPBackend(BackendBase):
     """FTP backend class for object-oriented usage.
 
     Provides an object-oriented interface to the FTP backend
     with injectable client support.
-
-    Attributes:
-        ftp_client: FTP client instance (injectable for testing)
-
     """
 
-    def __init__(self, ftp_client: FTPClientProtocol | None = None) -> None:
+    def __init__(self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False) -> None:
         """Initialize FTP backend.
 
         Args:
             ftp_client: Optional injectable FTP client for testing.
+            disable_retry: If True, skip retry logic (for testing)
 
         """
+        super().__init__(disable_retry=disable_retry)
         self.ftp_client = ftp_client
+        self._client = None
+        self._use_tls_options = [True, False]
+        self._current_tls_index = 0
+
+    def _execute(
+        self,
+        process_parameters: dict,
+        settings_dict: dict,
+        filename: str,
+        **kwargs,
+    ) -> bool:
+        """Send file via FTP/FTPS.
+
+        Args:
+            process_parameters: FTP connection parameters
+            settings_dict: Settings dictionary
+            filename: File to send
+
+        Returns:
+            True if file was sent successfully
+
+        """
+        filename_no_path = os.path.basename(filename)
+        file_size = os.path.getsize(filename)
+
+        # Use injected client or create default
+        if self.ftp_client is not None:
+            self._client = self.ftp_client
+            # If client is injected, use it directly (for testing)
+            return self._send_file(
+                process_parameters, filename, filename_no_path, file_size
+            )
+
+        # Try TLS options in order (only for real clients)
+        last_error = None
+        for use_tls in self._use_tls_options:
+            try:
+                self._client = create_ftp_client(use_tls=use_tls)
+                return self._send_file(
+                    process_parameters, filename, filename_no_path, file_size
+                )
+            except Exception as error:
+                last_error = error
+                logger.debug(
+                    "FTP %s connection failed, trying next option",
+                    "TLS" if use_tls else "plain"
+                )
+                self._cleanup()
+
+        # All TLS options failed
+        if last_error:
+            raise last_error
+        return False
+
+    def _send_file(
+        self,
+        process_parameters: dict,
+        filename: str,
+        filename_no_path: str,
+        file_size: int,
+    ) -> bool:
+        """Perform the actual file send operation.
+
+        Args:
+            process_parameters: FTP connection parameters
+            filename: Full path to file to send
+            filename_no_path: Basename of file to send
+            file_size: Size of file in bytes
+
+        Returns:
+            True if successful
+
+        """
+        logger.debug(
+            "Connecting to ftp server: %s",
+            process_parameters["ftp_server"],
+        )
+        self._client.connect(
+            str(process_parameters["ftp_server"]),
+            process_parameters["ftp_port"],
+        )
+        logger.debug("Logging in to %s", process_parameters["ftp_server"])
+        self._client.login(
+            process_parameters["ftp_username"],
+            process_parameters["ftp_password"],
+        )
+
+        logger.debug("Sending File %s...", filename_no_path)
+
+        _ensure_remote_directory(
+            self._client, process_parameters["ftp_folder"]
+        )
+
+        with open(filename, "rb") as send_file:
+            self._client.storbinary("stor " + filename_no_path, send_file)
+
+        logger.info("Successfully sent file %s", filename_no_path)
+        log_file_operation(
+            logger,
+            "write",
+            filename_no_path,
+            file_size=file_size,
+            file_type="edi",
+            success=True,
+            correlation_id=self._correlation_id,
+        )
+        return True
+
+    def _get_backend_name(self) -> str:
+        """Get backend name for logging."""
+        return "ftp"
+
+    def _get_endpoint(
+        self, process_parameters: dict, settings_dict: dict
+    ) -> str:
+        """Get FTP endpoint for logging."""
+        return f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}/{process_parameters.get('ftp_folder', '')}"
+
+    def _cleanup(self) -> None:
+        """Close FTP connection."""
+        if self._client is not None:
+            try:
+                self._client.close()
+            except Exception as e:
+                logger.debug("Failed to close FTP client: %s", e)
+
+    def _prepare_for_retry(
+        self,
+        process_parameters: dict,
+        settings_dict: dict,
+        filename: str,
+        **kwargs,
+    ) -> None:
+        """Prepare for retry by resetting state."""
+        self._client = None
 
     def send(
         self, process_parameters: dict, settings_dict: dict, filename: str
@@ -263,7 +232,10 @@ class FTPBackend:
             True if successful
 
         """
-        return do(process_parameters, settings_dict, filename, self.ftp_client)
+        try:
+            return self.execute(process_parameters, settings_dict, filename)
+        finally:
+            self._cleanup()
 
     @staticmethod
     def create_client(*, use_tls: bool = False) -> FTPClientProtocol:

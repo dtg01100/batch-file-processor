@@ -82,14 +82,9 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         logger.error(message)
         raise ValueError(message)
 
-    ssh_key_filename = settings_dict.get("ssh_key_filename", "")
-    return create_query_runner(
-        username=settings_dict["as400_username"],
-        password=settings_dict["as400_password"],
-        dsn=settings_dict["as400_address"],
-        database="QGPL",
-        ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-    )
+    from core.database.query_runner import create_query_runner_from_settings
+
+    return create_query_runner_from_settings(settings_dict)
 
 
 @dataclass

@@ -33,7 +33,7 @@ from core.edi.upc_utils import (
 from core.edi.upc_utils import (
     convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
 )
-from core.structured_logging import get_logger
+from core.structured_logging import get_logger, log_file_operation
 from core.utils.date_utils import (
     dactime_from_datetime,  # noqa: F401
     dactime_from_invtime,  # noqa: F401
@@ -234,10 +234,29 @@ def do_clear_old_files(folder_path, maximum_files) -> None:
                 return float("inf")
 
         oldest = min(files, key=_safe_ctime)
+        oldest_path = os.path.join(folder_path, oldest)
         try:
-            os.remove(os.path.join(folder_path, oldest))
+            os.remove(oldest_path)
+            log_file_operation(
+                logger,
+                "delete",
+                oldest_path,
+                file_type="log",
+                success=True,
+                context={"reason": "cleanup", "max_files": maximum_files},
+            )
         except FileNotFoundError:
             pass  # already deleted by another process
+        except Exception as e:
+            log_file_operation(
+                logger,
+                "delete",
+                oldest_path,
+                file_type="log",
+                success=False,
+                error=e,
+                context={"reason": "cleanup", "max_files": maximum_files},
+            )
 
 
 def qty_to_int(qty: str) -> int:
@@ -296,16 +315,9 @@ class CRecGenerator:
 
     def _db_connect(self) -> None:
         """Establish database connection."""
-        ssh_key_filename = self.settings.get("ssh_key_filename", "")
-        from core import database as core_database
+        from core.database.query_runner import create_query_runner_from_settings
 
-        self.query_object = core_database.create_query_runner(
-            username=self.settings["as400_username"],
-            password=self.settings["as400_password"],
-            dsn=self.settings["as400_address"],
-            database="QGPL",
-            ssh_key_filename=ssh_key_filename if ssh_key_filename else None,
-        )
+        self.query_object = create_query_runner_from_settings(self.settings)
 
     def set_invoice_number(self, invoice_number) -> None:
         """Set the current invoice number and mark records as unappended.

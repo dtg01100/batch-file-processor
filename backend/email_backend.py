@@ -11,18 +11,12 @@ import re
 import time
 from email.message import EmailMessage
 
+from backend.backend_base import BackendBase
 from backend.protocols import SMTPClientProtocol
 from backend.smtp_client import create_smtp_client
-from core.structured_logging import (
-    get_logger,
-    log_backend_call,
-    log_file_operation,
-)
+from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
-
-# this module sends the file specified in filename to the address specified in the dict process_parameters via email
-# note: process_parameters is a dict from a row in the database, passed into this module
 
 
 def _is_network_unreachable(error: Exception) -> bool:
@@ -53,22 +47,16 @@ def do(
     settings: dict,
     filename: str,
     smtp_client: SMTPClientProtocol | None = None,
+    disable_retry: bool = False,
 ) -> bool:
     """Send a file via email.
 
     Args:
-        process_parameters: Dictionary containing email parameters:
-            - email_to: Recipient email address(es), comma-separated
-            - email_subject_line: Subject line template (supports %datetime% and %filename%)
-        settings: Settings dictionary containing:
-            - email_address: Sender email address
-            - email_smtp_server: SMTP server hostname
-            - smtp_port: SMTP server port
-            - email_username: SMTP username (optional)
-            - email_password: SMTP password (optional)
+        process_parameters: Dictionary containing email parameters
+        settings: Settings dictionary containing SMTP configuration
         filename: Local file path to send
-        smtp_client: Optional injectable SMTP client for testing.
-                    If None, creates real SMTP client.
+        smtp_client: Optional injectable SMTP client for testing
+        disable_retry: If True, skip retry logic (for faster tests)
 
     Returns:
         True if email was sent successfully
@@ -77,41 +65,65 @@ def do(
         Exception: If email cannot be sent after 10 retries
 
     """
-    file_pass = False
-    counter = 0
-    correlation_id = os.urandom(4).hex()
-    file_size = os.path.getsize(filename)
+    backend = EmailBackend(smtp_client=smtp_client, disable_retry=disable_retry)
+    return backend.send(process_parameters, settings, filename)
 
-    log_file_operation(
-        logger,
-        "read",
-        filename,
-        file_size=file_size,
-        file_type="attachment",
-        correlation_id=correlation_id,
-    )
 
-    # Read file once outside retry loop
-    with open(filename, "rb") as fp:
-        file_content = fp.read()
+class EmailBackend(BackendBase):
+    """Email backend class for object-oriented usage.
 
-    # Determine content type once outside retry loop
-    ctype, encoding = mimetypes.guess_type(filename)
-    if ctype is None or encoding is not None:
-        # No guess could be made, or the file is encoded (compressed), so
-        # use a generic bag-of-bits type.
-        ctype = "application/octet-stream"
-    maintype, subtype = ctype.split("/", 1)
+    Provides an object-oriented interface to the email backend
+    with injectable client support.
+    """
 
-    server = None
-    while not file_pass:
-        start_time = time.perf_counter()
+    def __init__(self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False) -> None:
+        """Initialize email backend.
+
+        Args:
+            smtp_client: Optional injectable SMTP client for testing.
+            disable_retry: If True, skip retry logic (for testing)
+
+        """
+        super().__init__(disable_retry=disable_retry)
+        self.smtp_client = smtp_client
+        self._server = None
+        self._file_content = None
+        self._maintype = None
+        self._subtype = None
+
+    def _execute(
+        self,
+        process_parameters: dict,
+        settings: dict,
+        filename: str,
+        **kwargs,
+    ) -> bool:
+        """Send email with file attachment.
+
+        Args:
+            process_parameters: Email parameters
+            settings: SMTP settings
+            filename: File to send
+
+        Returns:
+            True if email was sent successfully
+
+        """
+        # Read file and determine content type (done once, before retry loop)
+        if self._file_content is None:
+            with open(filename, "rb") as fp:
+                self._file_content = fp.read()
+
+            ctype, encoding = mimetypes.guess_type(filename)
+            if ctype is None or encoding is not None:
+                ctype = "application/octet-stream"
+            self._maintype, self._subtype = ctype.split("/", 1)
 
         # Create or use provided SMTP client
-        if smtp_client is not None:
-            server = smtp_client
+        if self.smtp_client is not None:
+            self._server = self.smtp_client
         else:
-            server = create_smtp_client()
+            self._server = create_smtp_client()
 
         try:
             filename_no_path = os.path.basename(filename)
@@ -141,113 +153,71 @@ def do(
             message["To"] = to_address_list
             message.set_content(filename_no_path_str + " Attached")
 
-            # Attach file using pre-read content
+            # Attach file
             message.add_attachment(
-                file_content,
-                maintype=maintype,
-                subtype=subtype,
+                self._file_content,
+                maintype=self._maintype,
+                subtype=self._subtype,
                 filename=filename_no_path_str,
             )
 
             # Connect and send
-            server.connect(
+            self._server.connect(
                 str(settings["email_smtp_server"]), int(settings["smtp_port"])
             )
-            server.ehlo()
-            server.starttls()
+            self._server.ehlo()
+            self._server.starttls()
 
             if (
                 settings.get("email_username", "") != ""
                 and settings.get("email_password", "") != ""
             ):
-                server.login(settings["email_username"], settings["email_password"])
+                self._server.login(settings["email_username"], settings["email_password"])
 
-            server.send_message(message)
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            log_backend_call(
-                logger,
-                "smtp",
-                "send",
-                endpoint=f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}",
-                request_size=file_size,
-                success=True,
-                duration_ms=duration_ms,
-                correlation_id=correlation_id,
-            )
-
-            file_pass = True
+            self._server.send_message(message)
+            return True
 
         except Exception as email_error:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
             if _is_network_unreachable(email_error):
-                log_backend_call(
-                    logger,
-                    "smtp",
-                    "send",
-                    endpoint=f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}",
-                    success=False,
-                    error=email_error,
-                    duration_ms=duration_ms,
-                    correlation_id=correlation_id,
-                )
                 raise RuntimeError(
                     "Network is unreachable (Errno 101) while connecting to SMTP "
                     f"server {settings.get('email_smtp_server', '')}:"
                     f"{settings.get('smtp_port', '')}. "
                     "Check internet/VPN connectivity and SMTP server settings."
                 ) from email_error
+            raise
 
-            if counter == 10:
-                logger.debug("Retried 10 times, passing exception to dispatch")
-                log_backend_call(
-                    logger,
-                    "smtp",
-                    "send",
-                    endpoint=f"{settings.get('email_smtp_server', '')}",
-                    success=False,
-                    error=email_error,
-                    retry_count=counter,
-                    correlation_id=correlation_id,
-                )
-                raise
-            counter += 1
-            time.sleep(min(2**counter, 60))
-            logger.debug("Encountered an error. Retry number %d", counter)
-            logger.debug("SMTP error: %s", email_error)
-        finally:
-            # Always close the connection, even on exception or retry
-            if server is not None:
-                try:
-                    server.close()
-                except Exception as close_err:
-                    logger.debug("Failed to close SMTP connection: %s", close_err)
+    def _get_backend_name(self) -> str:
+        """Get backend name for logging."""
+        return "smtp"
 
-    return file_pass
+    def _get_endpoint(
+        self, process_parameters: dict, settings: dict
+    ) -> str:
+        """Get SMTP endpoint for logging."""
+        return f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
 
+    def _cleanup(self) -> None:
+        """Close SMTP connection."""
+        if self._server is not None:
+            try:
+                self._server.close()
+            except Exception as close_err:
+                logger.debug("Failed to close SMTP connection: %s", close_err)
 
-class EmailBackend:
-    """Email backend class for object-oriented usage.
+    def _prepare_for_retry(
+        self,
+        process_parameters: dict,
+        settings: dict,
+        filename: str,
+        **kwargs,
+    ) -> None:
+        """Prepare for retry by resetting state."""
+        self._server = None
 
-    Provides an object-oriented interface to the email backend
-    with injectable client support.
-
-    Attributes:
-        smtp_client: SMTP client instance (injectable for testing)
-
-    """
-
-    def __init__(self, smtp_client: SMTPClientProtocol | None = None) -> None:
-        """Initialize email backend.
-
-        Args:
-            smtp_client: Optional injectable SMTP client for testing.
-
-        """
-        self.smtp_client = smtp_client
-
-    def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:
+    def send(
+        self, process_parameters: dict, settings: dict, filename: str
+    ) -> bool:
         """Send a file via email.
 
         Args:
@@ -259,7 +229,12 @@ class EmailBackend:
             True if successful
 
         """
-        return do(process_parameters, settings, filename, self.smtp_client)
+        try:
+            return self.execute(process_parameters, settings, filename)
+        finally:
+            self._cleanup()
+            # Reset file content for potential reuse
+            self._file_content = None
 
     @staticmethod
     def create_client(config: dict | None = None) -> SMTPClientProtocol:

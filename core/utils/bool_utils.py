@@ -67,6 +67,47 @@ def to_db_bool(value: Any) -> int:
     return 1 if normalize_bool(value) else 0
 
 
+def normalize_db_bool(value: Any) -> bool:
+    """Normalize a boolean value from database storage.
+
+    Stricter than normalize_bool — only accepts the formats actually stored
+    in the database: True/False booleans, integer 1/0, and string "True",
+    "False", "1", "0" (legacy SQLite TEXT affinity form). Rejects "yes"/"no"
+    and other truthy strings that the database would never contain.
+
+    Used when reading boolean columns from SQLite that may have been written
+    as string "True"/"False" by legacy code.
+
+    Args:
+        value: Database value (bool, int, float, str, or None)
+
+    Returns:
+        Python bool
+
+    Examples:
+        normalize_db_bool("True") -> True
+        normalize_db_bool("1") -> True
+        normalize_db_bool(1) -> True
+        normalize_db_bool("False") -> False
+        normalize_db_bool("yes") -> False  # rejected
+        normalize_db_bool(None) -> False
+
+    """
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lower_val = value.strip().lower()
+        if lower_val in ("true", "1"):
+            return True
+        if lower_val in ("false", "0", ""):
+            return False
+    return False
+
+
 def from_db_bool(value: Any) -> bool:
     """Convert SQLite value to Python boolean.
 
