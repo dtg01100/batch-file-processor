@@ -13,222 +13,189 @@ from dispatch.services.progress_reporter import (
     NullProgressReporter,
     ProgressReporter,
 )
-from dispatch.services.upc_service import (
-    MockQueryRunner,
-    UPCService,
-    UPCServiceResult,
-)
+from dispatch.services.upc_service import UPCLookupService
 
 
-class TestUPCServiceResult:
-    """Tests for UPCServiceResult dataclass."""
+class _StubQueryRunner:
+    """Stub query runner that returns fixed rows."""
 
-    def test_creation_with_all_fields(self):
-        """Test creating UPCServiceResult with all fields."""
-        upc_dict = {1: ["cat", "upc1", "a", "b", "c"]}
-        result = UPCServiceResult(upc_dict=upc_dict, success=True, errors=[])
+    def __init__(self, rows=None):
+        self._rows = rows or []
+        self.closed = False
 
-        assert result.upc_dict == upc_dict
-        assert result.success is True
-        assert result.errors == []
+    def run_query(self, query, params=None):
+        return self._rows
 
-    def test_creation_with_errors(self):
-        """Test creating UPCServiceResult with errors."""
-        result = UPCServiceResult(
-            upc_dict={}, success=False, errors=["Error 1", "Error 2"]
+    def close(self):
+        self.closed = True
+
+
+class TestUPCLookupService:
+    """Tests for UPCLookupService class."""
+
+    def test_init_empty_settings(self):
+        """Service initialises with empty settings and empty cache."""
+        service = UPCLookupService({})
+        assert service.settings == {}
+        assert service.upc_dict == {}
+        assert service.last_error is None
+
+    def test_get_dictionary_returns_empty_when_no_credentials(self):
+        """get_dictionary returns {} when AS400 credentials are absent."""
+        service = UPCLookupService({})
+        result = service.get_dictionary()
+        assert result == {}
+        assert service.last_error is not None
+        assert "missing AS400 settings" in service.last_error
+
+    def test_get_dictionary_uses_cached_dict(self):
+        """get_dictionary returns cached dict without hitting the database."""
+        service = UPCLookupService({})
+        service.upc_dict = {1: ["CAT", "UPC", "a", "b", "c"]}
+        result = service.get_dictionary()
+        assert result == {1: ["CAT", "UPC", "a", "b", "c"]}
+
+    def test_get_dictionary_via_stub_runner_tuple_rows(self, monkeypatch):
+        """get_dictionary parses positional tuple rows from the database."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        rows = [(100, "ELEC", "123456789012", "desc", "brand", "item")]
+        stub = _StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
         )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+        }
+        service = UPCLookupService(settings)
+        result = service.get_dictionary()
+        assert 100 in result
+        assert result[100] == ["ELEC", "123456789012", "desc", "brand", "item"]
+        assert stub.closed is True
 
-        assert result.upc_dict == {}
-        assert result.success is False
-        assert len(result.errors) == 2
-
-    def test_empty_dict_creation(self):
-        """Test creating UPCServiceResult with empty dict."""
-        result = UPCServiceResult(upc_dict={}, success=True, errors=[])
-
-        assert result.upc_dict == {}
-        assert result.success is True
-        assert result.errors == []
-
-
-class TestMockQueryRunner:
-    """Tests for MockQueryRunner class."""
-
-    def test_creation_with_no_data(self):
-        """Test creating MockQueryRunner with no data."""
-        runner = MockQueryRunner()
-
-        result = runner.execute("SELECT * FROM table", {})
-
-        assert result == []
-
-    def test_creation_with_data(self):
-        """Test creating MockQueryRunner with data."""
-        mock_data = [
-            (1, "cat1", "upc1", "a", "b", "c"),
-            (2, "cat2", "upc2", "d", "e", "f"),
+    def test_get_dictionary_via_stub_runner_dict_rows(self, monkeypatch):
+        """get_dictionary parses dict rows with uppercase column names."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        rows = [
+            {
+                "ANBACD": "999",
+                "ANBBCD": "CAT2",
+                "ANBGCD": "11111",
+                "ANBHCD": "22222",
+                "ANBICD": "33333",
+                "ANBJCD": "44444",
+            }
         ]
-        runner = MockQueryRunner(mock_data)
+        stub = _StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
+        )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+        }
+        service = UPCLookupService(settings)
+        result = service.get_dictionary()
+        assert 999 in result
+        assert result[999] == ["CAT2", "11111", "22222", "33333", "44444"]
 
-        result = runner.execute("SELECT * FROM table", {})
+    def test_get_dictionary_uses_injected_upc_service(self):
+        """get_dictionary delegates to an injected external UPC service."""
+        external = MagicMock()
+        external.get_dictionary.return_value = {42: ["X", "Y", "Z", "A", "B"]}
+        service = UPCLookupService({})
+        result = service.get_dictionary(upc_service=external)
+        assert result == {42: ["X", "Y", "Z", "A", "B"]}
+        external.get_dictionary.assert_called_once()
 
-        assert result == mock_data
+    def test_last_error_set_when_no_rows_returned(self, monkeypatch):
+        """last_error is populated when the fallback query returns no rows."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        stub = _StubQueryRunner([])
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
+        )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+        }
+        service = UPCLookupService(settings)
+        result = service.get_dictionary()
+        assert result == {}
+        assert service.last_error is not None
+        assert "no rows" in service.last_error
+
+    def test_last_error_set_when_rows_unparseable(self, monkeypatch):
+        """last_error describes the failure when rows cannot be parsed."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        stub = _StubQueryRunner([{"bad_key": "bad_value"}])
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
+        )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+        }
+        service = UPCLookupService(settings)
+        result = service.get_dictionary()
+        assert result == {}
+        assert service.last_error is not None
+
+    def test_strict_db_mode_raises_when_no_rows(self, monkeypatch):
+        """strict database_lookup_mode raises LookupError when query has no rows."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        stub = _StubQueryRunner([])
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
+        )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "database_lookup_mode": "strict",
+        }
+        service = UPCLookupService(settings)
+        with pytest.raises(LookupError):
+            service.get_dictionary(strict_db_mode=True)
+
+    def test_clear_cache_resets_dict(self):
+        """clear_cache empties upc_dict so next call re-fetches."""
+        service = UPCLookupService({})
+        service.upc_dict = {1: ["a", "b", "c", "d", "e"]}
+        service.clear_cache()
+        assert service.upc_dict == {}
+
+    def test_multiple_items_parsed_correctly(self, monkeypatch):
+        """Multiple rows are all parsed into the returned dictionary."""
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
+        rows = [
+            (1, "CAT1", "UPC1", "a", "b", "c"),
+            (2, "CAT2", "UPC2", "d", "e", "f"),
+        ]
+        stub = _StubQueryRunner(rows)
+        monkeypatch.setattr(
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub,
+        )
+        settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+        }
+        service = UPCLookupService(settings)
+        result = service.get_dictionary()
         assert len(result) == 2
-
-    def test_execute_returns_mock_data_regardless_of_query(self):
-        """Test that execute returns mock data regardless of query."""
-        mock_data = [(1, "cat", "upc", "a", "b", "c")]
-        runner = MockQueryRunner(mock_data)
-
-        result1 = runner.execute("SELECT * FROM table1", {})
-        result2 = runner.execute("DELETE FROM table2", {"param": "value"})
-        result3 = runner.execute("INSERT INTO table3 VALUES (1)", {"x": 1})
-
-        assert result1 == mock_data
-        assert result2 == mock_data
-        assert result3 == mock_data
-
-
-class TestUPCService:
-    """Tests for UPCService class."""
-
-    def test_fetch_upc_dictionary_success(self):
-        """Test successful UPC dictionary fetch."""
-        mock_data = [
-            (1, "cat1", "upc1", "a", "b", "c"),
-            (2, "cat2", "upc2", "d", "e", "f"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-
-        result = service.fetch_upc_dictionary({})
-
-        assert result.success is True
-        assert len(result.errors) == 0
-        assert 1 in result.upc_dict
-        assert 2 in result.upc_dict
-
-    def test_fetch_upc_dictionary_builds_correct_structure(self):
-        """Test that UPC dictionary is built correctly."""
-        mock_data = [
-            (100, "ELEC", "123456789012", "desc1", "brand1", "item1"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-
-        result = service.fetch_upc_dictionary({})
-
-        upc_list = result.upc_dict[100]
-        assert upc_list[0] == "ELEC"
-        assert upc_list[1] == "123456789012"
-
-    def test_fetch_upc_dictionary_error_handling(self):
-        """Test error handling when query fails."""
-        from dispatch.feature_flags import get_strict_testing_mode
-
-        def failing_execute(query, params=None):
-            raise Exception("Database connection failed")
-
-        query_runner = MagicMock()
-        query_runner.execute = failing_execute
-        service = UPCService(query_runner)
-
-        if get_strict_testing_mode():
-            with pytest.raises(
-                RuntimeError, match="Failed to fetch UPC dictionary from database"
-            ):
-                service.fetch_upc_dictionary({})
-        else:
-            result = service.fetch_upc_dictionary({})
-            assert result.success is False
-            assert len(result.errors) == 1
-            assert "Database connection failed" in result.errors[0]
-            assert result.upc_dict == {}
-
-    def test_get_upc_for_item_when_cached(self):
-        """Test getting UPC for item when cache is populated."""
-        mock_data = [
-            (1, "cat", "123456789", "a", "b", "c"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-        service.fetch_upc_dictionary({})
-
-        upc = service.get_upc_for_item(1)
-
-        assert upc == "123456789"
-
-    def test_get_upc_for_item_not_in_cache(self):
-        """Test getting UPC for item not in cache."""
-        mock_data = [
-            (1, "cat", "upc", "a", "b", "c"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-        service.fetch_upc_dictionary({})
-
-        upc = service.get_upc_for_item(999)
-
-        assert upc is None
-
-    def test_get_upc_for_item_before_fetch(self):
-        """Test getting UPC before cache is populated."""
-        query_runner = MockQueryRunner([])
-        service = UPCService(query_runner)
-
-        upc = service.get_upc_for_item(1)
-
-        assert upc is None
-
-    def test_get_category_for_item_when_cached(self):
-        """Test getting category for item when cache is populated."""
-        mock_data = [
-            (1, "ELECTRONICS", "upc", "a", "b", "c"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-        service.fetch_upc_dictionary({})
-
-        category = service.get_category_for_item(1)
-
-        assert category == "ELECTRONICS"
-
-    def test_get_category_for_item_not_in_cache(self):
-        """Test getting category for item not in cache."""
-        mock_data = [
-            (1, "cat", "upc", "a", "b", "c"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-        service.fetch_upc_dictionary({})
-
-        category = service.get_category_for_item(999)
-
-        assert category is None
-
-    def test_get_category_for_item_before_fetch(self):
-        """Test getting category before cache is populated."""
-        query_runner = MockQueryRunner([])
-        service = UPCService(query_runner)
-
-        category = service.get_category_for_item(1)
-
-        assert category is None
-
-    def test_caching_behavior(self):
-        """Test that UPC dictionary is cached properly."""
-        mock_data = [
-            (1, "cat", "upc", "a", "b", "c"),
-        ]
-        query_runner = MockQueryRunner(mock_data)
-        service = UPCService(query_runner)
-
-        assert service._upc_cache is None
-
-        service.fetch_upc_dictionary({})
-
-        assert service._upc_cache is not None
-        assert 1 in service._upc_cache
+        assert 1 in result
+        assert 2 in result
 
 
 class TestProgressReporterProtocol:

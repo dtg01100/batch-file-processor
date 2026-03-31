@@ -151,56 +151,57 @@ class TestProtocolCompliance:
         assert runner.connection is mock_conn
 
 
-def test_db_enabled_converter_connect_db_uses_core_database_create_query_runner(
+def test_database_connection_mixin_uses_create_query_runner_from_settings(
     monkeypatch,
 ):
-    """Ensure DBEnabledConverter resolves create_query_runner at call-time."""
-    from dispatch.converters.convert_base import DBEnabledConverter
+    """Ensure DatabaseConnectionMixin uses create_query_runner_from_settings."""
+    from dispatch.converters.mixins import DatabaseConnectionMixin
 
     called = {}
 
-    def fake_create_query_runner(**kwargs):
+    def fake_create_query_runner_from_settings(settings_dict, database="QGPL"):
         called["called"] = True
+        called["settings"] = settings_dict
+        called["database"] = database
         return QueryRunner(MockConnection())
 
-    monkeypatch.setattr("core.database.create_query_runner", fake_create_query_runner)
-
-    class DummyDBEnabledConverter(DBEnabledConverter):
-        def process_record_a(self, record):
-            pass
-
-        def process_record_b(self, record):
-            pass
-
-        def process_record_c(self, record):
-            pass
-
-    converter = DummyDBEnabledConverter(
-        "input.edi",
-        "output",
-        {"as400_username": "u", "as400_password": "p", "as400_address": "host"},
-        {},
-        {},
+    monkeypatch.setattr(
+        "core.database.query_runner.create_query_runner_from_settings",
+        fake_create_query_runner_from_settings,
     )
 
-    converter.connect_db()
+    class DummyConverter(DatabaseConnectionMixin):
+        def __init__(self):
+            super().__init__()
+            self.query_object = None
+
+        def some_method(self):
+            pass
+
+    converter = DummyConverter()
+    converter._init_db_connection(
+        {"as400_username": "u", "as400_password": "p", "as400_address": "host"}
+    )
 
     assert called.get("called", False)
     assert converter.query_object is not None
-    assert converter._db_connected is True
 
 
-def test_crec_generator_db_connect_uses_core_database_create_query_runner(monkeypatch):
-    """Ensure CRecGenerator resolves create_query_runner at call-time."""
+def test_crec_generator_db_connect_uses_create_query_runner_from_settings(monkeypatch):
+    """Ensure CRecGenerator uses create_query_runner_from_settings."""
     from core.utils.utils import CRecGenerator
 
     called = {}
 
-    def fake_create_query_runner(**kwargs):
+    def fake_create_query_runner_from_settings(settings_dict, database="QGPL"):
         called["called"] = True
+        called["settings"] = settings_dict
         return QueryRunner(MockConnection())
 
-    monkeypatch.setattr("core.database.create_query_runner", fake_create_query_runner)
+    monkeypatch.setattr(
+        "core.database.query_runner.create_query_runner_from_settings",
+        fake_create_query_runner_from_settings,
+    )
 
     cri = CRecGenerator(
         {"as400_username": "u", "as400_password": "p", "as400_address": "host"}

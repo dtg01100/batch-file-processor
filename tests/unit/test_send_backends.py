@@ -436,6 +436,7 @@ class TestHTTPBackend:
                 sample_settings_dict,
                 sample_file,
                 http_client=mock_client,
+                disable_retry=True,
             )
 
         assert "500" in str(exc_info.value)

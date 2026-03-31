@@ -355,8 +355,7 @@ class TestEstoreEinvoiceGenericFixtures:
 
         # Patch the module-level functions
         monkeypatch.setattr(
-            convert_to_estore_einvoice_generic,
-            "create_query_runner",
+            "core.database.query_runner.create_query_runner_from_settings",
             mock_create_query_runner,
         )
 

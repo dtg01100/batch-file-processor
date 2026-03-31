@@ -1,47 +1,16 @@
 """Batch File Sender - Qt Entry Point.
 
-This module serves as the Qt-based entry point for the Batch File Sender application.
-It creates and runs the QtBatchFileSenderApp instance.
-
-This script can be run directly without installation:
-    python main_qt.py
+This module delegates to main_interface for consistency.
 """
 
 import os
 import sys
 
-# Ensure the project root is in sys.path so we can import 'interface' package
-# when running as a script without installation
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
-from core.logging_config import get_logger, setup_logging
-from interface.qt.app import QtBatchFileSenderApp
-
-logger = get_logger(__name__)
-
-
-def main() -> None:
-    """Initialize and run the Batch File Sender application with Qt UI."""
-    setup_logging()
-    logger.debug("Logging initialized")
-
-    from core.constants import CURRENT_DATABASE_VERSION
-
-    logger.info("Starting Batch File Sender")
-
-    app = QtBatchFileSenderApp(
-        appname="Batch File Sender",
-        version="(Git Branch: Master)",
-        database_version=CURRENT_DATABASE_VERSION,
-    )
-    app.initialize()
-    try:
-        sys.exit(app.run())
-    finally:
-        app.shutdown()
-
+from main_interface import main
 
 if __name__ == "__main__":
     main()

@@ -475,8 +475,8 @@ class TestGetUPCDictionary:
         ]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.orchestrator.create_query_runner",
-            lambda **kwargs: stub_runner,
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub_runner,
         )
 
         orchestrator = DispatchOrchestrator(DispatchConfig())
@@ -513,8 +513,8 @@ class TestGetUPCDictionary:
         ]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.orchestrator.create_query_runner",
-            lambda **kwargs: stub_runner,
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub_runner,
         )
 
         orchestrator = DispatchOrchestrator(DispatchConfig())
@@ -542,8 +542,8 @@ class TestGetUPCDictionary:
         rows = [{"bad_key": "bad_value"}]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.orchestrator.create_query_runner",
-            lambda **kwargs: stub_runner,
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub_runner,
         )
 
         orchestrator = DispatchOrchestrator(DispatchConfig())
@@ -563,8 +563,8 @@ class TestGetUPCDictionary:
         rows = [{"bad_key": "bad_value"}]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.orchestrator.create_query_runner",
-            lambda **kwargs: stub_runner,
+            "dispatch.services.upc_service.create_query_runner_from_settings",
+            lambda settings_dict, database="QGPL": stub_runner,
         )
 
         orchestrator = DispatchOrchestrator(DispatchConfig())

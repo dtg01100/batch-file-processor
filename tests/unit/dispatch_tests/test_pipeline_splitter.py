@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from core.edi.edi_splitter import SplitConfig, SplitResult
+from core.utils.bool_utils import normalize_db_bool
 from dispatch.pipeline.splitter import (
     DefaultCreditDetector,
     EDISplitterStep,
@@ -13,7 +14,6 @@ from dispatch.pipeline.splitter import (
     MockSplitter,
     SplitterResult,
     _normalize_include_flag,
-    _normalize_true_false_only,
 )
 
 
@@ -1016,9 +1016,9 @@ class TestNormalizationHelpers:
 
     def test_normalize_true_false_only_strict_string_behavior(self):
         """Only literal true/false strings are treated as valid string booleans."""
-        assert _normalize_true_false_only("true") is True
-        assert _normalize_true_false_only("FALSE") is False
-        assert _normalize_true_false_only("yes") is False
+        assert normalize_db_bool("true") is True
+        assert normalize_db_bool("FALSE") is False
+        assert normalize_db_bool("yes") is False
 
     def test_normalize_include_flag_handles_none_and_unexpected_strings(self):
         """Include-flag normalization handles None defaults and arbitrary strings."""

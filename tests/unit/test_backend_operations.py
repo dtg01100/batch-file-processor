@@ -177,6 +177,7 @@ class TestCopyBackendOperations:
                 {},
                 source_file,
                 file_ops=FlakyCopyOps(),
+                disable_retry=True,  # Use fast retries for test
             )
         # counter goes 0→10 (11 attempts total before raise)
         assert call_count["n"] == 11, "Backend must retry exactly 10 times then raise"
