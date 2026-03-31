@@ -20,6 +20,7 @@ from core.structured_logging import (
 )
 from dispatch.error_handler import ErrorHandler
 from dispatch.send_manager import SendManager
+from core.utils import normalize_bool
 
 logger = get_logger(__name__)
 
@@ -258,7 +259,12 @@ class FileProcessor:
         )
         if did_convert:
             result.converted = True
-        if conversion_failed:
+
+        # If conversion failed (i.e., conversion was attempted but produced no output),
+        # treat as error. However, when process_edi is False we expect the original
+        # file to be sent unchanged — do not mark this as conversion failure.
+        process_edi_flag = normalize_bool(context.effective_folder.get("process_edi", False))
+        if conversion_failed and process_edi_flag:
             result.errors.append("No converted output was produced")
             result.sent = False
             return
