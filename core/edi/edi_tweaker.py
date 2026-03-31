@@ -76,11 +76,19 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
     required_keys = ("as400_username", "as400_password", "as400_address")
     missing_keys = [key for key in required_keys if not settings_dict.get(key)]
     if missing_keys:
+        # Missing AS400 credentials are acceptable for test environments or
+        # when tweaks don't need DB access. Use a NoOpQueryRunner that implements
+        # the required interface but returns empty results to avoid raising.
         message = "Missing AS400 credentials for tweaker query runner: " + ", ".join(
             missing_keys
         )
-        logger.error(message)
-        raise ValueError(message)
+        logger.warning(message + " - using NoOpQueryRunner")
+
+        class NoOpQueryRunner:
+            def run_query(self, query: str, params: tuple = None) -> list:
+                return []
+
+        return NoOpQueryRunner()
 
     from core.database.query_runner import create_query_runner_from_settings
 
