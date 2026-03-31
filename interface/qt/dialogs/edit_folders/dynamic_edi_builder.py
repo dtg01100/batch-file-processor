@@ -4,6 +4,7 @@ Handles the construction and management of dynamic EDI configuration sections
 that appear based on user selections in the EDI options dropdown.
 """
 
+import logging
 from typing import Any, Callable, Optional
 
 from core.structured_logging import (
@@ -86,7 +87,7 @@ class DynamicEDIBuilder:
         set_correlation_id(self._correlation_id)
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Dynamic EDI Builder initialized",
             correlation_id=self._correlation_id,
             component="dynamic_edi_builder",
@@ -175,7 +176,11 @@ class DynamicEDIBuilder:
             return -1
         text_lower = text.lower()
         return next(
-            (i for i in range(combo.count()) if combo.itemText(i).lower() == text_lower),
+            (
+                i
+                for i in range(combo.count())
+                if combo.itemText(i).lower() == text_lower
+            ),
             -1,
         )
 
@@ -236,7 +241,7 @@ class DynamicEDIBuilder:
         """Clear dynamic EDI widgets and clean up field references."""
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Clearing dynamic EDI widgets",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -343,7 +348,7 @@ class DynamicEDIBuilder:
         self._edi_option_processing = True
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             f"EDI option toggled to: {'Convert EDI' if checked else 'Do Nothing'}",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -421,7 +426,7 @@ class DynamicEDIBuilder:
         """Handle convert format selection changes."""
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             f"Convert format changed to: {fmt}",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -471,7 +476,7 @@ class DynamicEDIBuilder:
 
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Clearing convert sub widgets",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",

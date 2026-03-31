@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from typing import Any
@@ -72,7 +73,7 @@ class QtAppBootstrapService:
         parsed_args, _unknown = launch_options.parse_known_args(args)
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Parsed command line arguments",
             correlation_id=correlation_id,
             component="qt_bootstrap",
@@ -100,7 +101,7 @@ class QtAppBootstrapService:
                 ) from error
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Config directories setup complete",
             correlation_id=get_correlation_id(),
             component="qt_bootstrap",
@@ -115,7 +116,7 @@ class QtAppBootstrapService:
     def build_ui_runtime(self) -> None:
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Building Qt UI runtime",
             correlation_id=get_correlation_id(),
             component="qt_bootstrap",

@@ -5,9 +5,12 @@ coordinating validation, conversion, and sending of files.
 """
 
 import datetime
+import hashlib
+import logging
 import os
 import re
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any
@@ -210,8 +213,6 @@ class DispatchOrchestrator:
         correlation_id = get_or_create_correlation_id()
         folder_path = folder.get("folder_name", "")
         alias = folder.get("alias", folder_path)
-
-        import logging
 
         log_with_context(
             logger,
@@ -751,8 +752,6 @@ class DispatchOrchestrator:
             FileResult with processing outcome
 
         """
-        import os
-
         correlation_id = get_or_create_correlation_id()
         result = FileResult(file_name=file_path, checksum="")
         context = self._build_processing_context(folder=folder, upc_dict=upc_dict)
@@ -936,8 +935,6 @@ class DispatchOrchestrator:
         if not (self.config.splitter_step and split_edi):
             return False
 
-        import tempfile
-
         with tempfile.TemporaryDirectory() as temp_dir:
             split_result = self.config.splitter_step.split(
                 current_file,
@@ -995,7 +992,9 @@ class DispatchOrchestrator:
         if send_errors:
             for backend_name, error_message in send_errors.items():
                 result.errors.append(
-                    f"Failed to send split file via {backend_name}: {error_message}"
+                    self._format_send_error(
+                        backend_name, error_message, is_split_file=True
+                    )
                 )
             return
 
@@ -1013,7 +1012,7 @@ class DispatchOrchestrator:
         if send_errors:
             for backend_name, error_message in send_errors.items():
                 result.errors.append(
-                    f"Failed to send file via {backend_name}: {error_message}"
+                    self._format_send_error(backend_name, error_message)
                 )
                 self._log_message(
                     run_log,
@@ -1027,6 +1026,13 @@ class DispatchOrchestrator:
             run_log,
             f"FAILED sending {file_basename}",
         )
+
+    def _format_send_error(
+        self, backend_name: str, error_message: str, is_split_file: bool = False
+    ) -> str:
+        """Format a send error message for a specific backend."""
+        file_type = "split file" if is_split_file else "file"
+        return f"Failed to send {file_type} via {backend_name}: {error_message}"
 
     def _log_success_with_invoices(
         self,
@@ -1300,14 +1306,7 @@ class DispatchOrchestrator:
         if legacy_tweak_enabled:
             effective_folder["convert_edi"] = True
         elif "convert_edi" not in effective_folder:
-            # Legacy mode-aware behavior:
-            # - Explicit process_edi values are treated as authoritative.
-            # - Legacy tweak_edi=True forces conversion via tweaks compatibility.
-            # - convert_to_format is only used as a fallback inference when mode
-            #   flags are absent (NULL/missing in older rows).
-            if legacy_tweak_enabled:
-                effective_folder["convert_edi"] = True
-            elif process_edi_raw is None:
+            if process_edi_raw is None:
                 effective_folder["convert_edi"] = has_convert_target
             else:
                 effective_folder["convert_edi"] = process_edi_bool
@@ -1384,8 +1383,6 @@ class DispatchOrchestrator:
             ValueError: If the template is absolute or contains path traversal
 
         """
-        import os
-
         if os.path.isabs(template) or ".." in template:
             raise ValueError(f"Invalid filename pattern in rename template: {template}")
 
@@ -1404,12 +1401,6 @@ class DispatchOrchestrator:
             Path to send (renamed copy, or original if no rename configured)
 
         """
-        import datetime
-        import os
-        import re
-        import shutil
-        import tempfile
-
         rename_template = context.effective_folder.get("rename_file", "").strip()
         if not rename_template:
             return file_path
@@ -1451,8 +1442,6 @@ class DispatchOrchestrator:
             True if file was sent successfully
 
         """
-        import os
-
         enabled_backends = self.send_manager.get_enabled_backends(folder)
 
         if not enabled_backends:
@@ -1511,8 +1500,6 @@ class DispatchOrchestrator:
         folder_path = folder.get("folder_name", "")
         alias = folder.get("alias", folder_path)
 
-        import logging
-
         log_with_context(
             logger,
             logging.INFO,
@@ -1543,8 +1530,6 @@ class DispatchOrchestrator:
         if self.config.file_system:
             return self.config.file_system.dir_exists(path)
 
-        import os
-
         return os.path.isdir(path)
 
     def _get_files_in_folder(self, path: str) -> list[str]:
@@ -1559,8 +1544,6 @@ class DispatchOrchestrator:
         """
         if self.config.file_system:
             return self.config.file_system.list_files(path)
-
-        import os
 
         if not os.path.isdir(path):
             return []
@@ -1693,8 +1676,6 @@ class DispatchOrchestrator:
             MD5 checksum as hex string
 
         """
-        import hashlib
-
         log_file_operation(
             logger,
             "read",
@@ -1732,8 +1713,6 @@ class DispatchOrchestrator:
 
         """
         try:
-            from core.edi.edi_parser import capture_records
-
             if self.config.file_system:
                 content_bytes = self.config.file_system.read_file(file_path)
                 content = (
@@ -1744,6 +1723,8 @@ class DispatchOrchestrator:
             else:
                 with open(file_path, "r", errors="replace") as f:
                     content = f.read()
+
+            from core.edi.edi_parser import capture_records
 
             seen: dict[str, None] = {}
             for line in content.splitlines():
@@ -1784,11 +1765,9 @@ class DispatchOrchestrator:
 
         Args:
             run_log: Run log to write to
-            message: Message to log
+            message:             Message to log
 
         """
-        import logging
-
         log_with_context(
             logger,
             logging.INFO,
@@ -1806,11 +1785,9 @@ class DispatchOrchestrator:
 
         Args:
             run_log: Run log to write to
-            message: Error message to log
+            message:             Error message to log
 
         """
-        import logging
-
         log_with_context(
             logger,
             logging.ERROR,

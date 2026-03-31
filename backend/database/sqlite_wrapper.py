@@ -39,17 +39,19 @@ class Table:
     All boolean values are stored as INTEGER (0/1) and converted to Python bool on read.
     """
 
-    def __init__(self, conn: sqlite3.Connection, name: str) -> None:
+    def __init__(self, conn: sqlite3.Connection, name: str, lock: threading.RLock | None = None) -> None:
         """Initialize a table reference.
 
         Args:
             conn: SQLite database connection
             name: Name of the table
+            lock: Optional lock for thread-safe operations
 
         """
         self._conn = conn
         self._name = name
         self._boolean_columns: set | None = None
+        self._lock = lock
 
     _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE = {
         "folders": {
@@ -305,16 +307,17 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        if kwargs:
-            where, values = self._build_where_clause(kwargs)
-            cur = self._conn.execute(
-                f"SELECT * FROM {quoted_table} WHERE {where} LIMIT 1", tuple(values)
-            )
-        else:
-            cur = self._conn.execute(f"SELECT * FROM {quoted_table} LIMIT 1")
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            if kwargs:
+                where, values = self._build_where_clause(kwargs)
+                cur = self._conn.execute(
+                    f"SELECT * FROM {quoted_table} WHERE {where} LIMIT 1", tuple(values)
+                )
+            else:
+                cur = self._conn.execute(f"SELECT * FROM {quoted_table} LIMIT 1")
 
-        return self._row_to_dict(cur.fetchone())
+            return self._row_to_dict(cur.fetchone())
 
     def find(
         self,
@@ -338,31 +341,32 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        sql = f"SELECT * FROM {quoted_table}"
-        params = []
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            sql = f"SELECT * FROM {quoted_table}"
+            params = []
 
-        if kwargs:
-            where, where_values = self._build_where_clause(kwargs)
-            sql += f" WHERE {where}"
-            params = where_values
+            if kwargs:
+                where, where_values = self._build_where_clause(kwargs)
+                sql += f" WHERE {where}"
+                params = where_values
 
-        if order_by:
-            sql += f" ORDER BY {self._quote_identifier(order_by)}"
+            if order_by:
+                sql += f" ORDER BY {self._quote_identifier(order_by)}"
 
-        if _limit:
-            sql += f" LIMIT {_limit}"
+            if _limit:
+                sql += f" LIMIT {_limit}"
 
-        if _offset:
-            sql += f" OFFSET {_offset}"
+            if _offset:
+                sql += f" OFFSET {_offset}"
 
-        cur = self._conn.execute(sql, tuple(params))
-        return [
-            row_dict
-            for r in cur.fetchall()
-            for row_dict in [self._row_to_dict(r)]
-            if row_dict is not None
-        ]
+            cur = self._conn.execute(sql, tuple(params))
+            return [
+                row_dict
+                for r in cur.fetchall()
+                for row_dict in [self._row_to_dict(r)]
+                if row_dict is not None
+            ]
 
     def all(self) -> list[dict[str, Any]]:
         """Get all records from the table.
@@ -374,14 +378,15 @@ class Table:
             sqlite3.OperationalError: If table doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        cur = self._conn.execute(f"SELECT * FROM {quoted_table}")
-        return [
-            row_dict
-            for r in cur.fetchall()
-            for row_dict in [self._row_to_dict(r)]
-            if row_dict is not None
-        ]
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            cur = self._conn.execute(f"SELECT * FROM {quoted_table}")
+            return [
+                row_dict
+                for r in cur.fetchall()
+                for row_dict in [self._row_to_dict(r)]
+                if row_dict is not None
+            ]
 
     def insert(self, record: dict[str, Any]) -> int:
         """Insert a new record into the table.
@@ -397,22 +402,23 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        keys = list(record.keys())
-        if not keys:
-            raise ValueError("Cannot insert empty record")
+        with self._lock:
+            keys = list(record.keys())
+            if not keys:
+                raise ValueError("Cannot insert empty record")
 
-        quoted_table = self._quote_identifier(self._name)
-        cols = ", ".join(self._quote_identifier(k) for k in keys)
-        placeholders = ", ".join("?" for _ in keys)
-        sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
-        boolean_cols = self._get_boolean_columns()
-        values = tuple(
-            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
-        )
+            quoted_table = self._quote_identifier(self._name)
+            cols = ", ".join(self._quote_identifier(k) for k in keys)
+            placeholders = ", ".join("?" for _ in keys)
+            sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
+            boolean_cols = self._get_boolean_columns()
+            values = tuple(
+                self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+            )
 
-        cur = self._conn.execute(sql, values)
-        self._conn.commit()
-        return int(cur.lastrowid or 0)
+            cur = self._conn.execute(sql, values)
+            self._conn.commit()
+            return int(cur.lastrowid or 0)
 
     def insert_many(self, records: list[dict]) -> None:
         """Insert multiple records in a single transaction.
@@ -425,20 +431,21 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        if not records:
-            return
-        boolean_cols = self._get_boolean_columns()
-        keys = list(records[0].keys())
-        quoted_table = self._quote_identifier(self._name)
-        cols = ", ".join(self._quote_identifier(k) for k in keys)
-        placeholders = ", ".join("?" for _ in keys)
-        sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
-        values = [
-            tuple(self._serialize_record_value(k, r[k], boolean_cols) for k in keys)
-            for r in records
-        ]
-        self._conn.executemany(sql, values)
-        self._conn.commit()
+        with self._lock:
+            if not records:
+                return
+            boolean_cols = self._get_boolean_columns()
+            keys = list(records[0].keys())
+            quoted_table = self._quote_identifier(self._name)
+            cols = ", ".join(self._quote_identifier(k) for k in keys)
+            placeholders = ", ".join("?" for _ in keys)
+            sql = f"INSERT INTO {quoted_table} ({cols}) VALUES ({placeholders})"
+            values = [
+                tuple(self._serialize_record_value(k, r[k], boolean_cols) for k in keys)
+                for r in records
+            ]
+            self._conn.executemany(sql, values)
+            self._conn.commit()
 
     def update(self, record: dict[str, Any], keys: list[str]) -> None:
         """Update an existing record.
@@ -451,26 +458,27 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        set_keys = [k for k in record.keys() if k not in keys]
-        if not set_keys:
-            # Nothing to update
-            return
+        with self._lock:
+            set_keys = [k for k in record.keys() if k not in keys]
+            if not set_keys:
+                # Nothing to update
+                return
 
-        quoted_table = self._quote_identifier(self._name)
-        set_clause = ", ".join(f"{self._quote_identifier(k)}=?" for k in set_keys)
-        where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
-        sql = f"UPDATE {quoted_table} SET {set_clause} WHERE {where_clause}"
+            quoted_table = self._quote_identifier(self._name)
+            set_clause = ", ".join(f"{self._quote_identifier(k)}=?" for k in set_keys)
+            where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
+            sql = f"UPDATE {quoted_table} SET {set_clause} WHERE {where_clause}"
 
-        boolean_cols = self._get_boolean_columns()
-        params = [
-            self._serialize_record_value(k, record[k], boolean_cols) for k in set_keys
-        ]
-        params.extend(
-            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
-        )
+            boolean_cols = self._get_boolean_columns()
+            params = [
+                self._serialize_record_value(k, record[k], boolean_cols) for k in set_keys
+            ]
+            params.extend(
+                self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+            )
 
-        self._conn.execute(sql, tuple(params))
-        self._conn.commit()
+            self._conn.execute(sql, tuple(params))
+            self._conn.commit()
 
     def delete(self, **kwargs) -> None:
         """Delete records matching the given criteria.
@@ -482,16 +490,17 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        if not kwargs:
-            sql = f"DELETE FROM {quoted_table}"
-            self._conn.execute(sql)
-        else:
-            where, values = self._build_where_clause(kwargs)
-            sql = f"DELETE FROM {quoted_table} WHERE {where}"
-            self._conn.execute(sql, tuple(values))
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            if not kwargs:
+                sql = f"DELETE FROM {quoted_table}"
+                self._conn.execute(sql)
+            else:
+                where, values = self._build_where_clause(kwargs)
+                sql = f"DELETE FROM {quoted_table} WHERE {where}"
+                self._conn.execute(sql, tuple(values))
 
-        self._conn.commit()
+            self._conn.commit()
 
     def count(self, **kwargs) -> int:
         """Count records matching the given criteria.
@@ -506,17 +515,18 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        if kwargs:
-            where, values = self._build_where_clause(kwargs)
-            cur = self._conn.execute(
-                f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}", tuple(values)
-            )
-        else:
-            cur = self._conn.execute(f"SELECT COUNT(*) as c FROM {quoted_table}")
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            if kwargs:
+                where, values = self._build_where_clause(kwargs)
+                cur = self._conn.execute(
+                    f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}", tuple(values)
+                )
+            else:
+                cur = self._conn.execute(f"SELECT COUNT(*) as c FROM {quoted_table}")
 
-        row = cur.fetchone()
-        return int(row[0]) if row is not None else 0
+            row = cur.fetchone()
+            return int(row[0]) if row is not None else 0
 
     def upsert(self, record: dict[str, Any], keys: list[str]) -> None:
         """Insert or update a record.
@@ -532,22 +542,23 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
-        boolean_cols = self._get_boolean_columns()
-        values = tuple(
-            self._serialize_record_value(k, record[k], boolean_cols) for k in keys
-        )
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            where_clause = " AND ".join(f"{self._quote_identifier(k)}=?" for k in keys)
+            boolean_cols = self._get_boolean_columns()
+            values = tuple(
+                self._serialize_record_value(k, record[k], boolean_cols) for k in keys
+            )
 
-        cur = self._conn.execute(
-            f"SELECT 1 FROM {quoted_table} WHERE {where_clause} LIMIT 1", values
-        )
-        exists = cur.fetchone() is not None
+            cur = self._conn.execute(
+                f"SELECT 1 FROM {quoted_table} WHERE {where_clause} LIMIT 1", values
+            )
+            exists = cur.fetchone() is not None
 
-        if exists:
-            self.update(record, keys)
-        else:
-            self.insert(record)
+            if exists:
+                self.update(record, keys)
+            else:
+                self.insert(record)
 
     def create_column(self, column_name: str, column_type: str) -> None:
         """Create a column in the table if it doesn't exist.
@@ -561,29 +572,30 @@ class Table:
             New code should use explicit schema definitions.
 
         """
-        # Map type strings to SQLite types
-        type_lower = column_type.lower()
-        if "bool" in type_lower:
-            sql_type = "INTEGER DEFAULT 0"
-        elif "int" in type_lower:
-            sql_type = "INTEGER"
-        elif "real" in type_lower or "float" in type_lower:
-            sql_type = "REAL"
-        else:
-            sql_type = "TEXT"
+        with self._lock:
+            # Map type strings to SQLite types
+            type_lower = column_type.lower()
+            if "bool" in type_lower:
+                sql_type = "INTEGER DEFAULT 0"
+            elif "int" in type_lower:
+                sql_type = "INTEGER"
+            elif "real" in type_lower or "float" in type_lower:
+                sql_type = "REAL"
+            else:
+                sql_type = "TEXT"
 
-        try:
-            quoted_table = self._quote_identifier(self._name)
-            quoted_column = self._quote_identifier(column_name)
-            self._conn.execute(
-                f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
-            )
-            self._conn.commit()
-            # Clear boolean column cache
-            self._boolean_columns = None
-        except sqlite3.OperationalError:
-            # Column already exists or cannot be added
-            pass
+            try:
+                quoted_table = self._quote_identifier(self._name)
+                quoted_column = self._quote_identifier(column_name)
+                self._conn.execute(
+                    f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
+                )
+                self._conn.commit()
+                # Clear boolean column cache
+                self._boolean_columns = None
+            except sqlite3.OperationalError:
+                # Column already exists or cannot be added
+                pass
 
     def distinct(self, column: str) -> list[dict[str, Any]]:
         """Get distinct values for a column.
@@ -598,21 +610,23 @@ class Table:
             sqlite3.OperationalError: If table or column doesn't exist
 
         """
-        quoted_table = self._quote_identifier(self._name)
-        sql = f"SELECT DISTINCT * FROM {quoted_table} ORDER BY {self._quote_identifier(column)}"
-        cur = self._conn.execute(sql)
-        return [
-            row_dict
-            for r in cur.fetchall()
-            for row_dict in [self._row_to_dict(r)]
-            if row_dict is not None
-        ]
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            sql = f"SELECT DISTINCT * FROM {quoted_table} ORDER BY {self._quote_identifier(column)}"
+            cur = self._conn.execute(sql)
+            return [
+                row_dict
+                for r in cur.fetchall()
+                for row_dict in [self._row_to_dict(r)]
+                if row_dict is not None
+            ]
 
     def drop(self) -> None:
         """Drop the table from the database."""
-        quoted_table = self._quote_identifier(self._name)
-        self._conn.execute(f"DROP TABLE IF EXISTS {quoted_table}")
-        self._conn.commit()
+        with self._lock:
+            quoted_table = self._quote_identifier(self._name)
+            self._conn.execute(f"DROP TABLE IF EXISTS {quoted_table}")
+            self._conn.commit()
 
 
 class Database:
@@ -632,6 +646,7 @@ class Database:
         self._path = path
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._lock = threading.RLock()
 
         # Enable foreign key constraints
         try:
@@ -667,14 +682,16 @@ class Database:
             List of table names
 
         """
-        cur = self._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
-        return [row[0] for row in cur.fetchall()]
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            )
+            return [row[0] for row in cur.fetchall()]
 
     def commit(self) -> None:
         """Commit pending changes to the database."""
-        self._conn.commit()
+        with self._lock:
+            self._conn.commit()
 
     def __getitem__(self, table_name: str) -> Table:
         """Get a table by name.
@@ -686,14 +703,15 @@ class Database:
             Table object for the given name
 
         """
-        return Table(self._conn, table_name)
+        return Table(self._conn, table_name, self._lock)
 
     def close(self) -> None:
         """Close the database connection."""
-        try:
-            self._conn.close()
-        except sqlite3.Error:
-            pass
+        with self._lock:
+            try:
+                self._conn.close()
+            except sqlite3.Error:
+                pass
 
     def query(self, sql: str) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
@@ -706,40 +724,41 @@ class Database:
             Returns empty list on error.
 
         """
-        try:
-            cur = self._conn.execute(sql)
-        except sqlite3.Error:
-            # If execution fails, commit any pending changes and return empty
+        with self._lock:
             try:
-                self._conn.commit()
+                cur = self._conn.execute(sql)
             except sqlite3.Error:
-                pass
-            return []
-
-        # PRAGMA statements return results without needing commit
-        if sql.strip().upper().startswith("PRAGMA"):
-            try:
-                return [dict(r) for r in cur.fetchall()]
-            except sqlite3.Error:
+                # If execution fails, commit any pending changes and return empty
+                try:
+                    self._conn.commit()
+                except sqlite3.Error:
+                    pass
                 return []
 
-        # For other statements, commit and return processed rows
-        try:
-            self._conn.commit()
-            # Use a dummy table to process rows with boolean conversion
-            dummy_table = Table(self._conn, "dummy")
-            return [
-                row_dict
-                for r in cur.fetchall()
-                for row_dict in [dummy_table._row_to_dict(r)]
-                if row_dict is not None
-            ]
-        except sqlite3.Error:
+            # PRAGMA statements return results without needing commit
+            if sql.strip().upper().startswith("PRAGMA"):
+                try:
+                    return [dict(r) for r in cur.fetchall()]
+                except sqlite3.Error:
+                    return []
+
+            # For other statements, commit and return processed rows
             try:
                 self._conn.commit()
+                # Use a dummy table to process rows with boolean conversion
+                dummy_table = Table(self._conn, "dummy", self._lock)
+                return [
+                    row_dict
+                    for r in cur.fetchall()
+                    for row_dict in [dummy_table._row_to_dict(r)]
+                    if row_dict is not None
+                ]
             except sqlite3.Error:
-                pass
-            return []
+                try:
+                    self._conn.commit()
+                except sqlite3.Error:
+                    pass
+                return []
 
     @classmethod
     def connect(cls, path: str) -> Database:

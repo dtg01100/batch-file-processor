@@ -16,6 +16,8 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
+MAX_A_RECORD_COUNT = 700
+
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
 from core.edi.edi_transformer import (
@@ -200,7 +202,7 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
         work_file_lined = work_file.readlines()  # make list of lines
         lines_in_edi = len(work_file_lined)
         a_record_count = sum(1 for line in work_file_lined if line.startswith("A"))
-        if a_record_count > 700:
+        if a_record_count > MAX_A_RECORD_COUNT:
             return []
 
         edi_send_list, write_counter = _write_split_edi_files(
@@ -272,7 +274,7 @@ def add_row(csv_writer, rowdict: dict) -> None:
     csv_writer.writerow(rowdict.values())
 
 
-class cRecGenerator:
+class CRecGenerator:
     """Class for generating split C records for prepaid/non-prepaid sales tax.
 
     This class queries the database to split sales tax totals into prepaid and

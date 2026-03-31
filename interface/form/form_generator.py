@@ -6,6 +6,7 @@ from ConfigurationSchema definitions. Supports the Qt framework
 through the existing UI abstraction layer.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
@@ -58,7 +59,7 @@ class FormGenerator(ABC):
         set_correlation_id(self._correlation_id)
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Form generator initialized",
             correlation_id=self._correlation_id,
             component="form_generator",
@@ -483,7 +484,7 @@ class QtFormGenerator(FormGenerator):
         is_valid = len(all_errors) == 0
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             f"Form validation {'succeeded' if is_valid else 'failed'}",
             correlation_id=get_correlation_id(),
             component="form_generator",
@@ -560,7 +561,7 @@ class FormGeneratorFactory:
         correlation_id = get_correlation_id() or generate_correlation_id()
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             f"Creating form generator for framework: {framework}",
             correlation_id=correlation_id,
             component="form_generator",

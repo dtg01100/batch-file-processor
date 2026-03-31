@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import time
 import traceback
 from typing import Any
@@ -84,7 +85,7 @@ class QtRunCoordinator:
         set_correlation_id(correlation_id)
         log_with_context(
             logger,
-            10,  # DEBUG
+            logging.DEBUG,  # DEBUG
             "Starting process_directories run",
             correlation_id=correlation_id,
             component="qt_run_coordinator",

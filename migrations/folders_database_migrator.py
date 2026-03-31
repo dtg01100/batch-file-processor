@@ -7,6 +7,9 @@ logger = logging.getLogger(__name__)
 CSV_SORT_ORDER = "upc_number,qty_of_units,unit_cost,description,vendor_item"
 REPLACEME_PLACEHOLDER = "replaceme"
 
+# Current schema version - this is the single source of truth for the database version
+CURRENT_SCHEMA_VERSION = "50"
+
 
 def _quote_identifier(name: str) -> str:
     """Quote a SQL identifier, escaping any embedded quotes."""
@@ -780,6 +783,21 @@ def upgrade_database(
                 cursor.execute(stmt)
             except Exception:
                 pass  # column already exists
+        # Populate NULL timestamps for existing rows (ensure_schema may have
+        # already created the columns without a DEFAULT, leaving rows NULL).
+        for table, timestamp_col in [
+            ("folders", "created_at"),
+            ("folders", "updated_at"),
+            ("administrative", "created_at"),
+            ("administrative", "updated_at"),
+            ("processed_files", "created_at"),
+            ("settings", "created_at"),
+            ("settings", "updated_at"),
+        ]:
+            cursor.execute(
+                f"UPDATE '{table}' SET {timestamp_col} = ? WHERE {timestamp_col} IS NULL",
+                (now,),
+            )
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="34", os=running_platform)
@@ -1450,9 +1468,9 @@ def upgrade_database(
             conn.execute("ROLLBACK")
             raise RuntimeError(f"Failed to add process_backend_http column: {e}") from e
 
-        update_version = dict(id=1, version="50", os=running_platform)
+        update_version = dict(id=1, version=CURRENT_SCHEMA_VERSION, os=running_platform)
         db_version.update(update_version, ["id"])
-        _log_migration_step("49", "50")
+        _log_migration_step("49", CURRENT_SCHEMA_VERSION)
 
     db_version_dict = db_version.find_one(id=1)
 

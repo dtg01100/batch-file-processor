@@ -139,8 +139,8 @@ class QtBatchFileSenderApp:
 
         self._configure_qt_platform()
 
-        print(f"{self._appname} Version {self._version}")
-        print(f"Running on {self._running_platform}")
+        logger.info("%s Version %s", self._appname, self._version)
+        logger.info("Running on %s", self._running_platform)
 
         self._parse_arguments(args)
 
@@ -233,11 +233,11 @@ class QtBatchFileSenderApp:
                 )
             self._window = None
 
+        QT_EVENT_PROCESSING_ITERATIONS = 10
+
         try:
             if QApplication.instance() is not None:
-                # Process events multiple times to fully drain pending events
-                # (signals, deleteLater calls, timers) left by widget teardown
-                for _ in range(10):
+                for _ in range(QT_EVENT_PROCESSING_ITERATIONS):
                     QApplication.processEvents()
         except Exception:
             logger.debug(
@@ -576,68 +576,70 @@ class QtBatchFileSenderApp:
     def _set_defaults_popup(self) -> None:
         if self._database is None:
             return
-        defaults = self._database.get_oversight_or_default()
-        defaults = dict(defaults)
-        defaults.setdefault("copy_to_directory", "")
-        defaults.setdefault(
-            "logs_directory",
-            os.path.join(os.path.expanduser("~"), "BatchFileSenderLogs"),
-        )
-        defaults.setdefault("enable_reporting", False)
-        defaults.setdefault("report_email_destination", "")
-        defaults.setdefault("report_edi_errors", False)
-        defaults.setdefault("folder_name", "template")
-        defaults.setdefault("folder_is_active", True)
-        defaults.setdefault("alias", "")
-        defaults.setdefault("process_backend_copy", False)
-        defaults.setdefault("process_backend_ftp", False)
-        defaults.setdefault("process_backend_email", False)
-        defaults.setdefault("ftp_server", "")
-        defaults.setdefault("ftp_port", 21)
-        defaults.setdefault("ftp_folder", "")
-        defaults.setdefault("ftp_username", "")
-        defaults.setdefault("ftp_password", "")
-        defaults.setdefault("email_to", "")
-        defaults.setdefault("email_subject_line", "")
-        defaults.setdefault("process_edi", False)
-        defaults.setdefault("convert_to_format", "csv")
-        defaults.setdefault("calculate_upc_check_digit", False)
-        defaults.setdefault("include_a_records", False)
-        defaults.setdefault("include_c_records", False)
-        defaults.setdefault("include_headers", False)
-        defaults.setdefault("filter_ampersand", False)
-        defaults.setdefault("split_edi", False)
-        defaults.setdefault("split_edi_include_invoices", False)
-        defaults.setdefault("split_edi_include_credits", False)
-        defaults.setdefault("prepend_date_files", False)
-        defaults.setdefault("split_edi_filter_categories", "ALL")
-        defaults.setdefault("split_edi_filter_mode", "include")
-        defaults.setdefault("rename_file", "")
-        defaults.setdefault("pad_a_records", False)
-        defaults.setdefault("a_record_padding", "")
-        defaults.setdefault("a_record_padding_length", 6)
-        defaults.setdefault("append_a_records", False)
-        defaults.setdefault("a_record_append_text", "")
-        defaults.setdefault("force_txt_file_ext", False)
-        defaults.setdefault("invoice_date_offset", 0)
-        defaults.setdefault("invoice_date_custom_format", False)
-        defaults.setdefault("invoice_date_custom_format_string", "%Y%m%d")
-        defaults.setdefault("retail_uom", False)
-        defaults.setdefault("force_edi_validation", False)
-        defaults.setdefault("override_upc_bool", False)
-        defaults.setdefault("override_upc_level", 1)
-        defaults.setdefault("override_upc_category_filter", "")
-        defaults.setdefault("upc_target_length", 11)
-        defaults.setdefault("upc_padding_pattern", "           ")
-        defaults.setdefault("include_item_numbers", False)
-        defaults.setdefault("include_item_description", False)
-        defaults.setdefault("simple_csv_sort_order", "")
-        defaults.setdefault("split_prepaid_sales_tax_crec", False)
-        defaults.setdefault("estore_store_number", "")
-        defaults.setdefault("estore_Vendor_OId", "")
-        defaults.setdefault("estore_vendor_NameVendorOID", "")
-        defaults.setdefault("estore_c_record_OID", "")
-        defaults.setdefault("fintech_division_id", "")
+        defaults = dict(self._database.get_oversight_or_default())
+        default_values = {
+            "copy_to_directory": "",
+            "logs_directory": os.path.join(
+                os.path.expanduser("~"), "BatchFileSenderLogs"
+            ),
+            "enable_reporting": False,
+            "report_email_destination": "",
+            "report_edi_errors": False,
+            "folder_name": "template",
+            "folder_is_active": True,
+            "alias": "",
+            "process_backend_copy": False,
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+            "ftp_server": "",
+            "ftp_port": 21,
+            "ftp_folder": "",
+            "ftp_username": "",
+            "ftp_password": "",
+            "email_to": "",
+            "email_subject_line": "",
+            "process_edi": False,
+            "convert_to_format": "csv",
+            "calculate_upc_check_digit": False,
+            "include_a_records": False,
+            "include_c_records": False,
+            "include_headers": False,
+            "filter_ampersand": False,
+            "split_edi": False,
+            "split_edi_include_invoices": False,
+            "split_edi_include_credits": False,
+            "prepend_date_files": False,
+            "split_edi_filter_categories": "ALL",
+            "split_edi_filter_mode": "include",
+            "rename_file": "",
+            "pad_a_records": False,
+            "a_record_padding": "",
+            "a_record_padding_length": 6,
+            "append_a_records": False,
+            "a_record_append_text": "",
+            "force_txt_file_ext": False,
+            "invoice_date_offset": 0,
+            "invoice_date_custom_format": False,
+            "invoice_date_custom_format_string": "%Y%m%d",
+            "retail_uom": False,
+            "force_edi_validation": False,
+            "override_upc_bool": False,
+            "override_upc_level": 1,
+            "override_upc_category_filter": "",
+            "upc_target_length": 11,
+            "upc_padding_pattern": "           ",
+            "include_item_numbers": False,
+            "include_item_description": False,
+            "simple_csv_sort_order": "",
+            "split_prepaid_sales_tax_crec": False,
+            "estore_store_number": "",
+            "estore_Vendor_OId": "",
+            "estore_vendor_NameVendorOID": "",
+            "estore_c_record_OID": "",
+            "fintech_division_id": "",
+        }
+        for key, value in default_values.items():
+            defaults.setdefault(key, value)
         self._open_edit_folders_dialog(defaults)
 
     def _show_edit_settings_dialog(self) -> None:
@@ -828,7 +830,7 @@ class QtBatchFileSenderApp:
 
     def _log_critical_error(self, error) -> None:
         try:
-            print(str(error))
+            logger.error("%s", error)
             with open("critical_error.log", "a", encoding="utf-8") as critical_log:
                 critical_log.write(f"program version is {self._version}")
                 critical_log.write(f"{datetime.datetime.now()}{error}\r\n")
@@ -838,7 +840,7 @@ class QtBatchFileSenderApp:
         except SystemExit:
             raise
         except Exception as big_error:
-            print("error writing critical error log...")
+            logger.error("error writing critical error log: %s", big_error)
             raise SystemExit from big_error
 
 
