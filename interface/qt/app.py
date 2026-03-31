@@ -301,12 +301,31 @@ class QtBatchFileSenderApp:
             self._database.oversight_and_defaults.update(
                 {"id": 1, "single_add_folder_prior": selected_folder}, ["id"]
             )
-        proposed_folder = self._folder_manager.check_folder_exists(selected_folder)
+        existing_folders = self._folder_manager.check_folder_exists(selected_folder)
 
-        if proposed_folder["truefalse"] is False:
-            if self._progress_service:
-                self._progress_service.show("Adding Folder...")
-            self._folder_manager.add_folder(selected_folder)
+        if existing_folders["truefalse"]:
+            # Folder already exists - give user three choices
+            existing_count = len(existing_folders["all_matched_folders"])
+            msg = f"This folder has {existing_count} existing configuration(s)."
+            choice = self._ui_service.ask_three_choices(
+                "Folder Already Exists",
+                msg,
+                "Add Another",  # 0
+                "Edit Original",  # 1
+                "Cancel",  # 2
+            )
+            if choice == 2:  # Cancel
+                return
+            elif choice == 1:  # Edit original
+                self._open_edit_folders_dialog(existing_folders["matched_folder"])
+                return
+            # choice == 0: Proceed to add new configuration
+
+        if self._progress_service:
+            self._progress_service.show("Adding Folder...")
+        self._folder_manager.add_folder(selected_folder)
+        # Only ask about marking processed if folder is new (no existing configs)
+        if not existing_folders["truefalse"]:
             if self._ui_service.ask_yes_no(
                 "Mark Processed",
                 "Do you want to mark files in folder as processed?",
@@ -317,15 +336,9 @@ class QtBatchFileSenderApp:
                     )
                     if folder_dict:
                         self._mark_active_as_processed_wrapper(folder_dict["id"])
-            if self._progress_service:
-                self._progress_service.hide()
-            self._refresh_users_list()
-        else:
-            proposed_folder_dict = proposed_folder["matched_folder"]
-            if self._ui_service.ask_ok_cancel(
-                "Query:", "Folder already known, would you like to edit?"
-            ):
-                self._open_edit_folders_dialog(proposed_folder_dict)
+        if self._progress_service:
+            self._progress_service.hide()
+        self._refresh_users_list()
 
     def _batch_add_folders(self) -> None:
         if (
@@ -362,24 +375,21 @@ class QtBatchFileSenderApp:
 
         if self._progress_service:
             self._progress_service.show("Adding folders...")
-        added, skipped = 0, 0
+        added = 0
         for folder in folders_to_add:
             if self._progress_service:
                 self._progress_service.update_message(
-                    f"Adding folders... ({added + skipped + 1}/{len(folders_to_add)})"
+                    f"Adding folders... ({added + 1}/{len(folders_to_add)})"
                 )
-            if self._folder_manager.check_folder_exists(folder)["truefalse"]:
-                skipped += 1
-            else:
-                self._folder_manager.add_folder(folder)
-                added += 1
+            self._folder_manager.add_folder(folder)
+            added += 1
 
         logger.info("done adding %s folders", added)
         if self._progress_service:
             self._progress_service.hide()
         self._ui_service.show_info(
             "Batch Add Complete",
-            f"{added} folders added, {skipped} folders skipped.",
+            f"{added} folders added.",
         )
         self._refresh_users_list()
         os.chdir(starting_directory)

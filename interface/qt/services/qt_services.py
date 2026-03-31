@@ -93,6 +93,38 @@ class QtUIService:
         )
         return result == QMessageBox.StandardButton.Ok
 
+    def ask_three_choices(
+        self,
+        title: str,
+        message: str,
+        choice1: str,
+        choice2: str,
+        choice3: str,
+    ) -> int:
+        """Prompt the user with a three-choice question.
+
+        Returns:
+            0 if user selected choice1, 1 if choice2, 2 if choice3.
+
+        """
+        msg_box = QMessageBox(self._parent)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        btn1 = msg_box.addButton(choice1, QMessageBox.ButtonRole.AcceptRole)
+        btn2 = msg_box.addButton(choice2, QMessageBox.ButtonRole.AcceptRole)
+        btn3 = msg_box.addButton(choice3, QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(btn1)
+        msg_box.exec()
+
+        clicked = msg_box.clickedButton()
+        if clicked == btn1:
+            return 0
+        elif clicked == btn2:
+            return 1
+        elif clicked == btn3:
+            return 2
+        return -1
+
     # -- file / directory dialogs ---------------------------------------------
 
     @staticmethod
