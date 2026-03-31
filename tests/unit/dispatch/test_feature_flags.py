@@ -80,25 +80,25 @@ class TestSetFeatureFlag:
 
     def test_set_debug_mode_true(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
-        set_feature_flag("debug_mode", True)
+        set_feature_flag("debug_mode", value=True)
         assert os.environ.get("DISPATCH_DEBUG_MODE") == "true"
         assert get_debug_mode() is True
 
     def test_set_debug_mode_false(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
-        set_feature_flag("debug_mode", False)
+        set_feature_flag("debug_mode", value=False)
         assert os.environ.get("DISPATCH_DEBUG_MODE") == "false"
         assert get_debug_mode() is False
 
     def test_set_strict_testing_mode_true(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
-        set_feature_flag("strict_testing_mode", True)
+        set_feature_flag("strict_testing_mode", value=True)
         assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
         assert get_strict_testing_mode() is True
 
     def test_set_strict_testing_mode_false(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
-        set_feature_flag("strict_testing_mode", False)
+        set_feature_flag("strict_testing_mode", value=False)
         assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "false"
         assert get_strict_testing_mode() is False
 
@@ -107,7 +107,7 @@ class TestSetFeatureFlag:
     )
     def test_unknown_flag_raises_error(self, unknown_flag):
         with pytest.raises(ValueError) as exc_info:
-            set_feature_flag(unknown_flag, True)
+            set_feature_flag(unknown_flag, value=True)
 
         error_msg = str(exc_info.value)
         assert "Unknown feature flag" in error_msg

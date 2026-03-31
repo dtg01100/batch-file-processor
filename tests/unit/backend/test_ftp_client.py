@@ -154,7 +154,7 @@ class TestRealFTPClient:
         """Test set_pasv delegates to underlying connection."""
         client = RealFTPClient()
         client.connect("ftp.example.com", 21)
-        client.set_pasv(True)
+        client.set_pasv(passive=True)
 
         mock_ftplib.FTP.return_value.set_pasv.assert_called_once_with(True)
 
@@ -243,8 +243,8 @@ class TestMockFTPClient:
 
     def test_set_pasv_records_setting(self, mock_client):
         """Test set_pasv records passive mode setting."""
-        mock_client.set_pasv(True)
-        mock_client.set_pasv(False)
+        mock_client.set_pasv(passive=True)
+        mock_client.set_pasv(passive=False)
 
         assert mock_client.passive_mode_settings == [True, False]
 
@@ -252,7 +252,7 @@ class TestMockFTPClient:
         """Test set_nlst_return_value configures nlst response."""
         mock_client.set_nlst_return_value(["file1.txt", "file2.txt"])
 
-        result = mock_client.nlst("/remote/dir")
+        result = mock_client.nlst(directory="/remote/dir")
         assert result == ["file1.txt", "file2.txt"]
 
     def test_add_error_raises_on_next_operation(self, mock_client):
@@ -334,7 +334,7 @@ class TestFTPClientProtocolCompliance:
         for client_class in [RealFTPClient, MockFTPClient]:
             client = client_class()
             for method in required_methods:
-                assert hasattr(
-                    client, method
-                ), f"{client_class.__name__} missing {method}"
+                assert hasattr(client, method), (
+                    f"{client_class.__name__} missing {method}"
+                )
                 assert callable(getattr(client, method)), f"{method} not callable"

@@ -191,8 +191,8 @@ def test_db_enabled_converter_connect_db_uses_core_database_create_query_runner(
 
 
 def test_crec_generator_db_connect_uses_core_database_create_query_runner(monkeypatch):
-    """Ensure cRecGenerator resolves create_query_runner at call-time."""
-    from core.utils.utils import cRecGenerator
+    """Ensure CRecGenerator resolves create_query_runner at call-time."""
+    from core.utils.utils import CRecGenerator
 
     called = {}
 
@@ -202,7 +202,9 @@ def test_crec_generator_db_connect_uses_core_database_create_query_runner(monkey
 
     monkeypatch.setattr("core.database.create_query_runner", fake_create_query_runner)
 
-    cri = cRecGenerator({"as400_username": "u", "as400_password": "p", "as400_address": "host"})
+    cri = CRecGenerator(
+        {"as400_username": "u", "as400_password": "p", "as400_address": "host"}
+    )
     cri._db_connect()
 
     assert called.get("called", False)

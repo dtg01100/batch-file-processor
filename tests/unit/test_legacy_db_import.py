@@ -2,13 +2,14 @@
 
 Tests the migration path for databases created before the v32->v33 migration
 was changed, ensuring old database files can be imported and upgraded to
-the current schema version (v42).
+the current schema version.
 """
 
 import pytest
 
 from backend.database import sqlite_wrapper
 from migrations import folders_database_migrator
+from migrations.folders_database_migrator import CURRENT_SCHEMA_VERSION
 
 
 def _create_old_v33_database(db_path, platform="Linux"):
@@ -111,6 +112,8 @@ def _create_old_v33_database(db_path, platform="Linux"):
             split_edi=False,
             force_edi_validation=0,
             fintech_division_id=0,
+            split_edi_filter_categories="ALL",
+            split_edi_filter_mode="include",
         )
     )
 
@@ -127,8 +130,8 @@ def _create_old_v33_database(db_path, platform="Linux"):
 class TestOldV33DatabaseMigration:
     """Test migration of old v33 databases (from commit 9446b3de) to current schema."""
 
-    def test_old_v33_migrates_to_v41(self, tmp_path):
-        """An old v33 database should be upgradable to v41."""
+    def test_old_v33_migrates_to_current(self, tmp_path):
+        """An old v33 database should be upgradable to the current schema version."""
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
@@ -136,7 +139,7 @@ class TestOldV33DatabaseMigration:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db["version"].find_one(id=1)
-        assert version["version"] == "42"
+        assert version["version"] == CURRENT_SCHEMA_VERSION
         db.close()
 
     def test_old_v33_gains_plugin_config_column(self, tmp_path):
@@ -185,8 +188,8 @@ class TestOldV33DatabaseMigration:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db["folders"].find_one(id=1)
-        assert folder["folder_name"] == "/tmp/test_folder_1"
-        assert folder["alias"] == "Test Folder 1"
+        assert folder["folder_name"] == "/tmp/test_v32_folder"
+        assert folder["alias"] == "V32 Test Folder"
         assert folder["convert_to_format"] == "csv"
         db.close()
 
@@ -227,7 +230,6 @@ class TestOldV33DatabaseMigration:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         folder = db["folders"].find_one(id=1)
-        # sqlite_wrapper normalizes boolean columns to Python bool
         assert isinstance(folder["folder_is_active"], bool)
         assert isinstance(folder["process_edi"], bool)
         assert folder["folder_is_active"] is True
@@ -251,13 +253,13 @@ class TestOldV33DatabaseMigration:
 class TestV32DatabaseMigration:
     """Test migration from v32 using the real legacy fixture database."""
 
-    def test_v32_migrates_to_v42(self, legacy_v32_db, tmp_path):
-        """A real v32 database should be upgradable to v42."""
+    def test_v32_migrates_to_current(self, legacy_v32_db, tmp_path):
+        """A real v32 database should be upgradable to the current schema version."""
         db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db["version"].find_one(id=1)
-        assert version["version"] == "42"
+        assert version["version"] == CURRENT_SCHEMA_VERSION
         db.close()
 
     def test_v32_gets_all_v33_columns(self, legacy_v32_db, tmp_path):
@@ -301,7 +303,7 @@ class TestV32FixtureDbMigrationAtScale:
     """Test migration at scale using the 530-folder real legacy fixture database."""
 
     def test_all_530_folders_survive_migration(self, legacy_v32_db, tmp_path):
-        """All 530 folders from the real v32 DB should survive migration to v42."""
+        """All 530 folders from the real v32 DB should survive migration."""
         db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
@@ -433,7 +435,7 @@ class TestMigrationIdempotency:
     """Test that running migration on an already-current database is safe."""
 
     def test_migration_noop_on_current_version(self, tmp_path):
-        """Running upgrade on a v41 database should not change anything."""
+        """Running upgrade on a database already at current version should not change anything."""
         db_path = str(tmp_path / "old_v33.db")
         _create_old_v33_database(db_path)
 
@@ -441,12 +443,12 @@ class TestMigrationIdempotency:
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db["version"].find_one(id=1)
-        assert version["version"] == "42"
+        assert version["version"] == CURRENT_SCHEMA_VERSION
 
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 
         version = db["version"].find_one(id=1)
-        assert version["version"] == "42"
+        assert version["version"] == CURRENT_SCHEMA_VERSION
         db.close()
 
     def test_old_v33_to_v33_target_preserves_both_column_sets(self, tmp_path):
@@ -470,12 +472,12 @@ class TestMigrationIdempotency:
 
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
-        assert db["version"].find_one(id=1)["version"] == "42"
+        assert db["version"].find_one(id=1)["version"] == CURRENT_SCHEMA_VERSION
 
         db.close()
         db = sqlite_wrapper.Database.connect(db_path)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
-        assert db["version"].find_one(id=1)["version"] == "42"
+        assert db["version"].find_one(id=1)["version"] == CURRENT_SCHEMA_VERSION
 
         folder = db["folders"].find_one(id=1)
         assert "plugin_config" in folder

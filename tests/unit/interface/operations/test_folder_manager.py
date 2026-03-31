@@ -16,13 +16,36 @@ from interface.operations.folder_manager import (
 from tests.fakes import FakeDatabaseObj, FakeTable
 
 
+class MockDatabase:
+    """Mock that satisfies DatabaseProtocol for isinstance checks.
+
+    Class-level declarations pass Python's @runtime_checkable check.
+    Instance-level MagicMock attributes provide full mock behavior
+    with per-instance isolation for test assertions.
+    """
+
+    # Class-level declarations for isinstance() protocol check
+    folders_table = None
+    oversight_and_defaults = None
+    processed_files = None
+    emails_table = None
+    get_oversight_or_default = None
+
+    def __init__(self):
+        self.folders_table = MagicMock()
+        self.oversight_and_defaults = MagicMock()
+        self.processed_files = MagicMock()
+        self.emails_table = MagicMock()
+        self.get_oversight_or_default = MagicMock()
+
+
 class TestFolderManager:
     """Tests for FolderManager class."""
 
     @pytest.fixture
     def mock_db(self):
         """Create mock database."""
-        db = MagicMock()
+        db = MockDatabase()
         db.oversight_and_defaults.find_one.return_value = {
             "id": 1,
             "default_setting": "value",
@@ -316,7 +339,7 @@ class TestFolderManagerBatchOperations:
     @pytest.fixture
     def mock_db(self):
         """Create mock database."""
-        db = MagicMock()
+        db = MockDatabase()
         db.oversight_and_defaults.find_one.return_value = {
             "id": 1,
             "default_setting": "value",
@@ -397,7 +420,7 @@ class TestFolderManagerSkipList:
 
     def test_skip_list_excludes_fields(self):
         """Test that skip list excludes correct fields."""
-        mock_db = MagicMock()
+        mock_db = MockDatabase()
         mock_db.get_oversight_or_default.return_value = {
             "id": 1,
             "folder_name": "should_be_skipped",
@@ -428,7 +451,7 @@ class TestFolderManagerCommunicationWiring:
 
     @pytest.fixture
     def mock_db(self):
-        db = MagicMock()
+        db = MockDatabase()
         db.get_oversight_or_default.return_value = {
             "id": 1,
             "folder_is_active": True,

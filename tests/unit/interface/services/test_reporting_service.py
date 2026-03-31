@@ -10,6 +10,7 @@ These tests verify orchestration between ReportingService and its collaborators:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -141,9 +142,17 @@ class TestReportingServiceCommunication:
             utils_module=Utils,
         )
 
+        fixed_time = datetime(2026, 3, 10, 12, 0, 0)
         monkeypatch.setattr(
-            "interface.services.reporting_service.time.ctime",
-            lambda: "Mon Mar 10 12:00:00 2026",
+            "interface.services.reporting_service.datetime",
+            type(
+                "MockDatetime",
+                (),
+                {
+                    "now": lambda: fixed_time,
+                    "datetime": datetime,
+                },
+            )(),
         )
 
         service.send_report_emails(
@@ -185,8 +194,15 @@ class TestReportingServiceCommunication:
         )
 
         monkeypatch.setattr(
-            "interface.services.reporting_service.time.ctime",
-            lambda: "Mon Mar 10 12:00:00 2026",
+            "interface.services.reporting_service.datetime",
+            type(
+                "MockDatetime",
+                (),
+                {
+                    "now": lambda: datetime(2026, 3, 10, 12, 0, 0),
+                    "datetime": datetime,
+                },
+            )(),
         )
 
         service.send_report_emails(
@@ -226,9 +242,24 @@ class TestReportingServiceCommunication:
             utils_module=Utils,
         )
 
+        fixed_time = datetime(2026, 3, 10, 12, 0, 0)
+        mock_datetime_instance = type(
+            "MockDatetime",
+            (),
+            {
+                "now": staticmethod(lambda: fixed_time),
+            },
+        )()
+        mock_datetime = type(
+            "MockDatetimeModule",
+            (),
+            {
+                "datetime": mock_datetime_instance,
+            },
+        )()
         monkeypatch.setattr(
-            "interface.services.reporting_service.time.ctime",
-            lambda: "Mon Mar 10 12:00:00 2026",
+            "interface.services.reporting_service.datetime",
+            mock_datetime,
         )
 
         service.send_report_emails(
@@ -267,9 +298,24 @@ class TestReportingServiceCommunication:
             utils_module=Utils,
         )
 
+        fixed_time = datetime(2026, 3, 10, 12, 0, 0)
+        mock_datetime_instance = type(
+            "MockDatetime",
+            (),
+            {
+                "now": staticmethod(lambda: fixed_time),
+            },
+        )()
+        mock_datetime = type(
+            "MockDatetimeModule",
+            (),
+            {
+                "datetime": mock_datetime_instance,
+            },
+        )()
         monkeypatch.setattr(
-            "interface.services.reporting_service.time.ctime",
-            lambda: "Mon Mar 10 12:00:00 2026",
+            "interface.services.reporting_service.datetime",
+            mock_datetime,
         )
 
         service.send_report_emails(

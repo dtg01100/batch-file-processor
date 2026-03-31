@@ -315,9 +315,8 @@ class TestDatabaseObjVersionChecking:
     def test_os_mismatch_raises_system_exit(self, mock_tables):
         """Test that OS mismatch raises SystemExit when no connection injected."""
         # Set version to match database_version so only OS mismatch is checked
-        # (version 41 matches the database_version in the test)
         mock_tables["version"].find_one.return_value = {
-            "version": "42",
+            "version": CURRENT_DATABASE_VERSION,
             "os": "Windows",
         }
 
