@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
-from core.utils.utils import filter_b_records_by_category
+from core.utils.utils import _col_to_excel, filter_b_records_by_category
 
 
 @runtime_checkable
@@ -183,27 +183,6 @@ class SplitResult:
     skipped_invoices: int
     total_lines_written: int
     original_invoice_count: int = 0
-
-
-def _col_to_excel(col: int) -> str:
-    """Convert column number to Excel-style letter.
-
-    Args:
-        col: 1-based column number
-
-    Returns:
-        Excel-style column letter (A, B, ..., Z, AA, AB, ...)
-
-    Credit:
-        Nodebody on StackOverflow: http://stackoverflow.com/a/19154642
-
-    """
-    excel_col = str()
-    div = col
-    while div:
-        (div, mod) = divmod(div - 1, 26)
-        excel_col = chr(mod + 65) + excel_col
-    return excel_col
 
 
 def filter_edi_file_by_category(

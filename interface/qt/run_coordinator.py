@@ -110,7 +110,7 @@ class QtRunCoordinator:
         start_time = str(datetime.datetime.now())
         reporting = self._app._database.get_oversight_or_default()
         run_log_name_constructor = (
-            "Run Log " + str(time.ctime()).replace(":", "-") + ".txt"
+            "Run Log " + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
         )
 
         if not self._app._os_module.path.isdir(

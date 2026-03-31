@@ -1,6 +1,6 @@
+import datetime
 import os
 import shutil
-import time
 
 import core.utils as utils
 from core.structured_logging import get_logger, log_file_operation
@@ -28,7 +28,7 @@ def do_backup(input_file):
         os.path.basename(input_file)
         + ".bak"
         + "-"
-        + str(time.ctime()).replace(":", "-"),
+        + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
     )
 
     log_file_operation(

@@ -85,7 +85,7 @@ def build_error_log_filename(
 
     # Generate timestamp if not provided
     if timestamp is None:
-        timestamp = time.ctime().replace(":", "-")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Build filename
     log_name = f"{cleaned_alias} errors.{timestamp}.txt"
@@ -133,8 +133,7 @@ def ensure_directory_exists(path: str) -> bool:
 
     """
     try:
-        if not os.path.exists(path):
-            os.makedirs(path)
+        os.makedirs(path, exist_ok=True)
         return True
     except (IOError, OSError):
         return False

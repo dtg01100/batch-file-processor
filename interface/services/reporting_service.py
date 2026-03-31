@@ -7,9 +7,9 @@ The class supports dependency injection for testability.
 """
 
 import copy
+import datetime
 import logging
 import os
-import time
 import zipfile
 from io import StringIO
 from typing import Any, Protocol, runtime_checkable
@@ -351,7 +351,9 @@ class ReportingService:
         email_errors.write("\r\n\r\n" + str(skipped_files) + " emails skipped")
 
         email_errors_log_name = (
-            "Email Errors Log " + str(time.ctime()).replace(":", "-") + ".txt"
+            "Email Errors Log "
+            + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            + ".txt"
         )
         email_errors_log_path = os.path.join(run_log_path, email_errors_log_name)
 

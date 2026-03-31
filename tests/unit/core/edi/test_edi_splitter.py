@@ -7,9 +7,9 @@ from core.edi.edi_splitter import (
     RealFilesystem,
     SplitConfig,
     SplitResult,
-    _col_to_excel,
     filter_b_records_by_category,
 )
+from core.utils.utils import _col_to_excel
 
 
 class TestColToExcel:
