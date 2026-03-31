@@ -23,7 +23,11 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
 import pytest
-from aiosmtpd.controller import Controller
+try:
+    from aiosmtpd.controller import Controller  # type: ignore
+    AIOSMTPD_AVAILABLE = True
+except Exception:
+    AIOSMTPD_AVAILABLE = False
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
@@ -132,6 +136,8 @@ class _RecordingHandler:
 
 @pytest.fixture
 def live_smtp_server():
+    if not AIOSMTPD_AVAILABLE:
+        pytest.skip("aiosmtpd not installed")
     handler = _RecordingHandler()
     port = _free_port()
     ctrl = Controller(handler, hostname="127.0.0.1", port=port)
