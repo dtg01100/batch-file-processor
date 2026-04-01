@@ -4,6 +4,7 @@ Tests the DatabaseObj class with mocked database connections
 to ensure proper behavior without requiring actual database files.
 """
 
+import sqlite3
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -365,6 +366,68 @@ class TestDatabaseObjVersionChecking:
 
         # Should have tables initialized
         assert db.folders_table is not None
+
+    def test_current_version_db_repairs_missing_http_columns_on_startup(self, tmp_path):
+        """Current-version DB should still run repair for missing HTTP columns.
+
+        Regression case: DB reports current version but lacks http_url family
+        columns, causing sqlite3.OperationalError on folder update.
+        """
+        from backend.database import sqlite_wrapper
+        from core.database import schema
+
+        db_path = str(tmp_path / "folders.db")
+        conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(conn)
+
+        version_table = conn["version"]
+        if version_table.find_one(id=1) is None:
+            version_table.insert(dict(version=CURRENT_DATABASE_VERSION, os="Linux"))
+        else:
+            version_table.update(
+                dict(id=1, version=CURRENT_DATABASE_VERSION, os="Linux"), ["id"]
+            )
+
+        conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=1, convert_to_format="csv")
+        )
+        if conn["administrative"].find_one(id=1) is None:
+            conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        conn.commit()
+
+        # Simulate schema drift: remove HTTP payload columns from folders.
+        raw = conn.raw_connection
+        for col in (
+            "http_url",
+            "http_headers",
+            "http_field_name",
+            "http_auth_type",
+            "http_api_key",
+        ):
+            raw.execute(f'ALTER TABLE "folders" DROP COLUMN "{col}"')
+        raw.commit()
+        conn.close()
+
+        db = DatabaseObj(
+            database_path=db_path,
+            database_version=CURRENT_DATABASE_VERSION,
+            config_folder=str(tmp_path),
+            running_platform="Linux",
+        )
+
+        repaired_row = db.folders_table.find_one(alias="A")
+        assert repaired_row is not None
+        assert repaired_row["http_url"] == ""
+        assert repaired_row["http_headers"] == ""
+        assert repaired_row["http_field_name"] == "file"
+        assert repaired_row["http_auth_type"] == ""
+        assert repaired_row["http_api_key"] == ""
+
+        # Verify update path no longer raises missing-column error.
+        repaired_row["http_url"] = "https://example.test/upload"
+        db.folders_table.update(repaired_row, ["id"])
+
+        db.close()
 
 
 class TestDatabaseObjReload:

@@ -274,6 +274,30 @@ class DatabaseObj:
                 )
             raise SystemExit("OS mismatch")
 
+        # Run idempotent repair passes even when version is already current.
+        # This handles schema drift cases where a database reports the latest
+        # version but is still missing columns expected by newer code paths.
+        if int(db_version_dict["version"]) == int(self._database_version):
+            self._run_current_version_repairs()
+
+    def _run_current_version_repairs(self) -> None:
+        """Run safe repair migrations for current-version databases.
+
+        This intentionally skips backup creation and version checks, and relies
+        on the migrator's idempotent repair logic for no-op behavior when the
+        schema is already consistent.
+        """
+        if self._migrator_func:
+            self._migrator_func(
+                self.database_connection, self._config_folder, self._running_platform
+            )
+        else:
+            from migrations import folders_database_migrator
+
+            folders_database_migrator.upgrade_database(
+                self.database_connection, self._config_folder, self._running_platform
+            )
+
     def _upgrade_database(self) -> None:
         """Upgrade the database to the current version."""
         if self._show_popup_func:
