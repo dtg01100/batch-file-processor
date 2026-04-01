@@ -33,6 +33,8 @@ from interface.models.folder_configuration import (
     UPCOverrideConfiguration,
 )
 from interface.operations.folder_data_extractor import ExtractedDialogFields
+from backend.database import sqlite_wrapper
+from core.database import schema
 
 # =============================================================================
 # FIELD COLLECTION UTILITIES
@@ -132,6 +134,35 @@ def get_to_dict_keys() -> Set[str]:
             simple_csv_sort_order="date",
             split_prepaid_sales_tax_crec=True,
         ),
+    )
+    return set(config.to_dict().keys())
+
+
+def get_to_dict_keys_with_http() -> Set[str]:
+    """Get all keys that to_dict() produces when HTTP backend is configured."""
+    config = FolderConfiguration(
+        folder_name="test",
+        folder_is_active=True,
+        alias="test_alias",
+        process_backend_http=True,
+        http={
+            "url": "https://example.test/upload",
+            "headers": "X-Test: 1",
+            "field_name": "file",
+            "auth_type": "",
+            "api_key": "",
+        },
+    )
+
+    # Use dataclass model directly to avoid accidental API drift in test setup.
+    from interface.models.folder_configuration import HTTPConfiguration
+
+    config.http = HTTPConfiguration(
+        url="https://example.test/upload",
+        headers="X-Test: 1",
+        field_name="file",
+        auth_type="",
+        api_key="",
     )
     return set(config.to_dict().keys())
 
@@ -734,6 +765,26 @@ class TestFieldCoverageAnalysis:
             print("DISPATCH: All required fields present ✓")
 
         assert all_satisfied, "Some backends are missing required fields"
+
+    def test_live_folders_schema_covers_persisted_config_keys(self, tmp_path):
+        """Schema drift guard: persisted keys must exist as columns in folders table."""
+        db_path = str(tmp_path / "schema_drift_guard.db")
+        db = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db)
+
+        cursor = db.raw_connection.cursor()
+        cursor.execute('PRAGMA table_info("folders")')
+        folders_columns = {row[1] for row in cursor.fetchall()}
+
+        persisted_keys = get_to_dict_keys_with_http() - {"plugin_configurations"}
+        missing_columns = persisted_keys - folders_columns
+
+        db.close()
+
+        assert not missing_columns, (
+            "Schema drift detected: persisted FolderConfiguration keys missing from "
+            f"folders table columns: {sorted(missing_columns)}"
+        )
 
 
 class TestNestedConfigurationCoverage:

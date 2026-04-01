@@ -682,6 +682,62 @@ class TestMigrationVersion49to50:
 
         db_conn.close()
 
+    def test_v50_repair_adds_missing_http_payload_columns(self, tmp_path):
+        """Repair step at v50 backfills HTTP payload columns used by folder save."""
+        db_path = str(tmp_path / "test_v50_http_payload_repair.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+        schema.ensure_schema(db_conn)
+
+        db_conn["version"].insert(dict(version="50", os="Linux"))
+        db_conn["folders"].insert(
+            dict(folder_name="/a", alias="A", process_edi=1, convert_to_format="csv")
+        )
+        db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
+        db_conn.commit()
+
+        # Simulate legacy v50 DBs where only process_backend_http exists.
+        for table_name in ("folders", "administrative"):
+            cursor = db_conn.raw_connection.cursor()
+            cursor.execute(f'PRAGMA table_info("{table_name}")')
+            existing_columns = {row[1] for row in cursor.fetchall()}
+            for col in (
+                "http_url",
+                "http_headers",
+                "http_field_name",
+                "http_auth_type",
+                "http_api_key",
+            ):
+                if col in existing_columns:
+                    db_conn.raw_connection.execute(
+                        f'ALTER TABLE "{table_name}" DROP COLUMN "{col}"'
+                    )
+        db_conn.commit()
+
+        folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
+
+        cursor = db_conn.raw_connection.cursor()
+        for table_name in ("folders", "administrative"):
+            cursor.execute(f'PRAGMA table_info("{table_name}")')
+            columns = {row[1] for row in cursor.fetchall()}
+            for col in (
+                "process_backend_http",
+                "http_url",
+                "http_headers",
+                "http_field_name",
+                "http_auth_type",
+                "http_api_key",
+            ):
+                assert col in columns
+
+        folder = db_conn["folders"].find_one(alias="A")
+        assert folder["http_url"] == ""
+        assert folder["http_headers"] == ""
+        assert folder["http_field_name"] == "file"
+        assert folder["http_auth_type"] == ""
+        assert folder["http_api_key"] == ""
+
+        db_conn.close()
+
     def test_v50_repair_is_idempotent(self, tmp_path):
         """Running migration multiple times at v50 is safe."""
         db_path = str(tmp_path / "test_v50_idempotent.db")

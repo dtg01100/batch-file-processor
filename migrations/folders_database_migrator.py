@@ -1529,9 +1529,10 @@ def upgrade_database(
 
     db_version_dict = db_version.find_one(id=1)
 
-    # Repair step: Fix databases stuck at v50 but missing process_backend_http column.
-    # This can happen if the v49→v50 migration failed after incrementing version.
-    # Also handles case where column exists but has NULL values (from ensure_schema).
+    # Repair step: Fix databases stuck at v50 but missing HTTP backend columns.
+    # This can happen if v49→v50 only added process_backend_http while newer
+    # application code expects additional HTTP fields to exist.
+    # Also handles case where columns exist but have NULL values.
     if str(db_version_dict["version"]) == "50":
         conn = database_connection.raw_connection
         cursor = conn.cursor()
@@ -1541,64 +1542,82 @@ def upgrade_database(
             cursor.execute(f"PRAGMA table_info({quoted_table})")
             return column_name in {row[1] for row in cursor.fetchall()}
 
-        folders_missing = not _column_exists("folders", "process_backend_http")
-        admin_missing = not _column_exists("administrative", "process_backend_http")
+        required_http_columns = {
+            "process_backend_http": ("INTEGER", "0"),
+            "http_url": ("TEXT", "''"),
+            "http_headers": ("TEXT", "''"),
+            "http_field_name": ("TEXT", "'file'"),
+            "http_auth_type": ("TEXT", "''"),
+            "http_api_key": ("TEXT", "''"),
+        }
 
-        if folders_missing or admin_missing:
-            print("  Repairing database: missing process_backend_http column(s)...")
+        missing_by_table = {
+            table_name: [
+                col
+                for col in required_http_columns
+                if not _column_exists(table_name, col)
+            ]
+            for table_name in ("folders", "administrative")
+        }
+
+        if missing_by_table["folders"] or missing_by_table["administrative"]:
+            print("  Repairing database: missing HTTP backend column(s)...")
             try:
                 conn.execute("BEGIN")
-                if folders_missing:
-                    conn.execute(
-                        'ALTER TABLE "folders" ADD COLUMN "process_backend_http" INTEGER DEFAULT 0'
-                    )
-                    conn.execute('UPDATE "folders" SET "process_backend_http" = 0')
-                if admin_missing:
-                    conn.execute(
-                        'ALTER TABLE "administrative" ADD COLUMN "process_backend_http" INTEGER DEFAULT 0'
-                    )
-                    conn.execute(
-                        'UPDATE "administrative" SET "process_backend_http" = 0'
-                    )
+
+                for table_name in ("folders", "administrative"):
+                    quoted_table = _quote_identifier(table_name)
+                    for column_name in missing_by_table[table_name]:
+                        sql_type, default_sql = required_http_columns[column_name]
+                        quoted_column = _quote_identifier(column_name)
+                        conn.execute(
+                            f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
+                        )
+                        conn.execute(
+                            f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}"
+                        )
+
+                # Some columns may already exist but contain NULL values from
+                # older schema states. Normalize NULLs for all required columns.
+                for table_name in ("folders", "administrative"):
+                    quoted_table = _quote_identifier(table_name)
+                    for column_name, (_, default_sql) in required_http_columns.items():
+                        quoted_column = _quote_identifier(column_name)
+                        conn.execute(
+                            f"UPDATE {quoted_table} SET {quoted_column} = {default_sql} "
+                            f"WHERE {quoted_column} IS NULL"
+                        )
+
                 conn.execute("COMMIT")
-                print("  Repair complete: process_backend_http column(s) added.")
+                print("  Repair complete: HTTP backend column(s) added.")
             except Exception as e:
                 conn.execute("ROLLBACK")
-                raise RuntimeError(
-                    f"Failed to repair process_backend_http column: {e}"
-                ) from e
+                raise RuntimeError(f"Failed to repair HTTP backend columns: {e}") from e
         else:
-            # Column exists in both tables - ensure no NULL values remain
-            # (can happen if ensure_schema() created column without default)
+            # Columns exist in both tables - ensure no NULL values remain.
             try:
                 conn.execute("BEGIN")
-                # Check for NULL values in folders
-                cursor.execute(
-                    'SELECT COUNT(*) FROM "folders" WHERE "process_backend_http" IS NULL'
-                )
-                folders_null = cursor.fetchone()[0]
-                # Check for NULL values in administrative
-                cursor.execute(
-                    'SELECT COUNT(*) FROM "administrative" WHERE "process_backend_http" IS NULL'
-                )
-                admin_null = cursor.fetchone()[0]
+                total_null_updates = 0
+                for table_name in ("folders", "administrative"):
+                    quoted_table = _quote_identifier(table_name)
+                    for column_name, (_, default_sql) in required_http_columns.items():
+                        quoted_column = _quote_identifier(column_name)
+                        cursor.execute(
+                            f"SELECT COUNT(*) FROM {quoted_table} WHERE {quoted_column} IS NULL"
+                        )
+                        null_count = cursor.fetchone()[0]
+                        if null_count > 0:
+                            total_null_updates += null_count
+                            conn.execute(
+                                f"UPDATE {quoted_table} SET {quoted_column} = {default_sql} "
+                                f"WHERE {quoted_column} IS NULL"
+                            )
 
-                if folders_null > 0 or admin_null > 0:
+                if total_null_updates > 0:
                     print(
-                        f"  Repairing database: setting default for {folders_null + admin_null} NULL value(s)..."
+                        f"  Repair complete: replaced {total_null_updates} NULL HTTP value(s) with defaults."
                     )
-                    if folders_null > 0:
-                        conn.execute(
-                            'UPDATE "folders" SET "process_backend_http" = 0 WHERE "process_backend_http" IS NULL'
-                        )
-                    if admin_null > 0:
-                        conn.execute(
-                            'UPDATE "administrative" SET "process_backend_http" = 0 WHERE "process_backend_http" IS NULL'
-                        )
-                    print("  Repair complete: NULL values replaced with default.")
                 conn.execute("COMMIT")
             except Exception as e:
                 conn.execute("ROLLBACK")
-                raise RuntimeError(
-                    f"Failed to repair process_backend_http NULL values: {e}"
-                ) from e
+                raise RuntimeError(f"Failed to repair HTTP backend NULL values: {e}") from e
