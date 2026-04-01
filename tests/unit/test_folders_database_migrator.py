@@ -8,6 +8,9 @@ Tests cover:
 - Log output verification
 """
 
+import sqlite3
+from pathlib import Path
+
 import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
@@ -703,3 +706,158 @@ class TestMigrationVersion49to50:
         assert folder["process_backend_http"] == 0
 
         db_conn.close()
+
+
+@pytest.mark.integration
+@pytest.mark.database
+class TestV32UpgradeIntegration:
+    """Integration tests for the v32→current upgrade path using the real legacy fixture."""
+
+    @pytest.fixture
+    def migrated_db_conn(self, tmp_path):
+        """Migrate the real v32 fixture to current schema and return a raw sqlite3 connection."""
+        import shutil
+
+        src = Path("tests/fixtures/legacy_v32_folders.db")
+        if not src.exists():
+            pytest.skip("Legacy v32 database fixture not found")
+
+        db_path = str(tmp_path / "folders.db")
+        shutil.copy2(str(src), db_path)
+
+        db = sqlite_wrapper.Database.connect(db_path)
+        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+        db.close()
+
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        yield conn
+        conn.close()
+
+    def test_total_folder_count_preserved(self, migrated_db_conn):
+        """Migration must not lose any folder rows."""
+        cur = migrated_db_conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM folders")
+        assert cur.fetchone()[0] == 530
+
+    def test_no_string_booleans_remain_after_upgrade(self, migrated_db_conn):
+        """All boolean columns must be stored as integers — no 'True'/'False' strings."""
+        bool_columns = [
+            "process_edi",
+            "tweak_edi",
+            "folder_is_active",
+            "include_c_records",
+            "pad_a_records",
+            "filter_ampersand",
+            "calculate_upc_check_digit",
+            "include_headers",
+            "include_a_records",
+            "append_a_records",
+            "force_txt_file_ext",
+        ]
+        cur = migrated_db_conn.cursor()
+        for col in bool_columns:
+            cur.execute(
+                f"SELECT COUNT(*) FROM folders"
+                f" WHERE LOWER(CAST({col} AS TEXT)) IN ('true', 'false')"
+            )
+            count = cur.fetchone()[0]
+            assert count == 0, (
+                f"Column '{col}' still has string boolean values after migration"
+            )
+
+    def test_disabled_folders_remain_disabled_after_upgrade(self, migrated_db_conn):
+        """The 380 originally-disabled folders must not become enabled during migration."""
+        cur = migrated_db_conn.cursor()
+
+        # No string remnants
+        cur.execute(
+            "SELECT COUNT(*) FROM folders"
+            " WHERE LOWER(CAST(process_edi AS TEXT)) IN ('true', 'false')"
+        )
+        assert cur.fetchone()[0] == 0
+
+        # Exactly 150 folders were originally enabled; none of the 380 disabled
+        # ones should have been promoted to process_edi=1.
+        cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 1")
+        assert cur.fetchone()[0] <= 150
+
+        cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 0")
+        assert cur.fetchone()[0] == 380
+
+    def test_convert_to_format_normalized_after_upgrade(self, migrated_db_conn):
+        """Display-name convert_to_format values must be replaced by canonical tokens."""
+        cur = migrated_db_conn.cursor()
+
+        # Old display names must be gone
+        for old_name in (
+            "Estore eInvoice Generic",
+            "YellowDog CSV",
+            "scansheet-type-a",
+            "ScannerWare",
+        ):
+            cur.execute(
+                "SELECT COUNT(*) FROM folders WHERE convert_to_format = ?", (old_name,)
+            )
+            assert cur.fetchone()[0] == 0, (
+                f"Display name '{old_name}' still present after migration"
+            )
+
+        # Normalized canonical tokens must be present with correct counts
+        expected = {
+            "estore_einvoice_generic": 15,
+            "yellowdog_csv": 14,
+            "scansheet_type_a": 2,
+            "scannerware": 1,
+        }
+        for token, expected_count in expected.items():
+            cur.execute(
+                "SELECT COUNT(*) FROM folders WHERE convert_to_format = ?", (token,)
+            )
+            actual = cur.fetchone()[0]
+            assert actual == expected_count, (
+                f"Expected {expected_count} folders with format '{token}', got {actual}"
+            )
+
+    def test_all_convert_formats_are_supported_after_upgrade(self, migrated_db_conn):
+        """Every non-empty convert_to_format value must be a known canonical token."""
+        from dispatch.pipeline.converter import SUPPORTED_FORMATS
+
+        cur = migrated_db_conn.cursor()
+        cur.execute(
+            "SELECT DISTINCT convert_to_format FROM folders"
+            " WHERE convert_to_format IS NOT NULL AND convert_to_format != ''"
+        )
+        unknown = [
+            row[0]
+            for row in cur.fetchall()
+            if row[0] not in SUPPORTED_FORMATS
+        ]
+        assert unknown == [], (
+            f"Unsupported format values found after migration: {unknown}"
+        )
+
+    def test_tweak_edi_cleared_for_all_folders(self, migrated_db_conn):
+        """The deprecated tweak_edi flag must be 0 for every folder after migration."""
+        cur = migrated_db_conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM folders WHERE tweak_edi != 0")
+        assert cur.fetchone()[0] == 0
+
+    def test_tweaks_format_not_assigned_to_disabled_folders(self, migrated_db_conn):
+        """Disabled folders must never receive convert_to_format='tweaks'."""
+        cur = migrated_db_conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM folders"
+            " WHERE process_edi = 0 AND convert_to_format = 'tweaks'"
+        )
+        assert cur.fetchone()[0] == 0
+
+    def test_enabled_tweak_edi_folders_get_tweaks_format(self, migrated_db_conn):
+        """Enabled folders must not be left with an empty convert_to_format."""
+        cur = migrated_db_conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM folders"
+            " WHERE process_edi = 1"
+            " AND (convert_to_format IS NULL OR convert_to_format = '')"
+        )
+        assert cur.fetchone()[0] == 0
