@@ -66,9 +66,9 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         """
         # Get parameters
         params = context.parameters_dict
-        self.store_number = params["estore_store_number"]
-        self.vendor_oid = params["estore_Vendor_OId"]
-        self.vendor_name = params["estore_vendor_NameVendorOID"]
+        self.store_number = params.get("estore_store_number", "")
+        self.vendor_oid = params.get("estore_Vendor_OId", "")
+        self.vendor_name = params.get("estore_vendor_NameVendorOID", "")
         self.upc_lookup = context.upc_lut
 
         # Initialize state

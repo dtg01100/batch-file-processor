@@ -1001,6 +1001,19 @@ class DispatchOrchestrator:
         "retail_uom": False,
         "override_upc_bool": False,
         "split_prepaid_sales_tax_crec": False,
+        # HTTP backend fields — added by v42→v43 and v49→v50 migrations;
+        # legacy folders will have NULL for these columns.
+        "process_backend_http": False,
+        "http_url": "",
+        "http_headers": "",
+        "http_field_name": "",
+        "http_auth_type": "",
+        "http_api_key": "",
+        # Email subject line — added later; legacy folders may have NULL.
+        "email_subject_line": "",
+        # EDI output fields — legacy folders may have NULL.
+        "process_edi_output": False,
+        "edi_output_folder": "",
     }
 
     def _detect_enabled_backends(self, folder: dict) -> list[str]:
@@ -1087,6 +1100,14 @@ class DispatchOrchestrator:
         legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
         if legacy_tweak_enabled:
             raw_convert_format = "tweaks"
+            # Legacy rows often have process_edi=False with tweak_edi=True.
+            # Force conversion explicitly so tweaks still execute after we
+            # clear tweak_edi below to avoid duplicate application.
+            effective_folder["convert_edi"] = True
+            # Runtime uses converter target as the source of truth for tweaks.
+            # Clear legacy tweak flag to avoid applying tweaks twice when a
+            # tweaker step is configured alongside converter_step.
+            effective_folder["tweak_edi"] = False
 
         # Normalize convert format early so legacy/stale variants are treated
         # consistently in downstream gates.

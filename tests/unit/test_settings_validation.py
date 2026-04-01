@@ -10,6 +10,7 @@ Tests the FolderSettingsValidator class methods:
 
 import pytest
 
+from interface.models.folder_configuration import EDIConfiguration, FolderConfiguration
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 
 pytestmark = [pytest.mark.unit]
@@ -203,3 +204,40 @@ class TestFolderSettingsValidatorInvoiceDateOffset:
         result = self.validator.validate_invoice_date_offset(offset)
         assert not result.is_valid
         assert any(e.field == "invoice_date_offset" for e in result.errors)
+
+
+class TestFolderSettingsValidatorConversionAndSenderSelections:
+    """Regression tests for conversion/sender selection validation."""
+
+    def setup_method(self):
+        self.validator = FolderSettingsValidator()
+
+    def test_validate_complete_rejects_unsupported_output_format(self):
+        config = FolderConfiguration(
+            folder_name="orders",
+            folder_is_active=True,
+            process_backend_copy=True,
+            copy=None,
+            edi=EDIConfiguration(
+                process_edi=True,
+                convert_to_format="totally_not_a_real_format",
+            ),
+        )
+
+        result = self.validator.validate_complete(config)
+
+        assert result.is_valid is False
+        assert any(e.field == "convert_to_format" for e in result.errors)
+        assert any("Unsupported output format" in e.message for e in result.errors)
+
+    def test_validate_complete_accepts_http_only_sender_selection(self):
+        config = FolderConfiguration(
+            folder_name="orders",
+            folder_is_active=True,
+            process_backend_http=True,
+        )
+
+        result = self.validator.validate_complete(config)
+
+        assert result.is_valid is True
+        assert not any(e.field == "backends" for e in result.errors)

@@ -283,6 +283,79 @@ class TestTweakEDIMappingFromDB:
         content = backend.received[0][1].decode("utf-8", errors="replace")
         assert not content.startswith("UPC,"), "Tweak should not produce a CSV header"
 
+    def test_legacy_tweak_flag_matches_migrated_tweaks_output(self, temp_db, tmp_path):
+        """Legacy tweak_edi rows and migrated tweaks-format rows produce same output.
+
+        This guards upgrade compatibility: after migration clears tweak_edi and
+        stores convert_to_format='tweaks', externally visible file content should
+        remain unchanged.
+        """
+        indir_legacy = _make_edi_dir(tmp_path, "legacy")
+        indir_migrated = _make_edi_dir(tmp_path, "migrated")
+
+        # Legacy representation used by old DB rows.
+        legacy_id = temp_db["folders"].insert(
+            {
+                "folder_name": str(indir_legacy),
+                "alias": "legacy-tweak",
+                "folder_is_active": True,
+                "process_edi": False,
+                "tweak_edi": True,
+                "invoice_date_offset": 1,
+                "invoice_date_custom_format": False,
+                "invoice_date_custom_format_string": "",
+                "split_prepaid_sales_tax_crec": False,
+                "process_backend_copy": True,
+                "copy_to_directory": "/tmp",
+            }
+        )
+
+        # Post-migration representation expected in newer DBs.
+        migrated_id = temp_db["folders"].insert(
+            {
+                "folder_name": str(indir_migrated),
+                "alias": "migrated-tweaks",
+                "folder_is_active": True,
+                "process_edi": True,
+                "tweak_edi": False,
+                "convert_to_format": "tweaks",
+                "invoice_date_offset": 1,
+                "invoice_date_custom_format": False,
+                "invoice_date_custom_format_string": "",
+                "split_prepaid_sales_tax_crec": False,
+                "process_backend_copy": True,
+                "copy_to_directory": "/tmp",
+            }
+        )
+
+        as400_settings = {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "h",
+        }
+
+        legacy_result, legacy_backend = _run_folder_from_db(
+            temp_db, legacy_id, as400_settings
+        )
+        migrated_result, migrated_backend = _run_folder_from_db(
+            temp_db, migrated_id, as400_settings
+        )
+
+        assert legacy_result.success
+        assert migrated_result.success
+        assert legacy_backend.received
+        assert migrated_backend.received
+
+        legacy_content = legacy_backend.received[0][1].decode("utf-8", errors="replace")
+        migrated_content = migrated_backend.received[0][1].decode(
+            "utf-8", errors="replace"
+        )
+
+        # Equivalent external output for old/new profile representations.
+        assert legacy_content == migrated_content
+        assert "010225" in legacy_content  # offset applied in both cases
+        assert not legacy_content.startswith("UPC,")
+
 
 # =============================================================================
 # Tests: multi-folder isolation

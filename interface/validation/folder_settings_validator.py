@@ -9,9 +9,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from core.utils.bool_utils import normalize_bool
+from core.utils.format_utils import normalize_convert_to_format
 from interface.models.folder_configuration import (
     BackendSpecificConfiguration,
     CopyConfiguration,
+    ConvertFormat,
     EDIConfiguration,
     EmailConfiguration,
     FolderConfiguration,
@@ -23,6 +25,11 @@ from interface.services.ftp_service import FTPServiceProtocol
 
 if TYPE_CHECKING:
     from interface.operations.folder_data_extractor import ExtractedDialogFields
+
+
+SUPPORTED_CONVERT_FORMATS = {
+    normalize_convert_to_format(format_enum.value) for format_enum in ConvertFormat
+}
 
 
 @dataclass
@@ -418,6 +425,45 @@ class FolderSettingsValidator:
 
         return result
 
+    def validate_conversion_selection(
+        self,
+        *,
+        process_edi: bool,
+        convert_to_format: str,
+    ) -> ValidationResult:
+        """Validate selected conversion/output format.
+
+        Args:
+            process_edi: Whether conversion processing is enabled
+            convert_to_format: Selected output format name
+
+        Returns:
+            ValidationResult with format selection errors
+
+        """
+        result = ValidationResult()
+
+        normalized_format = normalize_convert_to_format(convert_to_format)
+        do_nothing_format = normalize_convert_to_format(ConvertFormat.DO_NOTHING.value)
+
+        if process_edi and not normalized_format:
+            result.add_error(
+                "convert_to_format",
+                "Output format is required when EDI conversion is enabled",
+            )
+            return result
+
+        if not normalized_format or normalized_format == do_nothing_format:
+            return result
+
+        if normalized_format not in SUPPORTED_CONVERT_FORMATS:
+            result.add_error(
+                "convert_to_format",
+                f"Unsupported output format selected: {convert_to_format}",
+            )
+
+        return result
+
     def validate_complete(
         self, config: FolderConfiguration, current_alias: str | None = None
     ) -> ValidationResult:
@@ -599,11 +645,21 @@ class FolderSettingsValidator:
                 ),
             )
 
+        if config.edi:
+            self._merge_result(
+                result,
+                self.validate_conversion_selection(
+                    process_edi=normalize_bool(config.edi.process_edi),
+                    convert_to_format=config.edi.convert_to_format,
+                ),
+            )
+
         backend_count = sum(
             [
                 config.process_backend_copy,
                 config.process_backend_ftp,
                 config.process_backend_email,
+                config.process_backend_http,
             ]
         )
         if backend_count == 0 and normalize_bool(config.folder_is_active):

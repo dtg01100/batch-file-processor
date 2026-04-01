@@ -1320,53 +1320,55 @@ def upgrade_database(
 
         cursor = database_connection.raw_connection.cursor()
 
-        backup_files = []
-        if config_folder:
-            backup_pattern = os.path.join(config_folder, "folders.db.bak-*")
-            backup_files = sorted(glob.glob(backup_pattern))
+        # Check whether any folders have the corrupted signature from the original
+        # buggy v44→v45 migration (process_edi='0' AND convert_to_format='tweaks').
+        # For fresh migrations from v32, the current v44→v45 step is correct and
+        # produces no corrupted rows, so we skip everything.
+        affected = {
+            r[0]
+            for r in cursor.execute(
+                "SELECT id FROM folders "
+                "WHERE process_edi = '0' AND convert_to_format = 'tweaks'"
+            ).fetchall()
+        }
 
-        if backup_files:
-            backup_path = backup_files[-1]
-            try:
-                back_conn = _sqlite3.connect(backup_path)
-                back_conn.row_factory = _sqlite3.Row
+        if affected:
+            backup_files = []
+            if config_folder:
+                backup_pattern = os.path.join(config_folder, "folders.db.bak-*")
+                backup_files = sorted(glob.glob(backup_pattern))
 
-                # Identify the corrupted rows in production.
-                # Signature: process_edi='0' AND convert_to_format='tweaks'
-                # (disabled folders should never legitimately be 'tweaks')
-                affected = {
-                    r[0]
-                    for r in cursor.execute(
-                        "SELECT id FROM folders "
-                        "WHERE process_edi = '0' AND convert_to_format = 'tweaks'"
-                    ).fetchall()
-                }
+            if backup_files:
+                backup_path = backup_files[-1]
+                try:
+                    back_conn = _sqlite3.connect(backup_path)
+                    back_conn.row_factory = _sqlite3.Row
 
-                fixed = 0
-                for row in back_conn.execute(
-                    "SELECT id, convert_to_format FROM folders"
-                ):
-                    if row["id"] in affected:
-                        cursor.execute(
-                            "UPDATE folders SET convert_to_format = ? WHERE id = ?",
-                            (row["convert_to_format"] or "", row["id"]),
-                        )
-                        fixed += 1
+                    fixed = 0
+                    for row in back_conn.execute(
+                        "SELECT id, convert_to_format FROM folders"
+                    ):
+                        if row["id"] in affected:
+                            cursor.execute(
+                                "UPDATE folders SET convert_to_format = ? WHERE id = ?",
+                                (row["convert_to_format"] or "", row["id"]),
+                            )
+                            fixed += 1
 
-                back_conn.close()
-                database_connection.raw_connection.commit()
+                    back_conn.close()
+                    database_connection.raw_connection.commit()
+                    print(
+                        f"  Repaired {fixed} folders using backup "
+                        f"{os.path.basename(backup_path)}"
+                    )
+                except Exception as e:
+                    print(f"  Warning: could not repair from backup: {e}")
+            else:
                 print(
-                    f"  Repaired {fixed} folders using backup "
-                    f"{os.path.basename(backup_path)}"
+                    "  Warning: no backup file found; folders with "
+                    "process_edi='0' and convert_to_format='tweaks' may have "
+                    "incorrect conversion targets (manual review recommended)."
                 )
-            except Exception as e:
-                print(f"  Warning: could not repair from backup: {e}")
-        else:
-            print(
-                "  Warning: no backup file found; folders with "
-                "process_edi='0' and convert_to_format='tweaks' may have "
-                "incorrect conversion targets (manual review recommended)."
-            )
 
         update_version = dict(id=1, version="47", os=running_platform)
         db_version.update(update_version, ["id"])

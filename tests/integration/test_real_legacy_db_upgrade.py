@@ -157,7 +157,7 @@ class TestLegacyDatabasePreConditions:
 class TestUpgradeCompletes:
     """Test that the full v32 → current migration completes successfully."""
 
-    def test_upgrade_reaches_v42(self, migrated_db_shared):
+    def test_upgrade_reaches_current_version(self, migrated_db_shared):
         """Migration should bring the database to the current version."""
         version = migrated_db_shared["version"].find_one(id=1)
         assert version["version"] == CURRENT_DATABASE_VERSION
@@ -1201,3 +1201,49 @@ class TestNoBehavioralChangeAfterUpgrade:
         assert not orphaned, (
             f"{len(orphaned)} processed_files rows have orphaned folder_id after migration"
         )
+
+
+class TestLegacyFormatCompatibility:
+    """Verify that every convert_to_format value in the legacy DB is pipeline-compatible after migration."""
+
+    def test_all_format_values_are_supported_or_empty(self, migrated_db_shared):
+        """Every folder's convert_to_format must normalize to a value in SUPPORTED_FORMATS or be empty."""
+        from dispatch.pipeline.converter import SUPPORTED_FORMATS
+        from core.utils.format_utils import normalize_convert_to_format
+
+        conn = migrated_db_shared.raw_connection
+        rows = conn.execute("SELECT alias, convert_to_format FROM folders").fetchall()
+        bad = []
+        for alias, fmt in rows:
+            if not fmt:
+                continue  # empty/None means no conversion — always valid
+            normalized = normalize_convert_to_format(fmt)
+            if normalized not in SUPPORTED_FORMATS:
+                bad.append((alias, fmt, normalized))
+        assert not bad, f"Folders with unrecognized convert_to_format: {bad}"
+
+    def test_all_active_folders_have_importable_converter(self, migrated_db_shared):
+        """Every active folder (process_edi=1) with a convert_to_format must have an importable converter module."""
+        import importlib
+        from core.utils.format_utils import normalize_convert_to_format
+
+        conn = migrated_db_shared.raw_connection
+        # process_edi may be stored as 1, '1', 'True', etc. — check all truthy variants
+        rows = conn.execute(
+            "SELECT alias, convert_to_format FROM folders WHERE process_edi IN (1, '1', 'True')"
+        ).fetchall()
+        bad = []
+        for alias, fmt in rows:
+            if not fmt:
+                continue
+            normalized = normalize_convert_to_format(fmt)
+            if not normalized:
+                continue
+            module_name = f"dispatch.converters.convert_to_{normalized}"
+            try:
+                mod = importlib.import_module(module_name)
+                if not hasattr(mod, "edi_convert"):
+                    bad.append((alias, fmt, normalized, "no edi_convert function"))
+            except ImportError as e:
+                bad.append((alias, fmt, normalized, str(e)))
+        assert not bad, f"Active folders with broken converters: {bad}"

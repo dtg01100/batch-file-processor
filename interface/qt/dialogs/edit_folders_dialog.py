@@ -309,6 +309,7 @@ class EditFoldersDialog(BaseDialog):
             "ftp_password": "ftp_password_field",
             "email_recipient": "email_recipient_field",
             "copy_destination": "copy_dest_btn",
+            "convert_to_format": "convert_formats_var",
             "backends": "process_backend_copy_check",
         }
         key = field_map.get(field)
