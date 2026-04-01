@@ -462,19 +462,16 @@ class TestMigrationContents:
 
         db_conn.close()
 
-    def test_v45_clears_tweak_edi_v48_promotes_process_edi(self, tmp_path):
-        """v44→v48 migration chain: tweak_edi is cleared, process_edi promoted when format set.
+    def test_v45_clears_tweak_edi_process_edi_unchanged(self, tmp_path):
+        """v44→v48 migration chain: tweak_edi is cleared, process_edi is never altered.
 
         Starting from v44:
-        - v45 clears tweak_edi
-        - v48 promotes process_edi=0→1 for folders that have a convert_to_format
+        - v45 clears tweak_edi (retiring the deprecated flag)
+        - v48 is a version-bump only; it does NOT touch process_edi
 
-        Folders with process_edi=0 AND a format configured end up with process_edi=1
-        because the UI already treats them as enabled (the v48 migration corrects
-        the data to match what the UI shows).
-
-        Folders with process_edi=0 AND no format remain at 0 — they are genuinely
-        disabled with nothing to send.
+        Folders with process_edi=0 keep process_edi=0 regardless of convert_to_format.
+        Disabling a folder (process_edi=0) is an explicit user choice that migration
+        must not override.
         """
         db_path = str(tmp_path / "test_v45_disabled.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
@@ -482,7 +479,7 @@ class TestMigrationContents:
 
         db_conn["version"].insert(dict(version="44", os="Linux"))
         # Folder: process_edi=0 + tweak_edi=1 + non-empty format
-        # After v48: process_edi promoted to 1 (format present → intended to convert)
+        # After migration: process_edi stays 0 — disabled is an intentional state.
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled",
@@ -493,7 +490,7 @@ class TestMigrationContents:
             )
         )
         # Folder: process_edi=0 + tweak_edi=1 + empty format
-        # After v48: process_edi stays 0 (no format → genuinely disabled)
+        # After migration: process_edi stays 0.
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled_empty",
@@ -508,13 +505,12 @@ class TestMigrationContents:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
-        # Folder with format: promoted by v48
-        assert folders["Disabled"]["process_edi"] == 1, (
-            "process_edi=0 with a format must be promoted to 1 by v48"
+        # Both folders remain disabled — migration must not flip process_edi.
+        assert folders["Disabled"]["process_edi"] == 0, (
+            "process_edi=0 must not be promoted — disabling a folder is intentional"
         )
         assert folders["Disabled"]["tweak_edi"] == 0
         assert folders["Disabled"]["convert_to_format"] == "csv"
-        # Folder without format: stays disabled
         assert folders["DisabledEmpty"]["process_edi"] == 0, (
             "process_edi=0 with no format must remain 0"
         )
@@ -525,16 +521,22 @@ class TestMigrationContents:
 
 
 class TestMigrationVersion48:
-    """Test v47 -> v48: promote process_edi for folders with a conversion target."""
+    """Test v47 -> v48: version bump only, no data changes."""
 
-    def test_v48_promotes_process_edi_when_format_set(self, tmp_path):
-        """Folders with process_edi=False but a convert_to_format get process_edi=1."""
+    def test_v48_leaves_process_edi_unchanged(self, tmp_path):
+        """v47→v48 is a no-op for data; process_edi is never altered.
+
+        A prior version of this step attempted to flip process_edi=0→1 for folders
+        with a convert_to_format set, but that heuristic was wrong: legacy databases
+        have many intentionally-disabled folders with stale convert_to_format values.
+        Enabling conversion for those would change dispatch behaviour silently.
+        """
         db_path = str(tmp_path / "test_v48.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
         schema.ensure_schema(db_conn)
 
         db_conn["version"].insert(dict(version="47", os="Linux"))
-        # Affected: process_edi=0 with a real format
+        # These must all keep their original process_edi after migration.
         db_conn["folders"].insert(
             dict(folder_name="/a", alias="A", process_edi=0, convert_to_format="csv")
         )
@@ -546,11 +548,9 @@ class TestMigrationVersion48:
                 convert_to_format="Estore eInvoice Generic",
             )
         )
-        # Not affected: process_edi=0, no format
         db_conn["folders"].insert(
             dict(folder_name="/c", alias="C", process_edi=0, convert_to_format="")
         )
-        # Not affected: do_nothing format
         db_conn["folders"].insert(
             dict(
                 folder_name="/d",
@@ -559,7 +559,6 @@ class TestMigrationVersion48:
                 convert_to_format="do_nothing",
             )
         )
-        # Not affected: already enabled
         db_conn["folders"].insert(
             dict(folder_name="/e", alias="E", process_edi=1, convert_to_format="csv")
         )
@@ -572,11 +571,13 @@ class TestMigrationVersion48:
         assert version_record["version"] == "50"
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
-        assert folders["A"]["process_edi"] == 1, "should be promoted"
-        assert folders["B"]["process_edi"] == 1, "should be promoted"
-        assert folders["C"]["process_edi"] == 0, "no format — must not be promoted"
-        assert folders["D"]["process_edi"] == 0, "do_nothing — must not be promoted"
-        assert folders["E"]["process_edi"] == 1, "already enabled — unchanged"
+        # Disabled folders must remain disabled regardless of convert_to_format.
+        from core.utils.bool_utils import normalize_bool
+        assert not normalize_bool(folders["A"]["process_edi"]), "disabled with format — must stay disabled"
+        assert not normalize_bool(folders["B"]["process_edi"]), "disabled with format — must stay disabled"
+        assert not normalize_bool(folders["C"]["process_edi"]), "no format — must stay disabled"
+        assert not normalize_bool(folders["D"]["process_edi"]), "do_nothing — must stay disabled"
+        assert normalize_bool(folders["E"]["process_edi"]), "already enabled — must stay enabled"
 
         db_conn.close()
 

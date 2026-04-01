@@ -1374,44 +1374,14 @@ def upgrade_database(
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict and str(db_version_dict["version"]) == "47":
-        # Fix folders where process_edi is explicitly False/0 but a
-        # convert_to_format is configured.  This state is contradictory: the UI
-        # displays the EDI checkbox as enabled whenever convert_to_format is
-        # non-empty (edit_folders_dialog.py), so users believe processing is on,
-        # but the orchestrator respects the explicit False and skips conversion
-        # entirely.  The intended state is process_edi=True for any folder that
-        # has a conversion target set.
-        #
-        # We treat "do_nothing" as a legitimate disabled-conversion format and
-        # leave those folders alone.
-        cursor = database_connection.raw_connection.cursor()
-
-        try:
-            cursor.execute(
-                """
-                UPDATE folders
-                SET process_edi = 1
-                WHERE (
-                    process_edi = 0
-                    OR process_edi = 'False'
-                    OR process_edi = 'false'
-                )
-                AND convert_to_format IS NOT NULL
-                AND TRIM(convert_to_format) != ''
-                AND LOWER(TRIM(convert_to_format)) != 'do_nothing'
-                """
-            )
-            fixed = cursor.rowcount
-        except Exception as e:
-            fixed = 0
-            print(f"  Warning: v48 migration encountered an error: {e}")
-
-        database_connection.raw_connection.commit()
-        print(
-            f"  Repaired {fixed} folder(s) with process_edi=False "
-            "but a conversion target configured."
-        )
-
+        # Version bump only.  A previous revision of this step attempted to flip
+        # process_edi=0 → 1 for folders that had a convert_to_format set,
+        # reasoning that the UI showed conversion as enabled.  That heuristic was
+        # wrong: legacy databases contain many folders where process_edi=False is
+        # intentional (the user disabled the folder) and convert_to_format holds a
+        # stale value from an earlier migration.  Silently enabling conversion for
+        # those folders changes dispatch behaviour without user consent.
+        # process_edi is left entirely unchanged here.
         update_version = dict(id=1, version="48", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("47", "48")
