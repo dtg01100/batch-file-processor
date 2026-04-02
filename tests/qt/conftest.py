@@ -146,30 +146,16 @@ def sample_folder_config():
 
 
 @pytest.fixture
-def mock_database_obj(tmp_path):
-    """Create a real database object for Qt tests using a temporary database.
+def mock_database_obj(temp_database):
+    """Create a real database object for Qt tests.
 
-    This fixture creates a real DatabaseObj with a temporary SQLite database,
-    allowing tests to perform actual database operations without mocks.
+    Delegates to the root ``temp_database`` fixture to avoid duplication.
     Each test gets an isolated database that is cleaned up automatically.
 
     Returns:
-        DatabaseObj: A real database object with initialized tables including
-        processed_files and folders_table.
+        DatabaseObj: A real database object with initialized tables.
     """
-    from backend.database.database_obj import DatabaseObj
-    from core.constants import CURRENT_DATABASE_VERSION
-
-    db_path = tmp_path / "test_folders.db"
-
-    db = DatabaseObj(
-        database_path=str(db_path),
-        database_version=CURRENT_DATABASE_VERSION,
-        config_folder=str(tmp_path),
-        running_platform="Linux",
-    )
-
-    return db
+    return temp_database
 
 
 @pytest.fixture
