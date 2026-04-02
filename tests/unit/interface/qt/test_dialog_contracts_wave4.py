@@ -18,9 +18,108 @@ from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.validation.folder_settings_validator import ValidationResult
-from tests.fakes import FakeDatabaseObj, FakeMaintenanceFunctions
 
 pytestmark = pytest.mark.qt
+
+
+class _StubTable:
+    """Minimal table stub for dialog construction (no deprecation warning)."""
+
+    def __init__(self, data=None):
+        self._data = list(data or [])
+
+    def find_one(self, **_kw):
+        return None
+
+    def find(self, **_kw):
+        return list(self._data)
+
+    def all(self):
+        return list(self._data)
+
+    def insert(self, record):
+        self._data.append(record)
+        return record.get("id", len(self._data))
+
+    def update(self, record, keys):
+        pass
+
+    def delete(self, **_kw):
+        pass
+
+    def upsert(self, record, keys):
+        pass
+
+    def count(self, **_kw):
+        return 0
+
+    def query(self, sql):
+        return []
+
+
+class _StubDB:
+    """Minimal database stub for dialog construction."""
+
+    def __init__(self, data=None):
+        self._data = data or {}
+        self.folders_table = _StubTable(self._data.get("folders"))
+        self.oversight_and_defaults = _StubTable(self._data.get("administrative"))
+        self.processed_files = _StubTable(self._data.get("processed_files"))
+        self.emails_table = _StubTable()
+
+    def get_oversight_or_default(self):
+        return (
+            self._data.get("administrative", [{}])[0]
+            if self._data.get("administrative")
+            else {}
+        )
+
+    def __getitem__(self, name):
+        return getattr(self, name, _StubTable())
+
+
+class _StubMF:
+    """Minimal maintenance-functions stub for dialog construction."""
+
+    def __init__(self, db=None):
+        self._db = db or _StubDB()
+        self._called = set()
+
+    def set_operation_callbacks(self, on_start, on_end):
+        pass
+
+    def get_database(self):
+        return self._db
+
+    def was_called(self, name):
+        return name in self._called
+
+    def call_count(self, name):
+        return 1 if name in self._called else 0
+
+    def clear_queued_emails(self):
+        self._called.add("clear_queued_emails")
+
+    def set_all_active(self):
+        self._called.add("set_all_active")
+
+    def set_all_inactive(self):
+        self._called.add("set_all_inactive")
+
+    def clear_resend_flags(self):
+        self._called.add("clear_resend_flags")
+
+    def clear_processed_files_log(self):
+        self._called.add("clear_processed_files_log")
+
+    def remove_inactive_folders(self):
+        self._called.add("remove_inactive_folders")
+
+    def mark_active_as_processed(self, selected_folder=None):
+        self._called.add("mark_active_as_processed")
+
+    def database_import_wrapper(self, path):
+        self._called.add("database_import_wrapper")
 
 
 class TestBaseDialogActionModes:
@@ -54,7 +153,7 @@ class TestBaseDialogActionModes:
 
 class TestNonApplyDialogRejectContracts:
     def test_processed_files_close_button_rejects(self, qtbot):
-        db = FakeDatabaseObj()
+        db = _StubDB()
         with patch.object(ProcessedFilesDialog, "_get_folder_tuples", return_value=[]):
             dialog = ProcessedFilesDialog(None, db)
             qtbot.addWidget(dialog)
@@ -70,7 +169,7 @@ class TestNonApplyDialogRejectContracts:
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
         )
-        dialog = ResendDialog(None, FakeDatabaseObj())
+        dialog = ResendDialog(None, _StubDB())
         qtbot.addWidget(dialog)
         dialog.show()
 
@@ -85,7 +184,7 @@ class TestNonApplyDialogRejectContracts:
             qtbot.mouseClick(dialog._close_button, Qt.MouseButton.LeftButton)
 
     def test_maintenance_escape_rejects(self, qtbot):
-        dialog = MaintenanceDialog(None, FakeMaintenanceFunctions())
+        dialog = MaintenanceDialog(None, _StubMF())
         qtbot.addWidget(dialog)
         dialog.show()
 
@@ -125,7 +224,7 @@ class TestAccessibilityContracts:
             assert control.accessibleDescription()
 
     def test_processed_files_action_controls_have_accessibility_metadata(self, qtbot):
-        db = FakeDatabaseObj(
+        db = _StubDB(
             {
                 "processed_files": [{"id": 1, "folder_id": 10, "file_name": "a.txt"}],
                 "folders": [{"id": 10, "alias": "Alpha", "folder_name": "/tmp/a"}],
@@ -193,7 +292,7 @@ class TestBaseDialogHelperUsageGuards:
         )
 
         with patch.object(BaseDialog, "show_info") as show_info:
-            dialog = ResendDialog(None, FakeDatabaseObj())
+            dialog = ResendDialog(None, _StubDB())
             qtbot.addWidget(dialog)
             assert dialog._should_show is False
             show_info.assert_called_once()
@@ -207,7 +306,7 @@ class TestBaseDialogHelperUsageGuards:
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
         )
 
-        dialog = ResendDialog(None, FakeDatabaseObj())
+        dialog = ResendDialog(None, _StubDB())
         qtbot.addWidget(dialog)
 
         # Select a file, then attempt to mark for resend which calls the service

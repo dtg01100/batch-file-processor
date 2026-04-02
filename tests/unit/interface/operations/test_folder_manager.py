@@ -13,7 +13,51 @@ from interface.operations.folder_manager import (
     FolderManager,
     TableProtocol,
 )
-from tests.fakes import FakeDatabaseObj, FakeTable
+
+
+class _SimpleTable:
+    """Lightweight table stub for protocol compliance tests."""
+
+    def __init__(self, data=None):
+        self._data = list(data or [])
+
+    def find_one(self, **kwargs):
+        for r in self._data:
+            if all(r.get(k) == v for k, v in kwargs.items()):
+                return r
+        return None
+
+    def find(self, **kwargs):
+        return [r for r in self._data if all(r.get(k) == v for k, v in kwargs.items())]
+
+    def all(self):
+        return list(self._data)
+
+    def insert(self, record):
+        self._data.append(record)
+        return record.get("id", len(self._data))
+
+    def update(self, record, keys):
+        pass
+
+    def delete(self, **kwargs):
+        pass
+
+    def count(self, **kwargs):
+        return len(self.find(**kwargs))
+
+
+class _SimpleDatabaseObj:
+    """Lightweight database stub for protocol compliance tests."""
+
+    def __init__(self):
+        self.folders_table = _SimpleTable()
+        self.oversight_and_defaults = _SimpleTable()
+        self.processed_files = _SimpleTable()
+        self.emails_table = _SimpleTable()
+
+    def get_oversight_or_default(self):
+        return {}
 
 
 class MockDatabase:
@@ -403,16 +447,16 @@ class TestFolderManagerProtocolCompliance:
     """Tests for protocol compliance."""
 
     def test_database_protocol_compliance(self):
-        """Verify fake database implements DatabaseProtocol."""
-        fake_db = FakeDatabaseObj()
+        """Verify stub database implements DatabaseProtocol."""
+        stub_db = _SimpleDatabaseObj()
 
-        assert isinstance(fake_db, DatabaseProtocol)
+        assert isinstance(stub_db, DatabaseProtocol)
 
     def test_table_protocol_compliance(self):
-        """Verify fake table implements TableProtocol."""
-        fake_table = FakeTable()
+        """Verify stub table implements TableProtocol."""
+        stub_table = _SimpleTable()
 
-        assert isinstance(fake_table, TableProtocol)
+        assert isinstance(stub_table, TableProtocol)
 
 
 class TestFolderManagerSkipList:
