@@ -526,12 +526,14 @@ class DispatchOrchestrator:
 
         """
         context = self._build_processing_context(folder, upc_dict)
+        # Pass the full ProcessingContext object so downstream services receive
+        # settings and temp artifact tracking.
         return self.file_processor.process_file(
             file_path=file_path,
             folder=folder,
             upc_dict=upc_dict,
             run_log=run_log,
-            effective_folder=context.effective_folder,
+            effective_folder=context,
         )
 
     def _execute_file_pipeline(
@@ -1108,13 +1110,16 @@ class DispatchOrchestrator:
         if legacy_tweak_enabled:
             raw_convert_format = "tweaks"
             # Legacy rows often have process_edi=False with tweak_edi=True.
-            # Force conversion explicitly so tweaks still execute after we
-            # clear tweak_edi below to avoid duplicate application.
+            # Force conversion explicitly so tweaks still execute. Only clear the
+            # legacy tweak flag when a converter step is present to avoid
+            # preventing the standalone tweaker step from running in tests or
+            # configurations where only tweaker_step is provided.
             effective_folder["convert_edi"] = True
-            # Runtime uses converter target as the source of truth for tweaks.
-            # Clear legacy tweak flag to avoid applying tweaks twice when a
-            # tweaker step is configured alongside converter_step.
-            effective_folder["tweak_edi"] = False
+            if self.config.converter_step:
+                # Runtime uses converter target as the source of truth for tweaks.
+                # Clear legacy tweak flag to avoid applying tweaks twice when a
+                # tweaker step is configured alongside converter_step.
+                effective_folder["tweak_edi"] = False
 
         # Normalize convert format early so legacy/stale variants are treated
         # consistently in downstream gates.

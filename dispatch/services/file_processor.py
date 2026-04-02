@@ -184,25 +184,37 @@ class FileProcessor:
         return result
 
     def _build_context(
-        self, folder: dict, upc_dict: dict, effective_folder: dict | None = None
+        self, folder: dict, upc_dict: dict, effective_folder: dict | ProcessingContext | None = None
     ) -> ProcessingContext:
         """Build processing context for a file.
 
         Args:
             folder: Folder configuration
             upc_dict: UPC dictionary
-            effective_folder: Pre-normalized folder dict; defaults to folder if not given
+            effective_folder: Either a pre-built ProcessingContext or a normalized
+                folder dict. If a ProcessingContext is provided it is returned
+                unchanged; if a dict is provided it will be used as the
+                effective_folder field on a new ProcessingContext.
 
         Returns:
             ProcessingContext with initialized state
 
         """
+        # If a full ProcessingContext was passed (from DispatchOrchestrator),
+        # reuse it directly so settings and temp tracking are preserved.
+        if isinstance(effective_folder, ProcessingContext):
+            return effective_folder
+
+        # Otherwise treat effective_folder as the normalized folder dict (or None)
         return ProcessingContext(
             folder=folder,
             effective_folder=(
                 effective_folder if effective_folder is not None else folder
             ),
-            settings={},
+            # If the caller supplied a dict with 'settings', use it, otherwise
+            # default to an empty dict. DispatchOrchestrator passes a full
+            # ProcessingContext which was handled above.
+            settings=(effective_folder.get("settings") if isinstance(effective_folder, dict) else {}),
             upc_dict=upc_dict,
         )
 
