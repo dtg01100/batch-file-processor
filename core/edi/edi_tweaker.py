@@ -649,7 +649,14 @@ class EDITweaker:
             proposed_upc = fields["upc_number"].strip()
             upc_len = len(str(proposed_upc))
 
-            if upc_len == self.config.upc_target_length:
+            # Prefer explicit check-digit calculation for 11-digit UPCs when enabled.
+            # This ensures calculate_upc_check_digit behavior is applied even when
+            # upc_target_length defaults to 11.
+            if upc_len == 11:
+                check_digit = utils.calc_check_digit(proposed_upc)
+                fields["upc_number"] = str(proposed_upc) + str(check_digit)
+            elif upc_len == self.config.upc_target_length:
+                # Already the desired length — no change required
                 pass
             elif upc_len == 12 and self.config.upc_target_length == 13:
                 fields["upc_number"] = str(proposed_upc).rjust(
@@ -660,9 +667,6 @@ class EDITweaker:
                         else " "
                     ),
                 )
-            elif upc_len == 11:
-                check_digit = utils.calc_check_digit(proposed_upc)
-                fields["upc_number"] = str(proposed_upc) + str(check_digit)
             elif upc_len == 8:
                 fields["upc_number"] = str(utils.convert_UPCE_to_UPCA(proposed_upc))
         else:
