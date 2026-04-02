@@ -27,7 +27,33 @@ from core.logging_config import (
 )
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
-from tests.fakes import FakeTable
+
+
+class _StubProcessedFilesTable:
+    """Lightweight table stub for processed-files dedup tests."""
+
+    def __init__(self, data=None):
+        self._data = list(data or [])
+
+    def find(self, **kwargs):
+        return [r for r in self._data if all(r.get(k) == v for k, v in kwargs.items())]
+
+    def find_one(self, **kwargs):
+        for r in self._data:
+            if all(r.get(k) == v for k, v in kwargs.items()):
+                return r
+        return None
+
+    def insert(self, record):
+        self._data.append(record)
+        return record.get("id", len(self._data))
+
+    def update(self, record, keys):
+        for i, existing in enumerate(self._data):
+            if all(existing.get(k) == record.get(k) for k in keys):
+                self._data[i] = {**existing, **record}
+                return
+
 
 pytestmark = [
     pytest.mark.integration,
@@ -923,8 +949,8 @@ class TestProcessedFilesSkipLogging:
             with open(fpath, "rb") as f:
                 checksums.append(hashlib.md5(f.read()).hexdigest())
 
-        # Create a FakeTable pre-populated with these checksums
-        processed_files = FakeTable(
+        # Create a stub table pre-populated with these checksums
+        processed_files = _StubProcessedFilesTable(
             [
                 {"file_checksum": cs, "folder_id": 1, "resend_flag": 0}
                 for cs in checksums
