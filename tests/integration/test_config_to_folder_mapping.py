@@ -124,9 +124,9 @@ class TestProcessEDIMappingFromDB:
         assert result.files_processed == 1
         # The file delivered to the backend should be a converted CSV
         assert backend.received
-        assert backend.received[0][0].endswith(".csv"), (
-            f"Expected .csv output, got: {backend.received[0][0]}"
-        )
+        assert backend.received[0][0].endswith(
+            ".csv"
+        ), f"Expected .csv output, got: {backend.received[0][0]}"
 
     def test_process_edi_false_sends_original(self, temp_db, tmp_path):
         indir = _make_edi_dir(tmp_path)

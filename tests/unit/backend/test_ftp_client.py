@@ -7,11 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.ftp_client import (
-    MockFTPClient,
-    RealFTPClient,
-    create_ftp_client,
-)
+from backend.ftp_client import MockFTPClient, RealFTPClient, create_ftp_client
 from backend.protocols import FTPClientProtocol
 
 
@@ -334,7 +330,7 @@ class TestFTPClientProtocolCompliance:
         for client_class in [RealFTPClient, MockFTPClient]:
             client = client_class()
             for method in required_methods:
-                assert hasattr(client, method), (
-                    f"{client_class.__name__} missing {method}"
-                )
+                assert hasattr(
+                    client, method
+                ), f"{client_class.__name__} missing {method}"
                 assert callable(getattr(client, method)), f"{method} not callable"

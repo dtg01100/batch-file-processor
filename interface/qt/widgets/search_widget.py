@@ -96,15 +96,13 @@ class SearchWidget(QWidget):
         self._entry.setEnabled(enabled)
 
     def _build_ui(self) -> None:
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             SearchWidget {{
                 background-color: transparent;
                 border-radius: {Theme.RADIUS_LG};
                 padding: {Theme.SPACING_SM};
             }}
-        """
-        )
+        """)
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

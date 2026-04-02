@@ -9,8 +9,7 @@ def _create_legacy_db(path):
     conn = sqlite3.connect(path)
     cur = conn.cursor()
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY,
             alias TEXT,
@@ -33,10 +32,8 @@ def _create_legacy_db(path):
             edi_converter_scratch_folder TEXT,
             folder_name TEXT
         )
-        """
-    )
-    cur.execute(
-        """
+        """)
+    cur.execute("""
         CREATE TABLE administrative (
             id INTEGER PRIMARY KEY,
             email_origin_address TEXT,
@@ -60,10 +57,8 @@ def _create_legacy_db(path):
             errors_folder TEXT,
             folder_name TEXT
         )
-        """
-    )
-    cur.execute(
-        """
+        """)
+    cur.execute("""
         CREATE TABLE settings (
             id INTEGER PRIMARY KEY,
             email_address TEXT,
@@ -74,10 +69,8 @@ def _create_legacy_db(path):
             as400_password TEXT,
             as400_address TEXT
         )
-        """
-    )
-    cur.execute(
-        """
+        """)
+    cur.execute("""
         CREATE TABLE processed_files (
             id INTEGER PRIMARY KEY,
             file_name TEXT,
@@ -85,8 +78,7 @@ def _create_legacy_db(path):
             ftp_destination TEXT,
             email_destination TEXT
         )
-        """
-    )
+        """)
     cur.execute("CREATE TABLE emails_to_send (id INTEGER PRIMARY KEY, log TEXT)")
     cur.execute(
         "CREATE TABLE working_batch_emails_to_send (id INTEGER PRIMARY KEY, log TEXT)"
@@ -148,18 +140,14 @@ def _create_legacy_db(path):
         ],
     )
 
-    cur.execute(
-        """
+    cur.execute("""
         INSERT INTO administrative VALUES
         (1, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't')
-        """
-    )
-    cur.execute(
-        """
+        """)
+    cur.execute("""
         INSERT INTO settings VALUES
         (1, 'old@example.com', 'old_user', 'old_pw', 'smtp.old.com', 'u', 'p', '1.2.3.4')
-        """
-    )
+        """)
     cur.executemany(
         """
         INSERT INTO processed_files VALUES
@@ -204,8 +192,7 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT
             email_origin_address,
             email_origin_password,
@@ -216,8 +203,7 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
             copy_to_directory,
             folder_name
         FROM folders WHERE id = 1
-        """
-    )
+        """)
     row1 = cur.fetchone()
     assert row1 == (
         "user1@example.com",
@@ -230,8 +216,7 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
         "D:/DATA/OUT/A1",
     )
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT
             email_to,
             email_subject_line,
@@ -240,21 +225,18 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
             copy_to_directory,
             folder_name
         FROM folders WHERE id = 2
-        """
-    )
+        """)
     row2 = cur.fetchone()
     assert row2 == ("", None, "", None, "", "D:/DATA/OUT/A2")
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT
             email_origin_address,
             ftp_server,
             logs_directory,
             folder_name
         FROM administrative WHERE id = 1
-        """
-    )
+        """)
     assert cur.fetchone() == (
         "admin@example.com",
         "ftp.example.com",
@@ -262,24 +244,20 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
         "template",
     )
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT
             email_address,
             email_username,
             email_password,
             as400_address
         FROM settings WHERE id = 1
-        """
-    )
+        """)
     assert cur.fetchone() == ("settings@example.com", "", "", "10.0.0.100")
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT file_name, copy_destination, ftp_destination, email_destination
         FROM processed_files WHERE id = 1
-        """
-    )
+        """)
     assert cur.fetchone() == (
         r"D:\DATA\OUT\012258\012258.115",
         "D:/OUTPUT/redacted",
@@ -287,12 +265,10 @@ def test_redact_updates_expected_columns_and_preserves_empty_values(
         "redacted@example.com",
     )
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT file_name, copy_destination, ftp_destination, email_destination
         FROM processed_files WHERE id = 2
-        """
-    )
+        """)
     assert cur.fetchone() == (r"D:\DATA\OUT\X\Y", "N/A", "N/A", "N/A")
 
     cur.execute("SELECT log FROM emails_to_send ORDER BY id")

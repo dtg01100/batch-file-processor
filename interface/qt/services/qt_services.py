@@ -402,8 +402,7 @@ class QtProgressService(QObject):
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(100)
         progress_bar.setValue(0)
-        progress_bar.setStyleSheet(
-            f"""
+        progress_bar.setStyleSheet(f"""
             QProgressBar {{
                 border: 2px solid {Theme.PROGRESS_BAR_BORDER};
                 border-radius: 5px;
@@ -415,8 +414,7 @@ class QtProgressService(QObject):
                 background-color: {Theme.PROGRESS_BAR_CHUNK};
                 border-radius: 3px;
             }}
-        """
-        )
+        """)
         return progress_bar
 
     def _setup_layout(self) -> None:

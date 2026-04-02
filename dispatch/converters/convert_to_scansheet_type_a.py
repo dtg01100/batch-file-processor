@@ -41,7 +41,6 @@ from openpyxl.drawing.image import Image as OpenPyXlImage
 from PIL import Image as pil_Image
 from PIL import ImageOps as pil_ImageOps
 
-import core.database
 from core import utils
 from core.structured_logging import (
     StructuredLogger,

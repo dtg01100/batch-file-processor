@@ -93,28 +93,24 @@ def invfetcher_test_db(tmp_path):
     conn.execute("ATTACH DATABASE ':memory:' AS dacdata")
 
     # Create ohhst table (invoice headers) - matches AS400 schema
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE dacdata.ohhst (
             BTHHNB INTEGER PRIMARY KEY,
             bte4cd TEXT,
             bthinb TEXT,
             btabnb INTEGER
         )
-    """
-    )
+    """)
 
     # Create odhst table (invoice details/lines) - matches AS400 schema
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE dacdata.odhst (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             BUHHNB INTEGER,
             BUHUNB INTEGER,
             BUHXTX TEXT
         )
-    """
-    )
+    """)
 
     # Insert test invoice header data for invoice 1
     # Invoice number 1 with PO number, customer name, and customer number

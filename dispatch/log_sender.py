@@ -12,10 +12,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from core.structured_logging import (
-    get_logger,
-    log_backend_call,
-)
+from core.structured_logging import get_logger, log_backend_call
 
 logger = get_logger(__name__)
 

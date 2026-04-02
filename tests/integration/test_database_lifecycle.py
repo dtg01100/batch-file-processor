@@ -123,9 +123,9 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert col in admin_columns, (
-                f"administrative table should have {col} column"
-            )
+            assert (
+                col in admin_columns
+            ), f"administrative table should have {col} column"
 
         # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")
@@ -731,21 +731,18 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
     c = raw.cursor()
 
     # -- Base tables at roughly v33 level (no columns added by v33+ migrations)
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE version (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             version TEXT,
             os TEXT
         )
-    """
-    )
+    """)
     c.execute(
         "INSERT INTO version (id, version, os) VALUES (1, ?, 'Linux')", (version,)
     )
 
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             folder_name TEXT,
@@ -782,11 +779,9 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             split_edi_include_invoices INTEGER DEFAULT 0,
             split_edi_include_credits INTEGER DEFAULT 0
         )
-    """
-    )
+    """)
 
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE processed_files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_name TEXT,
@@ -794,11 +789,9 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             file_checksum TEXT,
             resend_flag INTEGER DEFAULT 0
         )
-    """
-    )
+    """)
 
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             enable_email INTEGER DEFAULT 0,
@@ -847,12 +840,10 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             split_edi_include_invoices INTEGER DEFAULT 0,
             split_edi_include_credits INTEGER DEFAULT 0
         )
-    """
-    )
+    """)
     c.execute("INSERT INTO settings (id) VALUES (1)")
 
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE administrative (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             copy_to_directory TEXT DEFAULT '',
@@ -867,8 +858,7 @@ def _create_old_version_db(db_path: str, config_folder: str, version: str) -> No
             batch_add_folder_prior TEXT,
             export_processed_folder_prior TEXT
         )
-    """
-    )
+    """)
     c.execute(
         "INSERT INTO administrative (id, logs_directory) VALUES (1, ?)",
         (os.path.join(config_folder, "logs"),),

@@ -71,8 +71,6 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         QueryRunner implementing TweakerQueryRunnerProtocol
 
     """
-    from core.database import create_query_runner
-
     required_keys = ("as400_username", "as400_password", "as400_address")
     missing_keys = [key for key in required_keys if not settings_dict.get(key)]
     if missing_keys:

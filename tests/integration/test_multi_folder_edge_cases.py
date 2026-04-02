@@ -560,7 +560,9 @@ class TestSentFilesHistoryIsolation:
         orch = DispatchOrchestrator(config)
 
         # Process folder A
-        result_a = orch.process_folder(folder_a, MagicMock(), processed_files=processed_files)
+        result_a = orch.process_folder(
+            folder_a, MagicMock(), processed_files=processed_files
+        )
         assert result_a.success is True
 
         # Verify folder A's history contains only folder A's files
@@ -575,7 +577,9 @@ class TestSentFilesHistoryIsolation:
         assert len(files_in_b) == 0
 
         # Now process folder B
-        result_b = orch.process_folder(folder_b, MagicMock(), processed_files=processed_files)
+        result_b = orch.process_folder(
+            folder_b, MagicMock(), processed_files=processed_files
+        )
         assert result_b.success is True
 
         # Verify folder B's history contains only folder B's files
@@ -617,17 +621,19 @@ class TestSentFilesHistoryIsolation:
         copy_be = CopyBackend()
         ftp_be = RecordingBackend("ftp")
 
-        config = DispatchConfig(
-            backends={"copy": copy_be, "ftp": ftp_be}, settings={}
-        )
+        config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         orch = DispatchOrchestrator(config)
 
         # Process copy-only folder
-        result_copy = orch.process_folder(folder_copy, MagicMock(), processed_files=processed_files)
+        result_copy = orch.process_folder(
+            folder_copy, MagicMock(), processed_files=processed_files
+        )
         assert result_copy.success is True
 
         # Process FTP folder
-        result_ftp = orch.process_folder(folder_ftp, MagicMock(), processed_files=processed_files)
+        result_ftp = orch.process_folder(
+            folder_ftp, MagicMock(), processed_files=processed_files
+        )
         assert result_ftp.success is True
 
         # Verify history isolation
@@ -640,7 +646,9 @@ class TestSentFilesHistoryIsolation:
         assert os.path.basename(ftp_records[0]["file_name"]) == "file_1_0.edi"
 
         # Verify no cross-contamination
-        all_file_names = [os.path.basename(r["file_name"]) for r in processed_files.records]
+        all_file_names = [
+            os.path.basename(r["file_name"]) for r in processed_files.records
+        ]
         assert len(all_file_names) == 2
         assert "file_0_0.edi" in all_file_names
         assert "file_1_0.edi" in all_file_names
@@ -659,29 +667,35 @@ class TestSentFilesHistoryIsolation:
         file_a = str(tmp_path / "input_0" / "file_0_0.edi")
         file_b = str(tmp_path / "input_1" / "file_1_0.edi")
 
-        processed_files.insert({
-            "file_name": file_a,
-            "folder_id": 100,
-            "folder_alias": "Folder A",
-            "file_checksum": "checksum_a",
-            "resend_flag": 1,
-            "status": "pending",
-        })
-        processed_files.insert({
-            "file_name": file_b,
-            "folder_id": 200,
-            "folder_alias": "Folder B",
-            "file_checksum": "checksum_b",
-            "resend_flag": 1,
-            "status": "pending",
-        })
+        processed_files.insert(
+            {
+                "file_name": file_a,
+                "folder_id": 100,
+                "folder_alias": "Folder A",
+                "file_checksum": "checksum_a",
+                "resend_flag": 1,
+                "status": "pending",
+            }
+        )
+        processed_files.insert(
+            {
+                "file_name": file_b,
+                "folder_id": 200,
+                "folder_alias": "Folder B",
+                "file_checksum": "checksum_b",
+                "resend_flag": 1,
+                "status": "pending",
+            }
+        )
 
         copy_be = CopyBackend()
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orch = DispatchOrchestrator(config)
 
         # Process only folder A (should clear resend flag for A but not B)
-        result_a = orch.process_folder(folder_a, MagicMock(), processed_files=processed_files)
+        result_a = orch.process_folder(
+            folder_a, MagicMock(), processed_files=processed_files
+        )
         assert result_a.success is True
 
         # Verify folder A's resend flag was cleared
@@ -693,7 +707,9 @@ class TestSentFilesHistoryIsolation:
         assert record_b["resend_flag"] == 1
 
         # Process folder B and verify its flag is cleared
-        result_b = orch.process_folder(folder_b, MagicMock(), processed_files=processed_files)
+        result_b = orch.process_folder(
+            folder_b, MagicMock(), processed_files=processed_files
+        )
         assert result_b.success is True
 
         record_b = processed_files.find_one(file_name=file_b, folder_id=200)
@@ -746,7 +762,9 @@ class TestSentFilesHistoryIsolation:
         orch = DispatchOrchestrator(config)
 
         # Process config A
-        result_a = orch.process_folder(folder_a, MagicMock(), processed_files=processed_files)
+        result_a = orch.process_folder(
+            folder_a, MagicMock(), processed_files=processed_files
+        )
         assert result_a.success is True
 
         # Config A history should contain the file
@@ -759,7 +777,9 @@ class TestSentFilesHistoryIsolation:
         assert len(history_b) == 0
 
         # Process config B (same file through different config)
-        result_b = orch.process_folder(folder_b, MagicMock(), processed_files=processed_files)
+        result_b = orch.process_folder(
+            folder_b, MagicMock(), processed_files=processed_files
+        )
         assert result_b.success is True
 
         # Now config B should also have a record for the same file
@@ -816,29 +836,35 @@ class TestSentFilesHistoryIsolation:
 
         # Pre-populate: same file, different folder_ids, both with resend_flag=1
         file_path = str(shared_input / "resend_file.edi")
-        processed_files.insert({
-            "file_name": file_path,
-            "folder_id": 1,
-            "folder_alias": "Resend A",
-            "file_checksum": "abc123",
-            "resend_flag": 1,
-            "status": "pending",
-        })
-        processed_files.insert({
-            "file_name": file_path,
-            "folder_id": 2,
-            "folder_alias": "Resend B",
-            "file_checksum": "abc123",
-            "resend_flag": 1,
-            "status": "pending",
-        })
+        processed_files.insert(
+            {
+                "file_name": file_path,
+                "folder_id": 1,
+                "folder_alias": "Resend A",
+                "file_checksum": "abc123",
+                "resend_flag": 1,
+                "status": "pending",
+            }
+        )
+        processed_files.insert(
+            {
+                "file_name": file_path,
+                "folder_id": 2,
+                "folder_alias": "Resend B",
+                "file_checksum": "abc123",
+                "resend_flag": 1,
+                "status": "pending",
+            }
+        )
 
         copy_be = CopyBackend()
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orch = DispatchOrchestrator(config)
 
         # Process config A only (clears resend flag for folder_id=1)
-        result_a = orch.process_folder(folder_a, MagicMock(), processed_files=processed_files)
+        result_a = orch.process_folder(
+            folder_a, MagicMock(), processed_files=processed_files
+        )
         assert result_a.success is True
 
         # Config A's flag should be cleared
@@ -850,7 +876,9 @@ class TestSentFilesHistoryIsolation:
         assert rec_b["resend_flag"] == 1
 
         # Process config B and verify its flag is also cleared
-        result_b = orch.process_folder(folder_b, MagicMock(), processed_files=processed_files)
+        result_b = orch.process_folder(
+            folder_b, MagicMock(), processed_files=processed_files
+        )
         assert result_b.success is True
 
         rec_b = processed_files.find_one(file_name=file_path, folder_id=2)

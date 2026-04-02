@@ -4,11 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from core.edi.po_fetcher import (
-    POData,
-    POFetcher,
-    QueryRunnerProtocol,
-)
+from core.edi.po_fetcher import POData, POFetcher, QueryRunnerProtocol
 
 
 class TestPOFetcher:

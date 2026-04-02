@@ -12,10 +12,7 @@ from io import StringIO
 from typing import Any
 
 import scripts.record_error as record_error
-from core.structured_logging import (
-    get_logger,
-    log_with_context,
-)
+from core.structured_logging import get_logger, log_with_context
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
 
 logger = get_logger(__name__)

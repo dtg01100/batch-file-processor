@@ -20,6 +20,8 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+from backend.database import sqlite_wrapper
+from core.database import schema
 from interface.models.folder_configuration import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
@@ -33,8 +35,6 @@ from interface.models.folder_configuration import (
     UPCOverrideConfiguration,
 )
 from interface.operations.folder_data_extractor import ExtractedDialogFields
-from backend.database import sqlite_wrapper
-from core.database import schema
 
 # =============================================================================
 # FIELD COLLECTION UTILITIES

@@ -20,11 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from core.logging_config import (
-    RunLogAdapter,
-    RunLogHandler,
-    setup_logging,
-)
+from core.logging_config import RunLogAdapter, RunLogHandler, setup_logging
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 

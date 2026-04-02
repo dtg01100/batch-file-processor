@@ -47,7 +47,6 @@ from decimal import Decimal
 from typing import Any
 
 from core import utils
-from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 from core.structured_logging import get_logger
 from dispatch.converters.convert_base import (

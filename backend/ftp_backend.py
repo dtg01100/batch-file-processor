@@ -72,7 +72,9 @@ class FTPBackend(BackendBase):
     with injectable client support.
     """
 
-    def __init__(self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False) -> None:
+    def __init__(
+        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False
+    ) -> None:
         """Initialize FTP backend.
 
         Args:
@@ -127,7 +129,7 @@ class FTPBackend(BackendBase):
                 last_error = error
                 logger.debug(
                     "FTP %s connection failed, trying next option",
-                    "TLS" if use_tls else "plain"
+                    "TLS" if use_tls else "plain",
                 )
                 self._cleanup()
 
@@ -171,9 +173,7 @@ class FTPBackend(BackendBase):
 
         logger.debug("Sending File %s...", filename_no_path)
 
-        _ensure_remote_directory(
-            self._client, process_parameters["ftp_folder"]
-        )
+        _ensure_remote_directory(self._client, process_parameters["ftp_folder"])
 
         with open(filename, "rb") as send_file:
             self._client.storbinary("stor " + filename_no_path, send_file)
@@ -194,9 +194,7 @@ class FTPBackend(BackendBase):
         """Get backend name for logging."""
         return "ftp"
 
-    def _get_endpoint(
-        self, process_parameters: dict, settings_dict: dict
-    ) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
         """Get FTP endpoint for logging."""
         return f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}/{process_parameters.get('ftp_folder', '')}"
 

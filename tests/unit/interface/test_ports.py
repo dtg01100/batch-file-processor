@@ -248,9 +248,7 @@ class TestQtUIService:
         mock_msg_box_instance.clickedButton.return_value = mock_btn1
 
         service = QtUIService()
-        result = service.ask_three_choices(
-            "Title", "Message", "Add", "Edit", "Cancel"
-        )
+        result = service.ask_three_choices("Title", "Message", "Add", "Edit", "Cancel")
 
         assert result == 0
 
@@ -266,9 +264,7 @@ class TestQtUIService:
         mock_msg_box_instance.clickedButton.return_value = mock_btn2
 
         service = QtUIService()
-        result = service.ask_three_choices(
-            "Title", "Message", "Add", "Edit", "Cancel"
-        )
+        result = service.ask_three_choices("Title", "Message", "Add", "Edit", "Cancel")
 
         assert result == 1
 
@@ -284,9 +280,7 @@ class TestQtUIService:
         mock_msg_box_instance.clickedButton.return_value = mock_btn3
 
         service = QtUIService()
-        result = service.ask_three_choices(
-            "Title", "Message", "Add", "Edit", "Cancel"
-        )
+        result = service.ask_three_choices("Title", "Message", "Add", "Edit", "Cancel")
 
         assert result == 2
 

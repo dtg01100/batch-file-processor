@@ -76,7 +76,9 @@ class EmailBackend(BackendBase):
     with injectable client support.
     """
 
-    def __init__(self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False) -> None:
+    def __init__(
+        self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False
+    ) -> None:
         """Initialize email backend.
 
         Args:
@@ -172,7 +174,9 @@ class EmailBackend(BackendBase):
                 settings.get("email_username", "") != ""
                 and settings.get("email_password", "") != ""
             ):
-                self._server.login(settings["email_username"], settings["email_password"])
+                self._server.login(
+                    settings["email_username"], settings["email_password"]
+                )
 
             self._server.send_message(message)
             return True
@@ -191,11 +195,11 @@ class EmailBackend(BackendBase):
         """Get backend name for logging."""
         return "smtp"
 
-    def _get_endpoint(
-        self, process_parameters: dict, settings: dict
-    ) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get SMTP endpoint for logging."""
-        return f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
+        return (
+            f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
+        )
 
     def _cleanup(self) -> None:
         """Close SMTP connection."""
@@ -215,9 +219,7 @@ class EmailBackend(BackendBase):
         """Prepare for retry by resetting state."""
         self._server = None
 
-    def send(
-        self, process_parameters: dict, settings: dict, filename: str
-    ) -> bool:
+    def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:
         """Send a file via email.
 
         Args:

@@ -7,13 +7,7 @@ mirroring the Tkinter-based FolderDataExtractor but operating on PyQt5 widgets.
 
 from typing import Any
 
-from PyQt5.QtWidgets import (
-    QCheckBox,
-    QComboBox,
-    QLineEdit,
-    QPushButton,
-    QSpinBox,
-)
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton, QSpinBox
 
 from core.structured_logging import get_logger
 from interface.operations.folder_data_extractor import ExtractedDialogFields

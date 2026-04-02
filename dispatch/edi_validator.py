@@ -6,11 +6,7 @@ using dependency injection for file system operations.
 
 from io import StringIO
 
-from core.structured_logging import (
-    get_logger,
-    log_file_operation,
-    log_with_context,
-)
+from core.structured_logging import get_logger, log_file_operation, log_with_context
 from dispatch.interfaces import FileSystemInterface
 
 logger = get_logger(__name__)

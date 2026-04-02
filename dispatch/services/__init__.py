@@ -4,7 +4,11 @@ This module contains service classes that provide specialized functionality
 for the dispatch pipeline.
 """
 
-from dispatch.services.file_processor import FileProcessor, FileResult, ProcessingContext
+from dispatch.services.file_processor import (
+    FileProcessor,
+    FileResult,
+    ProcessingContext,
+)
 from dispatch.services.progress_reporter import (
     CLIProgressReporter,
     LoggingProgressReporter,

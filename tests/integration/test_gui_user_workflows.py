@@ -547,32 +547,28 @@ class TestMaintenanceWorkflow:
         conn = sqlite3.connect(legacy_v32_db)
         try:
             cur = conn.cursor()
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT folder_name
                 FROM folders
                 WHERE folder_is_active IN (1, '1', 'True', 'true')
                   AND convert_to_format = 'jolley_custom'
                 LIMIT 1
-                """
-            )
+                """)
             row = cur.fetchone()
             if row is None or not row[0]:
-                cur.execute(
-                    """
+                cur.execute("""
                     SELECT folder_name
                     FROM folders
                     WHERE folder_is_active IN (1, '1', 'True', 'true')
                     LIMIT 1
-                    """
-                )
+                    """)
                 row = cur.fetchone()
         finally:
             conn.close()
 
-        assert row is not None and row[0], (
-            "Expected at least one folder in legacy fixture DB"
-        )
+        assert (
+            row is not None and row[0]
+        ), "Expected at least one folder in legacy fixture DB"
         imported_folder_name = str(row[0])
 
         # Keep side effects local and deterministic.
@@ -992,23 +988,23 @@ class TestMaintenanceWorkflow:
                 }
             )
 
-        assert copy_calls or ftp_calls or email_calls, (
-            "Expected at least one backend to be invoked during run"
-        )
+        assert (
+            copy_calls or ftp_calls or email_calls
+        ), "Expected at least one backend to be invoked during run"
         assert sent_file_snapshots, "Expected captured sent file content"
         sent_file = sent_file_snapshots[0]
-        assert sent_file["filename"].lower().endswith(".csv"), (
-            "Expected converted output to be a CSV file"
-        )
-        assert "Invoice Details" in sent_file["content"], (
-            "Expected converted Jolley CSV invoice header"
-        )
-        assert "Corporate Customer" in sent_file["content"], (
-            "Expected customer lookup fields from mocked ODBC query"
-        )
-        assert "Test Item Description" in sent_file["content"], (
-            "Expected transformed line-item detail from input EDI"
-        )
+        assert (
+            sent_file["filename"].lower().endswith(".csv")
+        ), "Expected converted output to be a CSV file"
+        assert (
+            "Invoice Details" in sent_file["content"]
+        ), "Expected converted Jolley CSV invoice header"
+        assert (
+            "Corporate Customer" in sent_file["content"]
+        ), "Expected customer lookup fields from mocked ODBC query"
+        assert (
+            "Test Item Description" in sent_file["content"]
+        ), "Expected transformed line-item detail from input EDI"
         processed_after_full = list(app._database.processed_files.all())
         assert processed_after_full, "Expected processed_files rows after full run"
         assert all(r.get("file_checksum") for r in processed_after_full)
@@ -1062,9 +1058,9 @@ class TestMaintenanceWorkflow:
             if btn.text() == "Send":
                 send_button = btn
                 break
-        assert send_button is not None or folder is not None, (
-            "Expected row-level Send button or fallback folder id"
-        )
+        assert (
+            send_button is not None or folder is not None
+        ), "Expected row-level Send button or fallback folder id"
 
         pre_single_send_count = len(copy_calls) + len(ftp_calls) + len(email_calls)
         if send_button is not None:
@@ -1089,20 +1085,20 @@ class TestMaintenanceWorkflow:
             )
             post_single_send_count = len(copy_calls) + len(ftp_calls) + len(email_calls)
 
-        assert post_single_send_count > pre_single_send_count, (
-            "Expected additional send during single-folder run"
-        )
+        assert (
+            post_single_send_count > pre_single_send_count
+        ), "Expected additional send during single-folder run"
         processed_after_single = list(app._database.processed_files.all())
         assert len(processed_after_single) >= len(processed_after_full)
-        assert any("Invoice Details" in s["content"] for s in sent_file_snapshots), (
-            "Expected transformed CSV content in sent files across runs"
-        )
-        assert any("FROM dacdata.ohhst" in q for q in query_calls), (
-            "Expected ODBC customer lookup query"
-        )
-        assert any("select distinct bubacd" in q for q in query_calls), (
-            "Expected ODBC UOM lookup query"
-        )
+        assert any(
+            "Invoice Details" in s["content"] for s in sent_file_snapshots
+        ), "Expected transformed CSV content in sent files across runs"
+        assert any(
+            "FROM dacdata.ohhst" in q for q in query_calls
+        ), "Expected ODBC customer lookup query"
+        assert any(
+            "select distinct bubacd" in q for q in query_calls
+        ), "Expected ODBC UOM lookup query"
 
         # Ensure we generated folder entries for every active folder.
         assert set(active_folder_names).issubset(
@@ -1121,12 +1117,12 @@ class TestMaintenanceWorkflow:
             if any(len(batch) > 1 for batch in discovered_batches)
         ]
 
-        assert folders_with_empty_entries, (
-            "Expected some folders to have empty discovery entries"
-        )
-        assert folders_with_multiple_files, (
-            "Expected at least one folder with more than one discovered file"
-        )
+        assert (
+            folders_with_empty_entries
+        ), "Expected some folders to have empty discovery entries"
+        assert (
+            folders_with_multiple_files
+        ), "Expected at least one folder with more than one discovered file"
 
         # Comprehensive validation for all sent files
         assert sent_file_snapshots, "Expected at least one sent file snapshot"
@@ -1147,9 +1143,9 @@ class TestMaintenanceWorkflow:
         assert sent_csv_files, "Expected only converted CSV files to be sent"
         for idx, sent_file_snap in enumerate(sent_csv_files):
             # Validate format is CSV
-            assert sent_file_snap["filename"].lower().endswith(".csv"), (
-                f"Sent file {idx} should be CSV (processed), got: {sent_file_snap['filename']}"
-            )
+            assert (
+                sent_file_snap["filename"].lower().endswith(".csv")
+            ), f"Sent file {idx} should be CSV (processed), got: {sent_file_snap['filename']}"
             # Validate backend context
             assert sent_file_snap.get("backend") in [
                 "copy",
@@ -1158,22 +1154,22 @@ class TestMaintenanceWorkflow:
             ], f"CSV file {idx} missing backend context"
             # Validate expected CSV content in each file
             content = sent_file_snap["content"]
-            assert "Invoice Details" in content, (
-                f"CSV file {idx} missing Jolley CSV invoice header"
-            )
+            assert (
+                "Invoice Details" in content
+            ), f"CSV file {idx} missing Jolley CSV invoice header"
             # Validate format structure (CSV has headers and data)
             lines = content.strip().split("\n")
-            assert len(lines) > 1, (
-                f"CSV file {idx} should have multiple lines (header + data)"
-            )
+            assert (
+                len(lines) > 1
+            ), f"CSV file {idx} should have multiple lines (header + data)"
             # Validate CSV structure with quoted fields
-            assert "," in content, (
-                f"CSV file {idx} missing comma separators (CSV format)"
-            )
+            assert (
+                "," in content
+            ), f"CSV file {idx} missing comma separators (CSV format)"
             # Validate CSV structure with quoted fields
-            assert '"' in content, (
-                f"CSV file {idx} missing quoted fields (standard CSV)"
-            )
+            assert (
+                '"' in content
+            ), f"CSV file {idx} missing quoted fields (standard CSV)"
 
         # Validate backend distribution: at least one backend should have been used
         total_backend_calls = sum(sent_file_count_per_backend.values())
@@ -1187,31 +1183,31 @@ class TestMaintenanceWorkflow:
         assert processed_after_single, "Expected processed files records in database"
         for proc_file in processed_after_single:
             # Each record must have checksum
-            assert proc_file.get("file_checksum"), (
-                "Processed file record missing file_checksum"
-            )
+            assert proc_file.get(
+                "file_checksum"
+            ), "Processed file record missing file_checksum"
             # Each record must have status
-            assert proc_file.get("status") == "processed", (
-                f"Processed file record should have status='processed', got: {proc_file.get('status')}"
-            )
+            assert (
+                proc_file.get("status") == "processed"
+            ), f"Processed file record should have status='processed', got: {proc_file.get('status')}"
             # Each record must have folder_id
-            assert proc_file.get("folder_id") is not None, (
-                "Processed file record missing folder_id"
-            )
+            assert (
+                proc_file.get("folder_id") is not None
+            ), "Processed file record missing folder_id"
             # Each record must be associated with an active folder
-            assert proc_file.get("folder_id") in active_folder_ids, (
-                f"Processed file references non-existent folder: {proc_file.get('folder_id')}"
-            )
+            assert (
+                proc_file.get("folder_id") in active_folder_ids
+            ), f"Processed file references non-existent folder: {proc_file.get('folder_id')}"
             # Validate timestamps are present
-            assert proc_file.get("processed_at"), (
-                "Processed file record missing processed_at timestamp"
-            )
+            assert proc_file.get(
+                "processed_at"
+            ), "Processed file record missing processed_at timestamp"
 
         # Validate log generation
         logs_dir_path = Path(logs_dir)
-        assert logs_dir_path.exists() and logs_dir_path.is_dir(), (
-            f"Logs directory should exist: {logs_dir_path}"
-        )
+        assert (
+            logs_dir_path.exists() and logs_dir_path.is_dir()
+        ), f"Logs directory should exist: {logs_dir_path}"
         log_files = list(logs_dir_path.glob("*.txt"))
         assert log_files, "Expected at least one log file generated"
 

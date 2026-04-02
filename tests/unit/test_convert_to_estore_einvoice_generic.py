@@ -585,9 +585,9 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             ]
 
             for col in expected_columns:
-                assert any(col in h for h in header_row), (
-                    f"Column {col} not found in header"
-                )
+                assert any(
+                    col in h for h in header_row
+                ), f"Column {col} not found in header"
 
     def test_store_number_in_output(
         self,
@@ -1420,9 +1420,9 @@ class TestEstoreEinvoiceGenericFilenameRegression(TestEstoreEinvoiceGenericFixtu
             sample_upc_lut,
         )
 
-        assert os.path.dirname(result) == str(out_dir), (
-            f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
-        )
+        assert os.path.dirname(result) == str(
+            out_dir
+        ), f"Output file should be in '{out_dir}', but got '{os.path.dirname(result)}'"
 
 
 if __name__ == "__main__":

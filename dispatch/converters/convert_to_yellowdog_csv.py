@@ -22,11 +22,9 @@ Backward Compatibility:
 """
 
 import csv
-import logging
 from datetime import datetime
 
 from core import utils
-from core.database import create_query_runner
 from core.edi.inv_fetcher import InvFetcher
 from core.structured_logging import get_logger
 from core.utils import safe_int

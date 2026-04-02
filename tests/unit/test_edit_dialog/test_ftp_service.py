@@ -9,10 +9,7 @@ project_root = os.path.dirname(
 )
 sys.path.insert(0, project_root)
 
-from interface.services.ftp_service import (
-    FTPConnectionResult,
-    MockFTPService,
-)
+from interface.services.ftp_service import FTPConnectionResult, MockFTPService
 
 
 class TestMockFTPService:

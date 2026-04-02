@@ -27,26 +27,22 @@ def legacy_database_v1(tmp_path):
     cursor = conn.cursor()
 
     # Create v1 schema (minimal columns)
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY,
             folder_name TEXT,
             alias TEXT
         )
-    """
-    )
+    """)
 
     # Create version table for migration
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE version (
             id INTEGER PRIMARY KEY,
             version TEXT,
             os TEXT
         )
-    """
-    )
+    """)
 
     # Insert version record (v1 = version 1)
     cursor.execute(
@@ -80,8 +76,7 @@ def legacy_database_v2(tmp_path):
     cursor = conn.cursor()
 
     # Create v2 schema (added backend columns)
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY,
             folder_name TEXT,
@@ -90,19 +85,16 @@ def legacy_database_v2(tmp_path):
             process_backend_ftp TEXT,
             copy_to_directory TEXT
         )
-    """
-    )
+    """)
 
     # Create version table for migration
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE version (
             id INTEGER PRIMARY KEY,
             version TEXT,
             os TEXT
         )
-    """
-    )
+    """)
 
     # Insert version record (v2 = version 2)
     cursor.execute(
@@ -135,8 +127,7 @@ def legacy_database_v3(tmp_path):
     cursor = conn.cursor()
 
     # Create v3 schema
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE folders (
             id INTEGER PRIMARY KEY,
             folder_name TEXT,
@@ -148,27 +139,23 @@ def legacy_database_v3(tmp_path):
             copy_to_directory TEXT,
             convert_to_type TEXT
         )
-    """
-    )
+    """)
 
     # Create version table for migration
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE version (
             id INTEGER PRIMARY KEY,
             version TEXT,
             os TEXT
         )
-    """
-    )
+    """)
 
     # Insert version record (v3 = version 3)
     cursor.execute(
         "INSERT INTO version (id, version, os) VALUES (?, ?, ?)", (1, "3", "Linux")
     )
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE processed_files (
             id INTEGER PRIMARY KEY,
             folder_id INTEGER,
@@ -176,8 +163,7 @@ def legacy_database_v3(tmp_path):
             md5 TEXT,
             processed_date TEXT
         )
-    """
-    )
+    """)
 
     # Insert test data
     cursor.execute(
@@ -637,46 +623,38 @@ class TestMigrationEdgeCases:
         cursor = conn.cursor()
 
         # Create minimal folders table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE folders (
                 id INTEGER PRIMARY KEY,
                 folder_name TEXT,
                 alias TEXT
             )
-        """
-        )
+        """)
 
         # Create version table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE version (
                 id INTEGER PRIMARY KEY,
                 version TEXT,
                 os TEXT
             )
-        """
-        )
+        """)
 
         # Create settings table (needed by migration)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY,
                 enable_email INTEGER
             )
-        """
-        )
+        """)
 
         # Create administrative table (needed by migration)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE administrative (
                 id INTEGER PRIMARY KEY,
                 copy_to_directory TEXT
             )
-        """
-        )
+        """)
 
         # Insert version record
         cursor.execute(
@@ -728,57 +706,47 @@ class TestMigrationEdgeCases:
         conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE folders (
                 id INTEGER PRIMARY KEY,
                 folder_name TEXT,
                 alias TEXT
             )
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE processed_files (
                 id INTEGER PRIMARY KEY,
                 folder_id INTEGER,
                 filename TEXT,
                 md5 TEXT
             )
-        """
-        )
+        """)
 
         # Create version table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE version (
                 id INTEGER PRIMARY KEY,
                 version TEXT,
                 os TEXT
             )
-        """
-        )
+        """)
 
         # Create settings table (needed by migration)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY,
                 enable_email INTEGER
             )
-        """
-        )
+        """)
 
         # Create administrative table (needed by migration)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE administrative (
                 id INTEGER PRIMARY KEY,
                 copy_to_directory TEXT
             )
-        """
-        )
+        """)
 
         # Insert version record - start from version 40 to skip problematic migrations
         cursor.execute(

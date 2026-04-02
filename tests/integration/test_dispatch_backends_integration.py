@@ -16,10 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dispatch.orchestrator import (
-    DispatchConfig,
-    DispatchOrchestrator,
-)
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend, SendManager
 
 # =============================================================================

@@ -39,7 +39,9 @@ class Table:
     All boolean values are stored as INTEGER (0/1) and converted to Python bool on read.
     """
 
-    def __init__(self, conn: sqlite3.Connection, name: str, lock: threading.RLock | None = None) -> None:
+    def __init__(
+        self, conn: sqlite3.Connection, name: str, lock: threading.RLock | None = None
+    ) -> None:
         """Initialize a table reference.
 
         Args:
@@ -471,7 +473,8 @@ class Table:
 
             boolean_cols = self._get_boolean_columns()
             params = [
-                self._serialize_record_value(k, record[k], boolean_cols) for k in set_keys
+                self._serialize_record_value(k, record[k], boolean_cols)
+                for k in set_keys
             ]
             params.extend(
                 self._serialize_record_value(k, record[k], boolean_cols) for k in keys
@@ -520,7 +523,8 @@ class Table:
             if kwargs:
                 where, values = self._build_where_clause(kwargs)
                 cur = self._conn.execute(
-                    f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}", tuple(values)
+                    f"SELECT COUNT(*) as c FROM {quoted_table} WHERE {where}",
+                    tuple(values),
                 )
             else:
                 cur = self._conn.execute(f"SELECT COUNT(*) as c FROM {quoted_table}")

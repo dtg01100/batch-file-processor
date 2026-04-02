@@ -32,10 +32,7 @@ from interface.operations.folder_data_extractor import (
     ExtractedDialogFields,
     FolderDataExtractor,
 )
-from interface.services.ftp_service import (
-    FTPConnectionResult,
-    FTPServiceProtocol,
-)
+from interface.services.ftp_service import FTPConnectionResult, FTPServiceProtocol
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,
     ValidationResult,

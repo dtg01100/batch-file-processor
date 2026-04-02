@@ -9,11 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.database import (
-    DatabaseConnectionProtocol,
-    DatabaseObj,
-    TableProtocol,
-)
+from backend.database import DatabaseConnectionProtocol, DatabaseObj, TableProtocol
 from core.constants import CURRENT_DATABASE_VERSION
 
 

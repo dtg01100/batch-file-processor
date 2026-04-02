@@ -2,16 +2,32 @@
 
 This module manages sending files to multiple backends,
 using dependency injection for testability.
+
+Thread Safety:
+    SendManager instances are NOT thread-safe. Each thread should create and use
+    its own SendManager instance. The `results` and `errors` dictionaries are
+    instance variables that are mutated during send_all() calls.
+
+    For multi-threaded scenarios:
+    - Create separate SendManager instances per thread
+    - Do not share SendManager instances across threads
+    - The DEFAULT_BACKENDS class variable is read-only and thread-safe
+
+    Example of thread-safe usage:
+        import threading
+        from dispatch.send_manager import SendManager
+
+        def worker(files_to_send):
+            # Each thread creates its own SendManager
+            send_manager = SendManager(backends={...})
+            for file_path in files_to_send:
+                send_manager.send_all(..., file_path, ...)
 """
 
 import importlib
 import os
 
-from core.structured_logging import (
-    get_logger,
-    log_backend_call,
-    log_with_context,
-)
+from core.structured_logging import get_logger, log_backend_call, log_with_context
 from dispatch.interfaces import BackendInterface
 
 logger = get_logger(__name__)

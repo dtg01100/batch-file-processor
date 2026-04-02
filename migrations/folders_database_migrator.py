@@ -277,8 +277,7 @@ def upgrade_database(
         administrative_section = database_connection["administrative"]
 
         database_connection.query("DROP TABLE IF EXISTS settings")
-        database_connection.query(
-            """
+        database_connection.query("""
             CREATE TABLE settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 enable_email INTEGER,
@@ -291,8 +290,7 @@ def upgrade_database(
                 backup_counter_maximum INTEGER,
                 enable_interval_backups INTEGER
             )
-        """
-        )
+        """)
 
         settings_table = database_connection["settings"]
         administrative_section_dict = administrative_section.find_one(id=1)
@@ -974,11 +972,9 @@ def upgrade_database(
 
     if db_version_dict["version"] == "37":
         database_connection.query("ALTER TABLE 'version' ADD COLUMN 'notes' TEXT")
-        database_connection.query(
-            """
+        database_connection.query("""
             UPDATE 'version' SET notes='administrative table duplicates folders table. Use folders table for all operations. administrative table deprecated.'
-        """
-        )
+        """)
 
         update_version = dict(id=1, version="38", os=running_platform)
         db_version.update(update_version, ["id"])
@@ -1273,8 +1269,7 @@ def upgrade_database(
                 # Do NOT touch folders where process_edi was explicitly set to 0;
                 # those folders intentionally disabled conversion and must keep
                 # passing through.
-                cursor.execute(
-                    f"""
+                cursor.execute(f"""
                     UPDATE {table}
                     SET process_edi = 1,
                         tweak_edi   = 0
@@ -1282,8 +1277,7 @@ def upgrade_database(
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                       AND (process_edi IS NULL OR process_edi != 0)
-                """
-                )
+                """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
@@ -1291,24 +1285,21 @@ def upgrade_database(
                 # Case A (disabled): real format stored but processing was
                 # explicitly off.  Only retire the deprecated tweak_edi flag;
                 # leave process_edi=0 and convert_to_format untouched.
-                cursor.execute(
-                    f"""
+                cursor.execute(f"""
                     UPDATE {table}
                     SET tweak_edi = 0
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                       AND process_edi = 0
-                """
-                )
+                """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
                 # Case B (enabled): no format stored – the intent was EDI tweaks.
                 # Only promote when processing was enabled or unset.
-                cursor.execute(
-                    f"""
+                cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
                         process_edi       = 1,
@@ -1316,23 +1307,20 @@ def upgrade_database(
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                       AND (process_edi IS NULL OR process_edi != 0)
-                """
-                )
+                """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
                 # Case B (disabled): no format stored and processing was
                 # explicitly off.  Only retire the deprecated tweak_edi flag.
-                cursor.execute(
-                    f"""
+                cursor.execute(f"""
                     UPDATE {table}
                     SET tweak_edi = 0
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                       AND process_edi = 0
-                """
-                )
+                """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
@@ -1347,26 +1335,22 @@ def upgrade_database(
         cursor = database_connection.raw_connection.cursor()
 
         try:
-            cursor.execute(
-                """
+            cursor.execute("""
                 UPDATE folders
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
-            """
-            )
+            """)
         except Exception:
             pass
 
         try:
-            cursor.execute(
-                """
+            cursor.execute("""
                 UPDATE administrative
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
-            """
-            )
+            """)
         except Exception:
             pass
 
@@ -1620,4 +1604,6 @@ def upgrade_database(
                 conn.execute("COMMIT")
             except Exception as e:
                 conn.execute("ROLLBACK")
-                raise RuntimeError(f"Failed to repair HTTP backend NULL values: {e}") from e
+                raise RuntimeError(
+                    f"Failed to repair HTTP backend NULL values: {e}"
+                ) from e

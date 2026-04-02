@@ -46,7 +46,11 @@ class CopyBackend(BackendBase):
     with injectable file operations support.
     """
 
-    def __init__(self, file_ops: FileOperationsProtocol | None = None, disable_retry: bool = False) -> None:
+    def __init__(
+        self,
+        file_ops: FileOperationsProtocol | None = None,
+        disable_retry: bool = False,
+    ) -> None:
         """Initialize copy backend.
 
         Args:
@@ -69,13 +73,17 @@ class CopyBackend(BackendBase):
         if not self.file_ops.exists(candidate):
             return candidate
 
-        source_parent = self.file_ops.basename(self.file_ops.dirname(filename)) or "collision"
+        source_parent = (
+            self.file_ops.basename(self.file_ops.dirname(filename)) or "collision"
+        )
         collision_dir = self.file_ops.join(dest_dir, source_parent)
         collision_candidate = self.file_ops.join(collision_dir, dest_filename)
         collision_index = 1
 
         while self.file_ops.exists(collision_candidate):
-            collision_dir = self.file_ops.join(dest_dir, f"{source_parent}.{collision_index}")
+            collision_dir = self.file_ops.join(
+                dest_dir, f"{source_parent}.{collision_index}"
+            )
             collision_candidate = self.file_ops.join(collision_dir, dest_filename)
             collision_index += 1
 
@@ -109,7 +117,9 @@ class CopyBackend(BackendBase):
             try:
                 self.file_ops.makedirs(dest_dir)
             except Exception as e:
-                raise IOError(f"Failed to create destination directory '{dest_dir}': {e}")
+                raise IOError(
+                    f"Failed to create destination directory '{dest_dir}': {e}"
+                )
 
         destination_path = self._resolve_destination(dest_dir, filename)
         self.file_ops.copy(filename, destination_path)
@@ -119,9 +129,7 @@ class CopyBackend(BackendBase):
         """Get backend name for logging."""
         return "copy"
 
-    def _get_endpoint(
-        self, process_parameters: dict, settings_dict: dict
-    ) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
         """Get copy destination for logging."""
         return process_parameters.get("copy_to_directory", "")
 

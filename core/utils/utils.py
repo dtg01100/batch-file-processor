@@ -20,26 +20,20 @@ MAX_A_RECORD_COUNT = 700
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
-from core.edi.edi_transformer import (
-    convert_to_price,  # noqa: F401
-    convert_to_price_decimal,  # noqa: F401
-    dac_str_int_to_int,  # noqa: F401
-    detect_invoice_is_credit,  # noqa: F401
-)
+from core.edi.edi_transformer import convert_to_price  # noqa: F401
+from core.edi.edi_transformer import convert_to_price_decimal  # noqa: F401
+from core.edi.edi_transformer import dac_str_int_to_int  # noqa: F401
+from core.edi.edi_transformer import detect_invoice_is_credit  # noqa: F401
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
-from core.edi.upc_utils import (
-    calc_check_digit,  # noqa: F401
-)
-from core.edi.upc_utils import (
-    convert_upce_to_upca as convert_UPCE_to_UPCA,  # noqa: F401
+from core.edi.upc_utils import calc_check_digit  # noqa: F401
+from core.edi.upc_utils import (  # noqa: F401
+    convert_upce_to_upca as convert_UPCE_to_UPCA,
 )
 from core.structured_logging import get_logger, log_file_operation
-from core.utils.date_utils import (
-    dactime_from_datetime,  # noqa: F401
-    dactime_from_invtime,  # noqa: F401
-    datetime_from_dactime,  # noqa: F401
-    datetime_from_invtime,  # noqa: F401
-)
+from core.utils.date_utils import dactime_from_datetime  # noqa: F401
+from core.utils.date_utils import dactime_from_invtime  # noqa: F401
+from core.utils.date_utils import datetime_from_dactime  # noqa: F401
+from core.utils.date_utils import datetime_from_invtime  # noqa: F401
 
 logger = get_logger(__name__)
 

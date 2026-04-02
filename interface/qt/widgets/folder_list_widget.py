@@ -191,16 +191,14 @@ class FolderListWidget(QWidget):
         """
         container = QWidget()
         container.setObjectName("card")
-        container.setStyleSheet(
-            f"""
+        container.setStyleSheet(f"""
             #card {{
                 background-color: {Theme.CARD_BACKGROUND};
                 border: 1px solid {Theme.CARD_BORDER};
                 border-radius: {Theme.RADIUS_LG};
                 padding: {Theme.SPACING_LG};
             }}
-        """
-        )
+        """)
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(
             Theme.SPACING_LG_INT,
@@ -213,15 +211,13 @@ class FolderListWidget(QWidget):
         # Modern header with enhanced typography
         header = QLabel(title)
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet(
-            f"""
+        header.setStyleSheet(f"""
             font-size: {Theme.FONT_SIZE_XL};
             font-weight: 600;
             color: {Theme.TEXT_PRIMARY};
             padding-bottom: {Theme.SPACING_MD};
             letter-spacing: 0.25px;
-        """
-        )
+        """)
         container_layout.addWidget(header)
 
         # Modern separator
@@ -229,15 +225,13 @@ class FolderListWidget(QWidget):
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Plain)
         separator.setObjectName("separator")
-        separator.setStyleSheet(
-            f"""
+        separator.setStyleSheet(f"""
             QFrame#separator {{
                 background-color: {Theme.OUTLINE_VARIANT};
                 border: none;
                 height: 1px;
             }}
-        """
-        )
+        """)
         container_layout.addWidget(separator)
 
         # Scroll area with modern styling
@@ -245,14 +239,12 @@ class FolderListWidget(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setStyleSheet(
-            """
+        scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
                 background-color: transparent;
             }
-        """
-        )
+        """)
 
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
@@ -266,13 +258,11 @@ class FolderListWidget(QWidget):
 
         if not folder_list:
             self._empty_label = QLabel(f"No {title}")
-            self._empty_label.setStyleSheet(
-                f"""
+            self._empty_label.setStyleSheet(f"""
                 color: {Theme.TEXT_TERTIARY};
                 font-size: {Theme.FONT_SIZE_SM};
                 font-style: italic;
-            """
-            )
+            """)
             self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._empty_label.setContentsMargins(
                 Theme.SPACING_LG_INT,
@@ -284,13 +274,11 @@ class FolderListWidget(QWidget):
         else:
             # Create "no matches" label (hidden by default, shown when filter hides all)
             self._empty_label = QLabel("No matching folders")
-            self._empty_label.setStyleSheet(
-                f"""
+            self._empty_label.setStyleSheet(f"""
                 color: {Theme.TEXT_TERTIARY};
                 font-size: {Theme.FONT_SIZE_SM};
                 font-style: italic;
-            """
-            )
+            """)
             self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._empty_label.setContentsMargins(
                 Theme.SPACING_LG_INT,
@@ -335,8 +323,7 @@ class FolderListWidget(QWidget):
         """
         row_widget = QWidget()
         row_widget.setObjectName("folderCard")
-        row_widget.setStyleSheet(
-            f"""
+        row_widget.setStyleSheet(f"""
             #folderCard {{
                 background-color: {Theme.CARD_SURFACE};
                 border: 1px solid {Theme.CARD_BORDER};
@@ -347,8 +334,7 @@ class FolderListWidget(QWidget):
                 background-color: {Theme.SURFACE_VARIANT};
                 border-color: {Theme.PRIMARY};
             }}
-        """
-        )
+        """)
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(
             Theme.SPACING_SM_INT,
@@ -375,8 +361,7 @@ class FolderListWidget(QWidget):
             toggle_btn.setAccessibleDescription(
                 f"Folder '{alias}' is active. Click to disable."
             )
-            toggle_btn.setStyleSheet(
-                f"""
+            toggle_btn.setStyleSheet(f"""
                 QPushButton {{
                     color: {Theme.PRIMARY};
                     background-color: transparent;
@@ -392,8 +377,7 @@ class FolderListWidget(QWidget):
                 QPushButton:pressed {{
                     background-color: {Theme.SECONDARY_CONTAINER};
                 }}
-                """
-            )
+                """)
         else:
             toggle_btn.setToolTip("Inactive -- click to enable")
             toggle_btn.setAccessibleName(
@@ -402,8 +386,7 @@ class FolderListWidget(QWidget):
             toggle_btn.setAccessibleDescription(
                 f"Folder '{alias}' is inactive. Click to enable."
             )
-            toggle_btn.setStyleSheet(
-                f"""
+            toggle_btn.setStyleSheet(f"""
                 QPushButton {{
                     color: {Theme.TEXT_TERTIARY};
                     background-color: transparent;
@@ -421,8 +404,7 @@ class FolderListWidget(QWidget):
                 QPushButton:pressed {{
                     background-color: {Theme.SECONDARY_CONTAINER};
                 }}
-                """
-            )
+                """)
         toggle_btn.clicked.connect(lambda _checked, fid=folder_id: self._on_toggle(fid))
         row_layout.addWidget(toggle_btn)
 

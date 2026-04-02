@@ -7,11 +7,8 @@ extracted from dispatch.py for testability.
 import datetime
 import os
 import re
-import time
 
-from core.structured_logging import (
-    get_logger,
-)
+from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -216,4 +213,6 @@ def build_processed_file_record(
     }
 
 
-from core.utils import do_clear_old_files  # noqa: F401 - re-exported for backward compat
+from core.utils import (  # noqa: F401 - re-exported for backward compat
+    do_clear_old_files,
+)

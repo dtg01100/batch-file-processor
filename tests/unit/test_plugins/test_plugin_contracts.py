@@ -28,9 +28,7 @@ from interface.plugins.simplified_csv_configuration_plugin import (
 from interface.plugins.stewarts_custom_configuration_plugin import (
     StewartsCustomConfigurationPlugin,
 )
-from interface.plugins.tweaks_configuration_plugin import (
-    TweaksConfigurationPlugin,
-)
+from interface.plugins.tweaks_configuration_plugin import TweaksConfigurationPlugin
 from interface.plugins.validation_framework import ValidationResult
 from interface.plugins.yellowdog_csv_configuration_plugin import (
     YellowDogCSVConfigurationPlugin,

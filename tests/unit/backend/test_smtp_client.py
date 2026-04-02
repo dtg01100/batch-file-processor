@@ -8,11 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from backend.protocols import SMTPClientProtocol
-from backend.smtp_client import (
-    MockSMTPClient,
-    RealSMTPClient,
-    create_smtp_client,
-)
+from backend.smtp_client import MockSMTPClient, RealSMTPClient, create_smtp_client
 
 
 class TestRealSMTPClient:

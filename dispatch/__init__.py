@@ -9,21 +9,10 @@ Feature Flags:
 
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
-from dispatch.feature_flags import (
-    get_debug_mode,
-    get_feature_flags,
-    set_feature_flag,
-)
-from dispatch.file_utils import (
-    build_output_filename,
-    do_clear_old_files,
-)
+from dispatch.feature_flags import get_debug_mode, get_feature_flags, set_feature_flag
+from dispatch.file_utils import build_output_filename, do_clear_old_files
 from dispatch.hash_utils import generate_file_hash, generate_match_lists
-from dispatch.interfaces import (
-    BackendInterface,
-    DatabaseInterface,
-    FileSystemInterface,
-)
+from dispatch.interfaces import BackendInterface, DatabaseInterface, FileSystemInterface
 from dispatch.log_sender import (
     EmailConfig,
     LogEntry,

@@ -100,9 +100,9 @@ def windows_executable(docker_cmd):
         f"--- stderr (last 2000 chars) ---\n{result.stderr[-2000:]}"
     )
 
-    assert EXECUTABLE_PATH.exists(), (
-        f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
-    )
+    assert (
+        EXECUTABLE_PATH.exists()
+    ), f"Build succeeded but .exe not found at {EXECUTABLE_PATH}"
 
     return EXECUTABLE_PATH
 
@@ -162,9 +162,9 @@ class TestWindowsExecutable:
             f"--- stdout ---\n{result.stdout}\n"
             f"--- stderr ---\n{result.stderr}"
         )
-        assert "Self-test passed" in result.stdout, (
-            f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
-        )
+        assert (
+            "Self-test passed" in result.stdout
+        ), f"Expected 'Self-test passed' in stdout.\n--- stdout ---\n{result.stdout}"
 
     def test_windows_help_flag_via_wine(self, windows_executable, docker_cmd):
         """Running --help on the .exe via Wine shows expected flags."""
@@ -192,9 +192,9 @@ class TestWindowsExecutable:
             f"--- stdout ---\n{result.stdout}\n"
             f"--- stderr ---\n{result.stderr}"
         )
-        assert "--self-test" in result.stdout, (
-            f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
-        )
-        assert "--automatic" in result.stdout, (
-            f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"
-        )
+        assert (
+            "--self-test" in result.stdout
+        ), f"--self-test not found in --help output.\n--- stdout ---\n{result.stdout}"
+        assert (
+            "--automatic" in result.stdout
+        ), f"--automatic not found in --help output.\n--- stdout ---\n{result.stdout}"

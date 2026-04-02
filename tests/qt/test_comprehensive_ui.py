@@ -19,11 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QApplication,
-    QMessageBox,
-    QPushButton,
-)
+from PyQt5.QtWidgets import QApplication, QMessageBox, QPushButton
 
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION

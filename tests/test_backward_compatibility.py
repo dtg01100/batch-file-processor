@@ -160,6 +160,7 @@ class TestDatabaseSchemaFunctions:
     @pytest.mark.unit
     def test_ensure_schema_accepts_connection(self):
         import inspect
+
         from core.database.schema import ensure_schema
 
         sig = inspect.signature(ensure_schema)

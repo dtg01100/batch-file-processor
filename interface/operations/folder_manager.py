@@ -232,7 +232,8 @@ class FolderManager:
             all_folders = self._db.folders_table.all()
 
         matched_folders = [
-            folder for folder in all_folders
+            folder
+            for folder in all_folders
             if os.path.normpath(folder["folder_name"]) == os.path.normpath(folder_path)
         ]
 
@@ -240,7 +241,7 @@ class FolderManager:
             return {
                 "truefalse": True,
                 "matched_folder": matched_folders[0],
-                "all_matched_folders": matched_folders
+                "all_matched_folders": matched_folders,
             }
 
         return {"truefalse": False, "matched_folder": None, "all_matched_folders": []}

@@ -27,10 +27,7 @@ from core.edi.edi_transformer import (
     dac_str_int_to_int,
     detect_invoice_is_credit,
 )
-from core.edi.edi_tweaker import (
-    EDITweaker,
-    TweakerConfig,
-)
+from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 from core.edi.upc_utils import (
     apply_retail_uom_transform,
     calc_check_digit,

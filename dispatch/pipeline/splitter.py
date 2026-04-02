@@ -9,10 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
 from core.edi.edi_splitter import EDISplitter, SplitConfig
-from core.structured_logging import (
-    get_logger,
-    log_file_operation,
-)
+from core.structured_logging import get_logger, log_file_operation
 from core.utils.bool_utils import normalize_bool, normalize_db_bool
 from dispatch.interfaces import FileSystemInterface
 
@@ -319,9 +316,7 @@ class EDISplitterStep:
 
         filter_categories = params.get("split_edi_filter_categories", "ALL")
         filter_mode = params.get("split_edi_filter_mode", "include")
-        prepend_date = normalize_db_bool(
-            params.get("prepend_date_files", False)
-        )
+        prepend_date = normalize_db_bool(params.get("prepend_date_files", False))
 
         include_invoices = _normalize_include_flag(
             params.get("split_edi_include_invoices", True), default=True

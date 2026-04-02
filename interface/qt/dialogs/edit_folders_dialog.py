@@ -7,11 +7,7 @@ Uses a decomposed architecture with dedicated builders and handlers.
 import os
 from typing import Any, Callable
 
-from PyQt5.QtWidgets import (
-    QFileDialog,
-    QMessageBox,
-    QWidget,
-)
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from core.utils.bool_utils import normalize_bool
 from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper

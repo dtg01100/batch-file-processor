@@ -317,8 +317,7 @@ def main() -> None:
         # Step 7: Summary
         print_section("DEMONSTRATION COMPLETE - SUMMARY")
 
-        print(
-            f"""
+        print(f"""
 Migration Results:
   - Source database: v{version} (Windows) -> v{new_version} (Linux)
   - Folders imported: {len(import_folders)}
@@ -332,8 +331,7 @@ The legacy database import and migration system successfully:
   4. ✓ Imported active folders from legacy database
   5. ✓ Preserved data integrity during transition
   6. ✓ Verified all key columns exist in final database
-"""
-        )
+""")
 
     finally:
         # Cleanup

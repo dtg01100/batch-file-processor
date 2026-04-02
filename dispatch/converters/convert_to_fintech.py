@@ -24,10 +24,10 @@ Backward Compatibility:
 """
 
 import csv
-import logging
 
 from core import utils
 from core.edi.inv_fetcher import InvFetcher
+from core.structured_logging import get_logger
 from core.utils import safe_int
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -35,6 +35,8 @@ from dispatch.converters.convert_base import (
     EDIRecord,
     create_csv_writer,
 )
+
+logger = get_logger(__name__)
 
 
 class FintechConverter(BaseEDIConverter):
@@ -246,6 +248,4 @@ class FintechConverter(BaseEDIConverter):
 from .convert_base import create_edi_convert_wrapper
 
 # Auto-generated wrapper using the standard template
-edi_convert = create_edi_convert_wrapper(
-    FintechConverter, format_name="fintech"
-)
+edi_convert = create_edi_convert_wrapper(FintechConverter, format_name="fintech")

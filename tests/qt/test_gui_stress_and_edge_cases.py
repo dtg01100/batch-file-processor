@@ -13,11 +13,7 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtWidgets import (
-    QMessageBox,
-    QPushButton,
-    QWidget,
-)
+from PyQt5.QtWidgets import QMessageBox, QPushButton, QWidget
 
 pytestmark = pytest.mark.qt
 from core.constants import CURRENT_DATABASE_VERSION

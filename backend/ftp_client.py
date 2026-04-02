@@ -220,11 +220,12 @@ class RealFTPClient:
             raise RuntimeError("Not connected to FTP server")
         self._connection.set_pasv(passive)
 
-    def nlst(self, *, passive: bool) -> list[str]:
+    def nlst(self, directory: str = ".", *, passive: bool = True) -> list[str]:
         """List files in directory.
 
         Args:
             directory: Directory to list (default: current directory)
+            passive: Whether to use passive mode
 
         Returns:
             List of file names
@@ -232,6 +233,7 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
+        self._connection.set_pasv(passive)
         return self._connection.nlst(directory)
 
     def retrbinary(self, cmd: str, callback: Any, blocksize: int = 8192) -> None:

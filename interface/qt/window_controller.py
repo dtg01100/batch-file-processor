@@ -50,15 +50,13 @@ class QtMainWindowController:
 
         header_label = QLabel("Batch File Sender")
         header_label.setObjectName("sidebar_header")
-        header_label.setStyleSheet(
-            f"""
+        header_label.setStyleSheet(f"""
             font-size: {Theme.FONT_SIZE_XL};
             font-weight: 700;
             color: {Theme.TEXT_ON_SIDEBAR};
             padding-bottom: {Theme.SPACING_LG};
             letter-spacing: 0.5px;
-        """
-        )
+        """)
         options_layout.addWidget(header_label)
 
         self._add_sidebar_button(
@@ -100,14 +98,12 @@ class QtMainWindowController:
         separator = QFrame()
         separator.setFixedHeight(1)
         separator.setObjectName("sidebar_separator")
-        separator.setStyleSheet(
-            f"""
+        separator.setStyleSheet(f"""
             QFrame#sidebar_separator {{
                 background-color: {Theme.SIDEBAR_OUTLINE};
                 margin: {Theme.SPACING_MD} 0;
             }}
-        """
-        )
+        """)
         options_layout.addWidget(separator)
 
         self._app._process_folder_button = QPushButton("Process All Folders")
@@ -119,25 +115,21 @@ class QtMainWindowController:
         )
         options_layout.addWidget(self._app._process_folder_button)
 
-        options_widget.setStyleSheet(
-            f"""
+        options_widget.setStyleSheet(f"""
             QWidget#sidebar {{
                 background-color: {Theme.SIDEBAR_BACKGROUND};
                 border-right: 1px solid {Theme.SIDEBAR_OUTLINE};
             }}
-        """
-        )
+        """)
 
         main_layout.addWidget(options_widget)
 
         self._app._right_panel_widget = QWidget()
-        self._app._right_panel_widget.setStyleSheet(
-            f"""
+        self._app._right_panel_widget.setStyleSheet(f"""
             QWidget {{
                 background-color: {Theme.BACKGROUND};
             }}
-        """
-        )
+        """)
         right_layout = QVBoxLayout(self._app._right_panel_widget)
         right_layout.setContentsMargins(
             Theme.SPACING_XXL_INT,

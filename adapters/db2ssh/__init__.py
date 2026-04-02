@@ -113,7 +113,7 @@ def _parse_db2_output(output: str):
         description.append(name)
 
     rows = []
-    for line in lines[sep_idx + 1:]:
+    for line in lines[sep_idx + 1 :]:
         stripped = line.strip()
         if not stripped:
             continue

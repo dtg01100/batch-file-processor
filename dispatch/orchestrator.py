@@ -26,6 +26,7 @@ from core.structured_logging import (
 from core.utils import normalize_bool, normalize_convert_to_format
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
+from dispatch.feature_flags import get_strict_testing_mode
 from dispatch.interfaces import (
     BackendInterface,
     DatabaseInterface,
@@ -34,7 +35,11 @@ from dispatch.interfaces import (
     ValidatorInterface,
 )
 from dispatch.send_manager import SendManager
-from dispatch.services.file_processor import FileProcessor, FileResult, ProcessingContext
+from dispatch.services.file_processor import (
+    FileProcessor,
+    FileResult,
+    ProcessingContext,
+)
 from dispatch.services.upc_service import UPCLookupService
 
 logger = get_logger(__name__)
@@ -666,7 +671,7 @@ class DispatchOrchestrator:
         run_log: Any,
     ) -> bool:
         """Process split pipeline path. Returns True if split flow was executed."""
-        split_edi = context.effective_folder.get("split_edi", False)
+        split_edi = normalize_bool(context.effective_folder.get("split_edi", False))
         logger.debug(
             "Splitter step: enabled=%s, split_edi=%s",
             bool(self.config.splitter_step),
@@ -963,7 +968,9 @@ class DispatchOrchestrator:
             f"Validation failed for {file_basename}: {result.errors}",
         )
 
-        if not context.effective_folder.get("force_edi_validation", False):
+        if not normalize_bool(
+            context.effective_folder.get("force_edi_validation", False)
+        ):
             return False, current_file
 
         return True, current_file
@@ -1027,11 +1034,11 @@ class DispatchOrchestrator:
 
         """
         enabled = []
-        if folder.get("process_backend_copy"):
+        if normalize_bool(folder.get("process_backend_copy", False)):
             enabled.append(f"Copy: {folder.get('copy_to_directory', 'N/A')}")
-        if folder.get("process_backend_ftp"):
+        if normalize_bool(folder.get("process_backend_ftp", False)):
             enabled.append(f"FTP: {folder.get('ftp_server', 'N/A')}")
-        if folder.get("process_backend_email"):
+        if normalize_bool(folder.get("process_backend_email", False)):
             enabled.append(f"Email: {folder.get('email_to', 'N/A')}")
         return enabled
 

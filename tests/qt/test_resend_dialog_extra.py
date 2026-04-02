@@ -42,7 +42,9 @@ def _make_dialog(qtbot, mock_database_obj, monkeypatch):
         "interface.qt.dialogs.resend_dialog.ResendDialog._check_files_exist_async",
         lambda self: None,
     )
-    monkeypatch.setattr("PyQt5.QtCore.QTimer.singleShot", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "PyQt5.QtCore.QTimer.singleShot", lambda *_args, **_kwargs: None
+    )
 
     dialog = ResendDialog(None, mock_database_obj.database_connection)
     qtbot.addWidget(dialog)

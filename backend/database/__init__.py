@@ -29,11 +29,7 @@ from backend.database.database_obj import (
     DatabaseObj,
     TableProtocol,
 )
-from backend.database.sqlite_wrapper import (
-    Database,
-    Table,
-    connect,
-)
+from backend.database.sqlite_wrapper import Database, Table, connect
 
 __all__ = [
     "Database",

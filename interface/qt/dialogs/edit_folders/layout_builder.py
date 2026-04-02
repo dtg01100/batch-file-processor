@@ -111,8 +111,7 @@ class UILayoutBuilder:
         # QPushButton with setCheckable(True) makes the entire surface clickable.
         self.active_checkbox = QPushButton("Folder Is Disabled")
         self.active_checkbox.setCheckable(True)
-        self.active_checkbox.setStyleSheet(
-            f"""
+        self.active_checkbox.setStyleSheet(f"""
             QPushButton {{
                 background-color: {Theme.ERROR_CONTAINER};
                 color: {Theme.ON_ERROR_CONTAINER};
@@ -122,8 +121,7 @@ class UILayoutBuilder:
                 text-align: left;
                 border: none;
             }}
-        """
-        )
+        """)
         if self.on_update_backend_states:
             self.active_checkbox.toggled.connect(self.on_update_backend_states)
         self.fields["active_checkbutton"] = self.active_checkbox

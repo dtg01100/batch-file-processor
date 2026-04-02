@@ -460,15 +460,13 @@ class TestSchemaBackwardCompatibility:
         db_conn = sqlite_wrapper.Database.connect(db_path)
 
         # Create folders table without plugin_configurations column
-        db_conn.query(
-            """
+        db_conn.query("""
             CREATE TABLE folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 folder_name TEXT,
                 alias TEXT
             )
-        """
-        )
+        """)
 
         # Insert some data
         db_conn["folders"].insert_many(
@@ -515,15 +513,13 @@ class TestSchemaBackwardCompatibility:
         db_conn = sqlite_wrapper.Database.connect(db_path)
 
         # Create folders table with plugin_configurations column
-        db_conn.query(
-            """
+        db_conn.query("""
             CREATE TABLE folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 folder_name TEXT,
                 plugin_configurations TEXT
             )
-        """
-        )
+        """)
 
         # Run ensure_schema - should not fail
         schema.ensure_schema(db_conn)

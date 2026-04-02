@@ -8,13 +8,7 @@ from __future__ import annotations
 from typing import Literal
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QMessageBox,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QVBoxLayout, QWidget
 
 from interface.qt.theme import Theme
 

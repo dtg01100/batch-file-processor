@@ -18,9 +18,9 @@ from core.structured_logging import (
     get_or_create_correlation_id,
     log_file_operation,
 )
+from core.utils import normalize_bool
 from dispatch.error_handler import ErrorHandler
 from dispatch.send_manager import SendManager
-from core.utils import normalize_bool
 
 logger = get_logger(__name__)
 
@@ -199,7 +199,9 @@ class FileProcessor:
         """
         return ProcessingContext(
             folder=folder,
-            effective_folder=effective_folder if effective_folder is not None else folder,
+            effective_folder=(
+                effective_folder if effective_folder is not None else folder
+            ),
             settings={},
             upc_dict=upc_dict,
         )
@@ -263,7 +265,9 @@ class FileProcessor:
         # If conversion failed (i.e., conversion was attempted but produced no output),
         # treat as error. However, when process_edi is False we expect the original
         # file to be sent unchanged — do not mark this as conversion failure.
-        process_edi_flag = normalize_bool(context.effective_folder.get("process_edi", False))
+        process_edi_flag = normalize_bool(
+            context.effective_folder.get("process_edi", False)
+        )
         if conversion_failed and process_edi_flag:
             result.errors.append("No converted output was produced")
             result.sent = False
@@ -331,7 +335,9 @@ class FileProcessor:
                     result.errors.append(errors_or_file)
                 return False, current_file
             # errors_or_file is the (possibly modified) file path on success
-            new_file = errors_or_file if isinstance(errors_or_file, str) else current_file
+            new_file = (
+                errors_or_file if isinstance(errors_or_file, str) else current_file
+            )
             return True, new_file
         except Exception as e:
             logger.exception("Validation error for %s: %s", file_basename, e)
@@ -514,9 +520,7 @@ class FileProcessor:
         # Placeholder - actual rename logic would go here
         return file_path
 
-    def _send_to_backends(
-        self, file_path: str, folder: dict, run_log: Any
-    ) -> bool:
+    def _send_to_backends(self, file_path: str, folder: dict, run_log: Any) -> bool:
         """Send file to all enabled backends via send_manager.
 
         Args:

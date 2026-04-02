@@ -8,11 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
-from core.structured_logging import (
-    get_logger,
-    log_file_operation,
-    log_with_context,
-)
+from core.structured_logging import get_logger, log_file_operation, log_with_context
 
 logger = get_logger(__name__)
 

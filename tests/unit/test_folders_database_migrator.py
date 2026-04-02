@@ -509,14 +509,14 @@ class TestMigrationContents:
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
         # Both folders remain disabled — migration must not flip process_edi.
-        assert folders["Disabled"]["process_edi"] == 0, (
-            "process_edi=0 must not be promoted — disabling a folder is intentional"
-        )
+        assert (
+            folders["Disabled"]["process_edi"] == 0
+        ), "process_edi=0 must not be promoted — disabling a folder is intentional"
         assert folders["Disabled"]["tweak_edi"] == 0
         assert folders["Disabled"]["convert_to_format"] == "csv"
-        assert folders["DisabledEmpty"]["process_edi"] == 0, (
-            "process_edi=0 with no format must remain 0"
-        )
+        assert (
+            folders["DisabledEmpty"]["process_edi"] == 0
+        ), "process_edi=0 with no format must remain 0"
         assert folders["DisabledEmpty"]["tweak_edi"] == 0
         assert folders["DisabledEmpty"]["convert_to_format"] in ("", None)
 
@@ -576,11 +576,22 @@ class TestMigrationVersion48:
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
         # Disabled folders must remain disabled regardless of convert_to_format.
         from core.utils.bool_utils import normalize_bool
-        assert not normalize_bool(folders["A"]["process_edi"]), "disabled with format — must stay disabled"
-        assert not normalize_bool(folders["B"]["process_edi"]), "disabled with format — must stay disabled"
-        assert not normalize_bool(folders["C"]["process_edi"]), "no format — must stay disabled"
-        assert not normalize_bool(folders["D"]["process_edi"]), "do_nothing — must stay disabled"
-        assert normalize_bool(folders["E"]["process_edi"]), "already enabled — must stay enabled"
+
+        assert not normalize_bool(
+            folders["A"]["process_edi"]
+        ), "disabled with format — must stay disabled"
+        assert not normalize_bool(
+            folders["B"]["process_edi"]
+        ), "disabled with format — must stay disabled"
+        assert not normalize_bool(
+            folders["C"]["process_edi"]
+        ), "no format — must stay disabled"
+        assert not normalize_bool(
+            folders["D"]["process_edi"]
+        ), "do_nothing — must stay disabled"
+        assert normalize_bool(
+            folders["E"]["process_edi"]
+        ), "already enabled — must stay enabled"
 
         db_conn.close()
 
@@ -745,9 +756,7 @@ class TestMigrationVersion49to50:
         schema.ensure_schema(db_conn)
 
         db_conn["version"].insert(dict(version="50", os="Linux"))
-        db_conn["folders"].insert(
-            dict(folder_name="/a", alias="A", process_edi=1)
-        )
+        db_conn["folders"].insert(dict(folder_name="/a", alias="A", process_edi=1))
         db_conn["administrative"].insert(dict(id=1, copy_to_directory=""))
         db_conn.commit()
 
@@ -818,9 +827,9 @@ class TestV32UpgradeIntegration:
                 f" WHERE LOWER(CAST({col} AS TEXT)) IN ('true', 'false')"
             )
             count = cur.fetchone()[0]
-            assert count == 0, (
-                f"Column '{col}' still has string boolean values after migration"
-            )
+            assert (
+                count == 0
+            ), f"Column '{col}' still has string boolean values after migration"
 
     def test_disabled_folders_remain_disabled_after_upgrade(self, migrated_db_conn):
         """The 380 originally-disabled folders must not become enabled during migration."""
@@ -855,9 +864,9 @@ class TestV32UpgradeIntegration:
             cur.execute(
                 "SELECT COUNT(*) FROM folders WHERE convert_to_format = ?", (old_name,)
             )
-            assert cur.fetchone()[0] == 0, (
-                f"Display name '{old_name}' still present after migration"
-            )
+            assert (
+                cur.fetchone()[0] == 0
+            ), f"Display name '{old_name}' still present after migration"
 
         # Normalized canonical tokens must be present with correct counts
         expected = {
@@ -871,9 +880,9 @@ class TestV32UpgradeIntegration:
                 "SELECT COUNT(*) FROM folders WHERE convert_to_format = ?", (token,)
             )
             actual = cur.fetchone()[0]
-            assert actual == expected_count, (
-                f"Expected {expected_count} folders with format '{token}', got {actual}"
-            )
+            assert (
+                actual == expected_count
+            ), f"Expected {expected_count} folders with format '{token}', got {actual}"
 
     def test_all_convert_formats_are_supported_after_upgrade(self, migrated_db_conn):
         """Every non-empty convert_to_format value must be a known canonical token."""
@@ -884,14 +893,10 @@ class TestV32UpgradeIntegration:
             "SELECT DISTINCT convert_to_format FROM folders"
             " WHERE convert_to_format IS NOT NULL AND convert_to_format != ''"
         )
-        unknown = [
-            row[0]
-            for row in cur.fetchall()
-            if row[0] not in SUPPORTED_FORMATS
-        ]
-        assert unknown == [], (
-            f"Unsupported format values found after migration: {unknown}"
-        )
+        unknown = [row[0] for row in cur.fetchall() if row[0] not in SUPPORTED_FORMATS]
+        assert (
+            unknown == []
+        ), f"Unsupported format values found after migration: {unknown}"
 
     def test_tweak_edi_cleared_for_all_folders(self, migrated_db_conn):
         """The deprecated tweak_edi flag must be 0 for every folder after migration."""

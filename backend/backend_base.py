@@ -7,6 +7,25 @@ across all backend implementations (email, FTP, HTTP, copy). It handles:
 - File operation logging
 - Backend call logging
 - Connection cleanup in finally blocks
+
+Thread Safety:
+    BackendBase instances are NOT thread-safe. Each backend operation should use
+    its own backend instance. The instance variables (_correlation_id, _counter)
+    are mutated during execute() calls.
+
+    For multi-threaded scenarios:
+    - Create separate backend instances per thread or per operation
+    - Do not share backend instances across concurrent operations
+    - The class constants (MAX_RETRIES, MAX_DELAY, INITIAL_DELAY) are read-only
+
+    Example of thread-safe usage:
+        import threading
+        from backend.email_backend import EmailBackend
+
+        def send_email(file_path):
+            # Each thread creates its own backend instance
+            backend = EmailBackend()
+            backend.send(params, settings, file_path)
 """
 
 import os
@@ -14,11 +33,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any
 
-from core.structured_logging import (
-    get_logger,
-    log_backend_call,
-    log_file_operation,
-)
+from core.structured_logging import get_logger, log_backend_call, log_file_operation
 
 logger = get_logger(__name__)
 
@@ -129,9 +144,7 @@ class BackendBase(ABC):
             start_time = time.perf_counter()
             try:
                 # Execute the actual backend operation
-                result = self._execute(
-                    process_parameters, settings, filename, **kwargs
-                )
+                result = self._execute(process_parameters, settings, filename, **kwargs)
 
                 # Log success
                 duration_ms = (time.perf_counter() - start_time) * 1000
@@ -177,8 +190,12 @@ class BackendBase(ABC):
 
                 # Retry with backoff
                 self._counter += 1
-                delay = 0.001 if self._disable_retry else min(
-                    self.INITIAL_DELAY * (2 ** (self._counter - 1)), self.MAX_DELAY
+                delay = (
+                    0.001
+                    if self._disable_retry
+                    else min(
+                        self.INITIAL_DELAY * (2 ** (self._counter - 1)), self.MAX_DELAY
+                    )
                 )
                 logger.warning(
                     "Encountered an error. Retry number %d: %s",
@@ -189,7 +206,9 @@ class BackendBase(ABC):
                     time.sleep(delay)
 
                 # Prepare for retry
-                self._prepare_for_retry(process_parameters, settings, filename, **kwargs)
+                self._prepare_for_retry(
+                    process_parameters, settings, filename, **kwargs
+                )
 
     def _get_operation_name(self) -> str:
         """Get the operation name for logging.
@@ -282,9 +301,7 @@ class BackendBase(ABC):
         pass
 
     @abstractmethod
-    def _get_endpoint(
-        self, process_parameters: dict, settings: dict
-    ) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get the endpoint for logging.
 
         Args:

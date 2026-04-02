@@ -211,9 +211,9 @@ class TestHiddenImports:
         missing = sorted(
             m for m in app_modules_requiring_bundling if m not in hidden_imports
         )
-        assert not missing, (
-            f"The following modules require explicit hiddenimports: {missing}"
-        )
+        assert (
+            not missing
+        ), f"The following modules require explicit hiddenimports: {missing}"
 
     @pytest.mark.unit
     def test_hiddenimports_includes_all_dispatch_converters(self):

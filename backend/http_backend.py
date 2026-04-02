@@ -99,7 +99,9 @@ class HTTPBackend(BackendBase):
     with injectable client support.
     """
 
-    def __init__(self, http_client: HTTPClientProtocol | None = None, disable_retry: bool = False) -> None:
+    def __init__(
+        self, http_client: HTTPClientProtocol | None = None, disable_retry: bool = False
+    ) -> None:
         """Initialize HTTP backend.
 
         Args:
@@ -210,9 +212,7 @@ class HTTPBackend(BackendBase):
         """Get backend name for logging."""
         return "http"
 
-    def _get_endpoint(
-        self, process_parameters: dict, settings_dict: dict
-    ) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
         """Get HTTP endpoint for logging."""
         return process_parameters.get("http_url", "")
 

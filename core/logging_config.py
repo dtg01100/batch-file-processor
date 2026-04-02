@@ -28,10 +28,7 @@ import sys
 from contextvars import ContextVar
 from typing import IO, Any, Union
 
-from core.structured_logging import (
-    JSONFormatter,
-    StructuredLogAdapter,
-)
+from core.structured_logging import JSONFormatter, StructuredLogAdapter
 
 # ---------------------------------------------------------------------------
 # Module-level constants

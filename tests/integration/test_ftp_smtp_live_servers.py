@@ -18,8 +18,10 @@ from email import message_from_bytes
 from typing import List, Optional
 
 import pytest
+
 try:
     from aiosmtpd.controller import Controller  # type: ignore
+
     AIOSMTPD_AVAILABLE = True
 except Exception:
     AIOSMTPD_AVAILABLE = False
@@ -28,6 +30,7 @@ try:
     from pyftpdlib.authorizers import DummyAuthorizer  # type: ignore
     from pyftpdlib.handlers import FTPHandler  # type: ignore
     from pyftpdlib.servers import FTPServer  # type: ignore
+
     PYFTPDLIB_AVAILABLE = True
 except Exception:
     PYFTPDLIB_AVAILABLE = False

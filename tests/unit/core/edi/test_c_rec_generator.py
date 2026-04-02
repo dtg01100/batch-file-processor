@@ -5,11 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from core.edi.c_rec_generator import (
-    CRecGenerator,
-    CRecordConfig,
-    QueryRunnerProtocol,
-)
+from core.edi.c_rec_generator import CRecGenerator, CRecordConfig, QueryRunnerProtocol
 
 
 class TestCRecGenerator:

@@ -182,7 +182,9 @@ class TestResendDialogFileManagement:
             with patch.object(dialog, "show_info"):
                 dialog._mark_selected_for_resend()
 
-            mock_service.set_resend_flags_batch.assert_called_once_with([10], resend_flag=True)
+            mock_service.set_resend_flags_batch.assert_called_once_with(
+                [10], resend_flag=True
+            )
 
 
 @pytest.mark.qt

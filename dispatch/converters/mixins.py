@@ -79,7 +79,11 @@ class DatabaseConnectionMixin(ABC):
         if self._db_initialized:
             return
 
-        missing_keys = [key for key in required_keys if key not in settings_dict or not settings_dict[key]]
+        missing_keys = [
+            key
+            for key in required_keys
+            if key not in settings_dict or not settings_dict[key]
+        ]
         if missing_keys:
             raise ValueError(
                 f"Missing required database settings: {', '.join(missing_keys)}"

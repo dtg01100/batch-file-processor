@@ -7,6 +7,29 @@ This module provides comprehensive structured logging capabilities including:
 - Structured JSON log output with consistent field names
 - Helper functions for common logging patterns
 
+Thread Safety:
+    This module is thread-safe. Correlation IDs and trace IDs are stored in
+    thread-local storage, ensuring that each thread maintains its own context.
+    The following components are thread-safe:
+
+    - get_correlation_id() / set_correlation_id(): Thread-local storage
+    - get_trace_id() / set_trace_id(): Thread-local storage
+    - get_logger(): Returns standard logging.Logger (thread-safe by design)
+    - redact_sensitive_data(): Pure function, no shared state
+    - All log_* functions: Thread-safe, use thread-local context
+
+    Example of thread-safe usage:
+        import threading
+        from core.structured_logging import set_correlation_id, get_logger
+
+        def worker(thread_id):
+            set_correlation_id(f"corr-{thread_id}")
+            logger = get_logger(__name__)
+            logger.info(f"Thread {thread_id} working")
+
+        # Each thread has its own correlation ID
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(3)]
+
 Usage:
     from core.structured_logging import (
         get_logger,                    # Get logger with structured extras
@@ -772,12 +795,21 @@ def log_backend_call(
 
     # Determine log level based on outcome
     if error:
-        extra["error"] = {"type": type(error).__name__, "message": str(error)}
+        error_message = str(error)
+        # Redact sensitive data from error messages
+        if any(
+            sensitive in error_message.lower()
+            for sensitive in ["password", "secret", "token", "key", "credential"]
+        ):
+            error_message = redact_sensitive_data({"error": error_message}).get(
+                "error", "[REDACTED]"
+            )
+        extra["error"] = {"type": type(error).__name__, "message": error_message}
         logger.error(
             "[BACKEND ERROR] %s %s failed: %s",
             backend_type,
             operation,
-            str(error),
+            error_message,
             extra=extra,
             exc_info=True,
         )

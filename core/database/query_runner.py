@@ -8,8 +8,6 @@ and loose coupling from the underlying database implementation.
 import re
 from typing import Protocol, runtime_checkable
 
-from core.structured_logging import get_logger, log_database_call
-
 _READ_ONLY_SQL_START = {"SELECT", "WITH"}
 _MUTATING_SQL_START = {
     "INSERT",

@@ -9,17 +9,11 @@ from __future__ import annotations
 from typing import Any
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt5.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from interface.operations.maintenance_functions import (
+from interface.operations.maintenance_functions import (  # Toolkit-agnostic business logic
     MaintenanceFunctions,
-)  # Toolkit-agnostic business logic
+)
 from interface.ports import UIServiceProtocol
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme

@@ -417,18 +417,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     try:
         from datetime import datetime as _dt
 
-        from core.utils.date_utils import (
-            dactime_from_datetime as _dfd,
-        )
-        from core.utils.date_utils import (
-            dactime_from_invtime as _dacfi,
-        )
-        from core.utils.date_utils import (
-            datetime_from_dactime as _dfd2,
-        )
-        from core.utils.date_utils import (
-            datetime_from_invtime as _dfi,
-        )
+        from core.utils.date_utils import dactime_from_datetime as _dfd
+        from core.utils.date_utils import dactime_from_invtime as _dacfi
+        from core.utils.date_utils import datetime_from_dactime as _dfd2
+        from core.utils.date_utils import datetime_from_invtime as _dfi
 
         ok("core.utils.date_utils imported")
     except Exception as exc:
@@ -497,18 +489,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     print("[9/14] UPC utilities")
 
     try:
-        from core.edi.upc_utils import (
-            calc_check_digit as _ccd,
-        )
-        from core.edi.upc_utils import (
-            convert_upce_to_upca as _upce2upca,
-        )
-        from core.edi.upc_utils import (
-            pad_upc as _pupc,
-        )
-        from core.edi.upc_utils import (
-            validate_upc as _vupc,
-        )
+        from core.edi.upc_utils import calc_check_digit as _ccd
+        from core.edi.upc_utils import convert_upce_to_upca as _upce2upca
+        from core.edi.upc_utils import pad_upc as _pupc
+        from core.edi.upc_utils import validate_upc as _vupc
 
         ok("core.edi.upc_utils imported")
     except Exception as exc:
@@ -622,27 +606,13 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     print("[10/14] EDI parser")
 
     try:
-        from core.edi.edi_parser import (
-            ARecord,
-        )
-        from core.edi.edi_parser import (
-            build_a_record as _bar,
-        )
-        from core.edi.edi_parser import (
-            build_b_record as _bbr,
-        )
-        from core.edi.edi_parser import (
-            build_c_record as _bcr,
-        )
-        from core.edi.edi_parser import (
-            capture_records as _cr,
-        )
-        from core.edi.edi_parser import (
-            parse_a_record as _par,
-        )
-        from core.edi.edi_parser import (
-            parse_b_record as _pbr,
-        )
+        from core.edi.edi_parser import ARecord
+        from core.edi.edi_parser import build_a_record as _bar
+        from core.edi.edi_parser import build_b_record as _bbr
+        from core.edi.edi_parser import build_c_record as _bcr
+        from core.edi.edi_parser import capture_records as _cr
+        from core.edi.edi_parser import parse_a_record as _par
+        from core.edi.edi_parser import parse_b_record as _pbr
 
         ok("core.edi.edi_parser imported")
     except Exception as exc:
@@ -900,18 +870,10 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     print("[11/14] Hash utilities")
 
     try:
-        from dispatch.hash_utils import (
-            build_hash_dictionaries as _bhd,
-        )
-        from dispatch.hash_utils import (
-            check_file_against_processed as _cfap,
-        )
-        from dispatch.hash_utils import (
-            generate_file_hash as _gfh,
-        )
-        from dispatch.hash_utils import (
-            generate_match_lists as _gml,
-        )
+        from dispatch.hash_utils import build_hash_dictionaries as _bhd
+        from dispatch.hash_utils import check_file_against_processed as _cfap
+        from dispatch.hash_utils import generate_file_hash as _gfh
+        from dispatch.hash_utils import generate_match_lists as _gml
 
         ok("dispatch.hash_utils imported")
     except Exception as exc:
@@ -1063,15 +1025,9 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     print("[12/14] Feature flags")
 
     try:
-        from dispatch.feature_flags import (
-            get_debug_mode as _gdm,
-        )
-        from dispatch.feature_flags import (
-            get_feature_flags as _gff,
-        )
-        from dispatch.feature_flags import (
-            set_feature_flag as _sff,
-        )
+        from dispatch.feature_flags import get_debug_mode as _gdm
+        from dispatch.feature_flags import get_feature_flags as _gff
+        from dispatch.feature_flags import set_feature_flag as _sff
 
         ok("dispatch.feature_flags imported")
     except Exception as exc:
@@ -1310,21 +1266,11 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     print("[14/14] Orchestrator dataclasses and basic orchestration")
 
     try:
-        from dispatch.orchestrator import (
-            DispatchConfig as _DC,
-        )
-        from dispatch.orchestrator import (
-            DispatchOrchestrator as _DO,
-        )
-        from dispatch.orchestrator import (
-            FileResult as _FiR,
-        )
-        from dispatch.orchestrator import (
-            FolderResult as _FR,
-        )
-        from dispatch.orchestrator import (
-            ProcessingContext as _PC,
-        )
+        from dispatch.orchestrator import DispatchConfig as _DC
+        from dispatch.orchestrator import DispatchOrchestrator as _DO
+        from dispatch.orchestrator import FileResult as _FiR
+        from dispatch.orchestrator import FolderResult as _FR
+        from dispatch.orchestrator import ProcessingContext as _PC
 
         ok("dispatch.orchestrator imported")
     except Exception as exc:

@@ -24,11 +24,7 @@ Example:
 from decimal import Decimal
 from typing import Any
 
-from core.utils import (
-    calc_check_digit,
-    convert_UPCE_to_UPCA,
-    safe_int,
-)
+from core.utils import calc_check_digit, convert_UPCE_to_UPCA, safe_int
 
 
 def apply_retail_uom(
@@ -262,4 +258,3 @@ def filter_description(desc: str, *, filter_ampersand: bool = False) -> str:
     if filter_ampersand:
         desc = desc.replace("&", "AND")
     return desc
-

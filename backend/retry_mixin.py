@@ -94,7 +94,9 @@ class BackendRetryMixin:
                     try:
                         cleanup()
                     except Exception as cleanup_error:
-                        logger.debug("Cleanup error in '%s': %s", operation_name, cleanup_error)
+                        logger.debug(
+                            "Cleanup error in '%s': %s", operation_name, cleanup_error
+                        )
 
     def with_logging(
         self,
@@ -115,8 +117,6 @@ class BackendRetryMixin:
             The return value from the operation
 
         """
-        from core.structured_logging import get_logger as get_local_logger
-
         if context is None:
             context = {}
 

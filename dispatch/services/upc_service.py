@@ -8,7 +8,6 @@ dictionaries from the AS400 database. It handles:
 - Error handling with configurable strictness modes
 """
 
-import logging
 from typing import Any
 
 from core.database import QueryRunner
@@ -164,7 +163,9 @@ class UPCLookupService:
             True if strict mode is enabled
 
         """
-        mode = str(self.settings.get("database_lookup_mode", "optional")).strip().lower()
+        mode = (
+            str(self.settings.get("database_lookup_mode", "optional")).strip().lower()
+        )
         return mode in {"strict", "required", "test"}
 
     def _validate_credentials(self) -> bool:
@@ -212,8 +213,7 @@ class UPCLookupService:
             LookupError: If strict mode and query returns no rows
 
         """
-        rows = runner.run_query(
-            """
+        rows = runner.run_query("""
             select
                 dsanrep.anbacd as anbacd,
                 dsanrep.anbbcd as anbbcd,
@@ -222,8 +222,7 @@ class UPCLookupService:
                 strip(dsanrep.anbicd) as anbicd,
                 strip(dsanrep.anbjcd) as anbjcd
             from dacdata.dsanrep dsanrep
-            """
-        )
+            """)
 
         if strict_db_mode and not rows:
             raise LookupError(
