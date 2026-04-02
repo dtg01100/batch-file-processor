@@ -23,6 +23,83 @@ pytestmark = pytest.mark.qt
 from core.constants import CURRENT_DATABASE_VERSION
 
 
+class _StubTable:
+    """Lightweight table stub replacing deprecated FakeTable."""
+
+    def __init__(self, data=None):
+        self._data = list(data or [])
+
+    def find_one(self, **kwargs):
+        for r in self._data:
+            if all(r.get(k) == v for k, v in kwargs.items()):
+                return r
+        return None
+
+    def find(self, **kwargs):
+        kwargs.pop("order_by", None)
+        return [r for r in self._data if all(r.get(k) == v for k, v in kwargs.items())]
+
+    def all(self):
+        return list(self._data)
+
+    def insert(self, record):
+        self._data.append(record)
+        return record.get("id", len(self._data))
+
+    def update(self, record, keys):
+        pass
+
+    def delete(self, **kwargs):
+        pass
+
+    def count(self, **kwargs):
+        return len(self.find(**kwargs))
+
+
+class _StubDB:
+    """Lightweight database stub replacing deprecated FakeDatabaseObj."""
+
+    def __init__(self):
+        self.folders_table = _StubTable()
+        self.oversight_and_defaults = _StubTable()
+        self.processed_files = _StubTable()
+        self.emails_table = _StubTable()
+        self.emails_table_batch = _StubTable()
+        self.sent_emails_removal_queue = _StubTable()
+
+    def get_oversight_or_default(self):
+        return {}
+
+    def get_database(self):
+        return self
+
+
+class _StubMF:
+    """Lightweight maintenance-functions stub replacing deprecated FakeMaintenanceFunctions."""
+
+    def __init__(self, db=None):
+        self._db = db or _StubDB()
+        self._called = set()
+
+    def set_operation_callbacks(self, on_start, on_end):
+        pass
+
+    def get_database(self):
+        return self._db
+
+    def was_called(self, name):
+        return name in self._called
+
+    def call_count(self, name):
+        return 1 if name in self._called else 0
+
+    def clear_queued_emails(self):
+        self._called.add("clear_queued_emails")
+
+    def database_import_wrapper(self, path):
+        self._called.add("database_import_wrapper")
+
+
 # ---------------------------------------------------------------------------
 # EditSettingsDialog - Stress and Edge Cases
 # ---------------------------------------------------------------------------
@@ -640,9 +717,7 @@ class TestFolderListWidgetStress:
     """Stress tests for FolderListWidget."""
 
     def _make_table(self, active=None, inactive=None):
-        from tests.fakes import FakeTable
-
-        table = FakeTable()
+        table = _StubTable()
         active = active or []
         inactive = inactive or []
         all_folders = active + inactive
@@ -1368,10 +1443,8 @@ class TestMaintenanceDialogStress:
     def test_clear_queued_emails_empty_table(self, qtbot):
         """Test clearing queued emails when table is empty."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
-        from tests.fakes import FakeDatabaseObj, FakeMaintenanceFunctions
 
-        fake_db = FakeDatabaseObj()
-        mock_mf = FakeMaintenanceFunctions(database_obj=fake_db)
+        mock_mf = _StubMF()
 
         dialog = MaintenanceDialog(None, mock_mf)
         qtbot.addWidget(dialog)
@@ -1386,10 +1459,8 @@ class TestMaintenanceDialogStress:
     def test_import_old_configurations_no_ui_service(self, qtbot):
         """Test import old configurations without UI service."""
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
-        from tests.fakes import FakeDatabaseObj, FakeMaintenanceFunctions
 
-        fake_db = FakeDatabaseObj()
-        mock_mf = FakeMaintenanceFunctions(database_obj=fake_db)
+        mock_mf = _StubMF()
 
         dialog = MaintenanceDialog(None, mock_mf, ui_service=None)
         qtbot.addWidget(dialog)
