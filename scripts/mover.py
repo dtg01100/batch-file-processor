@@ -1,7 +1,12 @@
 """Database migration utilities.
 
 This module provides utilities for migrating and merging database files.
-It has been refactored to remove tkinter dependencies.
+It has been refactored to remove tkinter dependencies, using callback-based
+progress reporting instead.
+
+Example usage:
+    migrator = DbMigrationThing("/path/to/old.db", "/path/to/new.db")
+    migrator.do_migrate(progress_callback=my_callback)
 """
 
 import os
