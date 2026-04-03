@@ -3,8 +3,10 @@
 This module exposes EDI tweaks as a conversion backend, allowing tweaks
 to be applied through the same module-loading mechanism as other converters.
 
-The tweak functionality is applied by the modern EDITweaker class in
-core.edi.edi_tweaker, which performs various EDI transformations:
+The tweak functionality is applied through BaseEDIConverter's template method
+pattern, delegating transformations to EDITweaker from core.edi.edi_tweaker.
+
+Transformations applied:
 - A-record padding
 - A-record appending
 - Invoice date offsetting
@@ -13,69 +15,114 @@ core.edi.edi_tweaker, which performs various EDI transformations:
 - UPC override from lookup table
 - C-record generation for split prepaid sales tax
 
-The module maintains the standard converter interface with edi_convert() function.
-
 Backward Compatibility:
     The module-level edi_convert() function maintains the same signature
     as other converters: edi_convert(edi_process, output_filename,
     settings_dict, parameters_dict, upc_lut)
 """
 
-from core.edi.edi_tweaker import EDITweaker, _create_query_runner_adapter
+from dispatch.converters.convert_base import BaseEDIConverter, ConversionContext
+from dispatch.converters.mixins import DatabaseConnectionMixin
+from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lut: dict,
-) -> str:
-    """Apply EDI tweaks to a file.
+class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
+    """Converter that applies EDI tweaks using the template method pattern.
 
-    This is the entry point for the conversion backend system. It uses
-    the EDITweaker class from core.edi.edi_tweaker.
-
-    Args:
-        edi_process: Path to input EDI file
-        output_filename: Path to output file (without extension - tweak adds it)
-        settings_dict: Dictionary containing database and app settings
-        parameters_dict: Dictionary containing tweak parameters:
-            - pad_a_records: Whether to pad A records
-            - a_record_padding: Padding text for A records
-            - a_record_padding_length: Length for padding
-            - append_a_records: Whether to append to A records
-            - a_record_append_text: Text to append
-            - invoice_date_custom_format: Use custom date format
-            - invoice_date_custom_format_string: Custom date format string
-            - force_txt_file_ext: Force .txt extension
-            - calculate_upc_check_digit: Calculate UPC check digit
-            - invoice_date_offset: Days to offset invoice date
-            - retail_uom: Convert to retail UOM
-            - override_upc_bool: Override UPC from lookup
-            - override_upc_level: UPC level (1=pack, 2=case)
-            - override_upc_category_filter: Category filter for UPC override
-            - split_prepaid_sales_tax_crec: Split prepaid sales tax
-            - upc_target_length: Target UPC length
-            - upc_padding_pattern: UPC padding pattern
-        upc_lut: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the output file (may include .txt extension if force_txt_file_ext)
-
-    Raises:
-        Exception: Any exception raised by EDITweaker on failure
-
+    This converter extends BaseEDIConverter to process EDI files through
+    the standard template method, delegating record transformations to
+    EDITweaker.
     """
-    # Create query runner adapter from settings
-    query_runner = _create_query_runner_adapter(settings_dict)
 
-    # Create tweaker and apply tweaks
-    tweaker = EDITweaker(query_runner)
-    return tweaker.tweak(
-        edi_process,
-        output_filename,
-        settings_dict,
-        parameters_dict,
-        upc_lut,
-    )
+    def __init__(self) -> None:
+        """Initialize the tweaks converter."""
+        self._tweaker = None
+
+    def _initialize_output(self, context: ConversionContext) -> None:
+        """Initialize output file and EDITweaker instance.
+
+        Args:
+            context: The conversion context
+
+        """
+        from core.edi.edi_tweaker import _create_query_runner_adapter
+
+        config = TweakerConfig.from_params(context.parameters_dict)
+        query_runner = _create_query_runner_adapter(context.settings_dict)
+        self._tweaker = EDITweaker(query_runner, config)
+
+        output_path = context.output_filename
+        if config.force_txt_file_ext:
+            output_path += ".txt"
+
+        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")
+        context.user_data["output_path"] = output_path
+
+    def process_a_record(self, record, context: ConversionContext) -> None:
+        """Process and transform an A record.
+
+        Args:
+            record: The EDIRecord containing A record fields
+            context: The conversion context
+
+        """
+        transformed = self._tweaker._process_a_record(
+            record.fields, context.output_file
+        )
+        context.output_file.write(transformed)
+
+    def process_b_record(self, record, context: ConversionContext) -> None:
+        """Process and transform a B record.
+
+        Args:
+            record: The EDIRecord containing B record fields
+            context: The conversion context
+
+        """
+        transformed = self._tweaker._process_b_record(
+            record.fields, context.output_file, context.upc_lut
+        )
+        context.output_file.write(transformed)
+
+    def process_c_record(self, record, context: ConversionContext) -> None:
+        """Process and transform a C record.
+
+        Args:
+            record: The EDIRecord containing C record fields
+            context: The conversion context
+
+        """
+        transformed = self._tweaker._process_c_record(
+            record.fields, context.output_file
+        )
+        if transformed:
+            context.output_file.write(transformed)
+
+    def _finalize_output(self, context: ConversionContext) -> None:
+        """Close output file.
+
+        Args:
+            context: The conversion context
+
+        """
+        if context.output_file is not None:
+            context.output_file.close()
+            context.output_file = None
+
+    def _get_return_value(self, context: ConversionContext) -> str:
+        """Return the output file path.
+
+        Args:
+            context: The conversion context
+
+        Returns:
+            Path to the tweaked output file
+
+        """
+        return context.user_data.get("output_path", context.output_filename)
+
+
+from .convert_base import create_edi_convert_wrapper
+
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(TweaksConverter, format_name="tweaks")

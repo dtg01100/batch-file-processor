@@ -309,47 +309,9 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename_initial: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lookup: dict,
-) -> str:
-    """Convert EDI file to EStore E-Invoice CSV format with shipper mode support.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates an EStoreEInvoiceConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename_initial: Base path for output file (directory used for output)
-        settings_dict: Application settings dictionary
-        parameters_dict: Conversion parameters with estore_store_number,
-                         estore_Vendor_OId, and estore_vendor_NameVendorOID
-        upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file with eInv prefix and timestamp
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "/output/path/prefix",
-        ...     {},
-        ...     {
-        ...         'estore_store_number': '001',
-        ...         'estore_Vendor_OId': 'VENDOR123',
-        ...         'estore_vendor_NameVendorOID': 'TestVendor'
-        ...     },
-        ...     {123456: ('CAT1', '012345678905', '012345678900')}
-        ... )
-        >>> print(result)
-        '/output/path/eInvTestVendor.20240101120000.csv'
-
-    """
-    converter = EStoreEInvoiceConverter()
-    return converter.edi_convert(
-        edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup
-    )
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    EStoreEInvoiceConverter, format_name="estore_einvoice"
+)

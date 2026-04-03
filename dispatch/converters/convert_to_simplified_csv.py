@@ -211,42 +211,9 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lookup: dict,
-) -> str:
-    """Convert EDI file to simplified CSV format with configurable columns.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates a SimplifiedCSVConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename: Base path for output file (without extension)
-        settings_dict: Application settings dictionary
-        parameters_dict: Conversion parameters (see module docstring for options)
-        upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "output",
-        ...     settings_dict,
-        ...     {'include_headers': 'True', 'simple_csv_sort_order': 'upc_number,qty_of_units'},
-        ...     {123456: ('CAT1', 'upc_pack', 'upc_case')}
-        ... )
-        >>> print(result)
-        'output.csv'
-
-    """
-    converter = SimplifiedCSVConverter()
-    return converter.edi_convert(
-        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
-    )
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    SimplifiedCSVConverter, format_name="simplified_csv"
+)

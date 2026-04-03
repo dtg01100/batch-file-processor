@@ -344,42 +344,7 @@ class CSVConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename: str,
-    settings_dict: dict,
-    parameters_dict: dict,
-    upc_lut: dict,
-) -> str:
-    """Convert EDI file to CSV format with configurable options.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates a CSVConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename: Base path for output file (without extension)
-        settings_dict: Application settings dictionary
-        parameters_dict: Conversion parameters (see module docstring for options)
-        upc_lut: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "output",
-        ...     settings_dict,
-        ...     {'include_headers': 'True', 'include_c_records': 'False'},
-        ...     {123456: ('CAT1', 'upc_pack', 'upc_case')}
-        ... )
-        >>> print(result)
-        'output.csv'
-
-    """
-    converter = CSVConverter()
-    return converter.edi_convert(
-        edi_process, output_filename, settings_dict, parameters_dict, upc_lut
-    )
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(CSVConverter, format_name="csv")

@@ -462,49 +462,9 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
+from .convert_base import create_edi_convert_wrapper
 
-def edi_convert(
-    edi_process: str,
-    output_filename_initial: str,
-    settings_dict: dict[str, Any],
-    parameters_dict: dict[str, Any],
-    upc_lookup: dict[int, tuple],
-) -> str:
-    """Convert EDI file to EStore E-Invoice Generic CSV format.
-
-    This is the original function signature maintained for backward compatibility.
-    It simply creates an EStoreEInvoiceGenericConverter instance and delegates to it.
-
-    Args:
-        edi_process: Path to the input EDI file
-        output_filename_initial: Base path for output file (directory used for output)
-        settings_dict: Application settings dictionary with DB credentials
-        parameters_dict: Conversion parameters with estore_store_number,
-                         estore_Vendor_OId, estore_vendor_NameVendorOID,
-                         and estore_c_record_OID
-        upc_lookup: UPC lookup table (item_number -> (category, upc_pack, upc_case))
-
-    Returns:
-        Path to the generated CSV file with eInv prefix and timestamp
-
-    Example:
-        >>> result = edi_convert(
-        ...     "input.edi",
-        ...     "/output/path/prefix",
-        ...     {'as400_username': 'user', 'as400_password': 'pass', ...},
-        ...     {
-        ...         'estore_store_number': '001',
-        ...         'estore_Vendor_OId': 'VENDOR123',
-        ...         'estore_vendor_NameVendorOID': 'TestVendor',
-        ...         'estore_c_record_OID': 'CHARGE001'
-        ...     },
-        ...     {123456: ('CAT1', '012345678905', '012345678900')}
-        ... )
-        >>> print(result)
-        '/output/path/eInvTestVendor.20240101120000.csv'
-
-    """
-    converter = EStoreEInvoiceGenericConverter()
-    return converter.edi_convert(
-        edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup
-    )
+# Auto-generated wrapper using the standard template
+edi_convert = create_edi_convert_wrapper(
+    EStoreEInvoiceGenericConverter, format_name="estore_einvoice_generic"
+)
