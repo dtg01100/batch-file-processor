@@ -108,12 +108,37 @@ class FolderResult:
 
 
 class _ValidatorAdapter:
-    """Adapts a ValidatorInterface (.validate()) to the pipeline step execute() interface."""
+    """Adapts a ValidatorInterface (.validate()) to the pipeline step execute() interface.
+
+    This wrapper allows legacy validators that expose a .validate() method
+    to be used uniformly by the FileProcessor service, which expects
+    pipeline steps to expose an .execute() method.
+
+    Attributes:
+        _validator: The wrapped ValidatorInterface instance.
+
+    """
 
     def __init__(self, validator: Any) -> None:
+        """Initialize the adapter with a legacy validator.
+
+        Args:
+            validator: A ValidatorInterface instance with a .validate() method.
+
+        """
         self._validator = validator
 
     def execute(self, file_path: str, folder: dict) -> tuple[bool, list]:
+        """Execute the validation via the legacy .validate() method.
+
+        Args:
+            file_path: Path to the file to validate.
+            folder: Folder configuration dictionary (unused by legacy validators).
+
+        Returns:
+            Tuple of (success: bool, errors: list) from the validation.
+
+        """
         return self._validator.validate(file_path)
 
 
@@ -181,12 +206,16 @@ class DispatchOrchestrator:
         """Process a single folder via the pipeline path.
 
         Args:
-            folder: Folder configuration dictionary
-            run_log: Run log for recording processing activity
-            processed_files: Optional database of already processed files
+            folder: Folder configuration dictionary.
+            run_log: Run log for recording processing activity.
+            processed_files: Optional database of already processed files.
+            pre_discovered_files: Optional list of files already discovered
+                (skips file discovery if provided).
+            folder_num: Current folder index (1-based) for progress reporting.
+            folder_total: Total number of folders for progress reporting.
 
         Returns:
-            FolderResult with processing outcome
+            FolderResult with processing outcome.
 
         """
         correlation_id = get_or_create_correlation_id()
@@ -232,13 +261,17 @@ class DispatchOrchestrator:
         """Process folder using new pipeline steps.
 
         Args:
-            folder: Folder configuration dictionary
-            run_log: Run log for recording processing activity
-            processed_files: Optional database of already processed files
-            upc_dict: UPC dictionary for lookup
+            folder: Folder configuration dictionary.
+            run_log: Run log for recording processing activity.
+            processed_files: Optional database of already processed files.
+            upc_dict: UPC dictionary for lookup.
+            pre_discovered_files: Optional list of files already discovered
+                (skips file discovery if provided).
+            folder_num: Current folder index (1-based) for progress reporting.
+            folder_total: Total number of folders for progress reporting.
 
         Returns:
-            FolderResult with processing outcome
+            FolderResult with processing outcome.
 
         """
         result = FolderResult(
@@ -375,7 +408,21 @@ class DispatchOrchestrator:
         result: FolderResult,
         total_files: int,
     ) -> None:
-        """Process all files in folder and update result counters in place."""
+        """Process all files in folder and update result counters in place.
+
+        Iterates through the file list, processing each via the pipeline
+        and accumulating success/failure counts in the result object.
+
+        Args:
+            files: List of file paths to process.
+            folder: Folder configuration dictionary.
+            effective_upc_dict: UPC lookup dictionary.
+            processed_files: Database table for tracking processed files.
+            run_log: Run log for recording processing activity.
+            result: FolderResult object to update (mutated in place).
+            total_files: Total file count for progress reporting.
+
+        """
         for idx, file_path in enumerate(files):
             if self.config.progress_reporter:
                 self.config.progress_reporter.update_file(idx + 1, total_files)
@@ -395,7 +442,15 @@ class DispatchOrchestrator:
                 result.errors.extend(file_result.errors)
 
     def _finalize_folder_result(self, result: FolderResult) -> None:
-        """Finalize folder result and notify progress reporter."""
+        """Finalize folder result and notify progress reporter.
+
+        Sets the success flag based on whether any files failed, and
+        notifies the progress reporter that the folder is complete.
+
+        Args:
+            result: FolderResult object to finalize (mutated in place).
+
+        """
         result.success = result.files_failed == 0
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(success=result.success)
@@ -403,7 +458,17 @@ class DispatchOrchestrator:
     def _folder_not_found_result(
         self, folder_path: str, run_log: Any, result: FolderResult
     ) -> FolderResult:
-        """Create error result for missing folder."""
+        """Create error result for missing folder.
+
+        Args:
+            folder_path: Path to the folder that was not found.
+            run_log: Run log to record the error message.
+            result: FolderResult to populate with error details.
+
+        Returns:
+            The updated FolderResult with success=False and files_failed=1.
+
+        """
         error_msg = f"Folder not found: {folder_path}"
         result.errors.append(error_msg)
         result.success = False
@@ -456,7 +521,19 @@ class DispatchOrchestrator:
         folder_num: int | None,
         folder_total: int | None,
     ) -> None:
-        """Initialize progress reporter for folder processing."""
+        """Initialize progress reporter for folder processing.
+
+        Calls the progress reporter's start_folder method with folder alias
+        and file counts. Handles both old and new progress reporter interfaces
+        (with/without folder_num and folder_total parameters).
+
+        Args:
+            folder: Folder configuration dictionary containing 'alias' or 'folder_name'.
+            total_files: Number of files to process in this folder.
+            folder_num: Current folder index (1-based), if available.
+            folder_total: Total number of folders to process, if available.
+
+        """
         if not self.config.progress_reporter:
             return
 
@@ -544,7 +621,20 @@ class DispatchOrchestrator:
         result: FileResult,
         run_log: Any,
     ) -> None:
-        """Execute core file pipeline and update result in place."""
+        """Execute core file pipeline and update result in place.
+
+        Runs the file through checksum calculation, validation, splitting
+        (if enabled), conversion, tweaking, and sending stages. The result
+        object is mutated in place to reflect processing outcomes.
+
+        Args:
+            file_path: Absolute path to the file being processed.
+            file_basename: Base name of the file (for logging).
+            context: ProcessingContext containing settings and temp tracking.
+            result: FileResult to update (mutated in place).
+            run_log: Optional run log for recording processing activity.
+
+        """
         result.checksum = self._calculate_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
         current_file = file_path
