@@ -413,7 +413,9 @@ class CRecGenerator:
         self._invoice_number = invoice_number
         self.unappended_records = True
 
-    def fetch_splitted_sales_tax_totals(self, write_func: Callable[[str], None]) -> None:
+    def fetch_splitted_sales_tax_totals(
+        self, write_func: Callable[[str], None]
+    ) -> None:
         """Fetch and write split sales tax totals as C records.
 
         Queries the database for prepaid and non-prepaid sales tax amounts
