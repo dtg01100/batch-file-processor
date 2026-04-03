@@ -51,6 +51,9 @@ This folder collects all workspace-scoped SKILL.md workflows for common Batch Fi
 - `create-instructions.SKILL.md`
   - Capture chat->instruction file workflow and persist agent customization rules.
 
+- `test-strategy-wizard.SKILL.md`
+  - Test marker and fixture selection based on code change scope and type.
+
 ## Usage
 
 1. Pick the matching skill file for your change.
