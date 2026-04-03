@@ -21,13 +21,13 @@ Example:
 
 """
 
-import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from core.structured_logging import get_logger
 from core.utils import calc_check_digit, convert_UPCE_to_UPCA, safe_int
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def apply_retail_uom(
