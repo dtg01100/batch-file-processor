@@ -142,7 +142,7 @@ def folder_manager(workspace):
 
 
 @pytest.fixture
-def test_folder(workspace, folder_manager):
+def configured_folder(workspace, folder_manager):
     """Create a test folder with basic configuration."""
     folder_path = str(workspace["input_folder"])
 
@@ -304,7 +304,7 @@ class TestBasicProcessingFlow:
     """Test the basic folder processing workflow."""
 
     def test_initial_run_processes_files(
-        self, workspace, test_folder, orchestrator, sample_edi_content
+        self, workspace, configured_folder, orchestrator, sample_edi_content
     ):
         """Test that initial run processes EDI files correctly."""
         # Create test EDI file in input folder
@@ -317,7 +317,7 @@ class TestBasicProcessingFlow:
 
         # Run dispatch
         result = run_dispatch(
-            orchestrator["orchestrator"], test_folder["folder"], workspace["db"]
+            orchestrator["orchestrator"], configured_folder["folder"], workspace["db"]
         )
 
         # Verify processing results
@@ -340,7 +340,7 @@ class TestBasicProcessingFlow:
         assert updated_folder["folder_is_active"] == 0, "Folder should be inactive"
 
     def test_duplicate_detection(
-        self, workspace, test_folder, orchestrator, sample_edi_content
+        self, workspace, configured_folder, orchestrator, sample_edi_content
     ):
         """Test that duplicate files are detected and skipped."""
         # Create and process a file
@@ -353,7 +353,7 @@ class TestBasicProcessingFlow:
         workspace["db"].processed_files.insert(
             {
                 "file_name": str(test_file),
-                "folder_id": test_folder["folder_id"],
+                "folder_id": configured_folder["folder_id"],
                 "md5": file_hash,
                 "processed_at": datetime.now().isoformat(),
                 "resend_flag": 0,
@@ -373,9 +373,9 @@ class TestBasicProcessingFlow:
 class TestFolderConfigurationChanges:
     """Test modifying folder settings and verifying behavior changes."""
 
-    def test_change_convert_to_format(self, workspace, test_folder, orchestrator):
+    def test_change_convert_to_format(self, workspace, configured_folder, orchestrator):
         """Test changing convert_to_format setting."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Change conversion format to fintech
         workspace["db"].folders_table.update(
@@ -392,9 +392,9 @@ class TestFolderConfigurationChanges:
             updated_folder["convert_to_format"] == "fintech"
         ), "Format should be changed to fintech"
 
-    def test_toggle_edi_processing(self, workspace, test_folder):
+    def test_toggle_edi_processing(self, workspace, configured_folder):
         """Test toggling EDI processing on/off."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Disable EDI processing
         workspace["db"].folders_table.update(
@@ -422,9 +422,9 @@ class TestFolderConfigurationChanges:
         updated_folder = get_folder_config(workspace["db"], folder_id)
         assert updated_folder["process_edi"] == 1, "EDI processing should be enabled"
 
-    def test_update_copy_destination(self, workspace, test_folder):
+    def test_update_copy_destination(self, workspace, configured_folder):
         """Test changing copy backend destination."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Create new output directory
         new_output = workspace["workspace"] / "new_output"
@@ -454,7 +454,7 @@ class TestFolderConfigurationChanges:
 class TestResendWorkflow:
     """Test the resend flag workflow for reprocessing files."""
 
-    def test_mark_file_for_resend(self, workspace, test_folder, sample_edi_content):
+    def test_mark_file_for_resend(self, workspace, configured_folder, sample_edi_content):
         """Test marking a file for resend via database."""
         # Create and process a file first
         test_file = workspace["input_folder"] / "invoice_001.edi"
@@ -466,7 +466,7 @@ class TestResendWorkflow:
         record_id = workspace["db"].processed_files.insert(
             {
                 "file_name": str(test_file),
-                "folder_id": test_folder["folder_id"],
+                "folder_id": configured_folder["folder_id"],
                 "md5": file_hash,
                 "processed_at": datetime.now().isoformat(),
                 "resend_flag": 0,
@@ -492,7 +492,7 @@ class TestResendWorkflow:
         assert updated_record["resend_flag"] == 1, "Resend flag should be set to 1"
 
     def test_resend_flag_bypasses_duplicate_detection(
-        self, workspace, test_folder, sample_edi_content
+        self, workspace, configured_folder, sample_edi_content
     ):
         """Test that resend_flag allows reprocessing of already-processed files."""
         # Create and initially process a file
@@ -505,7 +505,7 @@ class TestResendWorkflow:
         workspace["db"].processed_files.insert(
             {
                 "file_name": str(test_file),
-                "folder_id": test_folder["folder_id"],
+                "folder_id": configured_folder["folder_id"],
                 "md5": file_hash,
                 "processed_at": datetime.now().isoformat(),
                 "resend_flag": 0,
@@ -533,14 +533,14 @@ class TestResendWorkflow:
         # (ProcessedFilesTracker requires a different database interface)
         resend_records = list(
             workspace["db"].processed_files.find(
-                folder_id=test_folder["folder_id"], resend_flag=1
+                folder_id=configured_folder["folder_id"], resend_flag=1
             )
         )
 
         # Should find the file marked for resend
         assert len(resend_records) == 1, "Should find exactly one resend record"
 
-    def test_clear_resend_flag(self, workspace, test_folder, sample_edi_content):
+    def test_clear_resend_flag(self, workspace, configured_folder, sample_edi_content):
         """Test clearing the resend flag after reprocessing."""
         # Create, process, mark for resend, then clear
         test_file = workspace["input_folder"] / "invoice_001.edi"
@@ -552,7 +552,7 @@ class TestResendWorkflow:
         record_id = workspace["db"].processed_files.insert(
             {
                 "file_name": str(test_file),
-                "folder_id": test_folder["folder_id"],
+                "folder_id": configured_folder["folder_id"],
                 "md5": file_hash,
                 "processed_at": datetime.now().isoformat(),
                 "resend_flag": 1,
@@ -582,9 +582,9 @@ class TestResendWorkflow:
 class TestEDITweakingAndSplitting:
     """Test EDI tweaking and splitting features."""
 
-    def test_date_offset_tweak(self, workspace, test_folder):
+    def test_date_offset_tweak(self, workspace, configured_folder):
         """Test invoice_date_offset tweak."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Enable tweaking with date offset
         workspace["db"].folders_table.update(
@@ -601,9 +601,9 @@ class TestEDITweakingAndSplitting:
         assert folder["tweak_edi"] == 1, "Tweaking should be enabled"
         assert folder["invoice_date_offset"] == 7, "Date offset should be 7"
 
-    def test_ampersand_filter(self, workspace, test_folder):
+    def test_ampersand_filter(self, workspace, configured_folder):
         """Test filter_ampersand setting."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Enable ampersand filtering
         workspace["db"].folders_table.update(
@@ -618,9 +618,9 @@ class TestEDITweakingAndSplitting:
         folder = get_folder_config(workspace["db"], folder_id)
         assert folder["filter_ampersand"] == 1, "Ampersand filter should be enabled"
 
-    def test_category_split_config(self, workspace, test_folder):
+    def test_category_split_config(self, workspace, configured_folder):
         """Test split_edi with category filter configuration."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Configure category splitting
         workspace["db"].folders_table.update(
@@ -643,9 +643,9 @@ class TestEDITweakingAndSplitting:
             folder["split_edi_filter_mode"] == "include"
         ), "Filter mode should be include"
 
-    def test_pad_a_records_config(self, workspace, test_folder):
+    def test_pad_a_records_config(self, workspace, configured_folder):
         """Test pad_a_records configuration."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Configure A-record padding
         workspace["db"].folders_table.update(
@@ -673,9 +673,9 @@ class TestEDITweakingAndSplitting:
 class TestBackendVariations:
     """Test different backend configurations."""
 
-    def test_email_backend_config(self, workspace, test_folder):
+    def test_email_backend_config(self, workspace, configured_folder):
         """Test email backend configuration."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Configure email backend
         workspace["db"].folders_table.update(
@@ -693,9 +693,9 @@ class TestBackendVariations:
         assert folder["process_backend_email"] == 1, "Email backend should be enabled"
         assert folder["email_to"] == "test@example.com", "Email recipient should be set"
 
-    def test_ftp_backend_config(self, workspace, test_folder):
+    def test_ftp_backend_config(self, workspace, configured_folder):
         """Test FTP backend configuration."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Configure FTP backend
         workspace["db"].folders_table.update(
@@ -717,9 +717,9 @@ class TestBackendVariations:
         assert folder["ftp_server"] == "ftp.example.com", "FTP server should be set"
         assert folder["ftp_port"] == 21, "FTP port should be set"
 
-    def test_multiple_backends_enabled(self, workspace, test_folder):
+    def test_multiple_backends_enabled(self, workspace, configured_folder):
         """Test enabling multiple backends simultaneously."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # Create additional directories for backends
         email_output = workspace["workspace"] / "email_output"
@@ -748,9 +748,9 @@ class TestBackendVariations:
         assert folder["process_backend_email"] == 1, "Email backend should be enabled"
         assert folder["process_backend_ftp"] == 1, "FTP backend should be enabled"
 
-    def test_backend_disabled_toggle(self, workspace, test_folder):
+    def test_backend_disabled_toggle(self, workspace, configured_folder):
         """Test toggling backend off."""
-        folder_id = test_folder["folder_id"]
+        folder_id = configured_folder["folder_id"]
 
         # First enable copy backend
         workspace["db"].folders_table.update(
@@ -933,11 +933,11 @@ class TestFullIntegrationWorkflow:
 class TestEdgeCasesAndErrorHandling:
     """Test edge cases and error handling scenarios."""
 
-    def test_empty_input_folder(self, workspace, test_folder, orchestrator):
+    def test_empty_input_folder(self, workspace, configured_folder, orchestrator):
         """Test processing with no files in input folder."""
         # Run dispatch on empty folder
         result = run_dispatch(
-            orchestrator["orchestrator"], test_folder["folder"], workspace["db"]
+            orchestrator["orchestrator"], configured_folder["folder"], workspace["db"]
         )
 
         # Should complete without error but process 0 files

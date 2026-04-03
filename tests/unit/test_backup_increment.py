@@ -23,14 +23,14 @@ class TestDoBackup:
             shutil.rmtree(temp_path)
 
     @pytest.fixture
-    def test_file(self, temp_dir):
+    def source_file_to_backup(self, temp_dir):
         """Create a test file to backup."""
-        file_path = os.path.join(temp_dir, "test_file.txt")
+        file_path = os.path.join(temp_dir, "source_file_to_backup.txt")
         with open(file_path, "w") as f:
             f.write("test content")
         return file_path
 
-    def test_do_backup_creates_backup_directory(self, temp_dir, test_file):
+    def test_do_backup_creates_backup_directory(self, temp_dir, source_file_to_backup):
         """Test that backup creates a 'backups' directory."""
         # Remove any existing backups directory
         backups_dir = os.path.join(temp_dir, "backups")
@@ -38,46 +38,46 @@ class TestDoBackup:
             shutil.rmtree(backups_dir)
 
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            backup_increment.do_backup(test_file)
+            backup_increment.do_backup(source_file_to_backup)
 
         assert os.path.exists(backups_dir)
         assert os.path.isdir(backups_dir)
 
-    def test_do_backup_creates_bak_file(self, temp_dir, test_file):
+    def test_do_backup_creates_bak_file(self, temp_dir, source_file_to_backup):
         """Test that backup creates a .bak file."""
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            result = backup_increment.do_backup(test_file)
+            result = backup_increment.do_backup(source_file_to_backup)
 
         assert os.path.exists(result)
-        # Filename includes timestamp after .bak, e.g., test_file.txt.bak-Thu...
+        # Filename includes timestamp after .bak, e.g., source_file_to_backup.txt.bak-Thu...
         assert ".bak-" in result
 
-    def test_do_backup_returns_correct_path(self, temp_dir, test_file):
+    def test_do_backup_returns_correct_path(self, temp_dir, source_file_to_backup):
         """Test that do_backup returns the correct backup path."""
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            result = backup_increment.do_backup(test_file)
+            result = backup_increment.do_backup(source_file_to_backup)
 
         expected_dir = os.path.join(temp_dir, "backups")
         assert expected_dir in result
-        assert os.path.basename(test_file) in result
+        assert os.path.basename(source_file_to_backup) in result
 
-    def test_do_backup_file_content_matches(self, temp_dir, test_file):
+    def test_do_backup_file_content_matches(self, temp_dir, source_file_to_backup):
         """Test that backup file has the same content as original."""
-        with open(test_file, "r") as f:
+        with open(source_file_to_backup, "r") as f:
             original_content = f.read()
 
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            result = backup_increment.do_backup(test_file)
+            result = backup_increment.do_backup(source_file_to_backup)
 
         with open(result, "r") as f:
             backup_content = f.read()
 
         assert backup_content == original_content
 
-    def test_do_backup_calls_clear_old_files(self, temp_dir, test_file):
+    def test_do_backup_calls_clear_old_files(self, temp_dir, source_file_to_backup):
         """Test that do_backup calls utils.do_clear_old_files."""
         with patch("scripts.backup_increment.utils.do_clear_old_files") as mock_clear:
-            backup_increment.do_backup(test_file)
+            backup_increment.do_backup(source_file_to_backup)
 
             mock_clear.assert_called_once()
             # Verify it was called with the backups directory and max files = 50
@@ -85,12 +85,12 @@ class TestDoBackup:
             assert call_args[0][1] == 50  # maximum_files
 
     def test_do_backup_handles_existing_backup_folder_as_file(
-        self, temp_dir, test_file
+        self, temp_dir, source_file_to_backup
     ):
         """Test backup handles case where backups name exists as a file."""
         # First backup creates the directory
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            backup_increment.do_backup(test_file)
+            backup_increment.do_backup(source_file_to_backup)
 
         # Remove the backup directory and create a file with that name
         backups_dir = os.path.join(temp_dir, "backups")
@@ -102,20 +102,20 @@ class TestDoBackup:
 
         # Second backup should handle this by creating "backups1" directory
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            second_result = backup_increment.do_backup(test_file)
+            second_result = backup_increment.do_backup(source_file_to_backup)
 
         # Should create backups1 directory
         assert os.path.exists(second_result)
         assert "backups1" in second_result
 
-    def test_do_backup_increments_suffix(self, temp_dir, test_file):
+    def test_do_backup_increments_suffix(self, temp_dir, source_file_to_backup):
         """Test backup increments numeric suffix when directories exist."""
         # Create multiple backup scenarios
         os.path.join(temp_dir, "backups")
 
         # First run creates "backups" directory
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            first_result = backup_increment.do_backup(test_file)
+            first_result = backup_increment.do_backup(source_file_to_backup)
 
         # Clean up the backup but leave the directory
         if os.path.exists(first_result):
@@ -123,14 +123,14 @@ class TestDoBackup:
 
         # Second run should find "backups" is a directory and use it
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            second_result = backup_increment.do_backup(test_file)
+            second_result = backup_increment.do_backup(source_file_to_backup)
 
         assert os.path.exists(second_result)
 
-    def test_do_backup_timestamp_in_filename(self, temp_dir, test_file):
+    def test_do_backup_timestamp_in_filename(self, temp_dir, source_file_to_backup):
         """Test that backup filename contains a timestamp."""
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
-            result = backup_increment.do_backup(test_file)
+            result = backup_increment.do_backup(source_file_to_backup)
 
         # Filename should contain .bak-
         assert ".bak-" in result
