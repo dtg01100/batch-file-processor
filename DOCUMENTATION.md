@@ -153,12 +153,12 @@ The primary GUI application providing:
 - **Settings Configuration**: Global settings for email, AS400 connection, etc.
 
 **Key Classes:**
-- [`DatabaseObj`](interface.py:63) - Database connection wrapper with table accessors
+- [`DatabaseObj`](backend/database/database_obj.py) line 83 - Database connection wrapper with table accessors
 
 **Key Functions:**
-- [`add_folder()`](interface.py:261) - Add new folder with default settings
-- [`batch_add_folders()`](interface.py:335) - Bulk add multiple directories
-- [`send_single()`](interface.py:387) - Process a single folder
+- [`add_folder()`](interface/operations/folder_manager.py) line 151 - Add new folder with default settings
+- [`batch_add_folders()`](interface/operations/folder_manager.py) line 491 - Bulk add multiple directories
+- [`_send_single()`](interface/qt/app.py) line 412 - Process a single folder
 
 ### dispatch.py
 
@@ -169,9 +169,9 @@ The core processing engine containing:
 - **Backend Dispatch**: Routes files to appropriate backend modules
 
 **Key Functions:**
-- [`process()`](dispatch.py:81) - Main processing loop for all active folders
-- [`generate_file_hash()`](dispatch.py:37) - Calculate MD5 checksum with retry logic
-- [`generate_match_lists()`](dispatch.py:23) - Build lookup structures for processed files
+- [`process()`](dispatch/orchestrator.py) line 1683 - Main processing loop for all active folders
+- [`generate_file_hash()`](dispatch/hash_utils.py) line 42 - Calculate MD5 checksum with retry logic
+- [`generate_match_lists()`](dispatch/hash_utils.py) line 16 - Build lookup structures for processed files
 
 ---
 
