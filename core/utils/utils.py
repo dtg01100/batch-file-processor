@@ -15,6 +15,7 @@ New code should import directly from the core modules.
 import os
 from datetime import datetime
 from decimal import Decimal
+from typing import Callable
 
 MAX_A_RECORD_COUNT = 700
 
@@ -38,34 +39,27 @@ from core.utils.date_utils import datetime_from_invtime  # noqa: F401
 logger = get_logger(__name__)
 
 
-# ============================================================================
-# Backward Compatibility Re-exports
-# ============================================================================
-# These imports allow existing code to continue importing from utils.py
-# New code should import directly from core modules
-
-# Note: date functions are imported above
-# Note: capture_records, _get_default_parser are imported above
-# Note: calc_check_digit, convert_UPCE_to_UPCA are imported above
-
-
-# ============================================================================
-# Data Transformation Functions (not yet migrated to core)
-# Note: dactime_from_datetime, datetime_from_dactime, datetime_from_invtime,
-# dactime_from_invtime are now imported from core.utils.date_utils
-
-
-# Note: _get_default_parser and capture_records are now imported from core.edi.edi_parser
-
-# Note: calc_check_digit and convert_UPCE_to_UPCA are now imported from core.edi.upc_utils
-
-
-# Note: dac_str_int_to_int, convert_to_price, convert_to_price_decimal
-# are now imported from core.edi.edi_transformer
-
-
 def _col_to_excel(col: int) -> str:
-    """Convert a 1-based column index to Excel letters."""
+    """Convert a 1-based column index to Excel column letters.
+
+    Uses a base-26 conversion algorithm where 1->A, 2->B, ..., 26->Z,
+    27->AA, 28->AB, etc.
+
+    Args:
+        col: 1-based column index (must be positive).
+
+    Returns:
+        Excel-style column letter(s), e.g., "A", "Z", "AA", "AB".
+
+    Examples:
+        >>> _col_to_excel(1)
+        'A'
+        >>> _col_to_excel(26)
+        'Z'
+        >>> _col_to_excel(27)
+        'AA'
+
+    """
     excel_col = ""
     div = col
     while div:
@@ -82,7 +76,25 @@ def _build_split_file_metadata(
     *,
     prepend_date_files: bool,
 ) -> tuple[str, str, str]:
-    """Build output path and filename metadata for a split EDI invoice."""
+    """Build output path and filename metadata for a split EDI invoice.
+
+    Constructs the output file path and name components for a single
+    invoice extracted from a multi-invoice EDI file. The filename includes
+    an Excel-style column letter prefix (A, B, C, ...) and optionally
+    the invoice date.
+
+    Args:
+        line_dict: Parsed A record fields containing invoice metadata.
+        count: Invoice sequence number (1-based) within the EDI file.
+        edi_process: Path to the original EDI file being processed.
+        work_directory: Directory where split output files are written.
+        prepend_date_files: If True, prefix filenames with formatted invoice date.
+
+    Returns:
+        Tuple of (output_file_path, file_name_prefix, file_name_suffix)
+        where suffix is ".cr" for credit invoices or ".inv" for regular.
+
+    """
     prepend_letters = _col_to_excel(count)
     file_name_suffix = ".cr" if int(line_dict["invoice_total"]) < 0 else ".inv"
 
@@ -100,7 +112,15 @@ def _build_split_file_metadata(
 
 
 def _count_total_lines(file_paths: list[str]) -> int:
-    """Count total lines across multiple files."""
+    """Count total lines across multiple files.
+
+    Args:
+        file_paths: List of file paths to count lines in.
+
+    Returns:
+        Total number of lines across all files.
+
+    """
     total_lines = 0
     for file_path in file_paths:
         with open(file_path, encoding="utf-8") as file_handle:
@@ -114,7 +134,22 @@ def _validate_split_counts(
     edi_send_list: list[tuple[str, str, str]],
     a_record_count: int,
 ) -> None:
-    """Validate that split output file counts match the source input."""
+    """Validate that split output file counts match the source input.
+
+    Ensures data integrity by verifying that all lines from the input
+    EDI file were written to output files and that the number of A records
+    matches the number of output files.
+
+    Args:
+        lines_in_edi: Total line count in the original EDI file.
+        write_counter: Total lines written to all output files.
+        edi_send_list: List of (output_path, prefix, suffix) tuples for split files.
+        a_record_count: Number of A records (invoices) in the original file.
+
+    Raises:
+        Exception: If line counts or A record counts don't match expectations.
+
+    """
     output_paths = [output_file for output_file, _, _ in edi_send_list]
     edi_send_list_lines = _count_total_lines(output_paths)
 
@@ -135,7 +170,27 @@ def _write_split_edi_files(
     *,
     prepend_date_files: bool,
 ) -> tuple[list[tuple[str, str, str]], int]:
-    """Write split invoice files and return metadata list with written line count."""
+    """Write split invoice files and return metadata list with written line count.
+
+    Iterates through EDI lines, creating a new output file for each A record
+    (invoice header) and writing subsequent B/C records to that file until
+    the next A record is encountered.
+
+    Args:
+        work_file_lined: All lines from the input EDI file.
+        edi_process: Path to the original EDI file (used for basename).
+        work_directory: Directory where split output files are written.
+        prepend_date_files: If True, prefix filenames with formatted invoice date.
+
+    Returns:
+        Tuple of (edi_send_list, write_counter) where edi_send_list is a list
+        of (output_path, prefix, suffix) tuples and write_counter is total
+        lines written across all output files.
+
+    Raises:
+        ValueError: If no A record is found before data lines, or if file has no A records.
+
+    """
     f = None
     count = 0
     write_counter = 0
@@ -184,10 +239,29 @@ def _write_split_edi_files(
     return edi_send_list, write_counter
 
 
-def do_split_edi(edi_process, work_directory, parameters_dict):
+def do_split_edi(
+    edi_process: str, work_directory: str, parameters_dict: dict
+) -> list[tuple[str, str, str]]:
     """Split a multi-invoice EDI file into individual invoice files.
 
-    Credit for the col_to_excel goes to Nodebody on stackoverflow, at this link: http://stackoverflow.com/a/19154642
+    Reads an EDI file containing multiple invoices (each starting with an A record)
+    and splits it into separate files, one per invoice. Output filenames include
+    an alphabetical prefix (A_, B_, C_, ...) and optionally the invoice date.
+
+    Args:
+        edi_process: Path to the input EDI file to split.
+        work_directory: Directory where split output files will be written.
+        parameters_dict: Configuration dictionary containing:
+            - prepend_date_files (bool): Whether to prefix filenames with dates.
+
+    Returns:
+        List of tuples (output_path, file_prefix, file_suffix) for each split file,
+        or empty list if the file exceeds MAX_A_RECORD_COUNT invoices.
+
+    Raises:
+        Exception: If output line counts or A record counts don't match input.
+        ValueError: If the EDI file is malformed (missing A records).
+
     """
 
     if not os.path.exists(work_directory):
@@ -215,7 +289,18 @@ def do_split_edi(edi_process, work_directory, parameters_dict):
     return edi_send_list
 
 
-def do_clear_old_files(folder_path, maximum_files) -> None:
+def do_clear_old_files(folder_path: str, maximum_files: int) -> None:
+    """Delete oldest files in a folder until the count is at or below the maximum.
+
+    Uses a while loop rather than a simple if check because files may be
+    added concurrently by other processes. Each iteration re-scans the
+    directory to get an accurate current count.
+
+    Args:
+        folder_path: Path to the folder to clean up.
+        maximum_files: Maximum number of files to allow before deletion starts.
+
+    """
     while True:
         files = os.listdir(folder_path)
         if len(files) <= maximum_files:
@@ -294,12 +379,12 @@ class CRecGenerator:
     non-prepaid amounts, then writes them as separate C records.
     """
 
-    def __init__(self, settings_dict) -> None:
+    def __init__(self, settings_dict: dict) -> None:
         """Initialize the C record generator.
 
         Args:
             settings_dict: Dictionary containing database connection settings.
-                Must include: as400_username, as400_password, as400_address
+                Must include: as400_username, as400_password, as400_address.
 
         """
         self.query_object = None
@@ -308,12 +393,17 @@ class CRecGenerator:
         self.settings = settings_dict
 
     def _db_connect(self) -> None:
-        """Establish database connection."""
+        """Establish database connection using the configured settings.
+
+        Creates a query runner from the stored settings dictionary for
+        executing SQL queries against the AS400 database.
+
+        """
         from core.database.query_runner import create_query_runner_from_settings
 
         self.query_object = create_query_runner_from_settings(self.settings)
 
-    def set_invoice_number(self, invoice_number) -> None:
+    def set_invoice_number(self, invoice_number: str) -> None:
         """Set the current invoice number and mark records as unappended.
 
         Args:
@@ -323,7 +413,7 @@ class CRecGenerator:
         self._invoice_number = invoice_number
         self.unappended_records = True
 
-    def fetch_splitted_sales_tax_totals(self, write_func) -> None:
+    def fetch_splitted_sales_tax_totals(self, write_func: Callable[[str], None]) -> None:
         """Fetch and write split sales tax totals as C records.
 
         Queries the database for prepaid and non-prepaid sales tax amounts
