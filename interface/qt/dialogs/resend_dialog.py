@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QCloseEvent, QColor
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -86,7 +86,7 @@ class ResendDialog(BaseDialog):
         self._is_updating_selection = False
         self._ignore_table_selection_changes = False
         self._should_show = True
-        self._search_timer = QTimer()
+        self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
         self._search_timer.timeout.connect(self._do_search_filter)
 
@@ -681,8 +681,7 @@ class ResendDialog(BaseDialog):
         """Cancel existing file check worker safely."""
         if self._file_check_worker and self._file_check_worker.isRunning():
             self._file_check_worker.cancel()
-            self._file_check_worker.deleteLater()
-            QTimer.singleShot(500, self._file_check_worker.deleteLater)
+            self._file_check_worker.wait(3000)
             self._file_check_worker = None
 
     def _load_more(self) -> None:
@@ -796,6 +795,11 @@ class ResendDialog(BaseDialog):
             self.show_info("Success", f"Cleared resend flags for {count} files.")
         except Exception as e:
             self.show_error("Database Error", f"Database error: {e}")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Handle dialog close — cancel file check worker if running."""
+        self._cancel_file_check_worker()
+        super().closeEvent(event)
 
 
 def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
