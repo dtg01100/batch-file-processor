@@ -34,46 +34,55 @@ paramstyle = "qmark"
 
 
 class Warning(Exception):
-    pass
+    """Exception raised for important warnings (e.g., data truncation)."""
 
 
 class Error(Exception):
-    pass
+    """Base exception class for all database errors."""
 
 
 class InterfaceError(Error):
-    pass
+    """Exception raised for errors related to the database interface, not the database itself."""
 
 
 class DatabaseError(Error):
-    pass
+    """Base exception class for errors related to the database operation."""
 
 
 class OperationalError(DatabaseError):
-    pass
+    """Exception raised for operational errors outside control (connection failure, memory error)."""
 
 
 class ProgrammingError(DatabaseError):
-    pass
+    """Exception raised for programming errors (syntax error, table not found)."""
 
 
 class IntegrityError(DatabaseError):
-    pass
+    """Exception raised when relational integrity is affected (foreign key violation)."""
 
 
 class DataError(DatabaseError):
-    pass
+    """Exception raised for data processing errors (division by zero, value out of range)."""
 
 
 class NotSupportedError(DatabaseError):
-    pass
+    """Exception raised when an unsupported database method was called."""
 
 
 # --- Output Parsing ---
 
 
-def _parse_db2_output(output: str):
-    """Parse db2 columnar output into (description, rows)."""
+def _parse_db2_output(output: str) -> tuple[list[str], list[tuple]]:
+    """Parse db2 columnar output into (description, rows).
+
+    Args:
+        output: Raw string output from db2 command execution.
+
+    Returns:
+        Tuple of (column_names, rows) where column_names is a list of
+        header strings and rows is a list of tuples containing cell values.
+
+    """
     lines = output.splitlines()
 
     sep_idx = None
@@ -129,7 +138,19 @@ def _parse_db2_output(output: str):
 
 
 def _parse_error(output: str) -> str:
-    """Extract error message from db2 error output."""
+    """Extract error message from db2 error output.
+
+    Scans output lines for SQLSTATE, NATIVE ERROR markers, or common
+    error keywords to construct a concise error message.
+
+    Args:
+        output: Raw string output from failed db2 command execution.
+
+    Returns:
+        Extracted error message string, or the full output if no
+        specific error pattern is found.
+
+    """
     lines = output.strip().splitlines()
     messages = []
     for line in lines:
@@ -141,8 +162,27 @@ def _parse_error(output: str) -> str:
     return "; ".join(messages) if messages else output.strip()
 
 
-def _qmark_to_positional(sql: str, params: tuple):
-    """Replace ? placeholders with escaped literal values."""
+def _qmark_to_positional(sql: str, params: tuple) -> tuple[str, list]:
+    """Replace ? placeholders with escaped literal values.
+
+    This is a workaround for db2ssh not supporting parameterized queries.
+    Values are escaped and embedded directly into the SQL string.
+
+    Warning:
+        This approach is vulnerable to SQL injection if params come from
+        untrusted sources. Always validate inputs when possible.
+
+    Args:
+        sql: SQL query string with ? placeholders.
+        params: Tuple of parameter values to substitute.
+
+    Returns:
+        Tuple of (sql_with_literals, empty_list).
+
+    Raises:
+        ProgrammingError: If the number of ? placeholders doesn't match params length.
+
+    """
     if not params:
         return sql, []
     parts = sql.split("?")
@@ -169,8 +209,20 @@ def _qmark_to_positional(sql: str, params: tuple):
 # --- SSH Query Execution ---
 
 
-def _run_query(ssh, sql: str):
-    """Execute SQL on IBM i via qsh db2. Returns (output, error, exit_status)."""
+def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
+    """Execute SQL on IBM i via qsh db2.
+
+    Writes the SQL to a temporary file on the remote system, executes it
+    via `qsh -c "db2 -f ..."`, then cleans up the temp file.
+
+    Args:
+        ssh: Active paramiko SSH client connected to the IBM i system.
+        sql: SQL query string to execute.
+
+    Returns:
+        Tuple of (stdout_output, stderr_output, exit_status_code).
+
+    """
     remote_sql = f"/tmp/.db2ssh_{uuid.uuid4().hex}.sql"
 
     escaped_sql = sql.replace("\\", "\\\\").replace("'", "'\\''")
@@ -198,14 +250,34 @@ class Cursor:
     rowcount = -1
     arraysize = 1
 
-    def __init__(self, connection):
+    def __init__(self, connection: "Connection") -> None:
+        """Initialize the cursor.
+
+        Args:
+            connection: DB-API Connection object to execute queries against.
+
+        """
         self._connection = connection
-        self._rows = []
+        self._rows: list[tuple] = []
         self._pos = 0
         self.description = None
         self.rowcount = -1
 
-    def execute(self, operation, parameters=None):
+    def execute(self, operation: str, parameters: tuple | None = None) -> "Cursor":
+        """Execute a database operation (query or command).
+
+        Args:
+            operation: SQL query string, may contain ? placeholders.
+            parameters: Optional tuple of parameters to substitute.
+
+        Returns:
+            Self, for method chaining.
+
+        Raises:
+            InterfaceError: If the connection is closed.
+            ProgrammingError: If the SQL execution fails.
+
+        """
         if self._connection._closed:
             raise InterfaceError("Connection is closed")
 
@@ -231,38 +303,69 @@ class Cursor:
         self.rowcount = len(rows)
         return self
 
-    def executemany(self, operation, seq_of_parameters):
+    def executemany(self, operation: str, seq_of_parameters: list[tuple]) -> None:
+        """Execute the same operation against multiple parameter sets.
+
+        Args:
+            operation: SQL query string with ? placeholders.
+            seq_of_parameters: List of parameter tuples, one per execution.
+
+        """
         for params in seq_of_parameters:
             self.execute(operation, params)
 
-    def fetchone(self):
+    def fetchone(self) -> tuple | None:
+        """Fetch the next row of a query result set.
+
+        Returns:
+            Next row as a tuple, or None if no more rows are available.
+
+        """
         if self._pos >= len(self._rows):
             return None
         row = self._rows[self._pos]
         self._pos += 1
         return row
 
-    def fetchmany(self, size=None):
+    def fetchmany(self, size: int | None = None) -> list[tuple]:
+        """Fetch the next set of rows of a query result set.
+
+        Args:
+            size: Number of rows to fetch. Defaults to self.arraysize if None.
+
+        Returns:
+            List of row tuples.
+
+        """
         if size is None:
             size = self.arraysize
         result = self._rows[self._pos : self._pos + size]
         self._pos += len(result)
         return result
 
-    def fetchall(self):
+    def fetchall(self) -> list[tuple]:
+        """Fetch all remaining rows of a query result set.
+
+        Returns:
+            List of all remaining row tuples.
+
+        """
         result = self._rows[self._pos :]
         self._pos = len(self._rows)
         return result
 
-    def close(self):
+    def close(self) -> None:
+        """Close the cursor and release resources."""
         self._connection = None
         self._rows = []
         self.description = None
 
-    def setinputsizes(self, sizes):
+    def setinputsizes(self, sizes: list) -> None:
+        """Set input sizes (no-op, not supported by db2ssh)."""
         pass
 
-    def setoutputsize(self, size, column=None):
+    def setoutputsize(self, size: int, column: int | None = None) -> None:
+        """Set output size for a column (no-op, not supported by db2ssh)."""
         pass
 
     def __iter__(self):
@@ -282,8 +385,28 @@ class Connection:
     """DB-API 2.0 connection for IBM i Db2 over SSH."""
 
     def __init__(
-        self, host, user, password=None, key_filename=None, port=22, timeout=10
-    ):
+        self,
+        host: str,
+        user: str,
+        password: str | None = None,
+        key_filename: str | None = None,
+        port: int = 22,
+        timeout: int = 10,
+    ) -> None:
+        """Establish an SSH connection to IBM i.
+
+        Args:
+            host: IBM i hostname or IP address.
+            user: IBM i username for authentication.
+            password: IBM i password (optional if using key-based auth).
+            key_filename: Path to SSH private key file (optional).
+            port: SSH port number (default: 22).
+            timeout: Connection timeout in seconds (default: 10).
+
+        Raises:
+            OperationalError: If authentication fails or SSH connection cannot be established.
+
+        """
         self._host = host
         self._user = user
         self._closed = False
@@ -305,18 +428,35 @@ class Connection:
         except Exception as e:
             raise OperationalError(f"Connection failed: {e}")
 
-    def cursor(self):
+    def cursor(self) -> Cursor:
+        """Create a new cursor for executing queries.
+
+        Returns:
+            New Cursor object for executing SQL queries.
+
+        Raises:
+            InterfaceError: If the connection is closed.
+
+        """
         if self._closed:
             raise InterfaceError("Connection is closed")
         return Cursor(self)
 
-    def commit(self):
+    def commit(self) -> None:
+        """Commit pending transactions (no-op for db2ssh over SSH)."""
         pass
 
-    def rollback(self):
+    def rollback(self) -> None:
+        """Rollback pending transactions.
+
+        Raises:
+            NotSupportedError: Rollback is not supported over the SSH db2 interface.
+
+        """
         raise NotSupportedError("Rollback not supported over SSH db2 interface")
 
-    def close(self):
+    def close(self) -> None:
+        """Close the SSH connection."""
         if not self._closed:
             self._ssh.close()
             self._closed = True
@@ -332,11 +472,15 @@ class Connection:
 
 
 def connect(
-    host, user=None, password=None, key_filename=None, port=22, timeout=10, **kwargs
-):
+    host: str,
+    user: str,
+    password: str | None = None,
+    key_filename: str | None = None,
+    port: int = 22,
+    timeout: int = 10,
+    **kwargs,
+) -> Connection:
     """Connect to IBM i Db2 via SSH.
-
-    Returns a DB-API 2.0 Connection object.
 
     Authentication is attempted in this order:
         1. Password (explicit or DB2_PASSWORD env var)
@@ -344,13 +488,21 @@ def connect(
         3. Default key files (~/.ssh/id_rsa, etc.)
         4. Explicit key_filename
 
-    Parameters:
-        host: IBM i hostname or IP
-        user: IBM i username
-        password: IBM i password (or set DB2_PASSWORD env var)
-        key_filename: path to private key file for key-based auth
-        port: SSH port (default 22)
-        timeout: connection timeout in seconds (default 10)
+    Args:
+        host: IBM i hostname or IP address.
+        user: IBM i username.
+        password: IBM i password (or set DB2_PASSWORD env var).
+        key_filename: Path to private key file for key-based auth.
+        port: SSH port (default: 22).
+        timeout: Connection timeout in seconds (default: 10).
+
+    Returns:
+        DB-API 2.0 Connection object.
+
+    Raises:
+        InterfaceError: If username is not provided.
+        OperationalError: If connection or authentication fails.
+
     """
     if password is None:
         password = os.environ.get("DB2_PASSWORD")

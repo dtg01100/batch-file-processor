@@ -9,6 +9,7 @@ QueryRunner in core.database.
 import time
 import uuid
 from dataclasses import dataclass
+from typing import Any
 
 from core.structured_logging import get_logger, log_database_call
 
@@ -56,20 +57,30 @@ class DB2SSHConnection:
         self._connection_id = uuid.uuid4().hex[:8]
         self._logger = get_logger(__name__)
 
-    def _ensure_connection(self):
-        """Establish the SSH connection if not already connected."""
+    def _ensure_connection(self) -> Any:
+        """Establish the SSH connection if not already connected.
+
+        Returns:
+            The underlying db2ssh connection object.
+
+        """
         if self._connection is None:
             self._connect()
         return self._connection
 
-    def _connect(self):
+    def _connect(self) -> Any:
         """Establish the database connection via SSH.
 
+        Creates a new paramiko-based SSH connection to the IBM i system
+        and initializes the db2ssh session. Logs connection duration
+        and success/failure metrics.
+
         Returns:
-            db2ssh Connection object
+            db2ssh Connection object for executing queries.
 
         Raises:
             ConnectionError: If the SSH connection cannot be established.
+
         """
         start_time = time.perf_counter()
         try:
@@ -107,15 +118,20 @@ class DB2SSHConnection:
             ) from exc
         return self._connection
 
-    def execute(self, query: str, params: tuple = None) -> list[dict]:
+    def execute(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results as list of dicts.
 
         Args:
-            query: SQL query string
-            params: Optional parameters (db2ssh uses qmark style)
+            query: SQL query string to execute on the IBM i database.
+            params: Optional parameters for parameterized queries (qmark style).
 
         Returns:
-            List of dictionaries with column names as keys
+            List of dictionaries with column names as keys.
+            Returns empty list for non-SELECT statements or no-result queries.
+
+        Raises:
+            ConnectionError: If the underlying SSH connection fails.
+
         """
         start_time = time.perf_counter()
         conn = self._ensure_connection()
