@@ -229,3 +229,14 @@ Use these agent-customization commands to expand coverage:
 
 - `tests/conftest.py` – shared fixtures including a legacy v32 database and mock events
 - `tests/fixtures/legacy_v32_folders.db` – real legacy production DB used for upgrade/compatibility tests
+
+## Copilot Instructions Index
+
+This repository includes the following Copilot instruction files in `.github/instructions/`:
+
+- `code-review-generic.instructions.md` – rules for structured code review comments and priorities
+- `performance-optimization.instructions.md` – performance best practices for frontend, backend, database, and system design
+- `security-and-owasp.instructions.md` – secure coding and OWASP Top 10 guidelines
+- `shell.instructions.md` – Bash/SH/Zsh scripting conventions and safety patterns
+- `copilot-thought-logging.instructions.md` – agent process tracking workflow with mandatory phase guidelines
+- `copilot-sdk-python.instructions.md` – GitHub Copilot SDK Python usage and session pattern guidance
