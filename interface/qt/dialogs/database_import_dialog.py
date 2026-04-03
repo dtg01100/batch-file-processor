@@ -10,6 +10,7 @@ import threading
 from typing import Any, cast
 
 from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -212,6 +213,14 @@ class DatabaseImportDialog(BaseDialog):
         setattr(result_event, "result", self.confirm_yes_no(title, message))
         result_event.set()
 
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Handle dialog close — terminate import thread if still running."""
+        thread = getattr(self, "_import_thread", None)
+        if thread is not None and callable(getattr(thread, "isRunning", None)) and thread.isRunning():
+            thread.terminate()
+            thread.wait(3000)
+        super().closeEvent(event)
+
 
 class ImportThread(QThread):
     """Background thread for database import."""
@@ -240,8 +249,8 @@ class ImportThread(QThread):
 
     def _confirm(self, title: str, message: str) -> bool:
         """Request confirmation from main thread using signals/slots."""
-        # Support direct run() calls in tests where this QThread is not started.
-        if QThread.currentThread() == self.thread():
+        # When run() is called directly in tests (thread not started), show inline.
+        if not self.isRunning():
             reply = QMessageBox.question(
                 None,
                 title,
