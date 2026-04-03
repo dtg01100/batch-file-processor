@@ -130,6 +130,7 @@ class Table:
 
         Doubles any embedded double quotes and wraps the name in double quotes.
         This prevents SQL injection via identifier names.
+        Validates that the identifier contains only valid characters.
 
         Args:
             name: The identifier to quote
@@ -137,7 +138,15 @@ class Table:
         Returns:
             Safely quoted identifier
 
+        Raises:
+            ValueError: If the identifier contains invalid characters
+
         """
+        # Validate identifier format
+        if not name:
+            raise ValueError("Empty identifier name")
+        if not all(c.isalnum() or c in '_-' for c in name):
+            raise ValueError(f"Invalid identifier characters in: {name}")
         # Replace any double quotes with two double quotes (SQL standard escaping)
         safe_name = name.replace('"', '""')
         return f'"{safe_name}"'

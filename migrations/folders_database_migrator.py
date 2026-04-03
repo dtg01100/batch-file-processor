@@ -101,7 +101,7 @@ def _normalize_legacy_v32_values(database_connection) -> None:
                     f"WHERE LOWER(CAST({_quote_identifier(col)} AS TEXT)) = 'false'"
                 )
             except Exception:
-                pass  # Column may not exist yet; safe to skip
+                logger.debug("Column %s may not exist yet; skipping", col)
 
         # Normalize convert_to_format via Python for full correctness
         try:
@@ -118,7 +118,7 @@ def _normalize_legacy_v32_values(database_connection) -> None:
                         (normalized, row_id),
                     )
         except Exception:
-            pass  # Table or column may not exist yet
+            logger.debug("Table %s or column may not exist yet; skipping", table)
 
     database_connection.raw_connection.commit()
 
@@ -862,8 +862,8 @@ def upgrade_database(
         ]:
             try:
                 cursor.execute(stmt)
-            except Exception:
-                pass  # column already exists
+            except Exception as e:
+                logger.debug("Column may already exist: %s", e)
         # Populate NULL timestamps for existing rows (ensure_schema may have
         # already created the columns without a DEFAULT, leaving rows NULL).
         for table, timestamp_col in [
@@ -905,14 +905,14 @@ def upgrade_database(
         ]:
             try:
                 cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
-            except Exception:
-                pass  # column already exists
+            except Exception as e:
+                logger.debug("Column %s may already exist: %s", col, e)
         try:
             cursor.execute(
                 "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT DEFAULT 'processed'"
             )
-        except Exception:
-            pass  # column already exists
+        except Exception as e:
+            logger.debug("Column 'status' may already exist: %s", e)
         cursor.execute(
             "UPDATE 'processed_files' SET filename=file_name WHERE file_name IS NOT NULL AND filename IS NULL"
         )
@@ -1227,14 +1227,14 @@ def upgrade_database(
                 cursor.execute(
                     f"ALTER TABLE '{table}' ADD COLUMN 'upc_target_length' INTEGER DEFAULT 11"
                 )
-            except Exception:
-                pass  # column already exists
+            except Exception as e:
+                logger.debug("Column upc_target_length may already exist: %s", e)
             try:
                 cursor.execute(
                     f"ALTER TABLE '{table}' ADD COLUMN 'upc_padding_pattern' TEXT"
                 )
-            except Exception:
-                pass  # column already exists
+            except Exception as e:
+                logger.debug("Column upc_padding_pattern may already exist: %s", e)
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="44", os=running_platform)
