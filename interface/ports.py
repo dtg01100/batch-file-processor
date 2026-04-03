@@ -274,6 +274,20 @@ class NullUIService:
     Every dialog method returns a sensible default so that application logic
     can run without any real UI toolkit present (e.g. in unit tests, CI
     pipelines, or headless server environments).
+
+    Default return values:
+        - show_* methods: No-op (silently ignored)
+        - ask_yes_no: False (conservative/safe default)
+        - ask_ok_cancel: False (conservative/safe default)
+        - ask_three_choices: -1 (cancel/default indicator)
+        - ask_* file/dir methods: "" (empty string = no selection)
+        - pump_events: No-op
+
+    Example:
+        >>> ui = NullUIService()
+        >>> ui.ask_yes_no("Confirm", "Delete all files?")
+        False
+
     """
 
     def show_info(self, title: str, message: str) -> None:
@@ -301,7 +315,14 @@ class NullUIService:
         choice2: str,
         choice3: str,
     ) -> int:
-        """Returns -1 (cancel/default)."""
+        """Returns -1 (cancel/default indicator).
+
+        Note:
+            The Protocol specifies return values 0, 1, or 2 for the three
+            choices. This implementation returns -1 to indicate that no
+            choice was made (equivalent to cancel).
+
+        """
         return -1
 
     def ask_directory(
@@ -346,12 +367,27 @@ class QtUIService:
     Uses QMessageBox for dialogs, QFileDialog for file/directory selection,
     and QApplication.processEvents() for event-loop pumping.
 
-    Args:
-        parent: Optional parent widget for dialogs.
+    This adapter bridges the application logic (which programs against the
+    Protocol interfaces) to the actual PyQt5 toolkit implementations.
+
+    Example:
+        >>> ui = QtUIService(parent=main_window)
+        >>> ui.show_info("Welcome", "Application started successfully.")
+        >>> selected = ui.ask_directory("Choose folder", initial_dir="/home")
+
+    Attributes:
+        _parent: Optional parent widget for modal dialogs.
 
     """
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: Any = None) -> None:
+        """Initialize the Qt UI adapter.
+
+        Args:
+            parent: Optional parent QWidget for dialog modality.
+                If None, dialogs will be application-modal.
+
+        """
         self._parent: QWidget | None = parent
 
     # -- informational dialogs ------------------------------------------------
@@ -400,7 +436,23 @@ class QtUIService:
         choice2: str,
         choice3: str,
     ) -> int:
-        """Prompt the user with a three-choice question."""
+        """Prompt the user with a three-choice question.
+
+        Displays a QMessageBox with three custom buttons. The return value
+        indicates which button was clicked.
+
+        Args:
+            title: Dialog title.
+            message: Question or informational text.
+            choice1: Label for first button (returns 0 if clicked).
+            choice2: Label for second button (returns 1 if clicked).
+            choice3: Label for third button, typically cancel-like (returns 2 if clicked).
+
+        Returns:
+            0 if user selected choice1, 1 if choice2, 2 if choice3.
+            Returns -1 if no button matched (e.g., dialog closed unexpectedly).
+
+        """
         msg_box = QMessageBox(self._parent)
         msg_box.setWindowTitle(title)
         msg_box.setText(message)

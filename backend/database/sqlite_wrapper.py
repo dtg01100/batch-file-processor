@@ -232,11 +232,40 @@ class Table:
     def _serialize_record_value(
         self, column: str, value: Any, boolean_cols: set
     ) -> Any:
+        """Serialize a single record value for database storage.
+
+        Handles boolean column conversion and general value serialization.
+
+        Args:
+            column: Column name (used to determine if boolean handling applies).
+            value: Value to serialize.
+            boolean_cols: Set of column names that store boolean values.
+
+        Returns:
+            Value suitable for SQLite binding (0/1 for booleans, JSON for
+            complex types, or native type for simple values).
+
+        """
         if column in boolean_cols:
             return to_db_bool(value)
         return self._serialize_value(value)
 
     def _build_where_clause(self, kwargs: dict[str, Any]) -> tuple[str, list[Any]]:
+        """Build a SQL WHERE clause from keyword arguments.
+
+        Constructs parameterized SQL with proper boolean handling.
+        Boolean columns use special handling to match both INTEGER (0/1)
+        and string legacy values ('true', '1', 'yes', 'on', etc.).
+
+        Args:
+            kwargs: Column=value pairs to match in the WHERE clause.
+
+        Returns:
+            Tuple of (where_clause_sql, parameter_values) where
+            where_clause_sql is the WHERE fragment (without 'WHERE' keyword)
+            and parameter_values is the list of bound parameter values.
+
+        """
         boolean_cols = self._get_boolean_columns()
         clauses: list[str] = []
         values: list[Any] = []
@@ -636,8 +665,20 @@ class Table:
 class Database:
     """Represents a SQLite database connection.
 
-    Provides table access and raw SQL query execution.
-    Uses sqlite3.Row for dict-like row access.
+    Provides table access via dictionary-style subscripting and raw
+    SQL query execution. Uses sqlite3.Row for dict-like row access.
+
+    Example:
+        >>> db = Database.connect("/path/to/db.sqlite")
+        >>> table = db["folders"]  # Returns a Table object
+        >>> rows = table.find(folder_is_active=1)
+        >>> db.close()
+
+    Note:
+        The schema is auto-initialized on construction (with tolerant
+        error handling). If schema ensure fails, the connection still
+        opens but core tables may be missing.
+
     """
 
     def __init__(self, path: str) -> None:
@@ -660,12 +701,13 @@ class Database:
 
         # Ensure core schema exists for new or in-memory databases so tests and
         # migrations can assume base tables like 'version' are present.
+        # Failure is tolerated because the database may already exist with a
+        # valid schema, or the caller may handle missing tables explicitly.
         try:
             from core.database import schema
 
             schema.ensure_schema(self)
         except Exception:
-            # Be tolerant: if schema ensure fails, don't crash the connection
             pass
 
     @property
@@ -720,12 +762,23 @@ class Database:
     def query(self, sql: str) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
 
+        Warning:
+            This method silently swallows sqlite3.Error exceptions and
+            returns an empty list. Callers cannot distinguish between
+            "no results" and "query failed". Use raw_connection.execute()
+            directly if you need proper error handling.
+
         Args:
-            sql: SQL statement to execute
+            sql: SQL statement to execute.
 
         Returns:
             List of dictionaries representing result rows.
-            Returns empty list on error.
+            Returns empty list if query execution fails.
+
+        Note:
+            For non-SELECT statements, this method will attempt to commit
+            the transaction after execution. PRAGMA statements are handled
+            separately without committing.
 
         """
         with self._lock:
