@@ -341,7 +341,7 @@ class EditSettingsDialog(BaseDialog):
             else:
                 initial = os.getcwd()
         except Exception:
-            initial = os.getcwd()
+            initial = os.path.expanduser("~")
 
         chosen = QFileDialog.getExistingDirectory(self, "Select Log Folder", initial)
         if chosen:
