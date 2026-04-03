@@ -629,7 +629,12 @@ class EDISplitterStep:
                     filtered_files.append((file_path, prefix, suffix))
                 elif not is_credit and include_invoices:
                     filtered_files.append((file_path, prefix, suffix))
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    "Credit/invoice detection failed for %s; keeping file by default: %s",
+                    file_path,
+                    e,
+                )
                 filtered_files.append((file_path, prefix, suffix))
 
         logger.debug(

@@ -8,6 +8,10 @@ import hashlib
 import os
 import time
 
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def generate_match_lists(processed_files: list[dict]) -> tuple[list, list, set]:
     """Extract hash lists from processed files.
@@ -65,12 +69,25 @@ def generate_file_hash(
                 for chunk in iter(lambda: f.read(8192), b""):
                     h.update(chunk)
                 generated_checksum = h.hexdigest()
-        except Exception:
+        except Exception as e:
             if checksum_attempt < max_retries:
+                logger.warning(
+                    "Hash generation failed for %s on attempt %d/%d: %s",
+                    absolute_path,
+                    checksum_attempt,
+                    max_retries,
+                    e,
+                )
                 # Exponential backoff: 1s, 4s, 9s, 16s, 25s
                 time.sleep(retry_delay_base * checksum_attempt * checksum_attempt)
                 checksum_attempt += 1
             else:
+                logger.error(
+                    "Hash generation failed for %s after %d attempts: %s",
+                    absolute_path,
+                    checksum_attempt,
+                    e,
+                )
                 raise
 
     return generated_checksum

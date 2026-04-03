@@ -3,6 +3,7 @@
 import datetime
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from dispatch.file_utils import (
@@ -259,8 +260,8 @@ class TestListFilesInDirectory:
             # Create files
             file1 = os.path.join(tmpdir, "file1.txt")
             file2 = os.path.join(tmpdir, "file2.edi")
-            open(file1, "w").close()
-            open(file2, "w").close()
+            Path(file1).touch()
+            Path(file2).touch()
 
             result = list_files_in_directory(tmpdir, files_only=True)
 
@@ -273,7 +274,7 @@ class TestListFilesInDirectory:
             # Create file and subdirectory
             file1 = os.path.join(tmpdir, "file1.txt")
             subdir = os.path.join(tmpdir, "subdir")
-            open(file1, "w").close()
+            Path(file1).touch()
             os.mkdir(subdir)
 
             result = list_files_in_directory(tmpdir, files_only=False)
@@ -289,7 +290,7 @@ class TestListFilesInDirectory:
         """Test that absolute paths are returned."""
         with tempfile.TemporaryDirectory() as tmpdir:
             file1 = os.path.join(tmpdir, "file1.txt")
-            open(file1, "w").close()
+            Path(file1).touch()
 
             result = list_files_in_directory(tmpdir)
 
