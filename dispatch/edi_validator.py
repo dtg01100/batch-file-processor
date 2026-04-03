@@ -4,6 +4,7 @@ This module provides a testable wrapper around the EDI validation functionality,
 using dependency injection for file system operations.
 """
 
+import os
 from io import StringIO
 
 from core.structured_logging import get_logger, log_file_operation, log_with_context
@@ -467,20 +468,14 @@ class RealFileSystem:
 
     def file_exists(self, path: str) -> bool:
         """Check if a file exists."""
-        import os
-
         return os.path.isfile(path)
 
     def dir_exists(self, path: str) -> bool:
         """Check if a directory exists."""
-        import os
-
         return os.path.isdir(path)
 
     def list_files(self, path: str) -> list[str]:
         """List all files in a directory."""
-        import os
-
         if not os.path.isdir(path):
             return []
         return [
@@ -491,14 +486,10 @@ class RealFileSystem:
 
     def mkdir(self, path: str) -> None:
         """Create a directory."""
-        import os
-
         os.mkdir(path)
 
     def makedirs(self, path: str) -> None:
         """Create a directory and all parent directories."""
-        import os
-
         os.makedirs(path, exist_ok=True)
 
     def copy_file(self, src: str, dst: str) -> None:
@@ -509,12 +500,8 @@ class RealFileSystem:
 
     def remove_file(self, path: str) -> None:
         """Remove a file."""
-        import os
-
         os.remove(path)
 
     def get_absolute_path(self, path: str) -> str:
         """Get the absolute path."""
-        import os
-
         return os.path.abspath(path)
