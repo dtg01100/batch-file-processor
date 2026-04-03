@@ -190,6 +190,28 @@ See `docs/architecture/backend-selection-hardening.md` for detailed guidance inc
 - Use concise, descriptive kebab-case filenames.
 - See [`docs-handling.instructions.md`](docs-handling.instructions.md) for full documentation organization guidelines.
 
+## Agent Bootstrap Workflow
+
+This file is the primary source of truth for AI agents in this repository. Follow these steps when starting in a new session:
+1. Discover existing convention files: `.github/copilot-instructions.md`, `AGENTS.md`, `workspace-instructions.md`, `README.md`, `DOCUMENTATION.md`.
+2. Explore `docs/*`, `dispatch/*`, `interface/*`, `backend/*` for architecture and contracts.
+3. Add or update code with regression tests and strict markers (`unit`, `integration`, `database`, `qt`, `dispatch`, `backend`, `conversion`).
+4. Preserve existing documentation and use links instead of new duplicate content.
+5. Run `pytest -q --timeout=30`, `ruff check .`, `black --check .`.
+
+## Suggested example prompts
+
+- "Add a new conversion format in `dispatch/converters` and wire its plugin; include unit+integration tests."
+- "Fix `tweaks` converter 0-byte output bug and add a regression test in `tests/dispatch`."
+- "Improve `interface/plugins/plugin_manager.py` to better handle plugin load errors and add coverage."
+
+## What to create next
+
+Use these agent-customization commands to expand coverage:
+- `/create-instruction agent-guidance.md` — streamlined policy for rules and conventions.
+- `/create-skill dispatch-test-wizard` — interactive helper for writing dispatch pipeline tests.
+- `/create-prompt code-review-checklist` — prompt template that automatically checks for SQL parameterization, path handling, and context usage.
+
 ## Test Fixtures
 
 - `tests/conftest.py` – shared fixtures including a legacy v32 database and mock events

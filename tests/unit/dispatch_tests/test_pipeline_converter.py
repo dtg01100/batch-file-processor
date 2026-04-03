@@ -1059,6 +1059,29 @@ class TestExecuteWrapper:
         assert result == "/tmp/edi_converter_keep/out.csv"
         assert context.temp_dirs == ["/tmp/edi_converter_keep"]
 
+    def test_execute_uses_pipeline_temp_dir_list_from_folder_when_context_missing(self):
+        """When context is None, execute should use folder['_pipeline_temp_dirs'] list."""
+        step = EDIConverterStep()
+        folder = {"_pipeline_temp_dirs": []}
+
+        with (
+            patch("tempfile.mkdtemp", return_value="/tmp/edi_converter_folder"),
+            patch.object(
+                step,
+                "convert",
+                return_value=ConverterResult(
+                    output_path="/tmp/edi_converter_folder/out.csv",
+                    format_used="csv",
+                    success=True,
+                    errors=[],
+                ),
+            ),
+        ):
+            result = step.execute("/input/file.edi", folder)
+
+        assert result == "/tmp/edi_converter_folder/out.csv"
+        assert folder["_pipeline_temp_dirs"] == ["/tmp/edi_converter_folder"]
+
     def test_execute_cleans_temp_dir_when_no_output(self):
         """Execute cleans temp dir and returns None when no conversion output."""
         step = EDIConverterStep()

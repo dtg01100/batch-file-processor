@@ -8,8 +8,12 @@ through the validation, splitting, conversion, and sending pipeline. It handles:
 - Send operations coordination
 """
 
+import datetime
 import hashlib
 import os
+import re
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -138,7 +142,8 @@ class FileProcessor:
             folder: Folder configuration dictionary
             upc_dict: UPC dictionary for lookups
             run_log: Optional run log for recording activity
-            effective_folder: Pre-normalized folder dict; if omitted, folder is used as-is
+            effective_folder:
+                Pre-normalized folder dict; if omitted, folder is used as-is
 
         Returns:
             FileResult with processing outcome
@@ -184,7 +189,10 @@ class FileProcessor:
         return result
 
     def _build_context(
-        self, folder: dict, upc_dict: dict, effective_folder: dict | ProcessingContext | None = None
+        self,
+        folder: dict,
+        upc_dict: dict,
+        effective_folder: dict | ProcessingContext | None = None,
     ) -> ProcessingContext:
         """Build processing context for a file.
 
@@ -214,7 +222,11 @@ class FileProcessor:
             # If the caller supplied a dict with 'settings', use it, otherwise
             # default to an empty dict. DispatchOrchestrator passes a full
             # ProcessingContext which was handled above.
-            settings=(effective_folder.get("settings") if isinstance(effective_folder, dict) else {}),
+            settings=(
+                effective_folder.get("settings")
+                if isinstance(effective_folder, dict)
+                else {}
+            ),
             upc_dict=upc_dict,
         )
 
@@ -505,9 +517,14 @@ class FileProcessor:
             file_path=final_file,
             folder=context.effective_folder,
             run_log=run_log,
+            settings=context.settings,
         )
 
         if not result.sent:
+            # Preserve backend error details for diagnostics and audit coverage.
+            if self.send_manager.errors:
+                result.errors.extend(self.send_manager.errors.values())
+
             self._record_send_failure(
                 result=result,
                 file_basename=file_basename,
@@ -529,16 +546,47 @@ class FileProcessor:
             Possibly renamed file path
 
         """
-        # Placeholder - actual rename logic would go here
-        return file_path
+        rename_template = context.effective_folder.get("rename_file", "").strip()
+        if not rename_template:
+            return file_path
 
-    def _send_to_backends(self, file_path: str, folder: dict, run_log: Any) -> bool:
+        original_basename = os.path.basename(file_path)
+        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
+        ext = original_basename.split(".")[-1] if "." in original_basename else ""
+        new_name = rename_template.replace("%datetime%", date_time)
+        if ext:
+            new_name = f"{new_name}.{ext}"
+
+        new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
+
+        temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
+        context.temp_dirs.append(temp_dir)
+
+        if os.path.isabs(new_name) or ".." in new_name:
+            raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
+
+        full_dest = os.path.join(temp_dir, new_name)
+        if not full_dest.startswith(temp_dir + os.sep) and full_dest != temp_dir:
+            raise ValueError(f"Path traversal attempt detected: {new_name}")
+
+        shutil.copy2(file_path, full_dest)
+        logger.debug("Renamed %s → %s for send", original_basename, new_name)
+        return full_dest
+
+    def _send_to_backends(
+        self,
+        file_path: str,
+        folder: dict,
+        run_log: Any,
+        settings: dict,
+    ) -> bool:
         """Send file to all enabled backends via send_manager.
 
         Args:
             file_path: File to send
             folder: Folder configuration
             run_log: Run log
+            settings: Global settings for backends
 
         Returns:
             True if all sends were successful
@@ -548,7 +596,7 @@ class FileProcessor:
         if not enabled_backends:
             return False
         send_results = self.send_manager.send_all(
-            enabled_backends, file_path, folder, {}
+            enabled_backends, file_path, folder, settings
         )
         return bool(send_results) and all(send_results.values())
 

@@ -6,6 +6,7 @@ injectable client support for testing.
 
 import ftplib
 import os
+import time  # noqa: F401
 
 from backend.backend_base import BackendBase
 from backend.ftp_client import create_ftp_client
@@ -196,7 +197,10 @@ class FTPBackend(BackendBase):
 
     def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
         """Get FTP endpoint for logging."""
-        return f"{process_parameters.get('ftp_server', '')}:{process_parameters.get('ftp_port', '')}/{process_parameters.get('ftp_folder', '')}"
+        server = process_parameters.get("ftp_server", "")
+        port = process_parameters.get("ftp_port", "")
+        folder = process_parameters.get("ftp_folder", "")
+        return f"{server}:{port}/{folder}"
 
     def _cleanup(self) -> None:
         """Close FTP connection."""
