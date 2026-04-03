@@ -5,11 +5,12 @@ extracted from dispatch.py for testability.
 """
 
 import hashlib
-import logging
 import os
 import time
 
-logger = logging.getLogger(__name__)
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def generate_match_lists(processed_files: list[dict]) -> tuple[list, list, set]:
