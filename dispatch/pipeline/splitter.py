@@ -183,7 +183,12 @@ class MockSplitter:
         return self._result
 
     def reset(self) -> None:
-        """Reset the mock state."""
+        """Reset the mock state to initial values.
+
+        Clears call counts and recorded arguments. Useful for reusing
+        the same mock instance across multiple test cases.
+
+        """
         self.call_count = 0
         self.last_input_path = None
         self.last_output_dir = None
@@ -624,7 +629,12 @@ class EDISplitterStep:
                     filtered_files.append((file_path, prefix, suffix))
                 elif not is_credit and include_invoices:
                     filtered_files.append((file_path, prefix, suffix))
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    "Credit/invoice detection failed for %s; keeping file by default: %s",
+                    file_path,
+                    e,
+                )
                 filtered_files.append((file_path, prefix, suffix))
 
         logger.debug(
