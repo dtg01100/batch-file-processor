@@ -8,6 +8,7 @@ from core.database.query_runner import (
     QueryRunner,
     assert_read_only_sql,
     create_query_runner,
+    create_query_runner_from_settings,
 )
 
 
@@ -108,6 +109,110 @@ class TestCreateQueryRunner:
         runner = create_query_runner("user", "pass", "TEST")
         assert isinstance(runner, QueryRunner)
 
+    def test_create_query_runner_passes_ssh_key_filename_to_db2ssh(self, monkeypatch):
+        """Test that create_query_runner propagates ssh_key_filename to DB2SSHConnection."""
+        captured = {}
+
+        class FakeDB2SSHConnection:
+            def __init__(self, config):
+                captured["config"] = config
+
+            def execute(self, query, params=None):
+                return []
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(
+            "adapters.db2ssh.connection.DB2SSHConnection",
+            FakeDB2SSHConnection,
+        )
+
+        runner = create_query_runner(
+            "user",
+            "pass",
+            "host",
+            database="QGPL",
+            ssh_key_filename="/tmp/test_ssh_key",
+        )
+
+        assert isinstance(runner, QueryRunner)
+        assert captured["config"].key_filename == "/tmp/test_ssh_key"
+
+    def test_create_query_runner_from_settings_forwards_ssh_key_filename(
+        self, monkeypatch
+    ):
+        """Test that create_query_runner_from_settings forwards ssh_key_filename."""
+        called = {}
+
+        def fake_create_query_runner(
+            username, password, dsn, database="QGPL", ssh_key_filename=None
+        ):
+            called["ssh_key_filename"] = ssh_key_filename
+            called["password"] = password
+            return QueryRunner(MockConnection())
+
+        monkeypatch.setattr(
+            "core.database.query_runner.create_query_runner",
+            fake_create_query_runner,
+        )
+
+        runner = create_query_runner_from_settings(
+            {
+                "as400_username": "user",
+                "as400_password": "pass",
+                "as400_address": "host",
+                "ssh_key_filename": "/tmp/test_ssh_key",
+            }
+        )
+
+        assert isinstance(runner, QueryRunner)
+        assert called["ssh_key_filename"] == "/tmp/test_ssh_key"
+        assert called["password"] == "pass"
+
+    def test_create_query_runner_from_settings_accepts_ssh_key_without_password(
+        self, monkeypatch
+    ):
+        """Test that key-based auth (password omitted) is accepted."""
+        called = {}
+
+        def fake_create_query_runner(
+            username, password, dsn, database="QGPL", ssh_key_filename=None
+        ):
+            called["ssh_key_filename"] = ssh_key_filename
+            called["password"] = password
+            return QueryRunner(MockConnection())
+
+        monkeypatch.setattr(
+            "core.database.query_runner.create_query_runner",
+            fake_create_query_runner,
+        )
+
+        runner = create_query_runner_from_settings(
+            {
+                "as400_username": "user",
+                "as400_password": "",
+                "as400_address": "host",
+                "ssh_key_filename": "/tmp/key.pem",
+            }
+        )
+
+        assert isinstance(runner, QueryRunner)
+        assert called["ssh_key_filename"] == "/tmp/key.pem"
+        assert called["password"] is None
+
+    def test_create_query_runner_from_settings_requires_password_or_key(self):
+        """Test that missing both password and key raises ValueError."""
+        with pytest.raises(ValueError, match="Either as400_password or ssh_key_filename must be provided"):
+            create_query_runner_from_settings(
+                {
+                    "as400_username": "user",
+                    "as400_password": "",
+                    "as400_address": "host",
+                    "ssh_key_filename": "",
+                }
+            )
+
 
 class TestReadOnlySqlPolicy:
     """Tests for read-only SQL contract."""
@@ -180,11 +285,55 @@ def test_database_connection_mixin_uses_create_query_runner_from_settings(
 
     converter = DummyConverter()
     converter._init_db_connection(
-        {"as400_username": "u", "as400_password": "p", "as400_address": "host"}
+        {
+            "as400_username": "u",
+            "as400_password": "p",
+            "as400_address": "host",
+            "ssh_key_filename": "/tmp/test_ssh_key",
+        }
     )
 
     assert called.get("called", False)
     assert converter.query_object is not None
+    assert converter.ssh_key_filename == "/tmp/test_ssh_key"
+
+
+def test_database_connection_mixin_allows_key_only(monkeypatch):
+    """Test DatabaseConnectionMixin can use ssh key auth without password."""
+    from dispatch.converters.mixins import DatabaseConnectionMixin
+
+    called = {}
+
+    def fake_create_query_runner_from_settings(settings_dict, database="QGPL"):
+        called["settings"] = settings_dict
+        return QueryRunner(MockConnection())
+
+    monkeypatch.setattr(
+        "core.database.query_runner.create_query_runner_from_settings",
+        fake_create_query_runner_from_settings,
+    )
+
+    class DummyConverter(DatabaseConnectionMixin):
+        def __init__(self):
+            super().__init__()
+            self.query_object = None
+
+        def some_method(self):
+            pass
+
+    converter = DummyConverter()
+    converter._init_db_connection(
+        {
+            "as400_username": "u",
+            "as400_password": "",
+            "as400_address": "host",
+            "ssh_key_filename": "/tmp/test_ssh_key",
+        }
+    )
+
+    assert converter.query_object is not None
+    assert converter.ssh_key_filename == "/tmp/test_ssh_key"
+    assert converter.as400_password is None
 
 
 def test_crec_generator_db_connect_uses_create_query_runner_from_settings(monkeypatch):
@@ -217,8 +366,9 @@ class TestDB2SSHAdapter:
 
     def test_semicolon_appended_to_sql(self):
         """Ensure _run_query appends semicolon for db2 -t flag."""
-        from adapters.db2ssh import _run_query
         import inspect
+
+        from adapters.db2ssh import _run_query
 
         source = inspect.getsource(_run_query)
         # Verify semicolon handling is present
@@ -226,8 +376,9 @@ class TestDB2SSHAdapter:
 
     def test_db2_command_uses_t_flag(self):
         """Ensure _run_query uses db2 -f file -t for semicolon termination."""
-        from adapters.db2ssh import _run_query
         import inspect
+
+        from adapters.db2ssh import _run_query
 
         source = inspect.getsource(_run_query)
         # Verify -t flag is present (use raw string to avoid escaping issues)

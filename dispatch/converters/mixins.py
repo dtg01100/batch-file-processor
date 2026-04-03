@@ -64,7 +64,6 @@ class DatabaseConnectionMixin(ABC):
         database: str = "QGPL",
         required_keys: tuple[str, ...] = (
             "as400_username",
-            "as400_password",
             "as400_address",
         ),
     ) -> None:
@@ -89,15 +88,29 @@ class DatabaseConnectionMixin(ABC):
                 f"Missing required database settings: {', '.join(missing_keys)}"
             )
 
+        # Either password or ssh_key_filename is required to authenticate
+        ssh_key_filename = settings_dict.get("ssh_key_filename", "").strip() or None
+        as400_password = settings_dict.get("as400_password", "").strip() or None
+        if not (as400_password or ssh_key_filename):
+            raise ValueError(
+                "Either as400_password or ssh_key_filename must be provided"
+            )
+
+        self.ssh_key_filename = ssh_key_filename
+        self.as400_password = as400_password
+
         # Use the convenience wrapper to create query runner from settings
         from core.database.query_runner import create_query_runner_from_settings
 
-        ssh_key_filename = settings_dict.get("ssh_key_filename", "")
         self.query_object = create_query_runner_from_settings(
             settings_dict, database=database
         )
         self._db_initialized = True
-        logger.debug("Database connection initialized for %s", self.__class__.__name__)
+        logger.debug(
+            "Database connection initialized for %s (ssh_key_filename=%s)",
+            self.__class__.__name__,
+            ssh_key_filename,
+        )
 
     def _close_db_connection(self) -> None:
         """Close the database connection if open."""
