@@ -153,7 +153,11 @@ class EmailBackend(BackendBase):
                     a.strip() for a in re.split(r"[;,]", to_address) if a.strip()
                 ]
             elif isinstance(to_address, list):
-                to_address_list = [a.strip() for a in to_address if isinstance(a, str) and a.strip()]
+                to_address_list = [
+                    a.strip()
+                    for a in to_address
+                    if isinstance(a, str) and a.strip()
+                ]
             else:
                 raise ValueError("email_to must be a string or list of strings")
 
@@ -203,6 +207,12 @@ class EmailBackend(BackendBase):
     def _get_backend_name(self) -> str:
         """Get backend name for logging."""
         return "smtp"
+
+    def _is_non_retryable_error(self, error: Exception) -> bool:
+        """Treat network-unreachable SMTP errors as non-retryable."""
+        if _is_network_unreachable(error):
+            return True
+        return super()._is_non_retryable_error(error)
 
     def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get SMTP endpoint for logging."""

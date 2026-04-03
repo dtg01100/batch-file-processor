@@ -180,9 +180,7 @@ class TestFTPRetryLogic:
     def test_ftp_sleep_called_on_retry(self, temporary_test_file):
         """time.sleep(2) should be called once when one retry occurs."""
         mock_client = MockFTPClient()
-        # Two errors needed: one for TLS attempt and one for non-TLS fallback.
-        # Both TLS options exhaust → outer retry → sleep(2) called once.
-        mock_client.add_error(ftplib.error_temp("Transient error"))
+        # One transient error should cause one retry and one sleep call.
         mock_client.add_error(ftplib.error_temp("Transient error"))
 
         with patch("backend.ftp_backend.time.sleep") as mock_sleep:
