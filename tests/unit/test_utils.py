@@ -1059,6 +1059,27 @@ class TestDoSplitEdi:
         result = utils.do_split_edi(str(edi_file), str(work_dir), params)
         assert len(result) == 1
 
+    def test_do_split_edi_outputs_to_workdir_and_sanitizes_paths(self, tmp_path):
+        """Output paths should be inside work directory and no traversal allowed."""
+        edi_content = (
+            "A12345678901234567010123000123456789\n"
+            "B01234567890ABCDEFGHIJ0001000001200340567890001234\n"
+        )
+        edi_file = tmp_path / "test.edi"
+        edi_file.write_text(edi_content)
+
+        work_dir = tmp_path / "output"
+        params = {"prepend_date_files": False}
+
+        result = utils.do_split_edi(str(edi_file), str(work_dir), params)
+
+        assert len(result) == 1
+        assert all(
+            os.path.commonpath([os.path.abspath(str(work_dir)), os.path.abspath(item[0])])
+            == os.path.abspath(str(work_dir))
+            for item in result
+        )
+
 
 # =============================================================================
 # utils.filter_b_records_by_category() tests

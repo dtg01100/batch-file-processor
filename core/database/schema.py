@@ -6,9 +6,59 @@ statements with permissive types (TEXT/INTEGER) so it can be applied
 against older databases without failing.
 """
 
+import sqlite3
+import time
+
 from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _execute_sqlite_statement(conn, stmt, object_name=None) -> None:
+    """Execute a schema statement on sqlite3.Connection with retries for locked DB."""
+    max_attempts = 3
+    delay_base = 0.1
+
+    for attempt in range(max_attempts):
+        try:
+            logger.debug(
+                "Executing SQLite schema statement (attempt=%d) for %s",
+                attempt + 1,
+                object_name or "unknown",
+            )
+            conn.execute(stmt)
+            conn.commit()
+            if object_name:
+                logger.info("Schema object verified: %s", object_name)
+            return
+        except sqlite3.OperationalError as exc:
+            msg = str(exc).lower()
+            if "locked" in msg and attempt < max_attempts - 1:
+                logger.warning(
+                    "Database is locked on attempt %d for %s; retrying",
+                    attempt + 1,
+                    object_name or "unknown",
+                )
+                time.sleep(delay_base * (attempt + 1))
+                continue
+            logger.error(
+                "Operational error executing schema statement for %s: %s",
+                object_name or "unknown",
+                exc,
+            )
+            raise
+        except sqlite3.Error as exc:
+            err_str = str(exc).lower()
+            if "already exists" in err_str:
+                if object_name:
+                    logger.debug("Schema object already exists: %s", object_name)
+                return
+            logger.error(
+                "SQLite error executing schema statement for %s: %s",
+                object_name or "unknown",
+                exc,
+            )
+            raise
 
 
 def ensure_schema(database_connection) -> None:
@@ -397,21 +447,35 @@ def ensure_schema(database_connection) -> None:
         # Extract table/index name for logging
         object_name = _extract_object_name(s)
 
+        raw_conn = getattr(database_connection, "_conn", None)
+
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            try:
+                _execute_sqlite_statement(raw_conn, s, object_name=object_name)
+            except sqlite3.OperationalError as exc:
+                logger.warning(
+                    "Schema statement lock/operational issue: %s, %s",
+                    object_name or "unknown",
+                    exc,
+                )
+            except sqlite3.Error as exc:
+                logger.warning(
+                    "Schema statement sqlite error: %s: %s",
+                    object_name or "unknown",
+                    exc,
+                )
+            continue
+
         try:
             database_connection.query(s)
             if object_name:
-                logger.debug(
-                    "Schema object created/verified: %s",
-                    object_name,
-                )
+                logger.debug("Schema object created/verified: %s", object_name)
         except Exception:
             # be tolerant: older dataset impl or DB state may raise; ensure best-effort
             try:
-                # Some dataset shims expose ._conn for raw sqlite3.Connection
-                raw = getattr(database_connection, "_conn", None)
-                if raw is not None:
-                    raw.execute(s)
-                    raw.commit()
+                if raw_conn is not None:
+                    raw_conn.execute(s)
+                    raw_conn.commit()
                     if object_name:
                         logger.debug(
                             "Schema object created/verified (via raw conn): %s",
@@ -427,15 +491,28 @@ def ensure_schema(database_connection) -> None:
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
+    # Handle ALTER statements separately for compatibility and best-effort behavior.
+    raw_conn = getattr(database_connection, "_conn", None)
+
     try:
-        database_connection.query(
-            "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
-        )
-        # initialize existing rows with empty JSON/dict-like string if needed
-        database_connection.query(
-            'UPDATE "folders" SET "plugin_configurations" = "{}" '
-            'WHERE "plugin_configurations" IS NULL'
-        )
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            _execute_sqlite_statement(
+                raw_conn, "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
+            )
+            _execute_sqlite_statement(
+                raw_conn,
+                'UPDATE "folders" SET "plugin_configurations" = "{}" '
+                'WHERE "plugin_configurations" IS NULL',
+            )
+        else:
+            database_connection.query(
+                "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
+            )
+            database_connection.query(
+                'UPDATE "folders" SET "plugin_configurations" = "{}" '
+                'WHERE "plugin_configurations" IS NULL'
+            )
+
         logger.info("Migration: added plugin_configurations column to folders table")
     except Exception:
         # Ignore failures (column exists or DB locked) -- migrations elsewhere
@@ -445,9 +522,15 @@ def ensure_schema(database_connection) -> None:
         )
 
     try:
-        database_connection.query(
-            "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
-        )
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            _execute_sqlite_statement(
+                raw_conn, "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
+            )
+        else:
+            database_connection.query(
+                "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
+            )
+
         logger.info("Migration: added invoice_numbers column to processed_files table")
     except Exception:
         logger.debug(

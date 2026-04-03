@@ -233,6 +233,43 @@ class TestEmailBackend:
         assert "a@example.com" in to_field
         assert "b@example.com" in to_field
 
+    def test_email_sends_to_semicolon_separated_recipients(self, sample_settings, sample_file):
+        """Semicolon-separated addresses are accepted in the same way as commas."""
+        from backend import email_backend
+        from backend.smtp_client import MockSMTPClient
+
+        params = {
+            "email_to": "a@example.com; b@example.com; c@example.com",
+            "email_subject_line": "Test",
+        }
+        mock_smtp = MockSMTPClient()
+        email_backend.do(params, sample_settings, sample_file, smtp_client=mock_smtp)
+
+        assert len(mock_smtp.emails_sent) > 0
+        to_field = mock_smtp.emails_sent[0]["msg"]["To"]
+        assert "a@example.com" in to_field
+        assert "b@example.com" in to_field
+        assert "c@example.com" in to_field
+
+    def test_email_strips_blank_recipient_entries(self, sample_settings, sample_file):
+        """Empty recipient tokens are ignored to avoid unintended blank recipients."""
+        from backend import email_backend
+        from backend.smtp_client import MockSMTPClient
+
+        params = {
+            "email_to": "a@example.com, , b@example.com,; , c@example.com",
+            "email_subject_line": "Test",
+        }
+        mock_smtp = MockSMTPClient()
+        email_backend.do(params, sample_settings, sample_file, smtp_client=mock_smtp)
+
+        assert len(mock_smtp.emails_sent) > 0
+        to_field = mock_smtp.emails_sent[0]["msg"]["To"]
+        assert "a@example.com" in to_field
+        assert "b@example.com" in to_field
+        assert "c@example.com" in to_field
+        assert ", ," not in to_field
+
 
 class TestCopyBackend:
     """Test suite for Copy backend functionality."""

@@ -119,6 +119,33 @@ class TestMigrationEdgeCases:
 
         db_conn.close()
 
+    def test_ensure_schema_retries_locked_db(self, tmp_path, monkeypatch):
+        """Ensure schema applies even if first raw execute raises a locked error."""
+        db_path = str(tmp_path / "test_locked_db.db")
+        db_conn = sqlite_wrapper.Database.connect(db_path)
+
+        call_count = {"n": 0}
+        original_execute = schema._execute_sqlite_statement
+
+        def locked_once(conn, stmt, object_name=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise sqlite3.OperationalError("database is locked")
+            return original_execute(conn, stmt, object_name=object_name)
+
+        monkeypatch.setattr(schema, "_execute_sqlite_statement", locked_once)
+
+        try:
+            schema.ensure_schema(db_conn)
+        finally:
+            monkeypatch.setattr(schema, "_execute_sqlite_statement", original_execute)
+
+        assert call_count["n"] > 1
+        # The tables should still exist after retry.
+        assert "folders" in db_conn.tables
+
+        db_conn.close()
+
     def test_multiple_consecutive_migrations(self, tmp_path):
         """Test running migration multiple times is idempotent."""
         db_path = str(tmp_path / "test_multiple.db")

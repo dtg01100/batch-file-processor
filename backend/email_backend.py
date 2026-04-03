@@ -144,9 +144,18 @@ class EmailBackend(BackendBase):
             subject_line = re.sub(r"[\r\n]", "", subject_line)
             filename_no_path_str = re.sub(r"[\r\n]", "", filename_no_path_str)
 
-            # Parse recipient addresses
+            # Parse recipient addresses from comma- or semicolon-separated input.
+            # Keep recipient order and ignore empty entries to avoid introducing
+            # blank recipients into the email envelope.
             to_address = process_parameters["email_to"]
-            to_address_list = [a.strip() for a in to_address.split(",")]
+            if isinstance(to_address, str):
+                to_address_list = [
+                    a.strip() for a in re.split(r"[;,]", to_address) if a.strip()
+                ]
+            elif isinstance(to_address, list):
+                to_address_list = [a.strip() for a in to_address if isinstance(a, str) and a.strip()]
+            else:
+                raise ValueError("email_to must be a string or list of strings")
 
             # Build email message
             message = EmailMessage()

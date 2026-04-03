@@ -172,6 +172,8 @@ def _write_split_edi_files(
 ) -> tuple[list[tuple[str, str, str]], int]:
     """Write split invoice files and return metadata list with written line count.
 
+    Logs are included for file creation and any path validation issues.
+
     Iterates through EDI lines, creating a new output file for each A record
     (invoice header) and writing subsequent B/C records to that file until
     the next A record is encountered.
@@ -191,19 +193,32 @@ def _write_split_edi_files(
         ValueError: If no A record is found before data lines, or if file has no A records.
 
     """
-    f = None
     count = 0
     write_counter = 0
     edi_send_list = []
+    current_file = None
+
+    # Enforce stable absolute work directory path
+    work_directory = os.path.abspath(work_directory)
 
     try:
+        logger.debug(
+            "_write_split_edi_files starting (source=%s, work_directory=%s, prepend_date_files=%s)",
+            edi_process,
+            work_directory,
+            prepend_date_files,
+        )
+
         for line_mum, line in enumerate(work_file_lined):
             writeable_line = line
+
             if writeable_line.startswith("A"):
                 count += 1
                 line_dict = capture_records(writeable_line)
-                if edi_send_list:
-                    f.close()
+
+                if current_file is not None:
+                    current_file.close()
+
                 output_file_path, file_name_prefix, file_name_suffix = (
                     _build_split_file_metadata(
                         line_dict,
@@ -213,28 +228,46 @@ def _write_split_edi_files(
                         prepend_date_files=prepend_date_files,
                     )
                 )
+                logger.debug("create split file %s (count=%d)", output_file_path, count)
+
+                if not os.path.abspath(output_file_path).startswith(
+                    work_directory + os.sep
+                ):
+                    logger.error(
+                        "Invalid output path generated (potential path traversal): %s", output_file_path
+                    )
+                    raise ValueError(
+                        "Invalid output path generated (potential path traversal)"
+                    )
+
                 edi_send_list.append(
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
-                f = open(output_file_path, "wb")
 
-            if f is None:
+                current_file = open(output_file_path, "wb")
+
+            if current_file is None:
                 raise ValueError(
                     f"[do_split_edi]: No A record found before line {line_mum}; "
                     "EDI file must start with an A record"
                 )
 
-            f.write(writeable_line.replace("\n", "\r\n").encode())
+            current_file.write(writeable_line.replace("\n", "\r\n").encode())
             write_counter += 1
 
-        if f is None:
+        if current_file is None:
             raise ValueError("[do_split_edi]: EDI file contained no A records")
 
-        f.close()
-    except Exception:
-        if f is not None and not f.closed:
-            f.close()
-        raise
+    finally:
+        if current_file is not None and not current_file.closed:
+            current_file.close()
+
+    logger.info(
+        "_write_split_edi_files complete (source=%s, outputs=%s, lines=%d)",
+        edi_process,
+        len(edi_send_list),
+        write_counter,
+    )
 
     return edi_send_list, write_counter
 
@@ -264,20 +297,39 @@ def do_split_edi(
 
     """
 
-    if not os.path.exists(work_directory):
-        os.mkdir(work_directory)
+    work_directory = os.path.abspath(work_directory)
+    os.makedirs(work_directory, exist_ok=True)
+
+    if not os.path.exists(edi_process):
+        raise FileNotFoundError(f"EDI source file not found: {edi_process}")
+
+    logger.info(
+        "do_split_edi start (source=%s, work_directory=%s)",
+        edi_process,
+        work_directory,
+    )
+
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = work_file.readlines()  # make list of lines
         lines_in_edi = len(work_file_lined)
         a_record_count = sum(1 for line in work_file_lined if line.startswith("A"))
+        logger.debug(
+            "do_split_edi counts: lines=%d, a_records=%d", lines_in_edi, a_record_count
+        )
         if a_record_count > MAX_A_RECORD_COUNT:
+            logger.warning(
+                "do_split_edi abort, too many A records (%d > %d)",
+                a_record_count,
+                MAX_A_RECORD_COUNT,
+            )
             return []
 
+        prepended = parameters_dict.get("prepend_date_files", False)
         edi_send_list, write_counter = _write_split_edi_files(
             work_file_lined,
             edi_process,
             work_directory,
-            prepend_date_files=parameters_dict["prepend_date_files"],
+            prepend_date_files=prepended,
         )
 
         _validate_split_counts(
@@ -286,6 +338,12 @@ def do_split_edi(
             edi_send_list,
             a_record_count,
         )
+
+    logger.info(
+        "do_split_edi complete (source=%s, output_files=%d)",
+        edi_process,
+        len(edi_send_list),
+    )
     return edi_send_list
 
 
