@@ -78,9 +78,7 @@ class QtFolderDataExtractor:
             force_edi_validation=self._get_bool("force_edi_check_var"),
             pad_a_records=self._get_bool("pad_arec_check"),
             a_record_padding=self._get_text("a_record_padding_field"),
-            a_record_padding_length=int(
-                self._get_combo("a_record_padding_length") or "6"
-            ),
+            a_record_padding_length=self._get_int("a_record_padding_length", 6),
             append_a_records=self._get_bool("append_arec_check"),
             a_record_append_text=self._get_text("a_record_append_field"),
             force_txt_file_ext=self._get_bool("force_txt_file_ext_check"),
@@ -91,7 +89,7 @@ class QtFolderDataExtractor:
             ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
             override_upc_bool=self._get_bool("override_upc_bool"),
-            override_upc_level=int(self._get_combo("override_upc_level") or "1"),
+            override_upc_level=self._get_int("override_upc_level", 1),
             override_upc_category_filter=self._get_text(
                 "override_upc_category_filter_entry"
             ),
@@ -186,6 +184,11 @@ class QtFolderDataExtractor:
             elif isinstance(widget, QLineEdit):
                 try:
                     return int(widget.text().strip())
+                except (TypeError, ValueError):
+                    pass
+            elif isinstance(widget, QComboBox):
+                try:
+                    return int(widget.currentText().strip())
                 except (TypeError, ValueError):
                     pass
         except RuntimeError:
