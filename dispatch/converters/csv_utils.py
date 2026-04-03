@@ -21,10 +21,13 @@ Example:
 
 """
 
-from decimal import Decimal
+import logging
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from core.utils import calc_check_digit, convert_UPCE_to_UPCA, safe_int
+
+logger = logging.getLogger(__name__)
 
 
 def apply_retail_uom(
@@ -55,7 +58,7 @@ def apply_retail_uom(
         if unit_multiplier == 0:
             raise ValueError("Unit multiplier cannot be zero")
         int(fields["qty_of_units"].strip())
-    except Exception:
+    except (KeyError, ValueError, TypeError, AttributeError):
         return fields
 
     # Get UPC for each (retail) from lookup
@@ -83,8 +86,8 @@ def apply_retail_uom(
         fields["upc_number"] = each_upc
         fields["unit_multiplier"] = "000001"
 
-    except Exception:
-        pass
+    except (InvalidOperation, ValueError, TypeError, KeyError, ArithmeticError) as e:
+        logger.debug("Retail UOM conversion skipped due to invalid data: %s", e)
 
     return fields
 
@@ -212,7 +215,7 @@ def format_retail_price(
         retail_price = case_cost / Decimal(multiplier)
         result = retail_price.quantize(Decimal(".01"))
         return str(result) if as_string else result
-    except Exception:
+    except (InvalidOperation, ValueError, TypeError, AttributeError, ArithmeticError):
         return "0.00" if as_string else Decimal("0.00")
 
 

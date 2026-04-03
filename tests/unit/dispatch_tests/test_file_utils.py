@@ -3,6 +3,7 @@
 import datetime
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from dispatch.file_utils import (
@@ -98,8 +99,10 @@ class TestBuildErrorLogFilename:
 
     def test_basic_construction(self):
         """Test basic filename construction."""
-        with patch("dispatch.file_utils.time") as mock_time:
-            mock_time.ctime.return_value = "Mon Jan 15 10-30-00 2024"
+        with patch("dispatch.file_utils.datetime") as mock_datetime:
+            mock_datetime.datetime.now.return_value.strftime.return_value = (
+                "2024-01-15_10-30-00"
+            )
 
             result = build_error_log_filename(
                 alias="Test Folder",
@@ -138,9 +141,11 @@ class TestBuildErrorLogFilename:
         assert "2024-01-15_10-30-00" in result
 
     def test_colons_replaced_in_timestamp(self):
-        """Test that colons are replaced in timestamp."""
-        with patch("dispatch.file_utils.time") as mock_time:
-            mock_time.ctime.return_value = "Mon Jan 15 10:30:00 2024"
+        """Test that generated timestamp has no colons (replaced with dashes)."""
+        with patch("dispatch.file_utils.datetime") as mock_datetime:
+            mock_datetime.datetime.now.return_value.strftime.return_value = (
+                "2024-01-15_10-30-00"
+            )
 
             result = build_error_log_filename(
                 alias="TestFolder",
@@ -148,8 +153,9 @@ class TestBuildErrorLogFilename:
                 folder_name="/data/input",
             )
 
-        # Colons should be replaced with dashes
+        # Colons should be replaced with dashes in generated timestamp
         assert "10:30:00" not in result
+        assert "10-30-00" in result
 
 
 class TestGetFileExtension:
@@ -254,8 +260,8 @@ class TestListFilesInDirectory:
             # Create files
             file1 = os.path.join(tmpdir, "file1.txt")
             file2 = os.path.join(tmpdir, "file2.edi")
-            open(file1, "w").close()
-            open(file2, "w").close()
+            Path(file1).touch()
+            Path(file2).touch()
 
             result = list_files_in_directory(tmpdir, files_only=True)
 
@@ -268,7 +274,7 @@ class TestListFilesInDirectory:
             # Create file and subdirectory
             file1 = os.path.join(tmpdir, "file1.txt")
             subdir = os.path.join(tmpdir, "subdir")
-            open(file1, "w").close()
+            Path(file1).touch()
             os.mkdir(subdir)
 
             result = list_files_in_directory(tmpdir, files_only=False)
@@ -284,7 +290,7 @@ class TestListFilesInDirectory:
         """Test that absolute paths are returned."""
         with tempfile.TemporaryDirectory() as tmpdir:
             file1 = os.path.join(tmpdir, "file1.txt")
-            open(file1, "w").close()
+            Path(file1).touch()
 
             result = list_files_in_directory(tmpdir)
 

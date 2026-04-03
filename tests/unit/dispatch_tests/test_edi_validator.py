@@ -3,6 +3,7 @@
 import logging
 import os
 import tempfile
+from pathlib import Path
 
 from dispatch.edi_validator import EDIValidator, RealFileSystem
 
@@ -268,8 +269,8 @@ class TestRealFileSystem:
             # Create files
             file1 = os.path.join(tmpdir, "file1.txt")
             file2 = os.path.join(tmpdir, "file2.edi")
-            open(file1, "w").close()
-            open(file2, "w").close()
+            Path(file1).touch()
+            Path(file2).touch()
 
             fs = RealFileSystem()
             files = fs.list_files(tmpdir)
