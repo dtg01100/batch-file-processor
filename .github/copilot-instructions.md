@@ -94,6 +94,19 @@ When mocks are necessary:
 - New code changes should include a test that would fail before the fix and pass after.
 - Prefer small focused tests that assert behavior as narrowly as possible.
 
+## Bug Fixing Principles
+
+**Find and fix root causes — never just work around them.**
+
+When a bug is reported or discovered:
+1. Investigate to understand the **root cause**, not just the symptom
+2. If the bug is in our code, **fix it properly** at the source
+3. Do not add workarounds, patches, or defensive checks that mask the problem
+4. Only add workarounds for **external dependencies** (e.g., third-party APIs, database limitations) when root-cause fixes are impossible
+5. Document any intentional workarounds with `TODO: <reason>` linking to the known issue
+
+Example: If `JOIN` queries fail through db2ssh but work via ODBC, the fix belongs in the adapter or query construction — not in every converter that happens to use joins.
+
 ## Architecture
 
 ```

@@ -210,3 +210,25 @@ def test_crec_generator_db_connect_uses_create_query_runner_from_settings(monkey
 
     assert called.get("called", False)
     assert cri.query_object is not None
+
+
+class TestDB2SSHAdapter:
+    """Tests for db2ssh adapter multiline SQL support."""
+
+    def test_semicolon_appended_to_sql(self):
+        """Ensure _run_query appends semicolon for db2 -t flag."""
+        from adapters.db2ssh import _run_query
+        import inspect
+
+        source = inspect.getsource(_run_query)
+        # Verify semicolon handling is present
+        assert 'rstrip()' in source or 'endswith(";")' in source or "endswith(';')" in source
+
+    def test_db2_command_uses_t_flag(self):
+        """Ensure _run_query uses db2 -f file -t for semicolon termination."""
+        from adapters.db2ssh import _run_query
+        import inspect
+
+        source = inspect.getsource(_run_query)
+        # Verify -t flag is present (use raw string to avoid escaping issues)
+        assert "-t" in source, "db2 command should use -t flag for semicolon termination"

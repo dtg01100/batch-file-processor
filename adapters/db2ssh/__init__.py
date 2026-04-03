@@ -225,11 +225,17 @@ def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
     """
     remote_sql = f"/tmp/.db2ssh_{uuid.uuid4().hex}.sql"
 
+    # Ensure SQL ends with semicolon (required for db2 -t flag)
+    sql = sql.rstrip()
+    if not sql.endswith(";"):
+        sql = sql + ";"
+
     escaped_sql = sql.replace("\\", "\\\\").replace("'", "'\\''")
     ssh.exec_command(f"printf '%s\\n' '{escaped_sql}' > {remote_sql}")
 
     try:
-        cmd = f'qsh -c "db2 -f {remote_sql}"'
+        # Use -t flag for semicolon-terminated statements (allows multiline SQL)
+        cmd = f'qsh -c "db2 -f {remote_sql} -t"'
         stdin, stdout, stderr = ssh.exec_command(cmd)
         output = stdout.read().decode()
         error = stderr.read().decode()
