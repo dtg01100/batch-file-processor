@@ -143,7 +143,7 @@ def _emit_startup_import_error(exc: ImportError | OSError) -> None:
     print("\n".join(lines), file=sys.stderr)
 
 
-def _load_qt_app_class() -> type[object]:
+def _load_qt_app_class() -> type:
     try:
         module = importlib.import_module("interface.qt.app")
     except (ImportError, OSError) as exc:

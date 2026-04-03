@@ -12,7 +12,7 @@ decoupled from any specific UI framework.
 from __future__ import annotations
 
 import os
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 try:
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget

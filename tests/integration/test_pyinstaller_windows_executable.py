@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 
 from build_wine_local import (
-    WINDOWS_EXECUTABLE_NAME,
     format_bundle_validation_errors,
     validate_windows_bundle,
 )

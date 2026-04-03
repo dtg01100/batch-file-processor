@@ -12,6 +12,8 @@ from typing import Any
 
 from core.utils.bool_utils import normalize_bool
 
+from pydantic import BaseModel, Field, ValidationError, model_validator
+
 
 def _bool_from_data(data: dict[str, Any], key: str, *, default: bool = False) -> bool:
     return normalize_bool(data.get(key, default))
@@ -256,6 +258,32 @@ class CSVConfiguration:
     split_prepaid_sales_tax_crec: bool = False
 
 
+class FolderConfigurationPydantic(BaseModel):
+    folder_name: str = Field(default="")
+    folder_is_active: bool = Field(default=False)
+    alias: str = Field(default="")
+
+    process_backend_copy: bool = Field(default=False)
+    process_backend_ftp: bool = Field(default=False)
+    process_backend_email: bool = Field(default=False)
+    process_backend_http: bool = Field(default=False)
+
+    process_edi: bool = Field(default=False)
+    split_edi: bool = Field(default=False)
+    split_edi_include_invoices: bool = Field(default=False)
+    split_edi_include_credits: bool = Field(default=False)
+    prepend_date_files: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def validate_edi_options(cls, values):
+        if values.prepend_date_files and not values.split_edi:
+            raise ValueError("prepend_date_files requires split_edi to be true")
+        return values
+
+    class Config:
+        extra = "forbid"
+
+
 @dataclass
 class FolderConfiguration:
     """Complete folder configuration data model."""
@@ -380,6 +408,30 @@ class FolderConfiguration:
 
         return errors
 
+    def validate_with_pydantic(self) -> None:
+        """Validate current FolderConfiguration using Pydantic schema."""
+        try:
+            FolderConfigurationPydantic(
+                folder_name=self.folder_name,
+                folder_is_active=self.folder_is_active,
+                alias=self.alias,
+                process_backend_copy=self.process_backend_copy,
+                process_backend_ftp=self.process_backend_ftp,
+                process_backend_email=self.process_backend_email,
+                process_backend_http=self.process_backend_http,
+                process_edi=self.edi.process_edi if self.edi else False,
+                split_edi=self.edi.split_edi if self.edi else False,
+                split_edi_include_invoices=(
+                    self.edi.split_edi_include_invoices if self.edi else False
+                ),
+                split_edi_include_credits=(
+                    self.edi.split_edi_include_credits if self.edi else False
+                ),
+                prepend_date_files=self.edi.prepend_date_files if self.edi else False,
+            )
+        except ValidationError as exc:
+            raise ValueError(f"FolderConfiguration pydantic validation failed: {exc}")
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FolderConfiguration":
         """Create FolderConfiguration from dictionary."""
@@ -494,7 +546,7 @@ class FolderConfiguration:
             ),
         )
 
-        return cls(
+        folder_config = cls(
             folder_name=data.get("folder_name", ""),
             folder_is_active=normalize_bool(data.get("folder_is_active", False)),
             alias=data.get("alias", ""),
@@ -515,6 +567,9 @@ class FolderConfiguration:
             csv=csv,
             plugin_configurations=data.get("plugin_configurations", {}),
         )
+
+        folder_config.validate_with_pydantic()
+        return folder_config
 
     def to_dict(self) -> dict[str, Any]:
         """Convert FolderConfiguration to dictionary for database."""

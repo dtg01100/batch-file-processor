@@ -11,7 +11,6 @@ Tests cover:
 import pytest
 from PyQt5.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QLineEdit,
     QVBoxLayout,
