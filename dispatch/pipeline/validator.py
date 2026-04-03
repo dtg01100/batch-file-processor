@@ -147,7 +147,13 @@ class MockValidator:
         return params.get("report_edi_errors", False)
 
     def reset(self) -> None:
-        """Reset the mock state."""
+        """Reset the mock state to initial values.
+
+        Clears call counts, recorded file paths, errors, warnings, and
+        log output. Useful for reusing the same mock instance across
+        multiple test cases.
+
+        """
         self.call_count = 0
         self.last_file_path = None
         self.last_filename_for_log = None
@@ -369,4 +375,10 @@ class EDIValidationStep:
 
 
 class ValidationError(Exception):
-    """Exception raised for validation errors."""
+    """Exception raised when EDI validation detects irrecoverable errors.
+
+    This exception signals that the EDI file has structural or content
+    errors that make it unsuitable for further processing. The exception
+    message typically contains details about the validation failures.
+
+    """

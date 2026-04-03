@@ -65,9 +65,12 @@ class FintechConverter(BaseEDIConverter):
             "fintech_division_id", ""
         )
 
-        # Initialize invoice fetcher for customer number lookups
-        # Note: InvFetcher requires a query_runner parameter, but for this converter
-        # we don't actually need database lookups, so we pass None
+        # Initialize invoice fetcher for customer number lookups.
+        # InvFetcher is used here only for fetch_cust_no(), which retrieves
+        # the customer number associated with an invoice. Passing None for
+        # query_runner is intentional: this converter doesn't require database
+        # lookups beyond customer number, and InvFetcher handles a None
+        # query_runner gracefully by returning empty/default values.
         context.user_data["inv_fetcher"] = InvFetcher(None, context.settings_dict)
 
         # Open output file and create CSV writer
@@ -216,10 +219,10 @@ class FintechConverter(BaseEDIConverter):
         """Convert unit of measure multiplier to UOM description.
 
         Args:
-            uommult: The unit multiplier value
+            uommult: The unit multiplier value (number of units per case).
 
         Returns:
-            "EA" if multiplier > 1, "CS" otherwise
+            "EA" (each) if multiplier > 1, "CS" (case) otherwise.
 
         """
         if uommult > 1:
@@ -232,10 +235,13 @@ class FintechConverter(BaseEDIConverter):
         """Format invoice date from MMDDYY to MM/DD/YYYY.
 
         Args:
-            inv_date: Date string in MMDDYY format
+            inv_date: Date string in MMDDYY format (e.g., "011524" for Jan 15, 2024).
 
         Returns:
-            Formatted date string in MM/DD/YYYY format
+            Formatted date string in MM/DD/YYYY format (e.g., "01/15/2024").
+
+        Raises:
+            ValueError: If the date string cannot be parsed as MMDDYY.
 
         """
         return utils.datetime_from_invtime(inv_date).strftime("%m/%d/%Y")

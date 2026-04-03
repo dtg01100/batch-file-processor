@@ -233,7 +233,13 @@ class MockConverter:
         return self._result
 
     def reset(self) -> None:
-        """Reset the mock state."""
+        """Reset the mock state to initial values.
+
+        Clears call counts, recorded arguments, output files, and result
+        settings. Useful for reusing the same mock instance across
+        multiple test cases.
+
+        """
         self.call_count = 0
         self.last_input_path = None
         self.last_output_dir = None

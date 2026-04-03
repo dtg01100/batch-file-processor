@@ -193,8 +193,12 @@ class YellowDogConverter(BaseEDIConverter):
         Reverses record order (as per original behavior) and writes
         all records with database lookups for customer info.
 
+        The invoice consists of batched B records (line items) and C records
+        (charges/taxes), all sharing the same A record (invoice header) context.
+
         Args:
-            context: The conversion context
+            context: The conversion context containing the CSV writer,
+                output file, and user data (arec_line, brec_lines, crec_lines).
 
         """
         csv_writer = context.csv_writer
