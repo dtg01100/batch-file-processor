@@ -1388,8 +1388,11 @@ def upgrade_database(
         cursor = database_connection.raw_connection.cursor()
 
         # Check whether any folders have the corrupted signature from the original
-        # buggy v44→v45 migration (process_edi='0' AND convert_to_format='tweaks').
-        # For fresh migrations from v32, the current v44→v45 step is correct and
+        # v44->v45 migration bug. The buggy migration set process_edi='0' and
+        # convert_to_format='tweaks' for folders that should have retained their
+        # original EDI processing settings. This fix detects and repairs those rows
+        # by restoring values from the most recent database backup.
+        # For fresh migrations from v32, the current v44->v45 step is correct and
         # produces no corrupted rows, so we skip everything.
         affected = {
             r[0]
