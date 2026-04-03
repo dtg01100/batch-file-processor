@@ -79,6 +79,65 @@ class InvFetcher:
         self.custname = ""
         self.custno = 0
 
+    def _po_query(self, invoice_number: int) -> list:
+        if self._query_runner is None:
+            msg = "InvFetcher.fetch_po() called with no query_runner"
+            if self._strict_database_lookup:
+                raise RuntimeError(msg)
+            logger.warning("%s - returning empty PO", msg)
+            return []
+
+        qry_ret = self._query_runner.run_query(
+            """
+                SELECT
+                    trim(ohhst.bte4cd),
+                    trim(ohhst.bthinb),
+                    ohhst.btabnb
+                FROM
+                    dacdata.ohhst ohhst
+                WHERE
+                    ohhst.BTHHNB = ?
+                """,
+            (int(invoice_number),),
+        )
+        log_with_context(
+            logger,
+            logging.DEBUG,
+            "PO fetch query executed",
+            operation="fetch_po",
+            context={
+                "invoice_number": invoice_number,
+                "query_type": "SELECT",
+                "table": "dacdata.ohhst",
+                "params": (int(invoice_number),),
+                "result_count": len(qry_ret),
+            },
+        )
+        return qry_ret
+
+    def _set_values_from_row(self, row):
+        if isinstance(row, dict):
+            values = list(row.values())
+            self.po = values[0] if values else ""
+            self.custname = values[1] if len(values) > 1 else ""
+            self.custno = values[2] if len(values) > 2 else 0
+        else:
+            self.po = row[0]
+            self.custname = row[1]
+            self.custno = row[2]
+
+    def _set_po_from_query(self, qry_ret, invoice_number: int) -> str:
+        self.last_invoice_number = invoice_number
+
+        if qry_ret:
+            self._set_values_from_row(qry_ret[0])
+        elif self._strict_database_lookup:
+            raise LookupError(
+                f"No invoice header found in AS400 for invoice {invoice_number}"
+            )
+
+        return self.po
+
     def fetch_po(self, invoice_number: int) -> str:
         """Fetch PO number for invoice.
 
@@ -94,41 +153,8 @@ class InvFetcher:
         if invoice_number == self.last_invoice_number:
             return self.po
 
-        # Handle case where no query_runner is provided (for testing)
-        if self._query_runner is None:
-            msg = "InvFetcher.fetch_po() called with no query_runner"
-            if self._strict_database_lookup:
-                raise RuntimeError(msg)
-            logger.warning("%s - returning empty PO", msg)
-            return ""
-
         try:
-            qry_ret = self._query_runner.run_query(
-                """
-                SELECT
-                    trim(ohhst.bte4cd),
-                    trim(ohhst.bthinb),
-                    ohhst.btabnb
-                FROM
-                    dacdata.ohhst ohhst
-                WHERE
-                    ohhst.BTHHNB = ?
-                """,
-                (int(invoice_number),),
-            )
-            log_with_context(
-                logger,
-                logging.DEBUG,
-                "PO fetch query executed",
-                operation="fetch_po",
-                context={
-                    "invoice_number": invoice_number,
-                    "query_type": "SELECT",
-                    "table": "dacdata.ohhst",
-                    "params": (int(invoice_number),),
-                    "result_count": len(qry_ret),
-                },
-            )
+            qry_ret = self._po_query(invoice_number)
         except (RuntimeError, OSError, ValueError):
             if self._strict_database_lookup:
                 raise
@@ -145,32 +171,14 @@ class InvFetcher:
                 exc_info=True,
             )
             return ""
-        self.last_invoice_number = invoice_number
+
         try:
-            # Results are list of dicts, get first row values
-            if qry_ret:
-                row = qry_ret[0]
-                # Handle both dict and tuple results for flexibility
-                if isinstance(row, dict):
-                    # Get values by column order
-                    values = list(row.values())
-                    self.po = values[0] if values else ""
-                    self.custname = values[1] if len(values) > 1 else ""
-                    self.custno = values[2] if len(values) > 2 else 0
-                else:
-                    # Tuple result
-                    self.po = row[0]
-                    self.custname = row[1]
-                    self.custno = row[2]
-            elif self._strict_database_lookup:
-                raise LookupError(
-                    f"No invoice header found in AS400 for invoice {invoice_number}"
-                )
+            return self._set_po_from_query(qry_ret, invoice_number)
         except (IndexError, KeyError):
             if self._strict_database_lookup:
                 raise
             self.po = ""
-        return self.po
+            return self.po
 
     def fetch_cust_name(self, invoice_number: int) -> str:
         """Fetch customer name for invoice.

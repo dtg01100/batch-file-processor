@@ -94,6 +94,62 @@ class CRecord:
     amount: str
 
 
+def _parse_a_record(line: str) -> dict | None:
+    if len(line) < 33:
+        import logging
+
+        logging.getLogger(__name__).debug(
+            "A record line too short: expected >=33 chars, got %d", len(line)
+        )
+        return None
+    return {
+        "record_type": line[0],
+        "cust_vendor": line[1:7],
+        "invoice_number": line[7:17],
+        "invoice_date": line[17:23],
+        "invoice_total": line[23:33],
+    }
+
+
+def _parse_b_record(line: str) -> dict | None:
+    if len(line) < 70:
+        import logging
+
+        logging.getLogger(__name__).debug(
+            "B record line too short: expected >=70 chars, got %d", len(line)
+        )
+        return None
+    return {
+        "record_type": line[0],
+        "upc_number": line[1:12],
+        "description": line[12:37],
+        "vendor_item": line[37:43],
+        "unit_cost": line[43:49],
+        "combo_code": line[49:51],
+        "unit_multiplier": line[51:57],
+        "qty_of_units": line[57:62],
+        "suggested_retail_price": line[62:67],
+        "price_multi_pack": line[67:70],
+        "parent_item_number": line[70:76] if len(line) >= 76 else "",
+    }
+
+
+def _parse_c_record(line: str) -> dict | None:
+    if len(line) < 38:
+        import logging
+
+        logging.getLogger(__name__).debug(
+            "C record line too short: expected >=38 chars, got %d", len(line)
+        )
+        return None
+    return {
+        "record_type": line[0],
+        "charge_type": line[1:4],
+        "description": line[4:29],
+        "amount": line[29:38],
+    }
+
+
 def capture_records(line: str, parser=None) -> dict | None:
     """Parse an EDI record line into a dictionary.
 
@@ -107,7 +163,7 @@ def capture_records(line: str, parser=None) -> dict | None:
         ValueError: If line doesn't match known record type
 
     Example:
-        >>> capture_records("AVENDOR0000000001120240000000123\\n")
+        >>> capture_records("AVENDOR0000000001120240000000123\n")
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
 
     """
@@ -115,67 +171,22 @@ def capture_records(line: str, parser=None) -> dict | None:
     if parser is not None:
         result = parser.parse_line(line)
         if result is None and line and line.strip() != "":
-            if line.strip() == "\x1a":
+            if line.strip() == "":
                 return None
             raise EDIParseError("Not An EDI")
         return result
 
-    if not line or line.startswith("\x1a") or not line.strip():
+    if not line or line.startswith("") or not line.strip():
         return None
 
     if line.startswith("A"):
-        if len(line) < 33:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "A record line too short: expected >=33 chars, got %d", len(line)
-            )
-            return None
-        return {
-            "record_type": line[0],
-            "cust_vendor": line[1:7],
-            "invoice_number": line[7:17],
-            "invoice_date": line[17:23],
-            "invoice_total": line[23:33],
-        }
+        return _parse_a_record(line)
     elif line.startswith("B"):
-        if len(line) < 70:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "B record line too short: expected >=70 chars, got %d", len(line)
-            )
-            return None
-        return {
-            "record_type": line[0],
-            "upc_number": line[1:12],
-            "description": line[12:37],
-            "vendor_item": line[37:43],
-            "unit_cost": line[43:49],
-            "combo_code": line[49:51],
-            "unit_multiplier": line[51:57],
-            "qty_of_units": line[57:62],
-            "suggested_retail_price": line[62:67],
-            "price_multi_pack": line[67:70],
-            "parent_item_number": line[70:76] if len(line) >= 76 else "",
-        }
+        return _parse_b_record(line)
     elif line.startswith("C"):
-        if len(line) < 38:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "C record line too short: expected >=38 chars, got %d", len(line)
-            )
-            return None
-        return {
-            "record_type": line[0],
-            "charge_type": line[1:4],
-            "description": line[4:29],
-            "amount": line[29:38],
-        }
+        return _parse_c_record(line)
     else:
         return None  # Invalid record type
-
 
 def parse_a_record(line: str) -> ARecord:
     """Parse an A record line into an ARecord dataclass.
