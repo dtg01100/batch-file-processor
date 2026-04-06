@@ -338,50 +338,88 @@ class FileProcessor:
                 current_file,
                 context.effective_folder,
             )
-            # Handle tuple return: (is_valid, file_path_or_errors)
-            if isinstance(validation_output, tuple):
-                is_valid, errors_or_file = validation_output
-            elif isinstance(validation_output, dict):
-                # Fallback for dict-style return
-                is_valid = validation_output.get("valid", True)
-                errors_or_file = (
-                    validation_output.get("file_path", current_file)
-                    if is_valid
-                    else validation_output.get("errors", [])
-                )
-            elif isinstance(validation_output, bool):
-                # Simple boolean return
-                is_valid = validation_output
-                errors_or_file = current_file
-            else:
-                # Unexpected type - treat as valid with current file
-                logger.warning(
-                    "Unexpected validation output type: %s",
-                    type(validation_output).__name__,
-                )
-                is_valid = True
-                errors_or_file = current_file
-
-            result.validated = is_valid
-            if not is_valid:
-                logger.warning(
-                    "Validation failed for %s: %s", file_basename, errors_or_file
-                )
-                if isinstance(errors_or_file, list):
-                    result.errors.extend(str(e) for e in errors_or_file)
-                elif isinstance(errors_or_file, str):
-                    result.errors.append(errors_or_file)
-                return False, current_file
-            # errors_or_file is the (possibly modified) file path on success
-            new_file = (
-                errors_or_file if isinstance(errors_or_file, str) else current_file
+            return self._handle_validation_result(
+                validation_output, current_file, file_basename, result
             )
-            return True, new_file
         except Exception as e:
-            logger.exception("Validation error for %s: %s", file_basename, e)
-            result.validated = False
-            result.errors.append(str(e))
+            return self._handle_validation_error(e, file_basename, result, current_file)
+
+    def _handle_validation_result(
+        self,
+        validation_output: Any,
+        current_file: str,
+        file_basename: str,
+        result: FileResult,
+    ) -> tuple[bool, str]:
+        """Handle validation step result.
+
+        Args:
+            validation_output: Output from validator
+            current_file: Current file path
+            file_basename: File basename
+            result: File result to update
+
+        Returns:
+            Tuple of (continue_processing, current_file)
+
+        """
+        if isinstance(validation_output, tuple):
+            is_valid, errors_or_file = validation_output
+        elif isinstance(validation_output, dict):
+            is_valid = validation_output.get("valid", True)
+            errors_or_file = (
+                validation_output.get("file_path", current_file)
+                if is_valid
+                else validation_output.get("errors", [])
+            )
+        elif isinstance(validation_output, bool):
+            is_valid = validation_output
+            errors_or_file = current_file
+        else:
+            logger.warning(
+                "Unexpected validation output type: %s",
+                type(validation_output).__name__,
+            )
+            is_valid = True
+            errors_or_file = current_file
+
+        result.validated = is_valid
+        if not is_valid:
+            logger.warning(
+                "Validation failed for %s: %s", file_basename, errors_or_file
+            )
+            if isinstance(errors_or_file, list):
+                result.errors.extend(str(e) for e in errors_or_file)
+            elif isinstance(errors_or_file, str):
+                result.errors.append(errors_or_file)
             return False, current_file
+
+        new_file = errors_or_file if isinstance(errors_or_file, str) else current_file
+        return True, new_file
+
+    def _handle_validation_error(
+        self,
+        error: Exception,
+        file_basename: str,
+        result: FileResult,
+        current_file: str,
+    ) -> tuple[bool, str]:
+        """Handle validation error.
+
+        Args:
+            error: Exception from validation
+            file_basename: File basename
+            result: File result to update
+            current_file: Current file path
+
+        Returns:
+            Tuple of (continue_processing, current_file)
+
+        """
+        logger.exception("Validation error for %s: %s", file_basename, error)
+        result.validated = False
+        result.errors.append(str(error))
+        return False, current_file
 
     def _run_splitting(
         self,
@@ -454,46 +492,90 @@ class FileProcessor:
         conversion_failed = False
         file_path = current_file
 
-        # Run conversion
         if self.converter_step and validation_passed:
-            try:
-                converted_file = self.converter_step.execute(
-                    file_path,
-                    context.effective_folder,
-                    context.settings,
-                    context.upc_dict,
-                    context=context,
-                )
-                if converted_file:
-                    file_path = converted_file
-                    did_convert = True
-                    logger.debug(
-                        "Conversion completed for %s: %s", file_basename, file_path
-                    )
-                else:
-                    # Conversion was attempted but produced no output — treat as failure
-                    conversion_failed = True
-            except Exception as e:
-                logger.exception("Conversion error for %s: %s", file_basename, e)
-                conversion_failed = True
+            file_path, did_convert, conversion_failed = self._execute_conversion(
+                file_path, file_basename, context
+            )
 
-        # Run tweaks
         if self.tweaker_step and file_path:
-            try:
-                tweaked_file = self.tweaker_step.execute(
-                    file_path,
-                    context.effective_folder,
-                    context.upc_dict,
-                    settings=context.settings,
-                    context=context,
-                )
-                if tweaked_file:
-                    file_path = tweaked_file
-                    logger.debug("Tweaks applied to %s: %s", file_basename, file_path)
-            except Exception as e:
-                logger.exception("Tweak error for %s: %s", file_basename, e)
+            file_path = self._apply_tweaks(file_path, file_basename, context)
 
         return file_path, did_convert, conversion_failed
+
+    def _execute_conversion(
+        self,
+        file_path: str,
+        file_basename: str,
+        context: ProcessingContext,
+    ) -> tuple[str, bool, bool]:
+        """Execute conversion step.
+
+        Args:
+            file_path: Current file path
+            file_basename: File basename
+            context: Processing context
+
+        Returns:
+            Tuple of (new_file_path, did_convert, conversion_failed)
+
+        """
+        did_convert = False
+        conversion_failed = False
+
+        try:
+            converted_file = self.converter_step.execute(
+                file_path,
+                context.effective_folder,
+                context.settings,
+                context.upc_dict,
+                context=context,
+            )
+            if converted_file:
+                file_path = converted_file
+                did_convert = True
+                logger.debug(
+                    "Conversion completed for %s: %s", file_basename, file_path
+                )
+            else:
+                conversion_failed = True
+        except Exception as e:
+            logger.exception("Conversion error for %s: %s", file_basename, e)
+            conversion_failed = True
+
+        return file_path, did_convert, conversion_failed
+
+    def _apply_tweaks(
+        self,
+        file_path: str,
+        file_basename: str,
+        context: ProcessingContext,
+    ) -> str:
+        """Apply tweaks step.
+
+        Args:
+            file_path: Current file path
+            file_basename: File basename
+            context: Processing context
+
+        Returns:
+            Possibly tweaked file path
+
+        """
+        try:
+            tweaked_file = self.tweaker_step.execute(
+                file_path,
+                context.effective_folder,
+                context.upc_dict,
+                settings=context.settings,
+                context=context,
+            )
+            if tweaked_file:
+                file_path = tweaked_file
+                logger.debug("Tweaks applied to %s: %s", file_basename, file_path)
+        except Exception as e:
+            logger.exception("Tweak error for %s: %s", file_basename, e)
+
+        return file_path
 
     def _send_file(
         self,
