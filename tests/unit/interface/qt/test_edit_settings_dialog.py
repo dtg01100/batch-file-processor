@@ -102,7 +102,7 @@ class TestEditSettingsDialogUI:
         assert dialog.windowTitle() == "Test Settings"
         assert dialog.isModal()
         assert dialog.minimumWidth() >= 700
-        assert dialog.minimumHeight() >= 700
+        assert dialog.minimumHeight() >= 650
 
     def test_dialog_layout_growth_and_key_field_min_widths(
         self, qtbot, sample_settings, sample_oversight, mock_callbacks

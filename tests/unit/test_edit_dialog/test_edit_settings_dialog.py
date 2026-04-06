@@ -117,8 +117,8 @@ class TestEditSettingsDialogOpening:
         """Test that dialog has appropriate minimum size."""
         dialog = _make_dialog(qtbot)
 
-        assert dialog.minimumWidth() == 700
-        assert dialog.minimumHeight() == 700
+        assert dialog.minimumWidth() == 900
+        assert dialog.minimumHeight() == 650
 
     def test_key_input_fields_have_minimum_width(self, qtbot):
         """Test representative key input fields enforce minimum width."""

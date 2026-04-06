@@ -66,7 +66,7 @@ class EditSettingsDialog(BaseDialog):
         super().__init__(parent, title)
 
         # Set minimum size for comfortable viewing of all form fields
-        self.setMinimumSize(700, 700)
+        self.setMinimumSize(900, 650)
 
     def _get_settings(self) -> dict[str, Any]:
         if self._settings_provider:
@@ -76,15 +76,23 @@ class EditSettingsDialog(BaseDialog):
 
     def body(self, parent: QWidget) -> QWidget | None:
         """Create dialog body."""
-        # Use parent's existing layout instead of creating a new one
         layout = parent.layout()
         if layout is None:
             layout = QVBoxLayout(parent)
 
-        layout.addWidget(self._build_as400_section())
-        layout.addWidget(self._build_email_section())
-        layout.addWidget(self._build_reporting_section())
-        layout.addWidget(self._build_backup_section())
+        main_hlayout = QHBoxLayout()
+        left_column = QVBoxLayout()
+        right_column = QVBoxLayout()
+
+        left_column.addWidget(self._build_as400_section())
+        left_column.addWidget(self._build_email_section())
+        right_column.addWidget(self._build_reporting_section())
+        right_column.addWidget(self._build_backup_section())
+
+        main_hlayout.addLayout(left_column, 1)
+        main_hlayout.addLayout(right_column, 1)
+
+        layout.addLayout(main_hlayout)
 
         self.setSizeGripEnabled(False)
 
