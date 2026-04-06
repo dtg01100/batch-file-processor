@@ -66,6 +66,14 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         self.invoice_rows: list[int] = []
         self.invoice_row_counter = 0
 
+    def _initialize_output(self, context: ConversionContext) -> None:
+        """Stub implementation - not used since edi_convert is overridden."""
+        pass
+
+    def process_b_record(self, record: Any, context: ConversionContext) -> None:
+        """Stub implementation - not used since edi_convert is overridden."""
+        pass
+
     def edi_convert(
         self,
         edi_process: str,

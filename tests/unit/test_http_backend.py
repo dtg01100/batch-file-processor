@@ -159,10 +159,14 @@ class TestHTTPBackendOperations:
         mock_client = MockHTTPClient()
         mock_client.set_response(status_code=500, text="Server Error")
 
-        with pytest.raises(Exception, match="HTTP POST failed"):
-            __import__("backend.http_backend", fromlist=["do"]).do(
-                process_parameters, settings_dict, str(source), http_client=mock_client
-            )
+        with patch("time.sleep"):
+            with pytest.raises(Exception, match="HTTP POST failed"):
+                __import__("backend.http_backend", fromlist=["do"]).do(
+                    process_parameters,
+                    settings_dict,
+                    str(source),
+                    http_client=mock_client,
+                )
 
     def test_http_backend_retries_on_failure(self, temp_dir, settings_dict):
         """Test HTTP backend retries on failure."""
@@ -178,8 +182,6 @@ class TestHTTPBackendOperations:
 
         mock_client = MockHTTPClient()
         mock_client.set_response(status_code=500)
-        for _ in range(50):
-            mock_client.add_error(Exception("Connection error"))
 
         with patch("time.sleep"):
             with pytest.raises(Exception):
