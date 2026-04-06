@@ -34,6 +34,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Protocol, TextIO, runtime_checkable
 
+from core.constants import EMPTY_DATE_MMDDYY
 from core.edi.c_rec_generator import CRecGenerator
 from core.edi.po_fetcher import POFetcher
 from core.structured_logging import (
@@ -423,7 +424,7 @@ class EDITweaker:
 
         if self.config.invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]
-            if not invoice_date_string == "000000":
+            if not invoice_date_string == EMPTY_DATE_MMDDYY:
                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
                 offset_invoice_date = invoice_date + timedelta(
                     days=self.config.invoice_date_offset

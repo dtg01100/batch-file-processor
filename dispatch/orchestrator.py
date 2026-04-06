@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any
 
+from core.constants import FOLDER_DEFAULTS
 from core.structured_logging import (
     CorrelationContext,
     get_logger,
@@ -23,7 +24,7 @@ from core.structured_logging import (
     log_file_operation,
     log_with_context,
 )
-from core.utils import normalize_bool, normalize_convert_to_format
+from core.utils import capture_records, normalize_bool, normalize_convert_to_format
 from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
 from dispatch.feature_flags import get_strict_testing_mode
@@ -1075,54 +1076,6 @@ class DispatchOrchestrator:
 
         return True, current_file
 
-    # Defaults for folder configuration fields that may be NULL in the database.
-    # These mirror the defaults applied by app.py when opening the edit dialog.
-    _FOLDER_DEFAULTS: dict = {
-        "ftp_port": 21,
-        "a_record_padding": "",
-        "a_record_padding_length": 6,
-        "a_record_append_text": "",
-        "invoice_date_offset": 0,
-        "invoice_date_custom_format": False,
-        "invoice_date_custom_format_string": "%Y%m%d",
-        "override_upc_level": 1,
-        "override_upc_category_filter": "",
-        "upc_target_length": 11,
-        "upc_padding_pattern": "           ",
-        "simple_csv_sort_order": "",
-        "split_edi_filter_categories": "ALL",
-        "split_edi_filter_mode": "include",
-        "rename_file": "",
-        "convert_to_format": "",
-        "estore_store_number": "",
-        "estore_Vendor_OId": "",
-        "estore_vendor_NameVendorOID": "",
-        "estore_c_record_OID": "",
-        "fintech_division_id": "",
-        # Boolean tweak fields -- accessed via direct dict key in archive/edi_tweaks.py;
-        # must default to False so missing/NULL DB values don't raise KeyError.
-        "pad_a_records": False,
-        "append_a_records": False,
-        "force_txt_file_ext": False,
-        "calculate_upc_check_digit": False,
-        "retail_uom": False,
-        "override_upc_bool": False,
-        "split_prepaid_sales_tax_crec": False,
-        # HTTP backend fields — added by v42→v43 and v49→v50 migrations;
-        # legacy folders will have NULL for these columns.
-        "process_backend_http": False,
-        "http_url": "",
-        "http_headers": "",
-        "http_field_name": "",
-        "http_auth_type": "",
-        "http_api_key": "",
-        # Email subject line — added later; legacy folders may have NULL.
-        "email_subject_line": "",
-        # EDI output fields — legacy folders may have NULL.
-        "process_edi_output": False,
-        "edi_output_folder": "",
-    }
-
     def _detect_enabled_backends(self, folder: dict) -> list[str]:
         """Detect which backends are enabled for a folder.
 
@@ -1189,15 +1142,13 @@ class DispatchOrchestrator:
         effective_folder = folder.copy()
 
         # Apply defaults for fields that may be NULL in the database.
-        for key, default in self._FOLDER_DEFAULTS.items():
+        for key, default in FOLDER_DEFAULTS.items():
             if effective_folder.get(key) is None:
                 effective_folder[key] = default
 
         # upc_target_length of 0 is not meaningful -- treat as default (11).
         if not effective_folder.get("upc_target_length"):
-            effective_folder["upc_target_length"] = self._FOLDER_DEFAULTS[
-                "upc_target_length"
-            ]
+            effective_folder["upc_target_length"] = FOLDER_DEFAULTS["upc_target_length"]
 
         # Legacy compatibility shim:
         # Prior to tweaks being subsumed into converter formats, tweak mode was
@@ -1598,8 +1549,6 @@ class DispatchOrchestrator:
             else:
                 with open(file_path, "r", errors="replace") as f:
                     content = f.read()
-
-            from core.edi.edi_parser import capture_records
 
             seen: dict[str, None] = {}
             for line in content.splitlines():

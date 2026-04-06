@@ -25,6 +25,7 @@ Backward Compatibility:
 
 from datetime import datetime, timedelta
 
+from core.constants import EMPTY_DATE_MMDDYY
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
@@ -101,7 +102,7 @@ class ScannerWareConverter(BaseEDIConverter):
 
         if invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]
-            if invoice_date_string != "000000":
+            if invoice_date_string != EMPTY_DATE_MMDDYY:
                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
                 offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
                 write_invoice_date = datetime.strftime(offset_invoice_date, "%m%d%y")

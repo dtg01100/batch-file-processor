@@ -4,6 +4,8 @@ This module copies files to local directories with
 injectable file operations support for testing.
 """
 
+from typing import Any
+
 from backend.backend_base import BackendBase
 from backend.file_operations import create_file_operations
 from backend.protocols import FileOperationsProtocol
@@ -14,7 +16,7 @@ logger = get_logger(__name__)
 
 def do(
     process_parameters: dict,
-    settings_dict: dict,
+    settings: dict,
     filename: str,
     file_ops: FileOperationsProtocol | None = None,
     disable_retry: bool = False,
@@ -23,7 +25,7 @@ def do(
 
     Args:
         process_parameters: Dictionary containing copy_to_directory
-        settings_dict: Settings dictionary (not used)
+        settings: Settings dictionary (not used)
         filename: Local file path to copy
         file_ops: Optional injectable file operations for testing
         disable_retry: If True, skip retry logic (for faster tests)
@@ -36,7 +38,7 @@ def do(
 
     """
     backend = CopyBackend(file_ops=file_ops, disable_retry=disable_retry)
-    return backend.copy(process_parameters, settings_dict, filename)
+    return backend.send(process_parameters, settings, filename)
 
 
 class CopyBackend(BackendBase):
@@ -95,15 +97,15 @@ class CopyBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        settings_dict: dict,
+        settings: dict,
         filename: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> bool:
         """Copy file to destination directory.
 
         Args:
             process_parameters: Copy parameters with copy_to_directory
-            settings_dict: Settings dictionary
+            settings: Settings dictionary
             filename: File to copy
 
         Returns:
@@ -132,41 +134,26 @@ class CopyBackend(BackendBase):
         """Get backend name for logging."""
         return "copy"
 
-    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get copy destination for logging."""
         return process_parameters.get("copy_to_directory", "")
 
-    def copy(
-        self, process_parameters: dict, settings_dict: dict, filename: str
-    ) -> bool:
-        """Copy a file to a local directory.
+    def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:
+        """Send a file via copy (local file copy).
 
         Args:
             process_parameters: Copy parameters
-            settings_dict: Settings dictionary
+            settings: Settings dictionary
             filename: File to copy
 
         Returns:
             True if successful
 
         """
-        return self.execute(process_parameters, settings_dict, filename)
-
-    def send(
-        self, process_parameters: dict, settings_dict: dict, filename: str
-    ) -> bool:
-        """Send a file via copy (local file copy).
-
-        Args:
-            process_parameters: Copy parameters
-            settings_dict: Settings dictionary
-            filename: File to send (copy)
-
-        Returns:
-            True if successful
-
-        """
-        return self.copy(process_parameters, settings_dict, filename)
+        try:
+            return self.execute(process_parameters, settings, filename)
+        finally:
+            self._cleanup()
 
     @staticmethod
     def create_file_ops() -> FileOperationsProtocol:

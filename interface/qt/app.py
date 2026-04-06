@@ -30,7 +30,7 @@ from adapters.sqlite.repositories import (
     SqliteSettingsRepository,
 )
 from backend.database.database_obj import DatabaseObj
-from core.constants import APP_VERSION, CURRENT_DATABASE_VERSION
+from core.constants import APP_VERSION, CURRENT_DATABASE_VERSION, UPC_PADDING_PATTERN
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService
@@ -629,7 +629,7 @@ class QtBatchFileSenderApp:
             "override_upc_level": 1,
             "override_upc_category_filter": "",
             "upc_target_length": 11,
-            "upc_padding_pattern": "           ",
+            "upc_padding_pattern": UPC_PADDING_PATTERN,
             "include_item_numbers": False,
             "include_item_description": False,
             "simple_csv_sort_order": "",

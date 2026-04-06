@@ -36,6 +36,7 @@ from decimal import Decimal
 from typing import Any
 
 from core import utils
+from core.constants import EMPTY_DATE_MMDDYY, EMPTY_PARENT_ITEM
 from core.structured_logging import get_logger
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -192,7 +193,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
             self.invoice_accum.clear()
 
         # Format invoice date
-        if not record.fields["invoice_date"] == "000000":
+        if not record.fields["invoice_date"] == EMPTY_DATE_MMDDYY:
             invoice_date = datetime.strptime(record.fields["invoice_date"], "%m%d%y")
             write_invoice_date = datetime.strftime(invoice_date, "%Y%m%d")
         else:
@@ -258,7 +259,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 
         # Handle shipper mode logic
         if self.shipper_mode:
-            if record.fields["parent_item_number"] not in ["000000", "\n"]:
+            if record.fields["parent_item_number"] not in [EMPTY_PARENT_ITEM, "\n"]:
                 if self.shipper_parent_item:
                     self.shipper_parent_item = False
                 else:
