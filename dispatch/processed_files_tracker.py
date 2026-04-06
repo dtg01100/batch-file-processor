@@ -68,8 +68,16 @@ class ProcessedFileRecord:
         sent_date_time = data.get("sent_date_time")
         if isinstance(sent_date_time, str):
             sent_date_time = datetime.fromisoformat(sent_date_time)
-        elif not isinstance(sent_date_time, datetime):
-            sent_date_time = sent_date_time or datetime.now()
+        elif isinstance(sent_date_time, datetime):
+            pass
+        elif sent_date_time is None:
+            sent_date_time = datetime.now()
+        else:
+            logger.warning(
+                "Unexpected sent_date_time type: %s, using current time",
+                type(sent_date_time).__name__,
+            )
+            sent_date_time = datetime.now()
 
         return cls(
             file_name=data.get("file_name", ""),

@@ -423,6 +423,9 @@ class DispatchOrchestrator:
             total_files: Total file count for progress reporting.
 
         """
+        if not files:
+            return
+
         for idx, file_path in enumerate(files):
             if self.config.progress_reporter:
                 self.config.progress_reporter.update_file(idx + 1, total_files)
@@ -1004,9 +1007,7 @@ class DispatchOrchestrator:
         return current_file, did_convert
 
     def _normalize_validation_output(
-        self,
-        validation_output: Any,
-        current_file: str,
+        self, validation_output: Any, current_file: str
     ) -> tuple[bool, Any]:
         """Normalize validator step output to `(is_valid, errors_or_file)` tuple."""
         if isinstance(validation_output, tuple):
@@ -1024,7 +1025,14 @@ class DispatchOrchestrator:
                 ),
             )
 
-        return bool(validation_output), current_file
+        if isinstance(validation_output, bool):
+            return validation_output, current_file
+
+        logger.warning(
+            "Unexpected validation output type: %s, treating as invalid",
+            type(validation_output).__name__,
+        )
+        return False, [str(validation_output)]
 
     def _apply_validation_outcome(
         self,

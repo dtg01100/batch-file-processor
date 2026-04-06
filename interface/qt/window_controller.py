@@ -206,8 +206,7 @@ class QtMainWindowController:
         else:
             layout.addWidget(self._app._folder_list_widget, stretch=1)
 
-        # Restore scroll position after rebuild
-        if scroll_pos:
+        if scroll_pos is not None and isinstance(scroll_pos, int) and scroll_pos >= 0:
             self._app._folder_list_widget.set_scroll_position(scroll_pos)
 
         self._app._set_main_button_states()

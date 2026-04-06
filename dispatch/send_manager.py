@@ -260,7 +260,16 @@ class SendManager:
         )
         result = module.do(params, settings, file_path)
 
-        return True if result is None else bool(result)
+        if result is None:
+            return True
+        if isinstance(result, bool):
+            return result
+        logger.debug(
+            "Backend '%s' returned non-boolean result: %s, converting to bool",
+            backend_name,
+            type(result).__name__,
+        )
+        return bool(result)
 
     def get_enabled_backends(self, params: dict) -> set[str]:
         """Get the set of enabled backends from parameters.

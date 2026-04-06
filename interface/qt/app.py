@@ -217,7 +217,7 @@ class QtBatchFileSenderApp:
                 try:
                     disposer()
                 except Exception:
-                    logger.debug(
+                    logger.warning(
                         "Failed to dispose progress service during shutdown",
                         exc_info=True,
                     )
@@ -227,7 +227,7 @@ class QtBatchFileSenderApp:
                 self._window.close()
                 self._window.deleteLater()
             except Exception:
-                logger.debug(
+                logger.warning(
                     "Failed to close and delete main window during shutdown",
                     exc_info=True,
                 )
@@ -240,7 +240,7 @@ class QtBatchFileSenderApp:
                 for _ in range(QT_EVENT_PROCESSING_ITERATIONS):
                     QApplication.processEvents()
         except Exception:
-            logger.debug(
+            logger.warning(
                 "Failed to process pending Qt events during shutdown", exc_info=True
             )
 
@@ -418,7 +418,10 @@ class QtBatchFileSenderApp:
             if self._database.session_database:
                 single_table = self._database.session_database["single_table"]
                 single_table.drop()
-        finally:
+        except Exception:
+            pass
+
+        try:
             if self._database.session_database:
                 self._database.session_database.query(
                     "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
@@ -431,8 +434,6 @@ class QtBatchFileSenderApp:
                     table_dict = self._database.folders_table.find_one(id=folder_id)
                     if table_dict:
                         table_dict["old_id"] = table_dict.pop("id")
-                        # Filter to columns that exist in single_table to handle
-                        # schema differences between main and session databases
                         valid_cols = {
                             row["name"]
                             for row in self._database.session_database.query(
@@ -448,10 +449,12 @@ class QtBatchFileSenderApp:
                             "Error", f"Folder with id {folder_id} not found."
                         )
                         return
-                self._progress_service.hide()
+
                 if self._database.session_database:
                     self._graphical_process_directories(single_table)
                     single_table.drop()
+        finally:
+            self._progress_service.hide()
 
     def _disable_folder(self, folder_id: int) -> None:
         if self._folder_manager is None:
@@ -463,37 +466,39 @@ class QtBatchFileSenderApp:
         if self._folder_manager is None or self._ui_service is None:
             return
         folder = self._folder_manager.get_folder_by_id(folder_id)
-        if folder:
-            if not folder.get("folder_is_active", False):
-                has_backend = (
-                    folder.get("process_backend_email")
-                    or folder.get("process_backend_ftp")
-                    or folder.get("process_backend_copy")
-                )
-                if not has_backend:
-                    self._ui_service.show_error(
-                        "Cannot Enable Folder",
-                        f"Folder '{folder.get('alias', 'Unknown')}' has no backends configured.\n\n"
-                        "Please edit the folder and enable at least one backend:\n"
-                        "• Email\n"
-                        "• FTP\n"
-                        "• Copy to Directory",
-                    )
-                    return
-            if folder.get("folder_is_active", False):
-                self._folder_manager.disable_folder(folder_id)
-            else:
-                self._folder_manager.enable_folder(folder_id)
+        if not folder:
+            return
 
-            # Update only the affected row instead of rebuilding the whole list
-            if (
-                self._folder_list_widget is not None
-                and self._folder_list_widget.update_folder_row(folder_id)
-            ):
-                self._set_main_button_states()
-            else:
-                self._refresh_users_list()
-                self._set_main_button_states()
+        is_active = folder.get("folder_is_active", False)
+
+        if is_active:
+            self._folder_manager.disable_folder(folder_id)
+        else:
+            has_backend = (
+                folder.get("process_backend_email")
+                or folder.get("process_backend_ftp")
+                or folder.get("process_backend_copy")
+            )
+            if not has_backend:
+                self._ui_service.show_error(
+                    "Cannot Enable Folder",
+                    f"Folder '{folder.get('alias', 'Unknown')}' has no backends configured.\n\n"
+                    "Please edit the folder and enable at least one backend:\n"
+                    "• Email\n"
+                    "• FTP\n"
+                    "• Copy to Directory",
+                )
+                return
+            self._folder_manager.enable_folder(folder_id)
+
+        if (
+            self._folder_list_widget is not None
+            and self._folder_list_widget.update_folder_row(folder_id)
+        ):
+            self._set_main_button_states()
+        else:
+            self._refresh_users_list()
+            self._set_main_button_states()
 
     def _set_folders_filter(self, filter_field_contents: str) -> None:
         self._folder_filter = filter_field_contents
