@@ -41,6 +41,10 @@ def _execute_sqlite_statement(conn, stmt, object_name=None) -> None:
                 )
                 time.sleep(delay_base * (attempt + 1))
                 continue
+            if "duplicate column name" in msg or "already exists" in msg:
+                if object_name:
+                    logger.debug("Schema object already exists: %s", object_name)
+                return
             logger.error(
                 "Operational error executing schema statement for %s: %s",
                 object_name or "unknown",
@@ -497,7 +501,8 @@ def ensure_schema(database_connection) -> None:
     try:
         if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
             _execute_sqlite_statement(
-                raw_conn, "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
+                raw_conn,
+                "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
             )
             _execute_sqlite_statement(
                 raw_conn,
@@ -524,7 +529,8 @@ def ensure_schema(database_connection) -> None:
     try:
         if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
             _execute_sqlite_statement(
-                raw_conn, "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
+                raw_conn,
+                "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT",
             )
         else:
             database_connection.query(
