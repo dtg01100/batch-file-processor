@@ -305,7 +305,7 @@ class EDITweaker:
         for attempt in range(max_retries):
             try:
                 return open(filepath)
-            except Exception as error:
+            except OSError as error:
                 if attempt + 1 < max_retries:
                     sleep_time = (attempt + 1) * (attempt + 1)
                     time.sleep(sleep_time)

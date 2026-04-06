@@ -565,7 +565,7 @@ class EDIConverterStep:
         if self._file_system and not self._file_system.dir_exists(output_dir):
             try:
                 self._file_system.makedirs(output_dir)
-            except Exception as e:
+            except OSError as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 error_msg = f"Failed to create output directory: {e}"
                 StructuredLogger.log_error(

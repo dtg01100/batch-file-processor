@@ -736,7 +736,7 @@ class DispatchOrchestrator:
             try:
                 if os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir, ignore_errors=not strict_testing_mode)
-            except Exception as exc:
+            except OSError as exc:
                 if strict_testing_mode:
                     cleanup_errors.append(
                         f"directory '{temp_dir}' could not be removed: {exc}"
@@ -746,7 +746,7 @@ class DispatchOrchestrator:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except Exception as exc:
+            except OSError as exc:
                 if strict_testing_mode:
                     cleanup_errors.append(
                         f"file '{temp_file}' could not be removed: {exc}"

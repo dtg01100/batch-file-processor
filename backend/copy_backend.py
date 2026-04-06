@@ -121,7 +121,7 @@ class CopyBackend(BackendBase):
         if not self.file_ops.exists(dest_dir):
             try:
                 self.file_ops.makedirs(dest_dir)
-            except Exception as e:
+            except OSError as e:
                 raise IOError(
                     f"Failed to create destination directory '{dest_dir}': {e}"
                 )

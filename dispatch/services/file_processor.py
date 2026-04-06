@@ -746,7 +746,7 @@ class FileProcessor:
 
                     shutil.rmtree(temp_dir)
                     logger.debug("Cleaned up temp directory: %s", temp_dir)
-            except Exception as e:
+            except OSError as e:
                 logger.warning("Failed to clean up temp dir %s: %s", temp_dir, e)
 
         for temp_file in context.temp_files:
@@ -754,7 +754,7 @@ class FileProcessor:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
                     logger.debug("Cleaned up temp file: %s", temp_file)
-            except Exception as e:
+            except OSError as e:
                 logger.warning("Failed to clean up temp file %s: %s", temp_file, e)
 
         context.temp_dirs.clear()
