@@ -28,21 +28,116 @@ class BackendType(Enum):
     HTTP = "http"
 
 
-class ConvertFormat(Enum):
-    """Enum for EDI convert formats."""
+def _discover_format_values() -> list[tuple[str, str]]:
+    """Auto-discover convert formats from converters package.
 
-    CSV = "csv"
-    SCANNERWARE = "ScannerWare"
-    SCANSHEET_A = "ScanSheet_Type_A"
-    JOLLEY_CUSTOM = "jolley_custom"
-    ESTORE_EINVOICE = "eStore_eInvoice"
-    ESTORE_EINVOICE_GENERIC = "eStore_eInvoice_Generic"
-    FINTECH = "fintech"
-    STEWARTS_CUSTOM = "stewarts_custom"
-    YELLOWDOG_CSV = "yellowdog_csv"
-    SIMPLIFIED_CSV = "simplified_csv"
-    TWEAKS = "tweaks"
-    DO_NOTHING = "do_nothing"
+    Returns tuples of (internal_name, displayValue).
+    displayValue may differ from internalName for formats with specific casing.
+    """
+    import os
+    import pkgutil
+
+    # Mapping from internal names (from filenames) to display values (for legacy compatibility)
+    DISPLAY_VALUES = {
+        "scannerware": "ScannerWare",
+        "scansheet_type_a": "ScanSheet_Type_A",
+        "jolley_custom": "jolley_custom",
+        "estore_einvoice": "eStore_eInvoice",
+        "estore_einvoice_generic": "eStore_eInvoice_Generic",
+    }
+
+    values = [("do_nothing", "do_nothing")]
+    converter_path = os.path.join("dispatch", "converters")
+    if not os.path.isdir(converter_path):
+        return values
+
+    for _, module_name, is_pkg in pkgutil.iter_modules([converter_path]):
+        if module_name.startswith("convert_to_") and not is_pkg:
+            format_name = module_name.replace("convert_to_", "")
+            display_value = DISPLAY_VALUES.get(format_name, format_name)
+            values.append((format_name, display_value))
+    return values
+
+
+class _ConvertFormatMeta(type):
+    """Metaclass to enable ConvertFormat class iteration."""
+
+    def __iter__(cls):
+        cls._ensure_discovered()
+        for v in cls._discovered:
+            yield cls(cls._display_values[v])
+
+    def __len__(cls):
+        cls._ensure_discovered()
+        return len(cls._discovered)
+
+
+class ConvertFormat(metaclass=_ConvertFormatMeta):
+    """Enum-like class for EDI convert formats.
+
+    Auto-populated from dispatch/converters/convert_to_*.py modules.
+    """
+
+    _discovered: list[str] = []
+
+    def __init__(self, value: str):
+        self._value = value
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @property
+    def name(self) -> str:
+        return self._value.upper().replace("-", "_").replace(" ", "_")
+
+    @classmethod
+    def _ensure_discovered(cls):
+        if not cls._discovered:
+            discovered = _discover_format_values()
+            cls._discovered = [v[0] for v in discovered]
+            cls._display_values = {v[0]: v[1] for v in discovered}
+            for v in discovered:
+                key = v[0].upper().replace("-", "_").replace(" ", "_")
+                setattr(cls, key, cls(v[1]))
+
+    @classmethod
+    def values(cls) -> list[str]:
+        """Get all available format values."""
+        cls._ensure_discovered()
+        return list(cls._discovered)
+
+    @classmethod
+    def from_string(cls, s: str) -> "ConvertFormat | None":
+        """Create a ConvertFormat from a string value."""
+        if not s:
+            return None
+        cls._ensure_discovered()
+        s_normalized = s.lower().replace(" ", "_").replace("-", "_")
+        for v in cls._discovered:
+            if v.lower() == s_normalized:
+                return cls(cls._display_values.get(v, v))
+        return None
+
+    def __str__(self) -> str:
+        return self._value
+
+    def __repr__(self) -> str:
+        return f"ConvertFormat.{self.name}"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ConvertFormat):
+            return self._value == other._value
+        if isinstance(other, str):
+            return self._value.lower() == other.lower()
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self._value)
+
+
+# Initialize - this populates the class attributes for all formats
+ConvertFormat._ensure_discovered()
 
 
 @dataclass

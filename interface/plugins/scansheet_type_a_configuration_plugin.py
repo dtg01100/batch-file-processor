@@ -58,7 +58,7 @@ class ScanSheetTypeAConfigurationPlugin(ConfigurationPlugin):
     @classmethod
     def get_format_enum(cls) -> ConvertFormat:
         """Get the ConvertFormat enum value associated with this format."""
-        return ConvertFormat.SCANSHEET_A
+        return ConvertFormat.SCANSHEET_TYPE_A
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:

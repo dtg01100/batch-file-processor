@@ -6,6 +6,7 @@ using dynamic module loading for different output formats.
 
 import os
 import time
+import pkgutil
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -21,19 +22,20 @@ from dispatch.interfaces import FileSystemInterface
 logger = get_logger(__name__)
 
 
-SUPPORTED_FORMATS = [
-    "csv",
-    "estore_einvoice",
-    "estore_einvoice_generic",
-    "fintech",
-    "jolley_custom",
-    "scannerware",
-    "scansheet_type_a",
-    "simplified_csv",
-    "stewarts_custom",
-    "tweaks",
-    "yellowdog_csv",
-]
+def _discover_supported_formats() -> list[str]:
+    """Auto-discover supported conversion formats by scanning converters package."""
+    formats = []
+    converter_path = os.path.join(os.path.dirname(__file__), "..", "converters")
+    if not os.path.isdir(converter_path):
+        return formats
+    for _, module_name, is_pkg in pkgutil.iter_modules([converter_path]):
+        if module_name.startswith("convert_to_") and not is_pkg:
+            format_name = module_name.replace("convert_to_", "")
+            formats.append(format_name)
+    return sorted(formats)
+
+
+SUPPORTED_FORMATS = _discover_supported_formats()
 
 
 @dataclass
