@@ -110,7 +110,10 @@ class CopyBackend(BackendBase):
             True if copy was successful
 
         """
-        dest_dir = process_parameters["copy_to_directory"]
+        dest_dir = process_parameters.get("copy_to_directory", "")
+
+        if not dest_dir:
+            raise ValueError("copy_to_directory is not configured")
 
         # Ensure destination directory exists
         if not self.file_ops.exists(dest_dir):

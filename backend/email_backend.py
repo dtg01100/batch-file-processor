@@ -132,9 +132,10 @@ class EmailBackend(BackendBase):
             filename_no_path_str = str(filename_no_path)
 
             # Build subject line
-            if process_parameters["email_subject_line"] != "":
+            email_subject = process_parameters.get("email_subject_line", "")
+            if email_subject != "":
                 date_time = str(time.ctime())
-                subject_line_constructor = process_parameters["email_subject_line"]
+                subject_line_constructor = email_subject
                 subject_line = subject_line_constructor.replace(
                     "%datetime%", date_time
                 ).replace("%filename%", filename_no_path)
@@ -154,9 +155,7 @@ class EmailBackend(BackendBase):
                 ]
             elif isinstance(to_address, list):
                 to_address_list = [
-                    a.strip()
-                    for a in to_address
-                    if isinstance(a, str) and a.strip()
+                    a.strip() for a in to_address if isinstance(a, str) and a.strip()
                 ]
             else:
                 raise ValueError("email_to must be a string or list of strings")

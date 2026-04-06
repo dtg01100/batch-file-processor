@@ -287,12 +287,14 @@ class FileProcessor:
             result.converted = True
 
         # If conversion failed (i.e., conversion was attempted but produced no output),
-        # treat as error. However, when process_edi is False we expect the original
-        # file to be sent unchanged — do not mark this as conversion failure.
+        # treat as error. However, when process_edi is False and convert_to_format
+        # is not set, we expect the original file to be sent unchanged.
         process_edi_flag = normalize_bool(
             context.effective_folder.get("process_edi", False)
         )
-        if conversion_failed and process_edi_flag:
+        convert_format = context.effective_folder.get("convert_to_format", "")
+        conversion_was_requested = process_edi_flag or bool(convert_format)
+        if conversion_failed and conversion_was_requested:
             result.errors.append("No converted output was produced")
             result.sent = False
             return
@@ -339,7 +341,7 @@ class FileProcessor:
             # Handle tuple return: (is_valid, file_path_or_errors)
             if isinstance(validation_output, tuple):
                 is_valid, errors_or_file = validation_output
-            else:
+            elif isinstance(validation_output, dict):
                 # Fallback for dict-style return
                 is_valid = validation_output.get("valid", True)
                 errors_or_file = (
@@ -347,6 +349,18 @@ class FileProcessor:
                     if is_valid
                     else validation_output.get("errors", [])
                 )
+            elif isinstance(validation_output, bool):
+                # Simple boolean return
+                is_valid = validation_output
+                errors_or_file = current_file
+            else:
+                # Unexpected type - treat as valid with current file
+                logger.warning(
+                    "Unexpected validation output type: %s",
+                    type(validation_output).__name__,
+                )
+                is_valid = True
+                errors_or_file = current_file
 
             result.validated = is_valid
             if not is_valid:
@@ -562,11 +576,12 @@ class FileProcessor:
         temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
         context.temp_dirs.append(temp_dir)
 
-        if os.path.isabs(new_name) or ".." in new_name:
+        if not new_name or new_name == ".." or os.path.isabs(new_name):
             raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
 
         full_dest = os.path.join(temp_dir, new_name)
-        if not full_dest.startswith(temp_dir + os.sep) and full_dest != temp_dir:
+        real_full_dest = os.path.realpath(full_dest)
+        if not real_full_dest.startswith(os.path.realpath(temp_dir) + os.sep):
             raise ValueError(f"Path traversal attempt detected: {new_name}")
 
         shutil.copy2(file_path, full_dest)

@@ -1282,8 +1282,12 @@ class DispatchOrchestrator:
 
         self._validate_rename_template(new_name)
 
+        if not new_name or new_name == "..":
+            raise ValueError(f"Invalid filename from template: {new_name}")
+
         full_dest = os.path.join(temp_dir, new_name)
-        if not full_dest.startswith(temp_dir + os.sep) and full_dest != temp_dir:
+        real_full_dest = os.path.realpath(full_dest)
+        if not real_full_dest.startswith(os.path.realpath(temp_dir) + os.sep):
             raise ValueError(f"Path traversal attempt detected: {new_name}")
 
         dest_path = full_dest
