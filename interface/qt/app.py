@@ -30,7 +30,7 @@ from adapters.sqlite.repositories import (
     SqliteSettingsRepository,
 )
 from backend.database.database_obj import DatabaseObj
-from core.constants import CURRENT_DATABASE_VERSION
+from core.constants import APP_VERSION, CURRENT_DATABASE_VERSION
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService
@@ -48,7 +48,7 @@ class QtBatchFileSenderApp:
     def __init__(
         self,
         appname: str = "Batch File Sender",
-        version: str = "(Git Branch: Master)",
+        version: str = APP_VERSION,
         database_version: str = CURRENT_DATABASE_VERSION,
         database_obj: DatabaseObj | None = None,
         folder_manager: FolderManager | None = None,
@@ -272,9 +272,6 @@ class QtBatchFileSenderApp:
 
     def _refresh_users_list(self) -> None:
         self._window_controller.refresh_users_list()
-
-    def _update_filter_count_label(self, filtered_count: int, total_count: int) -> None:
-        pass
 
     def _set_main_button_states(self) -> None:
         self._window_controller.set_main_button_states()
@@ -829,31 +826,24 @@ class QtBatchFileSenderApp:
             return False
 
     def _log_critical_error(self, error) -> None:
+        logger.critical(
+            "Critical error: %s",
+            error,
+            exc_info=error if isinstance(error, Exception) else None,
+        )
         try:
-            logger.error("%s", error)
-            with open("critical_error.log", "a", encoding="utf-8") as critical_log:
-                critical_log.write(f"program version is {self._version}")
-                critical_log.write(f"{datetime.datetime.now()}{error}\r\n")
-            raise SystemExit from (
-                error if isinstance(error, Exception) else SystemExit(str(error))
+            log_dir = (
+                os.path.dirname(self._database_path) if self._database_path else "."
             )
-        except SystemExit:
-            raise
-        except Exception as big_error:
-            logger.error("error writing critical error log: %s", big_error)
-            raise SystemExit from big_error
-
-
-def main() -> None:
-    app = QtBatchFileSenderApp(
-        appname="Batch File Sender",
-        version="(Git Branch: Master)",
-        database_version=CURRENT_DATABASE_VERSION,
-    )
-    app.initialize()
-    app.run()
-    app.shutdown()
-
-
-if __name__ == "__main__":
-    main()
+            log_path = os.path.join(log_dir, "critical_error.log")
+            with open(log_path, "a", encoding="utf-8") as critical_log:
+                critical_log.write(f"Program version: {self._version}\n")
+                critical_log.write(f"Timestamp: {datetime.datetime.now()}\n")
+                if isinstance(error, Exception):
+                    critical_log.write(f"Error: {error!r}\n")
+                else:
+                    critical_log.write(f"Error: {error}\n")
+                critical_log.write("-" * 50 + "\n")
+        except Exception as log_error:
+            logger.error("Failed to write critical error log: %s", log_error)
+        raise SystemExit(1) from (error if isinstance(error, Exception) else None)

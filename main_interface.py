@@ -154,13 +154,12 @@ def _load_qt_app_class() -> type:
 
 def main() -> None:
     """Main entry point for the Batch File Sender application."""
-    from core.constants import CURRENT_DATABASE_VERSION
+    from core.constants import APP_VERSION
 
     qt_app_class = _load_qt_app_class()
     app = qt_app_class(
         appname="Batch File Sender",
-        version="(Git Branch: Master)",
-        database_version=CURRENT_DATABASE_VERSION,
+        version=APP_VERSION,
     )
     app.initialize()
     try:

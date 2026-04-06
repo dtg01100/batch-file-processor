@@ -1165,7 +1165,6 @@ class TestQtBatchFileSenderApp:
         app._edit_folder_selector = MagicMock()
         app._disable_folder = MagicMock()
         app._delete_folder_entry_wrapper = MagicMock()
-        app._update_filter_count_label = MagicMock()
         app._set_folders_filter = MagicMock()
 
         app._build_main_window()

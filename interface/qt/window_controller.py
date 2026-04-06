@@ -154,7 +154,6 @@ class QtMainWindowController:
             on_toggle=self._app._toggle_folder,
             on_delete=self._app._delete_folder_entry_wrapper,
             filter_value=self._app._folder_filter,
-            total_count_callback=self._app._update_filter_count_label,
         )
 
         self._app._search_widget = SearchWidget(
@@ -194,8 +193,9 @@ class QtMainWindowController:
             on_toggle=self._app._toggle_folder,
             on_delete=self._app._delete_folder_entry_wrapper,
             filter_value=self._app._folder_filter,
-            total_count_callback=self._app._update_filter_count_label,
         )
+
+        # Restore scroll position
 
         # Insert folder list after the search widget (search stays at top)
         if self._app._search_widget is not None:

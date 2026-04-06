@@ -673,26 +673,6 @@ class TestQtAppRefresh:
         assert hasattr(app, "_refresh_users_list")
         assert callable(app._refresh_users_list)
 
-    def test_update_filter_count_label_exists(
-        self,
-        qt_app,
-        mock_database,
-        mock_folder_manager,
-        mock_ui_service,
-        mock_progress_service,
-    ):
-        """Test update filter count label method exists."""
-        app = _make_app(
-            database_obj=mock_database,
-            folder_manager=mock_folder_manager,
-            ui_service=mock_ui_service,
-            progress_service=mock_progress_service,
-        )
-        app.initialize()
-
-        assert hasattr(app, "_update_filter_count_label")
-        assert callable(app._update_filter_count_label)
-
 
 class TestQtAppLifecycle:
     """Test app lifecycle methods."""

@@ -2,6 +2,9 @@
 
 from datetime import datetime
 
+# Application version - single source of truth
+APP_VERSION = "(Git Branch: Master)"
+
 # Database version - this is the single source of truth for the current
 # database schema version
 # Update this when adding new database migrations
