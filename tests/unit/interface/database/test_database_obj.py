@@ -4,7 +4,6 @@ Tests the DatabaseObj class with mocked database connections
 to ensure proper behavior without requiring actual database files.
 """
 
-import sqlite3
 from unittest.mock import MagicMock, patch
 
 import pytest

@@ -381,8 +381,16 @@ def test_all_conversion_formats(workspace):
 
     # Test each format
     for fmt in SUPPORTED_FORMATS:
-        # Skip formats that might require special configuration
-        if fmt in ["estore_einvoice", "estore_einvoice_generic"]:
+        # Skip formats that require special configuration or external services
+        # (AS400 database, FTP servers, etc.)
+        if fmt in [
+            "estore_einvoice",
+            "estore_einvoice_generic",
+            "jolley_custom",  # Requires AS400 database settings
+            "scansheet_type_a",  # Requires AS400 database settings
+            "stewarts_custom",  # Requires AS400 database settings
+            "yellowdog_csv",  # Requires AS400 database settings
+        ]:
             continue
 
         input_path = str(workspace["input"])
@@ -508,6 +516,7 @@ def test_simplified_csv_with_options(workspace):
 def test_email_backend(workspace):
     """Test email backend with mocked SMTP."""
     from unittest import mock
+    from unittest.mock import Mock
 
     db = workspace["db"]
     folder_manager = FolderManager(db)
@@ -541,15 +550,16 @@ def test_email_backend(workspace):
     test_file_path = workspace["input"] / "test_email.edi"
     test_file_path.write_text(test_file_content)
 
-    # Mock SMTP client
-    with mock.patch("backend.smtp_client.RealSMTPClient") as MockSMTP:
-        mock_smtp_instance = MockSMTP.return_value
+    # Mock SMTP client - patch where it's used, not where it's defined
+    with mock.patch("backend.email_backend.create_smtp_client") as MockCreateSMTP:
+        mock_smtp_instance = Mock()
         mock_smtp_instance.connect.return_value = None
         mock_smtp_instance.ehlo.return_value = None
         mock_smtp_instance.starttls.return_value = None
         mock_smtp_instance.login.return_value = None
         mock_smtp_instance.send_message.return_value = None
         mock_smtp_instance.close.return_value = None
+        MockCreateSMTP.return_value = mock_smtp_instance
 
         config = DispatchConfig(
             database=db,

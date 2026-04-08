@@ -124,6 +124,17 @@ def test_supported_formats_are_represented_in_format_matrix() -> None:
     """Every converter-supported format should appear in FORMAT_OPTION_CASES."""
     matrix_formats = {fmt for fmt, _options in FORMAT_OPTION_CASES}
     missing = set(SUPPORTED_FORMATS) - matrix_formats
+    # AS400-dependent formats cannot be tested without AS400 credentials;
+    # they are intentionally absent from FORMAT_OPTION_CASES and excluded here.
+    AS400_DEPENDENT_FORMATS = {
+        "estore_einvoice",
+        "estore_einvoice_generic",
+        "jolley_custom",
+        "scansheet_type_a",
+        "stewarts_custom",
+        "yellowdog_csv",
+    }
+    missing -= AS400_DEPENDENT_FORMATS
     assert not missing, (
         "FORMAT_OPTION_CASES missing supported formats: "
         f"{sorted(missing)}. Add at least one scenario per format."

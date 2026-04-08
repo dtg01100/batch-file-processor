@@ -152,3 +152,51 @@ def invfetcher_with_test_data(invfetcher_test_db):
     db_path, query_runner = invfetcher_test_db
     settings = {"database_lookup_mode": "test"}
     return InvFetcher(query_runner, settings)
+
+
+# =============================================================================
+# Mock AS400 Query Runner for Hermetic Tests
+# =============================================================================
+
+
+class MockQueryRunner:
+    """Mock query runner that returns empty results for hermetic testing.
+
+    Used to test converters that normally require AS400 database access,
+    allowing tests to run without external dependencies.
+    """
+
+    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+        """Return empty results for any query."""
+        return []
+
+    def close(self) -> None:
+        """No-op close."""
+        pass
+
+
+@pytest.fixture(autouse=True)
+def mock_as400_query_runner():
+    """Auto-used fixture that mocks AS400 query runner for all integration tests.
+
+    This fixture patches create_query_runner_from_settings to return a mock
+    that produces empty results, making tests hermetic (not dependent on
+    external AS400 services).
+
+    Converters that require AS400 data will produce empty/no output when
+    using this mock, which is appropriate for testing the pipeline flow
+    rather than the actual data conversion.
+    """
+    from unittest import mock
+
+    # Patch at the source module - this works because converters import
+    # create_query_runner_from_settings with "from core.database.query_runner import"
+    patch = mock.patch(
+        "core.database.query_runner.create_query_runner_from_settings",
+        return_value=MockQueryRunner()
+    )
+    patch.start()
+
+    yield
+
+    patch.stop()

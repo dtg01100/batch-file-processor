@@ -68,7 +68,9 @@ class BackendBase(ABC):
                 return "smtp"
 
             def _get_endpoint(self, process_parameters, settings):
-                return f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
+                server = settings.get('email_smtp_server', '')
+                port = settings.get('smtp_port', '')
+                return f"{server}:{port}"
 
             def _cleanup(self):
                 if self.smtp_client:

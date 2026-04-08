@@ -384,7 +384,7 @@ class TestGenerateFileHashRetryCount:
 
             with patch("builtins.open", mock_open):
                 with patch("dispatch.hash_utils.time.sleep"):  # Speed up test
-                    result = generate_file_hash(temp_path, max_retries=3)
+                    generate_file_hash(temp_path, max_retries=3)
 
             # With max_retries=3, we should get exactly 4 total attempts:
             # attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> attempt 4 succeeds

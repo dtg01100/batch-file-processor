@@ -1,6 +1,6 @@
 import pytest
 
-from interface.models.folder_configuration import FolderConfiguration, EDIConfiguration
+from interface.models.folder_configuration import EDIConfiguration, FolderConfiguration
 
 
 def test_folder_configuration_pydantic_valid():

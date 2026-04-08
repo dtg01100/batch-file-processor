@@ -21,9 +21,9 @@ Backward Compatibility:
     settings_dict, parameters_dict, upc_lut)
 """
 
+from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 from dispatch.converters.convert_base import BaseEDIConverter, ConversionContext
 from dispatch.converters.mixins import DatabaseConnectionMixin
-from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 
 
 class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):

@@ -21,20 +21,24 @@ MAX_A_RECORD_COUNT = 700
 
 # Import from core modules for backward compatibility
 from core.edi.edi_parser import capture_records
-from core.edi.edi_transformer import convert_to_price  # noqa: F401
-from core.edi.edi_transformer import convert_to_price_decimal  # noqa: F401
-from core.edi.edi_transformer import dac_str_int_to_int  # noqa: F401
-from core.edi.edi_transformer import detect_invoice_is_credit  # noqa: F401
+from core.edi.edi_transformer import (
+    convert_to_price,  # noqa: F401
+    convert_to_price_decimal,  # noqa: F401
+    dac_str_int_to_int,  # noqa: F401
+    detect_invoice_is_credit,  # noqa: F401
+)
 from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
 from core.edi.upc_utils import calc_check_digit  # noqa: F401
 from core.edi.upc_utils import (  # noqa: F401
     convert_upce_to_upca as convert_UPCE_to_UPCA,
 )
 from core.structured_logging import get_logger, log_file_operation
-from core.utils.date_utils import dactime_from_datetime  # noqa: F401
-from core.utils.date_utils import dactime_from_invtime  # noqa: F401
-from core.utils.date_utils import datetime_from_dactime  # noqa: F401
-from core.utils.date_utils import datetime_from_invtime  # noqa: F401
+from core.utils.date_utils import (
+    dactime_from_datetime,  # noqa: F401
+    dactime_from_invtime,  # noqa: F401
+    datetime_from_dactime,  # noqa: F401
+    datetime_from_invtime,  # noqa: F401
+)
 
 logger = get_logger(__name__)
 
@@ -203,7 +207,8 @@ def _write_split_edi_files(
 
     try:
         logger.debug(
-            "_write_split_edi_files starting (source=%s, work_directory=%s, prepend_date_files=%s)",
+            "_write_split_edi_files starting "
+            "(source=%s, work_directory=%s, prepend_date_files=%s)",
             edi_process,
             work_directory,
             prepend_date_files,
@@ -234,7 +239,9 @@ def _write_split_edi_files(
                     work_directory + os.sep
                 ):
                     logger.error(
-                        "Invalid output path generated (potential path traversal): %s", output_file_path
+                        "Invalid output path generated "
+                        "(potential path traversal): %s",
+                        output_file_path,
                     )
                     raise ValueError(
                         "Invalid output path generated (potential path traversal)"
@@ -489,8 +496,18 @@ class CRecGenerator:
         qry_ret = self.query_object.run_query(
             """
             SELECT
-                SUM(CASE odhst.buh6nb WHEN 1 THEN 0 ELSE odhst.bufgpr END) AS non_prepaid,
-                SUM(CASE odhst.buh6nb WHEN 1 THEN odhst.bufgpr ELSE 0 END) AS prepaid
+                SUM(
+                    CASE odhst.buh6nb
+                    WHEN 1 THEN 0
+                    ELSE odhst.bufgpr
+                    END
+                ) AS non_prepaid,
+                SUM(
+                    CASE odhst.buh6nb
+                    WHEN 1 THEN odhst.bufgpr
+                    ELSE 0
+                    END
+                ) AS prepaid
             FROM
                 dacdata.odhst odhst
             WHERE
@@ -642,9 +659,10 @@ def filter_b_records_by_category(
 
     Args:
         b_records: List of B record lines to filter
-        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        upc_dict: Dictionary mapping item numbers to
+            [category, upc1, upc2, upc3, upc4]
         filter_categories: String of comma-separated categories or "ALL"
-        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        filter_mode: "include" (keep these) or "exclude" (remove these)
 
     Returns:
         List of filtered B record lines
@@ -704,9 +722,11 @@ def filter_edi_file_by_category(
     Args:
         input_file: Path to input EDI file
         output_file: Path to output EDI file
-        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
+        upc_dict: Dictionary mapping item numbers to
+            [category, upc1, upc2, upc3, upc4]
         filter_categories: Comma-separated categories or "ALL"
-        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        filter_mode: "include" (keep only these categories) or
+            "exclude" (remove these categories)
 
     Returns:
         True if any filtering was applied, False if no filtering occurred

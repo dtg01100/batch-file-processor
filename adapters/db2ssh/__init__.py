@@ -42,7 +42,11 @@ class Error(Exception):
 
 
 class InterfaceError(Error):
-    """Exception raised for errors related to the database interface, not the database itself."""
+    """Exception raised for errors related to the database interface.
+
+    These errors are not related to the database itself but to
+    the interface or connection mechanism.
+    """
 
 
 class DatabaseError(Error):
@@ -50,7 +54,11 @@ class DatabaseError(Error):
 
 
 class OperationalError(DatabaseError):
-    """Exception raised for operational errors outside control (connection failure, memory error)."""
+    """Exception raised for operational errors outside application control.
+
+    Examples include connection failures, memory errors, or
+    other infrastructure-level issues.
+    """
 
 
 class ProgrammingError(DatabaseError):
@@ -58,11 +66,18 @@ class ProgrammingError(DatabaseError):
 
 
 class IntegrityError(DatabaseError):
-    """Exception raised when relational integrity is affected (foreign key violation)."""
+    """Exception raised when relational integrity is affected.
+
+    Examples include foreign key violations or constraint
+    failures.
+    """
 
 
 class DataError(DatabaseError):
-    """Exception raised for data processing errors (division by zero, value out of range)."""
+    """Exception raised for data processing errors.
+
+    Examples include division by zero or values out of range.
+    """
 
 
 class NotSupportedError(DatabaseError):

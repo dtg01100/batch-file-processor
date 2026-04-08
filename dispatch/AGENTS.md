@@ -6,75 +6,105 @@ Refactored dispatch package — file processing, EDI validation/splitting/conver
 
 ```
 dispatch/
-├── coordinator.py      # DispatchCoordinator (893 lines, main orchestration)
-├── file_processor.py   # FileDiscoverer, HashGenerator, FileFilter
-├── edi_validator.py    # EDIValidator, ValidationResult
-├── edi_processor.py    # EDISplitter, EDIConverter, EDITweaker, FileNamer
-├── send_manager.py     # SendManager, BackendFactory, SendResult
-├── error_handler.py    # ErrorHandler, ErrorLogger, ReportGenerator
-├── db_manager.py       # DBManager, ProcessedFilesTracker, ResendFlagManager
-└── __init__.py         # Exports all public APIs
+├── orchestrator.py          # DispatchOrchestrator (main orchestration)
+├── config_builder.py       # DispatchConfigBuilder (fluent config)
+├── pipeline/
+│   └── interfaces.py       # PipelineStep protocol, adapters
+├── services/
+│   ├── file_processor.py   # FileProcessor (per-file processing)
+│   └── folder_processor.py # FolderPipelineExecutor (per-folder processing)
+├── converters/             # 10 format converters
+├── send_manager.py         # SendManager, BackendFactory
+├── error_handler.py         # ErrorHandler, ErrorLogger
+└── edi_validator.py        # EDIValidator, ValidationResult
 ```
 
 ## WHERE TO LOOK
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Main orchestration | `coordinator.py` | DispatchCoordinator.process() — full flow |
-| File discovery/hashing | `file_processor.py` | generate_match_lists, generate_file_hash |
+| Main orchestration | `orchestrator.py` | DispatchOrchestrator.process() — full flow |
+| Pipeline configuration | `config_builder.py` | DispatchConfigBuilder for fluent setup |
+| Pipeline interfaces | `pipeline/interfaces.py` | PipelineStep protocol, adapters |
+| Per-folder processing | `services/folder_processor.py` | FolderPipelineExecutor |
+| Per-file processing | `services/file_processor.py` | FileProcessor.process_file() |
+| File discovery/hashing | `services/file_processor.py` | FileDiscoverer, HashGenerator |
 | EDI validation | `edi_validator.py` | ValidationResult with errors list |
-| EDI splitting | `edi_processor.py` | EDISplitter.split_edi() |
-| Format conversion | `edi_processor.py` | EDIConverter imports convert_to_* plugins |
-| Apply EDI tweaks | `edi_processor.py` | EDITweaker (calls convert_to_edi_tweaks.py) |
 | Send to backends | `send_manager.py` | SendManager.send_file(), BackendFactory |
 | Error recording | `error_handler.py` | ErrorLogger, ReportGenerator |
-| Processed files tracking | `db_manager.py` | ProcessedFilesTracker (DB operations) |
 
 ## KEY CLASSES
 
-**DispatchCoordinator** — Main orchestration (893 lines)
-- `process(ProcessingContext)` — coordinates all steps
-- Uses overlay updates for GUI progress (doingstuffoverlay.py)
-- Calls file discovery → validate → split → convert → send → error handling
+**DispatchOrchestrator** — Main orchestration
+- Delegates to FolderPipelineExecutor for per-folder processing
+- Uses FileProcessor for per-file processing
+- Maintains high-level coordination and progress reporting
 
-**EDIConverter** — Dynamic plugin loader
-- Builds module name: `convert_to_<format>`
-- `importlib.import_module()` then calls `module.edi_convert(...)`
+**DispatchConfigBuilder** — Fluent configuration
+- `DispatchConfigBuilder().with_validator(v).with_backends(b).build()`
+- Simplifies pipeline step composition
 
-**SendManager** — Send orchestration
-- `BackendFactory.get_backend(backend_type)` imports `<backend>_backend.py`
-- Calls `module.do(process_parameters, settings, file_path)`
+**FolderPipelineExecutor** — Per-folder processing
+- Handles file discovery and filtering
+- Processes files through FileProcessor pipeline
+- Aggregates results and errors
+
+**FileProcessor** — Per-file processing
+- Coordinates validation, splitting, conversion, tweaks, sending
+- Uses pipeline step pattern for extensibility
+
+**PipelineStep Protocol** — Standardized pipeline interface
+- `execute(input_path, context) -> (success, output_path, errors)`
+- `wrap_as_pipeline_step()` for adapter support
 
 ## CONVENTIONS
 
-**Processing flow** (coordinator.py):
-1. File discovery (FileDiscoverer)
-2. Hash generation (HashGenerator)
-3. File filtering (FileFilter — check processed_files)
-4. EDI validation (EDIValidator)
-5. EDI splitting (EDISplitter)
-6. EDI conversion (EDIConverter — imports converter)
-7. Apply tweaks (EDITweaker if enabled)
-8. Send (SendManager → backend)
-9. Error handling (ErrorHandler if failures)
+**Processing flow**:
+1. DispatchOrchestrator.process_folder() receives folder config
+2. FolderPipelineExecutor handles per-folder operations:
+   - File discovery (list files in directory)
+   - Filtering (skip already-processed via checksum)
+3. FileProcessor handles per-file operations:
+   - Hash generation
+   - EDI validation
+   - Splitting (if enabled)
+   - Conversion (to target format)
+   - Apply tweaks (if enabled)
+   - Send (via SendManager to backends)
+4. Results aggregated and returned
 
 **Plugin invocation**:
 - Converters: `module.edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup)`
 - Backends: `module.do(process_parameters, settings_dict, filename)`
 
-**Error handling**: record_error.py for logging, ErrorLogger aggregates errors, ReportGenerator creates reports
+**Pipeline step interface**:
+```python
+class PipelineStep(Protocol):
+    def execute(self, input_path: str, context: dict) -> tuple[bool, str, list[str]]:
+        ...
+```
 
-## COEXISTENCE WITH LEGACY
+## CONFIGURATION
 
-**dispatch.py** (root, 569 lines, deep nesting) — legacy monolithic dispatcher
-- Both `dispatch.py` and `dispatch/` package exist
-- Refactored code in `dispatch/` package is preferred
-- Legacy `dispatch.py` still used by some code paths (being migrated)
+```python
+from dispatch.config_builder import DispatchConfigBuilder
+from dispatch.edi_validator import EDIValidator
+
+config = (
+    DispatchConfigBuilder()
+    .with_validator(EDIValidator())
+    .with_settings({"email_host": "smtp.example.com"})
+    .with_backends({"email": email_backend})
+    .build()
+)
+
+orchestrator = DispatchOrchestrator(config)
+```
 
 ## ANTI-PATTERNS
 
 **DO NOT**:
 - Import from root `dispatch.py` for new code (use `dispatch/` package)
-- Add UI logic to coordinator (use ProcessingContext callbacks/overlay updates only)
+- Add UI logic to orchestrator (use callbacks/overlay updates only)
 - Hardcode converter/backend names (use dynamic import patterns)
-- Skip error recording (always use record_error.py or ErrorLogger)
+- Skip error recording (always use ErrorHandler)

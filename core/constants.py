@@ -10,6 +10,12 @@ APP_VERSION = "(Git Branch: Master)"
 # Update this when adding new database migrations
 CURRENT_DATABASE_VERSION = "50"
 
+# Backend timeout constants (seconds)
+SMTP_TIMEOUT_SECONDS = 30
+FTP_TIMEOUT_SECONDS = 30
+HASH_CALC_MAX_RETRIES = 5
+DEFAULT_MAX_RETRIES = 10
+
 # Date boundary constants for legacy date handling
 MIN_DATE = datetime(1900, 1, 1)
 MAX_DATE = datetime(9999, 12, 31)

@@ -15,6 +15,10 @@ from core.structured_logging import (
     get_or_create_correlation_id,
 )
 from dispatch.interfaces import FileSystemInterface
+from dispatch.pipeline.temp_dir_utils import (
+    cleanup_pipeline_temp_dir,
+    create_pipeline_temp_dir,
+)
 
 logger = get_logger(__name__)
 
@@ -455,10 +459,6 @@ class EDITweakerStep:
             Path to tweaked file, or None if tweaking failed/not needed
 
         """
-        import os
-        import shutil
-        import tempfile
-
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
 
@@ -478,7 +478,9 @@ class EDITweakerStep:
         )
 
         # Create a TEMPORARY directory for intermediate processing
-        temp_dir = tempfile.mkdtemp(prefix="edi_tweaker_")
+        temp_dir, temp_dirs = create_pipeline_temp_dir(
+            "edi_tweaker", folder, context
+        )
         StructuredLogger.log_debug(
             logger,
             "execute",
@@ -488,17 +490,6 @@ class EDITweakerStep:
             file_path=basename,
             correlation_id=correlation_id,
         )
-
-        temp_dirs: list[str] | None = None
-        if context is not None and hasattr(context, "temp_dirs"):
-            temp_dirs = context.temp_dirs
-        elif "_pipeline_temp_dirs" in folder and isinstance(
-            folder.get("_pipeline_temp_dirs"), list
-        ):
-            temp_dirs = folder["_pipeline_temp_dirs"]
-
-        if temp_dirs is not None:
-            temp_dirs.append(temp_dir)
 
         try:
             result = self.tweak(
@@ -536,9 +527,7 @@ class EDITweakerStep:
                 correlation_id=correlation_id,
                 duration_ms=duration_ms,
             )
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dirs is not None and temp_dir in temp_dirs:
-                temp_dirs.remove(temp_dir)
+            cleanup_pipeline_temp_dir(temp_dir, temp_dirs)
             return None
         except Exception as e:
             # Cleanup on exception
@@ -554,7 +543,5 @@ class EDITweakerStep:
                 },
                 duration_ms,
             )
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            if temp_dirs is not None and temp_dir in temp_dirs:
-                temp_dirs.remove(temp_dir)
+            cleanup_pipeline_temp_dir(temp_dir, temp_dirs)
             raise

@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Any, Callable, TypeVar
 
+from core.constants import DEFAULT_MAX_RETRIES
 from core.structured_logging import get_logger, log_with_context
 
 logger = get_logger(__name__)
@@ -35,7 +36,7 @@ class BackendRetryMixin:
     def retry_operation(
         self,
         operation: Callable[[], T],
-        max_retries: int = 10,
+        max_retries: int = DEFAULT_MAX_RETRIES,
         operation_name: str = "operation",
         initial_backoff: float = 2.0,
         max_backoff: float = 60.0,

@@ -10,7 +10,6 @@ This package contains small, focused utility modules organized by functionality:
 from core.edi.edi_parser import EDIParseError
 
 from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
-from .timing_utils import context_timer
 from .date_utils import (
     dactime_from_datetime,
     dactime_from_invtime,
@@ -20,6 +19,7 @@ from .date_utils import (
 )
 from .format_utils import normalize_convert_to_format
 from .safe_parse import safe_float, safe_int
+from .timing_utils import context_timer
 
 # Import legacy utils for backward compatibility
 from .utils import (

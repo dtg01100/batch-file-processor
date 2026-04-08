@@ -6,10 +6,11 @@ Tests:
 - Error handling and retry logic
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
+
+import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.backend]
 

@@ -149,6 +149,9 @@ class DispatchOrchestrator:
     This class coordinates the processing of files across folders,
     managing validation, conversion, and sending operations.
 
+    The orchestrator delegates per-folder processing to FolderPipelineExecutor
+    while maintaining high-level coordination responsibilities.
+
     Attributes:
         config: Dispatch configuration
         send_manager: Manager for sending files to backends
@@ -163,6 +166,11 @@ class DispatchOrchestrator:
             config: Dispatch configuration
 
         """
+        from dispatch.services.folder_processor import (
+            FolderPipelineExecutor,
+            FolderProcessingDependencies,
+        )
+
         self.config = config
         self.validator = config.validator or EDIValidator()
         self.send_manager = SendManager(backends=config.backends)
@@ -170,13 +178,12 @@ class DispatchOrchestrator:
         self.run_log: StringIO = StringIO()
         self.processed_count: int = 0
         self.error_count: int = 0
-        # Initialize services
         self.upc_service = UPCLookupService(config.settings)
-        # Wrap legacy ValidatorInterface (.validate()) as a pipeline step (.execute())
-        # so FileProcessor can use it uniformly regardless of which config key was set.
+
         effective_validator_step = config.validator_step
         if effective_validator_step is None and config.validator:
             effective_validator_step = _ValidatorAdapter(config.validator)
+
         self.file_processor = FileProcessor(
             send_manager=self.send_manager,
             error_handler=self.error_handler,
@@ -186,6 +193,16 @@ class DispatchOrchestrator:
             tweaker_step=config.tweaker_step,
             file_system=config.file_system,
         )
+
+        folder_deps = FolderProcessingDependencies(
+            file_processor=self.file_processor,
+            progress_reporter=config.progress_reporter,
+            get_upc_dictionary=lambda: self._get_upc_dictionary(),
+            file_system=config.file_system,
+            settings=config.settings,
+        )
+        self._folder_executor = FolderPipelineExecutor(folder_deps)
+
         logger.debug(
             "DispatchOrchestrator initialized (pipeline_steps: "
             "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
@@ -223,31 +240,25 @@ class DispatchOrchestrator:
         folder_path = folder.get("folder_name", "")
         alias = folder.get("alias", folder_path)
 
-        log_with_context(
-            logger,
-            logging.INFO,
-            f"Starting folder processing: {alias}",
-            correlation_id=correlation_id,
-            operation="process_folder",
-            context={
-                "folder_name": folder_path,
-                "folder_alias": alias,
-                "folder_num": folder_num,
-                "folder_total": folder_total,
-            },
-        )
+        logger.debug("Processing folder: %s (path=%s)", alias, folder_path)
 
         with CorrelationContext(correlation_id):
-            upc_dict = self._get_upc_dictionary(self.config.settings)
-            return self.process_folder_with_pipeline(
-                folder,
-                run_log,
-                processed_files,
-                upc_dict,
+            from dispatch.services.folder_processor import FolderProcessingRequest
+
+            request = FolderProcessingRequest(
+                folder=folder,
+                run_log=run_log,
+                processed_files=processed_files,
+                upc_dict=self._get_upc_dictionary(self.config.settings),
+                settings=self.config.settings,
                 pre_discovered_files=pre_discovered_files,
                 folder_num=folder_num,
                 folder_total=folder_total,
             )
+            result = self._folder_executor.process_folder(request)
+            self.processed_count += result.files_processed
+            self.error_count += result.files_failed
+            return result
 
     def process_folder_with_pipeline(
         self,
@@ -260,6 +271,9 @@ class DispatchOrchestrator:
         folder_total: int | None = None,
     ) -> FolderResult:
         """Process folder using new pipeline steps.
+
+        DEPRECATED: This method is kept for backward compatibility.
+        Use process_folder() instead which delegates to FolderPipelineExecutor.
 
         Args:
             folder: Folder configuration dictionary.
@@ -289,7 +303,7 @@ class DispatchOrchestrator:
         if not self._folder_exists(folder_path):
             return self._folder_not_found_result(folder_path, run_log, result)
 
-        files = self._discover_and_filter_files(
+        files = self._discover_folder_files(
             folder_path=folder_path,
             pre_discovered_files=pre_discovered_files,
             processed_files=processed_files,
@@ -307,7 +321,8 @@ class DispatchOrchestrator:
         )
 
         total_files = len(files)
-        self._init_progress_reporter(
+        # Setup progress reporting
+        self._setup_folder_progress(
             folder=folder,
             total_files=total_files,
             folder_num=folder_num,
@@ -316,7 +331,9 @@ class DispatchOrchestrator:
 
         effective_upc_dict = upc_dict if upc_dict is not None else self.config.upc_dict
 
-        self._process_folder_files(
+        # Delegate actual per-file processing to a small wrapper to keep this
+        # method focused on orchestration.
+        self._process_folder_file_list(
             files=files,
             folder=folder,
             effective_upc_dict=effective_upc_dict,
@@ -325,6 +342,7 @@ class DispatchOrchestrator:
             result=result,
             total_files=total_files,
         )
+
         self._finalize_folder_result(result)
 
         return result
@@ -362,23 +380,14 @@ class DispatchOrchestrator:
             progress_reporter.start_discovery(folder_total=folder_total)
 
         for folder_index, folder in enumerate(folders, start=1):
-            folder_path = folder.get("folder_name", "")
-            alias = folder.get("alias", folder_path)
-
-            if not self._folder_exists(folder_path):
-                pending: list[str] = []
-            else:
-                pending = self._get_files_in_folder(folder_path)
-                if processed_files and pending:
-                    pending = self._filter_processed_files(
-                        pending,
-                        processed_files,
-                        folder,
-                        folder_index=folder_index,
-                        folder_total=folder_total,
-                        folder_name=alias,
-                        progress_reporter=progress_reporter,
-                    )
+            alias = folder.get("alias", folder.get("folder_name", ""))
+            pending = self._discover_for_folder(
+                folder,
+                processed_files=processed_files,
+                progress_reporter=progress_reporter,
+                folder_index=folder_index,
+                folder_total=folder_total,
+            )
 
             pending_lists.append(pending)
             total_pending += len(pending)
@@ -458,6 +467,89 @@ class DispatchOrchestrator:
         result.success = result.files_failed == 0
         if self.config.progress_reporter:
             self.config.progress_reporter.complete_folder(success=result.success)
+
+    # --- Small helper wrappers extracted to aid readability ---
+    def _discover_folder_files(
+        self,
+        folder_path: str,
+        pre_discovered_files: list[str] | None,
+        processed_files: DatabaseInterface | None,
+        folder: dict,
+        run_log: Any,
+    ) -> list[str] | None:
+        """Wrapper for file discovery/filtering for a folder."""
+        return self._discover_and_filter_files(
+            folder_path=folder_path,
+            pre_discovered_files=pre_discovered_files,
+            processed_files=processed_files,
+            folder=folder,
+            run_log=run_log,
+        )
+
+    def _setup_folder_progress(
+        self,
+        folder: dict,
+        total_files: int,
+        folder_num: int | None,
+        folder_total: int | None,
+    ) -> None:
+        """Wrapper to initialize progress reporter for a folder."""
+        self._init_progress_reporter(
+            folder=folder,
+            total_files=total_files,
+            folder_num=folder_num,
+            folder_total=folder_total,
+        )
+
+    def _process_folder_file_list(
+        self,
+        files: list[str],
+        folder: dict,
+        effective_upc_dict: dict,
+        processed_files: DatabaseInterface | None,
+        run_log: Any,
+        result: FolderResult,
+        total_files: int,
+    ) -> None:
+        """Wrapper delegating to the per-file loop processor."""
+        self._process_folder_files(
+            files=files,
+            folder=folder,
+            effective_upc_dict=effective_upc_dict,
+            processed_files=processed_files,
+            run_log=run_log,
+            result=result,
+            total_files=total_files,
+        )
+
+    def _discover_for_folder(
+        self,
+        folder: dict,
+        processed_files: DatabaseInterface | None = None,
+        progress_reporter: Any | None = None,
+        folder_index: int | None = None,
+        folder_total: int | None = None,
+    ) -> list[str]:
+        """Discover pending files for a single folder (extracted loop body)."""
+        folder_path = folder.get("folder_name", "")
+        alias = folder.get("alias", folder_path)
+
+        if not self._folder_exists(folder_path):
+            return []
+
+        pending = self._get_files_in_folder(folder_path)
+        if processed_files and pending:
+            pending = self._filter_processed_files(
+                pending,
+                processed_files,
+                folder,
+                folder_index=folder_index,
+                folder_total=folder_total,
+                folder_name=alias,
+                progress_reporter=progress_reporter,
+            )
+
+        return pending
 
     def _folder_not_found_result(
         self, folder_path: str, run_log: Any, result: FolderResult
@@ -639,10 +731,12 @@ class DispatchOrchestrator:
             run_log: Optional run log for recording processing activity.
 
         """
-        result.checksum = self._calculate_checksum(file_path)
-        logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
+        # calculate checksum and log
+        self._set_checksum_for_result(result, file_path, file_basename)
+
         current_file = file_path
 
+        # validation
         continue_processing, current_file = self._run_validation_pipeline(
             current_file=current_file,
             context=context,
@@ -653,6 +747,7 @@ class DispatchOrchestrator:
         if not continue_processing:
             return
 
+        # splitting path (may send split files)
         if self._process_split_pipeline(
             current_file=current_file,
             file_path=file_path,
@@ -663,6 +758,7 @@ class DispatchOrchestrator:
         ):
             return
 
+        # conversion / tweaks
         current_file, did_convert = self._apply_conversion_and_tweaks(
             current_file=current_file,
             file_basename=file_basename,
@@ -674,6 +770,7 @@ class DispatchOrchestrator:
         if did_convert:
             result.converted = True
 
+        # send final output
         self._send_single_pipeline_file(
             current_file=current_file,
             file_path=file_path,
@@ -967,8 +1064,8 @@ class DispatchOrchestrator:
             Tuple of (final_file_path, did_convert)
 
         """
+        # keep external behavior the same but delegate converter execution
         did_convert = False
-
         converter_step = self.config.converter_step
         convert_edi = context.effective_folder.get("convert_edi", False)
         convert_format = context.effective_folder.get("convert_to_format", "")
@@ -986,11 +1083,10 @@ class DispatchOrchestrator:
                 run_log,
                 f"Converting {file_basename} to {convert_format}",
             )
-            converted_file = converter_step.execute(
-                current_file,
-                context.effective_folder,
-                context.settings,
-                context.upc_dict,
+            converted_file = self._execute_conversion_step(
+                converter_step=converter_step,
+                current_file=current_file,
+                original_file_path=original_file_path,
                 context=context,
             )
             if converted_file:
@@ -1006,6 +1102,33 @@ class DispatchOrchestrator:
                 )
 
         return current_file, did_convert
+
+    def _execute_conversion_step(
+        self,
+        converter_step: Any,
+        current_file: str,
+        original_file_path: str,
+        context: ProcessingContext,
+    ) -> str | None:
+        """Execute the configured converter step and return converted path or None.
+
+        Kept as a separate method to keep _apply_conversion_and_tweaks concise.
+        """
+        # The converter API expects: (input_path, folder, settings, upc_dict, context=...)
+        return converter_step.execute(
+            current_file,
+            context.effective_folder,
+            context.settings,
+            context.upc_dict,
+            context=context,
+        )
+
+    def _set_checksum_for_result(
+        self, result: FileResult, file_path: str, file_basename: str
+    ) -> None:
+        """Calculate and set checksum on a FileResult and log debug info."""
+        result.checksum = self._calculate_checksum(file_path)
+        logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
 
     def _normalize_validation_output(
         self, validation_output: Any, current_file: str
@@ -1676,12 +1799,38 @@ class DispatchOrchestrator:
             Tuple of (has_errors: bool, summary: str)
 
         """
+
+        # Prepare orchestrator and folder list
+        orchestrator, folders = DispatchOrchestrator._prepare_processing(
+            folders_database, settings, version, progress_callback
+        )
+
+        logger.debug("Starting dispatch process for %d active folders", len(folders))
+
+        # Iterate folders and collect errors
+        has_errors = DispatchOrchestrator._iterate_folders(
+            orchestrator, folders, run_log, processed_files
+        )
+
+        # Finalize and return summary
+        summary = DispatchOrchestrator._finalize_processing(orchestrator)
+        logger.info("Dispatch complete: %s", summary)
+        return has_errors, summary
+
+    @staticmethod
+    def _prepare_processing(folders_database, settings, version, progress_callback):
+        """Prepare the DispatchOrchestrator and return (orchestrator, folders).
+
+        This extracts the initial configuration and folder retrieval from the
+        main process() method to improve readability.
+        """
+        # Local imports kept here to avoid importing heavy pipeline modules at
+        # module import time (preserves original lazy-import behavior).
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.splitter import EDISplitterStep
         from dispatch.pipeline.tweaker import EDITweakerStep
         from dispatch.pipeline.validator import EDIValidationStep
 
-        # Create orchestrator config
         config = DispatchConfig(
             database=folders_database,
             settings=settings,
@@ -1694,14 +1843,15 @@ class DispatchOrchestrator:
         )
 
         orchestrator = DispatchOrchestrator(config)
-
-        # Get all active folders
         folders = list(folders_database.find(folder_is_active=True, order_by="alias"))
+        return orchestrator, folders
 
-        logger.debug("Starting dispatch process for %d active folders", len(folders))
-
+    @staticmethod
+    def _iterate_folders(
+        orchestrator: "DispatchOrchestrator", folders: list, run_log, processed_files
+    ) -> bool:
+        """Iterate over folders and run processing, returning whether any errors occurred."""
         has_errors = False
-
         for folder in folders:
             try:
                 result = orchestrator.process_folder(folder, run_log, processed_files)
@@ -1710,10 +1860,16 @@ class DispatchOrchestrator:
             except Exception as folder_error:
                 has_errors = True
                 if hasattr(run_log, "write"):
-                    run_log.write(
-                        f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
-                    )
+                    try:
+                        run_log.write(
+                            f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
+                        )
+                    except Exception:
+                        # best-effort logging; avoid masking original error
+                        logger.exception("Failed to write folder error to run_log")
+        return has_errors
 
-        summary = orchestrator.get_summary()
-        logger.info("Dispatch complete: %s", summary)
-        return has_errors, summary
+    @staticmethod
+    def _finalize_processing(orchestrator: "DispatchOrchestrator") -> str:
+        """Finalize processing and return summary string."""
+        return orchestrator.get_summary()

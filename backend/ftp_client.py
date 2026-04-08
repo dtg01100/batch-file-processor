@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from backend.protocols import FTPClientProtocol
+from core.constants import FTP_TIMEOUT_SECONDS
 from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
@@ -64,7 +65,7 @@ class RealFTPClient:
             if timeout is not None:
                 self._connection.connect(host, port, timeout)
             else:
-                self._connection.connect(host, port, 30)  # 30s default
+                self._connection.connect(host, port, FTP_TIMEOUT_SECONDS)
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_backend_call(

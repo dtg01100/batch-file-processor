@@ -66,6 +66,16 @@ def pytest_configure(config):
     On POSIX, prefer ``signal`` so a timed-out test fails and pytest continues
     running the remaining test cases. On Windows, fall back to ``thread``.
     """
+    import glob
+    import shutil
+
+    for pattern in ["edi_converter_*", "edi_tweaker_*", "edi_rename_*"]:
+        for path in glob.glob(f"/tmp/{pattern}"):
+            try:
+                shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                pass
+
     # pytest-timeout option is only present when the plugin is installed.
     if not hasattr(config.option, "timeout_method"):
         return

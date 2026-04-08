@@ -10,9 +10,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from core.utils.bool_utils import normalize_bool
-
 from pydantic import BaseModel, Field, ValidationError, model_validator
+
+from core.utils.bool_utils import normalize_bool
 
 
 def _bool_from_data(data: dict[str, Any], key: str, *, default: bool = False) -> bool:

@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from backend.protocols import SMTPClientProtocol
+from core.constants import SMTP_TIMEOUT_SECONDS
 from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
@@ -44,7 +45,7 @@ class RealSMTPClient:
         self.config = config or {}
         self._connection: smtplib.SMTP | None = None
 
-    def connect(self, host: str, port: int = 587, timeout: float = 30) -> None:
+    def connect(self, host: str, port: int = 587, timeout: float = SMTP_TIMEOUT_SECONDS) -> None:
         """Connect to SMTP server.
 
         Args:

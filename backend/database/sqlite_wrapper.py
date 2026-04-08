@@ -222,7 +222,8 @@ class Table:
                 d[k] = normalize_bool(v)
 
             # Attempt to deserialize JSON strings
-            # Only try to parse if string looks like valid JSON (starts with { or [ and ends with matching bracket)
+            # Only try to parse if string looks like valid JSON
+            # (starts with { or [ and ends with matching bracket)
             elif isinstance(v, str) and len(v) >= 2:
                 v_stripped = v.strip()
                 # Check if stripped string is long enough and looks like JSON
